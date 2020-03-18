@@ -8,6 +8,11 @@ targets:
   balloon:
     main: src/balloon.cr
 
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+    version: ~> 0.26.1
+
 development_dependencies:
   spectator:
     gitlab: arctic-fox/spectator

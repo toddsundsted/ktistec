@@ -12,6 +12,9 @@ dependencies:
   kemal:
     github: kemalcr/kemal
     version: ~> 0.26.1
+  openssl_ext:
+    github: toddsundsted/openssl_ext
+    version: ~> 0.1.2
 
 development_dependencies:
   spectator:

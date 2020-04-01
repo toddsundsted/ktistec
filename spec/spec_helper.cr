@@ -1,4 +1,3 @@
-require "../src/*"
 require "spectator"
 require "kemal"
 
@@ -49,4 +48,20 @@ def response
   Global.response.not_nil!
 end
 
-Kemal.run
+require "../src/framework"
+
+module Balloon
+  class SpecConfig
+    def db_file
+      @db_file ||= "sqlite3://#{File.tempname("balloon-test", ".db")}"
+    end
+  end
+
+  def self.config
+    @@spec_config ||= SpecConfig.new
+  end
+end
+
+Balloon::Server.run do
+  Kemal.config.logging = false
+end

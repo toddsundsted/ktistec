@@ -42,6 +42,9 @@ module Balloon
           db.exec "CREATE TABLE options (key TEXT PRIMARY KEY, value TEXT)"
         end
       end
+      Balloon::Database.all_pending_versions.each do |version|
+        puts Balloon::Database.do_operation(:apply, version)
+      end
       with new yield
       Kemal.run
     end
@@ -50,3 +53,5 @@ module Balloon
   # :nodoc:
   VERSION = {{ `shards version "#{__DIR__}"`.chomp.stringify }}
 end
+
+require "./database"

@@ -1,5 +1,10 @@
 module Balloon
   module Model
+    # Marks properties as persistent.
+    #
+    annotation Persistent
+    end
+
     # Model utilities.
     #
     module Utils
@@ -14,6 +19,9 @@ module Balloon
           end
       end
     end
+
+    @[Persistent]
+    property id : Int64?
   end
 end
 

@@ -6,7 +6,7 @@ authors:
 
 targets:
   balloon:
-    main: src/balloon.cr
+    main: src/balloon/server.cr
 
 dependencies:
   kemal:

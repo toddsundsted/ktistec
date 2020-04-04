@@ -55,6 +55,10 @@ module Balloon
     def db_file
       @db_file ||= "sqlite3://#{File.tempname("balloon-test", ".db")}"
     end
+
+    def host
+      @host ||= "https://test.test"
+    end
   end
 
   def self.config

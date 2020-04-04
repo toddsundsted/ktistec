@@ -6,10 +6,15 @@ module Balloon
   class Config
     YAML.mapping(
       db_file: String,
+      host: String,
     )
 
     def db_file
       "sqlite3://#{File.expand_path(@db_file, home: true)}"
+    end
+
+    def host
+      @host
     end
   end
 

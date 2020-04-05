@@ -1,11 +1,5 @@
 require "../spec_helper"
 
-class Actor
-  private def self.cost
-    4 # reduce the cost of computing a bcrypt hash
-  end
-end
-
 Spectator.describe Actor do
   before_each { Balloon.database.exec "BEGIN TRANSACTION" }
   after_each { Balloon.database.exec "ROLLBACK" }

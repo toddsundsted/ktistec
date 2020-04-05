@@ -66,6 +66,12 @@ module Balloon
   end
 end
 
+class Actor
+  private def self.cost
+    4 # reduce the cost of computing a bcrypt hash
+  end
+end
+
 Balloon::Server.run do
   Kemal.config.logging = false
 end

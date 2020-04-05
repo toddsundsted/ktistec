@@ -33,6 +33,12 @@ module Balloon
     @@database ||= DB.open(Balloon.config.db_file)
   end
 
+  @@secret_key : String?
+
+  def self.secret_key
+    @@secret_key ||= Balloon.database.scalar("SELECT value FROM options WHERE key = ?", "secret_key").as(String)
+  end
+
   # An [ActivityPub](https://www.w3.org/TR/activitypub/) server.
   #
   #     Balloon::Server.run do
@@ -43,8 +49,9 @@ module Balloon
     def self.run
       unless File.exists?(Balloon.config.db_file.split("//").last)
         DB.open(Balloon.config.db_file) do |db|
-          db.exec "CREATE TABLE migrations (id INTEGER PRIMARY KEY, name TEXT)"
           db.exec "CREATE TABLE options (key TEXT PRIMARY KEY, value TEXT)"
+          db.exec "INSERT INTO options (key, value) VALUES (?, ?)", "secret_key", Random::Secure.hex(64)
+          db.exec "CREATE TABLE migrations (id INTEGER PRIMARY KEY, name TEXT)"
         end
       end
       Balloon::Database.all_pending_versions.each do |version|

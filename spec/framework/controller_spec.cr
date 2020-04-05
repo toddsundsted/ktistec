@@ -14,6 +14,10 @@ class FooBarController
       "json"
     end
   end
+
+  get "/foo/bar/escape" do |env|
+    e "foo\nbar"
+  end
 end
 
 Spectator.describe Balloon::Controller do
@@ -34,6 +38,13 @@ Spectator.describe Balloon::Controller do
     it "responds with JSON" do
       get "/foo/bar/accept", HTTP::Headers{"Accept" => "application/json"}
       expect(response.body).to eq("json")
+    end
+  end
+
+  describe "/foo/bar/escape" do
+    it "escapes newline characters" do
+      get "/foo/bar/escape"
+      expect(response.body).to eq("foo\\nbar")
     end
   end
 end

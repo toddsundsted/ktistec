@@ -37,6 +37,15 @@ module Balloon
       env.response.content_type = "application/json"
       halt env, status_code: 500, response: body.to_json
     end
+
+    # Escapes newline characters.
+    #
+    # For use in views:
+    #     <%= e string %>
+    #
+    macro e(str)
+      {{str}}.gsub("\n", "\\n")
+    end
   end
 end
 

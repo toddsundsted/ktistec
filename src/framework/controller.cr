@@ -6,6 +6,20 @@ module Balloon
       Balloon.config.host
     end
 
+    macro accepts?(mime_type)
+      env.get?("accept") && env.get("accept").as(Array(String)).includes?({{mime_type}})
+    end
+
+    add_context_storage_type(Array(String))
+
+    before_all do |env|
+      if env.request.headers["Accept"]?
+        env.set "accept", env.request.headers["Accept"].split(",").map(&.split(";").first)
+      else
+        [] of String
+      end
+    end
+
     macro bad_request
       body = {msg: "Bad Request"}
       env.response.content_type = "application/json"

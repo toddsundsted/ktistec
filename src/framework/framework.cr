@@ -69,3 +69,4 @@ end
 require "./controller"
 require "./database"
 require "./model"
+require "./jwt"

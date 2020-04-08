@@ -38,6 +38,12 @@ module Balloon
       halt env, status_code: 500, response: body.to_json
     end
 
+    macro skip_auth(paths, method = "GET")
+      class ::Balloon::Auth < ::Kemal::Handler
+        exclude {{paths}}, {{method}}
+      end
+    end
+
     # Escapes newline characters.
     #
     # For use in views:

@@ -3,6 +3,8 @@ require "../spec_helper"
 class FooBarController
   include Balloon::Controller
 
+  skip_auth ["/foo/bar/host", "/foo/bar/accept", "/foo/bar/escape"]
+
   get "/foo/bar/host" do |env|
     {host: host}.to_json
   end

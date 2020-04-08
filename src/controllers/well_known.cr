@@ -3,6 +3,8 @@ require "../framework"
 class WellKnownController
   include Balloon::Controller
 
+  skip_auth ["/.well-known/*"]
+
   get "/.well-known/webfinger" do |env|
     domain = (host =~ /\/\/([^\/]+)$/) && $1
 

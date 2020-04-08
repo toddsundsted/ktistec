@@ -3,6 +3,8 @@ require "../framework/controller"
 class ActorsController
   include Balloon::Controller
 
+  skip_auth ["/actors/:username"]
+
   get "/actors/:username" do |env|
     username = env.params.url["username"]
 

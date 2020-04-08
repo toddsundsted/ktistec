@@ -54,4 +54,10 @@ Spectator.describe Actor do
       expect(subject.public_key.verify(OpenSSL::Digest.new("SHA256"), signature, message)).to be_true
     end
   end
+
+  describe "#sessions" do
+    it "gets related sessions" do
+      expect(subject.sessions).to be_empty
+    end
+  end
 end

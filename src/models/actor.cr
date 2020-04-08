@@ -60,4 +60,8 @@ class Actor
   def private_key
     OpenSSL::RSA.new(pem_private_key, nil, true)
   end
+
+  def sessions
+    Session.where(actor_id: self.id)
+  end
 end

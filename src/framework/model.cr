@@ -228,6 +228,27 @@ module Balloon
         @id = nil
         self
       end
+
+      def to_json(json : JSON::Builder)
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          json.object do
+            {% for v in vs %}
+              json.field({{v.stringify}}, {{v}})
+            {% end %}
+          end
+        {% end %}
+      end
+
+      def to_s(io : IO)
+        super
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          {% for v in vs %}
+            io << " " << {{v.stringify}} << "=" << {{v}}.inspect
+          {% end %}
+        {% end %}
+      end
     end
 
     macro included

@@ -1,5 +1,19 @@
 require "kemal"
 
+class HTTP::Server::Context
+  def accepts?(mime_type)
+    @accepts ||=
+      if self.request.headers["Accept"]?
+        self.request.headers["Accept"].split(",").map(&.split(";").first)
+      else
+        [] of String
+      end
+    if accepts = @accepts
+      accepts.includes?(mime_type)
+    end
+  end
+end
+
 module Balloon
   module Controller
     macro host
@@ -7,17 +21,7 @@ module Balloon
     end
 
     macro accepts?(mime_type)
-      env.get?("accept") && env.get("accept").as(Array(String)).includes?({{mime_type}})
-    end
-
-    add_context_storage_type(Array(String))
-
-    before_all do |env|
-      if env.request.headers["Accept"]?
-        env.set "accept", env.request.headers["Accept"].split(",").map(&.split(";").first)
-      else
-        [] of String
-      end
+      env.accepts?({{mime_type}})
     end
 
     macro bad_request

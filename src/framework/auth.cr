@@ -28,10 +28,15 @@ module Balloon
         end
       end
 
-      headers = HTTP::Headers.new
-      env.response.status_code = 401
-      env.response.headers["Content-Type"] = "application/json"
-      env.response.print "{\"msg\":\"Forbidden\"}"
+      if env.accepts?("text/html")
+        env.response.status_code = 401
+        env.response.headers["Content-Type"] = "text/html"
+        env.response.print render "src/views/pages/unauthorized.ecr"
+      else
+        env.response.status_code = 401
+        env.response.headers["Content-Type"] = "application/json"
+        env.response.print "{\"msg\":\"Unauthorized\"}"
+      end
     end
 
     private def check_authorization(env)

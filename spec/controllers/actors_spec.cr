@@ -1,6 +1,4 @@
 require "../spec_helper"
-require "json"
-require "xml"
 
 Spectator.describe ActorsController do
   before_each { Balloon.database.exec "BEGIN TRANSACTION" }

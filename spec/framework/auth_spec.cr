@@ -39,10 +39,16 @@ Spectator.describe Balloon::Auth do
       expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
     end
 
+    it "fails to authenticate, as HTML" do
+      get "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html"}
+      expect(response.status_code).to eq(401)
+      expect(XML.parse_html(response.body).xpath_nodes("/html//title").first.text).to eq("Unauthorized")
+    end
+
     it "fails to authenticate" do
       get "/foo/bar/auth"
       expect(response.status_code).to eq(401)
-      expect(JSON.parse(response.body)).to eq({"msg" => "Forbidden"})
+      expect(JSON.parse(response.body)["msg"]).to eq("Unauthorized")
     end
 
     context "invalid session" do

@@ -75,5 +75,6 @@ class Actor
 end
 
 Balloon::Server.run do
+  Kemal.config.port = Random.new.rand(49152..65535)
   Kemal.config.logging = false
 end

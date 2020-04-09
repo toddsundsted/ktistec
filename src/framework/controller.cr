@@ -5,6 +5,8 @@ class HTTP::Server::Context
     @accepts ||=
       if self.request.headers["Accept"]?
         self.request.headers["Accept"].split(",").map(&.split(";").first)
+      elsif self.request.headers["Content-Type"]?
+        [self.request.headers["Content-Type"].split(";").first]
       else
         [] of String
       end

@@ -249,6 +249,17 @@ module Balloon
           {% end %}
         {% end %}
       end
+
+      def to_h
+        {% begin %}
+          {
+            {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+            {% for v in vs %}
+              {{v.stringify}} => {{v}},
+            {% end %}
+          }
+        {% end %}
+      end
     end
 
     macro included

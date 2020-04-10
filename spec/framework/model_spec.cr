@@ -243,4 +243,11 @@ Spectator.describe Balloon::Model do
       expect(saved_model.to_s).to match(/id=nil/)
     end
   end
+
+  describe "#to_h" do
+    it "returns the hash representation" do
+      saved_model = FooBarModel.new
+      expect(saved_model.to_h.to_a).to contain({"id", nil})
+    end
+  end
 end

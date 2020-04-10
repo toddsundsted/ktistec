@@ -32,7 +32,7 @@ module Balloon
     end
 
     private def self.encode64(str)
-      Base64.strict_encode(str).gsub(/=+/, "")
+      Base64.urlsafe_encode(str, padding: false)
     end
 
     private def self.sign(str, key)

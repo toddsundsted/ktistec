@@ -27,8 +27,8 @@ module Balloon
         secret_key
       )
       JSON.parse(Base64.decode_string(hashed_payload))
-    rescue JSON::ParseException | Base64::Error | IndexError
-      raise Error.new
+    rescue ex : JSON::ParseException | Base64::Error | IndexError
+      raise Error.new(ex.message)
     end
 
     private def self.encode64(str)

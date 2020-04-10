@@ -14,16 +14,16 @@ module Balloon
 
       if (value = check_authorization(env)) || (value = check_cookie(env))
         if payload = Balloon::JWT.decode(value)
-          begin
-            if session = Session.find(session_key: payload["jti"].as_s)
-              if Time.parse_iso8601(payload["iat"].as_s) > Time.utc - 1.month
+          if Time.parse_iso8601(payload["iat"].as_s) > Time.utc - 1.month
+            begin
+              if session = Session.find(session_key: payload["jti"].as_s)
                 env.current_actor = session.actor
                 env.session = session
                 return call_next(env)
               end
+            rescue ex : DB::Error
+              raise ex unless ex.message == "no rows"
             end
-          rescue ex : DB::Error
-            raise ex unless ex.message == "no rows"
           end
         end
       end

@@ -10,6 +10,7 @@ module Balloon
   #
   class Auth < Kemal::Handler
     def call(env)
+      return call_next env unless env.route_lookup.found?
       return call_next env if exclude_match?(env)
 
       if (value = check_authorization(env)) || (value = check_cookie(env))

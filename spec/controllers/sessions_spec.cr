@@ -18,13 +18,15 @@ Spectator.describe SessionsController do
 
   describe "GET /sessions" do
     it "responds with HTML" do
-      get "/sessions", HTTP::Headers{"Accept" => "text/html"}
+      headers = HTTP::Headers{"Accept" => "text/html"}
+      get "/sessions", headers
       expect(response.status_code).to eq(200)
-      expect(XML.parse_html(response.body).xpath_nodes("//form[./input]")).not_to be_empty
+      expect(XML.parse_html(response.body).xpath_nodes("//form[./input[@name='username']][./input[@name='password']]")).not_to be_empty
     end
 
     it "responds with JSON" do
-      get "/sessions", HTTP::Headers{"Accept" => "application/json"}
+      headers = HTTP::Headers{"Accept" => "application/json"}
+      get "/sessions", headers
       expect(response.status_code).to eq(200)
       expect(JSON.parse(response.body).as_h.keys).to have("username", "password")
     end
@@ -80,13 +82,15 @@ Spectator.describe SessionsController do
 
   describe "POST /sessions/forget" do
     it "fails to authenticate" do
-      post "/sessions/forget", HTTP::Headers{"Accept" => "text/html"}
+      headers = HTTP::Headers{"Accept" => "text/html"}
+      post "/sessions/forget", headers
       expect(response.status_code).to eq(401)
       expect(XML.parse_html(response.body).xpath_nodes("/html//title").first.text).to eq("Unauthorized")
     end
 
     it "fails to authenticate" do
-      post "/sessions/forget", HTTP::Headers{"Accept" => "application/json"}
+      headers = HTTP::Headers{"Accept" => "application/json"}
+      post "/sessions/forget", headers
       expect(response.status_code).to eq(401)
       expect(JSON.parse(response.body)["msg"]).to eq("Unauthorized")
     end

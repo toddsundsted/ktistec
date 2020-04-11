@@ -44,9 +44,15 @@ module Balloon
       halt env, status_code: 500, response: body.to_json
     end
 
-    macro skip_auth(paths, method = "GET")
+    # Don't authenticate specified handlers.
+    #
+    #     skip_auth ["/foo", "/bar"], GET, POST
+    #
+    macro skip_auth(paths, method = GET, *methods)
       class ::Balloon::Auth < ::Kemal::Handler
-        exclude {{paths}}, {{method}}
+        {% for method in (methods << method) %}
+          exclude {{paths}}, {{method.stringify}}
+        {% end %}
       end
     end
 

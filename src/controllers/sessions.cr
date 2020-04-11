@@ -3,8 +3,7 @@ require "../framework"
 class SessionsController
   include Balloon::Controller
 
-  skip_auth ["/sessions"], "GET"
-  skip_auth ["/sessions"], "POST"
+  skip_auth ["/sessions"], GET, POST
 
   get "/sessions" do |env|
     message = username = password = nil

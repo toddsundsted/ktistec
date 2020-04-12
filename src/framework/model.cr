@@ -29,8 +29,23 @@ module Balloon
 
       # Returns the count of saved instances.
       #
-      def count
-        Balloon.database.scalar("SELECT COUNT(*) FROM #{table_name}").as(Int)
+      def count(**options)
+        if options.empty?
+          Balloon.database.scalar("SELECT COUNT(*) FROM #{table_name}").as(Int)
+        else
+          {% begin %}
+            {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+            conditions = {{vs.map(&.stringify)}}.select do |v|
+              options.has_key?(v)
+            end.map do |v|
+              "#{v} = ?"
+            end.join(",")
+            Balloon.database.scalar(
+              "SELECT COUNT(*) FROM #{table_name} WHERE #{conditions}",
+              *options.values
+            ).as(Int)
+          {% end %}
+        end
       end
 
       # Returns all instances.

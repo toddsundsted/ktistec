@@ -88,12 +88,25 @@ Spectator.describe Balloon::Model do
   end
 
   describe ".count" do
-    it "returns the count of persisted instances" do
-      expect(FooBarModel.count).to eq(0)
+    before_each do
+      FooBarModel.new.save
+      NotNilModel.new(val: "Val").save
     end
 
     it "returns the count of persisted instances" do
-      expect(NotNilModel.count).to eq(0)
+      expect(FooBarModel.count).to eq(1)
+    end
+
+    it "returns the count of matching instances" do
+      expect(FooBarModel.count(foo: "")).to eq(0)
+    end
+
+    it "returns the count of persisted instances" do
+      expect(NotNilModel.count).to eq(1)
+    end
+
+    it "returns the count of matching instances" do
+      expect(NotNilModel.count(val: "")).to eq(0)
     end
   end
 

@@ -191,6 +191,44 @@ module Balloon
         @@table_name ||= Utils.table_name({{@type}})
       end
 
+      getter errors = {} of String => Array(String)
+
+      # Returns true if the instance is valid.
+      #
+      def valid?
+        validate.empty?
+      end
+
+      # Validates the instance and returns any errors.
+      #
+      def validate
+        @errors.clear
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          {% for v in vs %}
+            if self.responds_to?(:_validate_{{v}})
+              if error = self._validate_{{v}}({{v}})
+                @errors[{{v.stringify}}] = [error]
+              end
+            end
+          {% end %}
+        {% end %}
+      end
+
+      # Adds a validation to a property on an instance.
+      #
+      #     validates xyz { "is blank" if xyz.blank? }
+      #
+      macro validates(property, &block)
+        private def _validate_{{property.name}}({{property.name}})
+          {% if block %}
+            {{block.body}}
+          {% else %}
+            {{property.block.body}}
+          {% end %}
+        end
+      end
+
       # Saves the instance.
       #
       def save

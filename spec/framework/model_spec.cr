@@ -5,9 +5,15 @@ class FooBarModel
 
   @[Persistent]
   property foo : String?
+  validates foo do
+    # no op
+  end
 
   @[Persistent]
   property bar : String?
+  validates bar do
+    # no op
+  end
 end
 
 class NotNilModel
@@ -15,9 +21,17 @@ class NotNilModel
 
   @[Persistent]
   property key : String = "Key"
+  validates key { "is not capitalized" unless key.starts_with?(/[A-Z]/) }
 
   @[Persistent]
   property val : String
+  validates val { "is not capitalized" unless val.starts_with?(/[A-Z]/) }
+
+  def validate
+    super
+    @errors["instance"] = ["key is equal to val"] if key == val
+    @errors
+  end
 end
 
 Spectator.describe Balloon::Model::Utils do
@@ -172,6 +186,20 @@ Spectator.describe Balloon::Model do
       saved_model = NotNilModel.new(val: "Val").save
       expect(NotNilModel.where("val = ?", "Val")).to eq([saved_model])
       expect(NotNilModel.where("val = ?", "")).to be_empty
+    end
+  end
+
+  describe "#valid?" do
+    it "performs the validations" do
+      new_model = NotNilModel.new(key: "Test", val: "Test")
+      expect(new_model.valid?).to be_false
+      expect(new_model.errors).to eq({"instance" => ["key is equal to val"]})
+    end
+
+    it "performs the validations" do
+      new_model = NotNilModel.new(key: "key", val: "val")
+      expect(new_model.valid?).to be_false
+      expect(new_model.errors).to eq({"key" => ["is not capitalized"], "val" => ["is not capitalized"]})
     end
   end
 

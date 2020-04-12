@@ -41,7 +41,6 @@ Spectator.describe Balloon::Model do
 
   describe ".new" do
     it "creates a new instance" do
-      expect(FooBarModel.new(foo: "Foo").foo).to eq("Foo")
       expect(FooBarModel.new.foo).to be_nil
     end
 
@@ -53,11 +52,10 @@ Spectator.describe Balloon::Model do
   describe "#assign" do
     it "bulk assigns properties" do
       expect(FooBarModel.new.assign(foo: "Foo").foo).to eq("Foo")
-      expect(FooBarModel.new.assign.foo).to be_nil
     end
 
     it "bulk assigns properties" do
-      expect(NotNilModel.new(val: "Val").assign(val: "").val).to eq("")
+      expect(NotNilModel.new(val: "").assign(val: "Val").val).to eq("Val")
     end
   end
 

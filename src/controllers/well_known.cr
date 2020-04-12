@@ -31,8 +31,7 @@ class WellKnownController
     }
     env.response.content_type = "application/jrd+json"
     message.to_json
-  rescue ex: DB::Error
-    not_found if ex.message == "no rows"
-    raise ex
+  rescue Balloon::Model::NotFound
+    not_found
   end
 end

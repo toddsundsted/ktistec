@@ -151,6 +151,10 @@ Spectator.describe Balloon::Model do
         expect(NotNilModel.find(saved_model.id)).not_to be(saved_model)
         expect(NotNilModel.find(saved_model.id)).to eq(saved_model)
       end
+
+      it "raises an exception" do
+        expect{NotNilModel.find(999999)}.to raise_error(Balloon::Model::NotFound)
+      end
     end
 
     context "given properties" do
@@ -170,6 +174,10 @@ Spectator.describe Balloon::Model do
         saved_model = NotNilModel.new(val: "Val").save
         expect(NotNilModel.find(val: "Val")).not_to be(saved_model)
         expect(NotNilModel.find(val: "Val")).to eq(saved_model)
+      end
+
+      it "raises an exception" do
+        expect{NotNilModel.find(val: "Baz")}.to raise_error(Balloon::Model::NotFound)
       end
     end
   end

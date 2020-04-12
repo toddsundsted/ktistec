@@ -22,8 +22,7 @@ module Balloon
                 env.session = session
                 return call_next(env)
               end
-            rescue ex : DB::Error
-              raise ex unless ex.message == "no rows"
+            rescue Balloon::Model::NotFound
             end
           end
         end

@@ -90,6 +90,9 @@ module Balloon
             )
           end
         {% end %}
+      rescue ex: DB::Error
+        raise NotFound.new if ex.message == "no rows"
+        raise ex
       end
 
       # Finds the saved instance.
@@ -114,6 +117,9 @@ module Balloon
             )
           end
         {% end %}
+      rescue ex: DB::Error
+        raise NotFound.new if ex.message == "no rows"
+        raise ex
       end
 
       # Returns saved instances.
@@ -332,6 +338,9 @@ module Balloon
     property id : Int64?
 
     @@table_name : String?
+
+    class NotFound < Exception
+    end
 
     class Invalid < Exception
     end

@@ -87,6 +87,16 @@ Spectator.describe Balloon::Model do
     end
   end
 
+  describe ".empty?" do
+    it "returns true" do
+      expect(FooBarModel.empty?).to be_true
+    end
+
+    it "returns true" do
+      expect(NotNilModel.empty?).to be_true
+    end
+  end
+
   describe ".count" do
     before_each do
       FooBarModel.new.save

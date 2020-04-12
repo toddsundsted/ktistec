@@ -27,6 +27,12 @@ module Balloon
         @@table_name ||= Utils.table_name({{@type}})
       end
 
+      # Returns true if no instances exist.
+      #
+      def empty?
+        Balloon.database.scalar("SELECT COUNT(*) FROM #{table_name}") == 0
+      end
+
       # Returns the count of saved instances.
       #
       def count(**options)

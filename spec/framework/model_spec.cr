@@ -224,6 +224,12 @@ Spectator.describe Balloon::Model do
       expect(new_model.valid?).to be_false
       expect(new_model.errors).to eq({"key" => ["is not capitalized"], "val" => ["is not capitalized"]})
     end
+
+    it "performs the validations" do
+      new_model = NotNilModel.new(key: "Key", val: "Val")
+      expect(new_model.valid?).to be_true
+      expect(new_model.errors).to be_empty
+    end
   end
 
   describe "#save" do

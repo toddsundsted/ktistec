@@ -234,6 +234,7 @@ module Balloon
             end
           {% end %}
         {% end %}
+        @errors
       end
 
       # Adds a validation to a property on an instance.

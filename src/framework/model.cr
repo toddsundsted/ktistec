@@ -254,6 +254,7 @@ module Balloon
       # Saves the instance.
       #
       def save
+        raise Invalid.new unless valid?
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           if @id
@@ -331,6 +332,9 @@ module Balloon
     property id : Int64?
 
     @@table_name : String?
+
+    class Invalid < Exception
+    end
   end
 end
 

@@ -243,6 +243,12 @@ Spectator.describe Balloon::Model do
         expect{new_model.save}.to change{new_model.id}
       end
 
+      it "raises an exception" do
+        new_model = NotNilModel.new(val: "")
+        expect{new_model.save}.to raise_error(Balloon::Model::Invalid)
+        expect(new_model.errors).not_to be_empty
+      end
+
       it "saves the properties" do
         saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
         expect(FooBarModel.find(saved_model.id).foo).to eq("Foo")
@@ -265,6 +271,12 @@ Spectator.describe Balloon::Model do
         expect{saved_model.save}.not_to change{saved_model.id}
       end
 
+      it "raises an exception" do
+        new_model = NotNilModel.new(val: "Val").save
+        expect{new_model.assign(val: "").save}.to raise_error(Balloon::Model::Invalid)
+        expect(new_model.errors).not_to be_empty
+      end
+
       it "updates the properties" do
         updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
         expect(FooBarModel.find(updated_model.id).foo).to eq("Bar")
@@ -272,8 +284,8 @@ Spectator.describe Balloon::Model do
       end
 
       it "updates the properties" do
-        updated_model = NotNilModel.new(val: "Val").save.assign(val: "").save
-        expect(NotNilModel.find(updated_model.id).val).to eq("")
+        updated_model = NotNilModel.new(val: "Val").save.assign(val: "Baz").save
+        expect(NotNilModel.find(updated_model.id).val).to eq("Baz")
       end
     end
   end

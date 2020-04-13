@@ -10,7 +10,7 @@ class Actor
   include Balloon::Model
 
   # :nodoc:
-  private def self.cost
+  private def cost
     12
   end
 
@@ -19,26 +19,14 @@ class Actor
   # This constructor is used to create new actors (which must have a
   # valid username and password).
   #
-  def self.new(username, password, **options)
+  def self.new(username, password)
     keypair = OpenSSL::RSA.generate(2048, 17)
-    new(**options.merge({
+    new(
       username: username,
-      encrypted_password: Crypto::Bcrypt::Password.create(password, cost).to_s,
+      password: password,
       pem_public_key: keypair.public_key.to_pem,
       pem_private_key: keypair.to_pem
-    }))
-  end
-
-  # Sets the password.
-  #
-  def password=(password)
-    self.encrypted_password = Crypto::Bcrypt::Password.create(password).to_s
-  end
-
-  # Validates the given password.
-  #
-  def valid_password?(password)
-    Crypto::Bcrypt::Password.new(encrypted_password).verify(password)
+    )
   end
 
   @[Persistent]
@@ -46,6 +34,23 @@ class Actor
 
   @[Persistent]
   property encrypted_password : String
+
+  @[Assignable]
+  @password : String?
+
+  # Validates the given password.
+  #
+  def valid_password?(password)
+    Crypto::Bcrypt::Password.new(encrypted_password).verify(password)
+  end
+
+  def password=(@password)
+    self.encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
+  end
+
+  def password
+    @password
+  end
 
   @[Persistent]
   property pem_public_key : String

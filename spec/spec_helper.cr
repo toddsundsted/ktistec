@@ -50,6 +50,10 @@ def response
   Global.response.not_nil!
 end
 
+def self.random_string
+  ('a'..'z').to_a.shuffle.first(8).join + "1="
+end
+
 require "../src/framework"
 
 module Balloon

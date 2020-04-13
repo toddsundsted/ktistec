@@ -4,10 +4,6 @@ Spectator.describe ActorsController do
   before_each { Balloon.database.exec "BEGIN TRANSACTION" }
   after_each { Balloon.database.exec "ROLLBACK" }
 
-  def random_string
-    ('a'..'z').to_a.shuffle.first(8).join
-  end
-
   let(username) { random_string }
   let(password) { random_string }
 

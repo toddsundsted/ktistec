@@ -1,6 +1,11 @@
 module Balloon
   module Model
-    # Marks properties as persistent.
+    # Marks properties as bulk assignable.
+    #
+    annotation Assignable
+    end
+
+    # Marks properties as persistent (and bulk assignable).
     #
     annotation Persistent
     end
@@ -171,7 +176,7 @@ module Balloon
       #
       def initialize(**options)
         {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             if (o = options[{{v.symbolize}}]?)
               self.{{v}} = o
@@ -202,7 +207,7 @@ module Balloon
       #
       def assign(**options)
         {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             if (o = options[{{v.symbolize}}]?)
               self.{{v}} = o

@@ -35,6 +35,28 @@ Spectator.describe Actor do
     end
   end
 
+  describe "#validate" do
+    it "rejects the username as too short" do
+      new_actor = Actor.new(username: "", password: "")
+      expect(new_actor.validate["username"]).to eq(["is too short"])
+    end
+
+    it "rejects the username as not unique" do
+      new_actor = Actor.new(username: subject.username, password: password)
+      expect(new_actor.validate["username"]).to eq(["must be unique"])
+    end
+
+    it "rejects the password as too short" do
+      new_actor = Actor.new(username: "", password: "a1!")
+      expect(new_actor.validate["password"]).to eq(["is too short"])
+    end
+
+    it "rejects the password as weak" do
+      new_actor = Actor.new(username: "", password: "abc123")
+      expect(new_actor.validate["password"]).to eq(["is weak"])
+    end
+  end
+
   describe "#public_key" do
     it "returns the public key" do
       expect(subject.public_key).to be_a(OpenSSL::RSA)

@@ -52,6 +52,23 @@ class Actor
     @password
   end
 
+  def validate
+    super
+    if username = self.username
+      messages = [] of String
+      messages << "is too short" unless username.size >= 1
+      messages << "must be unique" unless (actors = Actor.where(username: username)).empty? || actors.all? { |actor| actor.id == self.id }
+      errors["username"] = messages unless messages.empty?
+    end
+    if password = self.password
+      messages = [] of String
+      messages << "is weak" unless password =~ /[^a-zA-Z0-9]/ && password =~ /[a-zA-Z]/ && password =~ /[0-9]/
+      messages << "is too short" unless password.size >= 6
+      errors["password"] = messages unless messages.empty?
+    end
+    errors
+  end
+
   @[Persistent]
   property pem_public_key : String
 

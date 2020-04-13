@@ -1,0 +1,7 @@
+{
+  <%- unless actor.errors.empty? -%>
+    "msg":<%= actor.errors.flat_map { |k, vs| vs.map { |v| "#{k} #{v}" } }.join(", ").inspect %>,
+  <%- end -%>
+  "username":<%= actor.username.inspect %>,
+  "password":<%= actor.password.inspect %>
+}

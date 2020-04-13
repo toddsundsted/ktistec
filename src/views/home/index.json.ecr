@@ -1,0 +1,10 @@
+{
+  "@context":"https://www.w3.org/ns/activitystreams",
+  "id": "<%= host %>",
+  "type": "Collection",
+  "items":[
+    <%- actors.each_with_index do |actor, i| -%>
+      "/actors/<%= actor.username %>"<%= i < actors.size - 1 ? "," : "" %>
+    <%- end -%>
+  ]
+}

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang='en'>
+    <head>
+        <meta charset='utf-8'>
+    </head>
+    <body>
+        <div>
+            <h1>Sign Up</h1>
+            <% unless actor.errors.empty? %>
+                <p>Error: <%= actor.errors.flat_map { |k, vs| vs.map { |v| "#{k} #{v}" } }.join(", ") %></p>
+            <% end %>
+            <form method='POST'>
+                <input type='text' name='username' value='<%= actor.username %>'>
+                <input type='password' name='password' value='<%= actor.password %>'>
+                <input type='submit' value='Sign Up'>
+            </form>
+        </div>
+    </body>
+</html>

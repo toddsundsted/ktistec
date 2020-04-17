@@ -1,3 +1,5 @@
+require "./framework"
+
 module Balloon
   module Model
     # Marks properties as bulk assignable.

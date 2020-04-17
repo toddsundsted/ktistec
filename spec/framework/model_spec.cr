@@ -49,7 +49,7 @@ class NotNilModel
 end
 
 Spectator.describe Balloon::Model::Utils do
-  describe "#table_name" do
+  describe ".table_name" do
     it "returns the table name" do
       expect(described_class.table_name(Time::Span)).to eq("time_spans")
       expect(described_class.table_name(SemanticVersion)).to eq("semantic_versions")

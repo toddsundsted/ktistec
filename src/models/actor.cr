@@ -83,7 +83,5 @@ class Actor
     OpenSSL::RSA.new(pem_private_key, nil, true)
   end
 
-  def sessions
-    Session.where(actor_id: self.id)
-  end
+  has_many sessions
 end

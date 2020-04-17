@@ -37,12 +37,5 @@ class Session
     body
   end
 
-  def actor
-    Actor.find(actor_id)
-  end
-
-  def actor=(actor)
-    self.actor_id = actor.id.not_nil!
-    actor
-  end
+  belongs_to actor
 end

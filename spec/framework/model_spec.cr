@@ -19,6 +19,8 @@ class FooBarModel
   property not_nil_model_id : Int64?
 
   belongs_to not_nil_model
+
+  has_one not_nil, class_name: NotNilModel
 end
 
 class NotNilModel
@@ -42,6 +44,8 @@ class NotNilModel
   property foo_bar_model_id : Int64?
 
   belongs_to foo_bar, class_name: FooBarModel, foreign_key: foo_bar_model_id
+
+  has_many foo_bar_models
 end
 
 Spectator.describe Balloon::Model::Utils do
@@ -348,12 +352,20 @@ Spectator.describe Balloon::Model do
 
     it "assigns the associated instance" do
       expect(foo_bar.not_nil_model = not_nil).to eq(not_nil)
+      expect(foo_bar.not_nil_model).to eq(not_nil)
+    end
+
+    it "assigns the associated instance" do
       expect(not_nil.foo_bar = foo_bar).to eq(foo_bar)
+      expect(not_nil.foo_bar).to eq(foo_bar)
     end
 
     it "gets the associated instance" do
-      expect(foo_bar.not_nil_model).to eq(not_nil)
-      expect(not_nil.foo_bar).to eq(foo_bar)
+      expect(foo_bar.not_nil).to eq(not_nil)
+    end
+
+    it "gets the associated instance" do
+      expect(not_nil.foo_bar_models).to eq([foo_bar])
     end
   end
 end

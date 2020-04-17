@@ -283,6 +283,32 @@ module Balloon
         {% end %}
       end
 
+      # Specifies a one-to-many association with another model.
+      #
+      macro has_many(name, primary_key = id, foreign_key = nil, class_name = nil)
+        {% begin %}
+          {% singular = name.stringify %}
+          {% singular = singular =~ /(ses|sses|shes|ches|xes|zes)$/ ? singular[0..-3] : singular[0..-2] %}
+          {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
+          {% class_name = class_name || singular.camelcase.id %}
+          def {{name}}
+            {{class_name}}.where({{foreign_key}}: self.{{primary_key}})
+          end
+        {% end %}
+      end
+
+      # Specifies a one-to-one association with another model.
+      #
+      macro has_one(name, primary_key = id, foreign_key = nil, class_name = nil)
+        {% begin %}
+          {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
+          {% class_name = class_name || singular.stringify.camelcase.id %}
+          def {{name}}
+            {{class_name}}.find({{foreign_key}}: self.{{primary_key}})
+          end
+        {% end %}
+      end
+
       # Saves the instance.
       #
       def save

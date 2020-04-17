@@ -14,6 +14,11 @@ class FooBarModel
   validates bar do
     # no op
   end
+
+  @[Persistent]
+  property not_nil_model_id : Int64?
+
+  belongs_to not_nil_model
 end
 
 class NotNilModel
@@ -32,6 +37,11 @@ class NotNilModel
     @errors["instance"] = ["key is equal to val"] if key == val
     @errors
   end
+
+  @[Persistent]
+  property foo_bar_model_id : Int64?
+
+  belongs_to foo_bar, class_name: FooBarModel, foreign_key: foo_bar_model_id
 end
 
 Spectator.describe Balloon::Model::Utils do
@@ -46,8 +56,8 @@ end
 
 Spectator.describe Balloon::Model do
   before_each do
-    Balloon.database.exec "CREATE TABLE foo_bar_models (id integer PRIMARY KEY AUTOINCREMENT, foo text, bar text)"
-    Balloon.database.exec "CREATE TABLE not_nil_models (id integer PRIMARY KEY AUTOINCREMENT, key text NOT NULL, val text NOT NULL)"
+    Balloon.database.exec "CREATE TABLE foo_bar_models (id integer PRIMARY KEY AUTOINCREMENT, not_nil_model_id integer, foo text, bar text)"
+    Balloon.database.exec "CREATE TABLE not_nil_models (id integer PRIMARY KEY AUTOINCREMENT, foo_bar_model_id integer, key text NOT NULL, val text NOT NULL)"
   end
   after_each do
     Balloon.database.exec "DROP TABLE foo_bar_models"
@@ -324,6 +334,26 @@ Spectator.describe Balloon::Model do
     it "returns the hash representation" do
       saved_model = FooBarModel.new
       expect(saved_model.to_h.to_a).to contain({"id", nil})
+    end
+  end
+
+  context "associations" do
+    let(foo_bar) { FooBarModel.new.save }
+    let(not_nil) { NotNilModel.new(val: "Val").save }
+
+    before_each do
+      foo_bar.assign(not_nil_model_id: not_nil.id).save
+      not_nil.assign(foo_bar_model_id: foo_bar.id).save
+    end
+
+    it "assigns the associated instance" do
+      expect(foo_bar.not_nil_model = not_nil).to eq(not_nil)
+      expect(not_nil.foo_bar = foo_bar).to eq(foo_bar)
+    end
+
+    it "gets the associated instance" do
+      expect(foo_bar.not_nil_model).to eq(not_nil)
+      expect(not_nil.foo_bar).to eq(foo_bar)
     end
   end
 end

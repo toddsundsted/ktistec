@@ -262,6 +262,27 @@ module Balloon
         end
       end
 
+      # Specifies a one-to-one association with another model.
+      #
+      macro belongs_to(name, primary_key = id, foreign_key = nil, class_name = nil)
+        {% begin %}
+          {% foreign_key = foreign_key || "#{name}_id".id %}
+          {% class_name = class_name || name.stringify.camelcase.id %}
+          def {{name}}=({{name}} : {{class_name}})
+            {% m = @type.methods.find { |m| m.name == "#{foreign_key}=" } %}
+            {% if !m.args.first.restriction.resolve.nilable? %}
+              self.{{foreign_key}} = {{name}}.{{primary_key}}.not_nil!
+            {% else %}
+              self.{{foreign_key}} = {{name}}.{{primary_key}}
+            {% end %}
+            {{name}}
+          end
+          def {{name}}
+            {{class_name}}.find({{foreign_key}})
+          end
+        {% end %}
+      end
+
       # Saves the instance.
       #
       def save

@@ -86,8 +86,24 @@ end
 
 Spectator.describe Balloon::Model do
   before_each do
-    Balloon.database.exec "CREATE TABLE foo_bar_models (id integer PRIMARY KEY AUTOINCREMENT, not_nil_model_id integer, body_json text, foo text, bar text)"
-    Balloon.database.exec "CREATE TABLE not_nil_models (id integer PRIMARY KEY AUTOINCREMENT, foo_bar_model_id integer, body_yaml text, key text NOT NULL, val text NOT NULL)"
+    Balloon.database.exec <<-SQL
+      CREATE TABLE foo_bar_models (
+        id integer PRIMARY KEY AUTOINCREMENT,
+        not_nil_model_id integer,
+        body_json text,
+        foo text,
+        bar text
+      )
+    SQL
+    Balloon.database.exec <<-SQL
+      CREATE TABLE not_nil_models (
+        id integer PRIMARY KEY AUTOINCREMENT,
+        foo_bar_model_id integer,
+        body_yaml text,
+        key text NOT NULL,
+        val text NOT NULL
+      )
+    SQL
   end
   after_each do
     Balloon.database.exec "DROP TABLE foo_bar_models"

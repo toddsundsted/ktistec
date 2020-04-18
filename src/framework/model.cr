@@ -7,6 +7,11 @@ module Balloon
     annotation Assignable
     end
 
+    # Marks properties as insignificant (not part of identity).
+    #
+    annotation Insignificant
+    end
+
     # Marks properties as persistent (and bulk assignable).
     #
     annotation Persistent
@@ -192,7 +197,7 @@ module Balloon
       #
       def ==(other : self)
         {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
           if
             {% for v in vs %}
               self.{{v}} == other.{{v}} &&

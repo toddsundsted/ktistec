@@ -311,6 +311,26 @@ module Balloon
         {% end %}
       end
 
+      # Specifies a serializer for a column.
+      #
+      macro serializes(name, format = json, to_method = nil, from_method = nil, column_name = nil, class_name = nil)
+        {% begin %}
+          {% to_method = to_method || "to_#{format}".id %}
+          {% from_method = from_method || "from_#{format}".id %}
+          {% column_name = column_name || "#{name}_#{format}".id %}
+          {% class_name = class_name || name.stringify.capitalize.id %}
+          def {{name}}=({{name}} : {{class_name}})
+            self.{{column_name}} = {{name}}.{{to_method}}
+            {{name}}
+          end
+          def {{name}}
+            if {{column_name}} = self.{{column_name}}
+              {{class_name}}.{{from_method}}({{column_name}})
+            end
+          end
+        {% end %}
+      end
+
       # Saves the instance.
       #
       def save

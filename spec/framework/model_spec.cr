@@ -19,8 +19,21 @@ class FooBarModel
   property not_nil_model_id : Int64?
 
   belongs_to not_nil_model
-
   has_one not_nil, class_name: NotNilModel
+
+  @[Persistent]
+  property body_json : String?
+
+  serializes body
+
+  class Body
+    JSON.mapping(
+      body: Float64
+    )
+
+    def initialize(@body)
+    end
+  end
 end
 
 class NotNilModel
@@ -44,8 +57,21 @@ class NotNilModel
   property foo_bar_model_id : Int64?
 
   belongs_to foo_bar, class_name: FooBarModel, foreign_key: foo_bar_model_id
-
   has_many foo_bar_models
+
+  @[Persistent]
+  property body_yaml : String?
+
+  serializes body, format: yaml
+
+  class Body
+    YAML.mapping(
+      body: Float64
+    )
+
+    def initialize(@body)
+    end
+  end
 end
 
 Spectator.describe Balloon::Model::Utils do
@@ -60,8 +86,8 @@ end
 
 Spectator.describe Balloon::Model do
   before_each do
-    Balloon.database.exec "CREATE TABLE foo_bar_models (id integer PRIMARY KEY AUTOINCREMENT, not_nil_model_id integer, foo text, bar text)"
-    Balloon.database.exec "CREATE TABLE not_nil_models (id integer PRIMARY KEY AUTOINCREMENT, foo_bar_model_id integer, key text NOT NULL, val text NOT NULL)"
+    Balloon.database.exec "CREATE TABLE foo_bar_models (id integer PRIMARY KEY AUTOINCREMENT, not_nil_model_id integer, body_json text, foo text, bar text)"
+    Balloon.database.exec "CREATE TABLE not_nil_models (id integer PRIMARY KEY AUTOINCREMENT, foo_bar_model_id integer, body_yaml text, key text NOT NULL, val text NOT NULL)"
   end
   after_each do
     Balloon.database.exec "DROP TABLE foo_bar_models"
@@ -366,6 +392,23 @@ Spectator.describe Balloon::Model do
 
     it "gets the associated instance" do
       expect(not_nil.foo_bar_models).to eq([foo_bar])
+    end
+  end
+
+  context "serializations" do
+    let(foo_bar) { FooBarModel.new }
+    let(not_nil) { NotNilModel.new(val: "Val") }
+
+    it "serializes body as JSON" do
+      foo_bar.body = FooBarModel::Body.new(13.0)
+      expect(foo_bar.body_json).to eq("{\"body\":13.0}")
+      expect(foo_bar.body).to be_a(FooBarModel::Body)
+    end
+
+    it "serializes body as YAML" do
+      not_nil.body = NotNilModel::Body.new(17.0)
+      expect(not_nil.body_yaml).to eq("---\nbody: 17.0\n")
+      expect(not_nil.body).to be_a(NotNilModel::Body)
     end
   end
 end

@@ -1,6 +1,7 @@
 require "spectator"
 require "kemal"
 require "json"
+require "yaml"
 require "xml"
 
 # from https://github.com/kemalcr/spec-kemal/blob/master/src/spec-kemal.cr

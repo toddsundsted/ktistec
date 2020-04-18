@@ -21,15 +21,6 @@ up do |db|
     CREATE INDEX idx_sessions_actor_id
       ON sessions (actor_id ASC)
   STR
-  db.exec <<-STR
-    CREATE TRIGGER trg_sessions_updated_at
-    AFTER UPDATE
-    ON sessions FOR EACH ROW
-    BEGIN
-      UPDATE sessions SET updated_at = current_timestamp
-        WHERE id = old.id;
-    END
-  STR
 end
 
 down do |db|

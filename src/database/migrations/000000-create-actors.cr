@@ -18,15 +18,6 @@ up do |db|
     CREATE UNIQUE INDEX idx_actors_username
       ON actors (username ASC)
   STR
-  db.exec <<-STR
-    CREATE TRIGGER trg_actors_updated_at
-    AFTER UPDATE
-    ON actors FOR EACH ROW
-    BEGIN
-      UPDATE actors SET updated_at = current_timestamp
-        WHERE id = old.id;
-    END
-  STR
 end
 
 down do |db|

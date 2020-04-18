@@ -6,8 +6,8 @@ up do |db|
   db.exec <<-STR
     CREATE TABLE actors (
       id integer PRIMARY KEY AUTOINCREMENT,
-      created_at datetime NOT NULL DEFAULT current_timestamp,
-      updated_at datetime NOT NULL DEFAULT current_timestamp,
+      created_at datetime NOT NULL,
+      updated_at datetime NOT NULL,
       username varchar(255) NOT NULL,
       encrypted_password varchar(255) NOT NULL,
       pem_public_key text NOT NULL,

@@ -6,8 +6,8 @@ up do |db|
   db.exec <<-STR
     CREATE TABLE sessions (
       id integer PRIMARY KEY AUTOINCREMENT,
-      created_at datetime NOT NULL DEFAULT current_timestamp,
-      updated_at datetime NOT NULL DEFAULT current_timestamp,
+      created_at datetime NOT NULL,
+      updated_at datetime NOT NULL,
       body_json text NOT NULL,
       session_key varchar(22) NOT NULL,
       actor_id integer NOT NULL

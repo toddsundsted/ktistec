@@ -89,6 +89,8 @@ Spectator.describe Balloon::Model do
     Balloon.database.exec <<-SQL
       CREATE TABLE foo_bar_models (
         id integer PRIMARY KEY AUTOINCREMENT,
+        created_at datetime,
+        updated_at datetime,
         not_nil_model_id integer,
         body_json text,
         foo text,
@@ -98,6 +100,8 @@ Spectator.describe Balloon::Model do
     Balloon.database.exec <<-SQL
       CREATE TABLE not_nil_models (
         id integer PRIMARY KEY AUTOINCREMENT,
+        created_at datatime,
+        updated_at datetime,
         foo_bar_model_id integer,
         body_yaml text,
         key text NOT NULL,

@@ -182,6 +182,10 @@ module Balloon
       # Initializes the new instance.
       #
       def initialize(**options)
+        options = {
+          created_at: Time.utc,
+          updated_at: Time.utc
+        }.merge(**options)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
@@ -415,6 +419,14 @@ module Balloon
 
     @[Persistent]
     property id : Int64?
+
+    @[Persistent]
+    @[Insignificant]
+    property created_at : Time
+
+    @[Persistent]
+    @[Insignificant]
+    property updated_at : Time
 
     @@table_name : String?
 

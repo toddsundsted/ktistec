@@ -183,6 +183,7 @@ module Balloon
       #
       def initialize(**options)
         options = {
+          id: nil,
           created_at: Time.utc,
           updated_at: Time.utc
         }.merge(**options)

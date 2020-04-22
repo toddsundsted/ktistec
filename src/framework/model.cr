@@ -424,14 +424,6 @@ module Balloon
     @[Persistent]
     property id : Int64?
 
-    @[Persistent]
-    @[Insignificant]
-    property created_at : Time
-
-    @[Persistent]
-    @[Insignificant]
-    property updated_at : Time
-
     @@table_name : String?
 
     class NotFound < Exception

@@ -348,7 +348,9 @@ module Balloon
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           if @id
-            @updated_at = Time.utc
+            if self.responds_to?(:updated_at=)
+              self.updated_at = Time.utc
+            end
             conditions = {{vs.map(&.stringify)}}.map do |v|
               "#{v} = ?"
             end.join(",")

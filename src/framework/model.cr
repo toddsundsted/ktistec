@@ -414,6 +414,8 @@ module Balloon
           }
         {% end %}
       end
+
+      @@table_name : String?
     end
 
     macro included
@@ -423,8 +425,6 @@ module Balloon
 
     @[Persistent]
     property id : Int64?
-
-    @@table_name : String?
 
     class NotFound < Exception
     end

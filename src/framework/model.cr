@@ -1,7 +1,7 @@
 require "./framework"
 
 module Balloon
-  module Model
+  module Model(*T)
     # Marks properties as bulk assignable.
     #
     annotation Assignable
@@ -421,6 +421,10 @@ module Balloon
     macro included
       extend ClassMethods
       include InstanceMethods
+
+      {% for type in T.type_vars %}
+        include ::Balloon::Model::{{type}}
+      {% end %}
     end
 
     @[Persistent]
@@ -434,4 +438,5 @@ module Balloon
   end
 end
 
+require "./model/**"
 require "../models/**"

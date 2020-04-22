@@ -7,7 +7,7 @@ require "openssl_ext"
 # Also an account.
 #
 class Actor
-  include Balloon::Model
+  include Balloon::Model(Common)
 
   # :nodoc:
   private def cost

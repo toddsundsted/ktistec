@@ -1,7 +1,17 @@
 require "../spec_helper"
 
+module None
+end
+
+module Balloon
+  module Model
+    module None
+    end
+  end
+end
+
 class FooBarModel
-  include Balloon::Model(Common)
+  include Balloon::Model(None)
 
   @[Persistent]
   property foo : String?
@@ -37,7 +47,7 @@ class FooBarModel
 end
 
 class NotNilModel
-  include Balloon::Model(Common)
+  include Balloon::Model(None)
 
   @[Persistent]
   property key : String = "Key"

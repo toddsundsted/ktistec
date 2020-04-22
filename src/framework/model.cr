@@ -182,11 +182,6 @@ module Balloon
       # Initializes the new instance.
       #
       def initialize(**options)
-        options = {
-          id: nil,
-          created_at: Time.utc,
-          updated_at: Time.utc
-        }.merge(**options)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
@@ -428,7 +423,7 @@ module Balloon
     end
 
     @[Persistent]
-    property id : Int64?
+    property id : Int64? = nil
 
     class NotFound < Exception
     end

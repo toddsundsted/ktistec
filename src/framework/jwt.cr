@@ -42,7 +42,5 @@ module Balloon
     private def self.verify(sig, str, key)
       Crypto::Subtle.constant_time_compare(sign(str, key), sig)
     end
-
-    private TOKEN_RE = /^([a-zA-Z0-9\+\/]+)(\.([a-zA-Z0-9\+\/]+)){2}$/
   end
 end

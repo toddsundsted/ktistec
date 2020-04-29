@@ -73,7 +73,7 @@ module Balloon
   end
 end
 
-class Actor
+class Account
   private def cost
     4 # reduce the cost of computing a bcrypt hash
   end

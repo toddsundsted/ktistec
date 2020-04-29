@@ -7,9 +7,9 @@ Spectator.describe SessionsController do
   let(username) { random_string }
   let(password) { random_string }
 
-  let!(actor) { Actor.new(username, password).save }
-  let(session) { Session.new(actor).save }
-  let(payload) { {sub: actor.id, jti: session.session_key, iat: Time.utc} }
+  let!(account) { Account.new(username, password).save }
+  let(session) { Session.new(account).save }
+  let(payload) { {sub: account.id, jti: session.session_key, iat: Time.utc} }
   let(jwt) { Balloon::JWT.encode(payload) }
 
   describe "GET /sessions" do

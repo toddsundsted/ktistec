@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-Spectator.describe Actor do
+Spectator.describe Account do
   before_each { Balloon.database.exec "BEGIN TRANSACTION" }
   after_each { Balloon.database.exec "ROLLBACK" }
 
@@ -33,23 +33,23 @@ Spectator.describe Actor do
 
   describe "#validate" do
     it "rejects the username as too short" do
-      new_actor = Actor.new(username: "", password: "")
-      expect(new_actor.validate["username"]).to eq(["is too short"])
+      new_account = described_class.new(username: "", password: "")
+      expect(new_account.validate["username"]).to eq(["is too short"])
     end
 
     it "rejects the username as not unique" do
-      new_actor = Actor.new(username: subject.username, password: password)
-      expect(new_actor.validate["username"]).to eq(["must be unique"])
+      new_account = described_class.new(username: subject.username, password: password)
+      expect(new_account.validate["username"]).to eq(["must be unique"])
     end
 
     it "rejects the password as too short" do
-      new_actor = Actor.new(username: "", password: "a1!")
-      expect(new_actor.validate["password"]).to eq(["is too short"])
+      new_account = described_class.new(username: "", password: "a1!")
+      expect(new_account.validate["password"]).to eq(["is too short"])
     end
 
     it "rejects the password as weak" do
-      new_actor = Actor.new(username: "", password: "abc123")
-      expect(new_actor.validate["password"]).to eq(["is weak"])
+      new_account = described_class.new(username: "", password: "abc123")
+      expect(new_account.validate["password"]).to eq(["is weak"])
     end
   end
 

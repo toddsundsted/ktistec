@@ -1,21 +1,21 @@
 require "../framework/controller"
 
-class ActorsController
+class AccountsController
   include Balloon::Controller
 
-  skip_auth ["/actors/:username"]
+  skip_auth ["/accounts/:username"]
 
-  get "/actors/:username" do |env|
+  get "/accounts/:username" do |env|
     username = env.params.url["username"]
 
-    actor = Actor.find(username: username)
+    account = Account.find(username: username)
 
     if accepts?("text/html")
       env.response.content_type = "text/html"
-      render "src/views/actors/show.ecr"
+      render "src/views/accounts/show.ecr"
     else
       env.response.content_type = "application/activity+json"
-      render "src/views/actors/json.ecr"
+      render "src/views/accounts/json.ecr"
     end
   rescue Balloon::Model::NotFound
     not_found

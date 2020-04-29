@@ -10,7 +10,7 @@ up do |db|
       updated_at datetime NOT NULL,
       body_json text NOT NULL,
       session_key varchar(22) NOT NULL,
-      actor_id integer NOT NULL
+      account_id integer NOT NULL
     )
   STR
   db.exec <<-STR
@@ -18,8 +18,8 @@ up do |db|
       ON sessions (session_key ASC)
   STR
   db.exec <<-STR
-    CREATE INDEX idx_sessions_actor_id
-      ON sessions (actor_id ASC)
+    CREATE INDEX idx_sessions_account_id
+      ON sessions (account_id ASC)
   STR
 end
 

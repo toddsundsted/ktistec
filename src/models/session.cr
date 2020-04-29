@@ -9,13 +9,13 @@ class Session
   # Allocates a new session.
   #
   # This constructor is used to create new sessions (which must belong
-  # to an actor).
+  # to an account).
   #
-  def self.new(actor, body = "", **options)
+  def self.new(account, body = "", **options)
     new(**options.merge({
       session_key: Random::Secure.urlsafe_base64,
       body_json: body.to_json,
-      actor_id: actor.id,
+      account_id: account.id,
     }))
   end
 
@@ -26,7 +26,7 @@ class Session
   property body_json : String
 
   @[Persistent]
-  property actor_id : Int64
+  property account_id : Int64
 
   def body
     JSON.parse(body_json)
@@ -37,5 +37,5 @@ class Session
     body
   end
 
-  belongs_to actor
+  belongs_to account
 end

@@ -7,8 +7,8 @@ Spectator.describe Session do
   let(username) { random_string }
   let(password) { random_string }
 
-  let(actor) { Actor.new(username, password).save }
-  subject { described_class.new(actor).save }
+  let(account) { Account.new(username, password).save }
+  subject { described_class.new(account).save }
 
   describe "#body=" do
     it "sets the body" do
@@ -24,17 +24,17 @@ Spectator.describe Session do
     end
   end
 
-  describe "#actor=" do
-    it "sets the actor" do
-      actor = Actor.new(random_string, random_string).save
-      expect{subject.actor = actor}.to change{subject.actor_id}
+  describe "#account=" do
+    it "sets the account" do
+      account = Account.new(random_string, random_string).save
+      expect{subject.account = account}.to change{subject.account_id}
     end
   end
 
-  describe "#actor" do
-    it "gets the actor" do
-      actor = subject.actor = Actor.new(random_string, random_string).save
-      expect(subject.actor).to eq(actor)
+  describe "#account" do
+    it "gets the account" do
+      account = subject.account = Account.new(random_string, random_string).save
+      expect(subject.account).to eq(account)
     end
   end
 end

@@ -4,7 +4,7 @@ extend Balloon::Database::Migration
 
 up do |db|
   db.exec <<-STR
-    CREATE TABLE actors (
+    CREATE TABLE accounts (
       id integer PRIMARY KEY AUTOINCREMENT,
       created_at datetime NOT NULL,
       updated_at datetime NOT NULL,
@@ -15,13 +15,13 @@ up do |db|
     )
   STR
   db.exec <<-STR
-    CREATE UNIQUE INDEX idx_actors_username
-      ON actors (username ASC)
+    CREATE UNIQUE INDEX idx_accounts_username
+      ON accounts (username ASC)
   STR
 end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE actors;
+    DROP TABLE accounts;
   STR
 end

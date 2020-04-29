@@ -2,11 +2,11 @@ require "../framework/model"
 require "crypto/bcrypt/password"
 require "openssl_ext"
 
-# An ActivityPub actor.
+# An ActivityPub account.
 #
 # Also an account.
 #
-class Actor
+class Account
   include Balloon::Model(Common)
 
   # :nodoc:
@@ -14,9 +14,9 @@ class Actor
     12
   end
 
-  # Allocates a new actor.
+  # Allocates a new account.
   #
-  # This constructor is used to create new actors (which must have a
+  # This constructor is used to create new accounts (which must have a
   # valid username and password).
   #
   def self.new(username, password)
@@ -57,7 +57,7 @@ class Actor
     if username = self.username
       messages = [] of String
       messages << "is too short" unless username.size >= 1
-      messages << "must be unique" unless (actors = Actor.where(username: username)).empty? || actors.all? { |actor| actor.id == self.id }
+      messages << "must be unique" unless (accounts = Account.where(username: username)).empty? || accounts.all? { |account| account.id == self.id }
       errors["username"] = messages unless messages.empty?
     end
     if password = self.password

@@ -6,8 +6,8 @@
     <body>
         <div>
             <h1>Community</h1>
-            <%- actors.each do |actor| -%>
-                <p><a href="/actors/<%= actor.username %>"><%= actor.username %></a></p>
+            <%- accounts.each do |account| -%>
+                <p><a href="/accounts/<%= account.username %>"><%= account.username %></a></p>
             <%- end -%>
         </div>
     </body>

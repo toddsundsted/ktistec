@@ -6,8 +6,8 @@ class HomeController
   skip_auth ["/"], GET, POST
 
   get "/" do |env|
-    if (actors = Actor.all).empty?
-      actor = Actor.new("", "")
+    if (accounts = Account.all).empty?
+      account = Account.new("", "")
 
       if accepts?("text/html")
         env.response.content_type = "text/html"
@@ -28,18 +28,18 @@ class HomeController
   end
 
   post "/" do |env|
-    if (actors = Actor.all).empty?
-      actor = Actor.new(*params(env))
+    if (accounts = Account.all).empty?
+      account = Account.new(*params(env))
 
-      if actor.valid?
-        actor.save
-        session = Session.new(actor).save
-        payload = {sub: actor.id, jti: session.session_key, iat: Time.utc}
+      if account.valid?
+        account.save
+        session = Session.new(account).save
+        payload = {sub: account.id, jti: session.session_key, iat: Time.utc}
         jwt = Balloon::JWT.encode(payload)
 
         if accepts?("text/html")
           env.response.cookies["AuthToken"] = jwt
-          env.redirect "/actors/#{actor.username}"
+          env.redirect "/accounts/#{account.username}"
         else
           env.response.content_type = "application/json"
           {jwt: jwt}.to_json

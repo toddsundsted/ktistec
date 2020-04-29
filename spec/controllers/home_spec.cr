@@ -55,18 +55,18 @@ Spectator.describe HomeController do
         expect(JSON.parse(response.body)["msg"]).to match(/username is too short, password is too short/)
       end
 
-      it "creates actor and redirects" do
+      it "creates account and redirects" do
         headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
         body = "username=#{username}&password=#{password}"
-        expect{post "/", headers, body}.to change{Actor.count}.by(1)
+        expect{post "/", headers, body}.to change{Account.count}.by(1)
         expect(response.status_code).to eq(302)
         expect(response.headers["Set-Cookie"]).to be_truthy
       end
 
-      it "creates actor" do
+      it "creates account" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
         body = {username: username, password: password}.to_json
-        expect{post "/", headers, body}.to change{Actor.count}.by(1)
+        expect{post "/", headers, body}.to change{Account.count}.by(1)
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body)["jwt"]).to be_truthy
       end
@@ -74,21 +74,21 @@ Spectator.describe HomeController do
   end
 
   context "home page" do
-    let!(actor) { Actor.new(username, password).save }
+    let!(account) { Account.new(username, password).save }
 
     describe "GET /" do
-      it "renders a list of actors" do
+      it "renders a list of accounts" do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//p/a[contains(@href,'#{username}')]/@href").first.text).to match(/actors\/#{username}/)
+        expect(XML.parse_html(response.body).xpath_nodes("//p/a[contains(@href,'#{username}')]/@href").first.text).to match(/accounts\/#{username}/)
       end
 
-      it "renders a list of actors" do
+      it "renders a list of accounts" do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body)["items"].as_a.first).to match(/actors\/#{username}/)
+        expect(JSON.parse(response.body)["items"].as_a.first).to match(/accounts\/#{username}/)
       end
     end
 

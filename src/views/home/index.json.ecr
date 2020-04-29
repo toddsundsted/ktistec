@@ -3,8 +3,8 @@
   "id": "<%= host %>",
   "type": "Collection",
   "items":[
-    <%- actors.each_with_index do |actor, i| -%>
-      "/actors/<%= actor.username %>"<%= i < actors.size - 1 ? "," : "" %>
+    <%- accounts.each_with_index do |account, i| -%>
+      "/accounts/<%= account.username %>"<%= i < accounts.size - 1 ? "," : "" %>
     <%- end -%>
   ]
 }

@@ -20,14 +20,14 @@ class SessionsController
   post "/sessions" do |env|
     username, password = params(env)
 
-    if actor = actor?(username, password)
-      session = Session.new(actor).save
-      payload = {sub: actor.id, jti: session.session_key, iat: Time.utc}
+    if account = account?(username, password)
+      session = Session.new(account).save
+      payload = {sub: account.id, jti: session.session_key, iat: Time.utc}
       jwt = Balloon::JWT.encode(payload)
 
       if accepts?("text/html")
         env.response.cookies["AuthToken"] = jwt
-        env.redirect "/actors/#{actor.username}"
+        env.redirect "/accounts/#{account.username}"
       else
         env.response.content_type = "application/json"
         {jwt: jwt}.to_json
@@ -60,10 +60,10 @@ class SessionsController
     ["username", "password"].map { |p| params[p].as(String) }
   end
 
-  private def self.actor?(username, password)
-    actor = Actor.find(username: username)
-    if actor.valid_password?(password)
-      actor
+  private def self.account?(username, password)
+    account = Account.find(username: username)
+    if account.valid_password?(password)
+      account
     end
   rescue
     nil

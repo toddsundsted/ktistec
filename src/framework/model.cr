@@ -86,6 +86,8 @@ module Balloon
 
       # Finds the saved instance.
       #
+      # Raises `NotFound` if no such saved instance exists.
+      #
       def find(id)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
@@ -108,6 +110,17 @@ module Balloon
       end
 
       # Finds the saved instance.
+      #
+      # Returns `nil` if no such saved instance exists.
+      #
+      def find?(id)
+        find(id)
+      rescue
+      end
+
+      # Finds the saved instance.
+      #
+      # Raises `NotFound` if no such saved instance exists.
       #
       def find(**options)
         {% begin %}
@@ -132,6 +145,15 @@ module Balloon
       rescue ex: DB::Error
         raise NotFound.new if ex.message == "no rows"
         raise ex
+      end
+
+      # Finds the saved instance.
+      #
+      # Returns `nil` if no such saved instance exists.
+      #
+      def find?(**options)
+        find(**options)
+      rescue
       end
 
       # Returns saved instances.

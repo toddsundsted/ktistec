@@ -249,6 +249,20 @@ Spectator.describe Balloon::Model do
     end
   end
 
+  describe ".find?" do
+    context "given the id" do
+      it "returns nil" do
+        expect{NotNilModel.find?(999999)}.to be_nil
+      end
+    end
+
+    context "given properties" do
+      it "returns nil" do
+        expect{NotNilModel.find?(val: "Baz")}.to be_nil
+      end
+    end
+  end
+
   describe ".where" do
     it "returns the saved instances" do
       saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save

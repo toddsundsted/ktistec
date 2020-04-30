@@ -307,8 +307,11 @@ module Balloon
             {% end %}
             {{name}}
           end
+          def {{name}}?
+            {{class_name}}.find?({{primary_key}}: self.{{foreign_key}})
+          end
           def {{name}}
-            {{class_name}}.find({{foreign_key}})
+            {{class_name}}.find({{primary_key}}: self.{{foreign_key}})
           end
         {% end %}
       end

@@ -433,6 +433,16 @@ Spectator.describe Balloon::Model do
     it "gets the associated instance" do
       expect(not_nil.foo_bar_models).to eq([foo_bar])
     end
+
+    it "returns nil" do
+      foo_bar.not_nil_model_id = 999999
+      expect(foo_bar.not_nil_model?).to be_nil
+    end
+
+    it "returns nil" do
+      not_nil.foo_bar_model_id = 999999
+      expect(not_nil.foo_bar?).to be_nil
+    end
   end
 
   context "serializations" do

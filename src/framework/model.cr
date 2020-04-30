@@ -95,7 +95,7 @@ module Balloon
           conditions = "id = ?"
           Balloon.database.query_one(
             "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
-            id.not_nil!
+            id
           ) do |rs|
             {{@type}}.new(
               {% for v in vs %}

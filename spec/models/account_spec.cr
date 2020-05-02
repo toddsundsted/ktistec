@@ -53,26 +53,6 @@ Spectator.describe Account do
     end
   end
 
-  describe "#public_key" do
-    it "returns the public key" do
-      expect(subject.public_key).to be_a(OpenSSL::RSA)
-    end
-  end
-
-  describe "#private_key" do
-    it "returns the private key" do
-      expect(subject.private_key).to be_a(OpenSSL::RSA)
-    end
-  end
-
-  context "when using the keypair" do
-    it "verifies the signed message" do
-      message = "this is a test"
-      signature = subject.private_key.sign(OpenSSL::Digest.new("SHA256"), message)
-      expect(subject.public_key.verify(OpenSSL::Digest.new("SHA256"), signature, message)).to be_true
-    end
-  end
-
   context "given an actor to associate with" do
     let(actor) { ActivityPub::Actor.new(username: random_string).save }
 

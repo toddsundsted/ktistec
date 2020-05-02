@@ -19,14 +19,11 @@ class Account
   # This constructor is used to create new accounts (which must have a
   # valid username and password).
   #
-  def self.new(username, password)
-    keypair = OpenSSL::RSA.generate(2048, 17)
-    new(
+  def self.new(user username, pass password, **options)
+    new(**options.merge({
       username: username,
-      password: password,
-      pem_public_key: keypair.public_key.to_pem,
-      pem_private_key: keypair.to_pem
-    )
+      password: password
+    }))
   end
 
   @[Persistent]
@@ -67,20 +64,6 @@ class Account
       errors["password"] = messages unless messages.empty?
     end
     errors
-  end
-
-  @[Persistent]
-  property pem_public_key : String
-
-  @[Persistent]
-  property pem_private_key : String
-
-  def public_key
-    OpenSSL::RSA.new(pem_public_key, nil, false)
-  end
-
-  def private_key
-    OpenSSL::RSA.new(pem_private_key, nil, true)
   end
 
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: username, primary_key: username

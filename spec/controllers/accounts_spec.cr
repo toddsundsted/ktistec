@@ -7,7 +7,13 @@ Spectator.describe AccountsController do
   let(username) { random_string }
   let(password) { random_string }
 
-  let!(account) { Account.new(username, password).save }
+  let!(account) do
+    Account.new(username, password).tap do |account|
+      account.actor = ActivityPub::Actor.new.tap do |actor|
+        actor.username = username
+      end.save
+    end.save
+  end
 
   it "returns 404 if not found" do
     get "/accounts/missing"

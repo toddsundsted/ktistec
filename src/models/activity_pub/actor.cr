@@ -24,8 +24,6 @@ module ActivityPub
     @[Persistent]
     property username : String?
 
-    belongs_to account, foreign_key: username, primary_key: username
-
     @[Persistent]
     property pem_public_key : String?
 

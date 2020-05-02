@@ -83,5 +83,7 @@ class Account
     OpenSSL::RSA.new(pem_private_key, nil, true)
   end
 
+  belongs_to actor, class_name: ActivityPub::Actor, foreign_key: username, primary_key: username
+
   has_many sessions
 end

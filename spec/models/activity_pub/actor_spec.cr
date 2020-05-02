@@ -14,18 +14,6 @@ Spectator.describe ActivityPub::Actor do
 
   let(foo_bar) { FooBarActor.new.save }
 
-  describe "#account=" do
-    it "updates the username" do
-      expect{foo_bar.account = account}.to change{foo_bar.username}
-    end
-  end
-
-  describe "#account" do
-    it "updates the account" do
-      expect{foo_bar.username = account.username}.to change{foo_bar.account?}
-    end
-  end
-
   describe "#public_key" do
     it "returns the public key" do
       expect(foo_bar.public_key).to be_a(OpenSSL::RSA)

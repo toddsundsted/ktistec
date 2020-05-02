@@ -73,6 +73,22 @@ Spectator.describe Account do
     end
   end
 
+  context "given an actor to associate with" do
+    let(actor) { ActivityPub::Actor.new(username: random_string).save }
+
+    describe "#actor=" do
+      it "updates the username" do
+        expect{subject.actor = actor}.to change{subject.username}
+      end
+    end
+
+    describe "#actor" do
+      it "updates the actor" do
+        expect{subject.username = actor.username.not_nil!}.to change{subject.actor?}
+      end
+    end
+  end
+
   describe "#sessions" do
     it "gets related sessions" do
       expect(subject.sessions).to be_empty

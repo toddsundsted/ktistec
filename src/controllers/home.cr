@@ -29,10 +29,14 @@ class HomeController
 
   post "/" do |env|
     if (accounts = Account.all).empty?
-      account = Account.new(*params(env))
+      account = Account.new(**params(env))
+      actor = ActivityPub::Actor.new(**params(env))
 
-      if account.valid?
+      if account.valid? && actor.valid?
+        account.actor = actor
         account.save
+        actor.save
+
         session = Session.new(account).save
         payload = {sub: account.id, jti: session.session_key, iat: Time.utc}
         jwt = Balloon::JWT.encode(payload)
@@ -62,6 +66,6 @@ class HomeController
 
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
-    {"username", "password"}.map { |p| params[p].as(String) }
+    {username: params["username"].as(String), password: params["password"].as(String)}
   end
 end

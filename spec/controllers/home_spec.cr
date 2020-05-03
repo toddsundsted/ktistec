@@ -63,12 +63,24 @@ Spectator.describe HomeController do
         expect(response.headers["Set-Cookie"]).to be_truthy
       end
 
+      it "also creates actor" do
+        headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+        body = "username=#{username}&password=#{password}"
+        expect{post "/", headers, body}.to change{ActivityPub::Actor.count}.by(1)
+      end
+
       it "creates account" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
         body = {username: username, password: password}.to_json
         expect{post "/", headers, body}.to change{Account.count}.by(1)
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body)["jwt"]).to be_truthy
+      end
+
+      it "also creates actor" do
+        headers = HTTP::Headers{"Content-Type" => "application/json"}
+        body = {username: username, password: password}.to_json
+        expect{post "/", headers, body}.to change{ActivityPub::Actor.count}.by(1)
       end
     end
   end

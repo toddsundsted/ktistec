@@ -89,18 +89,18 @@ Spectator.describe HomeController do
     let!(account) { Account.new(username, password).save }
 
     describe "GET /" do
-      it "renders a list of accounts" do
+      it "renders a list of local actors" do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//p/a[contains(@href,'#{username}')]/@href").first.text).to match(/accounts\/#{username}/)
+        expect(XML.parse_html(response.body).xpath_nodes("//p/a[contains(@href,'#{username}')]/@href").first.text).to match(/actors\/#{username}/)
       end
 
-      it "renders a list of accounts" do
+      it "renders a list of local actors" do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body)["items"].as_a.first).to match(/accounts\/#{username}/)
+        expect(JSON.parse(response.body)["items"].as_a.first).to match(/actors\/#{username}/)
       end
     end
 

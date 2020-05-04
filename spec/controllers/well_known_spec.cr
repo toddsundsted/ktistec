@@ -7,7 +7,13 @@ Spectator.describe WellKnownController do
   let(username) { random_string }
   let(password) { random_string }
 
-  let!(account) { Account.new(username, password).save }
+  let!(account) do
+    Account.new(username, password).tap do |account|
+      account.actor = ActivityPub::Actor.new.tap do |actor|
+        actor.username = username
+      end.save
+    end.save
+  end
 
   context "webfinger" do
     it "returns 400 if bad request" do
@@ -37,18 +43,18 @@ Spectator.describe WellKnownController do
 
     it "returns aliases" do
       get "/.well-known/webfinger?resource=acct:#{username}@test.test"
-      expect(JSON.parse(response.body)["aliases"]).to match(["https://test.test/accounts/#{username}"])
+      expect(JSON.parse(response.body)["aliases"]).to match(["https://test.test/actors/#{username}"])
     end
 
-    it "returns reference to the account document" do
+    it "returns reference to the actor document" do
       get "/.well-known/webfinger?resource=acct:#{username}@test.test"
-      message = {"rel" => "self", "href" => "https://test.test/accounts/#{username}", "type" => "application/activity+json"}
+      message = {"rel" => "self", "href" => "https://test.test/actors/#{username}", "type" => "application/activity+json"}
       expect(JSON.parse(response.body)["links"].as_a).to contain(message)
     end
 
     it "returns reference to the profile page" do
       get "/.well-known/webfinger?resource=acct:#{username}@test.test"
-      message = {"rel" => "http://webfinger.net/rel/profile-page", "href" => "https://test.test/accounts/#{username}", "type" => "text/html"}
+      message = {"rel" => "http://webfinger.net/rel/profile-page", "href" => "https://test.test/actors/#{username}", "type" => "text/html"}
       expect(JSON.parse(response.body)["links"].as_a).to contain(message)
     end
   end

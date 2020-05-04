@@ -27,7 +27,7 @@ class SessionsController
 
       if accepts?("text/html")
         env.response.cookies["AuthToken"] = jwt
-        env.redirect "/accounts/#{account.username}"
+        env.redirect "/actors/#{account.username}"
       else
         env.response.content_type = "application/json"
         {jwt: jwt}.to_json

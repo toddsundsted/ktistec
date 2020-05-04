@@ -1,0 +1,22 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://w3id.org/security/v1",
+    "http://schema.org#"
+  ],
+  "type": "Person",
+  "id": "<%= host %>/actors/<%= actor.username %>",
+  "preferredUsername": "<%= actor.username %>",
+  <%- if (pem_public_key = actor.pem_public_key) -%>
+    "publicKey": {
+      "id": "<%= host %>/actors/<%= actor.username %>#main-key",
+      "owner": "<%= host %>/actors/<%= actor.username %>",
+      "publicKeyPem": "<%= e pem_public_key %>"
+    },
+  <%- end -%>
+  "inbox": "<%= host %>/actors/<%= actor.username %>/inbox",
+  "outbox": "<%= host %>/actors/<%= actor.username %>/outbox",
+  "following": "<%= host %>/actors/<%= actor.username %>/following",
+  "followers": "<%= host %>/actors/<%= actor.username %>/followers",
+  "liked": "<%= host %>/actors/<%= actor.username %>/liked"
+}

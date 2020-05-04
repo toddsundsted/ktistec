@@ -12,20 +12,20 @@ class WellKnownController
     bad_request unless resource = env.params.query["resource"]?
     bad_request unless resource =~ /^acct:([^@]+)@(#{domain})$/
 
-    account = Account.find(username: $1)
+    Account.find(username: $1).actor
 
     message = {
       subject: resource,
       aliases: [
-        "#{host}/accounts/#{$1}"
+        "#{host}/actors/#{$1}"
       ],
       links: [{
                 rel: "self",
-                href: "#{host}/accounts/#{$1}",
+                href: "#{host}/actors/#{$1}",
                 type: "application/activity+json"
               }, {
                 rel: "http://webfinger.net/rel/profile-page",
-                href: "#{host}/accounts/#{$1}",
+                href: "#{host}/actors/#{$1}",
                 type: "text/html"
               }]
     }

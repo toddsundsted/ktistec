@@ -8,14 +8,7 @@ require "xml"
 # run specs with `KEMAL_ENV=test crystal spec`
 
 class Global
-  @@response : HTTP::Client::Response?
-
-  def self.response=(@@response)
-  end
-
-  def self.response
-    @@response
-  end
+  class_property response : HTTP::Client::Response?
 end
 
 {% for method in %w(get post put head delete patch) %}

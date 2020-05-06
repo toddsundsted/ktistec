@@ -53,7 +53,7 @@ Spectator.describe Balloon::JSON_LD do
     end
   end
 
-  mock Balloon::JSON_LD::Loader do
+  double loader do
     stub load(url) do
       case url
       when "https://vocab"
@@ -93,7 +93,7 @@ Spectator.describe Balloon::JSON_LD do
             "page": "https://test/"
           }
         JSON
-      ))
+      ), double(loader))
     end
 
     describe "#[]" do
@@ -114,7 +114,7 @@ Spectator.describe Balloon::JSON_LD do
             "page": "https://test/"
           }
         JSON
-      ))
+      ), double(loader))
     end
 
     describe "#[]" do
@@ -140,7 +140,7 @@ Spectator.describe Balloon::JSON_LD do
             "page": "https://test/"
           }
         JSON
-      ))
+      ), double(loader))
     end
 
     describe "#[]" do
@@ -163,7 +163,7 @@ Spectator.describe Balloon::JSON_LD do
             "xx:page": "https://test/"
           }
         JSON
-      ))
+      ), double(loader))
     end
 
     describe "#[]" do
@@ -192,7 +192,7 @@ Spectator.describe Balloon::JSON_LD do
             "page": "https://test/"
           }
         JSON
-      ))
+      ), double(loader))
     end
 
     describe "#[]" do
@@ -225,7 +225,7 @@ Spectator.describe Balloon::JSON_LD do
             "page": "https://test/"
           }
         JSON
-      ))
+      ), double(loader))
     end
 
     describe "#[]" do
@@ -253,7 +253,7 @@ Spectator.describe Balloon::JSON_LD do
             }]
           }
         JSON
-      ))
+      ), double(loader))
     end
 
     describe "#[]" do

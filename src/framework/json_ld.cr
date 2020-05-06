@@ -1,6 +1,14 @@
 require "json"
 require "uri"
 
+private def empty
+  wrap(Hash(String, JSON::Any).new)
+end
+
+private def wrap(value)
+  JSON::Any.new(value)
+end
+
 module Balloon
   module JSON_LD
     # Expands the JSON-LD document.
@@ -11,14 +19,6 @@ module Balloon
         context(body["@context"]? || empty, loader),
         loader
       )
-    end
-
-    private def self.empty
-      wrap(Hash(String, JSON::Any).new)
-    end
-
-    private def self.wrap(value)
-      JSON::Any.new(value)
     end
 
     private def self.expand(body, context, loader)

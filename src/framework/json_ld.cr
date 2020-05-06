@@ -66,11 +66,11 @@ module Balloon
       result = Hash(String, JSON::Any).new
 
       if url = context.as_s?
-        context = loader.load(url)["@context"]
+        context = loader.load(url)
       elsif array = context.as_a?
         context = array.reduce(empty) do |a, c|
           if u = c.as_s?
-            c = loader.load(u)["@context"]
+            c = loader.load(u)
           end
           wrap(a.as_h.merge(c.as_h))
         end
@@ -109,7 +109,7 @@ module Balloon
     class Loader
       def load(url)
         uri = URI.parse(url)
-        CONTEXTS["#{uri.host}#{uri.path}/context.jsonld"]
+        CONTEXTS.dig("#{uri.host}#{uri.path}/context.jsonld", "@context")
       end
     end
 

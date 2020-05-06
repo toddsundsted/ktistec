@@ -59,13 +59,11 @@ Spectator.describe Balloon::JSON_LD do
       when "https://vocab"
         JSON.parse(<<-JSON
             {
-              "@context": {
-                "Lock": "https://lock",
-                "name": "https://name",
-                "page": {
-                  "@id": "https://page",
-                  "@type": "@id"
-                }
+              "Lock": "https://lock",
+              "name": "https://name",
+              "page": {
+                "@id": "https://page",
+                "@type": "@id"
               }
             }
           JSON

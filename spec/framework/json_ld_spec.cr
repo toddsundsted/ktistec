@@ -69,7 +69,7 @@ Spectator.describe Balloon::JSON_LD do
           JSON
         )
       else
-        raise "not found"
+        Balloon::JSON_LD::Loader.new.load(url)
       end
     end
   end
@@ -258,6 +258,26 @@ Spectator.describe Balloon::JSON_LD do
       it "returns mapped terms" do
         expect(json.as_h.keys).to match_array(["@context", "@type", "https://base"]).in_any_order
         expect(json["https://base"][0].as_h.keys).to match_array(["https://name", "https://page"]).in_any_order
+      end
+    end
+  end
+
+  context "given JSON-LD document with uncached context" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": "https://uncached",
+            "@type": "Lock",
+            "name": "Foo Bar Baz",
+            "page": "https://test/"
+          }
+        JSON
+      ), double(loader))
+    end
+
+    describe "#[]" do
+      it "gently ignores the context" do
+        expect(json.as_h.keys).to match_array(["@context", "@type"]).in_any_order
       end
     end
   end

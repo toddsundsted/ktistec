@@ -9,6 +9,18 @@ require "xml"
 
 class Global
   class_property response : HTTP::Client::Response?
+  class_property account : Account?
+  class_property session : Session?
+end
+
+class DummyAuth < Kemal::Handler
+  def call(env)
+    if (session = Global.session) && (account = Global.account)
+      env.current_account = account
+      env.session = session
+    end
+    return call_next(env)
+  end
 end
 
 {% for method in %w(get post put head delete patch) %}
@@ -33,7 +45,11 @@ end
 def build_main_handler
   main_handler = Kemal.config.handlers.first
   current_handler = main_handler
-  Kemal.config.handlers.each_with_index do |handler, index|
+  Kemal.config.handlers.each do |handler|
+    if handler.is_a?(Balloon::Auth) && Global.session && Global.account
+      # if we "sign_in" in a context, swap in the dummy handler
+      handler = DummyAuth.new
+    end
     current_handler.next = handler
     current_handler = handler
   end
@@ -46,6 +62,21 @@ end
 
 def self.random_string
   ('a'..'z').to_a.shuffle.first(8).join + "1="
+end
+
+def self._sign_in
+  Global.account = account = Account.new(random_string, random_string)
+  Global.session = Session.new(account)
+end
+
+def self._sign_out
+  Global.account = nil
+  Global.session = nil
+end
+
+macro sign_in
+  before_each { _sign_in }
+  after_each { _sign_out }
 end
 
 require "../src/framework"

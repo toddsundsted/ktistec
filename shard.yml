@@ -18,6 +18,9 @@ dependencies:
   openssl_ext:
     github: toddsundsted/openssl_ext
     version: ~> 0.1.2
+  web_finger:
+    github: toddsundsted/web_finger
+    version: ~> 0.1.6
 
 development_dependencies:
   spectator:

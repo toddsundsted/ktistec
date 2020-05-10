@@ -1,0 +1,10 @@
+{
+  <%- if actor -%>
+    "actor": {
+      "id":<%= actor.aid.inspect %>,
+      "username":<%= actor.username.try(&.inspect) || "null" %>,
+      "name":<%= actor.name.try(&.inspect) || "null" %>
+    },
+  <%- end -%>
+  "account":"<%= account %>"
+}

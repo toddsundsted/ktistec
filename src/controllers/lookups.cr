@@ -5,6 +5,7 @@ class LookupsController
   include Balloon::Controller
 
   get "/api/lookup" do |env|
+    message = nil
     actor = nil
 
     if (account = env.params.query["account"]?)
@@ -15,6 +16,18 @@ class LookupsController
       end
     end
 
+    if accepts?("text/html")
+      env.response.content_type = "text/html"
+      render "src/views/lookups/actor.html.ecr"
+    else
+      env.response.content_type = "application/json"
+      render "src/views/lookups/actor.json.ecr"
+    end
+
+  rescue ex : Socket::Addrinfo::Error | HostMeta::Error | WebFinger::Error | JSON::ParseException
+    message = ex.message
+
+    env.response.status_code = 400
     if accepts?("text/html")
       env.response.content_type = "text/html"
       render "src/views/lookups/actor.html.ecr"

@@ -2,36 +2,50 @@ require "../spec_helper"
 
 module WebFinger
   def self.query(account)
-    WebFinger::Result.from_json(<<-JSON
-      {
-        "links":[
-          {
-            "rel":"self",
-            "href":"https://test.test/foo_bar"
-          }
-        ]
-      }
-      JSON
-    )
+    case account
+    when /no-such-host/
+      raise WebFinger::NotFoundError.new("No such host")
+    else
+      WebFinger::Result.from_json(<<-JSON
+        {
+          "links":[
+            {
+              "rel":"self",
+              "href":"https://test.test/#{account}"
+            }
+          ]
+        }
+        JSON
+      )
+    end
   end
 end
 
 class HTTP::Client
   def self.get(url : String, headers : HTTP::Headers)
-    HTTP::Client::Response.new(
-      200,
-      headers: HTTP::Headers.new,
-      body: <<-JSON
-        {
-          "@context":[
-            "https://www.w3.org/ns/activitystreams"
-          ],
-          "type":"Person",
-          "id":"https://test.test/foo_bar",
-          "preferredUsername":"foo_bar"
-        }
-        JSON
-    )
+    case url
+    when /bad-json/
+      HTTP::Client::Response.new(
+        200,
+        headers: HTTP::Headers.new,
+        body: "bad json"
+      )
+    else
+      HTTP::Client::Response.new(
+        200,
+        headers: HTTP::Headers.new,
+        body: <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "type":"Person",
+            "id":"https://test.test/foo_bar",
+            "preferredUsername":"foo_bar"
+          }
+          JSON
+      )
+    end
   end
 end
 
@@ -82,6 +96,38 @@ Spectator.describe LookupsController do
           get "/api/lookup?account=foobar@test.test", headers
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
+        end
+      end
+
+      context "given a non-existent host" do
+        it "returns 400" do
+          headers = HTTP::Headers{"Accept" => "text/html"}
+          get "/api/lookup?account=foobar@no-such-host", headers
+          expect(response.status_code).to eq(400)
+          expect(XML.parse_html(response.body).xpath_nodes("//p[@class='error message']").first.text).to match(/No such host/)
+        end
+
+        it "returns 400" do
+          headers = HTTP::Headers{"Accept" => "application/json"}
+          get "/api/lookup?account=foobar@no-such-host", headers
+          expect(response.status_code).to eq(400)
+          expect(JSON.parse(response.body).as_h["msg"]).to match(/No such host/)
+        end
+      end
+
+      context "given bad JSON" do
+        it "returns 400" do
+          headers = HTTP::Headers{"Accept" => "text/html"}
+          get "/api/lookup?account=bad-json@test.test", headers
+          expect(response.status_code).to eq(400)
+          expect(XML.parse_html(response.body).xpath_nodes("//p[@class='error message']").first.text).to match(/Unexpected char/)
+        end
+
+        it "returns 400" do
+          headers = HTTP::Headers{"Accept" => "application/json"}
+          get "/api/lookup?account=bad-json@test.test", headers
+          expect(response.status_code).to eq(400)
+          expect(JSON.parse(response.body).as_h["msg"]).to match(/Unexpected char/)
         end
       end
     end

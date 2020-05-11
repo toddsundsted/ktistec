@@ -175,7 +175,7 @@ Spectator.describe Balloon::Model do
     end
 
     it "returns the count of matching instances" do
-      expect(FooBarModel.count(foo: "")).to eq(0)
+      expect(FooBarModel.count(foo: "", bar: "")).to eq(0)
     end
 
     it "returns the count of persisted instances" do
@@ -227,14 +227,14 @@ Spectator.describe Balloon::Model do
     context "given properties" do
       it "finds the saved instance" do
         saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
-        expect(FooBarModel.find(foo: "Foo")).not_to be(saved_model)
-        expect(FooBarModel.find(foo: "Foo")).to eq(saved_model)
+        expect(FooBarModel.find(foo: "Foo", bar: "Bar")).not_to be(saved_model)
+        expect(FooBarModel.find(foo: "Foo", bar: "Bar")).to eq(saved_model)
       end
 
       it "finds the updated instance" do
         updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
-        expect(FooBarModel.find(foo: "Bar")).not_to be(updated_model)
-        expect(FooBarModel.find(foo: "Bar")).to eq(updated_model)
+        expect(FooBarModel.find(foo: "Bar", bar: "Bar")).not_to be(updated_model)
+        expect(FooBarModel.find(foo: "Bar", bar: "Bar")).to eq(updated_model)
       end
 
       it "finds the saved instance" do
@@ -266,14 +266,14 @@ Spectator.describe Balloon::Model do
   describe ".where" do
     it "returns the saved instances" do
       saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
-      expect(FooBarModel.where(foo: "Foo")).to eq([saved_model])
-      expect(FooBarModel.where(foo: "Bar")).to be_empty
+      expect(FooBarModel.where(foo: "Foo", bar: "Bar")).to eq([saved_model])
+      expect(FooBarModel.where(foo: "Bar", bar: "Bar")).to be_empty
     end
 
     it "returns the saved instances" do
       saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
-      expect(FooBarModel.where("foo = ?", "Foo")).to eq([saved_model])
-      expect(FooBarModel.where("foo = ?", "Bar")).to be_empty
+      expect(FooBarModel.where("foo = ? and bar = ?", "Foo", "Bar")).to eq([saved_model])
+      expect(FooBarModel.where("foo = ? and bar = ?", "Bar", "Bar")).to be_empty
     end
 
     it "returns the updated instances" do

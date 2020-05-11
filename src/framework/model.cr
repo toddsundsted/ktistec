@@ -53,11 +53,11 @@ module Balloon
         else
           {% begin %}
             {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-            conditions = {{vs.map(&.stringify)}}.select do |v|
-              options.has_key?(v)
+            conditions = options.keys.select do |o|
+              o.in?({{vs.map(&.symbolize)}})
             end.map do |v|
               "#{v} = ?"
-            end.join(",")
+            end.join(" AND ")
             Balloon.database.scalar(
               "SELECT COUNT(*) FROM #{table_name} WHERE #{conditions}",
               *options.values
@@ -126,11 +126,11 @@ module Balloon
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify)}}.join(",")
-          conditions = {{vs.map(&.stringify)}}.select do |v|
-            options.has_key?(v)
+          conditions = options.keys.select do |o|
+            o.in?({{vs.map(&.symbolize)}})
           end.map do |v|
             "#{v} = ?"
-          end.join(",")
+          end.join(" AND ")
           Balloon.database.query_one(
             "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
             *options.values
@@ -162,11 +162,11 @@ module Balloon
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify)}}.join(",")
-          conditions = {{vs.map(&.stringify)}}.select do |v|
-            options.has_key?(v)
+          conditions = options.keys.select do |o|
+            o.in?({{vs.map(&.symbolize)}})
           end.map do |v|
             "#{v} = ?"
-          end.join(",")
+          end.join(" AND ")
           Balloon.database.query_all(
             "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
             *options.values

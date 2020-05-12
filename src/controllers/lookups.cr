@@ -9,11 +9,14 @@ class LookupsController
     actor = nil
 
     if (account = env.params.query["account"]?)
-      result = WebFinger.query("acct:#{account}")
-      response = get(result.link("self").href)
-      if response.status_code == 200
-        actor = ActivityPub::Actor.from_json_ld(response.body)
-      end
+      url = URI.parse(account)
+      url =
+        if url.scheme && url.host && url.path
+          account
+        else
+          WebFinger.query("acct:#{account}").link("self").href
+        end
+      actor = ActivityPub::Actor.from_json_ld(get(url).body)
     end
 
     if accepts?("text/html")
@@ -23,8 +26,7 @@ class LookupsController
       env.response.content_type = "application/json"
       render "src/views/lookups/actor.json.ecr"
     end
-
-  rescue ex : Socket::Addrinfo::Error | HostMeta::Error | WebFinger::Error | JSON::ParseException
+  rescue ex : Error | Socket::Addrinfo::Error | HostMeta::Error | WebFinger::Error | JSON::ParseException
     message = ex.message
 
     env.response.status_code = 400
@@ -56,6 +58,9 @@ class LookupsController
         end
       end
     end
-    raise "GET failed for #{url}"
+    raise Error.new("failed to get #{url}")
+  end
+
+  private class Error < Exception
   end
 end

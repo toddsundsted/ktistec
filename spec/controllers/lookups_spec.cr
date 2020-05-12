@@ -2,6 +2,8 @@ require "../spec_helper"
 
 module WebFinger
   def self.query(account)
+    account =~ /^acct:([^@]+)@([^@]+)$/
+    _, name, host = $~.to_a
     case account
     when /no-such-host/
       raise WebFinger::NotFoundError.new("No such host")
@@ -11,7 +13,7 @@ module WebFinger
           "links":[
             {
               "rel":"self",
-              "href":"https://test.test/#{account}"
+              "href":"https://#{host}/#{name}"
             }
           ]
         }
@@ -23,7 +25,8 @@ end
 
 class HTTP::Client
   def self.get(url : String, headers : HTTP::Headers)
-    case url
+    url = URI.parse(url)
+    case url.path
     when /bad-json/
       HTTP::Client::Response.new(
         200,
@@ -40,8 +43,8 @@ class HTTP::Client
               "https://www.w3.org/ns/activitystreams"
             ],
             "type":"Person",
-            "id":"https://test.test/foo_bar",
-            "preferredUsername":"foo_bar"
+            "id":"https://#{url.host}/#{url.path[1..-1]}",
+            "preferredUsername":"#{url.path[1..-1]}"
           }
           JSON
       )
@@ -86,14 +89,30 @@ Spectator.describe LookupsController do
       context "given a handle" do
         it "looks up an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          get "/api/lookup?account=foobar@test.test", headers
+          get "/api/lookup?account=foo_bar@test.test", headers
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/h1/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "looks up an actor" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          get "/api/lookup?account=foobar@test.test", headers
+          get "/api/lookup?account=foo_bar@test.test", headers
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
+        end
+      end
+
+      context "given a URL" do
+        it "looks up an actor" do
+          headers = HTTP::Headers{"Accept" => "text/html"}
+          get "/api/lookup?account=https://test.test/foo_bar", headers
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/h1/a[contains(text(),'foo_bar')]")).not_to be_empty
+        end
+
+        it "looks up an actor" do
+          headers = HTTP::Headers{"Accept" => "application/json"}
+          get "/api/lookup?account=https://test.test/foo_bar", headers
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
@@ -102,14 +121,14 @@ Spectator.describe LookupsController do
       context "given a non-existent host" do
         it "returns 400" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          get "/api/lookup?account=foobar@no-such-host", headers
+          get "/api/lookup?account=foo_bar@no-such-host", headers
           expect(response.status_code).to eq(400)
           expect(XML.parse_html(response.body).xpath_nodes("//p[@class='error message']").first.text).to match(/No such host/)
         end
 
         it "returns 400" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          get "/api/lookup?account=foobar@no-such-host", headers
+          get "/api/lookup?account=foo_bar@no-such-host", headers
           expect(response.status_code).to eq(400)
           expect(JSON.parse(response.body).as_h["msg"]).to match(/No such host/)
         end

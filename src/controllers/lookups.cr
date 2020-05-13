@@ -16,7 +16,7 @@ class LookupsController
         else
           WebFinger.query("acct:#{account}").link("self").href
         end
-      actor = ActivityPub::Actor.from_json_ld(get(url).body)
+      actor = get(url)
     end
 
     if accepts?("text/html")
@@ -46,7 +46,13 @@ class LookupsController
         response = HTTP::Client.get(url, headers)
         case response.status_code
         when 200
-          return response
+          json = Balloon::JSON_LD.expand(response.body)
+          if (aid = json.dig?("@id").try(&.as_s)) && (actor = ActivityPub::Actor.find?(aid: aid))
+            actor.from_json_ld(json)
+          else
+            actor = ActivityPub::Actor.from_json_ld(json)
+          end
+          return actor.save
         when 301, 302, 307, 308
           if url = response.headers["Location"]?
             next

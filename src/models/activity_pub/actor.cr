@@ -56,18 +56,26 @@ module ActivityPub
     property image : String?
 
     def self.from_json_ld(json)
-      json = Balloon::JSON_LD.expand(JSON.parse(json))
-      self.new(
-        aid: json.dig?("@id").try(&.as_s),
-        type: json.dig?("@type").try(&.as_s),
-        username: json.dig?("https://www.w3.org/ns/activitystreams#preferredUsername").try(&.as_s),
-        pem_public_key: json.dig?("https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem").try(&.as_s),
-        pem_private_key: json.dig?("https://w3id.org/security#privateKey", "https://w3id.org/security#privateKeyPem").try(&.as_s),
-        name: json.dig?("https://www.w3.org/ns/activitystreams#name").try(&.as_s),
-        summary: json.dig?("https://www.w3.org/ns/activitystreams#summary").try(&.as_s),
-        icon: json.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s),
-        image: json.dig?("https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url").try(&.as_s)
-      )
+      self.new(**map(json))
+    end
+
+    def from_json_ld(json)
+      self.assign(**map(json))
     end
   end
+end
+
+private def map(json)
+  json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
+  {
+    aid: json.dig?("@id").try(&.as_s),
+    type: json.dig?("@type").try(&.as_s),
+    username: json.dig?("https://www.w3.org/ns/activitystreams#preferredUsername").try(&.as_s),
+    pem_public_key: json.dig?("https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem").try(&.as_s),
+    pem_private_key: json.dig?("https://w3id.org/security#privateKey", "https://w3id.org/security#privateKeyPem").try(&.as_s),
+    name: json.dig?("https://www.w3.org/ns/activitystreams#name").try(&.as_s),
+    summary: json.dig?("https://www.w3.org/ns/activitystreams#summary").try(&.as_s),
+    icon: json.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s),
+    image: json.dig?("https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url").try(&.as_s)
+  }
 end

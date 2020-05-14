@@ -7,14 +7,6 @@ module ActivityPub
 
     @@table_name = "actors"
 
-    def initialize(**options)
-      keypair = OpenSSL::RSA.generate(2048, 17)
-      assign(**{
-        pem_public_key: keypair.public_key.to_pem,
-        pem_private_key: keypair.to_pem
-      }.merge(options))
-    end
-
     @[Persistent]
     property aid : String?
 

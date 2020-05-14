@@ -12,7 +12,30 @@ Spectator.describe ActivityPub::Actor do
 
   let(account) { Account.new(username, password).save }
 
-  let(foo_bar) { FooBarActor.new.save }
+  let(foo_bar) do
+    FooBarActor.new(
+      pem_public_key: (<<-KEY
+        -----BEGIN PUBLIC KEY-----
+        MFowDQYJKoZIhvcNAQEBBQADSQAwRgJBAKr1/30vwtQozUzKAiM87+cJzUvA15KR
+        KNFcMekDexfrLUk8EjP0psKcm9AGVefYvfKtD2cAGhF6UTZKVUUZRmECARE=
+        -----END PUBLIC KEY-----
+        KEY
+      ),
+      pem_private_key: (<<-KEY
+        -----BEGIN PRIVATE KEY-----
+        MIIBUQIBADANBgkqhkiG9w0BAQEFAASCATswggE3AgEAAkEAqvX/fS/C1CjNTMoC
+        Izzv5wnNS8DXkpEo0Vwx6QN7F+stSTwSM/Smwpyb0AZV59i98q0PZwAaEXpRNkpV
+        RRlGYQIBEQJAHitpUlO4+ENvhgWH6BnP+5hRZ7ieg0bK98T5v7VR9Sk2e/9cHRsj
+        kEztFNLNvWRiib1JWyP3f8uXbmnLsTQtMQIhAN6PLZn4nssJ0j2pv5jnhYKInq/g
+        Y85JWNP0s0K8c/15AiEAxKYSGOu8EjHBHrBG2c8aYl2IaoIl0UlKeHqU5Zx9nikC
+        IFukXhI5MlOaod0nx10UCcxWX3WYoZEtQrGg/oTkL8K5AiAXIpi3o0NNb0PlfiZz
+        +j9W3dPQS4v6gRfR8E3AqP+4QQIgEnP6htV+XMD4H9zg9aG+GFDorjWctnpNR6Z7
+        +4EIKbQ=
+        -----END PRIVATE KEY-----
+        KEY
+      )
+    ).save
+  end
 
   describe "#public_key" do
     it "returns the public key" do

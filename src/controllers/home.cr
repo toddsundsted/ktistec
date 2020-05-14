@@ -30,7 +30,12 @@ class HomeController
   post "/" do |env|
     if (accounts = Account.all).empty?
       account = Account.new(**params(env))
-      actor = ActivityPub::Actor.new(**params(env))
+      keypair = OpenSSL::RSA.generate(2048, 17)
+      actor = ActivityPub::Actor.new(
+        username: account.username,
+        pem_public_key: keypair.public_key.to_pem,
+        pem_private_key: keypair.to_pem
+      )
 
       if account.valid? && actor.valid?
         account.actor = actor

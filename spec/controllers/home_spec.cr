@@ -86,7 +86,14 @@ Spectator.describe HomeController do
   end
 
   context "home page" do
-    let!(account) { Account.new(username, password).save }
+    let!(account) do
+      Account.new(username, password).tap do |account|
+        account.actor = ActivityPub::Actor.new(
+          aid: "https://test.test/#{username}",
+          username: username
+        ).save
+      end.save
+    end
 
     describe "GET /" do
       it "renders a list of local actors" do

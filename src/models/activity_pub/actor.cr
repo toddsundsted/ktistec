@@ -9,9 +9,16 @@ module ActivityPub
 
     @[Persistent]
     property aid : String?
+    validates(aid) { unique_absolute_uri?(aid) }
 
-    def local?
-      aid.nil?
+    private def unique_absolute_uri?(aid)
+      if aid.nil?
+        "must be present"
+      elsif !URI.parse(aid).absolute?
+        "must be an absolute URI"
+      elsif (actor = Actor.find?(aid: aid)) && actor.id != self.id
+        "must be unique"
+      end
     end
 
     @[Persistent]

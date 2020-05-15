@@ -14,6 +14,7 @@ Spectator.describe ActivityPub::Actor do
 
   let(foo_bar) do
     FooBarActor.new(
+      aid: "https://test.test/#{random_string}",
       pem_public_key: (<<-KEY
         -----BEGIN PUBLIC KEY-----
         MFowDQYJKoZIhvcNAQEBBQADSQAwRgJBAKr1/30vwtQozUzKAiM87+cJzUvA15KR
@@ -58,6 +59,26 @@ Spectator.describe ActivityPub::Actor do
         signature = private_key.sign(OpenSSL::Digest.new("SHA256"), message)
         expect(public_key.verify(OpenSSL::Digest.new("SHA256"), signature, message)).to be_true
       end
+    end
+  end
+
+  context "when validating" do
+    let!(actor) { described_class.new(aid: "http://test.test/foo_bar").save }
+
+    it "must be present" do
+      expect(described_class.new.valid?).to be_false
+    end
+
+    it "must be an absolute URI" do
+      expect(described_class.new(aid: "/some_actor").valid?).to be_false
+    end
+
+    it "must be unique" do
+      expect(described_class.new(aid: "http://test.test/foo_bar").valid?).to be_false
+    end
+
+    it "is valid" do
+      expect(described_class.new(aid: "http://test.test/#{random_string}").save.valid?).to be_true
     end
   end
 

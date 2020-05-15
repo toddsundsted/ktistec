@@ -23,10 +23,6 @@ up do |db|
     CREATE UNIQUE INDEX idx_actors_aid
       ON actors (aid ASC)
   STR
-  db.exec <<-STR
-    CREATE INDEX idx_actors_username
-      ON actors (username ASC)
-  STR
 end
 
 down do |db|

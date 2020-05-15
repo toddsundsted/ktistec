@@ -55,22 +55,20 @@ Spectator.describe Account do
 
   context "given an actor to associate with" do
     let(actor) do
-      username = random_string
       ActivityPub::Actor.new(
-        aid: "https://test.test/#{username}",
-        username: username
+        aid: "https://test.test/#{random_string}"
       ).save
     end
 
     describe "#actor=" do
-      it "updates the username" do
-        expect{subject.actor = actor}.to change{subject.username}
+      it "updates the aid" do
+        expect{subject.actor = actor}.to change{subject.aid}
       end
     end
 
     describe "#actor" do
       it "updates the actor" do
-        expect{subject.username = actor.username.not_nil!}.to change{subject.actor?}
+        expect{subject.aid = actor.aid.not_nil!}.to change{subject.actor?}
       end
     end
   end

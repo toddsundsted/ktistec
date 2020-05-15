@@ -32,7 +32,7 @@ class HomeController
       account = Account.new(**params(env))
       keypair = OpenSSL::RSA.generate(2048, 17)
       actor = ActivityPub::Actor.new(
-        aid: "#{host}/actors/#{account.username}",
+        aid: account.aid,
         username: account.username,
         pem_public_key: keypair.public_key.to_pem,
         pem_private_key: keypair.to_pem

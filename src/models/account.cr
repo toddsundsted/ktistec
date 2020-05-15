@@ -66,7 +66,10 @@ class Account
     errors
   end
 
-  belongs_to actor, class_name: ActivityPub::Actor, foreign_key: username, primary_key: username
+  @[Persistent]
+  property aid : String { "#{Balloon.config.host}/actors/#{username}" }
+
+  belongs_to actor, class_name: ActivityPub::Actor, foreign_key: aid, primary_key: aid
 
   has_many sessions
 end

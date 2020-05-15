@@ -9,7 +9,8 @@ up do |db|
       created_at datetime NOT NULL,
       updated_at datetime NOT NULL,
       username varchar(255) NOT NULL,
-      encrypted_password varchar(255) NOT NULL
+      encrypted_password varchar(255) NOT NULL,
+      aid varchar(255) NOT NULL
     )
   STR
   db.exec <<-STR

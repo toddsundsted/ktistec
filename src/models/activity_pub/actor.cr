@@ -43,6 +43,18 @@ module ActivityPub
     end
 
     @[Persistent]
+    property inbox : String?
+
+    @[Persistent]
+    property outbox : String?
+
+    @[Persistent]
+    property following : String?
+
+    @[Persistent]
+    property followers : String?
+
+    @[Persistent]
     property name : String?
 
     @[Persistent]
@@ -72,6 +84,10 @@ private def map(json)
     username: json.dig?("https://www.w3.org/ns/activitystreams#preferredUsername").try(&.as_s),
     pem_public_key: json.dig?("https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem").try(&.as_s),
     pem_private_key: json.dig?("https://w3id.org/security#privateKey", "https://w3id.org/security#privateKeyPem").try(&.as_s),
+    inbox: json.dig?("http://www.w3.org/ns/ldp#inbox").try(&.as_s),
+    outbox: json.dig?("https://www.w3.org/ns/activitystreams#outbox").try(&.as_s),
+    following: json.dig?("https://www.w3.org/ns/activitystreams#following").try(&.as_s),
+    followers: json.dig?("https://www.w3.org/ns/activitystreams#followers").try(&.as_s),
     name: json.dig?("https://www.w3.org/ns/activitystreams#name").try(&.as_s),
     summary: json.dig?("https://www.w3.org/ns/activitystreams#summary").try(&.as_s),
     icon: json.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s),

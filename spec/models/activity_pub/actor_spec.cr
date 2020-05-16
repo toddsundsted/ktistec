@@ -102,7 +102,11 @@ Spectator.describe ActivityPub::Actor do
           "owner":"https://test.test/foo_bar",
           "privateKeyPem":"---PEM PRIVATE KEY---"
         },
-         "name":"Foo Bar",
+        "inbox": "inbox link",
+        "outbox": "outbox link",
+        "following": "following link",
+        "followers": "followers link",
+        "name":"Foo Bar",
         "summary": "<p></p>",
         "icon": {
           "type": "Image",
@@ -125,6 +129,10 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.username).to eq("foo_bar")
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
       expect(actor.pem_private_key).to eq("---PEM PRIVATE KEY---")
+      expect(actor.inbox).to eq("inbox link")
+      expect(actor.outbox).to eq("outbox link")
+      expect(actor.following).to eq("following link")
+      expect(actor.followers).to eq("followers link")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")
@@ -139,6 +147,10 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.username).to eq("foo_bar")
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
       expect(actor.pem_private_key).to eq("---PEM PRIVATE KEY---")
+      expect(actor.inbox).to eq("inbox link")
+      expect(actor.outbox).to eq("outbox link")
+      expect(actor.following).to eq("following link")
+      expect(actor.followers).to eq("followers link")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")

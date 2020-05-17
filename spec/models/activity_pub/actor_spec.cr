@@ -10,8 +10,6 @@ Spectator.describe ActivityPub::Actor do
   let(username) { random_string }
   let(password) { random_string }
 
-  let(account) { Account.new(username, password).save }
-
   let(foo_bar) do
     FooBarActor.new(
       aid: "https://test.test/#{random_string}",

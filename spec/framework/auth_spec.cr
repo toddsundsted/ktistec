@@ -64,5 +64,14 @@ Spectator.describe Balloon::Auth do
         expect(response.status_code).to eq(401)
       end
     end
+
+    context "new secret key" do
+      let(jwt) { Balloon::JWT.encode(payload, "old secret key") }
+
+      it "fails to authenticate" do
+        get "/foo/bar/auth", HTTP::Headers{"Authorization" => "Bearer #{jwt}"}
+        expect(response.status_code).to eq(401)
+      end
+    end
   end
 end

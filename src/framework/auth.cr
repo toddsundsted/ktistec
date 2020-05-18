@@ -13,19 +13,19 @@ module Balloon
       return call_next env unless env.route_lookup.found?
       return call_next env if exclude_match?(env)
 
-      if (value = check_authorization(env)) || (value = check_cookie(env))
-        if payload = Balloon::JWT.decode(value)
-          if Time.parse_iso8601(payload["iat"].as_s) > Time.utc - 1.month
-            begin
+      begin
+        if (value = check_authorization(env)) || (value = check_cookie(env))
+          if payload = Balloon::JWT.decode(value)
+            if Time.parse_iso8601(payload["iat"].as_s) > Time.utc - 1.month
               if session = Session.find(session_key: payload["jti"].as_s)
                 env.current_account = session.account
                 env.session = session
                 return call_next(env)
               end
-            rescue Balloon::Model::NotFound
             end
           end
         end
+      rescue Balloon::JWT::Error | Balloon::Model::NotFound
       end
 
       if env.accepts?("text/html")

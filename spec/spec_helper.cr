@@ -79,6 +79,57 @@ macro sign_in
   after_each { _sign_out }
 end
 
+# Networking mock.
+
+class HTTP::Client
+  def self.get(url : String, headers : HTTP::Headers)
+    url = URI.parse(url)
+    case url.path
+    when /bad-json/
+      HTTP::Client::Response.new(
+        200,
+        headers: HTTP::Headers.new,
+        body: "bad json"
+      )
+    when /specified-page/
+      HTTP::Client::Response.new(
+        200,
+        headers: HTTP::Headers.new,
+        body: "content"
+      )
+    when /redirected-page/
+      HTTP::Client::Response.new(
+        301,
+        headers: HTTP::Headers{"Location" => "https://#{url.host}/specified-page"},
+        body: ""
+      )
+    when /returns-([0-9]{3})/
+      HTTP::Client::Response.new(
+        $1.to_i,
+        headers: HTTP::Headers.new,
+        body: $1
+      )
+    when /people\/([a-z_]+)/
+      HTTP::Client::Response.new(
+        200,
+        headers: HTTP::Headers.new,
+        body: <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "type":"Person",
+            "id":"https://#{url.host}/#{$1}",
+            "preferredUsername":"#{$1}"
+          }
+          JSON
+      )
+    else
+      raise "not supported"
+    end
+  end
+end
+
 require "../src/framework"
 
 module Balloon

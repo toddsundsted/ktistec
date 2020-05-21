@@ -13,58 +13,11 @@ module WebFinger
           "links":[
             {
               "rel":"self",
-              "href":"https://#{host}/#{name}"
+              "href":"https://#{host}/people/#{name}"
             }
           ]
         }
         JSON
-      )
-    end
-  end
-end
-
-class HTTP::Client
-  def self.get(url : String, headers : HTTP::Headers)
-    url = URI.parse(url)
-    case url.path
-    when /bad-json/
-      HTTP::Client::Response.new(
-        200,
-        headers: HTTP::Headers.new,
-        body: "bad json"
-      )
-    when /specified-page/
-      HTTP::Client::Response.new(
-        200,
-        headers: HTTP::Headers.new,
-        body: "content"
-      )
-    when /redirected-page/
-      HTTP::Client::Response.new(
-        301,
-        headers: HTTP::Headers{"Location" => "https://#{url.host}/specified-page"},
-        body: ""
-      )
-    when /returns-([0-9]{3})/
-      HTTP::Client::Response.new(
-        $1.to_i,
-        headers: HTTP::Headers.new,
-        body: $1
-      )
-    else
-      HTTP::Client::Response.new(
-        200,
-        headers: HTTP::Headers.new,
-        body: <<-JSON
-          {
-            "@context":[
-              "https://www.w3.org/ns/activitystreams"
-            ],
-            "type":"Person",
-            "id":"https://#{url.host}/#{url.path[1..-1]}",
-            "preferredUsername":"#{url.path[1..-1]}"
-          }
-          JSON
       )
     end
   end
@@ -139,14 +92,14 @@ Spectator.describe LookupsController do
       context "given a URL" do
         it "retrieves and stores an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          expect{get "/api/lookup?account=https://test.test/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/h1/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and stores an actor" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          expect{get "/api/lookup?account=https://test.test/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
@@ -156,13 +109,13 @@ Spectator.describe LookupsController do
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            expect{get "/api/lookup?account=https://test.test/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
+            expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
             expect(ActivityPub::Actor.find(aid: "https://test.test/foo_bar").username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "application/json"}
-            expect{get "/api/lookup?account=https://test.test/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
+            expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
             expect(ActivityPub::Actor.find(aid: "https://test.test/foo_bar").username).to eq("foo_bar")
           end
         end

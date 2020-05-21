@@ -33,6 +33,24 @@ class HTTP::Client
         headers: HTTP::Headers.new,
         body: "bad json"
       )
+    when /specified-page/
+      HTTP::Client::Response.new(
+        200,
+        headers: HTTP::Headers.new,
+        body: "content"
+      )
+    when /redirected-page/
+      HTTP::Client::Response.new(
+        301,
+        headers: HTTP::Headers{"Location" => "https://#{url.host}/specified-page"},
+        body: ""
+      )
+    when /returns-([0-9]{3})/
+      HTTP::Client::Response.new(
+        $1.to_i,
+        headers: HTTP::Headers.new,
+        body: $1
+      )
     else
       HTTP::Client::Response.new(
         200,

@@ -26,36 +26,28 @@ module Balloon
       result = Hash(String, JSON::Any).new
 
       body.as_h.each do |term, value|
-        value =
-          if value.as_a?
-            val = value.as_a.map do |v|
-              v.as_h? ? expand(v, context, loader) : v
-            end
-            wrap(val)
-          elsif value.as_h?
-            expand(value, context, loader)
-          else
-            value
-          end
-
-        if term.includes?(":")
-          prefix, suffix = term.split(":")
-          if context[prefix]? && !suffix.starts_with?("//")
-            result["#{context[prefix]}#{suffix}"] = value
-          else
-            result[term] = value
-          end
-        elsif term.starts_with?("@")
+        if term.starts_with?("@") || ((defn = context[term]?.try(&.as_s)) && defn.starts_with?("@") && (term = defn))
           if value.as_s?
             result[term] = _expand(value.as_s, context)
           else
             result[term] = value
           end
-        elsif defn = context[term]?.try(&.as_s)
-          if defn.starts_with?("@") && value.as_s?
-            result[defn] = _expand(value.as_s, context)
+        else
+          if term.includes?(":")
+            prefix, suffix = term.split(":")
+            if context[prefix]? && !suffix.starts_with?("//")
+              term = "#{context[prefix]}#{suffix}"
+            end
+          elsif (defn = context[term]?.try(&.as_s))
+            term = defn
           else
-            result[defn] = value
+            next
+          end
+          value = _value(term, value, context, loader)
+          if result[term]?.try(&.as_h?) && value.as_h?
+            result[term] = wrap(result[term].as_h.merge(value.as_h))
+          else
+            result[term] = value
           end
         end
       end
@@ -102,6 +94,18 @@ module Balloon
         end
       else
         context[string]? || wrap(string)
+      end
+    end
+
+    private def self._value(term, value, context, loader)
+      if term.in?(["https://www.w3.org/ns/activitystreams#content", "https://www.w3.org/ns/activitystreams#name", "https://www.w3.org/ns/activitystreams#summary"])
+        value.as_s? ? wrap({"und" => value}) : value
+      elsif value.as_a?
+        wrap(value.as_a.map { |v| v.as_h? ? expand(v, context, loader) : v })
+      elsif value.as_h?
+        expand(value, context, loader)
+      else
+        value
       end
     end
 

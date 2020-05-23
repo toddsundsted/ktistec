@@ -262,6 +262,61 @@ Spectator.describe Balloon::JSON_LD do
     end
   end
 
+  context "given JSON-LD document with natural language values" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": {
+              "ns": "https://www.w3.org/ns/activitystreams#",
+              "name": "ns:name",
+              "nameMap": {
+                "@id": "ns:name"
+              }
+            },
+            "@type": "https://lock",
+            "name": "Foo Bar Baz",
+            "nameMap": {
+              "fr": "Foo Bàr Bàz"
+            }
+          }
+        JSON
+      ), double(loader))
+    end
+
+    describe "#[]" do
+      it "returns merged values" do
+        expect(json.as_h.keys).to match_array(["@context", "@type", "https://www.w3.org/ns/activitystreams#name"]).in_any_order
+        expect(json["https://www.w3.org/ns/activitystreams#name"]).to eq({"und" => "Foo Bar Baz", "fr" => "Foo Bàr Bàz"})
+      end
+    end
+  end
+
+  context "given JSON-LD document with no natural language values" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": {
+              "ns": "https://www.w3.org/ns/activitystreams#",
+              "name": "ns:name",
+              "nameMap": {
+                "@id": "ns:name"
+              }
+            },
+            "@type": "https://lock",
+            "name": "Foo Bar Baz"
+          }
+        JSON
+      ), double(loader))
+    end
+
+    describe "#[]" do
+      it "returns value as a map" do
+        expect(json.as_h.keys).to match_array(["@context", "@type", "https://www.w3.org/ns/activitystreams#name"]).in_any_order
+        expect(json["https://www.w3.org/ns/activitystreams#name"]).to eq({"und" => "Foo Bar Baz"})
+      end
+    end
+  end
+
   context "given JSON-LD document with uncached context" do
     let(json) do
       described_class.expand(JSON.parse(<<-JSON

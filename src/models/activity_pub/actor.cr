@@ -88,8 +88,8 @@ private def map(json)
     outbox: json.dig?("https://www.w3.org/ns/activitystreams#outbox").try(&.as_s),
     following: json.dig?("https://www.w3.org/ns/activitystreams#following").try(&.as_s),
     followers: json.dig?("https://www.w3.org/ns/activitystreams#followers").try(&.as_s),
-    name: json.dig?("https://www.w3.org/ns/activitystreams#name").try(&.as_s),
-    summary: json.dig?("https://www.w3.org/ns/activitystreams#summary").try(&.as_s),
+    name: json.dig?("https://www.w3.org/ns/activitystreams#name").try(&.as_h.dig?("und")).try(&.as_s),
+    summary: json.dig?("https://www.w3.org/ns/activitystreams#summary").try(&.as_h.dig?("und")).try(&.as_s),
     icon: json.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s),
     image: json.dig?("https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url").try(&.as_s)
   }

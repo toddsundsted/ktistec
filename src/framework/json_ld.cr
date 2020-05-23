@@ -28,7 +28,7 @@ module Balloon
       body.as_h.each do |term, value|
         if term.starts_with?("@") || ((defn = context[term]?.try(&.as_s)) && defn.starts_with?("@") && (term = defn))
           if value.as_s?
-            result[term] = _expand(value.as_s, context)
+            result[term] = expand_iri(value.as_s, context)
           else
             result[term] = value
           end
@@ -43,7 +43,7 @@ module Balloon
           else
             next
           end
-          value = _value(term, value, context, loader)
+          value = expand_value(term, value, context, loader)
           if result[term]?.try(&.as_h?) && value.as_h?
             result[term] = wrap(result[term].as_h.merge(value.as_h))
           else
@@ -75,16 +75,16 @@ module Balloon
           term = "#{context[prefix]}#{suffix}"
         end
         if iri = defn.as_s?
-          result[term] = _expand(iri, context)
+          result[term] = expand_iri(iri, context)
         elsif map = defn.as_h?
-          result[term] = _expand(map["@id"].as_s, context)
+          result[term] = expand_iri(map["@id"].as_s, context)
         end
       end
 
       wrap(result)
     end
 
-    private def self._expand(string, context)
+    private def self.expand_iri(string, context)
       if string.includes?(":")
         prefix, suffix = string.split(":")
         if context[prefix]? && !suffix.starts_with?("//")
@@ -97,7 +97,7 @@ module Balloon
       end
     end
 
-    private def self._value(term, value, context, loader)
+    private def self.expand_value(term, value, context, loader)
       if term.in?(["https://www.w3.org/ns/activitystreams#content", "https://www.w3.org/ns/activitystreams#name", "https://www.w3.org/ns/activitystreams#summary"])
         value.as_s? ? wrap({"und" => value}) : value
       elsif value.as_a?

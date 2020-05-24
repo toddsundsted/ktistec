@@ -16,10 +16,10 @@
         </div>
         <%- if actor -%>
         <div class="actor">
-            <h1><a href="<%= actor.aid %>" target="_blank"><%= actor.username || account %></a></h1>
+            <h1><a href="<%= actor.iri %>" target="_blank"><%= actor.username || account %></a></h1>
                 <dl>
                     <dt>Id</dt>
-                    <dd><%= actor.aid %></dd>
+                    <dd><%= actor.iri %></dd>
                     <dt>Username</dt>
                     <dd><%= actor.username %></dd>
                     <dt>Name</dt>

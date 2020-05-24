@@ -1,7 +1,7 @@
 {
   <%- if actor -%>
     "actor":{
-      "id":<%= actor.aid.inspect %>,
+      "id":<%= actor.iri.inspect %>,
       "username":<%= actor.username.try(&.inspect) || "null" %>,
       "name":<%= actor.name.try(&.inspect) || "null" %>
     },

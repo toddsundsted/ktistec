@@ -12,7 +12,7 @@ Spectator.describe ActivityPub::Actor do
 
   let(foo_bar) do
     FooBarActor.new(
-      aid: "https://test.test/#{random_string}",
+      iri: "https://test.test/#{random_string}",
       pem_public_key: (<<-KEY
         -----BEGIN PUBLIC KEY-----
         MFowDQYJKoZIhvcNAQEBBQADSQAwRgJBAKr1/30vwtQozUzKAiM87+cJzUvA15KR
@@ -61,22 +61,22 @@ Spectator.describe ActivityPub::Actor do
   end
 
   context "when validating" do
-    let!(actor) { described_class.new(aid: "http://test.test/foo_bar").save }
+    let!(actor) { described_class.new(iri: "http://test.test/foo_bar").save }
 
     it "must be present" do
       expect(described_class.new.valid?).to be_false
     end
 
     it "must be an absolute URI" do
-      expect(described_class.new(aid: "/some_actor").valid?).to be_false
+      expect(described_class.new(iri: "/some_actor").valid?).to be_false
     end
 
     it "must be unique" do
-      expect(described_class.new(aid: "http://test.test/foo_bar").valid?).to be_false
+      expect(described_class.new(iri: "http://test.test/foo_bar").valid?).to be_false
     end
 
     it "is valid" do
-      expect(described_class.new(aid: "http://test.test/#{random_string}").save.valid?).to be_true
+      expect(described_class.new(iri: "http://test.test/#{random_string}").save.valid?).to be_true
     end
   end
 
@@ -123,7 +123,7 @@ Spectator.describe ActivityPub::Actor do
   describe ".from_json_ld" do
     it "creates a new instance" do
       actor = described_class.from_json_ld(json).save.as_a(FooBarActor)
-      expect(actor.aid).to eq("https://test.test/foo_bar")
+      expect(actor.iri).to eq("https://test.test/foo_bar")
       expect(actor.username).to eq("foo_bar")
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
       expect(actor.pem_private_key).to eq("---PEM PRIVATE KEY---")
@@ -141,7 +141,7 @@ Spectator.describe ActivityPub::Actor do
   describe "#from_json_ld" do
     it "updates an existing instance" do
       actor = described_class.new.from_json_ld(json).save
-      expect(actor.aid).to eq("https://test.test/foo_bar")
+      expect(actor.iri).to eq("https://test.test/foo_bar")
       expect(actor.username).to eq("foo_bar")
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
       expect(actor.pem_private_key).to eq("---PEM PRIVATE KEY---")

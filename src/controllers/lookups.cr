@@ -19,7 +19,7 @@ class LookupsController
         end
       open(url) do |response|
         json = Balloon::JSON_LD.expand(response.body)
-        if (aid = json.dig?("@id").try(&.as_s)) && (actor = ActivityPub::Actor.find?(aid: aid))
+        if (iri = json.dig?("@id").try(&.as_s)) && (actor = ActivityPub::Actor.find?(iri: iri))
           actor.from_json_ld(json)
         else
           actor = ActivityPub::Actor.from_json_ld(json)

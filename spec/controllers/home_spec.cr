@@ -89,7 +89,7 @@ Spectator.describe HomeController do
     let!(account) do
       Account.new(username, password).tap do |account|
         account.actor = ActivityPub::Actor.new(
-          aid: "https://test.test/#{username}",
+          iri: "https://test.test/#{username}",
           username: username
         ).save
       end.save

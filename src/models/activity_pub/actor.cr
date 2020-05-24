@@ -8,15 +8,15 @@ module ActivityPub
     @@table_name = "actors"
 
     @[Persistent]
-    property aid : String?
-    validates(aid) { unique_absolute_uri?(aid) }
+    property iri : String?
+    validates(iri) { unique_absolute_uri?(iri) }
 
-    private def unique_absolute_uri?(aid)
-      if aid.nil?
+    private def unique_absolute_uri?(iri)
+      if iri.nil?
         "must be present"
-      elsif !URI.parse(aid).absolute?
+      elsif !URI.parse(iri).absolute?
         "must be an absolute URI"
-      elsif (actor = Actor.find?(aid: aid)) && actor.id != self.id
+      elsif (actor = Actor.find?(iri: iri)) && actor.id != self.id
         "must be unique"
       end
     end
@@ -79,7 +79,7 @@ end
 private def map(json)
   json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
   {
-    aid: json.dig?("@id").try(&.as_s),
+    iri: json.dig?("@id").try(&.as_s),
     type: json.dig?("@type").try(&.as_s),
     username: json.dig?("https://www.w3.org/ns/activitystreams#preferredUsername").try(&.as_s),
     pem_public_key: json.dig?("https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem").try(&.as_s),

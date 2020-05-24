@@ -67,9 +67,9 @@ class Account
   end
 
   @[Persistent]
-  property aid : String { "#{Balloon.config.host}/actors/#{username}" }
+  property iri : String { "#{Balloon.config.host}/actors/#{username}" }
 
-  belongs_to actor, class_name: ActivityPub::Actor, foreign_key: aid, primary_key: aid
+  belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri
 
   has_many sessions
 end

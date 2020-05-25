@@ -122,7 +122,7 @@ Spectator.describe ActivityPub::Actor do
 
   describe ".from_json_ld" do
     it "creates a new instance" do
-      actor = described_class.from_json_ld(json).save.as_a(FooBarActor)
+      actor = described_class.from_json_ld(json).save
       expect(actor.iri).to eq("https://test.test/foo_bar")
       expect(actor.username).to eq("foo_bar")
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")

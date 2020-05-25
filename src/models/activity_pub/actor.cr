@@ -80,7 +80,6 @@ private def map(json)
   json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
   {
     iri: json.dig?("@id").try(&.as_s),
-    type: json.dig?("@type").try(&.as_s),
     username: json.dig?("https://www.w3.org/ns/activitystreams#preferredUsername").try(&.as_s),
     pem_public_key: json.dig?("https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem").try(&.as_s),
     pem_private_key: json.dig?("https://w3id.org/security#privateKey", "https://w3id.org/security#privateKeyPem").try(&.as_s),

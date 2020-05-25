@@ -42,7 +42,7 @@ module Balloon
       # Returns true if no instances exist.
       #
       def empty?
-        Balloon.database.scalar("SELECT COUNT(*) FROM #{table_name}") == 0
+        count == 0
       end
 
       # Returns the count of saved instances.

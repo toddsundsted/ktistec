@@ -268,7 +268,7 @@ module Balloon
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           {% for v in vs %}
             if self.responds_to?(:_validate_{{v}})
-              if error = self._validate_{{v}}({{v}})
+              if error = self._validate_{{v}}(self.{{v}})
                 @errors[{{v.stringify}}] = [error]
               end
             end
@@ -378,7 +378,7 @@ module Balloon
             Balloon.database.exec(
               "UPDATE #{table_name} SET #{conditions} WHERE id = ?",
               {% for v in vs %}
-                {{v}},
+                self.{{v}},
               {% end %}
               @id
             )
@@ -388,7 +388,7 @@ module Balloon
             @id = Balloon.database.exec(
               "INSERT INTO #{table_name} (#{columns}) VALUES (#{conditions})",
               {% for v in vs %}
-                {{v}},
+                self.{{v}},
               {% end %}
             ).last_insert_id
           end

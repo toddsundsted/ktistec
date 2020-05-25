@@ -34,6 +34,26 @@ Spectator.describe Balloon::Model::Polymorphic do
   let!(subclass1) { Subclass1.new.save }
   let!(subclass2) { Subclass2.new.save }
 
+  describe ".all" do
+    it "finds all instances" do
+      expect(Subclass1.all).to eq([subclass1])
+    end
+  end
+
+  describe ".count" do
+    it "returns the count" do
+      expect(Subclass1.count).to eq(1)
+      expect(Subclass1.count(id: subclass2.id)).to eq(0)
+    end
+  end
+
+  describe ".where" do
+    it "finds all instances" do
+      expect(Subclass1.where(id: subclass2.id)).to be_empty
+      expect(Subclass1.where("id = ?", subclass2.id)).to be_empty
+    end
+  end
+
   describe ".find" do
     it "finds the instance" do
       expect(Subclass1.find(subclass1.id)).to be_a(Subclass1)

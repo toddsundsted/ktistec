@@ -49,7 +49,14 @@ module Balloon
       #
       def count(**options)
         if options.empty?
-          Balloon.database.scalar("SELECT COUNT(*) FROM #{table_name}").as(Int)
+          Balloon.database.scalar(
+            {% if @type < Balloon::Model::Polymorphic %}
+              "SELECT COUNT(*) FROM #{table_name} WHERE type IN (%s)" %
+              {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}}
+            {% else %}
+              "SELECT COUNT(*) FROM #{table_name}"
+            {% end %}
+          ).as(Int)
         else
           {% begin %}
             {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
@@ -59,7 +66,12 @@ module Balloon
               "#{v} = ?"
             end.join(" AND ")
             Balloon.database.scalar(
-              "SELECT COUNT(*) FROM #{table_name} WHERE #{conditions}",
+              {% if @type < Balloon::Model::Polymorphic %}
+                "SELECT COUNT(*) FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
+                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
+              {% else %}
+                "SELECT COUNT(*) FROM #{table_name} WHERE #{conditions}",
+              {% end %}
               *options.values
             ).as(Int)
           {% end %}
@@ -73,7 +85,12 @@ module Balloon
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify)}}.join(",")
           Balloon.database.query_all(
-            "SELECT #{columns} FROM #{table_name}"
+            {% if @type < Balloon::Model::Polymorphic %}
+              "SELECT #{columns} FROM #{table_name} WHERE type IN (%s)" %
+                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
+            {% else %}
+              "SELECT #{columns} FROM #{table_name}"
+            {% end %}
           ) do |rs|
             self.new(
               {% for v in vs %}
@@ -178,7 +195,12 @@ module Balloon
             "#{v} = ?"
           end.join(" AND ")
           Balloon.database.query_all(
-            "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
+            {% if @type < Balloon::Model::Polymorphic %}
+              "SELECT #{columns} FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
+                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
+            {% else %}
+              "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
+            {% end %}
             *options.values
           ) do |rs|
             self.new(
@@ -197,7 +219,12 @@ module Balloon
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify)}}.join(",")
           Balloon.database.query_all(
-            "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
+            {% if @type < Balloon::Model::Polymorphic %}
+              "SELECT #{columns} FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
+                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
+            {% else %}
+              "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
+            {% end %}
             *arguments
           ) do |rs|
             self.new(

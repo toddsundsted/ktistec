@@ -36,7 +36,7 @@ module Balloon
       # Returns the table name.
       #
       def table_name
-        @@table_name ||= Utils.table_name({{@type}})
+        @@table_name ||= Utils.table_name(self)
       end
 
       # Returns true if no instances exist.
@@ -75,7 +75,7 @@ module Balloon
           Balloon.database.query_all(
             "SELECT #{columns} FROM #{table_name}"
           ) do |rs|
-            {{@type}}.new(
+            self.new(
               {% for v in vs %}
                 {{v}}: rs.read({{v.type}}),
               {% end %}
@@ -97,7 +97,7 @@ module Balloon
             "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
             id
           ) do |rs|
-            {{@type}}.new(
+            self.new(
               {% for v in vs %}
                 {{v}}: rs.read({{v.type}}),
               {% end %}
@@ -135,7 +135,7 @@ module Balloon
             "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
             *options.values
           ) do |rs|
-            {{@type}}.new(
+            self.new(
               {% for v in vs %}
                 {{v}}: rs.read({{v.type}}),
               {% end %}
@@ -171,7 +171,7 @@ module Balloon
             "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
             *options.values
           ) do |rs|
-            {{@type}}.new(
+            self.new(
               {% for v in vs %}
                 {{v}}: rs.read({{v.type}}),
               {% end %}
@@ -190,7 +190,7 @@ module Balloon
             "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
             *arguments
           ) do |rs|
-            {{@type}}.new(
+            self.new(
               {% for v in vs %}
                 {{v}}: rs.read({{v.type}}),
               {% end %}
@@ -249,7 +249,7 @@ module Balloon
       # Returns the table name.
       #
       def table_name
-        @@table_name ||= Utils.table_name({{@type}})
+        @@table_name ||= Utils.table_name(self.class)
       end
 
       getter errors = {} of String => Array(String)

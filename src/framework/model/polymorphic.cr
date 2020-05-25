@@ -3,7 +3,7 @@ require "../model"
 module Balloon
   module Model
     module Polymorphic
-      macro find(id, *, as _as)
+      macro find(_id id, *, as _as)
         {% raise "can't convert #{@type} to #{_as}" unless _as.resolve < @type %}
         {{_as}}.find({{id}}).tap do |inst|
           unless {{_as.stringify}} == inst.type

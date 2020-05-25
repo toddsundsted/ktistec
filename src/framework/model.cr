@@ -115,7 +115,7 @@ module Balloon
       #
       def find?(id)
         find(id)
-      rescue
+      rescue NotFound
       end
 
       # Finds the saved instance.
@@ -153,7 +153,7 @@ module Balloon
       #
       def find?(**options)
         find(**options)
-      rescue
+      rescue NotFound
       end
 
       # Returns saved instances.

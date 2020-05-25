@@ -94,7 +94,12 @@ module Balloon
           columns = {{vs.map(&.stringify)}}.join(",")
           conditions = "id = ?"
           Balloon.database.query_one(
-            "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
+            {% if @type < Balloon::Model::Polymorphic %}
+              "SELECT #{columns} FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
+                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
+            {% else %}
+              "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
+            {% end %}
             id
           ) do |rs|
             self.new(
@@ -132,7 +137,12 @@ module Balloon
             "#{v} = ?"
           end.join(" AND ")
           Balloon.database.query_one(
-            "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
+            {% if @type < Balloon::Model::Polymorphic %}
+              "SELECT #{columns} FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
+                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
+            {% else %}
+              "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
+            {% end %}
             *options.values
           ) do |rs|
             self.new(

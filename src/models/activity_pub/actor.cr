@@ -7,6 +7,14 @@ module ActivityPub
 
     @@table_name = "actors"
 
+    def self.find(_iri iri : String?)
+      find(iri: iri)
+    end
+
+    def self.find?(_iri iri : String?)
+      find?(iri: iri)
+    end
+
     @[Persistent]
     property iri : String?
     validates(iri) { unique_absolute_uri?(iri) }
@@ -16,7 +24,7 @@ module ActivityPub
         "must be present"
       elsif !URI.parse(iri).absolute?
         "must be an absolute URI"
-      elsif (actor = Actor.find?(iri: iri)) && actor.id != self.id
+      elsif (actor = Actor.find?(iri)) && actor.id != self.id
         "must be unique"
       end
     end

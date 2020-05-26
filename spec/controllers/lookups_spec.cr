@@ -78,13 +78,13 @@ Spectator.describe LookupsController do
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
             expect{get "/api/lookup?account=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find(iri: "https://test.test/foo_bar").username).to eq("foo_bar")
+            expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "application/json"}
             expect{get "/api/lookup?account=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find(iri: "https://test.test/foo_bar").username).to eq("foo_bar")
+            expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
           end
         end
       end
@@ -110,13 +110,13 @@ Spectator.describe LookupsController do
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
             expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find(iri: "https://test.test/foo_bar").username).to eq("foo_bar")
+            expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "application/json"}
             expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find(iri: "https://test.test/foo_bar").username).to eq("foo_bar")
+            expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
           end
         end
       end

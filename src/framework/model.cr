@@ -105,7 +105,7 @@ module Balloon
       #
       # Raises `NotFound` if no such saved instance exists.
       #
-      def find(_id id)
+      def find(_id id : Int?)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify)}}.join(",")
@@ -135,7 +135,7 @@ module Balloon
       #
       # Returns `nil` if no such saved instance exists.
       #
-      def find?(_id id)
+      def find?(_id id : Int?)
         find(id)
       rescue NotFound
       end

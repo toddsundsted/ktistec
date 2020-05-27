@@ -74,6 +74,9 @@ module ActivityPub
     @[Persistent]
     property image : String?
 
+    @[Persistent]
+    property url : String?
+
     def self.from_json_ld(json)
       self.new(**map(json))
     end
@@ -98,6 +101,7 @@ private def map(json)
     name: json.dig?("https://www.w3.org/ns/activitystreams#name").try(&.as_h.dig?("und")).try(&.as_s),
     summary: json.dig?("https://www.w3.org/ns/activitystreams#summary").try(&.as_h.dig?("und")).try(&.as_s),
     icon: json.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s),
-    image: json.dig?("https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url").try(&.as_s)
+    image: json.dig?("https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url").try(&.as_s),
+    url: json.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s)
   }
 end

@@ -20,7 +20,8 @@ up do |db|
       name text,
       summary text,
       icon text,
-      image text
+      image text,
+      url text
     )
   STR
   db.exec <<-STR

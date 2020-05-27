@@ -115,7 +115,8 @@ Spectator.describe ActivityPub::Actor do
           "type": "Image",
           "mediaType": "image/jpeg",
           "url": "image link"
-        }
+        },
+        "url":"url link"
       }
     JSON
   end
@@ -135,6 +136,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
+      expect(actor.url).to eq("url link")
     end
   end
 
@@ -153,6 +155,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
+      expect(actor.url).to eq("url link")
     end
   end
 end

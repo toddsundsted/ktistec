@@ -158,4 +158,18 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.url).to eq("url link")
     end
   end
+
+  describe "#follow" do
+    let!(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    it "adds a following relationship" do
+      foo_bar.follow(other).save
+      expect(foo_bar.all_following).to eq([other])
+    end
+
+    it "adds a followers relationship" do
+      other.follow(foo_bar).save
+      expect(foo_bar.all_followers).to eq([other])
+    end
+  end
 end

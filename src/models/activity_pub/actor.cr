@@ -84,6 +84,76 @@ module ActivityPub
     def from_json_ld(json)
       self.assign(**map(json))
     end
+
+    def follow(other : Actor)
+      Relationship::Social::Follow.new(from_iri: self.iri, to_iri: other.iri)
+    end
+
+    def all_following(page : UInt16 = 0, size : UInt16 = 10)
+      {% begin %}
+        {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+        query = <<-QUERY
+          SELECT {{ vs.map{ |v| "a.#{v}" }.join(",").id }}
+            FROM actors AS a, relationships AS r
+           WHERE a.iri = r.to_iri
+             AND r.type = "#{Relationship::Social::Follow}"
+             AND r.from_iri = ?
+             AND a.id NOT IN (
+                SELECT a.id
+                  FROM actors AS a, relationships AS r
+                 WHERE a.iri = r.to_iri
+                   AND r.type = "#{Relationship::Social::Follow}"
+                   AND r.from_iri = ?
+              ORDER BY r.created_at DESC
+                 LIMIT ?
+             )
+        ORDER BY r.created_at DESC
+           LIMIT ?
+        QUERY
+        Balloon.database.query_all(
+          query, self.iri, self.iri, (page * size).to_i, size.to_i
+        ) do |rs|
+          Actor.new(
+            {% for v in vs %}
+              {{v}}: rs.read({{v.type}}),
+            {% end %}
+          )
+        end
+      {% end %}
+    end
+
+    def all_followers(page : UInt16 = 0, size : UInt16 = 10)
+      {% begin %}
+        {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+        query = <<-QUERY
+          SELECT {{ vs.map{ |v| "a.#{v}" }.join(",").id }}
+            FROM actors AS a, relationships AS r
+           WHERE a.iri = r.from_iri
+             AND r.type = "#{Relationship::Social::Follow}"
+             AND r.to_iri = ?
+             AND a.id NOT IN (
+                SELECT a.id
+                  FROM actors AS a, relationships AS r
+                 WHERE a.iri = r.from_iri
+                   AND r.type = "#{Relationship::Social::Follow}"
+                   AND r.to_iri = ?
+              ORDER BY r.created_at DESC
+                 LIMIT ?
+             )
+        ORDER BY r.created_at DESC
+           LIMIT ?
+        QUERY
+        Balloon.database.query_all(
+          query, self.iri, self.iri, (page * size).to_i, size.to_i
+        ) do |rs|
+          Actor.new(
+            {% for v in vs %}
+              {{v}}: rs.read({{v.type}}),
+            {% end %}
+          )
+        end
+      {% end %}
+    end
   end
 end
 

@@ -65,8 +65,9 @@ def self.random_string
 end
 
 def self._sign_in
-  Global.account = account = Account.new(random_string, random_string)
-  Global.session = Session.new(account)
+  account = Global.account = Account.new(username: random_string, password: random_string).save
+  ActivityPub::Actor.new(iri: account.iri, username: account.username).save
+  Global.session = Session.new(account).save
 end
 
 def self._sign_out

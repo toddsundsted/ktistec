@@ -1,0 +1,10 @@
+{
+  "@context":"https://www.w3.org/ns/activitystreams",
+  "id": "<%= host %>/actors/<%= actor.username %>/following",
+  "type": "Collection",
+  "items":[
+    <%- related.each_with_index do |actor, i| -%>
+      "<%= actor.iri %>"<%= i < related.size - 1 ? "," : "" %>
+    <%- end -%>
+  ]
+}

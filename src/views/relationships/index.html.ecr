@@ -1,0 +1,11 @@
+<div>
+    <h1>Following</h1>
+    <ul>
+        <%- related.each do |actor| -%>
+            <li class="actor">
+                <a href="<%= actor.iri %>"><%= actor.username || actor.iri %></a>
+            </li>
+        <%- end -%>
+    </ul>
+    <p><a href="/api/lookup">follow more...</a>
+</div>

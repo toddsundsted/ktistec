@@ -1,31 +1,23 @@
-<!DOCTYPE html>
-<html lang='en'>
-    <head>
-        <meta charset='utf-8'>
-    </head>
-    <body>
-        <div>
-            <h1>Lookup</h1>
-            <% if message %>
-                <p class="error message">Error: <%= message %></p>
-            <% end %>
-            <form method='GET'>
-                <input type='text' name='account' value='<%= account %>'>
-                <input type='submit' value='Lookup'>
-            </form>
-        </div>
-        <%- if actor -%>
-        <div class="actor">
-            <h1><a href="<%= actor.iri %>" target="_blank"><%= actor.username || account %></a></h1>
-                <dl>
-                    <dt>Id</dt>
-                    <dd><%= actor.iri %></dd>
-                    <dt>Username</dt>
-                    <dd><%= actor.username %></dd>
-                    <dt>Name</dt>
-                    <dd><%= actor.name %></dd>
-                </dl>
-            </div>
-        <%- end -%>
-    </body>
-</html>
+<div>
+    <h1>Lookup</h1>
+    <% if message %>
+        <p class="error message">Error: <%= message %></p>
+    <% end %>
+    <form method='GET'>
+        <input type='text' name='account' value='<%= account %>'>
+        <input type='submit' value='Lookup'>
+    </form>
+</div>
+<%- if actor -%>
+    <div class="actor">
+        <h1><a href="<%= actor.iri %>" target="_blank"><%= actor.username || account %></a></h1>
+        <dl>
+            <dt>Id</dt>
+            <dd><%= actor.iri %></dd>
+            <dt>Username</dt>
+            <dd><%= actor.username %></dd>
+            <dt>Name</dt>
+            <dd><%= actor.name %></dd>
+        </dl>
+    </div>
+<%- end -%>

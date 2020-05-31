@@ -12,7 +12,7 @@ class ActorsController
 
     if accepts?("text/html")
       env.response.content_type = "text/html"
-      render "src/views/actors/show.ecr"
+      render "src/views/actors/show.ecr", "src/views/layouts/default.html.ecr"
     else
       env.response.content_type = "application/activity+json"
       render "src/views/actors/json.ecr"

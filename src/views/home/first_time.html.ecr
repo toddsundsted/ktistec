@@ -1,19 +1,11 @@
-<!DOCTYPE html>
-<html lang='en'>
-    <head>
-        <meta charset='utf-8'>
-    </head>
-    <body>
-        <div>
-            <h1>Sign Up</h1>
-            <% unless account.errors.empty? %>
-                <p>Error: <%= account.errors.flat_map { |k, vs| vs.map { |v| "#{k} #{v}" } }.join(", ") %></p>
-            <% end %>
-            <form method='POST'>
-                <input type='text' name='username' value='<%= account.username %>'>
-                <input type='password' name='password' value='<%= account.password %>'>
-                <input type='submit' value='Sign Up'>
-            </form>
-        </div>
-    </body>
-</html>
+<div>
+     <h1>Sign Up</h1>
+    <% unless account.errors.empty? %>
+        <p>Error: <%= account.errors.flat_map { |k, vs| vs.map { |v| "#{k} #{v}" } }.join(", ") %></p>
+    <% end %>
+    <form method='POST'>
+        <input type='text' name='username' value='<%= account.username %>'>
+        <input type='password' name='password' value='<%= account.password %>'>
+        <input type='submit' value='Sign Up'>
+    </form>
+</div>

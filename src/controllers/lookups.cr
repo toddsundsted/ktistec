@@ -30,7 +30,7 @@ class LookupsController
 
     if accepts?("text/html")
       env.response.content_type = "text/html"
-      render "src/views/lookups/actor.html.ecr"
+      render "src/views/lookups/actor.html.ecr", "src/views/layouts/default.html.ecr"
     else
       env.response.content_type = "application/json"
       render "src/views/lookups/actor.json.ecr"
@@ -41,7 +41,7 @@ class LookupsController
     env.response.status_code = 400
     if accepts?("text/html")
       env.response.content_type = "text/html"
-      render "src/views/lookups/actor.html.ecr"
+      render "src/views/lookups/actor.html.ecr", "src/views/layouts/default.html.ecr"
     else
       env.response.content_type = "application/json"
       render "src/views/lookups/actor.json.ecr"

@@ -17,7 +17,7 @@ class RelationshipsController
 
     if accepts?("text/html")
       env.response.content_type = "text/html"
-      render "src/views/relationships/index.html.ecr"
+      render "src/views/relationships/index.html.ecr", "src/views/layouts/default.html.ecr"
     else
       env.response.content_type = "application/json"
       render "src/views/relationships/index.json.ecr"

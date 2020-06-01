@@ -4,7 +4,7 @@
   "type": "Collection",
   "items":[
     <%- accounts.each_with_index do |account, i| -%>
-      "/actors/<%= account.username %>"<%= i < accounts.size - 1 ? "," : "" %>
+      "<%= actor_path(account) %>"<%= i < accounts.size - 1 ? "," : "" %>
     <%- end -%>
   ]
 }

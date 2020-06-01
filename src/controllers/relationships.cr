@@ -3,10 +3,6 @@ require "../framework"
 class RelationshipsController
   include Balloon::Controller
 
-  private macro actor_relationship_path
-    "/actors/#{env.params.url["username"]}/#{env.params.url["relationship"]}"
-  end
-
   get "/actors/:username/:relationship" do |env|
     unless (actor = get_actor(env))
       not_found
@@ -40,7 +36,7 @@ class RelationshipsController
 
     related.save
 
-    env.redirect actor_relationship_path
+    env.redirect actor_relationships_path
   end
 
   delete "/actors/:username/:relationship/:id" do |env|
@@ -56,7 +52,7 @@ class RelationshipsController
 
     relationship.destroy
 
-    env.redirect actor_relationship_path
+    env.redirect actor_relationships_path
   end
 
   private def self.pagination_params(env)

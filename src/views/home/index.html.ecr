@@ -1,6 +1,6 @@
 <div>
     <h1>Community</h1>
     <%- accounts.each do |account| -%>
-        <p><a href="/actors/<%= account.username %>"><%= account.username %></a></p>
+        <p><a href="<%= actor_path(account) %>"><%= account.username %></a></p>
     <%- end -%>
 </div>

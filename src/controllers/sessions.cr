@@ -27,7 +27,7 @@ class SessionsController
 
       if accepts?("text/html")
         env.response.cookies["AuthToken"] = jwt
-        env.redirect "/actors/#{account.username}"
+        env.redirect actor_path(account)
       else
         env.response.content_type = "application/json"
         {jwt: jwt}.to_json
@@ -45,14 +45,14 @@ class SessionsController
       end
     end
   rescue KeyError
-    env.redirect "/sessions"
+    env.redirect sessions_path
   end
 
   post "/sessions/forget" do |env|
     if session = env.session?
       session.destroy
     end
-    env.redirect "/sessions"
+    env.redirect sessions_path
   end
 
   private def self.params(env)

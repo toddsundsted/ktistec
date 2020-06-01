@@ -49,7 +49,7 @@ class HomeController
 
         if accepts?("text/html")
           env.response.cookies["AuthToken"] = jwt
-          env.redirect "/actors/#{account.username}"
+          env.redirect actor_path(account)
         else
           env.response.content_type = "application/json"
           {jwt: jwt}.to_json
@@ -67,7 +67,7 @@ class HomeController
       not_found
     end
   rescue KeyError
-    env.redirect "/"
+    env.redirect home_path
   end
 
   private def self.params(env)

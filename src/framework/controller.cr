@@ -22,6 +22,22 @@ module Balloon
       Balloon.config.host
     end
 
+    macro home_path
+      "/"
+    end
+
+    macro sessions_path
+      "/sessions"
+    end
+
+    macro actor_path(actor = nil)
+      "/actors/#{{{actor}}.try(&.username) || env.params.url["username"]}"
+    end
+
+    macro actor_relationships_path(actor = nil, relationship = nil)
+      "#{actor_path({{actor}})}/#{{{relationship}} || env.params.url["relationship"]}"
+    end
+
     macro accepts?(mime_type)
       env.accepts?({{mime_type}})
     end

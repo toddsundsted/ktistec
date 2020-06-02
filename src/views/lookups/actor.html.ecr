@@ -19,5 +19,18 @@
             <dt>Name</dt>
             <dd><%= actor.name %></dd>
         </dl>
+        <%- if (account = env.current_account?) -%>
+            <%- if (relationship = account.try(&.actor.follows?(actor))) -%>
+                <form method='POST' action='<%= actor_relationships_path(account, "following") %>/<%= relationship.id %>'>
+                    <input type='hidden' name='_method' value='delete'>
+                    <input type='submit' value='Unfollow'>
+                </form>
+            <%- else -%>
+                <form method='POST' action='<%= actor_relationships_path(account, "following") %>'>
+                    <input type='hidden' name='iri' value='<%= actor.iri %>'>
+                    <input type='submit' value='Follow'>
+                </form>
+            <%- end -%>
+        <%- end -%>
     </div>
 <%- end -%>

@@ -86,6 +86,22 @@ Spectator.describe LookupsController do
             expect{get "/api/lookup?account=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
             expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
           end
+
+          it "presents a follow button" do
+            headers = HTTP::Headers{"Accept" => "text/html"}
+            get "/api/lookup?account=foo_bar@test.test", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/form/input[@value='Follow']")).not_to be_empty
+          end
+
+          context "with an existing relationship" do
+            let!(relationship) { Relationship::Social::Follow.new(from_iri: Global.account.try(&.iri), to_iri: actor.iri).save }
+
+            it "presents an unfollow button" do
+              headers = HTTP::Headers{"Accept" => "text/html"}
+              get "/api/lookup?account=foo_bar@test.test", headers
+              expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/form/input[@value='Unfollow']")).not_to be_empty
+            end
+          end
         end
       end
 
@@ -117,6 +133,22 @@ Spectator.describe LookupsController do
             headers = HTTP::Headers{"Accept" => "application/json"}
             expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
             expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
+          end
+
+          it "presents a follow button" do
+            headers = HTTP::Headers{"Accept" => "text/html"}
+            get "/api/lookup?account=https://test.test/people/foo_bar", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/form/input[@value='Follow']")).not_to be_empty
+          end
+
+          context "with an existing relationship" do
+            let!(relationship) { Relationship::Social::Follow.new(from_iri: Global.account.try(&.iri), to_iri: actor.iri).save }
+
+            it "presents an unfollow button" do
+              headers = HTTP::Headers{"Accept" => "text/html"}
+              get "/api/lookup?account=https://test.test/people/foo_bar", headers
+              expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/form/input[@value='Unfollow']")).not_to be_empty
+            end
           end
         end
       end

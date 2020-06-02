@@ -14,7 +14,7 @@ module Balloon
       return call_next env if exclude_match?(env)
 
       begin
-        if (value = check_authorization(env)) || (value = check_cookie(env))
+        if (value = check_authorization(env) || check_cookie(env))
           if payload = Balloon::JWT.decode(value)
             if Time.parse_iso8601(payload["iat"].as_s) > Time.utc - 1.month
               if session = Session.find(session_key: payload["jti"].as_s)

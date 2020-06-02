@@ -89,6 +89,10 @@ module ActivityPub
       Relationship::Social::Follow.new(from_iri: self.iri, to_iri: other.iri)
     end
 
+    def follows?(other : Actor)
+      Relationship::Social::Follow.find?(from_iri: self.iri, to_iri: other.iri)
+    end
+
     def all_following(page : UInt16 = 0, size : UInt16 = 10)
       {% begin %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}

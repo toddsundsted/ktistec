@@ -1,0 +1,23 @@
+<div id='actor-<%= actor.id %>' class='actor medium'>
+    <h1><%= actor.name || actor.username %></h1>
+    <%- if actor.icon -%>
+        <p><img class='icon' src='<%= actor.icon %>'></p>
+    <%- end -%>
+    <p><a target='_blank' href='<%= actor.url || actor.iri %>'><%= actor.username %></a></p>
+    <%- if actor.summary -%>
+        <p class='summary'><%= actor.summary %></p>
+    <%- end -%>
+    <%- if (account = env.current_account?) -%>
+        <%- if (relationship = account.actor.follows?(actor)) -%>
+            <form method='POST' action='<%= actor_relationships_path(account, "following") %>/<%= relationship.id %>'>
+                <input type='hidden' name='_method' value='delete'>
+                <input type='submit' value='Unfollow'>
+            </form>
+        <%- else -%>
+            <form method='POST' action='<%= actor_relationships_path(account, "following") %>'>
+                <input type='hidden' name='iri' value='<%= actor.iri %>'>
+                <input type='submit' value='Follow'>
+            </form>
+        <%- end -%>
+    <%- end -%>
+</div>

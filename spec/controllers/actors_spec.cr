@@ -37,4 +37,54 @@ Spectator.describe ActorsController do
       expect(JSON.parse(response.body).dig("type")).to be_truthy
     end
   end
+
+  describe "GET /remote/actors/:id" do
+    let!(actor) do
+      ActivityPub::Actor.new(
+        iri: "https://external/#{random_string}"
+      ).save
+    end
+
+    it "returns 401 if not authorized" do
+      headers = HTTP::Headers{"Accept" => "text/html"}
+      get "/remote/actors/0", headers
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      headers = HTTP::Headers{"Accept" => "application/json"}
+      get "/remote/actors/0", headers
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if not found" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/actors/999999", headers
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if not found" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/remote/actors/999999", headers
+        expect(response.status_code).to eq(404)
+      end
+
+      it "renders the actor" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/actors/#{actor.id}", headers
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("/html")).not_to be_empty
+      end
+
+      it "renders the actor" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/remote/actors/#{actor.id}", headers
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("id")).to be_truthy
+      end
+    end
+  end
 end

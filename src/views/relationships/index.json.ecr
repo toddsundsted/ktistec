@@ -4,7 +4,7 @@
   "type": "Collection",
   "items":[
     <%- related.each_with_index do |actor, i| -%>
-      "<%= actor.iri %>"<%= i < related.size - 1 ? "," : "" %>
+      "<%= remote_actor_path(actor) %>"<%= i < related.size - 1 ? "," : "" %>
     <%- end -%>
   ]
 }

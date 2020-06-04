@@ -38,7 +38,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/following", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='actor']//a/@href").first.text).to eq(other.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='actor']//a/@href").first.text).to eq("/remote/actors/#{other.id}")
       end
 
       it "renders the related actors" do
@@ -46,7 +46,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/actors/#{actor.username}/following", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("items", 0)).to eq(other.iri)
+        expect(JSON.parse(response.body).dig("items", 0)).to eq("/remote/actors/#{other.id}")
       end
 
       it "returns 404 if not the current account" do

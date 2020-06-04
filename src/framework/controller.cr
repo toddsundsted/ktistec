@@ -30,6 +30,10 @@ module Balloon
       "/sessions"
     end
 
+    macro remote_actor_path(actor = nil)
+      "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
+    end
+
     macro actor_path(actor = nil)
       "/actors/#{{{actor}}.try(&.username) || env.params.url["username"]}"
     end

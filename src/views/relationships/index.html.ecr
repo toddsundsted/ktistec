@@ -3,7 +3,7 @@
     <ul>
         <%- related.each do |actor| -%>
             <li class="actor">
-                <a href="<%= actor.iri %>"><%= actor.username || actor.iri %></a>
+                <a href="<%= remote_actor_path(actor) %>"><%= actor.username || actor.iri %></a>
             </li>
         <%- end -%>
     </ul>

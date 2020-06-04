@@ -62,7 +62,7 @@ Spectator.describe LookupsController do
           headers = HTTP::Headers{"Accept" => "text/html"}
           expect{get "/api/lookup?account=foo_bar@test.test", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/h1/a[contains(text(),'foo_bar')]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/p/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an actor" do
@@ -90,7 +90,7 @@ Spectator.describe LookupsController do
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
             get "/api/lookup?account=foo_bar@test.test", headers
-            expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/form/input[@value='Follow']")).not_to be_empty
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Follow']")).not_to be_empty
           end
 
           context "with an existing relationship" do
@@ -99,7 +99,7 @@ Spectator.describe LookupsController do
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
               get "/api/lookup?account=foo_bar@test.test", headers
-              expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/form/input[@value='Unfollow']")).not_to be_empty
+              expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Unfollow']")).not_to be_empty
             end
           end
         end
@@ -110,7 +110,7 @@ Spectator.describe LookupsController do
           headers = HTTP::Headers{"Accept" => "text/html"}
           expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/h1/a[contains(text(),'foo_bar')]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/p/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and stores an actor" do
@@ -138,7 +138,7 @@ Spectator.describe LookupsController do
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
             get "/api/lookup?account=https://test.test/people/foo_bar", headers
-            expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/form/input[@value='Follow']")).not_to be_empty
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Follow']")).not_to be_empty
           end
 
           context "with an existing relationship" do
@@ -147,7 +147,7 @@ Spectator.describe LookupsController do
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
               get "/api/lookup?account=https://test.test/people/foo_bar", headers
-              expect(XML.parse_html(response.body).xpath_nodes("//div[@class='actor']/form/input[@value='Unfollow']")).not_to be_empty
+              expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Unfollow']")).not_to be_empty
             end
           end
         end

@@ -38,8 +38,7 @@ def process_request(request)
   main_handler.call context
   response.close
   io.rewind
-  client_response = HTTP::Client::Response.from_io(io, decompress: false)
-  Global.response = client_response
+  HTTP::Client::Response.from_io(io, decompress: false)
 end
 
 def build_main_handler

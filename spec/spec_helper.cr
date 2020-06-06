@@ -137,14 +137,15 @@ module Balloon
     def db_file
       @db_file ||= "sqlite3://#{File.tempname("balloon-test", ".db")}"
     end
-
-    def host
-      @host ||= "https://test.test"
-    end
   end
 
   def self.config
     @@spec_config ||= SpecConfig.new
+  end
+
+  def self.clear_host
+    Balloon.database.exec("DELETE FROM options WHERE key = ?", "host")
+    @@host = nil
   end
 end
 
@@ -155,6 +156,7 @@ class Account
 end
 
 Balloon::Server.run do
+  Balloon.host = "https://test.test"
   Kemal.config.port = Random.new.rand(49152..65535)
   Kemal.config.logging = false
 end

@@ -5,21 +5,17 @@ require "zlib"
 
 require "kemal"
 require "sqlite3"
+require "uri"
 require "yaml"
 
 module Balloon
   class Config
     YAML.mapping(
-      db_file: String,
-      host: String,
+      db_file: String
     )
 
     def db_file
       "sqlite3://#{File.expand_path(@db_file, home: true)}"
-    end
-
-    def host
-      @host
     end
   end
 
@@ -42,6 +38,39 @@ module Balloon
 
   def self.secret_key
     @@secret_key ||= Balloon.database.scalar("SELECT value FROM options WHERE key = ?", "secret_key").as(String)
+  end
+
+  @@host : String?
+
+  private def self.present?(value)
+    !value.nil? && !value.empty? && value
+  end
+
+  def self.host=(host)
+    uri = URI.parse(host)
+    raise "scheme must be present" unless present?(uri.scheme)
+    raise "host must be present" unless present?(uri.host)
+    raise "fragment must not be present" if present?(uri.fragment)
+    raise "query must not be present" if present?(uri.query)
+    if (path = present?(uri.path))
+      raise "path must not be present" unless path == "/"
+      uri.path = ""
+    end
+    @@host = uri.normalize.to_s
+    query = "INSERT INTO options (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = ?"
+    Balloon.database.exec(query, "host", @@host, @@host)
+    @@host
+  end
+
+  def self.host
+    @@host ||= Balloon.database.scalar("SELECT value FROM options WHERE key = ?", "host").as(String)
+  end
+
+  def self.host?
+    host
+  rescue ex : Exception
+    raise ex unless ex.message == "no results"
+    false
   end
 
   # An [ActivityPub](https://www.w3.org/TR/activitypub/) server.

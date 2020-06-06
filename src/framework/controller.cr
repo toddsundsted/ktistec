@@ -19,7 +19,7 @@ end
 module Balloon
   module Controller
     macro host
-      Balloon.config.host
+      Balloon.host
     end
 
     macro home_path

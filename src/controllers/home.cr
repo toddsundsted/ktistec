@@ -22,10 +22,10 @@ class HomeController
 
       if accepts?("text/html")
         env.response.content_type = "text/html"
-        render "src/views/home/first_time.html.ecr", "src/views/layouts/default.html.ecr"
+        render "src/views/home/step_2.html.ecr", "src/views/layouts/default.html.ecr"
       else
         env.response.content_type = "application/json"
-        render "src/views/home/first_time.json.ecr"
+        render "src/views/home/step_2.json.ecr"
       end
     else
       if accepts?("text/html")
@@ -89,10 +89,10 @@ class HomeController
       else
         if accepts?("text/html")
           env.response.content_type = "text/html"
-          render "src/views/home/first_time.html.ecr"
+          render "src/views/home/step_2.html.ecr", "src/views/layouts/default.html.ecr"
         else
           env.response.content_type = "application/json"
-          render "src/views/home/first_time.json.ecr"
+          render "src/views/home/step_2.json.ecr"
         end
       end
     else

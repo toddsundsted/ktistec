@@ -59,7 +59,7 @@ Spectator.describe HomeController do
     end
   end
 
-  context "first time" do
+  context "on step 2 (create account)" do
     describe "GET /" do
       it "renders a form" do
         headers = HTTP::Headers{"Accept" => "text/html"}

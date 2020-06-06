@@ -8,7 +8,7 @@ up do |db|
       id integer PRIMARY KEY AUTOINCREMENT,
       created_at datetime NOT NULL,
       updated_at datetime NOT NULL,
-      type varchar(32) NOT NULL,
+      type varchar(63) NOT NULL,
       iri varchar(255) NOT NULL,
       username varchar(255),
       pem_public_key text,

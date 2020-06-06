@@ -9,7 +9,7 @@ Spectator.describe HomeController do
 
   context "first time" do
     describe "GET /" do
-      it "render a form" do
+      it "renders a form" do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/", headers
         expect(response.status_code).to eq(200)

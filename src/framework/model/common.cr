@@ -14,5 +14,6 @@ module Balloon
   end
 end
 
+# :nodoc:
 module Common
 end

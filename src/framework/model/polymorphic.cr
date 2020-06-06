@@ -24,5 +24,6 @@ module Balloon
   end
 end
 
+# :nodoc:
 module Polymorphic
 end

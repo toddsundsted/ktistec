@@ -7,6 +7,58 @@ Spectator.describe HomeController do
   let(username) { random_string }
   let(password) { random_string }
 
+  context "on step 1 (set host)" do
+    before_each { Balloon.clear_host }
+
+    describe "GET /" do
+      it "renders a form" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/", headers
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("//form[./input[@name='host']]")).not_to be_empty
+      end
+
+      it "returns a template" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/", headers
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).as_h.keys).to have("host")
+      end
+    end
+
+    describe "POST /" do
+      it "rerenders if params are invalid" do
+        headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+        body = "host=foo_bar"
+        post "/", headers, body
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("//div[./form]/p").first.text).to match(/scheme must be present/)
+      end
+
+      it "rerenders if params are invalid" do
+        headers = HTTP::Headers{"Content-Type" => "application/json"}
+        body = {host: "foo_bar"}.to_json
+        post "/", headers, body
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body)["msg"]).to match(/scheme must be present/)
+      end
+
+      it "sets host and redirects" do
+        headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+        body = "host=https://foo_bar"
+        expect{post "/", headers, body}.to change{Balloon.host?}
+        expect(response.status_code).to eq(302)
+      end
+
+      it "sets host and redirects" do
+        headers = HTTP::Headers{"Content-Type" => "application/json"}
+        body = {host: "https://foo_bar"}.to_json
+        expect{post "/", headers, body}.to change{Balloon.host?}
+        expect(response.status_code).to eq(302)
+      end
+    end
+  end
+
   context "first time" do
     describe "GET /" do
       it "renders a form" do

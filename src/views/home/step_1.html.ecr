@@ -1,0 +1,10 @@
+<div>
+    <h1>Specify the Host</h1>
+    <% if error %>
+        <p>Error: <%= error %></p>
+    <% end %>
+    <form method='POST'>
+        <input type='text' name='host' value='<%= _host %>'>
+        <input type='submit' value='Submit'>
+    </form>
+</div>

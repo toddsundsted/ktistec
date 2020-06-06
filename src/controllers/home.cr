@@ -6,7 +6,18 @@ class HomeController
   skip_auth ["/"], GET, POST
 
   get "/" do |env|
-    if (accounts = Account.all).empty?
+    if !Balloon.host?
+      _host = ""
+      error = nil
+
+      if accepts?("text/html")
+        env.response.content_type = "text/html"
+        render "src/views/home/step_1.html.ecr", "src/views/layouts/default.html.ecr"
+      else
+        env.response.content_type = "application/json"
+        render "src/views/home/step_1.json.ecr"
+      end
+    elsif (accounts = Account.all).empty?
       account = Account.new("", "")
 
       if accepts?("text/html")
@@ -28,7 +39,28 @@ class HomeController
   end
 
   post "/" do |env|
-    if (accounts = Account.all).empty?
+    if !Balloon.host?
+      begin
+        Balloon.host = host_param(env)
+
+        if accepts?("text/html")
+          env.redirect home_path
+        else
+          env.redirect home_path
+        end
+      rescue ex : Exception
+        _host = host_param(env)
+        error = ex.message
+
+        if accepts?("text/html")
+          env.response.content_type = "text/html"
+          render "src/views/home/step_1.html.ecr", "src/views/layouts/default.html.ecr"
+        else
+          env.response.content_type = "application/json"
+          render "src/views/home/step_1.json.ecr"
+        end
+      end
+    elsif (accounts = Account.all).empty?
       account = Account.new(**params(env))
       keypair = OpenSSL::RSA.generate(2048, 17)
       actor = ActivityPub::Actor.new(
@@ -68,6 +100,11 @@ class HomeController
     end
   rescue KeyError
     env.redirect home_path
+  end
+
+  private def self.host_param(env)
+    params = accepts?("text/html") ? env.params.body : env.params.json
+    params["host"].as(String)
   end
 
   private def self.params(env)

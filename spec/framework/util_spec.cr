@@ -15,3 +15,13 @@ Spectator.describe Balloon::Util do
     end
   end
 end
+
+Spectator.describe Balloon::Util::PaginatedArray do
+  subject { Balloon::Util::PaginatedArray{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} }
+
+  describe ".more" do
+    it "changes the indicator" do
+      expect{subject.more = true}.to change{subject.more?}
+    end
+  end
+end

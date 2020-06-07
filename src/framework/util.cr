@@ -36,5 +36,15 @@ module Balloon
 
     class OpenError < Exception
     end
+
+    class PaginatedArray(T) < Array(T)
+      def more=(more : Bool)
+        @more = more
+      end
+
+      def more?
+        @more
+      end
+    end
   end
 end

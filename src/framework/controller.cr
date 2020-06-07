@@ -84,6 +84,21 @@ module Balloon
     macro e(str)
       {{str}}.gsub("\n", "\\n")
     end
+
+    macro included
+      def self.paginate(collection, env)
+        path = env.request.path
+        query = env.params.query
+        page = 0
+        begin
+          if (p = query["page"].to_i) > 0
+            page = p
+          end
+        rescue ArgumentError | KeyError
+        end
+        render "./src/views/partials/paginator.html.ecr"
+      end
+    end
   end
 end
 

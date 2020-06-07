@@ -1,0 +1,10 @@
+<p>
+    <%- if page > 0 -%>
+        <%- query["page"] = (page - 1).to_s -%>
+        <a href='<%= path %>?<%= query %>'>Prev</a>
+    <%- end -%>
+    <%- if collection.more? -%>
+        <%- query["page"] = (page + 1).to_s -%>
+        <a href='<%= path %>?<%= query %>'>Next</a>
+    <%- end -%>
+</p>

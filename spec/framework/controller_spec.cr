@@ -3,7 +3,7 @@ require "../spec_helper"
 class FooBarController
   include Balloon::Controller
 
-  skip_auth ["/foo/bar/helpers", "/foo/bar/helpers/:username/:relationship", "/foo/bar/accept", "/foo/bar/escape"]
+  skip_auth ["/foo/bar/helpers", "/foo/bar/helpers/:username/:relationship", "/foo/bar/paginate", "/foo/bar/accept", "/foo/bar/escape"]
 
   get "/foo/bar/helpers" do |env|
     {
@@ -18,6 +18,15 @@ class FooBarController
       actor_path: actor_path,
       actor_relationships_path: actor_relationships_path
     }.to_json
+  end
+
+  get "/foo/bar/paginate" do |env|
+    page = env.params.query["page"]?.try(&.to_i) || 0
+    size = env.params.query["size"]?.try(&.to_i) || 10
+    results = Balloon::Util::PaginatedArray(Int32).new
+    (0..9).to_a[page * size, size].each { |v| results << v }
+    results.more = (page + 1) * size < 10
+    paginate(results, env)
   end
 
   get "/foo/bar/accept" do |env|
@@ -63,6 +72,23 @@ Spectator.describe Balloon::Controller do
       get "/foo/bar/helpers/foo_bar/helping"
       expect(response.status_code).to eq(200)
       expect(JSON.parse(response.body)["actor_relationships_path"]).to eq("/actors/foo_bar/helping")
+    end
+  end
+
+  describe "get /foo/bar/paginate" do
+    it "does not display pagination controls" do
+      get "/foo/bar/paginate"
+      expect(XML.parse_html(response.body).xpath_nodes("//a")).to be_empty
+    end
+
+    it "displays the prev link" do
+      get "/foo/bar/paginate?page=1"
+      expect(XML.parse_html(response.body).xpath_nodes("//a[contains(text(),'Prev')]")).not_to be_empty
+    end
+
+    it "displays the next link" do
+      get "/foo/bar/paginate?size=9"
+      expect(XML.parse_html(response.body).xpath_nodes("//a[contains(text(),'Next')]")).not_to be_empty
     end
   end
 

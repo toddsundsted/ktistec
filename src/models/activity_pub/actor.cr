@@ -114,14 +114,23 @@ module ActivityPub
         ORDER BY r.created_at DESC
            LIMIT ?
         QUERY
-        Balloon.database.query_all(
-          query, self.iri, self.iri, (page * size).to_i, size.to_i
-        ) do |rs|
-          Actor.new(
-            {% for v in vs %}
-              {{v}}: rs.read({{v.type}}),
-            {% end %}
-          )
+        Balloon::Util::PaginatedArray(Actor).new.tap do |array|
+          Balloon.database.query(
+            query, self.iri, self.iri, (page * size).to_i, size.to_i + 1
+          ) do |rs|
+            rs.each do
+              array <<
+                Actor.new(
+                 {% for v in vs %}
+                   {{v}}: rs.read({{v.type}}),
+                 {% end %}
+                )
+            end
+          end
+          if array.size > size
+            array.more = true
+            array.pop
+          end
         end
       {% end %}
     end
@@ -147,14 +156,23 @@ module ActivityPub
         ORDER BY r.created_at DESC
            LIMIT ?
         QUERY
-        Balloon.database.query_all(
-          query, self.iri, self.iri, (page * size).to_i, size.to_i
-        ) do |rs|
-          Actor.new(
-            {% for v in vs %}
-              {{v}}: rs.read({{v.type}}),
-            {% end %}
-          )
+        Balloon::Util::PaginatedArray(Actor).new.tap do |array|
+          Balloon.database.query(
+            query, self.iri, self.iri, (page * size).to_i, size.to_i + 1
+          ) do |rs|
+            rs.each do
+              array <<
+                Actor.new(
+                 {% for v in vs %}
+                   {{v}}: rs.read({{v.type}}),
+                 {% end %}
+                )
+            end
+          end
+          if array.size > size
+            array.more = true
+            array.pop
+          end
         end
       {% end %}
     end

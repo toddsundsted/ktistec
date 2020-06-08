@@ -57,8 +57,8 @@ module Balloon
       uri.path = ""
     end
     @@host = uri.normalize.to_s
-    query = "INSERT INTO options (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = ?"
-    Balloon.database.exec(query, "host", @@host, @@host)
+    query = "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)"
+    Balloon.database.exec(query, "host", @@host)
     @@host
   end
 

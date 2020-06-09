@@ -28,33 +28,33 @@ Spectator.describe WellKnownController do
     end
 
     it "returns 404 if not found" do
-      get "/.well-known/webfinger?resource=acct:missing@test.test"
+      get "/.well-known/webfinger?resource=acct%3Amissing%40test.test"
       expect(response.status_code).to eq(404)
     end
 
     it "returns 200 if found" do
-      get "/.well-known/webfinger?resource=acct:#{username}@test.test"
+      get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
       expect(response.status_code).to eq(200)
     end
 
     it "returns the subject" do
-      get "/.well-known/webfinger?resource=acct:#{username}@test.test"
+      get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
       expect(JSON.parse(response.body)["subject"]).to eq("acct:#{username}@test.test")
     end
 
     it "returns aliases" do
-      get "/.well-known/webfinger?resource=acct:#{username}@test.test"
+      get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
       expect(JSON.parse(response.body)["aliases"]).to match(["https://test.test/actors/#{username}"])
     end
 
     it "returns reference to the actor document" do
-      get "/.well-known/webfinger?resource=acct:#{username}@test.test"
+      get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
       message = {"rel" => "self", "href" => "https://test.test/actors/#{username}", "type" => "application/activity+json"}
       expect(JSON.parse(response.body)["links"].as_a).to contain(message)
     end
 
     it "returns reference to the profile page" do
-      get "/.well-known/webfinger?resource=acct:#{username}@test.test"
+      get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
       message = {"rel" => "http://webfinger.net/rel/profile-page", "href" => "https://test.test/actors/#{username}", "type" => "text/html"}
       expect(JSON.parse(response.body)["links"].as_a).to contain(message)
     end

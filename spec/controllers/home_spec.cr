@@ -9,6 +9,7 @@ Spectator.describe HomeController do
 
   context "on step 1 (set host)" do
     before_each { Balloon.clear_host }
+    after_each { Balloon.host = "https://test.test" }
 
     describe "GET /" do
       it "renders a form" do

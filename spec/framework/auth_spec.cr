@@ -38,7 +38,7 @@ Spectator.describe Balloon::Auth do
     it "fails to authenticate, as HTML" do
       get "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html"}
       expect(response.status_code).to eq(401)
-      expect(XML.parse_html(response.body).xpath_nodes("/html//title").first.text).to eq("Unauthorized")
+      expect(XML.parse_html(response.body).xpath_nodes("/html//title").first.text).to match(/Unauthorized/)
     end
 
     it "fails to authenticate" do

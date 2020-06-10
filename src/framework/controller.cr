@@ -47,21 +47,33 @@ module Balloon
     end
 
     macro bad_request
-      body = {msg: "Bad Request"}
-      env.response.content_type = "application/json"
-      halt env, status_code: 400, response: body.to_json
+      if accepts?("text/html")
+        env.response.content_type = "text/html"
+        halt env, status_code: 400, response: render "src/views/pages/bad_request.html.ecr", "src/views/layouts/default.html.ecr"
+      else
+        env.response.content_type = "application/json"
+        halt env, status_code: 400, response: %<{"msg":"Bad Request"}>
+      end
     end
 
     macro not_found
-      body = {msg: "Not Found"}
-      env.response.content_type = "application/json"
-      halt env, status_code: 404, response: body.to_json
+      if accepts?("text/html")
+        env.response.content_type = "text/html"
+        halt env, status_code: 404, response: render "src/views/pages/not_found.html.ecr", "src/views/layouts/default.html.ecr"
+      else
+        env.response.content_type = "application/json"
+        halt env, status_code: 404, response: %<{"msg":"Not Found"}>
+      end
     end
 
     macro server_error
-      body = {msg: "Server Error"}
-      env.response.content_type = "application/json"
-      halt env, status_code: 500, response: body.to_json
+      if accepts?("text/html")
+        env.response.content_type = "text/html"
+        halt env, status_code: 500, response: render "src/views/pages/server_error.html.ecr", "src/views/layouts/default.html.ecr"
+      else
+        env.response.content_type = "application/json"
+        halt env, status_code: 500, response: %<{"msg":"Server Error"}>
+      end
     end
 
     # Don't authenticate specified handlers.

@@ -46,31 +46,26 @@ Spectator.describe Balloon::Controller do
   describe "get /foo/bar/helpers" do
     it "gets the host" do
       get "/foo/bar/helpers"
-      expect(response.status_code).to eq(200)
       expect(JSON.parse(response.body)["host"]).to eq("https://test.test")
     end
 
     it "gets the home path" do
       get "/foo/bar/helpers"
-      expect(response.status_code).to eq(200)
       expect(JSON.parse(response.body)["home_path"]).to eq("/")
     end
 
     it "gets the sessions path" do
       get "/foo/bar/helpers"
-      expect(response.status_code).to eq(200)
       expect(JSON.parse(response.body)["sessions_path"]).to eq("/sessions")
     end
 
     it "gets the actor path" do
       get "/foo/bar/helpers/foo_bar/helping"
-      expect(response.status_code).to eq(200)
       expect(JSON.parse(response.body)["actor_path"]).to eq("/actors/foo_bar")
     end
 
     it "gets the actor relationships path" do
       get "/foo/bar/helpers/foo_bar/helping"
-      expect(response.status_code).to eq(200)
       expect(JSON.parse(response.body)["actor_relationships_path"]).to eq("/actors/foo_bar/helping")
     end
   end

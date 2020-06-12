@@ -83,7 +83,7 @@ module Balloon
       def all
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          columns = {{vs.map(&.stringify)}}.join(",")
+          columns = {{vs.map(&.stringify).join(",")}}
           Balloon.database.query_all(
             {% if @type < Balloon::Model::Polymorphic %}
               "SELECT #{columns} FROM #{table_name} WHERE type IN (%s)" %
@@ -108,7 +108,7 @@ module Balloon
       def find(_id id : Int?)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          columns = {{vs.map(&.stringify)}}.join(",")
+          columns = {{vs.map(&.stringify).join(",")}}
           conditions = "id = ?"
           Balloon.database.query_one(
             {% if @type < Balloon::Model::Polymorphic %}
@@ -147,7 +147,7 @@ module Balloon
       def find(**options)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          columns = {{vs.map(&.stringify)}}.join(",")
+          columns = {{vs.map(&.stringify).join(",")}}
           conditions = options.keys.select do |o|
             o.in?({{vs.map(&.symbolize)}})
           end.map do |v|
@@ -188,7 +188,7 @@ module Balloon
       def where(**options)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          columns = {{vs.map(&.stringify)}}.join(",")
+          columns = {{vs.map(&.stringify).join(",")}}
           conditions = options.keys.select do |o|
             o.in?({{vs.map(&.symbolize)}})
           end.map do |v|
@@ -217,7 +217,7 @@ module Balloon
       def where(conditions : String, *arguments)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          columns = {{vs.map(&.stringify)}}.join(",")
+          columns = {{vs.map(&.stringify).join(",")}}
           Balloon.database.query_all(
             {% if @type < Balloon::Model::Polymorphic %}
               "SELECT #{columns} FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
@@ -420,7 +420,7 @@ module Balloon
               @id
             )
           else
-            columns = {{vs.map(&.stringify)}}.join(",")
+            columns = {{vs.map(&.stringify).join(",")}}
             conditions = (["?"] * {{vs.size}}).join(",")
             @id = Balloon.database.exec(
               "INSERT INTO #{table_name} (#{columns}) VALUES (#{conditions})",

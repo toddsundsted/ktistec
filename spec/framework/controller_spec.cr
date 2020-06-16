@@ -3,7 +3,7 @@ require "../spec_helper"
 class FooBarController
   include Balloon::Controller
 
-  skip_auth ["/foo/bar/helpers", "/foo/bar/helpers/:username/:relationship", "/foo/bar/paginate", "/foo/bar/accept", "/foo/bar/escape"]
+  skip_auth ["/foo/bar/helpers", "/foo/bar/helpers/:username/:relationship", "/foo/bar/paginate", "/foo/bar/accept", "/foo/bar/escape", "/foo/bar/sanitize"]
 
   get "/foo/bar/helpers" do |env|
     {
@@ -39,6 +39,10 @@ class FooBarController
 
   get "/foo/bar/escape" do |env|
     e "foo\nbar"
+  end
+
+  get "/foo/bar/sanitize" do |env|
+    s "<body>Foo Bar</body>"
   end
 end
 
@@ -103,6 +107,13 @@ Spectator.describe Balloon::Controller do
     it "escapes newline characters" do
       get "/foo/bar/escape"
       expect(response.body).to eq("foo\\nbar")
+    end
+  end
+
+  describe "/foo/bar/sanitize" do
+    it "sanitizes HTML" do
+      get "/foo/bar/sanitize"
+      expect(response.body).to eq("<p>Foo Bar</p>")
     end
   end
 end

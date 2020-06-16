@@ -97,6 +97,15 @@ module Balloon
       {{str}}.gsub("\n", "\\n")
     end
 
+    # Sanitizes HTML.
+    #
+    # For use in views:
+    #     <%= s string %>
+    #
+    macro s(str)
+      Balloon::Util.sanitize({{str}})
+    end
+
     macro included
       def self.paginate(collection, env)
         path = env.request.path

@@ -1,6 +1,78 @@
+require "xml"
+
 module Balloon
   module Util
     extend self
+
+    def sanitize(content)
+      return "" if content.nil? || content.empty?
+      String.build do |build|
+        sanitize(XML.parse_html(content,
+          XML::HTMLParserOptions::RECOVER |
+          XML::HTMLParserOptions::NODEFDTD |
+          XML::HTMLParserOptions::NOIMPLIED |
+          XML::HTMLParserOptions::NOERROR |
+          XML::HTMLParserOptions::NOWARNING |
+          XML::HTMLParserOptions::NONET
+        ), build)
+      end
+    end
+
+    private ELEMENTS = [
+      "p",
+      "h1", "h2", "h3", "h4", "h5", "h6",
+      "ul", "ol", "li",
+      "dl", "dt", "dd",
+      "div", "span",
+      "strong", "em",
+      "blockquote",
+      "pre",
+      "img",
+      "a"
+    ]
+
+    private ATTRIBUTES = {
+      "a" => ["href"],
+      "img" => ["src", "alt"]
+    }
+
+    private STRIP = [
+      "head",
+      "script",
+      "style"
+    ]
+
+    private VOID = [
+      "img"
+    ]
+
+    private def sanitize(html, build)
+      name = html.name.downcase
+      if html.element? && name.in?(STRIP)
+        # skip
+      elsif html.element? && name.in?(ELEMENTS)
+        if (attributes = ATTRIBUTES[name]?)
+          build << "<" << name
+          (attributes & html.attributes.map(&.name)).each do |attr|
+            build << " #{attr}='#{html[attr]}'"
+          end
+          build << ">"
+        else
+          build << "<" << name << ">"
+        end
+        html.children.each { |child| sanitize(child, build) }
+        unless name.in?(VOID)
+          build << "</" << name << ">"
+        end
+      elsif html.element? || html.document?
+        empty = html.element? && build.empty?
+        build << "<p>" if empty
+        html.children.each { |child| sanitize(child, build) }
+        build << "</p>" if empty
+      elsif html.text?
+        build << html.text
+      end
+    end
 
     def open(url, headers = HTTP::Headers{"Accept" => "application/activity+json"}, attempts = 10)
       open(url, headers, attempts) do |response|

@@ -37,9 +37,9 @@ class FooBarModel
   serializes body
 
   class Body
-    JSON.mapping(
-      body: Float64
-    )
+    include JSON::Serializable
+
+    property body : Float64
 
     def initialize(@body)
     end
@@ -75,9 +75,9 @@ class NotNilModel
   serializes body, format: yaml
 
   class Body
-    YAML.mapping(
-      body: Float64
-    )
+    include YAML::Serializable
+
+    property body : Float64
 
     def initialize(@body)
     end

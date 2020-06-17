@@ -10,9 +10,9 @@ require "yaml"
 
 module Balloon
   class Config
-    YAML.mapping(
-      db_file: String
-    )
+    include YAML::Serializable
+
+    property db_file : String
 
     def db_file
       "sqlite3://#{File.expand_path(@db_file, home: true)}"
@@ -24,8 +24,8 @@ module Balloon
   def self.config
     @@config ||=
       File.open(File.expand_path(File.join("~", ".balloon.yml"), home: true)) do |file|
-      Config.from_yaml(file)
-    end
+        Config.from_yaml(file)
+      end
   end
 
   @@database : DB::Database?

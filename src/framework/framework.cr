@@ -100,6 +100,7 @@ module Balloon
   VERSION = {{ `shards version "#{__DIR__}"`.chomp.stringify }}
 end
 
+require "./ext/*"
 require "./util"
 require "./controller"
 require "./database"

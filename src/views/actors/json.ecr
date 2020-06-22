@@ -1,18 +1,23 @@
 {
   "@context": [
     "https://www.w3.org/ns/activitystreams",
-    "https://w3id.org/security/v1",
-    "http://schema.org#"
+    "https://w3id.org/security/v1"
   ],
   "type": "Person",
   "id": "<%= host %>/actors/<%= actor.username %>",
   "preferredUsername": "<%= actor.username %>",
+  <%- if actor.name.presence -%>
+  "name": "<%= actor.name %>",
+  <%- end -%>
+  <%- if actor.summary.presence -%>
+  "summary": "<%= actor.summary %>",
+  <%- end -%>
   <%- if (pem_public_key = actor.pem_public_key) -%>
-    "publicKey": {
-      "id": "<%= host %>/actors/<%= actor.username %>#main-key",
-      "owner": "<%= host %>/actors/<%= actor.username %>",
-      "publicKeyPem": "<%= e pem_public_key %>"
-    },
+  "publicKey": {
+    "id": "<%= host %>/actors/<%= actor.username %>#main-key",
+    "owner": "<%= host %>/actors/<%= actor.username %>",
+    "publicKeyPem": "<%= e pem_public_key %>"
+  },
   <%- end -%>
   "inbox": "<%= host %>/actors/<%= actor.username %>/inbox",
   "outbox": "<%= host %>/actors/<%= actor.username %>/outbox",

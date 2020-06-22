@@ -3,7 +3,7 @@
     <%- if actor.icon -%>
         <p><img class='icon' src='<%= actor.icon %>'></p>
     <%- end -%>
-    <p><a target='_blank' href='<%= actor.url || actor.iri %>'><%= actor.username %></a></p>
+    <p><a target='_blank' href='<%= actor.urls.try(&.first?) || actor.iri %>'><%= actor.username %></a></p>
     <%- if actor.summary -%>
         <p class='summary'><%= actor.summary %></p>
     <%- end -%>

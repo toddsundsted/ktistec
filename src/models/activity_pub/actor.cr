@@ -3,7 +3,7 @@ require "json"
 
 module ActivityPub
   class Actor
-    include Balloon::Model(Common, Polymorphic)
+    include Balloon::Model(Common, Polymorphic, Serialized)
 
     @@table_name = "actors"
 
@@ -75,15 +75,7 @@ module ActivityPub
     property image : String?
 
     @[Persistent]
-    property url : String?
-
-    def self.from_json_ld(json)
-      self.new(**map(json))
-    end
-
-    def from_json_ld(json)
-      self.assign(**map(json))
-    end
+    property urls : Array(String)?
 
     def follow(other : Actor)
       Relationship::Social::Follow.new(from_iri: self.iri, to_iri: other.iri)
@@ -176,24 +168,32 @@ module ActivityPub
         end
       {% end %}
     end
-  end
-end
 
-private def map(json)
-  json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
-  {
-    iri: json.dig?("@id").try(&.as_s),
-    username: json.dig?("https://www.w3.org/ns/activitystreams#preferredUsername").try(&.as_s),
-    pem_public_key: json.dig?("https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem").try(&.as_s),
-    pem_private_key: json.dig?("https://w3id.org/security#privateKey", "https://w3id.org/security#privateKeyPem").try(&.as_s),
-    inbox: json.dig?("http://www.w3.org/ns/ldp#inbox").try(&.as_s),
-    outbox: json.dig?("https://www.w3.org/ns/activitystreams#outbox").try(&.as_s),
-    following: json.dig?("https://www.w3.org/ns/activitystreams#following").try(&.as_s),
-    followers: json.dig?("https://www.w3.org/ns/activitystreams#followers").try(&.as_s),
-    name: json.dig?("https://www.w3.org/ns/activitystreams#name").try(&.as_h.dig?("und")).try(&.as_s),
-    summary: json.dig?("https://www.w3.org/ns/activitystreams#summary").try(&.as_h.dig?("und")).try(&.as_s),
-    icon: json.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s),
-    image: json.dig?("https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url").try(&.as_s),
-    url: json.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s)
-  }
+    def self.from_json_ld(json)
+      self.new(**map(json))
+    end
+
+    def from_json_ld(json)
+      self.assign(**self.class.map(json))
+    end
+
+    def self.map(json)
+      json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
+      {
+        iri: json.dig?("@id").try(&.as_s),
+        username: dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
+        pem_public_key: dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem"),
+        pem_private_key: dig?(json, "https://w3id.org/security#privateKey", "https://w3id.org/security#privateKeyPem"),
+        inbox: dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
+        outbox: dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
+        following: dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
+        followers: dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
+        name: dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
+        summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+        icon: dig_id?(json, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url"),
+        image: dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
+        urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")
+      }
+    end
+  end
 end

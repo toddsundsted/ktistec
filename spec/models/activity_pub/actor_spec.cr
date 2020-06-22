@@ -88,7 +88,7 @@ Spectator.describe ActivityPub::Actor do
           "https://w3id.org/security/v1"
         ],
         "@id":"https://test.test/foo_bar",
-        "@type":"FooBarActor",
+        "@type":"Actor",
         "preferredUsername":"foo_bar",
         "publicKey":{
           "id":"https://test.test/foo_bar#public-key",
@@ -136,7 +136,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
-      expect(actor.url).to eq("url link")
+      expect(actor.urls).to eq(["url link"])
     end
   end
 
@@ -155,7 +155,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
-      expect(actor.url).to eq("url link")
+      expect(actor.urls).to eq(["url link"])
     end
   end
 

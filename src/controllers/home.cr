@@ -19,6 +19,7 @@ class HomeController
       end
     elsif (accounts = Account.all).empty?
       account = Account.new("", "")
+      actor = ActivityPub::Actor.new
 
       if accepts?("text/html")
         env.response.content_type = "text/html"
@@ -62,16 +63,13 @@ class HomeController
       end
     elsif (accounts = Account.all).empty?
       account = Account.new(**params(env))
-      keypair = OpenSSL::RSA.generate(2048, 17)
-      actor = ActivityPub::Actor.new(
-        iri: account.iri,
-        username: account.username,
-        pem_public_key: keypair.public_key.to_pem,
-        pem_private_key: keypair.to_pem
-      )
-
+      actor = ActivityPub::Actor.new(**params(env))
+      actor.iri = account.iri
       if account.valid? && actor.valid?
-        account.actor = actor
+        keypair = OpenSSL::RSA.generate(2048, 17)
+        actor.pem_public_key = keypair.public_key.to_pem
+        actor.pem_private_key = keypair.to_pem
+
         account.save
         actor.save
 
@@ -109,6 +107,11 @@ class HomeController
 
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
-    {username: params["username"].as(String), password: params["password"].as(String)}
+    {
+      username: params["username"].as(String),
+      password: params["password"].as(String),
+      name: params["name"].as(String),
+      summary: params["summary"].as(String)
+    }
   end
 end

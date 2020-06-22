@@ -66,14 +66,14 @@ Spectator.describe HomeController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//form[./input[@name='username']][./input[@name='password']]")).not_to be_empty
+        expect(XML.parse_html(response.body).xpath_nodes("//form[./input[@name='username']][./input[@name='password']][./input[@name='name']][./input[@name='summary']]")).not_to be_empty
       end
 
       it "returns a template" do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).as_h.keys).to have("username", "password")
+        expect(JSON.parse(response.body).as_h.keys).to have("username", "password", "name", "summary")
       end
     end
 
@@ -94,7 +94,7 @@ Spectator.describe HomeController do
 
       it "rerenders if params are invalid" do
         headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
-        body = "username=&password=a1!"
+        body = "username=&password=a1!&name=&summary="
         post "/", headers, body
         expect(response.status_code).to eq(200)
         expect(XML.parse_html(response.body).xpath_nodes("//div[./form]/p").first.text).to match(/username is too short, password is too short/)
@@ -102,7 +102,7 @@ Spectator.describe HomeController do
 
       it "rerenders if params are invalid" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
-        body = {username: "", password: "a1!"}.to_json
+        body = {username: "", password: "a1!", name: "", summary: ""}.to_json
         post "/", headers, body
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body)["msg"]).to match(/username is too short, password is too short/)
@@ -110,7 +110,7 @@ Spectator.describe HomeController do
 
       it "creates account and redirects" do
         headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
-        body = "username=#{username}&password=#{password}"
+        body = "username=#{username}&password=#{password}&name=&summary="
         expect{post "/", headers, body}.to change{Account.count}.by(1)
         expect(response.status_code).to eq(302)
         expect(response.headers["Set-Cookie"]).to be_truthy
@@ -118,13 +118,13 @@ Spectator.describe HomeController do
 
       it "also creates actor" do
         headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
-        body = "username=#{username}&password=#{password}"
+        body = "username=#{username}&password=#{password}&name=&summary="
         expect{post "/", headers, body}.to change{ActivityPub::Actor.count}.by(1)
       end
 
       it "creates account" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
-        body = {username: username, password: password}.to_json
+        body = {username: username, password: password, name: "", summary: ""}.to_json
         expect{post "/", headers, body}.to change{Account.count}.by(1)
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body)["jwt"]).to be_truthy
@@ -132,7 +132,7 @@ Spectator.describe HomeController do
 
       it "also creates actor" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
-        body = {username: username, password: password}.to_json
+        body = {username: username, password: password, name: "", summary: ""}.to_json
         expect{post "/", headers, body}.to change{ActivityPub::Actor.count}.by(1)
       end
     end

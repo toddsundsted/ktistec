@@ -1,7 +1,9 @@
 {
-  <%- unless account.errors.empty? -%>
-    "msg":<%= account.errors.flat_map { |k, vs| vs.map { |v| "#{k} #{v}" } }.join(", ").inspect %>,
+  <%- unless account.errors.empty? && actor.errors.empty? -%>
+    "msg":<%= account.errors.merge(actor.errors).flat_map { |k, vs| vs.map { |v| "#{k} #{v}" } }.join(", ").inspect %>,
   <%- end -%>
-  "username":<%= account.username.inspect %>,
-  "password":<%= account.password.inspect %>
+  "username":<%= account.username.try(&.inspect) || "null" %>,
+  "password":<%= account.password.try(&.inspect) || "null" %>,
+  "name":<%= actor.name.try(&.inspect) || "null" %>,
+  "summary":<%= actor.summary.try(&.inspect) || "null" %>
 }

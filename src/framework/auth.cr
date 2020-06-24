@@ -10,8 +10,7 @@ module Balloon
   #
   class Auth < Kemal::Handler
     def call(env)
-      return call_next env unless env.route_lookup.found?
-      return call_next env if exclude_match?(env)
+      return call_next(env) unless env.route_lookup.found?
 
       begin
         if (value = check_authorization(env) || check_cookie(env))
@@ -27,6 +26,8 @@ module Balloon
         end
       rescue Balloon::JWT::Error | Balloon::Model::NotFound
       end
+
+      return call_next(env) if exclude_match?(env)
 
       if env.accepts?("text/html")
         env.response.status_code = 401

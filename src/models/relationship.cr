@@ -13,6 +13,12 @@ class Relationship
   @[Persistent]
   property to_iri : String
 
+  @[Persistent]
+  property confirmed : Bool { false }
+
+  @[Persistent]
+  property visible : Bool { false }
+
   def validate
     super
     relationship = Relationship.find?(from_iri: from_iri, to_iri: to_iri, type: type)

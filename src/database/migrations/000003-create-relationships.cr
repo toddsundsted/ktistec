@@ -10,7 +10,9 @@ up do |db|
       updated_at datetime NOT NULL,
       type varchar(63) NOT NULL,
       from_iri varchar(255) NOT NULL,
-      to_iri varchar(255) NOT NULL
+      to_iri varchar(255) NOT NULL,
+      confirmed boolean,
+      visible boolean
     )
   STR
   db.exec <<-STR

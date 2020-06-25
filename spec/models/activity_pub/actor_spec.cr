@@ -162,14 +162,28 @@ Spectator.describe ActivityPub::Actor do
   describe "#follow" do
     let!(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
-    it "adds a following relationship" do
-      foo_bar.follow(other).save
-      expect(foo_bar.all_following).to eq([other])
+    it "adds a public following relationship" do
+      foo_bar.follow(other, confirmed: true, visible: true).save
+      expect(foo_bar.all_following(public: true)).to eq([other])
+      expect(foo_bar.all_following(public: false)).to eq([other])
     end
 
-    it "adds a followers relationship" do
+    it "adds a public followers relationship" do
+      other.follow(foo_bar, confirmed: true, visible: true).save
+      expect(foo_bar.all_followers(public: true)).to eq([other])
+      expect(foo_bar.all_followers(public: false)).to eq([other])
+    end
+
+    it "adds a non-public following relationship" do
+      foo_bar.follow(other).save
+      expect(foo_bar.all_following(public: true)).to be_empty
+      expect(foo_bar.all_following(public: false)).to eq([other])
+    end
+
+    it "adds a non-public followers relationship" do
       other.follow(foo_bar).save
-      expect(foo_bar.all_followers).to eq([other])
+      expect(foo_bar.all_followers(public: true)).to be_empty
+      expect(foo_bar.all_followers(public: false)).to eq([other])
     end
   end
 end

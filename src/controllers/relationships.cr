@@ -3,11 +3,14 @@ require "../framework"
 class RelationshipsController
   include Balloon::Controller
 
+  skip_auth ["/actors/:username/:relationship"], GET
+
   get "/actors/:username/:relationship" do |env|
-    unless (actor = get_actor(env))
+    unless (account = get_account(env))
       not_found
     end
-    unless (related = get_related(actor, env))
+    actor = account.actor
+    unless (related = all_related(env, actor, public: env.current_account? != account))
       bad_request
     end
 
@@ -21,33 +24,41 @@ class RelationshipsController
   end
 
   post "/actors/:username/:relationship" do |env|
-    unless (actor = get_actor(env))
+    unless (account = get_account(env))
       not_found
     end
-    unless (other = get_other(env))
+    unless env.current_account? == account
+      forbidden
+    end
+    actor = account.actor
+    unless (other = find_other(env))
       bad_request
     end
-    unless (related = make_related(actor, other, env))
+    unless (relationship = make_relationship(env, actor, other))
       bad_request
     end
-    unless related.valid?
+    unless relationship.valid?
       bad_request
     end
 
-    related.save
+    relationship.save
 
     env.redirect actor_relationships_path
   end
 
   delete "/actors/:username/:relationship/:id" do |env|
-    unless (actor = get_actor(env))
+    unless (account = get_account(env))
       not_found
     end
-    unless (relationship = find_related(env))
+    unless env.current_account? == account
+      forbidden
+    end
+    actor = account.actor
+    unless (relationship = find_relationship(env))
       bad_request
     end
     unless actor.iri.in?({relationship.from_iri, relationship.to_iri})
-      not_found
+      forbidden
     end
 
     relationship.destroy
@@ -62,47 +73,43 @@ class RelationshipsController
     }
   end
 
-  private def self.get_actor(env)
-    (account = env.current_account?) &&
-      (username = env.params.url["username"]?) &&
-      account.username == username &&
-      (actor = account.actor?)
-    actor
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"]?)
   end
 
-  private def self.get_other(env)
+  private def self.all_related(env, actor, public = true)
+    case env.params.url["relationship"]?
+    when "following"
+      actor.all_following(*pagination_params(env), public: public)
+    when "followers"
+      actor.all_followers(*pagination_params(env), public: public)
+    else
+    end
+  end
+
+  private def self.make_relationship(env, actor, other)
+    case env.params.url["relationship"]?
+    when "following"
+      actor.follow(other, confirmed: true, visible: true)
+    when "followers"
+      other.follow(actor, confirmed: true, visible: true)
+    else
+    end
+  end
+
+  private def self.find_relationship(env)
+    case env.params.url["relationship"]?
+    when "following"
+      Relationship::Social::Follow.find?(env.params.url["id"].to_i)
+    when "followers"
+      Relationship::Social::Follow.find?(env.params.url["id"].to_i)
+    else
+    end
+  end
+
+  private def self.find_other(env)
     (iri = env.params.body["iri"]? || env.params.json["iri"]?) &&
       (other = ActivityPub::Actor.find?(iri.to_s))
     other
-  end
-
-  private def self.get_related(actor, env)
-    case env.params.url["relationship"]?
-    when "following"
-      actor.all_following(*pagination_params(env))
-    when "followers"
-      actor.all_followers(*pagination_params(env))
-    else
-    end
-  end
-
-  private def self.make_related(actor, other, env)
-    case env.params.url["relationship"]?
-    when "following"
-      actor.follow(other)
-    when "followers"
-      other.follow(actor)
-    else
-    end
-  end
-
-  private def self.find_related(env)
-    case env.params.url["relationship"]?
-    when "following"
-      Relationship::Social::Follow.find(env.params.url["id"].to_i)
-    when "followers"
-      Relationship::Social::Follow.find(env.params.url["id"].to_i)
-    else
-    end
   end
 end

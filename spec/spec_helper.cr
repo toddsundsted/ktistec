@@ -63,9 +63,14 @@ def self.random_string
   ('a'..'z').to_a.shuffle.first(8).join + "1="
 end
 
-def self._sign_in
-  account = Global.account = Account.new(username: random_string, password: random_string).save
-  ActivityPub::Actor.new(iri: account.iri, username: account.username).save
+def self.register(username = random_string, password = random_string)
+  Account.new(username: username, password: password).save.tap do |account|
+    ActivityPub::Actor.new(iri: account.iri, username: account.username).save
+  end
+end
+
+def self._sign_in(username = nil)
+  Global.account = account = username ? Account.find(username: username) : register
   Global.session = Session.new(account).save
 end
 
@@ -74,8 +79,8 @@ def self._sign_out
   Global.session = nil
 end
 
-macro sign_in
-  before_each { _sign_in }
+macro sign_in(as username = nil)
+  before_each { _sign_in({{username}}) }
   after_each { _sign_out }
 end
 

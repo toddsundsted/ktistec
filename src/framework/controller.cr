@@ -56,6 +56,16 @@ module Balloon
       end
     end
 
+    macro forbidden
+      if accepts?("text/html")
+        env.response.content_type = "text/html"
+        halt env, status_code: 403, response: render "src/views/pages/forbidden.html.ecr", "src/views/layouts/default.html.ecr"
+      else
+        env.response.content_type = "application/json"
+        halt env, status_code: 403, response: %<{"msg":"Forbidden"}>
+      end
+    end
+
     macro not_found
       if accepts?("text/html")
         env.response.content_type = "text/html"

@@ -10,6 +10,7 @@ up do |db|
       "updated_at" datetime NOT NULL,
       "type" varchar(63) NOT NULL,
       "iri" varchar(255) NOT NULL,
+      "visible" boolean,
       "published" datetime,
       "actor_iri" text,
       "object_iri" text,

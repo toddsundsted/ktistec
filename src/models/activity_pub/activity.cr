@@ -29,6 +29,9 @@ module ActivityPub
     end
 
     @[Persistent]
+    property visible : Bool { false }
+
+    @[Persistent]
     property published : Time?
 
     @[Persistent]

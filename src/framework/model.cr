@@ -335,7 +335,7 @@ module Balloon
           {% foreign_key = foreign_key || "#{name}_id".id %}
           {% class_name = class_name || name.stringify.camelcase.id %}
           def {{name}}=({{name}} : {{class_name}})
-            {% m = @type.methods.find { |m| m.name == "#{foreign_key}=" } %}
+            {% m = (@type.ancestors << @type).map(&.methods).reduce { |a, i| a + i }.find { |m| m.name == "#{foreign_key}=" } %}
             {% raise "invalid foreign key: #{foreign_key}" unless m %}
             {% if !m.args.first.restriction.resolve.nilable? %}
               self.{{foreign_key}} = {{name}}.{{primary_key}}.not_nil!

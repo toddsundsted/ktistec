@@ -31,6 +31,9 @@ module ActivityPub
 
     @[Persistent]
     property visible : Bool { false }
+    validates(visible) do
+      "may not be true" unless !visible || iri.try(&.starts_with?(Balloon.host))
+    end
 
     @[Persistent]
     property published : Time?

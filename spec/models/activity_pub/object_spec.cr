@@ -5,7 +5,7 @@ Spectator.describe ActivityPub::Object do
   after_each { Balloon.database.exec "ROLLBACK" }
 
   context "when validating" do
-    let!(object) { described_class.new(iri: "http://test.test/foo_bar").save }
+    let!(object) { described_class.new(iri: "https://test.test/foo_bar").save }
 
     it "must be present" do
       expect(described_class.new.valid?).to be_false
@@ -16,11 +16,15 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "must be unique" do
-      expect(described_class.new(iri: "http://test.test/foo_bar").valid?).to be_false
+      expect(described_class.new(iri: "https://test.test/foo_bar").valid?).to be_false
     end
 
     it "is valid" do
-      expect(described_class.new(iri: "http://test.test/#{random_string}").save.valid?).to be_true
+      expect(described_class.new(iri: "https://test.test/#{random_string}").save.valid?).to be_true
+    end
+
+    it "may not be visible if remote" do
+      expect(described_class.new(iri: "https://remote/0", visible: true).valid?).to be_false
     end
   end
 

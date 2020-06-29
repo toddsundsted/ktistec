@@ -15,11 +15,11 @@ module ActivityPub
     end
 
     @[Persistent]
-    property iri : String?
+    property iri : String { "" }
     validates(iri) { unique_absolute_uri?(iri) }
 
     private def unique_absolute_uri?(iri)
-      if iri.nil?
+      if iri.blank?
         "must be present"
       elsif !URI.parse(iri).absolute?
         "must be an absolute URI"

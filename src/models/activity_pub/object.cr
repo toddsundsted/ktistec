@@ -115,7 +115,7 @@ module ActivityPub
       json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
       {
         iri: json.dig?("@id").try(&.as_s),
-        published: (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_iso8601(p) : nil,
+        published: (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
         in_reply_to: dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
         replies: dig_id?(json, "https://www.w3.org/ns/activitystreams#replies"),
         attributed_to: dig_ids?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),

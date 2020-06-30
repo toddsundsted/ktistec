@@ -70,7 +70,7 @@ module ActivityPub
       json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
       {
         iri: json.dig?("@id").try(&.as_s),
-        published: (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_iso8601(p) : nil,
+        published: (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
         actor_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#actor"),
         object_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#object"),
         target_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#target"),

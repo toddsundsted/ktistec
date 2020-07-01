@@ -75,6 +75,8 @@ module ActivityPub
       include JSON::Serializable
 
       property content : String
+
+      @[JSON::Field(key: "mediaType")]
       property media_type : String
 
       def initialize(@content, @media_type)
@@ -85,6 +87,8 @@ module ActivityPub
       include JSON::Serializable
 
       property url : String
+
+      @[JSON::Field(key: "mediaType")]
       property media_type : String
 
       def initialize(@url, @media_type)

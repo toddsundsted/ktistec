@@ -1,5 +1,26 @@
 {
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": <%= activity.type.split("::").last.inspect %>,
-  "id": <%= activity.iri.inspect %>
+  "@context":"https://www.w3.org/ns/activitystreams",
+  <%- if (published = activity.published) -%>
+  "published":<%= published.to_rfc3339(fraction_digits: 3).inspect %>,
+  <%- end -%>
+  <%- if (actor_iri = activity.actor_iri) -%>
+  "actor":<%= actor_iri.inspect %>,
+  <%- end -%>
+  <%- if (object_iri = activity.object_iri) -%>
+  "object":<%= object_iri.inspect %>,
+  <%- end -%>
+  <%- if (target_iri = activity.target_iri) -%>
+  "target":<%= target_iri.inspect %>,
+  <%- end -%>
+  <%- if (to = activity.to) -%>
+  "to":<%= to.to_json %>,
+  <%- end -%>
+  <%- if (cc = activity.cc) -%>
+  "cc":<%= cc.to_json %>,
+  <%- end -%>
+  <%- if (summary = activity.summary) -%>
+  "summary":<%= summary.inspect %>,
+  <%- end -%>
+  "type":<%= activity.type.split("::").last.inspect %>,
+  "id":<%= activity.iri.inspect %>
 }

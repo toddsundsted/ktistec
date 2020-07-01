@@ -101,4 +101,11 @@ Spectator.describe ActivityPub::Object do
       expect(object.urls).to eq(["url link"])
     end
   end
+
+  context "when rendering" do
+    it "renders an identical instance" do
+      object = described_class.from_json_ld(json)
+      expect(described_class.from_json_ld(render "src/views/objects/object.json.ecr")).to eq(object)
+    end
+  end
 end

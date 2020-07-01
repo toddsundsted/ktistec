@@ -78,4 +78,11 @@ Spectator.describe ActivityPub::Activity do
       expect(activity.summary).to eq("abc")
     end
   end
+
+  context "when rendering" do
+    it "renders an identical instance" do
+      activity = described_class.from_json_ld(json)
+      expect(described_class.from_json_ld(render "src/views/activities/activity.json.ecr")).to eq(activity)
+    end
+  end
 end

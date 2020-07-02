@@ -7,14 +7,14 @@ Spectator.describe ActivityPub::Activity::Reject do
   subject { described_class.new(iri: "http://test.test/#{random_string}").save }
 
   describe "#actor" do
-    it "returns an actor" do
-      expect(typeof(subject.actor)).to eq(ActivityPub::Actor)
+    it "returns an actor or actor subclass" do
+      expect(typeof(subject.actor)).to eq({{(ActivityPub::Actor.all_subclasses << ActivityPub::Actor).join("|").id}})
     end
   end
 
   describe "#object" do
-    it "returns an activity" do
-      expect(typeof(subject.object)).to eq(ActivityPub::Activity)
+    it "returns an activity or activity subclass" do
+      expect(typeof(subject.object)).to eq({{(ActivityPub::Activity.all_subclasses << ActivityPub::Activity).join("|").id}})
     end
   end
 end

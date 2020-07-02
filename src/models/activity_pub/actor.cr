@@ -194,6 +194,7 @@ module ActivityPub
       json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
       {
         iri: json.dig?("@id").try(&.as_s),
+        _type: json.dig?("@type").try(&.as_s.split("#").last),
         username: dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
         pem_public_key: dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem"),
         pem_private_key: dig?(json, "https://w3id.org/security#privateKey", "https://w3id.org/security#privateKeyPem"),

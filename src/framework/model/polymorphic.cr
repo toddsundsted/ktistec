@@ -14,7 +14,6 @@ module Balloon
       end
 
       def as_a(as _as : T.class) : T forall T
-        {% raise "can't convert #{@type} to #{T}" unless T < @type %}
         T.find(self.id)
       end
 

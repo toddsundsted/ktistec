@@ -78,6 +78,29 @@ module Balloon
         end
       end
 
+      private def compose(rs : DB::ResultSet)
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          attrs = {
+            {% for v in vs %}
+              {{v}}: rs.read({{v.type}}),
+            {% end %}
+          }
+          {% if @type < Balloon::Model::Polymorphic %}
+            case attrs[:type]
+            {% for subclass in @type.all_subclasses %}
+              when {{subclass.stringify}}
+                {{subclass}}.new(**attrs)
+            {% end %}
+            else
+              self.new(**attrs)
+            end
+          {% else %}
+            self.new(**attrs)
+          {% end %}
+        {% end %}
+      end
+
       # Returns all instances.
       #
       def all
@@ -89,15 +112,10 @@ module Balloon
               "SELECT #{columns} FROM #{table_name} WHERE type IN (%s)" %
                 {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
             {% else %}
-              "SELECT #{columns} FROM #{table_name}"
+              "SELECT #{columns} FROM #{table_name}",
             {% end %}
-          ) do |rs|
-            self.new(
-              {% for v in vs %}
-                {{v}}: rs.read({{v.type}}),
-              {% end %}
-            )
-          end
+            &->compose(DB::ResultSet)
+          )
         {% end %}
       end
 
@@ -117,14 +135,9 @@ module Balloon
             {% else %}
               "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
             {% end %}
-            id
-          ) do |rs|
-            self.new(
-              {% for v in vs %}
-                {{v}}: rs.read({{v.type}}),
-              {% end %}
-            )
-          end
+            id,
+            &->compose(DB::ResultSet)
+          )
         {% end %}
       rescue ex: DB::Error
         raise NotFound.new if ex.message == "no rows"
@@ -160,14 +173,9 @@ module Balloon
             {% else %}
               "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
             {% end %}
-            *options.values
-          ) do |rs|
-            self.new(
-              {% for v in vs %}
-                {{v}}: rs.read({{v.type}}),
-              {% end %}
-            )
-          end
+            *options.values,
+            &->compose(DB::ResultSet)
+          )
         {% end %}
       rescue ex: DB::Error
         raise NotFound.new if ex.message == "no rows"
@@ -201,14 +209,9 @@ module Balloon
             {% else %}
               "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
             {% end %}
-            *options.values
-          ) do |rs|
-            self.new(
-              {% for v in vs %}
-                {{v}}: rs.read({{v.type}}),
-              {% end %}
-            )
-          end
+            *options.values,
+            &->compose(DB::ResultSet)
+          )
         {% end %}
       end
 
@@ -225,14 +228,9 @@ module Balloon
             {% else %}
               "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
             {% end %}
-            *arguments
-          ) do |rs|
-            self.new(
-              {% for v in vs %}
-                {{v}}: rs.read({{v.type}}),
-              {% end %}
-            )
-          end
+            *arguments,
+            &->compose(DB::ResultSet)
+          )
         {% end %}
       end
     end
@@ -487,6 +485,9 @@ module Balloon
 
     @[Persistent]
     property id : Int64? = nil
+
+    class Error < Exception
+    end
 
     class NotFound < Exception
     end

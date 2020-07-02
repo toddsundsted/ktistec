@@ -22,7 +22,9 @@ Spectator.describe Balloon::Model::Polymorphic do
     SQL
   end
   after_each do
-    Balloon.database.exec "DROP TABLE polymorphic_models"
+    Balloon.database.exec <<-SQL
+      DROP TABLE polymorphic_models
+    SQL
   end
 
   describe ".new" do
@@ -34,21 +36,35 @@ Spectator.describe Balloon::Model::Polymorphic do
   let!(subclass1) { Subclass1.new.save }
   let!(subclass2) { Subclass2.new.save }
 
-  describe ".all" do
-    it "finds all instances" do
-      expect(Subclass1.all).to eq([subclass1])
-    end
-  end
-
   describe ".count" do
     it "returns the count" do
+      expect(PolymorphicModel.count).to eq(2)
+      expect(PolymorphicModel.count(id: subclass2.id)).to eq(1)
+    end
+
+    it "returns the count for subclass" do
       expect(Subclass1.count).to eq(1)
       expect(Subclass1.count(id: subclass2.id)).to eq(0)
     end
   end
 
+  describe ".all" do
+    it "finds all instances" do
+      expect(PolymorphicModel.all).to eq([subclass1, subclass2])
+    end
+
+    it "finds all instances of subclass" do
+      expect(Subclass1.all).to eq([subclass1])
+    end
+  end
+
   describe ".where" do
     it "finds all instances" do
+      expect(PolymorphicModel.where(id: subclass2.id)).to eq([subclass2])
+      expect(PolymorphicModel.where("id = ?", subclass2.id)).to eq([subclass2])
+    end
+
+    it "finds all instances of subclass" do
       expect(Subclass1.where(id: subclass2.id)).to be_empty
       expect(Subclass1.where("id = ?", subclass2.id)).to be_empty
     end
@@ -56,6 +72,11 @@ Spectator.describe Balloon::Model::Polymorphic do
 
   describe ".find" do
     it "finds the instance" do
+      expect(PolymorphicModel.find(subclass1.id)).to be_a(Subclass1)
+      expect(PolymorphicModel.find(id: subclass1.id)).to be_a(Subclass1)
+    end
+
+    it "finds the instance of subclass" do
       expect(Subclass1.find(subclass1.id)).to be_a(Subclass1)
       expect(Subclass1.find(id: subclass1.id)).to be_a(Subclass1)
     end

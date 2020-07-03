@@ -88,7 +88,7 @@ Spectator.describe ActivityPub::Actor do
           "https://w3id.org/security/v1"
         ],
         "@id":"https://test.test/foo_bar",
-        "@type":"Actor",
+        "@type":"FooBarActor",
         "preferredUsername":"foo_bar",
         "publicKey":{
           "id":"https://test.test/foo_bar#public-key",
@@ -117,6 +117,11 @@ Spectator.describe ActivityPub::Actor do
   end
 
   describe ".from_json_ld" do
+    it "instantiates the subclass" do
+      actor = described_class.from_json_ld(json)
+      expect(actor.class).to eq(FooBarActor)
+    end
+
     it "creates a new instance" do
       actor = described_class.from_json_ld(json).save
       expect(actor.iri).to eq("https://test.test/foo_bar")

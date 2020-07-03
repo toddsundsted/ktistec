@@ -1,5 +1,8 @@
 require "../../spec_helper"
 
+class FooBarObject < ActivityPub::Object
+end
+
 Spectator.describe ActivityPub::Object do
   before_each { Balloon.database.exec "BEGIN TRANSACTION" }
   after_each { Balloon.database.exec "ROLLBACK" }
@@ -35,7 +38,7 @@ Spectator.describe ActivityPub::Object do
           "https://www.w3.org/ns/activitystreams"
         ],
         "@id":"https://test.test/foo_bar",
-        "@type":"Object",
+        "@type":"FooBarObject",
         "published":"2016-02-15T10:20:30Z",
         "inReplyTo":"in reply to link",
         "replies":{
@@ -65,6 +68,11 @@ Spectator.describe ActivityPub::Object do
   end
 
   describe ".from_json_ld" do
+    it "instantiates the subclass" do
+      object = described_class.from_json_ld(json)
+      expect(object.class).to eq(FooBarObject)
+    end
+
     it "creates a new instance" do
       object = described_class.from_json_ld(json).save
       expect(object.iri).to eq("https://test.test/foo_bar")

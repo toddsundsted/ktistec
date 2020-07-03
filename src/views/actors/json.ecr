@@ -46,6 +46,6 @@
   <%- if (urls = actor.urls) -%>
   "url":<%= urls.to_json %>,
   <%- end -%>
-  "type":"Person",
+  "type":<%= actor.type.split("::").last.inspect %>,
   "id":<%= actor.iri.inspect %>
 }

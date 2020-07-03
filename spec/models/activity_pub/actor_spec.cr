@@ -95,11 +95,6 @@ Spectator.describe ActivityPub::Actor do
           "owner":"https://test.test/foo_bar",
           "publicKeyPem":"---PEM PUBLIC KEY---"
         },
-        "privateKey":{
-          "id":"https://test.test/foo_bar#private-key",
-          "owner":"https://test.test/foo_bar",
-          "privateKeyPem":"---PEM PRIVATE KEY---"
-        },
         "inbox": "inbox link",
         "outbox": "outbox link",
         "following": "following link",
@@ -127,7 +122,6 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.iri).to eq("https://test.test/foo_bar")
       expect(actor.username).to eq("foo_bar")
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
-      expect(actor.pem_private_key).to eq("---PEM PRIVATE KEY---")
       expect(actor.inbox).to eq("inbox link")
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
@@ -146,7 +140,6 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.iri).to eq("https://test.test/foo_bar")
       expect(actor.username).to eq("foo_bar")
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
-      expect(actor.pem_private_key).to eq("---PEM PRIVATE KEY---")
       expect(actor.inbox).to eq("inbox link")
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")

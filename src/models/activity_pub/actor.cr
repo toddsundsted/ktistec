@@ -182,6 +182,10 @@ module ActivityPub
       {% end %}
     end
 
+    def to_json_ld(recursive = false)
+      ActorsController.render_actor(self, recursive)
+    end
+
     def self.from_json_ld(json)
       self.new(**map(json))
     end

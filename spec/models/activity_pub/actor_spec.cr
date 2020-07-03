@@ -152,6 +152,13 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#to_json_ld" do
+    it "renders an identical instance" do
+      actor = described_class.from_json_ld(json)
+      expect(described_class.from_json_ld(actor.to_json_ld)).to eq(actor)
+    end
+  end
+
   describe "#follow" do
     let!(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 

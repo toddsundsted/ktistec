@@ -107,6 +107,11 @@ module ActivityPub
       end
     end
 
+    def to_json_ld(recursive = false)
+      object = self
+      render "src/views/objects/object.json.ecr"
+    end
+
     def self.from_json_ld(json)
       self.new(**map(json))
     end

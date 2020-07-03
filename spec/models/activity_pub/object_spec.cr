@@ -102,10 +102,10 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
-  context "when rendering" do
+  describe "#to_json_ld" do
     it "renders an identical instance" do
       object = described_class.from_json_ld(json)
-      expect(described_class.from_json_ld(render "src/views/objects/object.json.ecr")).to eq(object)
+      expect(described_class.from_json_ld(object.to_json_ld)).to eq(object)
     end
   end
 end

@@ -36,4 +36,8 @@ class ActorsController
   rescue Balloon::Model::NotFound
     not_found
   end
+
+  def self.render_actor(actor, recursive = false)
+    render "src/views/actors/json.ecr"
+  end
 end

@@ -12,6 +12,8 @@ class ActivitiesController
       not_found
     end
 
+    recursive = true
+
     env.response.content_type = "application/activity+json"
     render "src/views/activities/activity.json.ecr"
   end
@@ -22,6 +24,8 @@ class ActivitiesController
     unless (activity = get_activity(env, id))
       not_found
     end
+
+    recursive = true
 
     env.response.content_type = "application/activity+json"
     render "src/views/activities/activity.json.ecr"

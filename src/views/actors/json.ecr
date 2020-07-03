@@ -1,27 +1,51 @@
 {
-  "@context": [
+  "@context":[
     "https://www.w3.org/ns/activitystreams",
     "https://w3id.org/security/v1"
   ],
-  "type": "Person",
-  "id": "<%= host %>/actors/<%= actor.username %>",
-  "preferredUsername": "<%= actor.username %>",
-  <%- if actor.name.presence -%>
-  "name": "<%= actor.name %>",
-  <%- end -%>
-  <%- if actor.summary.presence -%>
-  "summary": "<%= actor.summary %>",
+  <%- if (username = actor.username) -%>
+  "preferredUsername":<%= username.inspect %>,
   <%- end -%>
   <%- if (pem_public_key = actor.pem_public_key) -%>
-  "publicKey": {
-    "id": "<%= host %>/actors/<%= actor.username %>#main-key",
-    "owner": "<%= host %>/actors/<%= actor.username %>",
-    "publicKeyPem": "<%= e pem_public_key %>"
+  "publicKey":{
+    "id":"<%= actor.iri %>#main-key",
+    "owner":"<%= actor.iri %>",
+    "publicKeyPem":"<%= e pem_public_key %>"
   },
   <%- end -%>
-  "inbox": "<%= host %>/actors/<%= actor.username %>/inbox",
-  "outbox": "<%= host %>/actors/<%= actor.username %>/outbox",
-  "following": "<%= host %>/actors/<%= actor.username %>/following",
-  "followers": "<%= host %>/actors/<%= actor.username %>/followers",
-  "liked": "<%= host %>/actors/<%= actor.username %>/liked"
+  <%- if (inbox = actor.inbox) -%>
+  "inbox":<%= inbox.inspect %>,
+  <%- end -%>
+  <%- if (outbox = actor.outbox) -%>
+  "outbox":<%= outbox.inspect %>,
+  <%- end -%>
+  <%- if (following = actor.following) -%>
+  "following":<%= following.inspect %>,
+  <%- end -%>
+  <%- if (followers = actor.followers) -%>
+  "followers":<%= followers.inspect %>,
+  <%- end -%>
+  <%- if (name = actor.name) -%>
+  "name":<%= name.inspect %>,
+  <%- end -%>
+  <%- if (summary = actor.summary) -%>
+  "summary":<%= summary.inspect %>,
+  <%- end -%>
+  <%- if (icon = actor.icon) -%>
+  "icon":{
+    "type":"Image",
+    "url":<%= icon.inspect %>
+  },
+  <%- end -%>
+  <%- if (image = actor.image) -%>
+  "image":{
+    "type":"Image",
+    "url":<%= image.inspect %>
+  },
+  <%- end -%>
+  <%- if (urls = actor.urls) -%>
+  "url":<%= urls.to_json %>,
+  <%- end -%>
+  "type":"Person",
+  "id":<%= actor.iri.inspect %>
 }

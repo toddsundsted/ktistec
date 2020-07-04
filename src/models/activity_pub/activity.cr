@@ -55,9 +55,6 @@ module ActivityPub
     @[Persistent]
     property summary : String?
 
-    belongs_to actor, class_name: ActivityPub::Actor, foreign_key: actor_iri, primary_key: iri
-    belongs_to object, class_name: ActivityPub::Object, foreign_key: object_iri, primary_key: iri
-
     def to_json_ld(recursive = false)
       activity = self
       render "src/views/activities/activity.json.ecr"

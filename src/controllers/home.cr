@@ -63,7 +63,12 @@ class HomeController
       end
     elsif (accounts = Account.all).empty?
       account = Account.new(**params(env))
-      actor = ActivityPub::Actor.new(**params(env))
+      actor = ActivityPub::Actor::Person.new(**params(env).merge({
+        inbox: "#{Balloon.host}/#{account.username}/inbox",
+        outbox: "#{Balloon.host}/#{account.username}/outbox",
+        following: "#{Balloon.host}/#{account.username}/following",
+        followers: "#{Balloon.host}/#{account.username}/followers"
+      }))
       actor.iri = account.iri
       if account.valid? && actor.valid?
         keypair = OpenSSL::RSA.generate(2048, 17)

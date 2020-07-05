@@ -34,6 +34,22 @@ module Balloon
       env.request.headers.fetch("Referer", "/")
     end
 
+    macro remote_activity_path(activity = nil)
+      "/remote/activities/#{{{activity}}.try(&.id) || env.params.url["id"]}"
+    end
+
+    macro activity_path(activity = nil)
+      ((%iri = {{activity}}.try(&.iri)) && URI.parse(%iri).path) || "/activities/#{env.params.url["id"]}"
+    end
+
+    macro remote_object_path(object = nil)
+      "/remote/objects/#{{{object}}.try(&.id) || env.params.url["id"]}"
+    end
+
+    macro object_path(object = nil)
+      ((%iri = {{object}}.try(&.iri)) && URI.parse(%iri).path) || "/objects/#{env.params.url["id"]}"
+    end
+
     macro remote_actor_path(actor = nil)
       "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
     end

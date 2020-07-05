@@ -3,7 +3,22 @@ require "../spec_helper"
 class FooBarController
   include Balloon::Controller
 
-  skip_auth ["/foo/bar/helpers", "/foo/bar/helpers/:username/:relationship", "/foo/bar/paginate", "/foo/bar/accept", "/foo/bar/escape", "/foo/bar/sanitize"]
+  ID = random_string
+  ACTIVITY = ActivityPub::Activity.new(iri: "https://remote/#{ID}").save
+  OBJECT = ActivityPub::Object.new(iri: "https://remote/#{ID}").save
+
+  skip_auth [
+    "/foo/bar/helpers",
+    "/foo/bar/helpers/activities",
+    "/foo/bar/helpers/activities/:id",
+    "/foo/bar/helpers/objects",
+    "/foo/bar/helpers/objects/:id",
+    "/foo/bar/helpers/:username/:relationship",
+    "/foo/bar/paginate",
+    "/foo/bar/accept",
+    "/foo/bar/escape",
+    "/foo/bar/sanitize"
+  ]
 
   get "/foo/bar/helpers" do |env|
     {
@@ -11,6 +26,34 @@ class FooBarController
       home_path: home_path,
       sessions_path: sessions_path,
       back_path: back_path
+    }.to_json
+  end
+
+  get "/foo/bar/helpers/activities" do |env|
+    {
+      remote_activity_path: remote_activity_path(ACTIVITY),
+      activity_path: activity_path(ACTIVITY)
+    }.to_json
+  end
+
+  get "/foo/bar/helpers/activities/:id" do |env|
+    {
+      remote_activity_path: remote_activity_path,
+      activity_path: activity_path
+    }.to_json
+  end
+
+  get "/foo/bar/helpers/objects" do |env|
+    {
+      remote_object_path: remote_object_path(OBJECT),
+      object_path: object_path(OBJECT)
+    }.to_json
+  end
+
+  get "/foo/bar/helpers/objects/:id" do |env|
+    {
+      remote_object_path: remote_object_path,
+      object_path: object_path
     }.to_json
   end
 
@@ -67,6 +110,34 @@ Spectator.describe Balloon::Controller do
     it "gets the back path" do
       get "/foo/bar/helpers", HTTP::Headers{"Referer" => "/back"}
       expect(JSON.parse(response.body)["back_path"]).to eq("/back")
+    end
+
+    it "gets the remote activity path" do
+      get "/foo/bar/helpers/activities"
+      expect(JSON.parse(response.body)["remote_activity_path"]).to eq("/remote/activities/#{FooBarController::ACTIVITY.id}")
+      get "/foo/bar/helpers/activities/999999"
+      expect(JSON.parse(response.body)["remote_activity_path"]).to eq("/remote/activities/999999")
+    end
+
+    it "gets the activity path" do
+      get "/foo/bar/helpers/activities"
+      expect(JSON.parse(response.body)["activity_path"]).to eq("/#{FooBarController::ID}")
+      get "/foo/bar/helpers/activities/foo_bar"
+      expect(JSON.parse(response.body)["activity_path"]).to eq("/activities/foo_bar")
+    end
+
+    it "gets the remote object path" do
+      get "/foo/bar/helpers/objects"
+      expect(JSON.parse(response.body)["remote_object_path"]).to eq("/remote/objects/#{FooBarController::OBJECT.id}")
+      get "/foo/bar/helpers/objects/999999"
+      expect(JSON.parse(response.body)["remote_object_path"]).to eq("/remote/objects/999999")
+    end
+
+    it "gets the object path" do
+      get "/foo/bar/helpers/objects"
+      expect(JSON.parse(response.body)["object_path"]).to eq("/#{FooBarController::ID}")
+      get "/foo/bar/helpers/objects/foo_bar"
+      expect(JSON.parse(response.body)["object_path"]).to eq("/objects/foo_bar")
     end
 
     it "gets the actor path" do

@@ -9,7 +9,8 @@ class FooBarController
     {
       host: host,
       home_path: home_path,
-      sessions_path: sessions_path
+      sessions_path: sessions_path,
+      back_path: back_path
     }.to_json
   end
 
@@ -61,6 +62,11 @@ Spectator.describe Balloon::Controller do
     it "gets the sessions path" do
       get "/foo/bar/helpers"
       expect(JSON.parse(response.body)["sessions_path"]).to eq("/sessions")
+    end
+
+    it "gets the back path" do
+      get "/foo/bar/helpers", HTTP::Headers{"Referer" => "/back"}
+      expect(JSON.parse(response.body)["back_path"]).to eq("/back")
     end
 
     it "gets the actor path" do

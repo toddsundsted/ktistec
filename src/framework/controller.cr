@@ -30,6 +30,10 @@ module Balloon
       "/sessions"
     end
 
+    macro back_path
+      env.request.headers.fetch("Referer", "/")
+    end
+
     macro remote_actor_path(actor = nil)
       "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
     end

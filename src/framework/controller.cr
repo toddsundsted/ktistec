@@ -55,7 +55,7 @@ module Balloon
     end
 
     macro actor_path(actor = nil)
-      "/actors/#{{{actor}}.try(&.username) || env.params.url["username"]}"
+      ((%iri = {{actor}}.try(&.iri)) && URI.parse(%iri).path) || "/actors/#{env.params.url["id"]}"
     end
 
     macro actor_relationships_path(actor = nil, relationship = nil)

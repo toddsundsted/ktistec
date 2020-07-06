@@ -6,6 +6,7 @@ class FooBarController
   ID = random_string
   ACTIVITY = ActivityPub::Activity.new(iri: "https://remote/#{ID}").save
   OBJECT = ActivityPub::Object.new(iri: "https://remote/#{ID}").save
+  ACTOR = ActivityPub::Actor.new(iri: "https://remote/#{ID}").save
 
   skip_auth [
     "/foo/bar/helpers",
@@ -13,7 +14,9 @@ class FooBarController
     "/foo/bar/helpers/activities/:id",
     "/foo/bar/helpers/objects",
     "/foo/bar/helpers/objects/:id",
-    "/foo/bar/helpers/:username/:relationship",
+    "/foo/bar/helpers/actors",
+    "/foo/bar/helpers/actors/:username",
+    "/foo/bar/helpers/:id/:relationship",
     "/foo/bar/paginate",
     "/foo/bar/accept",
     "/foo/bar/escape",
@@ -57,9 +60,22 @@ class FooBarController
     }.to_json
   end
 
-  get "/foo/bar/helpers/:username/:relationship" do |env|
+  get "/foo/bar/helpers/actors" do |env|
     {
-      actor_path: actor_path,
+      remote_actor_path: remote_actor_path(ACTOR),
+      actor_path: actor_path(ACTOR)
+    }.to_json
+  end
+
+  get "/foo/bar/helpers/actors/:id" do |env|
+    {
+      remote_actor_path: remote_actor_path,
+      actor_path: actor_path
+    }.to_json
+  end
+
+  get "/foo/bar/helpers/:id/:relationship" do |env|
+    {
       actor_relationships_path: actor_relationships_path
     }.to_json
   end
@@ -140,8 +156,17 @@ Spectator.describe Balloon::Controller do
       expect(JSON.parse(response.body)["object_path"]).to eq("/objects/foo_bar")
     end
 
+    it "gets the remote actor path" do
+      get "/foo/bar/helpers/actors"
+      expect(JSON.parse(response.body)["remote_actor_path"]).to eq("/remote/actors/#{FooBarController::ACTOR.id}")
+      get "/foo/bar/helpers/actors/999999"
+      expect(JSON.parse(response.body)["remote_actor_path"]).to eq("/remote/actors/999999")
+    end
+
     it "gets the actor path" do
-      get "/foo/bar/helpers/foo_bar/helping"
+      get "/foo/bar/helpers/actors"
+      expect(JSON.parse(response.body)["actor_path"]).to eq("/#{FooBarController::ID}")
+      get "/foo/bar/helpers/actors/foo_bar"
       expect(JSON.parse(response.body)["actor_path"]).to eq("/actors/foo_bar")
     end
 

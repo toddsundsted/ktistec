@@ -43,7 +43,7 @@ class RelationshipsController
 
     relationship.save
 
-    env.redirect actor_relationships_path
+    env.redirect actor_relationships_path(actor)
   end
 
   delete "/actors/:username/:relationship/:id" do |env|
@@ -63,7 +63,7 @@ class RelationshipsController
 
     relationship.destroy
 
-    env.redirect actor_relationships_path
+    env.redirect actor_relationships_path(actor)
   end
 
   private def self.pagination_params(env)

@@ -287,7 +287,7 @@ module Balloon
         @@table_name ||= Utils.table_name(self.class)
       end
 
-      getter errors = {} of String => Array(String)
+      getter errors = Errors.new
 
       # Returns true if the instance is valid.
       #
@@ -400,7 +400,7 @@ module Balloon
       # Saves the instance.
       #
       def save
-        raise Invalid.new unless valid?
+        raise Invalid.new(errors) unless valid?
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           if @id
@@ -493,7 +493,13 @@ module Balloon
     end
 
     class Invalid < Exception
+      def initialize(errors : Errors)
+        message = errors.map { |field, error| "#{field}: #{error.join(", ")}" }.join("; ")
+        initialize(message)
+      end
     end
+
+    alias Errors = Hash(String, Array(String))
   end
 end
 

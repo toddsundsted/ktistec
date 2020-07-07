@@ -29,6 +29,10 @@ module ActivityPub
       end
     end
 
+    def local
+      iri.starts_with?(Balloon.host)
+    end
+
     @[Persistent]
     property username : String?
 

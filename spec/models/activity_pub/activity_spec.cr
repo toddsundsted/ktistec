@@ -93,4 +93,11 @@ Spectator.describe ActivityPub::Activity do
       expect(described_class.from_json_ld(activity.to_json_ld)).to eq(activity)
     end
   end
+
+  describe "#local" do
+    it "indicates if the activity is local" do
+      expect(described_class.new(iri: "https://test.test/foo_bar").local).to be_true
+      expect(described_class.new(iri: "https://remote/foo_bar").local).to be_false
+    end
+  end
 end

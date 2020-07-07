@@ -28,10 +28,14 @@ module ActivityPub
       end
     end
 
+    def local
+      iri.starts_with?(Balloon.host)
+    end
+
     @[Persistent]
     property visible : Bool { false }
     validates(visible) do
-      "may not be true" unless !visible || iri.try(&.starts_with?(Balloon.host))
+      "may not be true" unless !visible || local
     end
 
     @[Persistent]

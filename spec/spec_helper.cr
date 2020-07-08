@@ -64,9 +64,11 @@ def self.random_string
 end
 
 def self.register(username = random_string, password = random_string)
-  Account.new(username: username, password: password).save.tap do |account|
-    ActivityPub::Actor.new(iri: account.iri, username: account.username).save
-  end
+  Account.new(
+    actor: ActivityPub::Actor.new(iri: "https://test.test/actors/#{username}", username: username),
+    username: username,
+    password: password
+  ).save
 end
 
 def self._sign_in(username = nil)

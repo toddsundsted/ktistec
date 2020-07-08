@@ -139,14 +139,7 @@ Spectator.describe HomeController do
   end
 
   context "home page" do
-    let!(account) do
-      Account.new(username, password).tap do |account|
-        account.actor = ActivityPub::Actor.new(
-          iri: "https://test.test/actors/#{username}",
-          username: username
-        ).save
-      end.save
-    end
+    let!(account) { register(username, password) }
 
     describe "GET /" do
       it "renders a list of local actors" do

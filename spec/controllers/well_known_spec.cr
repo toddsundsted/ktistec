@@ -7,14 +7,7 @@ Spectator.describe WellKnownController do
   let(username) { random_string }
   let(password) { random_string }
 
-  let!(account) do
-    Account.new(username, password).tap do |account|
-      account.actor = ActivityPub::Actor.new(
-        iri: "https://test.test/#{username}",
-        username: username
-      ).save
-    end.save
-  end
+  let!(account) { register(username, password) }
 
   context "webfinger" do
     it "returns 400 if bad request" do

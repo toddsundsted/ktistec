@@ -8,14 +8,7 @@ Spectator.describe ActorsController do
     let(username) { random_string }
     let(password) { random_string }
 
-    let!(account) do
-      Account.new(username, password).tap do |account|
-        account.actor = ActivityPub::Actor.new(
-          iri: account.iri,
-          username: account.username
-        ).save
-      end.save
-    end
+    let!(account) { register(username, password) }
 
     it "returns 404 if not found" do
       get "/actors/missing"

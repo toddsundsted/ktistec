@@ -308,6 +308,12 @@ module Balloon
               end
             end
           {% end %}
+          {% for d in @type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
+            if (errors = {{d.body}}.try(&.validate))
+              errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{k}" }
+              @errors.merge!(errors)
+            end
+          {% end %}
         {% end %}
         @errors
       end
@@ -332,7 +338,9 @@ module Balloon
         {% begin %}
           {% foreign_key = foreign_key || "#{name}_id".id %}
           {% class_name = class_name || name.stringify.camelcase.id %}
-          def {{name}}=({{name}} : {{class_name}})
+          @[Assignable]
+          @{{name}} : {{class_name}}?
+          def {{name}}=(@{{name}} : {{class_name}})
             {% m = (@type.ancestors << @type).map(&.methods).reduce { |a, i| a + i }.find { |m| m.name == "#{foreign_key}=" } %}
             {% raise "invalid foreign key: #{foreign_key}" unless m %}
             {% if !m.args.first.restriction.resolve.nilable? %}
@@ -343,10 +351,13 @@ module Balloon
             {{name}}
           end
           def {{name}}?
-            {{class_name}}.find?({{primary_key}}: self.{{foreign_key}})
+            @{{name}} ||= {{class_name}}.find?({{primary_key}}: self.{{foreign_key}})
           end
           def {{name}}
-            {{class_name}}.find({{primary_key}}: self.{{foreign_key}})
+            @{{name}} ||= {{class_name}}.find({{primary_key}}: self.{{foreign_key}})
+          end
+          def _belongs_to_{{name}}
+            @{{name}}
           end
         {% end %}
       end
@@ -427,6 +438,9 @@ module Balloon
               {% end %}
             ).last_insert_id
           end
+          {% for d in @type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
+            {{d.body}}.try(&.save)
+          {% end %}
         {% end %}
         self
       end

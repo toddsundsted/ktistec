@@ -314,10 +314,16 @@ Spectator.describe Balloon::Model do
       expect(new_model.errors).to eq({"key" => ["is not capitalized"], "val" => ["is not capitalized"]})
     end
 
-    it "performs the validations" do
+    it "passes the validations" do
       new_model = NotNilModel.new(key: "Key", val: "Val")
       expect(new_model.valid?).to be_true
       expect(new_model.errors).to be_empty
+    end
+
+    it "validates the associated instance" do
+      not_nil_model = NotNilModel.new(val: "")
+      expect(FooBarModel.new(not_nil_model: not_nil_model).valid?).to be_false
+      expect(not_nil_model.errors).not_to be_empty
     end
   end
 
@@ -348,6 +354,11 @@ Spectator.describe Balloon::Model do
         saved_model = NotNilModel.new(val: "Val").save
         expect(NotNilModel.find(saved_model.id).val).to eq("Val")
       end
+
+      it "saves the associated instance" do
+        not_nil_model = NotNilModel.new(val: "Val")
+        expect{FooBarModel.new(not_nil_model: not_nil_model).save}.to change{not_nil_model.id}
+      end
     end
 
     context "existing instance" do
@@ -375,6 +386,11 @@ Spectator.describe Balloon::Model do
       it "updates the properties" do
         updated_model = NotNilModel.new(val: "Val").save.assign(val: "Baz").save
         expect(NotNilModel.find(updated_model.id).val).to eq("Baz")
+      end
+
+      it "saves the associated instance" do
+        not_nil_model = NotNilModel.new(val: "Val")
+        expect{FooBarModel.new.save.assign(not_nil_model: not_nil_model).save}.to change{not_nil_model.id}
       end
     end
   end
@@ -411,11 +427,6 @@ Spectator.describe Balloon::Model do
     let(foo_bar) { FooBarModel.new.save }
     let(not_nil) { NotNilModel.new(val: "Val").save }
 
-    before_each do
-      foo_bar.assign(not_nil_model_id: not_nil.id).save
-      not_nil.assign(foo_bar_model_id: foo_bar.id).save
-    end
-
     it "assigns the associated instance" do
       expect(foo_bar.not_nil_model = not_nil).to eq(not_nil)
       expect(foo_bar.not_nil_model).to eq(not_nil)
@@ -426,11 +437,13 @@ Spectator.describe Balloon::Model do
       expect(not_nil.foo_bar).to eq(foo_bar)
     end
 
-    it "gets the associated instance" do
+    it "gets the reciprocal instance" do
+      not_nil.assign(foo_bar: foo_bar).save
       expect(foo_bar.not_nil).to eq(not_nil)
     end
 
-    it "gets the associated instance" do
+    it "gets the reciprocal instance" do
+      foo_bar.assign(not_nil_model: not_nil).save
       expect(not_nil.foo_bar_models).to eq([foo_bar])
     end
 

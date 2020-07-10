@@ -303,7 +303,7 @@ module Balloon
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           {% for v in vs %}
             if self.responds_to?(:_validate_{{v}})
-              if error = self._validate_{{v}}(self.{{v}})
+              if error = self._validate_{{v}}
                 @errors[{{v.stringify}}] = [error]
               end
             end
@@ -334,7 +334,7 @@ module Balloon
       #     validates xyz { "is blank" if xyz.blank? }
       #
       macro validates(property, &block)
-        private def _validate_{{property.name}}({{property.name}})
+        private def _validate_{{property.name}}
           {% if block %}
             {{block.body}}
           {% else %}

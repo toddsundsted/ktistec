@@ -20,7 +20,8 @@ class FooBarController
     "/foo/bar/paginate",
     "/foo/bar/accept",
     "/foo/bar/escape",
-    "/foo/bar/sanitize"
+    "/foo/bar/sanitize",
+    "/foo/bar/id"
   ]
 
   get "/foo/bar/helpers" do |env|
@@ -103,6 +104,10 @@ class FooBarController
 
   get "/foo/bar/sanitize" do |env|
     s "<body>Foo Bar</body>"
+  end
+
+  get "/foo/bar/id" do |env|
+    id
   end
 end
 
@@ -216,6 +221,13 @@ Spectator.describe Balloon::Controller do
     it "sanitizes HTML" do
       get "/foo/bar/sanitize"
       expect(response.body).to eq("<p>Foo Bar</p>")
+    end
+  end
+
+  describe "/foo/bar/id" do
+    it "generates a URL-safe random string" do
+      get "/foo/bar/id"
+      expect(response.body).to match(/^[a-zA-Z0-9_-]+$/)
     end
   end
 end

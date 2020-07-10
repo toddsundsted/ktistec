@@ -136,6 +136,15 @@ module Balloon
       Balloon::Util.sanitize({{str}})
     end
 
+    # Generates a random, URL-safe identifier.
+    #
+    # 64 bits should ensure it takes about 5 billion attempts to
+    # generate a collision.
+    #
+    macro id
+      Random::Secure.urlsafe_base64(8)
+    end
+
     macro included
       def self.paginate(collection, env)
         path = env.request.path

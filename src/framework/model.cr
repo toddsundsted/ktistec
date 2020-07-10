@@ -301,6 +301,7 @@ module Balloon
         @errors.clear
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             if self.responds_to?(:_validate_{{v}})
               if error = self._validate_{{v}}

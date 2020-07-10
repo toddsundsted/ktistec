@@ -322,8 +322,10 @@ Spectator.describe Balloon::Model do
 
     it "validates the associated instance" do
       not_nil_model = NotNilModel.new(val: "")
-      expect(FooBarModel.new(not_nil_model: not_nil_model).valid?).to be_false
-      expect(not_nil_model.errors).not_to be_empty
+      foo_bar_model = FooBarModel.new(not_nil_model: not_nil_model)
+      expect(foo_bar_model.valid?).to be_false
+      expect(not_nil_model.errors).to eq({"val" => ["is not capitalized"]})
+      expect(foo_bar_model.errors).to eq({"not_nil_model.val" => ["is not capitalized"]})
     end
   end
 
@@ -428,33 +430,83 @@ Spectator.describe Balloon::Model do
     let(not_nil) { NotNilModel.new(val: "Val").save }
 
     it "assigns the associated instance" do
-      expect(foo_bar.not_nil_model = not_nil).to eq(not_nil)
+      expect(foo_bar.not_nil_model?).to be_nil
+      expect(not_nil.foo_bar_models).to be_empty
+      (foo_bar.not_nil_model = not_nil) && foo_bar.save
       expect(foo_bar.not_nil_model).to eq(not_nil)
-    end
-
-    it "assigns the associated instance" do
-      expect(not_nil.foo_bar = foo_bar).to eq(foo_bar)
-      expect(not_nil.foo_bar).to eq(foo_bar)
-    end
-
-    it "gets the reciprocal instance" do
-      not_nil.assign(foo_bar: foo_bar).save
-      expect(foo_bar.not_nil).to eq(not_nil)
-    end
-
-    it "gets the reciprocal instance" do
-      foo_bar.assign(not_nil_model: not_nil).save
       expect(not_nil.foo_bar_models).to eq([foo_bar])
     end
 
-    it "returns nil" do
-      foo_bar.not_nil_model_id = 999999
+    it "assigns the associated instance" do
       expect(foo_bar.not_nil_model?).to be_nil
+      expect(not_nil.foo_bar_models).to be_empty
+      foo_bar.assign(not_nil_model: not_nil).save
+      expect(foo_bar.not_nil_model).to eq(not_nil)
+      expect(not_nil.foo_bar_models).to eq([foo_bar])
+    end
+
+    it "assigns the associated instance" do
+      expect(not_nil.foo_bar?).to be_nil
+      expect(foo_bar.not_nil?).to be_nil
+      (not_nil.foo_bar = foo_bar) && not_nil.save
+      expect(not_nil.foo_bar).to eq(foo_bar)
+      expect(foo_bar.not_nil).to eq(not_nil)
+    end
+
+    it "assigns the associated instance" do
+      expect(not_nil.foo_bar?).to be_nil
+      expect(foo_bar.not_nil?).to be_nil
+      not_nil.assign(foo_bar: foo_bar).save
+      expect(not_nil.foo_bar).to eq(foo_bar)
+      expect(foo_bar.not_nil).to eq(not_nil)
+    end
+
+    it "assigns the reciprocal instance" do
+      expect(foo_bar.not_nil_model?).to be_nil
+      expect(not_nil.foo_bar_models).to be_empty
+      (not_nil.foo_bar_models = [foo_bar]) && not_nil.save
+      expect(foo_bar.not_nil_model).to eq(not_nil)
+      expect(not_nil.foo_bar_models).to eq([foo_bar])
+    end
+
+    it "assigns the reciprocal instance" do
+      expect(foo_bar.not_nil_model?).to be_nil
+      expect(not_nil.foo_bar_models).to be_empty
+      not_nil.assign(foo_bar_models: [foo_bar]).save
+      expect(foo_bar.not_nil_model).to eq(not_nil)
+      expect(not_nil.foo_bar_models).to eq([foo_bar])
+    end
+
+    it "assigns the reciprocal instance" do
+      expect(not_nil.foo_bar?).to be_nil
+      expect(foo_bar.not_nil?).to be_nil
+      (foo_bar.not_nil = not_nil) && foo_bar.save
+      expect(not_nil.foo_bar).to eq(foo_bar)
+      expect(foo_bar.not_nil).to eq(not_nil)
+    end
+
+    it "assigns the reciprocal instance" do
+      expect(not_nil.foo_bar?).to be_nil
+      expect(foo_bar.not_nil?).to be_nil
+      foo_bar.assign(not_nil: not_nil).save
+      expect(not_nil.foo_bar).to eq(foo_bar)
+      expect(foo_bar.not_nil).to eq(not_nil)
     end
 
     it "returns nil" do
-      not_nil.foo_bar_model_id = 999999
+      expect(foo_bar.not_nil_model?).to be_nil
+      expect(not_nil.foo_bar_models).to be_empty
+      (foo_bar.not_nil_model_id = 999999) && foo_bar.save
+      expect(foo_bar.not_nil_model?).to be_nil
+      expect(not_nil.foo_bar_models).to be_empty
+    end
+
+    it "returns nil" do
       expect(not_nil.foo_bar?).to be_nil
+      expect(foo_bar.not_nil?).to be_nil
+      (not_nil.foo_bar_model_id = 999999) && not_nil.save
+      expect(not_nil.foo_bar?).to be_nil
+      expect(foo_bar.not_nil?).to be_nil
     end
   end
 

@@ -309,9 +309,20 @@ module Balloon
             end
           {% end %}
           {% for d in @type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
-            if (errors = {{d.body}}.try(&.validate))
-              errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{k}" }
-              @errors.merge!(errors)
+            if (%body = {{d.body}})
+              if %body.responds_to?(:each)
+                %body.each_with_index do |b, i|
+                  if (errors = b.validate)
+                    errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{i}.#{k}" }
+                    @errors.merge!(errors)
+                  end
+                end
+              else
+                if (errors = %body.validate)
+                  errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{k}" }
+                  @errors.merge!(errors)
+                end
+              end
             end
           {% end %}
         {% end %}
@@ -341,13 +352,7 @@ module Balloon
           @[Assignable]
           @{{name}} : {{class_name}}?
           def {{name}}=(@{{name}} : {{class_name}})
-            {% m = (@type.ancestors << @type).map(&.methods).reduce { |a, i| a + i }.find { |m| m.name == "#{foreign_key}=" } %}
-            {% raise "invalid foreign key: #{foreign_key}" unless m %}
-            {% if !m.args.first.restriction.resolve.nilable? %}
-              self.{{foreign_key}} = {{name}}.{{primary_key}}.not_nil!
-            {% else %}
-              self.{{foreign_key}} = {{name}}.{{primary_key}}
-            {% end %}
+            self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
             {{name}}
           end
           def {{name}}?
@@ -370,8 +375,21 @@ module Balloon
           {% singular = singular =~ /(ses|sses|shes|ches|xes|zes)$/ ? singular[0..-3] : singular[0..-2] %}
           {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
           {% class_name = class_name || singular.camelcase.id %}
+          @[Assignable]
+          @{{name}} : Enumerable({{class_name}})?
+          def {{name}}=(@{{name}} : Enumerable({{class_name}}))
+            {{name}}.each { |n| n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}})) }
+            {{name}}
+          end
           def {{name}}
-            {{class_name}}.where({{foreign_key}}: self.{{primary_key}})
+            {{name}} = @{{name}}
+            if {{name}}.nil? || {{name}}.empty?
+              @{{name}} = {{class_name}}.where({{foreign_key}}: self.{{primary_key}})
+            end
+            @{{name}}.not_nil!
+          end
+          def _belongs_to_{{name}}
+            @{{name}}
           end
         {% end %}
       end
@@ -381,9 +399,21 @@ module Balloon
       macro has_one(name, primary_key = id, foreign_key = nil, class_name = nil)
         {% begin %}
           {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
-          {% class_name = class_name || singular.stringify.camelcase.id %}
+          {% class_name = class_name || name.stringify.camelcase.id %}
+          @[Assignable]
+          @{{name}} : {{class_name}}?
+          def {{name}}=(@{{name}} : {{class_name}})
+            {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
+            {{name}}
+          end
+          def {{name}}?
+            @{{name}} ||= {{class_name}}.find?({{foreign_key}}: self.{{primary_key}})
+          end
           def {{name}}
-            {{class_name}}.find({{foreign_key}}: self.{{primary_key}})
+            @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}})
+          end
+          def _belongs_to_{{name}}
+            @{{name}}
           end
         {% end %}
       end
@@ -439,7 +469,9 @@ module Balloon
             ).last_insert_id
           end
           {% for d in @type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
-            {{d.body}}.try(&.save)
+            if (%body = {{d.body}})
+              %body.responds_to?(:each) ? %body.each(&.save) : %body.save
+            end
           {% end %}
         {% end %}
         self

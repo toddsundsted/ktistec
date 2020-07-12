@@ -84,7 +84,7 @@ class HomeController
 
         if accepts?("text/html")
           env.response.cookies["AuthToken"] = jwt
-          env.redirect actor_path(account)
+          env.redirect actor_path(actor)
         else
           env.response.content_type = "application/json"
           {jwt: jwt}.to_json

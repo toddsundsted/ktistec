@@ -11,7 +11,7 @@ deploy:
   provider: pages
   skip_cleanup: true
   github_token: $GITHUB_TOKEN
-  project_name: toddsundsted/balloon
+  project_name: toddsundsted/ktistec
   on:
     branch: master
   local_dir: docs

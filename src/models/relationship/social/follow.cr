@@ -3,8 +3,11 @@ require "../../relationship"
 class Relationship
   class Social
     class Follow < Relationship
-      validates(from_iri) { "missing actor: from #{from_iri}" unless ActivityPub::Actor.find?(from_iri) }
-      validates(to_iri) { "missing actor: to #{to_iri}" unless ActivityPub::Actor.find?(to_iri) }
+      belongs_to actor, class_name: ActivityPub::Actor, foreign_key: from_iri, primary_key: iri
+      validates(actor) { "missing: #{from_iri}" unless actor? }
+
+      belongs_to object, class_name: ActivityPub::Actor, foreign_key: to_iri, primary_key: iri
+      validates(object) { "missing: #{to_iri}" unless object? }
     end
   end
 end

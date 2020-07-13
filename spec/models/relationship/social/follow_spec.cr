@@ -15,13 +15,13 @@ Spectator.describe Relationship::Social::Follow do
     it "rejects missing actor" do
       new_relationship = described_class.new(**options.merge({from_iri: "missing"}))
       expect(new_relationship.valid?).to be_false
-      expect(new_relationship.errors.keys).to contain("from_iri")
+      expect(new_relationship.errors.keys).to contain("actor")
     end
 
     it "rejects missing actor" do
       new_relationship = described_class.new(**options.merge({to_iri: "missing"}))
       expect(new_relationship.valid?).to be_false
-      expect(new_relationship.errors.keys).to contain("to_iri")
+      expect(new_relationship.errors.keys).to contain("object")
     end
 
     it "successfully validates instance" do

@@ -135,7 +135,7 @@ module ActivityPub
     end
 
     def self.map(json)
-      json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
+      json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
         iri: json.dig?("@id").try(&.as_s),
         _type: json.dig?("@type").try(&.as_s.split("#").last),

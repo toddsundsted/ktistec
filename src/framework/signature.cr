@@ -55,5 +55,11 @@ module Balloon
       end
       true
     end
+
+    def self.verify?(actor, url, headers)
+      verify(actor, url, headers)
+    rescue Error
+      false
+    end
   end
 end

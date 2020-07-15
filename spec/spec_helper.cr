@@ -96,7 +96,24 @@ end
 # Networking mock.
 
 class HTTP::Client
+  @@last : HTTP::Request? = nil
+  @@actors = [] of ActivityPub::Actor
+
+  def self.last
+    @@last
+  end
+
+  def self.actors
+    @@actors
+  end
+
+  def self.reset
+    @@last = nil
+    @@actors.clear
+  end
+
   def self.get(url : String, headers : HTTP::Headers)
+    @@last = HTTP::Request.new("GET", url, headers)
     url = URI.parse(url)
     case url.path
     when /bad-json/
@@ -127,7 +144,9 @@ class HTTP::Client
       HTTP::Client::Response.new(
         200,
         headers: HTTP::Headers.new,
-        body: <<-JSON
+        body: (actor = @@actors.find { |a| a.iri == url.to_s }) ?
+          actor.to_json_ld :
+          <<-JSON
           {
             "@context":[
               "https://www.w3.org/ns/activitystreams"

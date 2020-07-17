@@ -97,10 +97,15 @@ end
 
 class HTTP::Client
   @@last : HTTP::Request? = nil
+  @@activities = [] of ActivityPub::Activity
   @@actors = [] of ActivityPub::Actor
 
   def self.last
     @@last
+  end
+
+  def self.activities
+    @@activities
   end
 
   def self.actors
@@ -109,6 +114,7 @@ class HTTP::Client
 
   def self.reset
     @@last = nil
+    @@activities.clear
     @@actors.clear
   end
 
@@ -139,6 +145,22 @@ class HTTP::Client
         $1.to_i,
         headers: HTTP::Headers.new,
         body: $1
+      )
+    when /activities\/([^\/]+)/
+      HTTP::Client::Response.new(
+        200,
+        headers: HTTP::Headers.new,
+        body: (activity = @@activities.find { |a| a.iri == url.to_s }) ?
+          activity.to_json_ld :
+          <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "type":"Activity",
+            "id":"https://#{url.host}/#{$1}"
+          }
+          JSON
       )
     when /people\/([a-z_]+)/
       HTTP::Client::Response.new(

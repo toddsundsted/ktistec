@@ -94,7 +94,16 @@ macro sign_in(as username = nil)
 end
 
 # Networking mock.
-
+#
+# Cache an actor for later retrieval from the mock:
+# `HTTP::Client.actors << ActivityPub::Actor.new(...`
+#
+# Fetch the last request sent to the mock:
+# `Http::Client.last`
+#
+# Match the last request as a string:
+# `expect(...last).to match("GET /foo/bar")`
+#
 class HTTP::Client
   @@last : HTTP::Request? = nil
   @@activities = [] of ActivityPub::Activity
@@ -182,6 +191,13 @@ class HTTP::Client
     else
       raise "not supported"
     end
+  end
+end
+
+class String
+  def ===(other : HTTP::Request)
+    method, resource = self.split
+    other.method == method && other.resource == resource
   end
 end
 

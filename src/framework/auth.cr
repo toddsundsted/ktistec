@@ -29,14 +29,15 @@ module Balloon
 
       return call_next(env) if exclude_match?(env)
 
+      _message = "Unauthorized"
       if env.accepts?("text/html")
         env.response.status_code = 401
         env.response.headers["Content-Type"] = "text/html"
-        env.response.print render "src/views/pages/unauthorized.html.ecr", "src/views/layouts/default.html.ecr"
+        env.response.print render "src/views/pages/generic.html.ecr", "src/views/layouts/default.html.ecr"
       else
         env.response.status_code = 401
         env.response.headers["Content-Type"] = "application/json"
-        env.response.print "{\"msg\":\"Unauthorized\"}"
+        env.response.print %<{"msg":"#{_message}"}>
       end
     end
 

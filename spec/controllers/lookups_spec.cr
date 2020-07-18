@@ -13,7 +13,7 @@ module WebFinger
           "links":[
             {
               "rel":"self",
-              "href":"https://#{host}/people/#{name}"
+              "href":"https://#{host}/actors/#{name}"
             }
           ]
         }
@@ -108,14 +108,14 @@ Spectator.describe LookupsController do
       context "given a URL" do
         it "retrieves and stores an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/p/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and stores an actor" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
@@ -125,19 +125,19 @@ Spectator.describe LookupsController do
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
+            expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
             expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "application/json"}
-            expect{get "/api/lookup?account=https://test.test/people/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
+            expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
             expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
           end
 
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            get "/api/lookup?account=https://test.test/people/foo_bar", headers
+            get "/api/lookup?account=https://test.test/actors/foo_bar", headers
             expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Follow']")).not_to be_empty
           end
 
@@ -146,7 +146,7 @@ Spectator.describe LookupsController do
 
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
-              get "/api/lookup?account=https://test.test/people/foo_bar", headers
+              get "/api/lookup?account=https://test.test/actors/foo_bar", headers
               expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Unfollow']")).not_to be_empty
             end
           end

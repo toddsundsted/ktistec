@@ -162,7 +162,7 @@ class HTTP::Client
           }
           JSON
       )
-    when /people\/([a-z_]+)/
+    when /actors\/([^\/]+)/
       HTTP::Client::Response.new(
         200,
         headers: HTTP::Headers.new,

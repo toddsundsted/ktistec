@@ -66,6 +66,17 @@ module Balloon
       env.accepts?({{mime_type}})
     end
 
+    macro ok(message = "OK")
+      if accepts?("text/html")
+        message = {{message}}
+        env.response.content_type = "text/html"
+        halt env, status_code: 200, response: render "src/views/pages/ok.html.ecr", "src/views/layouts/default.html.ecr"
+      else
+        env.response.content_type = "application/json"
+        halt env, status_code: 200, response: %<{"msg":{{message}}}>
+      end
+    end
+
     macro bad_request
       if accepts?("text/html")
         env.response.content_type = "text/html"

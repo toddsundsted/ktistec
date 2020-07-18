@@ -189,7 +189,22 @@ class HTTP::Client
           JSON
       )
     else
-      raise "not supported"
+      raise "request not mocked: GET #{url}"
+    end
+  end
+
+  def self.post(url : String, headers : HTTP::Headers, body : String)
+    @@last = HTTP::Request.new("POST", url, headers, body)
+    url = URI.parse(url)
+    case url.path
+    when /([^\/]+)\/inbox/
+      HTTP::Client::Response.new(
+        200,
+        headers: HTTP::Headers.new,
+        body: ""
+      )
+    else
+      raise "request not mocked: POST #{url}"
     end
   end
 end

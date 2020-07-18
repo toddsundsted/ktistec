@@ -66,56 +66,26 @@ module Balloon
       env.accepts?({{mime_type}})
     end
 
-    macro ok(message = "OK")
-      if accepts?("text/html")
-        message = {{message}}
-        env.response.content_type = "text/html"
-        halt env, status_code: 200, response: render "src/views/pages/ok.html.ecr", "src/views/layouts/default.html.ecr"
-      else
-        env.response.content_type = "application/json"
-        halt env, status_code: 200, response: %<{"msg":{{message}}}>
+    # Define a simple response helper.
+    #
+    macro def_response_helper(name, code, message)
+      macro {{name.id}}(message = {{message}}, code = {{code}})
+        if accepts?("text/html")
+          _message = \{{message}}
+          env.response.content_type = "text/html"
+          halt env, status_code: \{{code}}, response: render "src/views/pages/generic.html.ecr", "src/views/layouts/default.html.ecr"
+        else
+          env.response.content_type = "application/json"
+          halt env, status_code: \{{code}}, response: %<{"msg":\{{message}}}>
+        end
       end
     end
 
-    macro bad_request
-      if accepts?("text/html")
-        env.response.content_type = "text/html"
-        halt env, status_code: 400, response: render "src/views/pages/bad_request.html.ecr", "src/views/layouts/default.html.ecr"
-      else
-        env.response.content_type = "application/json"
-        halt env, status_code: 400, response: %<{"msg":"Bad Request"}>
-      end
-    end
-
-    macro forbidden
-      if accepts?("text/html")
-        env.response.content_type = "text/html"
-        halt env, status_code: 403, response: render "src/views/pages/forbidden.html.ecr", "src/views/layouts/default.html.ecr"
-      else
-        env.response.content_type = "application/json"
-        halt env, status_code: 403, response: %<{"msg":"Forbidden"}>
-      end
-    end
-
-    macro not_found
-      if accepts?("text/html")
-        env.response.content_type = "text/html"
-        halt env, status_code: 404, response: render "src/views/pages/not_found.html.ecr", "src/views/layouts/default.html.ecr"
-      else
-        env.response.content_type = "application/json"
-        halt env, status_code: 404, response: %<{"msg":"Not Found"}>
-      end
-    end
-
-    macro server_error
-      if accepts?("text/html")
-        env.response.content_type = "text/html"
-        halt env, status_code: 500, response: render "src/views/pages/server_error.html.ecr", "src/views/layouts/default.html.ecr"
-      else
-        env.response.content_type = "application/json"
-        halt env, status_code: 500, response: %<{"msg":"Server Error"}>
-      end
-    end
+    def_response_helper(ok, 200, "OK")
+    def_response_helper(bad_request, 400, "Bad Request")
+    def_response_helper(forbidden, 403, "Forbidden")
+    def_response_helper(not_found, 404, "Not Found")
+    def_response_helper(server_error, 500, "Server Error")
 
     # Don't authenticate specified handlers.
     #

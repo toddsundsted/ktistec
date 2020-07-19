@@ -2,8 +2,128 @@ require "../framework"
 
 class RelationshipsController
   include Balloon::Controller
+  extend Balloon::Util
 
+  skip_auth ["/actors/:username/inbox"], POST
   skip_auth ["/actors/:username/:relationship"], GET
+
+  post "/actors/:username/outbox" do |env|
+    unless (account = get_account(env))
+      not_found
+    end
+    unless env.current_account? == account
+      forbidden
+    end
+
+    activity = env.params.body
+
+    case activity["type"]?
+    when "Follow"
+      unless (iri = activity["object"]?) && (object = ActivityPub::Actor.find?(iri))
+        bad_request
+      end
+      activity = ActivityPub::Activity::Follow.new(
+        iri: "#{Balloon.host}/activities/#{id}",
+        actor: account.actor,
+        object: object,
+        to: [object.iri]
+      )
+    else
+      bad_request
+    end
+
+    unless activity.valid_for_send?
+      bad_request
+    end
+
+    if object.local
+      Relationship::Content::Inbox.new(
+        owner: object,
+        activity: activity
+      ).save
+    else
+      response = HTTP::Client.post(
+        (inbox = object.inbox.not_nil!),
+        Balloon::Signature.sign(account.actor, inbox),
+        activity.to_json_ld
+      )
+    end
+
+    Relationship::Social::Follow.new(
+      actor: account.actor,
+      object: object
+    ).save
+
+    Relationship::Content::Outbox.new(
+      owner: account.actor,
+      activity: activity
+    ).save
+
+    env.redirect back_path
+  end
+
+  post "/actors/:username/inbox" do |env|
+    unless (account = get_account(env))
+      not_found
+    end
+    unless (body = env.request.body)
+      bad_request
+    end
+
+    activity = ActivityPub::Activity.from_json_ld(body)
+
+    if (ActivityPub::Activity.find?(activity.iri))
+      ok
+    elsif env.request.headers["Signature"]? && (actor_iri = activity.actor_iri)
+      if (actor = ActivityPub::Actor.find?(actor_iri))
+        unless Balloon::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
+          bad_request
+        end
+        activity.save
+      else
+        open(actor_iri) do |response|
+          actor = ActivityPub::Actor.from_json_ld(response.body)
+          unless Balloon::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
+            bad_request
+          end
+          activity.save
+          actor.save
+        end
+      end
+    else
+      open(activity.iri) do |response|
+        activity = ActivityPub::Activity.from_json_ld(response.body)
+        activity.save
+      end
+    end
+
+    unless activity.id
+      bad_request
+    end
+
+    case activity
+    when ActivityPub::Activity::Accept
+      unless activity.object?.try(&.local)
+        bad_request
+      end
+      unless (follow = Relationship::Social::Follow.find?(from_iri: account.actor.iri, to_iri: activity.actor.iri))
+        bad_request
+      end
+      follow.assign(confirmed: true).save
+    when ActivityPub::Activity::Reject
+      unless activity.object?.try(&.local)
+        bad_request
+      end
+      unless (follow = Relationship::Social::Follow.find?(from_iri: account.actor.iri, to_iri: activity.actor.iri))
+        bad_request
+      end
+      follow.assign(confirmed: false).save
+    else
+      bad_request
+    end
+
+    ok
+  end
 
   get "/actors/:username/:relationship" do |env|
     unless (account = get_account(env))

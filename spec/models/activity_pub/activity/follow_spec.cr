@@ -17,4 +17,29 @@ Spectator.describe ActivityPub::Activity::Follow do
       expect(typeof(subject.object)).to eq({{(ActivityPub::Actor.all_subclasses << ActivityPub::Actor).join("|").id}})
     end
   end
+
+  context "validations" do
+    let(actor) { ActivityPub::Actor.new }
+    let(object) { ActivityPub::Actor.new }
+
+    it "validates the actor is local" do
+      activity = subject.assign(actor: actor, object: object)
+      expect(activity.valid_for_send?).to be_false
+      expect(activity.errors["activity"]). to contain("actor must be local")
+    end
+
+    it "validates the object has an inbox" do
+      activity = subject.assign(actor: actor, object: object)
+      expect(activity.valid_for_send?).to be_false
+      expect(activity.errors["activity"]). to contain("object must have an inbox")
+    end
+
+    it "validates" do
+      actor.assign(iri: "https://test.test/actors/foo_bar")
+      object.assign(iri: "https://remote/", inbox: "https://remote/inbox")
+      activity = subject.assign(actor: actor, object: object)
+      expect(activity.valid_for_send?).to be_true
+      expect(activity.errors["activity"]?). to be_nil
+    end
+  end
 end

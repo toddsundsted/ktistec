@@ -27,11 +27,8 @@ module Balloon
         a[k] = v[1..-2]
         a
       end
-      unless (parameters.keys.sort & ["keyId", "signature", "headers"]).size == 3
+      unless (parameters.keys.sort & ["signature", "headers"]).size == 2
         raise Error.new("malformed signature")
-      end
-      unless parameters["keyId"] == actor.iri
-        raise Error.new("invalid keyId")
       end
       url = URI.parse(url)
       time = headers["Date"]

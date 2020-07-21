@@ -23,10 +23,6 @@ Spectator.describe Balloon::Signature do
       expect{described_class.verify(actor, "https://remote/inbox", HTTP::Headers{"Signature" => ""})}.to raise_error(Balloon::Signature::Error, "malformed signature")
     end
 
-    it "raises an error if the actor didn't generate the signature" do
-      expect{described_class.verify(ActivityPub::Actor.new, "https://remote/inbox", headers)}.to raise_error(Balloon::Signature::Error, "invalid keyId")
-    end
-
     it "raises an error if the keys don't match" do
       expect{described_class.verify(actor.assign(pem_public_key: "-----BEGIN PUBLIC KEY-----\nMFowDQYJKoZIhvcNAQEBBQADSQAwRgJBAJw6kBEQGSgQVt+T5/8Tq+8235TDi4wx\nziJ107KaI578uAIDoYg6U2ULSpfY4/lUnNH2W9hp6tPMTljY967+PacCARE=\n-----END PUBLIC KEY-----\n"), "https://remote/inbox", headers)}.to raise_error(Balloon::Signature::Error, "invalid signature")
     end

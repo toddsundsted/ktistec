@@ -41,6 +41,10 @@ module Balloon
             "#{header}: #{url.host}"
           when "date"
             "#{header}: #{time}"
+          when "content-type"
+            "#{header}: #{headers["Content-Type"]}"
+          when "digest"
+            "#{header}: #{headers["Digest"]}"
           end
         end.compact.join("\n")
       key = actor.public_key

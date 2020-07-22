@@ -243,7 +243,7 @@ module Balloon
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             unless (o = options[{{v.symbolize}}]?).nil?
-              self.{{v}} = o
+              self.{{v}} = o.as(typeof(self.{{v}}))
             end
           {% end %}
         {% end %}
@@ -274,7 +274,7 @@ module Balloon
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             unless (o = options[{{v.symbolize}}]?).nil?
-              self.{{v}} = o
+              self.{{v}} = o.as(typeof(self.{{v}}))
             end
           {% end %}
         {% end %}

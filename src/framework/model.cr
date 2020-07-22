@@ -352,14 +352,14 @@ module Balloon
           {% class_name = class_name || name.stringify.camelcase.id %}
           @[Assignable]
           @{{name}} : {{class_name}}?
-          def {{name}}=(@{{name}} : {{class_name}})
+          def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
             self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
             {{name}}
           end
-          def {{name}}?
+          def {{name}}? : {{class_name}}?
             @{{name}} ||= {{class_name}}.find?({{primary_key}}: self.{{foreign_key}})
           end
-          def {{name}}
+          def {{name}} : {{class_name}}
             @{{name}} ||= {{class_name}}.find({{primary_key}}: self.{{foreign_key}})
           end
           def _belongs_to_{{name}}
@@ -378,11 +378,11 @@ module Balloon
           {% class_name = class_name || singular.camelcase.id %}
           @[Assignable]
           @{{name}} : Enumerable({{class_name}})?
-          def {{name}}=(@{{name}} : Enumerable({{class_name}}))
+          def {{name}}=(@{{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
             {{name}}.each { |n| n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}})) }
             {{name}}
           end
-          def {{name}}
+          def {{name}} : Enumerable({{class_name}})
             {{name}} = @{{name}}
             if {{name}}.nil? || {{name}}.empty?
               @{{name}} = {{class_name}}.where({{foreign_key}}: self.{{primary_key}})
@@ -403,14 +403,14 @@ module Balloon
           {% class_name = class_name || name.stringify.camelcase.id %}
           @[Assignable]
           @{{name}} : {{class_name}}?
-          def {{name}}=(@{{name}} : {{class_name}})
+          def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
             {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
             {{name}}
           end
-          def {{name}}?
+          def {{name}}? : {{class_name}}?
             @{{name}} ||= {{class_name}}.find?({{foreign_key}}: self.{{primary_key}})
           end
-          def {{name}}
+          def {{name}} : {{class_name}}
             @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}})
           end
           def _belongs_to_{{name}}

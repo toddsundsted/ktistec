@@ -41,12 +41,12 @@ class Account
     Crypto::Bcrypt::Password.new(encrypted_password).verify(password)
   end
 
-  def password=(@password)
+  def password=(@password : String)
     self.encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
   end
 
   def password
-    @password
+    @password.not_nil!
   end
 
   def validate

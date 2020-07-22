@@ -36,7 +36,7 @@ module ActivityPub
     @[Assignable]
     @items_cached : Array(JSON::Any)?
 
-    def items_cached=(@items_cached : Array(JSON::Any))
+    def items_cached=(@items_cached : Array(JSON::Any)) : Array(JSON::Any)
       unless items_cached.empty?
         if items_cached[0].as_s?
           self.items = items_cached.map(&.as_s)
@@ -44,17 +44,17 @@ module ActivityPub
           self.items = items_cached.map(&.dig("@id").as_s)
         end
       end
-      @items_cached
+      items_cached
     end
 
     def items_cached
-      @items_cached.map do |item|
+      items_cached.map do |item|
         yield item
       end
     end
 
     def items_cached
-      @items_cached
+      @items_cached.not_nil!
     end
 
     @[Persistent]

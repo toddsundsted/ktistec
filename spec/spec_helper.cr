@@ -108,6 +108,7 @@ class HTTP::Client
   @@last : HTTP::Request? = nil
   @@activities = [] of ActivityPub::Activity
   @@actors = [] of ActivityPub::Actor
+  @@objects = [] of ActivityPub::Object
 
   def self.last
     @@last
@@ -121,10 +122,15 @@ class HTTP::Client
     @@actors
   end
 
+  def self.objects
+    @@objects
+  end
+
   def self.reset
     @@last = nil
     @@activities.clear
     @@actors.clear
+    @@objects.clear
   end
 
   def self.get(url : String, headers : HTTP::Headers)
@@ -185,6 +191,22 @@ class HTTP::Client
             "type":"Person",
             "id":"https://#{url.host}/#{$1}",
             "preferredUsername":"#{$1}"
+          }
+          JSON
+      )
+    when /objects\/([^\/]+)/
+      HTTP::Client::Response.new(
+        200,
+        headers: HTTP::Headers.new,
+        body: (object = @@objects.find { |a| a.iri == url.to_s }) ?
+          object.to_json_ld :
+          <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "type":"Object",
+            "id":"https://#{url.host}/#{$1}"
           }
           JSON
       )

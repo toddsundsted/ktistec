@@ -80,21 +80,21 @@ module ActivityPub
     end
 
     def from_json_ld(json)
-      assign(**map(json))
+      self.assign(**self.class.map(json))
+    end
+
+    def self.map(json)
+      json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
+      {
+        iri: json.dig?("@id").try(&.as_s),
+        items_cached: json.dig?("https://www.w3.org/ns/activitystreams#items").try(&.as_a),
+        total_items: json.dig?("https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i64),
+        first: json.dig?("https://www.w3.org/ns/activitystreams#first").try(&.as_s),
+        last: json.dig?("https://www.w3.org/ns/activitystreams#last").try(&.as_s),
+        prev: json.dig?("https://www.w3.org/ns/activitystreams#prev").try(&.as_s),
+        next: json.dig?("https://www.w3.org/ns/activitystreams#next").try(&.as_s),
+        current: json.dig?("https://www.w3.org/ns/activitystreams#current").try(&.as_s)
+      }
     end
   end
-end
-
-private def map(json)
-  json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
-  {
-    iri: json.dig?("@id").try(&.as_s),
-    items_cached: json.dig?("https://www.w3.org/ns/activitystreams#items").try(&.as_a),
-    total_items: json.dig?("https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i64),
-    first: json.dig?("https://www.w3.org/ns/activitystreams#first").try(&.as_s),
-    last: json.dig?("https://www.w3.org/ns/activitystreams#last").try(&.as_s),
-    prev: json.dig?("https://www.w3.org/ns/activitystreams#prev").try(&.as_s),
-    next: json.dig?("https://www.w3.org/ns/activitystreams#next").try(&.as_s),
-    current: json.dig?("https://www.w3.org/ns/activitystreams#current").try(&.as_s)
-  }
 end

@@ -126,7 +126,7 @@ Spectator.describe ActivityPub::Actor do
       actor = described_class.from_json_ld(json).save
       expect(actor.iri).to eq("https://test.test/foo_bar")
       expect(actor.username).to eq("foo_bar")
-      expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
+      expect(actor.pem_public_key).to be_nil
       expect(actor.inbox).to eq("inbox link")
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
@@ -137,6 +137,11 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
     end
+
+    it "includes the public key" do
+      actor = described_class.from_json_ld(json, include_key: true).save
+      expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
+    end
   end
 
   describe "#from_json_ld" do
@@ -144,7 +149,7 @@ Spectator.describe ActivityPub::Actor do
       actor = described_class.new.from_json_ld(json).save
       expect(actor.iri).to eq("https://test.test/foo_bar")
       expect(actor.username).to eq("foo_bar")
-      expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
+      expect(actor.pem_public_key).to be_nil
       expect(actor.inbox).to eq("inbox link")
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
@@ -154,6 +159,11 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
+    end
+
+    it "includes the public key" do
+      actor = described_class.new.from_json_ld(json, include_key: true).save
+      expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
     end
   end
 

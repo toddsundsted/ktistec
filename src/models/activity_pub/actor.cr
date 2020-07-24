@@ -190,8 +190,8 @@ module ActivityPub
       ActorsController.render_actor(self, recursive)
     end
 
-    def self.from_json_ld(json)
-      attrs = map(json)
+    def self.from_json_ld(json, *, include_key = false)
+      attrs = map(json, include_key: include_key)
       {% begin %}
         case attrs[:_type]
         {% for subclass in @type.all_subclasses %}
@@ -204,17 +204,19 @@ module ActivityPub
       {% end %}
     end
 
-    def from_json_ld(json)
-      self.assign(**self.class.map(json))
+    def from_json_ld(json, *, include_key = false)
+      self.assign(**self.class.map(json, include_key: include_key))
     end
 
-    def self.map(json)
+    def self.map(json, *, include_key = false)
       json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
         iri: json.dig?("@id").try(&.as_s),
         _type: json.dig?("@type").try(&.as_s.split("#").last),
         username: dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
-        pem_public_key: dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem"),
+        pem_public_key: if include_key
+          dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
+        end,
         inbox: dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
         outbox: dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
         following: dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),

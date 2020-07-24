@@ -82,7 +82,7 @@ class RelationshipsController
         activity.save
       else
         open(actor_iri) do |response|
-          actor = ActivityPub::Actor.from_json_ld(response.body)
+          actor = ActivityPub::Actor.from_json_ld(response.body, include_key: true)
           unless Balloon::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
             bad_request
           end

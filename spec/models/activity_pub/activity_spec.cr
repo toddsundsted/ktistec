@@ -1,6 +1,9 @@
 require "../../spec_helper"
 
 class FooBarActivity < ActivityPub::Activity
+  belongs_to actor, class_name: ActivityPub::Actor, foreign_key: actor_iri, primary_key: iri
+  belongs_to object, class_name: ActivityPub::Object, foreign_key: object_iri, primary_key: iri
+  belongs_to target, class_name: ActivityPub::Activity, foreign_key: target_iri, primary_key: iri
 end
 
 Spectator.describe ActivityPub::Activity do
@@ -31,6 +34,50 @@ Spectator.describe ActivityPub::Activity do
     end
   end
 
+  context "given embedded objects" do
+    let(json) do
+      <<-JSON
+        {
+          "@context":[
+            "https://www.w3.org/ns/activitystreams"
+          ],
+          "@id":"https://test.test/foo_bar",
+          "@type":"FooBarActivity",
+          "actor":{
+            "id":"actor link",
+            "type":"Actor"
+          },
+          "object":{
+            "@id":"object link",
+            "@type":"Object"
+          },
+          "target":{
+            "@id":"target link",
+            "@type":"Activity"
+          }
+        }
+      JSON
+    end
+
+    it "caches the actor" do
+      activity = described_class.from_json_ld(json).as(FooBarActivity)
+      expect(activity.actor).to be_a(ActivityPub::Actor)
+      expect(activity.actor.iri).to eq("actor link")
+    end
+
+    it "caches the object" do
+      activity = described_class.from_json_ld(json).as(FooBarActivity)
+      expect(activity.object).to be_a(ActivityPub::Object)
+      expect(activity.object.iri).to eq("object link")
+    end
+
+    it "caches the target" do
+      activity = described_class.from_json_ld(json).as(FooBarActivity)
+      expect(activity.target).to be_a(ActivityPub::Activity)
+      expect(activity.target.iri).to eq("target link")
+    end
+  end
+
   let(json) do
     <<-JSON
       {
@@ -41,12 +88,8 @@ Spectator.describe ActivityPub::Activity do
         "@type":"FooBarActivity",
         "published":"2016-02-15T10:20:30Z",
         "actor":"actor link",
-        "object":{
-          "id":"object link"
-        },
-        "target":{
-          "id":"target link"
-        },
+        "object":"object link",
+        "target":"target link",
         "to":"to link",
         "cc":["cc link"],
         "summary":"abc"

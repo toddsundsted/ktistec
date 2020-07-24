@@ -88,9 +88,21 @@ module ActivityPub
         iri: json.dig?("@id").try(&.as_s),
         _type: json.dig?("@type").try(&.as_s.split("#").last),
         published: (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
-        actor_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#actor"),
-        object_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#object"),
-        target_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#target"),
+        # either pick up the actor's id or the embedded actor
+        actor_iri: json.dig?("https://www.w3.org/ns/activitystreams#actor").try(&.as_s?),
+        actor: if (actor = json.dig?("https://www.w3.org/ns/activitystreams#actor")) && actor.as_h?
+          ActivityPub.from_json_ld(actor)
+        end,
+        # either pick up the object's id or the embedded object
+        object_iri: json.dig?("https://www.w3.org/ns/activitystreams#object").try(&.as_s?),
+        object: if (object = json.dig?("https://www.w3.org/ns/activitystreams#object")) && object.as_h?
+          ActivityPub.from_json_ld(object)
+        end,
+        # either pick up the target's id or the embedded target
+        target_iri: json.dig?("https://www.w3.org/ns/activitystreams#target").try(&.as_s?),
+        target: if (target = json.dig?("https://www.w3.org/ns/activitystreams#target")) && target.as_h?
+          ActivityPub.from_json_ld(target)
+        end,
         to: dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
         cc: dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
         summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")

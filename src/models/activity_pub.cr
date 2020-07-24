@@ -6,9 +6,13 @@ module ActivityPub
     {% begin %}
       case json["@type"].as_s.split("#").last
       {% for subclass in @type.constants.reduce([] of TypeNode) { |a, t| a + @type.constant(t).all_subclasses << t } %}
-        when {{subclass.stringify.split("::").last}}
-          {{subclass}}.new(**{{subclass}}.map(json))
+        when {{name = subclass.stringify.split("::").last}}
+          {% id = name.downcase.id %}
+          {{id}} = {{subclass}}.find?(json["@id"]?.try(&.as_s)) || {{subclass}}.new
+          {{id}}.assign(**{{subclass}}.map(json))
       {% end %}
+      else
+        raise NotImplementedError.new(json["@type"].as_s)
       end
     {% end %}
   end

@@ -3,17 +3,17 @@
   <%- if (published = activity.published) -%>
   "published":<%= published.to_rfc3339(fraction_digits: 3).inspect %>,
   <%- end -%>
-  <%- if recursive && activity.responds_to?(:actor) && (actor = activity.actor) -%>
+  <%- if recursive && activity.responds_to?(:actor) && (actor = activity.actor?) -%>
   "actor":<%= actor.to_json_ld %>,
   <%- elsif (actor_iri = activity.actor_iri) -%>
   "actor":<%= actor_iri.inspect %>,
   <%- end -%>
-  <%- if recursive && activity.responds_to?(:object) && (object = activity.object) -%>
+  <%- if recursive && activity.responds_to?(:object) && (object = activity.object?) -%>
   "object":<%= object.to_json_ld %>,
   <%- elsif (object_iri = activity.object_iri) -%>
   "object":<%= object_iri.inspect %>,
   <%- end -%>
-  <%- if recursive && activity.responds_to?(:target) && (target = activity.target) -%>
+  <%- if recursive && activity.responds_to?(:target) && (target = activity.target?) -%>
   "target":<%= target.to_json_ld %>,
   <%- elsif (target_iri = activity.target_iri) -%>
   "target":<%= target_iri.inspect %>,

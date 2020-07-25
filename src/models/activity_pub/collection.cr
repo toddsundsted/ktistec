@@ -83,7 +83,7 @@ module ActivityPub
       self.assign(**self.class.map(json))
     end
 
-    def self.map(json)
+    def self.map(json, **options)
       json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
       {
         iri: json.dig?("@id").try(&.as_s),

@@ -194,6 +194,10 @@ module ActivityPub
       ActivityPub.from_json_ld(json, include_key: include_key).as(self)
     end
 
+    def self.from_json_ld?(json, *, include_key = false)
+      ActivityPub.from_json_ld?(json, include_key: include_key).as(self?)
+    end
+
     def from_json_ld(json, *, include_key = false)
       self.assign(**self.class.map(json, include_key: include_key))
     end

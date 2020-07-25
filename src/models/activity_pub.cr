@@ -16,4 +16,10 @@ module ActivityPub
       end
     {% end %}
   end
+
+  def self.from_json_ld?(json, **options)
+    from_json_ld(json, **options)
+  rescue NotImplementedError
+    nil
+  end
 end

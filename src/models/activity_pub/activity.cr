@@ -68,6 +68,10 @@ module ActivityPub
       ActivityPub.from_json_ld(json).as(self)
     end
 
+    def self.from_json_ld?(json)
+      ActivityPub.from_json_ld?(json).as(self?)
+    end
+
     def from_json_ld(json)
       self.assign(**self.class.map(json))
     end

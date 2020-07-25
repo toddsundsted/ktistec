@@ -174,6 +174,25 @@ Spectator.describe RelationshipsController do
         headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.to change{ActivityPub::Activity.count}.by(1)
       end
+
+      context "which doesn't have a public key" do
+        before_each do
+          pem_public_key, other.pem_public_key = other.pem_public_key, nil
+          HTTP::Client.actors << other.save
+          other.pem_public_key = pem_public_key
+        end
+
+        it "retrieves the remote actor from the origin" do
+          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(HTTP::Client.last).to match("GET #{other.iri}")
+        end
+
+        it "updates the actor" do
+          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+          expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.to change{ActivityPub::Actor.find(other.id).pem_public_key}
+        end
+      end
     end
 
     context "when accepting" do

@@ -72,22 +72,28 @@ class RelationshipsController
 
     activity = ActivityPub::Activity.from_json_ld(body)
 
-    if (ActivityPub::Activity.find?(activity.iri))
+    if activity.id
       ok
-    elsif env.request.headers["Signature"]? && (actor_iri = activity.actor_iri)
-      if (actor = ActivityPub::Actor.find?(actor_iri))
-        unless Balloon::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
-          bad_request
-        end
-        activity.save
-      else
-        open(actor_iri) do |response|
-          actor = ActivityPub::Actor.from_json_ld(response.body, include_key: true)
+    end
+
+    if env.request.headers["Signature"]?
+      # never use the embedded actor's credentials for verification! go to the source
+      if (actor_iri = activity.actor_iri)
+        if (actor = ActivityPub::Actor.find?(actor_iri)) && actor.pem_public_key
           unless Balloon::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
             bad_request
           end
           activity.save
-          actor.save
+        else
+          open(actor_iri) do |response|
+            if (actor = ActivityPub::Actor.from_json_ld?(response.body, include_key: true)) && actor.pem_public_key
+              unless Balloon::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
+                bad_request
+              end
+              actor.save
+              activity.save
+            end
+          end
         end
       end
     else

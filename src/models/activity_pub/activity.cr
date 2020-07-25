@@ -65,17 +65,7 @@ module ActivityPub
     end
 
     def self.from_json_ld(json)
-      attrs = map(json)
-      {% begin %}
-        case attrs[:_type]
-        {% for subclass in @type.all_subclasses %}
-          when {{subclass.stringify.split("::").last}}
-            {{subclass}}.new(**attrs)
-        {% end %}
-        else
-          self.new(**attrs)
-        end
-      {% end %}
+      ActivityPub.from_json_ld(json).as(self)
     end
 
     def from_json_ld(json)

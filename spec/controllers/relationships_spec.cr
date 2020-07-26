@@ -195,6 +195,54 @@ Spectator.describe RelationshipsController do
       end
     end
 
+    context "on create" do
+      let(note) do
+        ActivityPub::Object::Note.new(
+          iri: "https://remote/objects/#{random_string}",
+        )
+      end
+      let(create) do
+        ActivityPub::Activity::Create.new(
+          iri: "https://remote/activities/create",
+          actor: other
+        )
+      end
+
+      it "returns 400 if no object is included" do
+        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "fetches object if remote" do
+        create.object_iri = note.iri
+        HTTP::Client.objects << note
+        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.to change{ActivityPub::Object.count}.by(1)
+        expect(HTTP::Client.last).to match("GET #{note.iri}")
+      end
+
+      it "doesn't fetch the object if embedded" do
+        create.object = note
+        HTTP::Client.objects << note
+        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.to change{ActivityPub::Object.count}.by(1)
+        expect(HTTP::Client.last).to be_nil
+      end
+
+      it "saves the object" do
+        create.object = note
+        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.to change{ActivityPub::Object.count}.by(1)
+      end
+
+      it "puts the activity in the actor's inbox" do
+        create.object = note
+        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.to change{Relationship::Content::Inbox.count}.by(1)
+      end
+    end
+
     context "when accepting" do
       let!(relationship) do
         Relationship::Social::Follow.new(

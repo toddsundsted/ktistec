@@ -108,6 +108,20 @@ class RelationshipsController
     end
 
     case activity
+    when ActivityPub::Activity::Create
+      unless (object = activity.object?)
+        unless (object_iri = activity.object_iri)
+          bad_request
+        end
+        open(object_iri) do |response|
+          object = ActivityPub::Object.from_json_ld(response.body)
+          activity.object = object
+        end
+      end
+      Relationship::Content::Inbox.new(
+        owner: account.actor,
+        activity: activity
+      ).save
     when ActivityPub::Activity::Accept
       unless activity.object?.try(&.local)
         bad_request

@@ -14,7 +14,7 @@ module Balloon
     # Expands the JSON-LD document.
     #
     def self.expand(body, loader = Loader.new)
-      body = JSON.parse(body) if body.is_a?(String)
+      body = JSON.parse(body) if body.is_a?(String | IO)
       expand(
         body,
         context(body["@context"]? || empty, loader),

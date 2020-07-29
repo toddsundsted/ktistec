@@ -202,6 +202,88 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#in_outbox" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro add_to_outbox(index)
+      let(activity{{index}}) do
+        ActivityPub::Activity::Create.new(
+          iri: "https://test.test/activities/#{random_string}",
+          visible: false
+        )
+      end
+      let!(relationship{{index}}) do
+        Relationship::Content::Outbox.new(
+          owner: subject,
+          activity: activity{{index}},
+          confirmed: true,
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
+        ).save
+      end
+    end
+
+    add_to_outbox(1)
+    add_to_outbox(2)
+    add_to_outbox(3)
+    add_to_outbox(4)
+    add_to_outbox(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.in_outbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
+    end
+
+    it "filters out non-public posts" do
+      expect(subject.in_outbox(0, 2, public: true)).to be_empty
+    end
+
+    it "paginates the results" do
+      expect(subject.in_outbox(0, 2, public: false)).to eq([activity5, activity4])
+      expect(subject.in_outbox(1, 2, public: false)).to eq([activity3, activity2])
+      expect(subject.in_outbox(1, 2, public: false).more?).to be_true
+    end
+  end
+
+  describe "#in_inbox" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro add_to_inbox(index)
+      let(activity{{index}}) do
+        ActivityPub::Activity::Create.new(
+          iri: "https://test.test/activities/#{random_string}",
+          visible: false
+        )
+      end
+      let!(relationship{{index}}) do
+        Relationship::Content::Inbox.new(
+          owner: subject,
+          activity: activity{{index}},
+          confirmed: true,
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
+        ).save
+      end
+    end
+
+    add_to_inbox(1)
+    add_to_inbox(2)
+    add_to_inbox(3)
+    add_to_inbox(4)
+    add_to_inbox(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.in_inbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
+    end
+
+    it "filters out non-public posts" do
+      expect(subject.in_inbox(0, 2, public: true)).to be_empty
+    end
+
+    it "paginates the results" do
+      expect(subject.in_inbox(0, 2, public: false)).to eq([activity5, activity4])
+      expect(subject.in_inbox(1, 2, public: false)).to eq([activity3, activity2])
+      expect(subject.in_inbox(1, 2, public: false).more?).to be_true
+    end
+  end
+
   describe "#local" do
     it "indicates if the actor is local" do
       expect(described_class.new(iri: "https://test.test/foo_bar").local).to be_true

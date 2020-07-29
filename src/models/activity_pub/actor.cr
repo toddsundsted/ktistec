@@ -186,6 +186,91 @@ module ActivityPub
       {% end %}
     end
 
+    private def content(type, page : UInt16 = 0, size : UInt16 = 10, public = true)
+      {% begin %}
+        {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
+        if public
+          query = <<-QUERY
+            SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
+              FROM activities AS a, relationships AS r
+             WHERE r.from_iri = ?
+               AND r.type = "#{type}"
+               AND r.confirmed = 1
+               AND a.iri = r.to_iri
+               AND a.visible = 1
+               AND a.id NOT IN (
+                  SELECT a.id
+                    FROM activities AS a, relationships AS r
+                   WHERE r.from_iri = ?
+                     AND r.type = "#{type}"
+                     AND r.confirmed = 1
+                     AND a.iri = r.to_iri
+                     AND a.visible = 1
+                ORDER BY r.created_at DESC
+                   LIMIT ?
+               )
+          ORDER BY r.created_at DESC
+             LIMIT ?
+          QUERY
+        else
+          query = <<-QUERY
+            SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
+              FROM activities AS a, relationships AS r
+             WHERE r.from_iri = ?
+               AND r.type = "#{type}"
+               AND r.confirmed = 1
+               AND a.iri = r.to_iri
+               AND a.id NOT IN (
+                  SELECT a.id
+                    FROM activities AS a, relationships AS r
+                   WHERE r.from_iri = ?
+                     AND r.type = "#{type}"
+                     AND r.confirmed = 1
+                     AND a.iri = r.to_iri
+                ORDER BY r.created_at DESC
+                   LIMIT ?
+               )
+          ORDER BY r.created_at DESC
+             LIMIT ?
+          QUERY
+        end
+        Balloon::Util::PaginatedArray(Activity).new.tap do |array|
+          Balloon.database.query(
+            query, self.iri, self.iri, (page * size).to_i, size.to_i + 1
+          ) do |rs|
+            rs.each do
+              attrs = {
+               {% for v in vs %}
+                 {{v}}: rs.read({{v.type}}),
+               {% end %}
+              }
+              array <<
+                case attrs[:type]
+                {% for subclass in ActivityPub::Activity.all_subclasses %}
+                  when {{name = subclass.stringify}}
+                    {{subclass}}.new(**attrs)
+                {% end %}
+                else
+                  ActivityPub::Activity.new(**attrs)
+                end
+            end
+          end
+          if array.size > size
+            array.more = true
+            array.pop
+          end
+        end
+      {% end %}
+    end
+
+    def in_outbox(page : UInt16 = 0, size : UInt16 = 10, public = true)
+      content(Relationship::Content::Outbox, page, size, public)
+    end
+
+    def in_inbox(page : UInt16 = 0, size : UInt16 = 10, public = true)
+      content(Relationship::Content::Inbox, page, size, public)
+    end
+
     def to_json_ld(recursive = false)
       ActorsController.render_actor(self, recursive)
     end

@@ -14,9 +14,10 @@
                 <input type='submit' value='Unfollow'>
             </form>
         <%- else -%>
-            <form method='POST' action='<%= actor_relationships_path(account, "following") %>'>
-                <input type='hidden' name='iri' value='<%= actor.iri %>'>
-                <input type='submit' value='Follow'>
+            <form method='POST' action='<%= actor_relationships_path(account, "outbox") %>'>
+                <input type='hidden' name='type' value='Follow'>
+                <input type='hidden' name='object' value='<%= actor.iri %>'>
+                <input type='submit' value='Remote Follow'>
             </form>
         <%- end -%>
     <%- end -%>

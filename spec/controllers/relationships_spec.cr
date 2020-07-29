@@ -512,16 +512,16 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(404)
     end
 
-    it "returns 400 if relationship type is not supported" do
+    it "returns 401 if relationship type is not supported" do
       headers = HTTP::Headers{"Accept" => "text/html"}
       get "/actors/#{actor.username}/foobar", headers
-      expect(response.status_code).to eq(400)
+      expect(response.status_code).to eq(401)
     end
 
-    it "returns 400 if relationship type is not supported" do
+    it "returns 401 if relationship type is not supported" do
       headers = HTTP::Headers{"Accept" => "application/json"}
       get "/actors/#{actor.username}/foobar", headers
-      expect(response.status_code).to eq(400)
+      expect(response.status_code).to eq(401)
     end
 
     context "when unauthorized" do

@@ -145,6 +145,36 @@ class RelationshipsController
     ok
   end
 
+  get "/actors/:username/outbox" do |env|
+    unless (account = get_account(env))
+      not_found
+    end
+    activities = account.actor.in_outbox(*pagination_params(env), public: env.current_account? != account)
+
+    if accepts?("text/html")
+      env.response.content_type = "text/html"
+      render "src/views/relationships/outbox.html.ecr", "src/views/layouts/default.html.ecr"
+    else
+      env.response.content_type = "application/json"
+      render "src/views/relationships/outbox.json.ecr"
+    end
+  end
+
+  get "/actors/:username/inbox" do |env|
+    unless (account = get_account(env))
+      not_found
+    end
+    activities = account.actor.in_inbox(*pagination_params(env), public: env.current_account? != account)
+
+    if accepts?("text/html")
+      env.response.content_type = "text/html"
+      render "src/views/relationships/inbox.html.ecr", "src/views/layouts/default.html.ecr"
+    else
+      env.response.content_type = "application/json"
+      render "src/views/relationships/inbox.json.ecr"
+    end
+  end
+
   get "/actors/:username/:relationship" do |env|
     unless (account = get_account(env))
       not_found

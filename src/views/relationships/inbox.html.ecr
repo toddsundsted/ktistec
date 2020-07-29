@@ -1,0 +1,12 @@
+<%- content_for "title" do -%>Inbox<%- end -%>
+<div>
+    <h1>Inbox</h1>
+    <ul>
+        <%- activities.each do |activity| -%>
+            <li class="activity">
+                <p><a href="<%= activity.iri %>"></a></p>
+            </li>
+        <%- end -%>
+    </ul>
+    <%= paginate(activities, env) %>
+</div>

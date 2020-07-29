@@ -1,0 +1,10 @@
+{
+  "@context":"https://www.w3.org/ns/activitystreams",
+  "id":"<%= host %><%= actor_relationships_path(account, "outbox") %>",
+  "type":"Collection",
+  "items":[
+    <%- activities.each_with_index do |activity, i| -%>
+      "<%= activity.iri %>"<%= i < activities.size - 1 ? "," : "" %>
+    <%- end -%>
+  ]
+}

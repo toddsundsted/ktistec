@@ -332,6 +332,148 @@ Spectator.describe RelationshipsController do
     end
   end
 
+  describe "GET /actors/:username/outbox" do
+    let(actor) { register.actor }
+    let(other) { register.actor }
+
+    macro add_to_outbox(index, actor, visible = false, confirmed = true)
+      let(activity{{index}}) do
+        ActivityPub::Activity.new(
+          iri: "https://test.test/activities/#{random_string}",
+          visible: {{visible}}
+        )
+      end
+      let!(relationship{{index}}) do
+        Relationship::Content::Outbox.new(
+          owner: {{actor}},
+          activity: activity{{index}},
+          confirmed: {{confirmed}}
+        ).save
+      end
+    end
+
+    add_to_outbox(1, actor, visible: true)
+    add_to_outbox(2, actor, visible: false)
+    add_to_outbox(3, other, visible: true)
+
+    it "returns 404 if not found" do
+      headers = HTTP::Headers{"Accept" => "text/html"}
+      get "/actors/0/outbox", headers
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if not found" do
+      headers = HTTP::Headers{"Accept" => "application/json"}
+      get "/actors/0/outbox", headers
+      expect(response.status_code).to eq(404)
+    end
+
+    context "when unauthorized" do
+      it "renders only the public activities" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/actors/#{actor.username}/outbox", headers
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity1.iri)
+      end
+
+      it "renders only the public activities" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/actors/#{actor.username}/outbox", headers
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("items").as_a).to contain_exactly(activity1.iri)
+      end
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "renders all activities" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/actors/#{actor.username}/outbox", headers
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity1.iri, activity2.iri)
+      end
+
+      it "renders all activities" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/actors/#{actor.username}/outbox", headers
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("items").as_a).to contain_exactly(activity1.iri, activity2.iri)
+      end
+    end
+  end
+
+  describe "GET /actors/:username/inbox" do
+    let(actor) { register.actor }
+    let(other) { register.actor }
+
+    macro add_to_inbox(index, actor, visible = false, confirmed = true)
+      let(activity{{index}}) do
+        ActivityPub::Activity.new(
+          iri: "https://test.test/activities/#{random_string}",
+          visible: {{visible}}
+        )
+      end
+      let!(relationship{{index}}) do
+        Relationship::Content::Inbox.new(
+          owner: {{actor}},
+          activity: activity{{index}},
+          confirmed: {{confirmed}}
+        ).save
+      end
+    end
+
+    add_to_inbox(1, actor, visible: true)
+    add_to_inbox(2, actor, visible: false)
+    add_to_inbox(3, other, visible: true)
+
+    it "returns 404 if not found" do
+      headers = HTTP::Headers{"Accept" => "text/html"}
+      get "/actors/0/inbox", headers
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if not found" do
+      headers = HTTP::Headers{"Accept" => "application/json"}
+      get "/actors/0/inbox", headers
+      expect(response.status_code).to eq(404)
+    end
+
+    context "when unauthorized" do
+      it "renders only the public activities" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/actors/#{actor.username}/inbox", headers
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity1.iri)
+      end
+
+      it "renders only the public activities" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/actors/#{actor.username}/inbox", headers
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("items").as_a).to contain_exactly(activity1.iri)
+      end
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "renders all activities" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/actors/#{actor.username}/inbox", headers
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity1.iri, activity2.iri)
+      end
+
+      it "renders all activities" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/actors/#{actor.username}/inbox", headers
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("items").as_a).to contain_exactly(activity1.iri, activity2.iri)
+      end
+    end
+  end
+
   describe "GET /actors/:username/:relationship" do
     let(actor) { register.actor }
     let(other1) { register.actor }

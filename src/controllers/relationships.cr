@@ -4,8 +4,10 @@ class RelationshipsController
   include Balloon::Controller
   extend Balloon::Util
 
-  skip_auth ["/actors/:username/inbox"], POST
-  skip_auth ["/actors/:username/:relationship"], GET
+  skip_auth ["/actors/:username/outbox"], GET
+  skip_auth ["/actors/:username/inbox"], POST, GET
+  skip_auth ["/actors/:username/following"], GET
+  skip_auth ["/actors/:username/followers"], GET
 
   post "/actors/:username/outbox" do |env|
     unless (account = get_account(env))

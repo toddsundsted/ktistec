@@ -9,6 +9,8 @@ module Balloon
   # Authentication middleware.
   #
   class Auth < Kemal::Handler
+    include Balloon::Controller
+
     def call(env)
       return call_next(env) unless env.route_lookup.found?
 

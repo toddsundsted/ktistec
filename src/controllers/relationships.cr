@@ -30,13 +30,21 @@ class RelationshipsController
         object: object,
         to: [object.iri]
       )
+      unless activity.valid_for_send?
+        bad_request
+      end
+      Relationship::Social::Follow.new(
+        actor: account.actor,
+        object: object
+      ).save
     else
       bad_request
     end
 
-    unless activity.valid_for_send?
-      bad_request
-    end
+    Relationship::Content::Outbox.new(
+      owner: account.actor,
+      activity: activity
+    ).save
 
     if object.local
       Relationship::Content::Inbox.new(
@@ -50,16 +58,6 @@ class RelationshipsController
         activity.to_json_ld
       )
     end
-
-    Relationship::Social::Follow.new(
-      actor: account.actor,
-      object: object
-    ).save
-
-    Relationship::Content::Outbox.new(
-      owner: account.actor,
-      activity: activity
-    ).save
 
     env.redirect back_path
   end

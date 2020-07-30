@@ -105,13 +105,17 @@ end
 # `expect(...last).to match("GET /foo/bar")`
 #
 class HTTP::Client
-  @@last : HTTP::Request? = nil
+  @@requests = [] of HTTP::Request
   @@activities = [] of ActivityPub::Activity
   @@actors = [] of ActivityPub::Actor
   @@objects = [] of ActivityPub::Object
 
-  def self.last
-    @@last
+  def self.last?
+    @@requests.last?
+  end
+
+  def self.requests
+    @@requests
   end
 
   def self.activities
@@ -127,14 +131,14 @@ class HTTP::Client
   end
 
   def self.reset
-    @@last = nil
+    @@requests.clear
     @@activities.clear
     @@actors.clear
     @@objects.clear
   end
 
   def self.get(url : String, headers : HTTP::Headers)
-    @@last = HTTP::Request.new("GET", url, headers)
+    @@requests << HTTP::Request.new("GET", url, headers)
     url = URI.parse(url)
     case url.path
     when /bad-json/
@@ -216,7 +220,7 @@ class HTTP::Client
   end
 
   def self.post(url : String, headers : HTTP::Headers, body : String)
-    @@last = HTTP::Request.new("POST", url, headers, body)
+    @@requests << HTTP::Request.new("POST", url, headers, body)
     url = URI.parse(url)
     case url.path
     when /([^\/]+)\/inbox/

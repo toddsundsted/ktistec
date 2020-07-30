@@ -75,7 +75,7 @@ Spectator.describe RelationshipsController do
         it "sends the activity to the object's inbox" do
           headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"
-          expect(HTTP::Client.last).to match("POST #{object.inbox}")
+          expect(HTTP::Client.last?).to match("POST #{object.inbox}")
         end
       end
 
@@ -129,7 +129,7 @@ Spectator.describe RelationshipsController do
       it "retrieves the activity from the origin" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-        expect(HTTP::Client.last).to match("GET https://remote/activities/foo_bar")
+        expect(HTTP::Client.last?).to match("GET https://remote/activities/foo_bar")
       end
 
       it "saves the activity" do
@@ -144,7 +144,7 @@ Spectator.describe RelationshipsController do
       it "fetches the remote actor from the origin" do
         headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-        expect(HTTP::Client.last).to match("GET #{other.iri}")
+        expect(HTTP::Client.last?).to match("GET #{other.iri}")
       end
 
       it "saves the actor" do
@@ -162,7 +162,7 @@ Spectator.describe RelationshipsController do
       it "does not fetch the actor" do
         headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-        expect(HTTP::Client.last).to be_nil
+        expect(HTTP::Client.last?).to be_nil
       end
 
       it "does not save the actor" do
@@ -185,7 +185,7 @@ Spectator.describe RelationshipsController do
         it "retrieves the remote actor from the origin" do
           headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
           post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-          expect(HTTP::Client.last).to match("GET #{other.iri}")
+          expect(HTTP::Client.last?).to match("GET #{other.iri}")
         end
 
         it "updates the actor" do
@@ -219,7 +219,7 @@ Spectator.describe RelationshipsController do
         HTTP::Client.objects << note
         headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.to change{ActivityPub::Object.count}.by(1)
-        expect(HTTP::Client.last).to match("GET #{note.iri}")
+        expect(HTTP::Client.last?).to match("GET #{note.iri}")
       end
 
       it "doesn't fetch the object if embedded" do
@@ -227,7 +227,7 @@ Spectator.describe RelationshipsController do
         HTTP::Client.objects << note
         headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.to change{ActivityPub::Object.count}.by(1)
-        expect(HTTP::Client.last).to be_nil
+        expect(HTTP::Client.last?).to be_nil
       end
 
       it "saves the object" do

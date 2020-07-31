@@ -46,18 +46,10 @@ class RelationshipsController
       activity: activity
     ).save
 
-    if object.local
-      Relationship::Content::Inbox.new(
-        owner: object,
-        activity: activity
-      ).save
-    else
-      response = HTTP::Client.post(
-        (inbox = object.inbox.not_nil!),
-        Balloon::Signature.sign(account.actor, inbox),
-        activity.to_json_ld
-      )
-    end
+    Task::Send.new(
+      actor: account.actor,
+      activity: activity
+    ).perform
 
     env.redirect back_path
   end

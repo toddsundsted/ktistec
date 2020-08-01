@@ -164,4 +164,18 @@ Spectator.describe ActivityPub::Collection do
       expect(collection.items_cached).to eq([{"@id" => "item link"}])
     end
   end
+
+  describe "#to_json_ld" do
+    it "renders an identical instance" do
+      collection = described_class.from_json_ld(json)
+      expect(described_class.from_json_ld(collection.to_json_ld)).to eq(collection)
+    end
+  end
+
+  describe "#local" do
+    it "indicates if the collection is local" do
+      expect(described_class.new(iri: "https://test.test/foo_bar").local).to be_true
+      expect(described_class.new(iri: "https://remote/foo_bar").local).to be_false
+    end
+  end
 end

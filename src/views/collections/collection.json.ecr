@@ -1,0 +1,23 @@
+{
+  "@context":"https://www.w3.org/ns/activitystreams",
+  <%- if (total_items = collection.total_items) -%>
+  "totalItems":<%= total_items %>,
+  <%- end -%>
+  <%- if (first = collection.first) -%>
+  "first":<%= first.inspect %>,
+  <%- end -%>
+  <%- if (last = collection.last) -%>
+  "last":<%= last.inspect %>,
+  <%- end -%>
+  <%- if (prev = collection.prev) -%>
+  "prev":<%= prev.inspect %>,
+  <%- end -%>
+  <%- if (_next = collection.next) -%>
+  "next":<%= _next.inspect %>,
+  <%- end -%>
+  <%- if (current = collection.current) -%>
+  "current":<%= current.inspect %>,
+  <%- end -%>
+  "type":<%= collection.class.to_s.split("::").last.inspect %>,
+  "id":<%= collection.iri.inspect %>
+}

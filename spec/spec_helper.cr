@@ -107,6 +107,7 @@ end
 class HTTP::Client
   @@requests = [] of HTTP::Request
   @@activities = [] of ActivityPub::Activity
+  @@collections = [] of ActivityPub::Collection
   @@actors = [] of ActivityPub::Actor
   @@objects = [] of ActivityPub::Object
 
@@ -122,6 +123,10 @@ class HTTP::Client
     @@activities
   end
 
+  def self.collections
+    @@collections
+  end
+
   def self.actors
     @@actors
   end
@@ -133,6 +138,7 @@ class HTTP::Client
   def self.reset
     @@requests.clear
     @@activities.clear
+    @@collections.clear
     @@actors.clear
     @@objects.clear
   end
@@ -181,6 +187,22 @@ class HTTP::Client
           }
           JSON
       )
+    when /actors\/([^\/]+)\/([^\/]+)/
+      HTTP::Client::Response.new(
+        200,
+        headers: HTTP::Headers.new,
+        body: (collection = @@collections.find { |c| c.iri == url.to_s }) ?
+          collection.to_json_ld :
+          <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "type":"Collection",
+            "id":"https://#{url.host}/#{$1}/#{$2}"
+          }
+          JSON
+      )
     when /actors\/([^\/]+)/
       HTTP::Client::Response.new(
         200,
@@ -202,7 +224,7 @@ class HTTP::Client
       HTTP::Client::Response.new(
         200,
         headers: HTTP::Headers.new,
-        body: (object = @@objects.find { |a| a.iri == url.to_s }) ?
+        body: (object = @@objects.find { |o| o.iri == url.to_s }) ?
           object.to_json_ld :
           <<-JSON
           {

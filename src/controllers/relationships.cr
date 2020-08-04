@@ -47,7 +47,7 @@ class RelationshipsController
     ).save
 
     Task::Send.new(
-      actor: account.actor,
+      sender: account.actor,
       activity: activity
     ).perform
 

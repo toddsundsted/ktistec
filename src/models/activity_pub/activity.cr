@@ -70,6 +70,7 @@ module ActivityPub
 
     def self.from_json_ld?(json)
       ActivityPub.from_json_ld?(json).as(self?)
+    rescue TypeCastError
     end
 
     def from_json_ld(json)

@@ -281,6 +281,7 @@ module ActivityPub
 
     def self.from_json_ld?(json, *, include_key = false)
       ActivityPub.from_json_ld?(json, include_key: include_key).as(self?)
+    rescue TypeCastError
     end
 
     def from_json_ld(json, *, include_key = false)

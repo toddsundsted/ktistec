@@ -112,17 +112,18 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(404)
     end
 
+    it "returns 400 if activity is not supported" do
+      HTTP::Client.activities << activity
+      headers = HTTP::Headers{"Content-Type" => "application/json"}
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(response.status_code).to eq(400)
+    end
+
     it "ignores the activity if it already exists" do
       activity.save
       headers = HTTP::Headers{"Content-Type" => "application/json"}
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(response.status_code).to eq(200)
-    end
-
-    it "returns 400 if activity is not supported" do
-      headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).to eq(400)
     end
 
     context "when unsigned" do
@@ -141,7 +142,7 @@ Spectator.describe RelationshipsController do
     context "when signed by remote actor" do
       before_each { HTTP::Client.actors << other.destroy }
 
-      it "fetches the remote actor from the origin" do
+      it "retrieves the remote actor from the origin" do
         headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
         expect(HTTP::Client.last?).to match("GET #{other.iri}")
@@ -158,8 +159,8 @@ Spectator.describe RelationshipsController do
       end
     end
 
-    context "when signed by local actor" do
-      it "does not fetch the actor" do
+    context "when signed by saved actor" do
+      it "does not retrieve the actor" do
         headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
         expect(HTTP::Client.last?).to be_nil
@@ -243,7 +244,7 @@ Spectator.describe RelationshipsController do
       end
     end
 
-    context "when accepting" do
+    context "on accept" do
       let!(relationship) do
         Relationship::Social::Follow.new(
           actor: actor,
@@ -287,7 +288,7 @@ Spectator.describe RelationshipsController do
       end
     end
 
-    context "when rejecting" do
+    context "on reject" do
       let!(relationship) do
         Relationship::Social::Follow.new(
           actor: actor,

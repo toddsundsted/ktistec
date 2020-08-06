@@ -244,6 +244,68 @@ Spectator.describe RelationshipsController do
       end
     end
 
+    context "on follow" do
+      let(follow) do
+        ActivityPub::Activity::Follow.new(
+          iri: "https://remote/activities/follow"
+        )
+      end
+
+      it "returns 400 if actor is missing" do
+        follow.object = actor
+        HTTP::Client.activities << follow
+        headers = HTTP::Headers{"Content-Type" => "application/json"}
+        post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if object is missing" do
+        follow.actor = other
+        HTTP::Client.activities << follow
+        headers = HTTP::Headers{"Content-Type" => "application/json"}
+        post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      context "when object is this account" do
+        before_each do
+          follow.actor = other
+          follow.object = actor
+        end
+
+        it "creates an unconfirmed follow relationship" do
+          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
+            to change{Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: false)}.by(1)
+        end
+
+        it "puts the activity in the actor's inbox" do
+          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
+            to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        end
+      end
+
+      context "when object is not this account" do
+        before_each do
+          follow.actor = other
+          follow.object = other
+        end
+
+        it "does not create a follow relationship" do
+          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
+            not_to change{Relationship::Social::Follow.count}
+        end
+
+        it "puts the activity in the actor's inbox" do
+          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
+            to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        end
+      end
+    end
+
     context "on accept" do
       let!(relationship) do
         Relationship::Social::Follow.new(

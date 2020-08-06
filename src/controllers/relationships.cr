@@ -110,6 +110,28 @@ class RelationshipsController
         owner: account.actor,
         activity: activity
       ).save
+    when ActivityPub::Activity::Follow
+      unless actor
+        bad_request
+      end
+      unless (object = activity.object?)
+        if (object_iri = activity.object_iri)
+          open(object_iri) do |response|
+            object = ActivityPub::Actor.from_json_ld?(response.body)
+          end
+        end
+      end
+      unless object
+        bad_request
+      end
+      if account.actor == object
+        unless Relationship::Social::Follow.find?(from_iri: actor.iri, to_iri: object.iri)
+          Relationship::Social::Follow.new(
+            actor: actor,
+            object: object
+          ).save
+        end
+      end
     when ActivityPub::Activity::Accept
       unless activity.object?.try(&.local)
         bad_request

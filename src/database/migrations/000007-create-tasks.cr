@@ -15,7 +15,7 @@ up do |db|
     )
   STR
   db.exec <<-STR
-    CREATE UNIQUE INDEX idx_tasks_type
+    CREATE INDEX idx_tasks_type
       ON tasks (type ASC)
   STR
 end

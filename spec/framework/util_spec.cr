@@ -55,6 +55,12 @@ Spectator.describe Balloon::Util do
       expect{described_class.open("https://external/returns-500")}.to raise_error(Balloon::Util::OpenError)
     end
   end
+
+  describe ".open?" do
+    it "returns nil on errors" do
+      expect{described_class.open?("https://external/returns-500")}.to be_nil
+    end
+  end
 end
 
 Spectator.describe Balloon::Util::PaginatedArray do

@@ -106,10 +106,6 @@ class RelationshipsController
           activity.object = object
         end
       end
-      Relationship::Content::Inbox.new(
-        owner: account.actor,
-        activity: activity
-      ).save
     when ActivityPub::Activity::Follow
       unless actor
         bad_request
@@ -151,6 +147,15 @@ class RelationshipsController
     else
       bad_request
     end
+
+    if [activity.to, activity.cc].compact.flatten.empty?
+      activity.to = [account.iri]
+    end
+
+    Task::Send.new(
+      sender: account.actor,
+      activity: activity
+    ).perform
 
     ok
   end

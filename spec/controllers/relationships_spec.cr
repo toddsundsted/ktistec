@@ -8,12 +8,6 @@ Spectator.describe RelationshipsController do
   describe "POST /actors/:username/outbox" do
     let(actor) { register(with_keys: true).actor }
     let(other) { register(with_keys: true).actor }
-    let(object) do
-      ActivityPub::Actor.new(
-        iri: "https://remote/actors/foo_bar",
-        inbox: "https://remote/actors/foo_bar/inbox"
-      ).save
-    end
 
     it "returns 401 if not authorized" do
       headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
@@ -43,6 +37,13 @@ Spectator.describe RelationshipsController do
       end
 
       context "when following" do
+        let(object) do
+          ActivityPub::Actor.new(
+            iri: "https://remote/actors/foo_bar",
+            inbox: "https://remote/actors/foo_bar/inbox"
+          ).save
+        end
+
         it "returns 400 if object does not exist" do
           headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=https://remote/actors/blah_blah"
@@ -216,6 +217,13 @@ Spectator.describe RelationshipsController do
       end
 
       context "given a remote object" do
+        let(object) do
+          ActivityPub::Actor.new(
+            iri: "https://remote/actors/foo_bar",
+            inbox: "https://remote/actors/foo_bar/inbox"
+          ).save
+        end
+
         it "sends the activity to the object's inbox" do
           headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"

@@ -65,6 +65,22 @@ class RelationshipsController
         to: [object.actor.iri]
       )
       follow.assign(confirmed: false).save
+    when "Create"
+      unless (content = activity["content"]?)
+        bad_request
+      end
+      activity = ActivityPub::Activity::Create.new(
+        iri: "#{Balloon.host}/activities/#{id}",
+        actor: account.actor,
+        object: ActivityPub::Object::Note.new(
+          iri: "#{Balloon.host}/objects/#{id}",
+          content: content,
+          attributed_to: [account.iri],
+          published: Time.utc,
+          visible: true
+        ),
+        cc: [account.actor.followers].compact
+      )
     else
       bad_request
     end

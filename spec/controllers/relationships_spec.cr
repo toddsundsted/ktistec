@@ -165,6 +165,56 @@ Spectator.describe RelationshipsController do
         end
       end
 
+      context "on create" do
+        let!(relationship) do
+          Relationship::Social::Follow.new(
+            actor: other,
+            object: actor,
+            confirmed: true
+          ).save
+        end
+
+        before_each do
+          actor.assign(followers: "#{actor.iri}/followers").save
+        end
+
+        it "returns 400 if the content is missing" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          post "/actors/#{actor.username}/outbox", headers, "type=Create"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "redirects when successful" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "creates a create activity" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+            to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
+        end
+
+        it "creates a note object" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+            to change{ActivityPub::Object::Note.count(content: "this is a test")}.by(1)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the other's inbox" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        end
+      end
+
       context "given a remote object" do
         it "sends the activity to the object's inbox" do
           headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}

@@ -71,6 +71,100 @@ Spectator.describe RelationshipsController do
         end
       end
 
+      context "on accept" do
+        let!(relationship) do
+          Relationship::Social::Follow.new(
+            actor: other,
+            object: actor,
+            confirmed: false
+          ).save
+        end
+        let(follow) do
+          ActivityPub::Activity::Follow.new(
+            iri: "https://test.test/activities/follow",
+            actor: other,
+            object: actor
+          ).save
+        end
+
+        it "returns 400 if a follow activity does not exist" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=https://remote/activities/follow"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "confirms the follow relationship" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"}.
+            to change{Relationship.find(relationship.id).confirmed}
+        end
+
+        it "creates an accept activity" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"}.
+            to change{ActivityPub::Activity::Accept.count(actor_iri: actor.iri, object_iri: follow.iri)}.by(1)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the other's inbox" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"}.
+            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        end
+      end
+
+      context "on reject" do
+        let!(relationship) do
+          Relationship::Social::Follow.new(
+            actor: other,
+            object: actor,
+            confirmed: true
+          ).save
+        end
+        let(follow) do
+          ActivityPub::Activity::Follow.new(
+            iri: "https://test.test/activities/follow",
+            actor: other,
+            object: actor
+          ).save
+        end
+
+        it "returns 400 if a follow activity does not exist" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=https://remote/activities/follow"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "confirms the follow relationship" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
+            to change{Relationship.find(relationship.id).confirmed}
+        end
+
+        it "creates a reject activity" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
+            to change{ActivityPub::Activity::Reject.count(actor_iri: actor.iri, object_iri: follow.iri)}.by(1)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the other's inbox" do
+          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
+            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        end
+      end
+
       context "given a remote object" do
         it "sends the activity to the object's inbox" do
           headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}

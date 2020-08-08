@@ -37,6 +37,34 @@ class RelationshipsController
         actor: account.actor,
         object: object
       ).save
+    when "Accept"
+      unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))
+        bad_request
+      end
+      unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+        bad_request
+      end
+      activity = ActivityPub::Activity::Accept.new(
+        iri: "#{Balloon.host}/activities/#{id}",
+        actor: account.actor,
+        object: object,
+        to: [object.actor.iri]
+      )
+      follow.assign(confirmed: true).save
+    when "Reject"
+      unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))
+        bad_request
+      end
+      unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+        bad_request
+      end
+      activity = ActivityPub::Activity::Reject.new(
+        iri: "#{Balloon.host}/activities/#{id}",
+        actor: account.actor,
+        object: object,
+        to: [object.actor.iri]
+      )
+      follow.assign(confirmed: false).save
     else
       bad_request
     end

@@ -53,8 +53,8 @@ class Task
             # if it looks like a collection, dereference the IRI and
             # add the actors in the collection to the recipients
             recipients += Relationship::Social::Follow.where(
-              from_iri: "#{Balloon.host}/actors/#{$1}"
-            ).map(&.to_iri)
+              to_iri: "#{Balloon.host}/actors/#{$1}"
+            ).map(&.from_iri)
             next
           when /^\/actors\/([^\/]+)$/
             # if it looks like an actor, dereference the IRI

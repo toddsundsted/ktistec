@@ -58,12 +58,12 @@ Spectator.describe Task::Send do
 
     let(local_collection) do
       Relationship::Social::Follow.new(
-        actor: actor,
-        object: local_recipient
+        actor: local_recipient,
+        object: actor
       ).save
       Relationship::Social::Follow.new(
-        actor: actor,
-        object: remote_recipient
+        actor: remote_recipient,
+        object: actor
       ).save
       ActivityPub::Collection.new(
         iri: "#{actor.iri}/followers"

@@ -4,6 +4,7 @@ require "json"
 module ActivityPub
   class Object
     include Balloon::Model(Common, Polymorphic, Serialized)
+    extend Balloon::Util
 
     @@table_name = "objects"
 
@@ -13,6 +14,17 @@ module ActivityPub
 
     def self.find?(_iri iri : String?)
       find?(iri: iri)
+    end
+
+    def self.dereference?(iri : String?) : self?
+      if iri
+        unless (object = self.find?(iri))
+          self.open?(iri) do |resp|
+            object = self.from_json_ld?(resp.body)
+          end
+        end
+      end
+      object
     end
 
     @[Persistent]

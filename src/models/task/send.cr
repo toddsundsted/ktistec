@@ -25,15 +25,9 @@ class Task
     private def recipients
       recipients = [activity.to, activity.cc].compact.flatten
 
-      if (object_iri = activity.object_iri)
-        unless (object = ActivityPub::Object.find?(object_iri))
-          open(object_iri) do |response|
-            object = ActivityPub::Object.from_json_ld?(response.body)
-          end
-        end
-      end
-
       unless local?(activity.actor_iri)
+        object = ActivityPub::Object.dereference?(activity.object_iri)
+
         recipients.select! do |r|
           local?(r) &&
             ((object && local?(object.in_reply_to) && collection_path?(r)) ||

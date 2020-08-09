@@ -279,6 +279,8 @@ Spectator.describe RelationshipsController do
     end
 
     context "when unsigned" do
+      before_each { HTTP::Client.activities << activity }
+
       it "retrieves the activity from the origin" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld

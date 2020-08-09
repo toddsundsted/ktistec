@@ -24,6 +24,7 @@ module WebFinger
 end
 
 Spectator.describe LookupsController do
+  before_each { HTTP::Client.reset }
   before_each { Balloon.database.exec "BEGIN TRANSACTION" }
   after_each { Balloon.database.exec "ROLLBACK" }
 
@@ -58,6 +59,10 @@ Spectator.describe LookupsController do
       end
 
       context "given a handle" do
+        let(actor) { ActivityPub::Actor.new(iri: "https://test.test/actors/foo_bar") }
+
+        before_each { HTTP::Client.actors << actor.dup.assign(username: "foo_bar") }
+
         it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
           expect{get "/api/lookup?account=foo_bar@test.test", headers}.to change{ActivityPub::Actor.count}.by(1)
@@ -73,18 +78,18 @@ Spectator.describe LookupsController do
         end
 
         context "to an existing actor" do
-          let!(actor) { ActivityPub::Actor.new(iri: "https://test.test/foo_bar").save }
+          before_each { actor.save }
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
             expect{get "/api/lookup?account=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
+            expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "application/json"}
             expect{get "/api/lookup?account=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
+            expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "presents a follow button" do
@@ -106,6 +111,10 @@ Spectator.describe LookupsController do
       end
 
       context "given a URL" do
+        let(actor) { ActivityPub::Actor.new(iri: "https://test.test/actors/foo_bar") }
+
+        before_each { HTTP::Client.actors << actor.dup.assign(username: "foo_bar") }
+
         it "retrieves and stores an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
           expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
@@ -121,18 +130,18 @@ Spectator.describe LookupsController do
         end
 
         context "to an existing actor" do
-          let!(actor) { ActivityPub::Actor.new(iri: "https://test.test/foo_bar").save }
+          before_each { actor.save }
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
             expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
+            expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "application/json"}
             expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://test.test/foo_bar").username).to eq("foo_bar")
+            expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "presents a follow button" do

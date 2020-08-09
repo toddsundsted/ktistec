@@ -173,68 +173,27 @@ class HTTP::Client
       )
     when /activities\/([^\/]+)/
       HTTP::Client::Response.new(
-        200,
+        (activity = @@activities.find { |a| a.iri == url.to_s }) ? 200 : 404,
         headers: HTTP::Headers.new,
-        body: (activity = @@activities.find { |a| a.iri == url.to_s }) ?
-          activity.to_json_ld :
-          <<-JSON
-          {
-            "@context":[
-              "https://www.w3.org/ns/activitystreams"
-            ],
-            "type":"Activity",
-            "id":"https://#{url.host}/#{$1}"
-          }
-          JSON
+        body: activity ? activity.to_json_ld : nil
       )
     when /actors\/([^\/]+)\/([^\/]+)/
       HTTP::Client::Response.new(
-        200,
+        (collection = @@collections.find { |c| c.iri == url.to_s }) ? 200 : 404,
         headers: HTTP::Headers.new,
-        body: (collection = @@collections.find { |c| c.iri == url.to_s }) ?
-          collection.to_json_ld :
-          <<-JSON
-          {
-            "@context":[
-              "https://www.w3.org/ns/activitystreams"
-            ],
-            "type":"Collection",
-            "id":"https://#{url.host}/#{$1}/#{$2}"
-          }
-          JSON
+        body: collection ? collection.to_json_ld : nil
       )
     when /actors\/([^\/]+)/
       HTTP::Client::Response.new(
-        200,
+        (actor = @@actors.find { |a| a.iri == url.to_s }) ? 200 : 404,
         headers: HTTP::Headers.new,
-        body: (actor = @@actors.find { |a| a.iri == url.to_s }) ?
-          actor.to_json_ld :
-          <<-JSON
-          {
-            "@context":[
-              "https://www.w3.org/ns/activitystreams"
-            ],
-            "type":"Person",
-            "id":"https://#{url.host}/#{$1}",
-            "preferredUsername":"#{$1}"
-          }
-          JSON
+        body: actor ? actor.to_json_ld : nil
       )
     when /objects\/([^\/]+)/
       HTTP::Client::Response.new(
-        200,
+        (object = @@objects.find { |o| o.iri == url.to_s }) ? 200 : 404,
         headers: HTTP::Headers.new,
-        body: (object = @@objects.find { |o| o.iri == url.to_s }) ?
-          object.to_json_ld :
-          <<-JSON
-          {
-            "@context":[
-              "https://www.w3.org/ns/activitystreams"
-            ],
-            "type":"Object",
-            "id":"https://#{url.host}/#{$1}"
-          }
-          JSON
+        body: object ? object.to_json_ld : nil
       )
     else
       raise "request not mocked: GET #{url}"

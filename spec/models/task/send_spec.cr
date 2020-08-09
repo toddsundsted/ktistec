@@ -114,7 +114,10 @@ Spectator.describe Task::Send do
 
       context "addressed to a remote collection" do
         let(recipient) { remote_collection }
-        before_each { activity.to = [recipient.iri]}
+        before_each do
+          HTTP::Client.collections << recipient
+          activity.to = [recipient.iri]
+        end
 
         it "ignores the remote collection" do
           subject.perform
@@ -213,7 +216,10 @@ Spectator.describe Task::Send do
 
       context "addressed to a remote collection" do
         let(recipient) { remote_collection }
-        before_each { activity.to = [recipient.iri]}
+        before_each do
+          HTTP::Client.collections << recipient
+          activity.to = [recipient.iri]
+        end
 
         it "ignores the remote collection" do
           subject.perform

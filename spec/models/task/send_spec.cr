@@ -159,6 +159,18 @@ Spectator.describe Task::Send do
               expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
             end
           end
+
+          context "when object doesn't exist" do
+            it "does not put the activity in the local recipient's inbox" do
+              expect{subject.perform}.
+                not_to change{Relationship::Content::Inbox.count}
+            end
+
+            it "does not send the activity to the remote recipient's inbox" do
+              subject.perform
+              expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.inbox}")
+            end
+          end
         end
 
         it "does not put the activity in the local recipient's inbox" do

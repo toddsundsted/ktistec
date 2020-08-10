@@ -23,7 +23,8 @@ class Task
     end
 
     private def recipients
-      recipients = [activity.to, activity.cc].compact.flatten
+      recipients = [activity.to, activity.cc].compact.flatten.sort.uniq
+      recipients.delete("https://www.w3.org/ns/activitystreams#Public")
 
       unless local?(activity.actor_iri)
         object = ActivityPub::Object.dereference?(activity.object_iri)

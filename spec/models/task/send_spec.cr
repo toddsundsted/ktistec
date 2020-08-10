@@ -253,6 +253,15 @@ Spectator.describe Task::Send do
           expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
         end
       end
+
+      context "addressed to the public collection" do
+        before_each { activity.to = ["https://www.w3.org/ns/activitystreams#Public"]}
+
+        it "does not send the activity" do
+          subject.perform
+          expect(HTTP::Client.requests).to be_empty
+        end
+      end
     end
   end
 end

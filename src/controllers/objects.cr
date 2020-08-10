@@ -31,6 +31,8 @@ class ObjectsController
     if (object = ActivityPub::Object.find?(iri_or_id))
       if object.visible
         object
+      elsif object.to.try(&.includes?(PUBLIC)) || object.cc.try(&.includes?(PUBLIC))
+        object
       elsif (iri = env.current_account?.try(&.iri))
         if object.to.try(&.includes?(iri)) || object.cc.try(&.includes?(iri))
           object
@@ -38,4 +40,6 @@ class ObjectsController
       end
     end
   end
+
+  private PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 end

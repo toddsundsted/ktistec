@@ -33,9 +33,17 @@ class ActivitiesController
 
   private def self.get_activity(env, iri_or_id)
     if (activity = ActivityPub::Activity.find?(iri_or_id))
-      if activity.visible || (activity.actor_iri && activity.actor_iri == env.current_account?.try(&.iri))
+      if activity.visible
         activity
+      elsif activity.to.try(&.includes?(PUBLIC)) || activity.cc.try(&.includes?(PUBLIC))
+        activity
+      elsif (iri = env.current_account?.try(&.iri))
+        if activity.actor_iri == iri
+          activity
+        end
       end
     end
   end
+
+  private PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 end

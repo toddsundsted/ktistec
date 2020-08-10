@@ -96,7 +96,27 @@ Spectator.describe ObjectsController do
         expect(response.status_code).to eq(404)
       end
 
-      context "when the user is a recipient" do
+      context "and it is addressed to the public collection" do
+        before_each do
+          [visible, notvisible, remote].each do |object|
+            object.assign(to: ["https://www.w3.org/ns/activitystreams#Public"]).save
+          end
+        end
+
+        it "renders the object" do
+          headers = HTTP::Headers{"Content-Type" => "application/json"}
+          get "/remote/objects/#{notvisible.id}", headers
+          expect(response.status_code).to eq(200)
+        end
+
+        it "renders the object" do
+          headers = HTTP::Headers{"Content-Type" => "application/json"}
+          get "/remote/objects/#{remote.id}", headers
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "and the user is a recipient" do
         before_each do
           [visible, notvisible, remote].each do |object|
             object.assign(cc: [Global.account.not_nil!.iri]).save

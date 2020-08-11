@@ -1,0 +1,41 @@
+<%- path = env.request.path -%>
+<%- query = env.params.query -%>
+<%- page = query["page"]? ? query["page"].to_i : 0 -%>
+<%- page = page >= 0 ? page : 0 -%>
+{
+  "@context":"https://www.w3.org/ns/activitystreams",
+  <%- if query["page"]? -%>
+  "type":"OrderedCollectionPage",
+  "id":"<%= host %><%= path %>?<%= query %>",
+  <%- if page > 0 -%>
+  <%- query["page"] = (page - 1).to_s -%>
+  "prev":"<%= host %><%= path %>?<%= query %>",
+  <%- end -%>
+  <%- if collection.more? -%>
+  <%- query["page"] = (page + 1).to_s -%>
+  "next":"<%= host %><%= path %>?<%= query %>",
+  <%- end -%>
+  "orderedItems":[
+  <%- collection.each_with_index do |item, i| -%>
+    "<%= item.iri %>"<%= i < collection.size - 1 ? "," : "" %>
+  <%- end -%>
+  ]
+  <%- else -%>
+  "type":"OrderedCollection",
+  "id":"<%= host %><%= path %>",
+  "first":{
+    "type":"OrderedCollectionPage",
+    <%- query["page"] = "0" -%>
+    "id":"<%= host %><%= path %>?<%= query %>",
+    <%- if collection.more? -%>
+    <%- query["page"] = "1" -%>
+    "next":"<%= host %><%= path %>?<%= query %>",
+    <%- end -%>
+    "orderedItems":[
+    <%- collection.each_with_index do |item, i| -%>
+      "<%= item.iri %>"<%= i < collection.size - 1 ? "," : "" %>
+    <%- end -%>
+    ]
+  }
+  <%- end -%>
+}

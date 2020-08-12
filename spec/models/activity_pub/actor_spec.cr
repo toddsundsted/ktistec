@@ -233,13 +233,13 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out non-public posts" do
-      expect(subject.in_outbox(0, 2, public: true)).to be_empty
+      expect(subject.in_outbox(1, 2, public: true)).to be_empty
     end
 
     it "paginates the results" do
-      expect(subject.in_outbox(0, 2, public: false)).to eq([activity5, activity4])
-      expect(subject.in_outbox(1, 2, public: false)).to eq([activity3, activity2])
-      expect(subject.in_outbox(1, 2, public: false).more?).to be_true
+      expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
+      expect(subject.in_outbox(2, 2, public: false)).to eq([activity3, activity2])
+      expect(subject.in_outbox(2, 2, public: false).more?).to be_true
     end
   end
 
@@ -274,13 +274,13 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out non-public posts" do
-      expect(subject.in_inbox(0, 2, public: true)).to be_empty
+      expect(subject.in_inbox(1, 2, public: true)).to be_empty
     end
 
     it "paginates the results" do
-      expect(subject.in_inbox(0, 2, public: false)).to eq([activity5, activity4])
-      expect(subject.in_inbox(1, 2, public: false)).to eq([activity3, activity2])
-      expect(subject.in_inbox(1, 2, public: false).more?).to be_true
+      expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
+      expect(subject.in_inbox(2, 2, public: false)).to eq([activity3, activity2])
+      expect(subject.in_inbox(2, 2, public: false).more?).to be_true
     end
   end
 

@@ -130,7 +130,7 @@ module Balloon
       def self.paginate(collection, env)
         path = env.request.path
         query = env.params.query
-        page = 0
+        page = 1
         begin
           if (p = query["page"].to_i) > 0
             page = p

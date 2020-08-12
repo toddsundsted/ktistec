@@ -297,8 +297,8 @@ class RelationshipsController
 
   private def self.pagination_params(env)
     {
-      env.params.query["page"]?.try(&.to_u16) || 0_u16,
-      env.params.query["size"]?.try(&.to_u16) || 10_u16
+      env.params.query["page"]?.try(&.to_i) || 1,
+      env.params.query["size"]?.try(&.to_i) || 10
     }
   end
 

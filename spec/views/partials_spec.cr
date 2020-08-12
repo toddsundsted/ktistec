@@ -21,14 +21,14 @@ Spectator.describe "partials" do
     subject { JSON.parse(render "./src/views/partials/collection.json.ecr") }
 
     context "when paginated" do
-      let(query) { "?page=0&size=2" }
+      let(query) { "?page=1&size=2" }
 
       it "renders a collection page" do
         expect(subject.dig("type")).to eq("OrderedCollectionPage")
       end
 
       it "contains the id of the collection page" do
-        expect(subject.dig("id")).to eq("#{Balloon.host}/collection?page=0&size=2")
+        expect(subject.dig("id")).to eq("#{Balloon.host}/collection?page=1&size=2")
       end
 
       it "contains a page of items" do
@@ -41,10 +41,10 @@ Spectator.describe "partials" do
       end
 
       context "and on the second page" do
-        let(query) { "?page=1&size=2" }
+        let(query) { "?page=2&size=2" }
 
         it "contains a link to the previous page" do
-          expect(subject.dig?("prev")).to eq("#{Balloon.host}/collection?page=0&size=2")
+          expect(subject.dig?("prev")).to eq("#{Balloon.host}/collection?page=1&size=2")
         end
       end
 
@@ -52,7 +52,7 @@ Spectator.describe "partials" do
         before_each { collection.more = true }
 
         it "contains a link to the next page" do
-          expect(subject.dig?("next")).to eq("#{Balloon.host}/collection?page=1&size=2")
+          expect(subject.dig?("next")).to eq("#{Balloon.host}/collection?page=2&size=2")
         end
       end
     end
@@ -77,7 +77,7 @@ Spectator.describe "partials" do
       end
 
       it "contains the first collection page" do
-        expect(subject.dig("first", "id")).to eq("#{Balloon.host}/collection?page=0")
+        expect(subject.dig("first", "id")).to eq("#{Balloon.host}/collection?page=1")
       end
 
       it "contains the first collection page of items" do
@@ -93,7 +93,7 @@ Spectator.describe "partials" do
         before_each { collection.more = true }
 
         it "contains a link to the next page" do
-          expect(subject.dig?("first", "next")).to eq("#{Balloon.host}/collection?page=1")
+          expect(subject.dig?("first", "next")).to eq("#{Balloon.host}/collection?page=2")
         end
       end
     end

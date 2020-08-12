@@ -82,11 +82,11 @@ class FooBarController
   end
 
   get "/foo/bar/paginate" do |env|
-    page = env.params.query["page"]?.try(&.to_i) || 0
+    page = env.params.query["page"]?.try(&.to_i) || 1
     size = env.params.query["size"]?.try(&.to_i) || 10
     results = Balloon::Util::PaginatedArray(Int32).new
-    (0..9).to_a[page * size, size].each { |v| results << v }
-    results.more = (page + 1) * size < 10
+    (0..9).to_a[(page - 1) * size, size].each { |v| results << v }
+    results.more = (page) * size < 10
     paginate(results, env)
   end
 
@@ -188,7 +188,7 @@ Spectator.describe Balloon::Controller do
     end
 
     it "displays the prev link" do
-      get "/foo/bar/paginate?page=1"
+      get "/foo/bar/paginate?page=2"
       expect(XML.parse_html(response.body).xpath_nodes("//a[contains(text(),'Prev')]")).not_to be_empty
     end
 

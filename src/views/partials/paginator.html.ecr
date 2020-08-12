@@ -1,5 +1,5 @@
 <p>
-    <%- if page > 0 -%>
+    <%- if page > 1 -%>
         <%- query["page"] = (page - 1).to_s -%>
         <a href='<%= path %>?<%= query %>'>Prev</a>
     <%- end -%>

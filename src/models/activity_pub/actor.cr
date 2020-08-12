@@ -136,13 +136,13 @@ module ActivityPub
       {% end %}
     end
 
-    def all_following(page : UInt16 = 0, size : UInt16 = 10, public = false)
+    def all_following(page = 1, size = 10, public = true)
       {% begin %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
         Balloon::Util::PaginatedArray(Actor).new.tap do |array|
           Balloon.database.query(
             query(Relationship::Social::Follow, :to_iri, :from_iri, public),
-            self.iri, self.iri, (page * size).to_i, size.to_i + 1
+            self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
             rs.each do
               array <<
@@ -161,13 +161,13 @@ module ActivityPub
       {% end %}
     end
 
-    def all_followers(page : UInt16 = 0, size : UInt16 = 10, public = false)
+    def all_followers(page = 1, size = 10, public = false)
       {% begin %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
         Balloon::Util::PaginatedArray(Actor).new.tap do |array|
           Balloon.database.query(
             query(Relationship::Social::Follow, :from_iri, :to_iri, public),
-            self.iri, self.iri, (page * size).to_i, size.to_i + 1
+            self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
             rs.each do
               array <<
@@ -186,7 +186,7 @@ module ActivityPub
       {% end %}
     end
 
-    private def content(type, page : UInt16 = 0, size : UInt16 = 10, public = true)
+    private def content(type, page = 1, size = 10, public = true)
       {% begin %}
         {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
         if public
@@ -236,7 +236,7 @@ module ActivityPub
         end
         Balloon::Util::PaginatedArray(Activity).new.tap do |array|
           Balloon.database.query(
-            query, self.iri, self.iri, (page * size).to_i, size.to_i + 1
+            query, self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
             rs.each do
               attrs = {
@@ -263,11 +263,11 @@ module ActivityPub
       {% end %}
     end
 
-    def in_outbox(page : UInt16 = 0, size : UInt16 = 10, public = true)
+    def in_outbox(page = 1, size = 10, public = true)
       content(Relationship::Content::Outbox, page, size, public)
     end
 
-    def in_inbox(page : UInt16 = 0, size : UInt16 = 10, public = true)
+    def in_inbox(page = 1, size = 10, public = true)
       content(Relationship::Content::Inbox, page, size, public)
     end
 

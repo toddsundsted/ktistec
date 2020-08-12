@@ -564,7 +564,8 @@ Spectator.describe RelationshipsController do
         Relationship::Content::Outbox.new(
           owner: {{actor}},
           activity: activity{{index}},
-          confirmed: {{confirmed}}
+          confirmed: {{confirmed}},
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
         ).save
       end
     end
@@ -597,7 +598,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/actors/#{actor.username}/outbox", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("items").as_a).to contain_exactly(activity1.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(activity1.iri)
       end
     end
 
@@ -615,7 +616,35 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/actors/#{actor.username}/outbox", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("items").as_a).to contain_exactly(activity1.iri, activity2.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(activity1.iri, activity2.iri)
+      end
+
+      it "renders first page of activities" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/actors/#{actor.username}/outbox?page=0&size=1", headers
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity2.iri)
+      end
+
+      it "renders first page of activities" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/actors/#{actor.username}/outbox?page=0&size=1", headers
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("orderedItems").as_a).to contain_exactly(activity2.iri)
+      end
+
+      it "renders last page of activities" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/actors/#{actor.username}/outbox?page=1&size=1", headers
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity1.iri)
+      end
+
+      it "renders last page of activities" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/actors/#{actor.username}/outbox?page=1&size=1", headers
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("orderedItems").as_a).to contain_exactly(activity1.iri)
       end
     end
   end
@@ -635,7 +664,8 @@ Spectator.describe RelationshipsController do
         Relationship::Content::Inbox.new(
           owner: {{actor}},
           activity: activity{{index}},
-          confirmed: {{confirmed}}
+          confirmed: {{confirmed}},
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
         ).save
       end
     end
@@ -668,7 +698,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/actors/#{actor.username}/inbox", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("items").as_a).to contain_exactly(activity1.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(activity1.iri)
       end
     end
 
@@ -686,7 +716,35 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/actors/#{actor.username}/inbox", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("items").as_a).to contain_exactly(activity1.iri, activity2.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(activity1.iri, activity2.iri)
+      end
+
+      it "renders first page of activities" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/actors/#{actor.username}/inbox?page=0&size=1", headers
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("//li[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity2.iri)
+      end
+
+      it "renders first page of activities" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/actors/#{actor.username}/inbox?page=0&size=1", headers
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("orderedItems").as_a).to contain_exactly(activity2.iri)
+      end
+
+      it "renders last page of activities" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/actors/#{actor.username}/inbox?page=1&size=1", headers
+        expect(response.status_code).to eq(200)
+        expect(XML.parse_html(response.body).xpath_nodes("//li[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity1.iri)
+      end
+
+      it "renders last page of activities" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/actors/#{actor.username}/inbox?page=1&size=1", headers
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("orderedItems").as_a).to contain_exactly(activity1.iri)
       end
     end
   end

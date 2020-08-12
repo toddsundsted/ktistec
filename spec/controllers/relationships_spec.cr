@@ -811,7 +811,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/actors/#{actor.username}/following", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("items")).to eq(["/remote/actors/#{other1.id}"])
+        expect(JSON.parse(response.body).dig("first", "orderedItems")).to eq([other1.iri])
       end
     end
 
@@ -829,7 +829,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/actors/#{actor.username}/following", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("items").as_a).to contain_exactly("/remote/actors/#{other1.id}", "/remote/actors/#{other2.id}")
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(other1.iri, other2.iri)
       end
 
       it "renders only the related public actors" do
@@ -843,7 +843,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/actors/#{other1.username}/following", headers
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("items").as_a).to be_empty
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
       end
     end
   end

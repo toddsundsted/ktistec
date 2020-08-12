@@ -1,10 +1,2 @@
-{
-  "@context":"https://www.w3.org/ns/activitystreams",
-  "id": "<%= host %>/actors/<%= actor.username %>/following",
-  "type": "Collection",
-  "items":[
-    <%- related.each_with_index do |actor, i| -%>
-      "<%= remote_actor_path(actor) %>"<%= i < related.size - 1 ? "," : "" %>
-    <%- end -%>
-  ]
-}
+<%- collection = related -%>
+<%= render "src/views/partials/collection.json.ecr" %>

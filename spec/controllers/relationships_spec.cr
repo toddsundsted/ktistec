@@ -36,7 +36,7 @@ Spectator.describe RelationshipsController do
         expect(response.status_code).to eq(400)
       end
 
-      context "when following" do
+      context "on follow" do
         let(object) do
           ActivityPub::Actor.new(
             iri: "https://remote/actors/foo_bar",
@@ -519,9 +519,9 @@ Spectator.describe RelationshipsController do
           object: other
         ).save
       end
-      let(accept) do
+      let(reject) do
         ActivityPub::Activity::Reject.new(
-          iri: "https://remote/activities/accept",
+          iri: "https://remote/activities/reject",
           actor: other,
           object: follow
         )
@@ -530,20 +530,20 @@ Spectator.describe RelationshipsController do
       it "returns 400 if relationship does not exist" do
         relationship.destroy
         headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
-        post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
+        post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
         expect(response.status_code).to eq(400)
       end
 
       it "returns 400 if related activity does not exist" do
         follow.destroy
         headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
-        post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
+        post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
         expect(response.status_code).to eq(400)
       end
 
       it "rejects the relationship" do
         headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
-        expect{post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld}.to change{Relationship.find(relationship.id).confirmed}
+        expect{post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld}.to change{Relationship.find(relationship.id).confirmed}
         expect(response.status_code).to eq(200)
       end
     end

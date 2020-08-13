@@ -9,8 +9,9 @@ Spectator.describe RelationshipsController do
     let(actor) { register(with_keys: true).actor }
     let(other) { register(with_keys: true).actor }
 
+    let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"} }
+
     it "returns 401 if not authorized" do
-      headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
       post "/actors/0/outbox", headers
       expect(response.status_code).to eq(401)
     end
@@ -19,19 +20,16 @@ Spectator.describe RelationshipsController do
       sign_in(as: actor.username)
 
       it "returns 404 if not found" do
-        headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
         post "/actors/0/outbox", headers
         expect(response.status_code).to eq(404)
       end
 
       it "returns 403 if not the current account" do
-        headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
         post "/actors/#{other.username}/outbox", headers
         expect(response.status_code).to eq(403)
       end
 
       it "returns 400 if activity type is not supported" do
-        headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
         post "/actors/#{actor.username}/outbox", headers, "type=FooBar"
         expect(response.status_code).to eq(400)
       end
@@ -45,37 +43,31 @@ Spectator.describe RelationshipsController do
         end
 
         it "returns 400 if object does not exist" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=https://remote/actors/blah_blah"
           expect(response.status_code).to eq(400)
         end
 
         it "redirects when successful" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"
           expect(response.status_code).to eq(302)
         end
 
         it "creates an unconfirmed follow relationship" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"}.
             to change{Relationship::Social::Follow.where(from_iri: actor.iri, to_iri: object.iri, confirmed: false).size}.by(1)
         end
 
         it "creates a follow activity" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"}.
             to change{ActivityPub::Activity::Follow.count(actor_iri: actor.iri, object_iri: object.iri)}.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"}.
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
         it "sends the activity to the object's outbox" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"
           expect(HTTP::Client.last?).to match("POST #{object.inbox}")
         end
@@ -98,31 +90,26 @@ Spectator.describe RelationshipsController do
         end
 
         it "returns 400 if a follow activity does not exist" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=https://remote/activities/follow"
           expect(response.status_code).to eq(400)
         end
 
         it "confirms the follow relationship" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"}.
             to change{Relationship.find(relationship.id).confirmed}
         end
 
         it "creates an accept activity" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"}.
             to change{ActivityPub::Activity::Accept.count(actor_iri: actor.iri, object_iri: follow.iri)}.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"}.
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
         it "puts the activity in the other's inbox" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"}.
             to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
         end
@@ -145,31 +132,26 @@ Spectator.describe RelationshipsController do
         end
 
         it "returns 400 if a follow activity does not exist" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=https://remote/activities/follow"
           expect(response.status_code).to eq(400)
         end
 
         it "confirms the follow relationship" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
             to change{Relationship.find(relationship.id).confirmed}
         end
 
         it "creates a reject activity" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
             to change{ActivityPub::Activity::Reject.count(actor_iri: actor.iri, object_iri: follow.iri)}.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
         it "puts the activity in the other's inbox" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
             to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
         end
@@ -189,37 +171,31 @@ Spectator.describe RelationshipsController do
         end
 
         it "returns 400 if the content is missing" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Create"
           expect(response.status_code).to eq(400)
         end
 
         it "redirects when successful" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
           expect(response.status_code).to eq(302)
         end
 
         it "creates a create activity" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
             to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
         end
 
         it "creates a note object" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
             to change{ActivityPub::Object::Note.count(content: "this is a test")}.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
         it "puts the activity in the other's inbox" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
             to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
         end
@@ -234,7 +210,6 @@ Spectator.describe RelationshipsController do
         end
 
         it "sends the activity to the object's inbox" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"
           expect(HTTP::Client.last?).to match("POST #{object.inbox}")
         end
@@ -250,7 +225,6 @@ Spectator.describe RelationshipsController do
         end
 
         it "puts the activity in the object's inbox" do
-          headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"}.
             to change{Relationship::Content::Inbox.count(from_iri: object.iri)}.by(1)
         end
@@ -259,7 +233,7 @@ Spectator.describe RelationshipsController do
   end
 
   describe "POST /actors/:username/inbox" do
-    let(actor) { register(with_keys: true).actor }
+    let!(actor) { register(with_keys: true).actor }
     let(other) { register(with_keys: true).actor }
     let(activity) do
       ActivityPub::Activity.new(
@@ -268,22 +242,21 @@ Spectator.describe RelationshipsController do
       )
     end
 
+    let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
+
     it "returns 404 if not found" do
-      headers = HTTP::Headers{"Content-Type" => "application/json"}
       post "/actors/0/inbox", headers
       expect(response.status_code).to eq(404)
     end
 
     it "returns 400 if activity is not supported" do
       HTTP::Client.activities << activity
-      headers = HTTP::Headers{"Content-Type" => "application/json"}
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(response.status_code).to eq(400)
     end
 
     it "ignores the activity if it already exists" do
       activity.save
-      headers = HTTP::Headers{"Content-Type" => "application/json"}
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(response.status_code).to eq(200)
     end
@@ -292,13 +265,11 @@ Spectator.describe RelationshipsController do
       before_each { HTTP::Client.activities << activity }
 
       it "retrieves the activity from the origin" do
-        headers = HTTP::Headers{"Content-Type" => "application/json"}
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
         expect(HTTP::Client.requests).to have("GET #{activity.iri}")
       end
 
       it "saves the activity" do
-        headers = HTTP::Headers{"Content-Type" => "application/json"}
         expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
           to change{ActivityPub::Activity.count}.by(1)
       end
@@ -307,46 +278,43 @@ Spectator.describe RelationshipsController do
     context "when signed by remote actor" do
       before_each { HTTP::Client.actors << other.destroy }
 
+      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+
       it "retrieves the remote actor from the origin" do
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
         expect(HTTP::Client.requests).to have("GET #{other.iri}")
       end
 
       it "does not retrieve the activity" do
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
         expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
       end
 
       it "saves the actor" do
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
           to change{ActivityPub::Actor.count}.by(1)
       end
 
       it "saves the activity" do
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
           to change{ActivityPub::Activity.count}.by(1)
       end
     end
 
     context "when signed by saved actor" do
+      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+
       it "does not retrieve the actor" do
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
         expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
       end
 
       it "does not retrieve the activity" do
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
         expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
       end
 
       it "saves the activity" do
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
           to change{ActivityPub::Activity.count}.by(1)
       end
@@ -359,13 +327,11 @@ Spectator.describe RelationshipsController do
         end
 
         it "retrieves the remote actor from the origin" do
-          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
           post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
           expect(HTTP::Client.requests).to have("GET #{other.iri}")
         end
 
         it "updates the actor's public key" do
-          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
           expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
             to change{ActivityPub::Actor.find(other.id).pem_public_key}
         end
@@ -380,13 +346,11 @@ Spectator.describe RelationshipsController do
         end
 
         it "retrieves the activity from the origin" do
-          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
           post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
           expect(HTTP::Client.requests).to have("GET #{activity.iri}")
         end
 
         it "saves the activity" do
-          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
           expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
             to change{ActivityPub::Activity.count}.by(1)
         end
@@ -406,8 +370,9 @@ Spectator.describe RelationshipsController do
         )
       end
 
+      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+
       it "returns 400 if no object is included" do
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
         expect(response.status_code).to eq(400)
       end
@@ -415,7 +380,6 @@ Spectator.describe RelationshipsController do
       it "fetches object if remote" do
         create.object_iri = note.iri
         HTTP::Client.objects << note
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
           to change{ActivityPub::Object.count}.by(1)
         expect(HTTP::Client.last?).to match("GET #{note.iri}")
@@ -424,7 +388,6 @@ Spectator.describe RelationshipsController do
       it "doesn't fetch the object if embedded" do
         create.object = note
         HTTP::Client.objects << note
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
           to change{ActivityPub::Object.count}.by(1)
         expect(HTTP::Client.last?).to be_nil
@@ -432,14 +395,12 @@ Spectator.describe RelationshipsController do
 
       it "saves the object" do
         create.object = note
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
           to change{ActivityPub::Object.count}.by(1)
       end
 
       it "puts the activity in the actor's inbox" do
         create.object = note
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
           to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
       end
@@ -452,10 +413,11 @@ Spectator.describe RelationshipsController do
         )
       end
 
+      let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
+
       it "returns 400 if actor is missing" do
         follow.object = actor
         HTTP::Client.activities << follow
-        headers = HTTP::Headers{"Content-Type" => "application/json"}
         post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
         expect(response.status_code).to eq(400)
       end
@@ -463,7 +425,6 @@ Spectator.describe RelationshipsController do
       it "returns 400 if object is missing" do
         follow.actor = other
         HTTP::Client.activities << follow
-        headers = HTTP::Headers{"Content-Type" => "application/json"}
         post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
         expect(response.status_code).to eq(400)
       end
@@ -474,14 +435,14 @@ Spectator.describe RelationshipsController do
           follow.object = actor
         end
 
+        let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+
         it "creates an unconfirmed follow relationship" do
-          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
           expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
             to change{Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: false)}.by(1)
         end
 
         it "puts the activity in the actor's inbox" do
-          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
           expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
             to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
         end
@@ -493,14 +454,14 @@ Spectator.describe RelationshipsController do
           follow.object = other
         end
 
+        let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+
         it "does not create a follow relationship" do
-          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
           expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
             not_to change{Relationship::Social::Follow.count}
         end
 
         it "puts the activity in the actor's inbox" do
-          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
           expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
             to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
         end
@@ -530,22 +491,21 @@ Spectator.describe RelationshipsController do
         )
       end
 
+      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+
       it "returns 400 if relationship does not exist" do
         relationship.destroy
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
         expect(response.status_code).to eq(400)
       end
 
       it "returns 400 if related activity does not exist" do
         follow.destroy
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
         expect(response.status_code).to eq(400)
       end
 
       it "accepts the relationship" do
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld}.
           to change{Relationship.find(relationship.id).confirmed}
         expect(response.status_code).to eq(200)
@@ -575,22 +535,21 @@ Spectator.describe RelationshipsController do
         )
       end
 
+      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+
       it "returns 400 if relationship does not exist" do
         relationship.destroy
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
         expect(response.status_code).to eq(400)
       end
 
       it "returns 400 if related activity does not exist" do
         follow.destroy
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
         expect(response.status_code).to eq(400)
       end
 
       it "rejects the relationship" do
-        headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
         expect{post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld}.
           to change{Relationship.find(relationship.id).confirmed}
         expect(response.status_code).to eq(200)

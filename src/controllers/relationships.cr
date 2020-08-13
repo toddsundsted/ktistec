@@ -252,29 +252,6 @@ class RelationshipsController
     end
   end
 
-  post "/actors/:username/:relationship" do |env|
-    unless (account = get_account(env))
-      not_found
-    end
-    unless env.current_account? == account
-      forbidden
-    end
-    actor = account.actor
-    unless (other = find_other(env))
-      bad_request
-    end
-    unless (relationship = make_relationship(env, actor, other))
-      bad_request
-    end
-    unless relationship.valid?
-      bad_request
-    end
-
-    relationship.save
-
-    env.redirect actor_relationships_path(actor)
-  end
-
   delete "/actors/:username/:relationship/:id" do |env|
     unless (account = get_account(env))
       not_found

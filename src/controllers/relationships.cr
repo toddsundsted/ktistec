@@ -124,11 +124,12 @@ class RelationshipsController
     end
 
     if env.request.headers["Signature"]?
-      unless actor && Balloon::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
-        bad_request
+      if actor && Balloon::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
+        activity.save
       end
-      activity.save
-    else
+    end
+
+    unless activity.id
       open?(activity.iri) do |response|
         activity = ActivityPub::Activity.from_json_ld(response.body)
         activity.save

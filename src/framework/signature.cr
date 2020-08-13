@@ -59,7 +59,7 @@ module Balloon
 
     def self.verify?(actor, url, headers)
       verify(actor, url, headers)
-    rescue Error
+    rescue Error | OpenSSL::Error
       false
     end
   end

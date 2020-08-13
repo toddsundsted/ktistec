@@ -370,6 +370,27 @@ Spectator.describe RelationshipsController do
             to change{ActivityPub::Actor.find(other.id).pem_public_key}
         end
       end
+
+      context "which can't authenticate the activity" do
+        before_each do
+          HTTP::Client.activities << activity
+          pem_public_key, other.pem_public_key = other.pem_public_key, ""
+          HTTP::Client.actors << other.save
+          other.pem_public_key = pem_public_key
+        end
+
+        it "retrieves the activity from the origin" do
+          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+        end
+
+        it "saves the activity" do
+          headers = Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"})
+          expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
+            to change{ActivityPub::Activity.count}.by(1)
+        end
+      end
     end
 
     context "on create" do

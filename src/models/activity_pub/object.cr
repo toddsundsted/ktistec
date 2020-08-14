@@ -19,8 +19,10 @@ module ActivityPub
     def self.dereference?(iri : String?) : self?
       if iri
         unless (object = self.find?(iri))
-          self.open?(iri) do |resp|
-            object = self.from_json_ld?(resp.body)
+          unless iri.starts_with?(Balloon.host)
+            self.open?(iri) do |response|
+              object = self.from_json_ld?(response.body)
+            end
           end
         end
       end

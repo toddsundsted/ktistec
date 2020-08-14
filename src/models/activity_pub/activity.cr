@@ -3,6 +3,7 @@ require "../../framework/model"
 module ActivityPub
   class Activity
     include Balloon::Model(Common, Polymorphic, Serialized)
+    extend Balloon::Util
 
     @@table_name = "activities"
 
@@ -12,6 +13,19 @@ module ActivityPub
 
     def self.find?(_iri iri : String?)
       find?(iri: iri)
+    end
+
+    def self.dereference?(iri : String?) : self?
+      if iri
+        unless (activity = self.find?(iri))
+          unless iri.starts_with?(Balloon.host)
+            self.open?(iri) do |response|
+              activity = self.from_json_ld?(response.body)
+            end
+          end
+        end
+      end
+      activity
     end
 
     @[Persistent]

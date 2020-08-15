@@ -90,7 +90,7 @@ class RelationshipsController
       activity: activity
     ).save
 
-    Task::Send.new(
+    Task::Deliver.new(
       sender: account.actor,
       activity: activity
     ).perform
@@ -197,7 +197,7 @@ class RelationshipsController
       activity.to = [account.iri]
     end
 
-    Task::Send.new(
+    Task::Deliver.new(
       sender: account.actor,
       activity: activity
     ).perform

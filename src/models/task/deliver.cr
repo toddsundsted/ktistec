@@ -1,7 +1,7 @@
 require "../task"
 
 class Task
-  class Send < Task
+  class Deliver < Task
     include Balloon::Util
 
     belongs_to sender, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri

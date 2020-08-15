@@ -1,6 +1,6 @@
 require "../../spec_helper"
 
-Spectator.describe Task::Send do
+Spectator.describe Task::Deliver do
   before_each { HTTP::Client.reset }
   before_each { Balloon.database.exec "BEGIN TRANSACTION" }
   after_each { Balloon.database.exec "ROLLBACK" }

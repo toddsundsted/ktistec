@@ -48,7 +48,7 @@ class SessionsController
     env.redirect sessions_path
   end
 
-  post "/sessions/forget" do |env|
+  delete "/sessions" do |env|
     if session = env.session?
       session.destroy
     end

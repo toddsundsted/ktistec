@@ -76,31 +76,31 @@ Spectator.describe SessionsController do
     end
   end
 
-  describe "POST /sessions/forget" do
+  describe "DELETE /sessions" do
     it "fails to authenticate" do
       headers = HTTP::Headers{"Accept" => "text/html"}
-      post "/sessions/forget", headers
+      delete "/sessions", headers
       expect(response.status_code).to eq(401)
       expect(XML.parse_html(response.body).xpath_nodes("/html//title").first.text).to match(/Unauthorized/)
     end
 
     it "fails to authenticate" do
       headers = HTTP::Headers{"Accept" => "application/json"}
-      post "/sessions/forget", headers
+      delete "/sessions", headers
       expect(response.status_code).to eq(401)
       expect(JSON.parse(response.body)["msg"]).to eq("Unauthorized")
     end
 
     it "destroys session and redirects" do
       headers = HTTP::Headers{"Cookie" => "AuthToken=#{jwt}", "Accept" => "text/html"}
-      expect{post "/sessions/forget", headers}.to change{Session.count}.by(-1)
+      expect{delete "/sessions", headers}.to change{Session.count}.by(-1)
       expect(response.status_code).to eq(302)
       expect(response.headers.to_a).to have({"Location", ["/sessions"]})
     end
 
     it "destroys session and redirects" do
       headers = HTTP::Headers{"Authorization" => "Bearer #{jwt}", "Accept" => "application/json"}
-      expect{post "/sessions/forget", headers}.to change{Session.count}.by(-1)
+      expect{delete "/sessions", headers}.to change{Session.count}.by(-1)
       expect(response.status_code).to eq(302)
       expect(response.headers.to_a).to have({"Location", ["/sessions"]})
     end

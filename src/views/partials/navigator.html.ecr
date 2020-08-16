@@ -1,7 +1,9 @@
-<nav>
-    <%- if (_account = env.current_account?) -%>
-        <a href='<%= actor_path(_account) %>'>Home</a>
-    <%- else -%>
-        <a href='<%= sessions_path %>'>Log In</a>
-    <%- end -%>
+<nav class='ui top fixed inverted navigation menu'>
+    <div class='ui text container'>
+        <%- if (_account = env.current_account?) -%>
+        <a class='item' href='<%= actor_path(_account) %>'>Home</a>
+        <%- else -%>
+        <a class='item' href='<%= sessions_path %>'>Log In</a>
+        <%- end -%>
+    </div>
 </nav>

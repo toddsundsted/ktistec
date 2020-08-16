@@ -8,10 +8,12 @@
         <script src="/semantic.min.js"></script>
         <style>
           html { font-size: 16px; }
+          .ui.fixed.menu + .ui.container { padding-top: 3.65rem; }
         </style>
         <%= yield_content("head") %>
     </head>
     <body>
+        <%= render "src/views/partials/navigator.html.ecr" %>
         <div class="ui text container">
             <%= content %>
         </div>

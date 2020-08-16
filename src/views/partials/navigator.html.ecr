@@ -2,6 +2,7 @@
     <div class='ui text container'>
         <%- if (_account = env.current_account?) -%>
         <a class='item' href='<%= actor_path(_account) %>'>Home</a>
+        <a class='item' href='<%= search_path %>'>Search</a>
         <div class='right menu'>
             <form method='POST' action='<%= sessions_path %>'>
                 <input type='hidden' name='_method' value='delete'>

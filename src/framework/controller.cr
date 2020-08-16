@@ -26,6 +26,10 @@ module Balloon
       "/"
     end
 
+    macro search_path
+      "/search"
+    end
+
     macro sessions_path
       "/sessions"
     end

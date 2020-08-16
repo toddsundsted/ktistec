@@ -5,7 +5,7 @@ class LookupsController
   include Balloon::Controller
   extend Balloon::Util
 
-  get "/api/lookup" do |env|
+  get "/search" do |env|
     message = nil
     actor = nil
 

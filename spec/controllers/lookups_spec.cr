@@ -28,32 +28,32 @@ Spectator.describe LookupsController do
   before_each { Balloon.database.exec "BEGIN TRANSACTION" }
   after_each { Balloon.database.exec "ROLLBACK" }
 
-  describe "GET /api/lookup" do
+  describe "GET /search" do
     it "returns 401 if not authorized" do
       headers = HTTP::Headers{"Accept" => "text/html"}
-      get "/api/lookup", headers
+      get "/search", headers
       expect(response.status_code).to eq(401)
     end
 
     it "returns 401 if not authorized" do
       headers = HTTP::Headers{"Accept" => "application/json"}
-      get "/api/lookup", headers
+      get "/search", headers
       expect(response.status_code).to eq(401)
     end
 
     context "when authorized" do
       sign_in
 
-      it "presents a lookup form" do
+      it "presents a search form" do
         headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/api/lookup", headers
+        get "/search", headers
         expect(response.status_code).to eq(200)
         expect(XML.parse_html(response.body).xpath_nodes("//form[./input[@name='account']]")).not_to be_empty
       end
 
-      it "presents a lookup form" do
+      it "presents a search form" do
         headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/api/lookup", headers
+        get "/search", headers
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body).as_h.keys).to have("account")
       end
@@ -65,14 +65,14 @@ Spectator.describe LookupsController do
 
         it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          expect{get "/api/lookup?account=foo_bar@test.test", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/search?account=foo_bar@test.test", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/p/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          expect{get "/api/lookup?account=foo_bar@test.test", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/search?account=foo_bar@test.test", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
@@ -82,19 +82,19 @@ Spectator.describe LookupsController do
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            expect{get "/api/lookup?account=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
+            expect{get "/search?account=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
             expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "application/json"}
-            expect{get "/api/lookup?account=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
+            expect{get "/search?account=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
             expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            get "/api/lookup?account=foo_bar@test.test", headers
+            get "/search?account=foo_bar@test.test", headers
             expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Follow']")).not_to be_empty
           end
 
@@ -103,7 +103,7 @@ Spectator.describe LookupsController do
 
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
-              get "/api/lookup?account=foo_bar@test.test", headers
+              get "/search?account=foo_bar@test.test", headers
               expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Unfollow']")).not_to be_empty
             end
           end
@@ -117,14 +117,14 @@ Spectator.describe LookupsController do
 
         it "retrieves and stores an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/search?account=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/p/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and stores an actor" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/search?account=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
@@ -134,19 +134,19 @@ Spectator.describe LookupsController do
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
+            expect{get "/search?account=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
             expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "application/json"}
-            expect{get "/api/lookup?account=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
+            expect{get "/search?account=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
             expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            get "/api/lookup?account=https://test.test/actors/foo_bar", headers
+            get "/search?account=https://test.test/actors/foo_bar", headers
             expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Follow']")).not_to be_empty
           end
 
@@ -155,7 +155,7 @@ Spectator.describe LookupsController do
 
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
-              get "/api/lookup?account=https://test.test/actors/foo_bar", headers
+              get "/search?account=https://test.test/actors/foo_bar", headers
               expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Unfollow']")).not_to be_empty
             end
           end
@@ -165,14 +165,14 @@ Spectator.describe LookupsController do
       context "given a non-existent host" do
         it "returns 400" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          get "/api/lookup?account=foo_bar@no-such-host", headers
+          get "/search?account=foo_bar@no-such-host", headers
           expect(response.status_code).to eq(400)
           expect(XML.parse_html(response.body).xpath_nodes("//p[@class='error message']").first.text).to match(/No such host/)
         end
 
         it "returns 400" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          get "/api/lookup?account=foo_bar@no-such-host", headers
+          get "/search?account=foo_bar@no-such-host", headers
           expect(response.status_code).to eq(400)
           expect(JSON.parse(response.body).as_h["msg"]).to match(/No such host/)
         end
@@ -181,14 +181,14 @@ Spectator.describe LookupsController do
       context "given bad JSON" do
         it "returns 400" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          get "/api/lookup?account=bad-json@test.test", headers
+          get "/search?account=bad-json@test.test", headers
           expect(response.status_code).to eq(400)
           expect(XML.parse_html(response.body).xpath_nodes("//p[@class='error message']").first.text).to match(/Unexpected char/)
         end
 
         it "returns 400" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          get "/api/lookup?account=bad-json@test.test", headers
+          get "/search?account=bad-json@test.test", headers
           expect(response.status_code).to eq(400)
           expect(JSON.parse(response.body).as_h["msg"]).to match(/Unexpected char/)
         end

@@ -4,9 +4,13 @@
         <meta charset='utf-8'>
         <meta content='width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,shrink-to-fit=no' name='viewport'>
         <title><%= yield_content("title") || "Balloon" %></title>
+        <link rel="stylesheet" href="/semantic.min.css">
+        <script src="/semantic.min.js"></script>
         <%= yield_content("head") %>
     </head>
     <body>
-        <%= content %>
+        <div class="ui text container">
+            <%= content %>
+        </div>
     </body>
 </html>

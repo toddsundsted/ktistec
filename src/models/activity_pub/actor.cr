@@ -95,6 +95,10 @@ module ActivityPub
     @[Persistent]
     property urls : Array(String)?
 
+    def display_name
+      name.presence || username.presence || iri
+    end
+
     def follow(other : Actor, **options)
       Relationship::Social::Follow.new(**options.merge({from_iri: self.iri, to_iri: other.iri}))
     end

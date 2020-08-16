@@ -6,6 +6,9 @@
         <title><%= yield_content("title") || "Balloon" %></title>
         <link rel="stylesheet" href="/semantic.min.css">
         <script src="/semantic.min.js"></script>
+        <style>
+          html { font-size: 16px; }
+        </style>
         <%= yield_content("head") %>
     </head>
     <body>

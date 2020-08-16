@@ -2,8 +2,16 @@
     <div class='ui text container'>
         <%- if (_account = env.current_account?) -%>
         <a class='item' href='<%= actor_path(_account) %>'>Home</a>
+        <div class='right menu'>
+            <form method='POST' action='<%= sessions_path %>'>
+                <input type='hidden' name='_method' value='delete'>
+                <div class='ui action input'>
+                    <input class='link item' type='submit' value='Sign Out'>
+                </div>
+            </form>
+        </div>
         <%- else -%>
-        <a class='item' href='<%= sessions_path %>'>Log In</a>
+        <a class='item' href='<%= sessions_path %>'>Sign In</a>
         <%- end -%>
     </div>
 </nav>

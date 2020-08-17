@@ -57,13 +57,15 @@ module ActivityPub
     property published : Time?
 
     @[Persistent]
-    property in_reply_to : String?
+    property attributed_to_iri : String?
+    belongs_to attributed_to, class_name: ActivityPub::Actor, foreign_key: attributed_to_iri, primary_key: iri
+
+    @[Persistent]
+    property in_reply_to_iri : String?
+    belongs_to in_reply_to, class_name: ActivityPub::Object, foreign_key: in_reply_to_iri, primary_key: iri
 
     @[Persistent]
     property replies : String?
-
-    @[Persistent]
-    property attributed_to : Array(String)?
 
     @[Persistent]
     property to : Array(String)?
@@ -149,9 +151,9 @@ module ActivityPub
         iri: json.dig?("@id").try(&.as_s),
         _type: json.dig?("@type").try(&.as_s.split("#").last),
         published: (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
-        in_reply_to: dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
+        attributed_to_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
+        in_reply_to_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
         replies: dig_id?(json, "https://www.w3.org/ns/activitystreams#replies"),
-        attributed_to: dig_ids?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
         to: dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
         cc: dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
         summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),

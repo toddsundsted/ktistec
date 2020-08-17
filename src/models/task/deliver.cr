@@ -38,7 +38,7 @@ class Task
         recipients.select! do |recipient|
           public?(recipient) ||
             (sender.iri == recipient) ||
-            (object && local?(object.in_reply_to) && local?(recipient) && followers_path?(recipient)) ||
+            (object && local?(object.in_reply_to_iri) && local?(recipient) && followers_path?(recipient)) ||
             (actor && actor.followers == recipient && sender.follows?(actor))
         end
       end

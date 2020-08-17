@@ -12,9 +12,9 @@ up do |db|
       "iri" varchar(255) NOT NULL,
       "visible" boolean,
       "published" datetime,
-      "in_reply_to" text,
+      "attributed_to_iri" text,
+      "in_reply_to_iri" text,
       "replies" text,
-      "attributed_to" text,
       "to" text,
       "cc" text,
       "summary" text,
@@ -30,8 +30,8 @@ up do |db|
       ON objects (iri ASC)
   STR
   db.exec <<-STR
-    CREATE INDEX idx_objects_in_reply_to_published
-      ON objects (in_reply_to ASC, published ASC)
+    CREATE INDEX idx_objects_in_reply_to_iri_published
+      ON objects (in_reply_to_iri ASC, published ASC)
   STR
 end
 

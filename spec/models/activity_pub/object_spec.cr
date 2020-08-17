@@ -40,12 +40,12 @@ Spectator.describe ActivityPub::Object do
         "@id":"https://test.test/foo_bar",
         "@type":"FooBarObject",
         "published":"2016-02-15T10:20:30Z",
+        "attributedTo":{
+          "id":"attributed to link"
+        },
         "inReplyTo":"in reply to link",
         "replies":{
           "id":"replies link"
-        },
-        "attributedTo":{
-          "id":"attributed to link"
         },
         "to":"to link",
         "cc":["cc link"],
@@ -77,9 +77,9 @@ Spectator.describe ActivityPub::Object do
       object = described_class.from_json_ld(json).save
       expect(object.iri).to eq("https://test.test/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
-      expect(object.in_reply_to).to eq("in reply to link")
+      expect(object.attributed_to_iri).to eq("attributed to link")
+      expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.replies).to eq("replies link")
-      expect(object.attributed_to).to eq(["attributed to link"])
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
       expect(object.summary).to eq("abc")
@@ -96,9 +96,9 @@ Spectator.describe ActivityPub::Object do
       object = described_class.new.from_json_ld(json).save
       expect(object.iri).to eq("https://test.test/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
-      expect(object.in_reply_to).to eq("in reply to link")
+      expect(object.attributed_to_iri).to eq("attributed to link")
+      expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.replies).to eq("replies link")
-      expect(object.attributed_to).to eq(["attributed to link"])
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
       expect(object.summary).to eq("abc")

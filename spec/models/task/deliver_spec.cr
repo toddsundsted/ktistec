@@ -81,7 +81,7 @@ Spectator.describe Task::Deliver do
     let(reply) do
       ActivityPub::Object.new(
         iri: "https://remote/objects/#{random_string}",
-        in_reply_to: "https://test.test/objects/#{random_string}"
+        in_reply_to_iri: "https://test.test/objects/#{random_string}"
       )
     end
 

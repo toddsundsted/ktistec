@@ -75,7 +75,7 @@ class RelationshipsController
         object: ActivityPub::Object::Note.new(
           iri: "#{Balloon.host}/objects/#{id}",
           content: content,
-          attributed_to: [account.iri],
+          attributed_to_iri: account.iri,
           published: Time.utc,
           visible: true
         ),

@@ -366,7 +366,8 @@ Spectator.describe RelationshipsController do
       let(create) do
         ActivityPub::Activity::Create.new(
           iri: "https://remote/activities/create",
-          actor: other
+          actor: other,
+          to: [actor.iri]
         )
       end
 
@@ -409,7 +410,8 @@ Spectator.describe RelationshipsController do
     context "on follow" do
       let(follow) do
         ActivityPub::Activity::Follow.new(
-          iri: "https://remote/activities/follow"
+          iri: "https://remote/activities/follow",
+          to: [actor.iri]
         )
       end
 

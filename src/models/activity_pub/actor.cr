@@ -298,11 +298,11 @@ module ActivityPub
     end
 
     def self.from_json_ld(json, *, include_key = false)
-      ActivityPub.from_json_ld(json, include_key: include_key).as(self)
+      ActivityPub.from_json_ld(json, include_key: include_key, default: self).as(self)
     end
 
     def self.from_json_ld?(json, *, include_key = false)
-      ActivityPub.from_json_ld?(json, include_key: include_key).as(self?)
+      ActivityPub.from_json_ld?(json, include_key: include_key, default: self).as(self?)
     rescue TypeCastError
     end
 

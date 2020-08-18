@@ -79,11 +79,11 @@ module ActivityPub
     end
 
     def self.from_json_ld(json)
-      ActivityPub.from_json_ld(json).as(self)
+      ActivityPub.from_json_ld(json, default: self).as(self)
     end
 
     def self.from_json_ld?(json)
-      ActivityPub.from_json_ld?(json).as(self?)
+      ActivityPub.from_json_ld?(json, default: self).as(self?)
     rescue TypeCastError
     end
 

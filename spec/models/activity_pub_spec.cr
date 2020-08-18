@@ -5,9 +5,17 @@ Spectator.describe ActivityPub do
   after_each { Balloon.database.exec "ROLLBACK" }
 
   describe ".from_json_ld" do
+    it "raises an error if the type is not supported" do
+      expect{described_class.from_json_ld(%q[{"@type":"FooBar"}])}.to raise_error(NotImplementedError)
+    end
+
+    it "defaults the instance to the specified class" do
+      expect(described_class.from_json_ld(%q[{"@type":"FooBar"}], default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
+    end
+
     it "instantiates the correct subclass" do
       expect(described_class.from_json_ld(%q[{"@type":"Person"}])).to be_a(ActivityPub::Actor::Person)
-      expect(described_class.from_json_ld(%q[{"@type":"Collection"}])).to be_a(ActivityPub::Collection)
+      expect(described_class.from_json_ld(%q[{"@type":"Note"}])).to be_a(ActivityPub::Object::Note)
     end
 
     subject { ActivityPub::Activity.new(iri: "https://test.test/foo_bar").save }

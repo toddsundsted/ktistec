@@ -12,6 +12,11 @@ module ActivityPub
           {{id}}.assign(**{{subclass}}.map(json, **options))
       {% end %}
       else
+        if (default = options[:default]?)
+          instance = default.find?(json["@id"]?.try(&.as_s)) || default.new
+          instance.assign(**default.map(json, **options))
+          return instance
+        end
         raise NotImplementedError.new(json["@type"].as_s)
       end
     {% end %}

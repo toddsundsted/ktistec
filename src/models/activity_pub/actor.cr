@@ -3,31 +3,9 @@ require "json"
 
 module ActivityPub
   class Actor
-    include Balloon::Model(Common, Polymorphic, Serialized)
-    extend Balloon::Util
+    include Balloon::Model(Common, Polymorphic, Serialized, Linked)
 
     @@table_name = "actors"
-
-    def self.find(_iri iri : String?)
-      find(iri: iri)
-    end
-
-    def self.find?(_iri iri : String?)
-      find?(iri: iri)
-    end
-
-    def self.dereference?(iri : String?) : self?
-      if iri
-        unless (actor = self.find?(iri))
-          unless iri.starts_with?(Balloon.host)
-            self.open?(iri) do |response|
-              actor = self.from_json_ld?(response.body)
-            end
-          end
-        end
-      end
-      actor
-    end
 
     @[Persistent]
     property iri : String { "" }

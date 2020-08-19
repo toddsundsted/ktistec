@@ -132,39 +132,25 @@ class RelationshipsController
     end
 
     unless verified
-      open?(activity.iri) do |response|
-        activity = ActivityPub::Activity.from_json_ld(response.body)
+      if (activity = ActivityPub::Activity.dereference?(activity.iri))
         verified = true
       end
     end
 
-    unless verified
+    unless activity && verified
       bad_request
     end
 
     case activity
     when ActivityPub::Activity::Create
-      unless (object = activity.object?)
-        unless (object_iri = activity.object_iri)
-          bad_request
-        end
-        open(object_iri) do |response|
-          object = ActivityPub::Object.from_json_ld(response.body)
-          activity.object = object
-        end
+      unless (object = activity.object?(dereference: true))
+        bad_request
       end
     when ActivityPub::Activity::Follow
       unless actor
         bad_request
       end
-      unless (object = activity.object?)
-        if (object_iri = activity.object_iri)
-          open(object_iri) do |response|
-            object = ActivityPub::Actor.from_json_ld?(response.body)
-          end
-        end
-      end
-      unless object
+      unless (object = activity.object?(dereference: true))
         bad_request
       end
       if account.actor == object

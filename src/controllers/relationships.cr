@@ -181,10 +181,6 @@ class RelationshipsController
       bad_request
     end
 
-    if [activity.to, activity.cc].compact.flatten.empty?
-      activity.to = [account.iri]
-    end
-
     activity.save
 
     Task::Deliver.new(

@@ -261,7 +261,21 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(200)
     end
 
+    it "does not save the activity on failure" do
+      expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
+        not_to change{ActivityPub::Activity.count}
+      expect(response.status_code).not_to eq(200)
+    end
+
     context "when unsigned" do
+      let(activity) do
+        ActivityPub::Activity::Follow.new(
+          iri: "https://remote/activities/follow",
+          actor_iri: other.iri,
+          object_iri: actor.iri
+        )
+      end
+
       before_each { HTTP::Client.activities << activity }
 
       it "retrieves the activity from the origin" do
@@ -276,6 +290,14 @@ Spectator.describe RelationshipsController do
     end
 
     context "when signed by remote actor" do
+      let(activity) do
+        ActivityPub::Activity::Follow.new(
+          iri: "https://remote/activities/follow",
+          actor_iri: other.iri,
+          object_iri: actor.iri
+        )
+      end
+
       before_each { HTTP::Client.actors << other.destroy }
 
       let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
@@ -314,11 +336,6 @@ Spectator.describe RelationshipsController do
         expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
       end
 
-      it "saves the activity" do
-        expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
-          to change{ActivityPub::Activity.count}.by(1)
-      end
-
       context "which doesn't have a public key" do
         before_each do
           pem_public_key, other.pem_public_key = other.pem_public_key, nil
@@ -348,11 +365,6 @@ Spectator.describe RelationshipsController do
         it "retrieves the activity from the origin" do
           post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
           expect(HTTP::Client.requests).to have("GET #{activity.iri}")
-        end
-
-        it "saves the activity" do
-          expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
-            to change{ActivityPub::Activity.count}.by(1)
         end
       end
     end

@@ -123,20 +123,22 @@ class RelationshipsController
       end
     end
 
+    verified = false
+
     if env.request.headers["Signature"]?
       if actor && Balloon::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
-        activity.save
+        verified = true
       end
     end
 
-    unless activity.id
+    unless verified
       open?(activity.iri) do |response|
         activity = ActivityPub::Activity.from_json_ld(response.body)
-        activity.save
+        verified = true
       end
     end
 
-    unless activity.id
+    unless verified
       bad_request
     end
 
@@ -196,6 +198,8 @@ class RelationshipsController
     if [activity.to, activity.cc].compact.flatten.empty?
       activity.to = [account.iri]
     end
+
+    activity.save
 
     Task::Deliver.new(
       sender: account.actor,

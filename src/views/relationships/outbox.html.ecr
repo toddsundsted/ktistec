@@ -1,12 +1,12 @@
-<%- content_for "title" do -%>Outbox<%- end -%>
-<div>
-    <h1>Outbox</h1>
-    <ul>
-        <%- activities.each do |activity| -%>
-            <li class="activity">
-                <p><a href="<%= activity.iri %>"></a></p>
-            </li>
-        <%- end -%>
-    </ul>
-    <%= paginate(activities, env) %>
-</div>
+<%- title = env.request.path.split("/").last.titleize -%>
+<%- content_for "title" do -%><%= title %><%- end -%>
+<h1><%= title %></h1>
+<section class='ui feed'>
+    <%- activities.each do |activity| -%>
+    <article class='event activity'>
+        <%= render "src/views/partials/activities/label.html.ecr" %>
+        <%= render "src/views/partials/activities/default.html.ecr" %>
+    </article>
+    <%- end -%>
+</section>
+<%= paginate(activities, env) %>

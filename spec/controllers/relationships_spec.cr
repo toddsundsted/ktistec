@@ -608,7 +608,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/outbox", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity1.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//article[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity1.iri)
       end
 
       it "renders only the public activities" do
@@ -626,7 +626,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/outbox", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity1.iri, activity2.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//article[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity1.iri, activity2.iri)
       end
 
       it "renders all activities" do
@@ -640,7 +640,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/outbox?page=1&size=1", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity2.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//article[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity2.iri)
       end
 
       it "renders first page of activities" do
@@ -654,7 +654,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/outbox?page=2&size=1", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity1.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//article[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity1.iri)
       end
 
       it "renders last page of activities" do
@@ -708,7 +708,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/inbox", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity1.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//article[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity1.iri)
       end
 
       it "renders only the public activities" do
@@ -726,7 +726,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/inbox", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='activity']//a/@href").map(&.text)).to contain_exactly(activity1.iri, activity2.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//article[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity1.iri, activity2.iri)
       end
 
       it "renders all activities" do
@@ -740,7 +740,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/inbox?page=1&size=1", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity2.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//article[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity2.iri)
       end
 
       it "renders first page of activities" do
@@ -754,7 +754,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/inbox?page=2&size=1", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity1.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//article[contains(@class,'activity')]//a/@href").map(&.text)).to contain_exactly(activity1.iri)
       end
 
       it "renders last page of activities" do

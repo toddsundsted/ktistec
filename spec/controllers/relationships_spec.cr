@@ -289,7 +289,7 @@ Spectator.describe RelationshipsController do
       end
     end
 
-    context "when signed by remote actor" do
+    context "when signed" do
       let(activity) do
         ActivityPub::Activity::Follow.new(
           iri: "https://remote/activities/follow",
@@ -298,73 +298,68 @@ Spectator.describe RelationshipsController do
         )
       end
 
-      before_each { HTTP::Client.actors << other.destroy }
-
       let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
-
-      it "retrieves the remote actor from the origin" do
-        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-        expect(HTTP::Client.requests).to have("GET #{other.iri}")
-      end
 
       it "does not retrieve the activity" do
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
         expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
-      end
-
-      it "saves the actor" do
-        expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
-          to change{ActivityPub::Actor.count}.by(1)
       end
 
       it "saves the activity" do
         expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
           to change{ActivityPub::Activity.count}.by(1)
       end
-    end
 
-    context "when signed by saved actor" do
-      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
-
-      it "does not retrieve the actor" do
-        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-        expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
-      end
-
-      it "does not retrieve the activity" do
-        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-        expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
-      end
-
-      context "which doesn't have a public key" do
-        before_each do
-          pem_public_key, other.pem_public_key = other.pem_public_key, nil
-          HTTP::Client.actors << other.save
-          other.pem_public_key = pem_public_key
-        end
+      context "by remote actor" do
+        before_each { HTTP::Client.actors << other.destroy }
 
         it "retrieves the remote actor from the origin" do
           post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
           expect(HTTP::Client.requests).to have("GET #{other.iri}")
         end
 
-        it "updates the actor's public key" do
+        it "saves the actor" do
           expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
-            to change{ActivityPub::Actor.find(other.id).pem_public_key}
+            to change{ActivityPub::Actor.count}.by(1)
         end
       end
 
-      context "which can't authenticate the activity" do
-        before_each do
-          HTTP::Client.activities << activity
-          pem_public_key, other.pem_public_key = other.pem_public_key, ""
-          HTTP::Client.actors << other.save
-          other.pem_public_key = pem_public_key
+      context "by saved actor" do
+        it "does not retrieve the actor" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
         end
 
-        it "retrieves the activity from the origin" do
-          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-          expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+        context "which doesn't have a public key" do
+          before_each do
+            pem_public_key, other.pem_public_key = other.pem_public_key, nil
+            HTTP::Client.actors << other.save
+            other.pem_public_key = pem_public_key
+          end
+
+          it "retrieves the remote actor from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+            expect(HTTP::Client.requests).to have("GET #{other.iri}")
+          end
+
+          it "updates the actor's public key" do
+            expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
+              to change{ActivityPub::Actor.find(other.id).pem_public_key}
+          end
+        end
+
+        context "which can't authenticate the activity" do
+          before_each do
+            HTTP::Client.activities << activity
+            pem_public_key, other.pem_public_key = other.pem_public_key, ""
+            HTTP::Client.actors << other.save
+            other.pem_public_key = pem_public_key
+          end
+
+          it "retrieves the activity from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+            expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+          end
         end
       end
     end

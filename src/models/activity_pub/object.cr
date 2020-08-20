@@ -69,6 +69,14 @@ module ActivityPub
     @[Persistent]
     property urls : Array(String)?
 
+    def display_link
+      urls.try(&.first?) || iri
+    end
+
+    def display_date
+      published.try(&.to_local) || created_at.to_local
+    end
+
     struct Source
       include JSON::Serializable
 

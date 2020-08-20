@@ -1,0 +1,36 @@
+<%- _actor = activity.actor -%>
+<%- _author = activity.object.attributed_to? || _actor -%>
+<%- _object = activity.object -%>
+<div class='label'>
+    <%- if _author.icon -%>
+    <%- if _author != _actor && _actor.icon -%>
+    <img src='<%= _actor.icon %>'>
+    <%- end -%>
+    <img src='<%= _author.icon %>'>
+    <%- else -%>
+    <i class='user icon'></i>
+    <%- end-%>
+</div>
+<div class='content'>
+    <%- if (_attachments = _object.attachments) && (_attachment = _attachments.shift?) -%>
+    <%- if _attachment.image? -%>
+    <img class='ui large fluid image attachment' src='<%= _attachment.url %>'>
+    <%- end -%>
+    <%- unless _attachments.empty? -%>
+    <div class='extra images'>
+        <%- _attachments.each do |_attachment| -%>
+        <%- if _attachment.image? -%>
+        <img src='<%= _attachment.url %>'>
+        <%- end -%>
+        <%- end -%>
+    </div>
+    <%- end -%>
+    <%- end -%>
+    <div class='<%= _attachment ? "extra " : "" %>text'>
+      <%= s _object.content %>
+    </div>
+    <div class='meta'>
+        <a href='<%= _author.display_link %>'><%= _author.display_name %></a>
+        <a href='<%= _object.display_link %>'><%= _object.display_date %></a>
+    </div>
+</div>

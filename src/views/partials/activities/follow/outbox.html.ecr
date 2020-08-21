@@ -1,0 +1,16 @@
+<%= render "src/views/partials/activities/label.html.ecr" %>
+<div class='content'>
+    <div class='summary'>
+        You followed <a href='<%= activity.object.display_link %>'><%= activity.object.display_name %></a>.
+    </div>
+    <%- _response = activity.accepted_or_rejected? -%>
+    <%- if _response.is_a?(ActivityPub::Activity::Accept) -%>
+    <div class='extra meta'>
+        Accepted on <%= _response.display_date %>.
+    </div>
+    <%- elsif _response.is_a?(ActivityPub::Activity::Reject) -%>
+    <div class='extra meta'>
+        Rejected on <%= _response.display_date %>.
+    </div>
+    <%- end -%>
+</div>

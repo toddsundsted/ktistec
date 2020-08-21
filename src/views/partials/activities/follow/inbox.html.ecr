@@ -1,0 +1,26 @@
+<%- _actor = activity.actor -%>
+<%- _object = activity.object -%>
+<%= render "src/views/partials/activities/label.html.ecr" %>
+<div class='content'>
+    <div class='summary'>
+        You received a follow request from <a href='<%= _actor.display_link %>'><%= _actor.display_name %></a>.
+    </div>
+    <%- unless (_response = activity.accepted_or_rejected?) -%>
+    <div class='extra text'>
+        <form class='ui form' method='POST' action='<%= actor_relationships_path(account, "outbox") %>'>
+            <input type='hidden' name='object' value='<%= activity.iri %>'>
+            <input class='ui mini primary button' type='submit' name='type' value='Accept'>
+            <input class='ui mini button' type='submit' name='type' value='Reject'>
+        </form>
+    </div>
+    <%- end -%>
+    <%- if _response.is_a?(ActivityPub::Activity::Accept) -%>
+    <div class='extra meta'>
+        Accepted on <%= _response.display_date %>.
+    </div>
+    <%- elsif _response.is_a?(ActivityPub::Activity::Reject) -%>
+    <div class='extra meta'>
+        Rejected on <%= _response.display_date %>.
+    </div>
+    <%- end -%>
+</div>

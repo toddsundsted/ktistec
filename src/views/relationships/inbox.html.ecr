@@ -6,6 +6,8 @@
     <article class='event activity'>
         <%- if activity.is_a?(ActivityPub::Activity::Create) -%>
         <%= render "src/views/partials/activities/create.html.ecr" %>
+        <%- elsif activity.is_a?(ActivityPub::Activity::Follow) -%>
+        <%= render "src/views/partials/activities/follow/inbox.html.ecr" %>
         <%- else -%>
         <%= render "src/views/partials/activities/default.html.ecr" %>
         <%- end -%>

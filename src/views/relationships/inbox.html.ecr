@@ -8,6 +8,10 @@
         <%= render "src/views/partials/activities/create.html.ecr" %>
         <%- elsif activity.is_a?(ActivityPub::Activity::Follow) -%>
         <%= render "src/views/partials/activities/follow/inbox.html.ecr" %>
+        <%- elsif activity.is_a?(ActivityPub::Activity::Accept) -%>
+        <%= render "src/views/partials/activities/accept/inbox.html.ecr" %>
+        <%- elsif activity.is_a?(ActivityPub::Activity::Reject) -%>
+        <%= render "src/views/partials/activities/reject/inbox.html.ecr" %>
         <%- else -%>
         <%= render "src/views/partials/activities/default.html.ecr" %>
         <%- end -%>

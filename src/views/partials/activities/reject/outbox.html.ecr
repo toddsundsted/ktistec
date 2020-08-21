@@ -1,0 +1,7 @@
+<%- _actor = activity.object.actor -%>
+<%= render "src/views/partials/activities/label.html.ecr" %>
+<div class='content'>
+    <div class='summary'>
+        You rejected a follow request from <a href='<%= _actor.display_link %>'><%= _actor.display_name %></a>.
+    </div>
+</div>

@@ -4,6 +4,7 @@ require "gzip"
 require "zlib"
 
 require "kemal"
+require "kilt/slang"
 require "sqlite3"
 require "uri"
 require "yaml"

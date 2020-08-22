@@ -36,7 +36,6 @@ Spectator.describe ActivityPub::Activity::Follow do
       end
     end
 
-
     context "when rejected" do
       let!(reject) do
         ActivityPub::Activity::Reject.new(

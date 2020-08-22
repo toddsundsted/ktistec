@@ -51,6 +51,10 @@ module ActivityPub
     @[Persistent]
     property summary : String?
 
+    def display_date
+      published.try(&.to_local) || created_at.to_local
+    end
+
     def to_json_ld(recursive = false)
       activity = self
       render "src/views/activities/activity.json.ecr"

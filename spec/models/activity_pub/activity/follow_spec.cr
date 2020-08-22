@@ -18,6 +18,39 @@ Spectator.describe ActivityPub::Activity::Follow do
     end
   end
 
+  describe "#accepted_or_rejected" do
+    it "returns nil" do
+      expect(subject.accepted_or_rejected?).to be_nil
+    end
+
+    context "when accepted" do
+      let!(accept) do
+        ActivityPub::Activity::Accept.new(
+          iri: "https://test.test/accept",
+          object: subject
+        ).save
+      end
+
+      it "returns the accept activity" do
+        expect(subject.accepted_or_rejected?).to eq(accept)
+      end
+    end
+
+
+    context "when rejected" do
+      let!(reject) do
+        ActivityPub::Activity::Reject.new(
+          iri: "https://test.test/reject",
+          object: subject
+        ).save
+      end
+
+      it "returns the reject activity" do
+        expect(subject.accepted_or_rejected?).to eq(reject)
+      end
+    end
+  end
+
   context "validations" do
     let(actor) { ActivityPub::Actor.new }
     let(object) { ActivityPub::Actor.new }

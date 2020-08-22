@@ -5,6 +5,12 @@ class ActivityPub::Activity
     belongs_to actor, class_name: ActivityPub::Actor, foreign_key: actor_iri, primary_key: iri
     belongs_to object, class_name: ActivityPub::Actor, foreign_key: object_iri, primary_key: iri
 
+    private QUERY = "object_iri = ? AND type IN ('#{Accept}', '#{Reject}') LIMIT 1"
+
+    def accepted_or_rejected?
+      ActivityPub::Activity.where(QUERY, iri).first?
+    end
+
     def valid_for_send?
       valid?
       messages = [] of String

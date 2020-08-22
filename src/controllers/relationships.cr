@@ -65,6 +65,23 @@ class RelationshipsController
         to: [object.actor.iri]
       )
       follow.assign(confirmed: false).save
+    when "Undo"
+      unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))
+        bad_request
+      end
+      unless object.actor == account.actor
+        bad_request
+      end
+      unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+        bad_request
+      end
+      activity = ActivityPub::Activity::Undo.new(
+        iri: "#{Balloon.host}/activities/#{id}",
+        actor: account.actor,
+        object: object,
+        to: [object.object.iri]
+      )
+      follow.destroy
     when "Create"
       unless (content = activity["content"]?)
         bad_request
@@ -177,6 +194,28 @@ class RelationshipsController
         bad_request
       end
       follow.assign(confirmed: false).save
+    when ActivityPub::Activity::Undo
+      unless activity.actor?(dereference: true)
+        bad_request
+      end
+      case (object = activity.object?(dereference: true))
+      when ActivityPub::Activity::Follow
+        unless object.object == account.actor
+          bad_request
+        end
+        unless object.actor == activity.actor
+          bad_request
+        end
+        unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+          bad_request
+        end
+        follow.destroy
+        if [activity.to, activity.cc].compact.flatten.empty?
+          activity.to = [account.iri]
+        end
+      else
+        bad_request
+      end
     else
       bad_request
     end

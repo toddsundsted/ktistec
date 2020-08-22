@@ -201,6 +201,54 @@ Spectator.describe RelationshipsController do
         end
       end
 
+      context "on undo" do
+        let!(relationship) do
+          Relationship::Social::Follow.new(
+            actor: actor,
+            object: other
+          ).save
+        end
+        let!(follow) do
+          ActivityPub::Activity::Follow.new(
+            iri: "https://test.test/activities/follow",
+            actor: actor,
+            object: other
+          ).save
+        end
+
+        it "returns 400 if the follow activity does not exist" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://remote/activities/follow"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the follow activity does not belong to the actor" do
+          follow.assign(actor: other).save
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the relationship does not exist" do
+          relationship.destroy
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "destroys the relationship" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"}.
+            to change{Relationship::Social::Follow.count(from_iri: actor.iri, to_iri: other.iri)}.by(-1)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the other's inbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"}.
+            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        end
+      end
+
       context "given a remote object" do
         let(object) do
           ActivityPub::Actor.new(
@@ -561,6 +609,65 @@ Spectator.describe RelationshipsController do
       it "rejects the relationship" do
         expect{post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld}.
           to change{Relationship.find(relationship.id).confirmed}
+        expect(response.status_code).to eq(200)
+      end
+    end
+
+    context "on undo" do
+      let!(relationship) do
+        Relationship::Social::Follow.new(
+          actor: other,
+          object: actor
+        ).save
+      end
+      let(follow) do
+        ActivityPub::Activity::Follow.new(
+          iri: "https://test.test/activities/follow",
+          actor: other,
+          object: actor
+        ).save
+      end
+      let(undo) do
+        ActivityPub::Activity::Undo.new(
+          iri: "https://remote/activities/undo",
+          actor: other,
+          object: follow
+        )
+      end
+
+      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+
+      it "returns 400 if relationship does not exist" do
+        relationship.destroy
+        post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if related activity does not exist" do
+        follow.destroy
+        post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the follow to undo isn't for this actor" do
+        follow.assign(object: other).save
+        post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the follow and undo aren't from the same actor" do
+        follow.assign(actor: actor).save
+        post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
+      it "destroys the relationship" do
+        expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
+          to change{Relationship::Social::Follow.count(from_iri: other.iri, to_iri: actor.iri)}.by(-1)
+      end
+
+      it "succeeds" do
+        post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
         expect(response.status_code).to eq(200)
       end
     end

@@ -5,6 +5,36 @@ class ActivityPub::Activity
     belongs_to actor, class_name: ActivityPub::Actor, foreign_key: actor_iri, primary_key: iri
     belongs_to object, class_name: ActivityPub::Actor, foreign_key: object_iri, primary_key: iri
 
+    def self.follows?(actor_or_iri, object_or_iri)
+      actor_iri = actor_or_iri.is_a?(ActivityPub::Actor) ?
+        actor_or_iri.iri :
+        actor_or_iri
+      object_iri = object_or_iri.is_a?(ActivityPub::Actor) ?
+        object_or_iri.iri :
+        object_or_iri
+
+      {% begin %}
+        {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+        columns = {{vs.map { |v| "f.#{v.stringify}" }.join(",")}}
+        query = <<-SQL
+            SELECT #{columns}
+              FROM #{table_name} f
+              JOIN relationships r
+                ON r.from_iri = f.actor_iri
+               AND r.to_iri = f.object_iri
+             WHERE f.type = '#{ActivityPub::Activity::Follow}'
+               AND r.type = '#{Relationship::Social::Follow}'
+               AND actor_iri = ?
+               AND object_iri = ?
+          ORDER BY f.created_at desc
+             LIMIT 1
+        SQL
+        Balloon.database.query_one(query, actor_iri, object_iri, &->compose(DB::ResultSet))
+      {% end %}
+    rescue ex: DB::Error
+      raise ex unless ex.message == "no rows"
+    end
+
     private QUERY = "object_iri = ? AND type IN ('#{Accept}', '#{Reject}') LIMIT 1"
 
     def accepted_or_rejected?

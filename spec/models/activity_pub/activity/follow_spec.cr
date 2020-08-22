@@ -18,6 +18,42 @@ Spectator.describe ActivityPub::Activity::Follow do
     end
   end
 
+  describe ".follows?" do
+    let(actor) do
+      ActivityPub::Actor.new(
+        iri: "https://test.test/#{random_string}"
+      )
+    end
+    let(other) do
+      ActivityPub::Actor.new(
+        iri: "https://test.test/#{random_string}"
+      )
+    end
+    let!(follow) do
+      Relationship::Social::Follow.new(
+        iri: "https://test.test/activities/follow",
+        actor: actor,
+        object: other
+      ).save
+    end
+
+    before_each do
+      subject.assign(actor: actor, object: other).save
+    end
+
+    it "returns the most recent follow activity" do
+      expect(described_class.follows?(actor, other)).to eq(subject)
+    end
+
+    context "when not following" do
+      before_each { follow.destroy }
+
+      it "returns nil" do
+        expect(described_class.follows?(actor, other)).to be_nil
+      end
+    end
+  end
+
   describe "#accepted_or_rejected" do
     it "returns nil" do
       expect(subject.accepted_or_rejected?).to be_nil

@@ -146,7 +146,7 @@ Spectator.describe HomeController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//p/a[contains(@href,'#{username}')]/@href").first.text).to match(/actors\/#{username}/)
+        expect(XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'card')][contains(@href,'#{username}')]/@href").map(&.text)).to have(/\/actors\/#{username}/)
       end
 
       it "renders a list of local actors" do

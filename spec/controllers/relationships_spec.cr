@@ -928,7 +928,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/following", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='actor']//a/@href").map(&.text)).to eq(["/remote/actors/#{other1.id}"])
+        expect(XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'card')]/@href").map(&.text)).to eq([other1.iri])
       end
 
       it "renders only the related public actors" do
@@ -946,7 +946,7 @@ Spectator.describe RelationshipsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/actors/#{actor.username}/following", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='actor']//a/@href").map(&.text)).to contain_exactly("/remote/actors/#{other1.id}", "/remote/actors/#{other2.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'card')]/@href").map(&.text)).to contain_exactly(other1.iri, other2.iri)
       end
 
       it "renders all the related actors" do

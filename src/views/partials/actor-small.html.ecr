@@ -1,0 +1,28 @@
+<a class='card' href='<%= actor.iri %>'>
+    <div class='content'>
+        <div class='header'><%= actor.display_name %></div>
+        <div class='meta'>@<%= actor.username %></div>
+    </div>
+    <div class='extra content'>
+        <%- if (icon = actor.icon) -%>
+        <img class='ui mini image' src='<%= icon %>'>
+        <%- else -%>
+        <i class='ui user icon'></i>
+        <%- end -%>
+        <%- if (_account = env.current_account?) -%>
+        <%- if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor)) -%>
+        <form class='right floated' method='POST' action='<%= actor_relationships_path(_account, "outbox") %>'>
+            <input type='hidden' name='type' value='Undo'>
+            <input type='hidden' name='object' value='<%= _follow.iri %>'>
+            <input class='ui mini primary button' type='submit' value='Unfollow'>
+        </form>
+        <%- else -%>
+        <form class='right floated' method='POST' action='<%= actor_relationships_path(_account, "outbox") %>'>
+            <input type='hidden' name='type' value='Follow'>
+            <input type='hidden' name='object' value='<%= actor.iri %>'>
+            <input class='ui mini primary button' type='submit' value='Follow'>
+        </form>
+        <%- end -%>
+        <%- end -%>
+    </div>
+</a>

@@ -1,12 +1,7 @@
-<div>
-    <h1>Following</h1>
-    <ul>
-        <%- related.each do |actor| -%>
-            <li class="actor">
-                <a href="<%= remote_actor_path(actor) %>"><%= actor.username || actor.iri %></a>
-            </li>
-        <%- end -%>
-    </ul>
-    <p><a href="/api/lookup">follow more...</a>
-    <%= paginate(related, env) %>
-</div>
+<h1><%= env.params.url["relationship"].titleize %></h1>
+<section class='ui cards'>
+    <%- related.each do |actor| -%>
+    <%= render "src/views/partials/actor-small.html.ecr" %>
+    <%- end -%>
+</section>
+<%= paginate(related, env) %>

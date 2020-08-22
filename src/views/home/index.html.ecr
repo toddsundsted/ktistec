@@ -1,6 +1,6 @@
-<div>
-    <h1>Community</h1>
-    <%- accounts.each do |account| -%>
-        <p><a href="<%= actor_path(account) %>"><%= account.username %></a></p>
+<h1>Community</h1>
+<section class='ui cards'>
+    <%- accounts.map(&.actor).each do |actor| -%>
+    <%= render "src/views/partials/actor-small.html.ecr" %>
     <%- end -%>
-</div>
+</section>

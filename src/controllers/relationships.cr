@@ -278,15 +278,15 @@ class RelationshipsController
     end
   end
 
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"]?)
+  end
+
   private def self.pagination_params(env)
     {
       env.params.query["page"]?.try(&.to_i) || 1,
       env.params.query["size"]?.try(&.to_i) || 10
     }
-  end
-
-  private def self.get_account(env)
-    Account.find?(username: env.params.url["username"]?)
   end
 
   private def self.all_related(env, actor, public = true)
@@ -297,31 +297,5 @@ class RelationshipsController
       actor.all_followers(*pagination_params(env), public: public)
     else
     end
-  end
-
-  private def self.make_relationship(env, actor, other)
-    case env.params.url["relationship"]?
-    when "following"
-      actor.follow(other, confirmed: true, visible: true)
-    when "followers"
-      other.follow(actor, confirmed: true, visible: true)
-    else
-    end
-  end
-
-  private def self.find_relationship(env)
-    case env.params.url["relationship"]?
-    when "following"
-      Relationship::Social::Follow.find?(env.params.url["id"].to_i)
-    when "followers"
-      Relationship::Social::Follow.find?(env.params.url["id"].to_i)
-    else
-    end
-  end
-
-  private def self.find_other(env)
-    (iri = env.params.body["iri"]? || env.params.json["iri"]?) &&
-      (other = ActivityPub::Actor.find?(iri.to_s))
-    other
   end
 end

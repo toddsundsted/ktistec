@@ -1,11 +1,17 @@
-<div>
-    <h1>Log In</h1>
+<h1>Sign In</h1>
+<form class='ui form<%= message ? " error" : "" %>' method='POST'>
     <% if message %>
-        <p>Error: <%= message %></p>
+    <div class='ui error message'>
+        <div class='header'><%= message %></div>
+    </div>
     <% end %>
-    <form method='POST'>
+    <div class='field'>
+        <label>Username</label>
         <input type='text' name='username' value='<%= username %>'>
+    </div>
+    <div class='field'>
+        <label>Password</label>
         <input type='password' name='password' value='<%= password %>'>
-        <input type='submit' value='Log In'>
-    </form>
-</div>
+    </div>
+    <input class='ui primary button' type='submit' value='Sign In'>
+</form>

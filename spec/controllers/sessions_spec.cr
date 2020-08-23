@@ -17,7 +17,7 @@ Spectator.describe SessionsController do
       headers = HTTP::Headers{"Accept" => "text/html"}
       get "/sessions", headers
       expect(response.status_code).to eq(200)
-      expect(XML.parse_html(response.body).xpath_nodes("//form[./input[@name='username']][./input[@name='password']]")).not_to be_empty
+      expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='username']][.//input[@name='password']]")).not_to be_empty
     end
 
     it "responds with JSON" do

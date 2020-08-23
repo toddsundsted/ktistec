@@ -278,26 +278,6 @@ class RelationshipsController
     end
   end
 
-  delete "/actors/:username/:relationship/:id" do |env|
-    unless (account = get_account(env))
-      not_found
-    end
-    unless env.current_account? == account
-      forbidden
-    end
-    actor = account.actor
-    unless (relationship = find_relationship(env))
-      bad_request
-    end
-    unless actor.iri.in?({relationship.from_iri, relationship.to_iri})
-      forbidden
-    end
-
-    relationship.destroy
-
-    env.redirect actor_relationships_path(actor)
-  end
-
   private def self.pagination_params(env)
     {
       env.params.query["page"]?.try(&.to_i) || 1,

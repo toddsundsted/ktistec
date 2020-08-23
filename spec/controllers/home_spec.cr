@@ -16,7 +16,7 @@ Spectator.describe HomeController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//form[./input[@name='host']]")).not_to be_empty
+        expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='host']]")).not_to be_empty
       end
 
       it "returns a template" do
@@ -33,7 +33,7 @@ Spectator.describe HomeController do
         body = "host=foo_bar"
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//div[./form]/p").first.text).to match(/scheme must be present/)
+        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first.text).to match(/scheme must be present/)
       end
 
       it "rerenders if params are invalid" do
@@ -49,6 +49,7 @@ Spectator.describe HomeController do
         body = "host=https://foo_bar"
         expect{post "/", headers, body}.to change{Balloon.host?}
         expect(response.status_code).to eq(302)
+        expect(response.headers.to_a).to have({"Location", ["/"]})
       end
 
       it "sets host and redirects" do
@@ -56,6 +57,7 @@ Spectator.describe HomeController do
         body = {host: "https://foo_bar"}.to_json
         expect{post "/", headers, body}.to change{Balloon.host?}
         expect(response.status_code).to eq(302)
+        expect(response.headers.to_a).to have({"Location", ["/"]})
       end
     end
   end
@@ -66,7 +68,7 @@ Spectator.describe HomeController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//form[./input[@name='username']][./input[@name='password']][./input[@name='name']][./input[@name='summary']]")).not_to be_empty
+        expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='username']][.//input[@name='password']][.//input[@name='name']][.//input[@name='summary']]")).not_to be_empty
       end
 
       it "returns a template" do
@@ -97,7 +99,7 @@ Spectator.describe HomeController do
         body = "username=&password=a1!&name=&summary="
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//div[./form]/p").first.text).to match(/username is too short, password is too short/)
+        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first.text).to match(/username is too short, password is too short/)
       end
 
       it "rerenders if params are invalid" do
@@ -138,22 +140,44 @@ Spectator.describe HomeController do
     end
   end
 
-  context "home page" do
+  context "when requesting the home page" do
     let!(account) { register(username, password) }
 
-    describe "GET /" do
-      it "renders a list of local actors" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/", headers
-        expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'card')][contains(@href,'#{username}')]/@href").map(&.text)).to have(/\/actors\/#{username}/)
-      end
+    context "if unauthenticated" do
+      describe "GET /" do
+        it "renders a list of local actors" do
+          headers = HTTP::Headers{"Accept" => "text/html"}
+          get "/", headers
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'card')][contains(@href,'#{username}')]/@href").map(&.text)).to have(/\/actors\/#{username}/)
+        end
 
-      it "renders a list of local actors" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/", headers
-        expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body)["items"].as_a.first).to match(/actors\/#{username}/)
+        it "renders a list of local actors" do
+          headers = HTTP::Headers{"Accept" => "application/json"}
+          get "/", headers
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body)["items"].as_a).to have(/\/actors\/#{username}/)
+        end
+      end
+    end
+
+    context "if authenticated" do
+      sign_in(as: account.username)
+
+      describe "GET /" do
+        it "redirects to the user's page" do
+          headers = HTTP::Headers{"Accept" => "text/html"}
+          get "/", headers
+          expect(response.status_code).to eq(302)
+          expect(response.headers.to_a).to have({"Location", ["/actors\/#{username}"]})
+        end
+
+        it "redirects to the user's page" do
+          headers = HTTP::Headers{"Accept" => "application/json"}
+          get "/", headers
+          expect(response.status_code).to eq(302)
+          expect(response.headers.to_a).to have({"Location", ["/actors\/#{username}"]})
+        end
       end
     end
 

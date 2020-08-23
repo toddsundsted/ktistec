@@ -1,10 +1,12 @@
-<div>
-    <h1>Specify the Host</h1>
+<h1>Specify the Host</h1>
+<form class='ui form<%= error ? " error" : "" %>' method='POST'>
     <% if error %>
-        <p>Error: <%= error %></p>
+    <div class='ui error message'>
+        <div class='header'><%= error %></div>
+    </div>
     <% end %>
-    <form method='POST'>
+    <div class='field'>
         <input type='text' name='host' value='<%= _host %>'>
-        <input type='submit' value='Submit'>
-    </form>
-</div>
+    </div>
+    <input class='ui primary button' type='submit' value='Submit'>
+</form>

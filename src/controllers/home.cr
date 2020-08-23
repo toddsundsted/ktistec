@@ -28,7 +28,7 @@ class HomeController
         env.response.content_type = "application/json"
         render "src/views/home/step_2.json.ecr"
       end
-    else
+    elsif (account = env.current_account?).nil?
       if accepts?("text/html")
         env.response.content_type = "text/html"
         render "src/views/home/index.html.ecr", "src/views/layouts/default.html.ecr"
@@ -36,6 +36,8 @@ class HomeController
         env.response.content_type = "application/json"
         render "src/views/home/index.json.ecr"
       end
+    else
+      env.redirect actor_path(account)
     end
   end
 

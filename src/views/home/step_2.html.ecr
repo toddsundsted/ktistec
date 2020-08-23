@@ -1,13 +1,24 @@
-<div>
-    <h1>Create an Account</h1>
-    <%- unless account.errors.empty? && actor.errors.empty? -%>
-        <p>Error: <%= account.errors.merge(actor.errors).flat_map { |k, vs| vs.map { |v| "#{k} #{v}" } }.join(", ") %></p>
-    <%- end -%>
-    <form method='POST'>
+<h1>Create an Account</h1>
+<%- unless account.errors.empty? && actor.errors.empty? -%>
+<%- error = account.errors.merge(actor.errors).flat_map { |k, vs| vs.map { |v| "#{k} #{v}" } }.join(", ") -%>
+<%- end -%>
+<form class='ui form<%= error ? " error" : "" %>' method='POST'>
+    <% if error %>
+    <div class='ui error message'>
+        <div class='header'><%= error %></div>
+    </div>
+    <% end %>
+    <div class='field'>
         <input type='text' name='username' value='<%= account.username %>'>
+    </div>
+    <div class='field'>
         <input type='password' name='password' value='<%= account.password %>'>
-        <input type='name' name='name' value='<%= actor.name %>'>
-        <input type='summary' name='summary' value='<%= actor.summary %>'>
-        <input type='submit' value='Sign Up'>
-    </form>
-</div>
+    </div>
+    <div class='field'>
+        <input type='text' name='name' value='<%= actor.name %>'>
+    </div>
+    <div class='field'>
+        <input type='text' name='summary' value='<%= actor.summary %>'>
+    </div>
+    <input class='ui primary button' type='submit' value='Sign Up'>
+</form>

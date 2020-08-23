@@ -66,6 +66,14 @@ module Balloon
       "#{actor_path({{actor}})}/#{{{relationship}} || env.params.url["relationship"]}"
     end
 
+    macro outbox_path(actor = nil)
+      "#{actor_path({{actor}})}/outbox"
+    end
+
+    macro inbox_path(actor = nil)
+      "#{actor_path({{actor}})}/inbox"
+    end
+
     macro accepts?(mime_type)
       env.accepts?({{mime_type}})
     end

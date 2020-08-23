@@ -48,7 +48,7 @@ Spectator.describe LookupsController do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/search", headers
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//form[./input[@name='account']]")).not_to be_empty
+        expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='account']]")).not_to be_empty
       end
 
       it "presents a search form" do
@@ -67,7 +67,7 @@ Spectator.describe LookupsController do
           headers = HTTP::Headers{"Accept" => "text/html"}
           expect{get "/search?account=foo_bar@test.test", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/p/a[contains(text(),'foo_bar')]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//h1/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an actor" do
@@ -95,16 +95,19 @@ Spectator.describe LookupsController do
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
             get "/search?account=foo_bar@test.test", headers
-            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Follow']")).not_to be_empty
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Follow']")).not_to be_empty
           end
 
           context "with an existing relationship" do
-            let!(relationship) { Relationship::Social::Follow.new(from_iri: Global.account.try(&.iri), to_iri: actor.iri).save }
+            before_each do
+              ActivityPub::Activity::Follow.new(iri: "https://remote/#{random_string}", actor_iri: Global.account.try(&.iri), object_iri: actor.iri).save
+              Relationship::Social::Follow.new(from_iri: Global.account.try(&.iri), to_iri: actor.iri).save
+            end
 
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
               get "/search?account=foo_bar@test.test", headers
-              expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Unfollow']")).not_to be_empty
+              expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Unfollow']")).not_to be_empty
             end
           end
         end
@@ -119,7 +122,7 @@ Spectator.describe LookupsController do
           headers = HTTP::Headers{"Accept" => "text/html"}
           expect{get "/search?account=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/p/a[contains(text(),'foo_bar')]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//h1/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and stores an actor" do
@@ -147,16 +150,19 @@ Spectator.describe LookupsController do
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
             get "/search?account=https://test.test/actors/foo_bar", headers
-            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Follow']")).not_to be_empty
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Follow']")).not_to be_empty
           end
 
           context "with an existing relationship" do
-            let!(relationship) { Relationship::Social::Follow.new(from_iri: Global.account.try(&.iri), to_iri: actor.iri).save }
+            before_each do
+              ActivityPub::Activity::Follow.new(iri: "https://remote/#{random_string}", actor_iri: Global.account.try(&.iri), object_iri: actor.iri).save
+              Relationship::Social::Follow.new(from_iri: Global.account.try(&.iri), to_iri: actor.iri).save
+            end
 
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
               get "/search?account=https://test.test/actors/foo_bar", headers
-              expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'actor')]/form/input[@value='Unfollow']")).not_to be_empty
+              expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Unfollow']")).not_to be_empty
             end
           end
         end
@@ -167,7 +173,7 @@ Spectator.describe LookupsController do
           headers = HTTP::Headers{"Accept" => "text/html"}
           get "/search?account=foo_bar@no-such-host", headers
           expect(response.status_code).to eq(400)
-          expect(XML.parse_html(response.body).xpath_nodes("//p[@class='error message']").first.text).to match(/No such host/)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first.text).to match(/No such host/)
         end
 
         it "returns 400" do
@@ -183,7 +189,7 @@ Spectator.describe LookupsController do
           headers = HTTP::Headers{"Accept" => "text/html"}
           get "/search?account=bad-json@test.test", headers
           expect(response.status_code).to eq(400)
-          expect(XML.parse_html(response.body).xpath_nodes("//p[@class='error message']").first.text).to match(/Unexpected char/)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first.text).to match(/Unexpected char/)
         end
 
         it "returns 400" do

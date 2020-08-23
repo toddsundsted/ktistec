@@ -1,13 +1,17 @@
-<div>
-    <h1>Lookup</h1>
-    <% if message %>
-        <p class="error message">Error: <%= message %></p>
-    <% end %>
-    <form method='GET'>
-        <input type='text' name='account' value='<%= account %>'>
-        <input type='submit' value='Lookup'>
-    </form>
-</div>
 <%- if actor -%>
-    <%= render "src/views/partials/actor-medium.html.ecr" %>
+<%= render "src/views/partials/actor-medium.html.slang" %>
+<h1>Search Again</h1>
+<%- else -%>
+<h1>Search</h1>
 <%- end -%>
+<form class='ui form<%= message ? " error" : "" %>' method='GET'>
+    <%- if message -%>
+    <div class='ui error message'>
+        <div class='header'><%= message %></div>
+    </div>
+    <%- end -%>
+    <div class='field'>
+        <input type='text' name='account' value='<%= account %>'>
+    </div>
+    <input class='ui primary button' type='submit' value='Search'>
+</form>

@@ -41,6 +41,9 @@ class RelationshipsController
       unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))
         bad_request
       end
+      unless object.object == account.actor
+        bad_request
+      end
       unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
         bad_request
       end
@@ -53,6 +56,9 @@ class RelationshipsController
       follow.assign(confirmed: true).save
     when "Reject"
       unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))
+        bad_request
+      end
+      unless object.object == account.actor
         bad_request
       end
       unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
@@ -182,12 +188,18 @@ class RelationshipsController
       unless activity.object?.try(&.local)
         bad_request
       end
+      unless activity.object.actor == account.actor
+        bad_request
+      end
       unless (follow = Relationship::Social::Follow.find?(from_iri: account.actor.iri, to_iri: activity.actor.iri))
         bad_request
       end
       follow.assign(confirmed: true).save
     when ActivityPub::Activity::Reject
       unless activity.object?.try(&.local)
+        bad_request
+      end
+      unless activity.object.actor == account.actor
         bad_request
       end
       unless (follow = Relationship::Social::Follow.find?(from_iri: account.actor.iri, to_iri: activity.actor.iri))

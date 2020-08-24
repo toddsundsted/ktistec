@@ -81,7 +81,7 @@ Spectator.describe RelationshipsController do
             confirmed: false
           ).save
         end
-        let(follow) do
+        let!(follow) do
           ActivityPub::Activity::Follow.new(
             iri: "https://test.test/activities/follow",
             actor: other,
@@ -91,6 +91,18 @@ Spectator.describe RelationshipsController do
 
         it "returns 400 if a follow activity does not exist" do
           post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=https://remote/activities/follow"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the follow activity does not belong to the actor" do
+          follow.assign(object: other).save
+          post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the relationship does not exist" do
+          relationship.destroy
+          post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"
           expect(response.status_code).to eq(400)
         end
 
@@ -123,7 +135,7 @@ Spectator.describe RelationshipsController do
             confirmed: true
           ).save
         end
-        let(follow) do
+        let!(follow) do
           ActivityPub::Activity::Follow.new(
             iri: "https://test.test/activities/follow",
             actor: other,
@@ -133,6 +145,18 @@ Spectator.describe RelationshipsController do
 
         it "returns 400 if a follow activity does not exist" do
           post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=https://remote/activities/follow"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the follow activity does not belong to the actor" do
+          follow.assign(object: other).save
+          post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the relationship does not exist" do
+          relationship.destroy
+          post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"
           expect(response.status_code).to eq(400)
         end
 
@@ -562,6 +586,12 @@ Spectator.describe RelationshipsController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 400 if it's not accepting the actor's follow" do
+        follow.assign(actor: other).save
+        post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
       it "accepts the relationship" do
         expect{post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld}.
           to change{Relationship.find(relationship.id).confirmed}
@@ -602,6 +632,12 @@ Spectator.describe RelationshipsController do
 
       it "returns 400 if related activity does not exist" do
         follow.destroy
+        post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if it's not rejecting the actor's follow" do
+        follow.assign(actor: other).save
         post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
         expect(response.status_code).to eq(400)
       end

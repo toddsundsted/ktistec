@@ -349,35 +349,61 @@ Spectator.describe RelationshipsController do
     end
 
     context "when unsigned" do
+      let(note) do
+        ActivityPub::Object::Note.new(
+          iri: "https://remote/objects/note"
+        )
+      end
       let(activity) do
-        ActivityPub::Activity::Follow.new(
-          iri: "https://remote/activities/follow",
-          actor_iri: other.iri,
-          object_iri: actor.iri
+        ActivityPub::Activity::Create.new(
+          iri: "https://remote/activities/create",
+          actor: other,
+          object: note
         )
       end
 
       before_each { HTTP::Client.activities << activity }
 
       it "retrieves the activity from the origin" do
-        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
         expect(HTTP::Client.requests).to have("GET #{activity.iri}")
       end
 
       it "saves the activity" do
-        expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
+        expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)}.
           to change{ActivityPub::Activity.count}.by(1)
+      end
+
+      context "and the actor is remote" do
+        before_each { HTTP::Client.actors << other.destroy }
+
+        it "retrieves the actor from the origin" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
+          expect(HTTP::Client.requests).to have("GET #{other.iri}")
+        end
+
+        it "saves the actor" do
+          expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)}.
+            to change{ActivityPub::Actor.count}.by(1)
+        end
       end
     end
 
     context "when signed" do
-      let(activity) do
-        ActivityPub::Activity::Follow.new(
-          iri: "https://remote/activities/follow",
-          actor_iri: other.iri,
-          object_iri: actor.iri
+      let(note) do
+        ActivityPub::Object::Note.new(
+          iri: "https://remote/objects/note"
         )
       end
+      let(activity) do
+        ActivityPub::Activity::Create.new(
+          iri: "https://remote/activities/create",
+          actor_iri: other.iri,
+          object_iri: note.iri
+        )
+      end
+
+      before_each { HTTP::Client.objects << note }
 
       let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
 

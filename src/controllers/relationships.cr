@@ -141,7 +141,7 @@ class RelationshipsController
     if (actor_iri = activity.actor_iri)
       unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!env.request.headers["Signature"]? || actor.pem_public_key)
         open?(actor_iri) do |response|
-          actor = ActivityPub::Actor.from_json_ld?(response.body, include_key: true).try(&.save)
+          actor = ActivityPub::Actor.from_json_ld?(response.body, include_key: true)
         end
       end
     end
@@ -166,6 +166,10 @@ class RelationshipsController
 
     unless actor
       bad_request("Actor Not Present")
+    end
+
+    if activity.responds_to?(:actor=)
+      activity.actor = actor
     end
 
     case activity

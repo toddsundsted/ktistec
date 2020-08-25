@@ -117,6 +117,39 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#thread" do
+    subject { described_class.new(iri: "https://test.test/objects/#{random_string}").save }
+
+    macro reply_to!(object, reply)
+      let!({{reply}}) do
+        described_class.new(
+          iri: "https://test.test/objects/#{random_string}",
+          in_reply_to: {{object}}
+        ).save
+      end
+    end
+
+    # Nesting:
+    # S           id=1
+    #   1         id=2
+    #     2       id=4
+    #       3     id=5
+    #   4         id=3
+    #     5       id=6
+
+    reply_to!(subject, object1)
+    reply_to!(subject, object4)
+    reply_to!(object1, object2)
+    reply_to!(object2, object3)
+    reply_to!(object4, object5)
+
+    it "returns all replies properly nested" do
+      expect(subject.thread).to eq([subject, object1, object2, object3, object4, object5])
+      expect(object1.thread).to eq([subject, object1, object2, object3, object4, object5])
+      expect(object5.thread).to eq([subject, object1, object2, object3, object4, object5])
+    end
+  end
+
   describe "#local" do
     it "indicates if the object is local" do
       expect(described_class.new(iri: "https://test.test/foo_bar").local).to be_true

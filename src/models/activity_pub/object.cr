@@ -113,6 +113,60 @@ module ActivityPub
       end
     end
 
+    @[Assignable]
+    property depth : Int32 { 0 }
+
+    def thread
+      {% begin %}
+        {% vs = ActivityPub::Object.instance_vars.select(&.annotation(Persistent)) %}
+        query = <<-QUERY
+          WITH RECURSIVE
+           ancestors_of(iri, depth) AS (
+                VALUES(?, 0)
+                 UNION
+                SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
+                  FROM objects AS o, ancestors_of AS p
+                 WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
+              ORDER BY depth DESC
+           ),
+           replies_to(iri, depth) AS (
+              SELECT * FROM (SELECT iri, 0 FROM ancestors_of ORDER BY depth DESC LIMIT 1)
+                 UNION
+                SELECT o.iri, r.depth + 1 AS depth
+                  FROM objects AS o, replies_to AS r
+                 WHERE o.in_reply_to_iri = r.iri
+              ORDER BY depth DESC
+            )
+        SELECT {{ vs.map{ |v| "o.\"#{v}\"" }.join(",").id }}, r.depth
+          FROM objects AS o, replies_to AS r
+         WHERE o.iri IN (r.iri)
+        QUERY
+        Array(Object).new.tap do |array|
+          Balloon.database.query(
+            query, self.iri
+          ) do |rs|
+            rs.each do
+              attrs = {
+               {% for v in vs %}
+                 {{v}}: rs.read({{v.type}}),
+               {% end %}
+               depth: rs.read(Int32)
+              }
+              array <<
+                case attrs[:type]
+                {% for subclass in ActivityPub::Object.all_subclasses %}
+                  when {{name = subclass.stringify}}
+                    {{subclass}}.new(**attrs)
+                {% end %}
+                else
+                  ActivityPub::Object.new(**attrs)
+                end
+            end
+          end
+        end
+      {% end %}
+    end
+
     def to_json_ld(recursive = false)
       object = self
       render "src/views/objects/object.json.ecr"

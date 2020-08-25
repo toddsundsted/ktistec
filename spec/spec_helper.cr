@@ -175,7 +175,7 @@ class HTTP::Client
       HTTP::Client::Response.new(
         (activity = @@activities.find { |a| a.iri == url.to_s }) ? 200 : 404,
         headers: HTTP::Headers.new,
-        body: activity ? activity.to_json_ld : nil
+        body: activity ? activity.to_json_ld(recursive: true) : nil
       )
     when /actors\/([^\/]+)\/([^\/]+)/
       HTTP::Client::Response.new(

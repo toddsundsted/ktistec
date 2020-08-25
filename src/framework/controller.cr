@@ -88,7 +88,7 @@ module Balloon
           halt env, status_code: \{{code}}, response: render "src/views/pages/generic.html.ecr", "src/views/layouts/default.html.ecr"
         else
           env.response.content_type = "application/json"
-          halt env, status_code: \{{code}}, response: %<{"msg":\{{message}}}>
+          halt env, status_code: \{{code}}, response: %<{"msg":\{{message.downcase}}}>
         end
       end
     end

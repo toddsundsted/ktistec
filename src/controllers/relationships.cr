@@ -161,7 +161,11 @@ class RelationshipsController
     end
 
     unless activity && verified
-      bad_request
+      bad_request("Can't Be Verified")
+    end
+
+    unless actor
+      bad_request("Actor Not Present")
     end
 
     case activity
@@ -229,7 +233,7 @@ class RelationshipsController
         bad_request
       end
     else
-      bad_request
+      bad_request("Activity Not Supported")
     end
 
     activity.save

@@ -321,16 +321,25 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(404)
     end
 
-    it "returns 400 if activity is not supported" do
-      HTTP::Client.activities << activity
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).to eq(400)
-    end
-
     it "ignores the activity if it already exists" do
       activity.save
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(response.status_code).to eq(200)
+    end
+
+    it "returns 400 if activity is not supported" do
+      HTTP::Client.activities << activity
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(JSON.parse(response.body)["msg"]).to eq("activity not supported")
+      expect(response.status_code).to eq(400)
+    end
+
+    it "returns 400 if actor is not present" do
+      activity.actor_iri = nil
+      HTTP::Client.activities << activity
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(JSON.parse(response.body)["msg"]).to eq("actor not present")
+      expect(response.status_code).to eq(400)
     end
 
     it "does not save the activity on failure" do
@@ -422,7 +431,6 @@ Spectator.describe RelationshipsController do
 
         context "which can't authenticate the activity" do
           before_each do
-            HTTP::Client.activities << activity
             pem_public_key, other.pem_public_key = other.pem_public_key, ""
             HTTP::Client.actors << other.save
             other.pem_public_key = pem_public_key
@@ -431,6 +439,12 @@ Spectator.describe RelationshipsController do
           it "retrieves the activity from the origin" do
             post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
             expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+          end
+
+          it "returns 400 if the activity can't be verified" do
+            post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+            expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+            expect(response.status_code).to eq(400)
           end
         end
       end

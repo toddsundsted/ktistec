@@ -27,6 +27,28 @@ class ObjectsController
     render "src/views/objects/object.json.ecr"
   end
 
+  macro depth(object)
+    "depth-#{{{object}}.depth}"
+  end
+
+  get "/remote/objects/:id/thread" do |env|
+    id = env.params.url["id"].to_i64
+
+    unless (object = get_object(env, id))
+      not_found
+    end
+
+    thread = object.thread
+
+    if accepts?("text/html")
+      env.response.content_type = "text/html"
+      render "src/views/objects/thread.html.slang", "src/views/layouts/default.html.ecr"
+    else
+      env.response.content_type = "application/activity+json"
+      render "src/views/objects/thread.json.ecr"
+    end
+  end
+
   private def self.get_object(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id))
       if object.visible

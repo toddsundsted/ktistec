@@ -1,0 +1,10 @@
+{
+  "@context":"https://www.w3.org/ns/activitystreams",
+  "type":"Collection",
+  "id":<%= "#{object.iri}/thread".inspect %>,
+  "items":[
+    <%- thread.each_with_index do |reply, i| -%>
+    <%= reply.to_json_ld %><%= comma(thread, i) %>
+    <%- end -%>
+  ]
+}

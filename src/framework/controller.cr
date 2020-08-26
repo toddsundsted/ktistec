@@ -74,6 +74,14 @@ module Balloon
       "#{actor_path({{actor}})}/inbox"
     end
 
+    macro anchor(object)
+      "object-#{{{object}}.id}"
+    end
+
+    macro remote_thread_path(object)
+      "/remote/objects/#{{{object}}.id}/thread#object-#{{{object}}.id}"
+    end
+
     macro accepts?(mime_type)
       env.accepts?({{mime_type}})
     end
@@ -127,6 +135,13 @@ module Balloon
     #
     macro s(str)
       Balloon::Util.sanitize({{str}})
+    end
+
+    # Emits a comma when one would be necessary when iterating through
+    # a collection.
+    #
+    macro comma(collection, counter)
+      {{counter}} < {{collection}}.size - 1 ? "," : ""
     end
 
     # Generates a random, URL-safe identifier.

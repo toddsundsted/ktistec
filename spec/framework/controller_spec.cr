@@ -21,6 +21,7 @@ class FooBarController
     "/foo/bar/accept",
     "/foo/bar/escape",
     "/foo/bar/sanitize",
+    "/foo/bar/comma",
     "/foo/bar/id"
   ]
 
@@ -29,7 +30,9 @@ class FooBarController
       host: host,
       home_path: home_path,
       sessions_path: sessions_path,
-      back_path: back_path
+      back_path: back_path,
+      remote_thread_path: remote_thread_path(OBJECT),
+      anchor: anchor(OBJECT)
     }.to_json
   end
 
@@ -106,6 +109,15 @@ class FooBarController
     s "<body>Foo Bar</body>"
   end
 
+  get "/foo/bar/comma" do |env|
+    String.build do |s|
+      ns = env.params.query["n"].split
+      ns.each_with_index do |n, i|
+        s << "#{n}#{comma(ns, i)}"
+      end
+    end
+  end
+
   get "/foo/bar/id" do |env|
     id
   end
@@ -131,6 +143,18 @@ Spectator.describe Balloon::Controller do
     it "gets the back path" do
       get "/foo/bar/helpers", HTTP::Headers{"Referer" => "/back"}
       expect(JSON.parse(response.body)["back_path"]).to eq("/back")
+    end
+
+    let(oid) { FooBarController::OBJECT.id }
+
+    it "gets the remote thread path" do
+      get "/foo/bar/helpers"
+      expect(JSON.parse(response.body)["remote_thread_path"]).to eq("/remote/objects/#{oid}/thread#object-#{oid}")
+    end
+
+    it "gets the anchor" do
+      get "/foo/bar/helpers"
+      expect(JSON.parse(response.body)["anchor"]).to eq("object-#{oid}")
     end
 
     it "gets the remote activity path" do
@@ -221,6 +245,13 @@ Spectator.describe Balloon::Controller do
     it "sanitizes HTML" do
       get "/foo/bar/sanitize"
       expect(response.body).to eq("<p>Foo Bar</p>")
+    end
+  end
+
+  describe "/foo/bar/comma" do
+    it "adds a comma where appropriate" do
+      get "/foo/bar/comma?n=1 2 3 4 5 6"
+      expect(response.body).to eq("1,2,3,4,5,6")
     end
   end
 

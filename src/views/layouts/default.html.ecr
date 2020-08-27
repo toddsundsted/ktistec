@@ -7,10 +7,8 @@
         <script src="/jquery.min.js"></script>
         <link rel="stylesheet" href="/semantic.min.css">
         <script src="/semantic.min.js"></script>
-        <style>
-          html { font-size: 16px; }
-          .ui.fixed.menu + .ui.container { padding-top: 3.65rem; }
-        </style>
+        <style><%= render "src/views/pages/ktistec.css.ecr" %></style>
+        <script><%= render "src/views/pages/ktistec.js.ecr" %></script>
         <%= yield_content("head") %>
     </head>
     <body>

@@ -12,6 +12,10 @@ module Balloon
   #
   class Method < Kemal::Handler
     def call(env)
+      # don't run this handler for image uploads. the use of
+      # `env.params.body` below breaks the form data processing in the
+      # uploads controller.
+      return call_next env if env.request.path == "/uploads"
       return call_next env unless env.request.method == "POST"
       return call_next env unless env.params.body["_method"]? == "delete"
 

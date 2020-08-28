@@ -102,6 +102,7 @@ module Balloon
     end
 
     def_response_helper(ok, 200, "OK")
+    def_response_helper(created, 201, "Created")
     def_response_helper(bad_request, 400, "Bad Request")
     def_response_helper(forbidden, 403, "Forbidden")
     def_response_helper(not_found, 404, "Not Found")

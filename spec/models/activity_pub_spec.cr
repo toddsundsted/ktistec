@@ -1,8 +1,7 @@
 require "../spec_helper"
 
 Spectator.describe ActivityPub do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   describe ".from_json_ld" do
     it "raises an error if the type is not supported" do

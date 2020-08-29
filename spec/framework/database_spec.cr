@@ -10,8 +10,7 @@ class TestMigraton
 end
 
 Spectator.describe Balloon::Database do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   let!(test) { TestMigraton.new("999999-test-migration.cr") }
 

@@ -1,8 +1,7 @@
 require "../../spec_helper"
 
 Spectator.describe ActivityPub::Collection do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   context "when validating" do
     let!(collection) { described_class.new(iri: "http://test.test/foo_bar").save }

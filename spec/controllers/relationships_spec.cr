@@ -1,9 +1,7 @@
 require "../spec_helper"
 
 Spectator.describe RelationshipsController do
-  before_each { HTTP::Client.reset }
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   describe "POST /actors/:username/outbox" do
     let(actor) { register(with_keys: true).actor }

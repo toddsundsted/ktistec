@@ -223,6 +223,12 @@ class String
   end
 end
 
+macro setup_spec
+  before_each { HTTP::Client.reset }
+  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
+  after_each { Balloon.database.exec "ROLLBACK" }
+end
+
 require "../src/framework"
 
 module Balloon

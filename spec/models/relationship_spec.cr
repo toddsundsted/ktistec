@@ -6,8 +6,7 @@ class FooBarRelationship < Relationship
 end
 
 Spectator.describe Relationship do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   context "validations" do
     let(options) do

@@ -15,8 +15,7 @@ class FooBarController
 end
 
 Spectator.describe Balloon::Auth do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   let(username) { random_string }
   let(password) { random_string }

@@ -1,8 +1,7 @@
 require "../spec_helper"
 
 Spectator.describe Balloon::Signature do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   let(actor) { register(with_keys: true).actor.save }
 

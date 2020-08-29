@@ -7,8 +7,7 @@ class FooBarActivity < ActivityPub::Activity
 end
 
 Spectator.describe ActivityPub::Activity do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   context "when validating" do
     let!(activity) { described_class.new(iri: "https://test.test/foo_bar").save }

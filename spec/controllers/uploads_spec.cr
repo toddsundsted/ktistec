@@ -1,6 +1,8 @@
 require "../spec_helper"
 
 Spectator.describe UploadsController do
+  setup_spec
+
   around_each do |example|
     previous, Kemal.config.public_folder = Kemal.config.public_folder, Dir.tempdir
     example.call

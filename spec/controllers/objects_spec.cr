@@ -1,8 +1,7 @@
 require "../spec_helper"
 
 Spectator.describe ObjectsController do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   let!(visible) do
     ActivityPub::Object.new(iri: "https://test.test/objects/#{random_string}", visible: true).save

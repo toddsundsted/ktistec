@@ -1,8 +1,7 @@
 require "../spec_helper"
 
 Spectator.describe ActorsController do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   describe "GET /actors/:username" do
     let(username) { random_string }

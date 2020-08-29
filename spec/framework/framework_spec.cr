@@ -10,8 +10,7 @@ Spectator.describe Balloon do
   end
 
   context "host" do
-    before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-    after_each { Balloon.database.exec "ROLLBACK" }
+    setup_spec
 
     it "raises an error when not set" do
       Balloon.clear_host

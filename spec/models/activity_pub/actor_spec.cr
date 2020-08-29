@@ -4,8 +4,7 @@ class FooBarActor < ActivityPub::Actor
 end
 
 Spectator.describe ActivityPub::Actor do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   let(username) { random_string }
   let(password) { random_string }

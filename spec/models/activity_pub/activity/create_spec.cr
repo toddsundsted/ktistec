@@ -1,8 +1,7 @@
 require "../../../spec_helper"
 
 Spectator.describe ActivityPub::Activity::Create do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   subject { described_class.new(iri: "http://test.test/#{random_string}").save }
 

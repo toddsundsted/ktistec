@@ -24,9 +24,7 @@ module WebFinger
 end
 
 Spectator.describe LookupsController do
-  before_each { HTTP::Client.reset }
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   describe "GET /search" do
     it "returns 401 if not authorized" do

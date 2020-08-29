@@ -1,8 +1,7 @@
 require "../spec_helper"
 
 Spectator.describe HomeController do
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  setup_spec
 
   let(username) { random_string }
   let(password) { random_string }

@@ -218,8 +218,13 @@ end
 
 class String
   def ===(other : HTTP::Request)
-    method, resource = self.split
-    other.method == method && other.resource == resource
+    "#{other.method} #{other.resource}" == self
+  end
+end
+
+class Regex
+  def ===(other : HTTP::Request)
+    "#{other.method} #{other.resource}" =~ self
   end
 end
 

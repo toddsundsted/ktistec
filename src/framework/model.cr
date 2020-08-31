@@ -494,7 +494,7 @@ module Balloon
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           json.object do
             {% for v in vs %}
-              json.field({{v.stringify}}, {{v}})
+              json.field({{v.stringify}}, self.{{v}})
             {% end %}
           end
         {% end %}
@@ -505,7 +505,7 @@ module Balloon
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           {% for v in vs %}
-            io << " " << {{v.stringify}} << "=" << {{v}}.inspect
+            io << " " << {{v.stringify}} << "=" << self.{{v}}.inspect
           {% end %}
         {% end %}
       end
@@ -515,7 +515,7 @@ module Balloon
           {
             {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
             {% for v in vs %}
-              {{v.stringify}} => {{v}},
+              {{v.stringify}} => self.{{v}},
             {% end %}
           }
         {% end %}

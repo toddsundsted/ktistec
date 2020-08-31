@@ -140,7 +140,7 @@ module Balloon
           )
         {% end %}
       rescue ex: DB::Error
-        raise NotFound.new if ex.message == "no rows"
+        raise NotFound.new("#{self}: #{id}") if ex.message == "no rows"
         raise ex
       end
 
@@ -178,7 +178,7 @@ module Balloon
           )
         {% end %}
       rescue ex: DB::Error
-        raise NotFound.new if ex.message == "no rows"
+        raise NotFound.new("#{self}: #{options}") if ex.message == "no rows"
         raise ex
       end
 

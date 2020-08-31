@@ -84,6 +84,14 @@ class NotNilModel
   end
 end
 
+class DerivedModel < FooBarModel
+  @@table_name = "foo_bar_models"
+end
+
+class AnotherModel < NotNilModel
+  @@table_name = "not_nil_models"
+end
+
 Spectator.describe Balloon::Model::Utils do
   describe ".table_name" do
     it "returns the table name" do
@@ -358,8 +366,8 @@ Spectator.describe Balloon::Model do
       end
 
       it "saves the associated instance" do
-        not_nil_model = NotNilModel.new(val: "Val")
-        expect{FooBarModel.new(not_nil_model: not_nil_model).save}.to change{not_nil_model.id}
+        another_model = AnotherModel.new(val: "Val")
+        expect{DerivedModel.new(not_nil_model: another_model).save}.to change{another_model.id}
       end
     end
 
@@ -391,8 +399,8 @@ Spectator.describe Balloon::Model do
       end
 
       it "saves the associated instance" do
-        not_nil_model = NotNilModel.new(val: "Val")
-        expect{FooBarModel.new.save.assign(not_nil_model: not_nil_model).save}.to change{not_nil_model.id}
+        another_model = AnotherModel.new(val: "Val")
+        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save}.to change{another_model.id}
       end
     end
   end

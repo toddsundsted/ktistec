@@ -469,7 +469,10 @@ module Balloon
               {% end %}
             ).last_insert_id
           end
-          {% for d in @type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
+          {% ancestors = @type.ancestors << @type %}
+          {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+          {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
+          {% for d in methods %}
             if (%body = {{d.body}})
               %body.responds_to?(:each) ? %body.each(&.save) : %body.save
             end

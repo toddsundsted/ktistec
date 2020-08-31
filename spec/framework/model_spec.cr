@@ -348,6 +348,11 @@ Spectator.describe Balloon::Model do
         expect{new_model.save}.to change{new_model.id}
       end
 
+      it "saves a new instance with an assigned id" do
+        new_model = FooBarModel.new(id: 9999_i64)
+        expect{new_model.save}.to change{FooBarModel.count}.by(1)
+      end
+
       it "raises an exception" do
         new_model = NotNilModel.new(val: "")
         expect{new_model.save}.to raise_error(Balloon::Model::Invalid)
@@ -379,6 +384,11 @@ Spectator.describe Balloon::Model do
       it "does not assign an id" do
         saved_model = FooBarModel.new.save
         expect{saved_model.save}.not_to change{saved_model.id}
+      end
+
+      it "does not save a new instance with an assigned id" do
+        new_model = FooBarModel.new(id: 9999_i64).save
+        expect{new_model.save}.not_to change{FooBarModel.count}
       end
 
       it "raises an exception" do

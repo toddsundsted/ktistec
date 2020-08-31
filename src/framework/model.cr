@@ -445,23 +445,19 @@ module Balloon
         raise Invalid.new(errors) unless valid?
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          columns = {{vs.map(&.stringify.stringify).join(",")}}
+          conditions = (["?"] * {{vs.size}}).join(",")
+          if self.responds_to?(:updated_at=)
+            self.updated_at = Time.utc
+          end
           if @id
-            if self.responds_to?(:updated_at=)
-              self.updated_at = Time.utc
-            end
-            conditions = {{vs.map(&.stringify.stringify)}}.map do |v|
-              "#{v} = ?"
-            end.join(",")
             Balloon.database.exec(
-              "UPDATE #{table_name} SET #{conditions} WHERE id = ?",
+              "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{conditions})",
               {% for v in vs %}
                 self.{{v}},
               {% end %}
-              @id
             )
           else
-            columns = {{vs.map(&.stringify.stringify).join(",")}}
-            conditions = (["?"] * {{vs.size}}).join(",")
             @id = Balloon.database.exec(
               "INSERT INTO #{table_name} (#{columns}) VALUES (#{conditions})",
               {% for v in vs %}

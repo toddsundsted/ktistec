@@ -37,11 +37,13 @@ module Balloon
                     unless ({{name}} = self.{{name}}?)
                       if ({{name}}_iri = self.{{name}}_iri) && dereference
                         unless {{name}}_iri.starts_with?(Balloon.host)
-                          {{m.return_type}}.open?({{name}}_iri) do |response|
-                            if ({{name}} = {{m.return_type}}.from_json_ld?(response.body))
-                              self.{{name}} = {{name}}
+                          {% for union_type in m.return_type.id.split("|").map(&.strip.id) %}
+                            {{union_type}}.open?({{name}}_iri) do |response|
+                              if ({{name}} = {{union_type}}.from_json_ld?(response.body))
+                                return self.{{name}} = {{name}}
+                              end
                             end
-                          end
+                          {% end %}
                         end
                       end
                     end

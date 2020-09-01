@@ -92,6 +92,14 @@ class AnotherModel < NotNilModel
   @@table_name = "not_nil_models"
 end
 
+class UnionAssociationModel
+  include Balloon::Model(None)
+
+  @[Assignable]
+  property model_id : Int64?
+  belongs_to model, class_name: FooBarModel | NotNilModel
+end
+
 Spectator.describe Balloon::Model::Utils do
   describe ".table_name" do
     it "returns the table name" do
@@ -446,6 +454,7 @@ Spectator.describe Balloon::Model do
   context "associations" do
     let(foo_bar) { FooBarModel.new.save }
     let(not_nil) { NotNilModel.new(val: "Val").save }
+    let(union) { UnionAssociationModel.new }
 
     it "assigns the associated instance" do
       expect(foo_bar.not_nil_model?).to be_nil
@@ -525,6 +534,14 @@ Spectator.describe Balloon::Model do
       (not_nil.foo_bar_model_id = 999999) && not_nil.save
       expect(not_nil.foo_bar?).to be_nil
       expect(foo_bar.not_nil?).to be_nil
+    end
+
+    it "returns the correct instance" do
+      expect(union.assign(model_id: not_nil.id).model).to eq(not_nil)
+    end
+
+    it "returns the correct instance" do
+      expect(union.assign(model_id: foo_bar.id).model).to eq(foo_bar)
     end
   end
 

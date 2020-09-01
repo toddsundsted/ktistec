@@ -347,25 +347,34 @@ module Balloon
       # Specifies a one-to-one association with another model.
       #
       macro belongs_to(name, primary_key = id, foreign_key = nil, class_name = nil)
-        {% begin %}
-          {% foreign_key = foreign_key || "#{name}_id".id %}
-          {% class_name = class_name || name.stringify.camelcase.id %}
-          @[Assignable]
-          @{{name}} : {{class_name}}?
-          def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
-            self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
-            {{name}}
+        {% foreign_key = foreign_key || "#{name}_id".id %}
+        {% class_name = class_name ? class_name.id : name.stringify.camelcase.id %}
+        {% union_types = class_name.split("|").map(&.strip.id) %}
+        @[Assignable]
+        @{{name}} : {{class_name}}?
+        def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
+          self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
+          {{name}}
+        end
+        def {{name}}? : {{class_name}}?
+          @{{name}} ||= begin
+            {% for union_type in union_types %}
+              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}) ||
+            {% end %}
+            nil
           end
-          def {{name}}? : {{class_name}}?
-            @{{name}} ||= {{class_name}}.find?({{primary_key}}: self.{{foreign_key}})
+        end
+        def {{name}} : {{class_name}}
+          @{{name}} ||= begin
+            {% for union_type in union_types %}
+              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}) ||
+            {% end %}
+            raise NotFound.new
           end
-          def {{name}} : {{class_name}}
-            @{{name}} ||= {{class_name}}.find({{primary_key}}: self.{{foreign_key}})
-          end
-          def _belongs_to_{{name}} : {{class_name}}
-            @{{name}}
-          end
-        {% end %}
+        end
+        def _belongs_to_{{name}} : {{class_name}}
+          @{{name}}
+        end
       end
 
       # Specifies a one-to-many association with another model.

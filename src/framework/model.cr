@@ -380,52 +380,48 @@ module Balloon
       # Specifies a one-to-many association with another model.
       #
       macro has_many(name, primary_key = id, foreign_key = nil, class_name = nil)
-        {% begin %}
-          {% singular = name.stringify %}
-          {% singular = singular =~ /(ses|sses|shes|ches|xes|zes)$/ ? singular[0..-3] : singular[0..-2] %}
-          {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
-          {% class_name = class_name || singular.camelcase.id %}
-          @[Assignable]
-          @{{name}} : Enumerable({{class_name}})?
-          def {{name}}=(@{{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
-            {{name}}.each { |n| n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}})) }
-            {{name}}
+        {% singular = name.stringify %}
+        {% singular = singular =~ /(ses|sses|shes|ches|xes|zes)$/ ? singular[0..-3] : singular[0..-2] %}
+        {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
+        {% class_name = class_name || singular.camelcase.id %}
+        @[Assignable]
+        @{{name}} : Enumerable({{class_name}})?
+        def {{name}}=(@{{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
+          {{name}}.each { |n| n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}})) }
+          {{name}}
+        end
+        def {{name}} : Enumerable({{class_name}})
+          {{name}} = @{{name}}
+          if {{name}}.nil? || {{name}}.empty?
+            @{{name}} = {{class_name}}.where({{foreign_key}}: self.{{primary_key}})
           end
-          def {{name}} : Enumerable({{class_name}})
-            {{name}} = @{{name}}
-            if {{name}}.nil? || {{name}}.empty?
-              @{{name}} = {{class_name}}.where({{foreign_key}}: self.{{primary_key}})
-            end
-            @{{name}}.not_nil!
-          end
-          def _belongs_to_{{name}} : Enumerable({{class_name}})
-            @{{name}}
-          end
-        {% end %}
+          @{{name}}.not_nil!
+        end
+        def _belongs_to_{{name}} : Enumerable({{class_name}})
+          @{{name}}
+        end
       end
 
       # Specifies a one-to-one association with another model.
       #
       macro has_one(name, primary_key = id, foreign_key = nil, class_name = nil)
-        {% begin %}
-          {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
-          {% class_name = class_name || name.stringify.camelcase.id %}
-          @[Assignable]
-          @{{name}} : {{class_name}}?
-          def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
-            {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
-            {{name}}
-          end
-          def {{name}}? : {{class_name}}?
-            @{{name}} ||= {{class_name}}.find?({{foreign_key}}: self.{{primary_key}})
-          end
-          def {{name}} : {{class_name}}
-            @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}})
-          end
-          def _belongs_to_{{name}} : {{class_name}}
-            @{{name}}
-          end
-        {% end %}
+        {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
+        {% class_name = class_name || name.stringify.camelcase.id %}
+        @[Assignable]
+        @{{name}} : {{class_name}}?
+        def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
+          {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
+          {{name}}
+        end
+        def {{name}}? : {{class_name}}?
+          @{{name}} ||= {{class_name}}.find?({{foreign_key}}: self.{{primary_key}})
+        end
+        def {{name}} : {{class_name}}
+          @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}})
+        end
+        def _belongs_to_{{name}} : {{class_name}}
+          @{{name}}
+        end
       end
 
       # Specifies a serializer for a column.

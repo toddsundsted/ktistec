@@ -57,6 +57,9 @@ module Balloon
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           conditions =
             [
+              {% if @type < Deletable %}
+                "deleted_at IS NULL",
+              {% end %}
               {% if @type < Polymorphic %}
                 "type IN (%s)" % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
               {% end %}
@@ -238,6 +241,9 @@ module Balloon
       #
       def validate
         @errors.clear
+        {% if @type < Deletable %}
+          return @errors if self.deleted?
+        {% end %}
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
@@ -386,6 +392,9 @@ module Balloon
       # Saves the instance.
       #
       def save
+        {% if @type < Deletable %}
+          return self if self.deleted?
+        {% end %}
         raise Invalid.new(errors) unless valid?
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}

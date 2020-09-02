@@ -45,37 +45,36 @@ module Balloon
         count == 0
       end
 
+      private def columns
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          {{vs.map(&.stringify.stringify).join(",")}}
+        {% end %}
+      end
+
+      private def conditions(*terms, **options)
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          conditions =
+            [
+              {% if @type < Polymorphic %}
+                "type IN (%s)" % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
+              {% end %}
+            ] of String +
+            options.keys.select { |o| o.in?({{vs.map(&.symbolize)}}) }.map { |v| "#{v} = ?" } +
+            terms.to_a
+          conditions.size > 0 ?
+            "WHERE " + conditions.join(" AND ") :
+            ""
+        {% end %}
+      end
+
       # Returns the count of saved instances.
       #
       def count(**options)
-        if options.empty?
-          Balloon.database.scalar(
-            {% if @type < Balloon::Model::Polymorphic %}
-              "SELECT COUNT(*) FROM #{table_name} WHERE type IN (%s)" %
-              {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}}
-            {% else %}
-              "SELECT COUNT(*) FROM #{table_name}"
-            {% end %}
-          ).as(Int)
-        else
-          {% begin %}
-            {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-            conditions = options.keys.select do |o|
-              o.in?({{vs.map(&.symbolize)}})
-            end.map do |v|
-              "#{v} = ?"
-            end.join(" AND ")
-            Balloon.database.scalar(
-              {% if @type < Balloon::Model::Polymorphic %}
-                "SELECT COUNT(*) FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
-                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
-              {% else %}
-                "SELECT COUNT(*) FROM #{table_name} WHERE #{conditions}",
-              {% end %}
-              *options.values
-            ).as(Int)
-          {% end %}
-        end
+        Balloon.database.scalar(
+          "SELECT COUNT(id) FROM #{table_name} #{conditions(**options)}", *options.values
+        ).as(Int)
       end
 
       private def compose(rs : DB::ResultSet)
@@ -86,7 +85,7 @@ module Balloon
               {{v}}: rs.read({{v.type}}),
             {% end %}
           }
-          {% if @type < Balloon::Model::Polymorphic %}
+          {% if @type < Polymorphic %}
             case attrs[:type]
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
@@ -104,19 +103,10 @@ module Balloon
       # Returns all instances.
       #
       def all
-        {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          columns = {{vs.map(&.stringify.stringify).join(",")}}
-          Balloon.database.query_all(
-            {% if @type < Balloon::Model::Polymorphic %}
-              "SELECT #{columns} FROM #{table_name} WHERE type IN (%s)" %
-                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
-            {% else %}
-              "SELECT #{columns} FROM #{table_name}",
-            {% end %}
-            &->compose(DB::ResultSet)
-          )
-        {% end %}
+        Balloon.database.query_all(
+          "SELECT #{columns} FROM #{table_name} #{conditions}",
+          &->compose(DB::ResultSet)
+        )
       end
 
       # Finds the saved instance.
@@ -124,21 +114,10 @@ module Balloon
       # Raises `NotFound` if no such saved instance exists.
       #
       def find(_id id : Int?)
-        {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          columns = {{vs.map(&.stringify.stringify).join(",")}}
-          conditions = "id = ?"
-          Balloon.database.query_one(
-            {% if @type < Balloon::Model::Polymorphic %}
-              "SELECT #{columns} FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
-                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
-            {% else %}
-              "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
-            {% end %}
-            id,
-            &->compose(DB::ResultSet)
-          )
-        {% end %}
+        Balloon.database.query_one(
+          "SELECT #{columns} FROM #{table_name} #{conditions(id: id)}", id,
+          &->compose(DB::ResultSet)
+        )
       rescue ex: DB::Error
         raise NotFound.new("#{self}: #{id}") if ex.message == "no rows"
         raise ex
@@ -158,25 +137,10 @@ module Balloon
       # Raises `NotFound` if no such saved instance exists.
       #
       def find(**options)
-        {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          columns = {{vs.map(&.stringify.stringify).join(",")}}
-          conditions = options.keys.select do |o|
-            o.in?({{vs.map(&.symbolize)}})
-          end.map do |v|
-            "#{v} = ?"
-          end.join(" AND ")
-          Balloon.database.query_one(
-            {% if @type < Balloon::Model::Polymorphic %}
-              "SELECT #{columns} FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
-                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
-            {% else %}
-              "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
-            {% end %}
-            *options.values,
-            &->compose(DB::ResultSet)
-          )
-        {% end %}
+        Balloon.database.query_one(
+          "SELECT #{columns} FROM #{table_name} #{conditions(**options)}", *options.values,
+          &->compose(DB::ResultSet)
+        )
       rescue ex: DB::Error
         raise NotFound.new("#{self}: #{options}") if ex.message == "no rows"
         raise ex
@@ -194,44 +158,19 @@ module Balloon
       # Returns saved instances.
       #
       def where(**options)
-        {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          columns = {{vs.map(&.stringify.stringify).join(",")}}
-          conditions = options.keys.select do |o|
-            o.in?({{vs.map(&.symbolize)}})
-          end.map do |v|
-            "#{v} = ?"
-          end.join(" AND ")
-          Balloon.database.query_all(
-            {% if @type < Balloon::Model::Polymorphic %}
-              "SELECT #{columns} FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
-                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
-            {% else %}
-              "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
-            {% end %}
-            *options.values,
-            &->compose(DB::ResultSet)
-          )
-        {% end %}
+        Balloon.database.query_all(
+          "SELECT #{columns} FROM #{table_name} #{conditions(**options)}", *options.values,
+          &->compose(DB::ResultSet)
+        )
       end
 
       # Returns saved instances.
       #
-      def where(conditions : String, *arguments)
-        {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          columns = {{vs.map(&.stringify.stringify).join(",")}}
-          Balloon.database.query_all(
-            {% if @type < Balloon::Model::Polymorphic %}
-              "SELECT #{columns} FROM #{table_name} WHERE type IN (%s) AND #{conditions}" %
-                {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
-            {% else %}
-              "SELECT #{columns} FROM #{table_name} WHERE #{conditions}",
-            {% end %}
-            *arguments,
-            &->compose(DB::ResultSet)
-          )
-        {% end %}
+      def where(where : String, *arguments)
+        Balloon.database.query_all(
+          "SELECT #{columns} FROM #{table_name} #{conditions(where)}", *arguments,
+          &->compose(DB::ResultSet)
+        )
       end
     end
 

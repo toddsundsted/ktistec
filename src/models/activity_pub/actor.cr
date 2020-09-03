@@ -3,7 +3,7 @@ require "json"
 
 module ActivityPub
   class Actor
-    include Balloon::Model(Common, Polymorphic, Serialized, Linked)
+    include Balloon::Model(Common, Deletable, Polymorphic, Serialized, Linked)
 
     @@table_name = "actors"
 

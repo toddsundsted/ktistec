@@ -22,11 +22,12 @@ up do |db|
       "media_type" text,
       "source" text,
       "attachments" text,
-      "urls" text
+      "urls" text,
+      "deleted_at" datetime
     )
   STR
   db.exec <<-STR
-    CREATE UNIQUE INDEX idx_objects_iri
+    CREATE INDEX idx_objects_iri
       ON objects (iri ASC)
   STR
   db.exec <<-STR

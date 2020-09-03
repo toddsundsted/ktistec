@@ -21,11 +21,12 @@ up do |db|
       "summary" text,
       "icon" text,
       "image" text,
-      "urls" text
+      "urls" text,
+      "deleted_at" datetime
     )
   STR
   db.exec <<-STR
-    CREATE UNIQUE INDEX idx_actors_iri
+    CREATE INDEX idx_actors_iri
       ON actors (iri ASC)
   STR
 end

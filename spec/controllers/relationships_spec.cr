@@ -745,6 +745,118 @@ Spectator.describe RelationshipsController do
         expect(response.status_code).to eq(200)
       end
     end
+
+    context "on delete" do
+      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+
+      context "object" do
+        let(note) do
+          ActivityPub::Object::Note.new(
+            iri: "https://remote/objects/#{random_string}",
+            attributed_to: other
+          ).save
+        end
+        let(delete) do
+          ActivityPub::Activity::Delete.new(
+            iri: "https://remote/activities/delete",
+            actor: other,
+            object: note
+          )
+        end
+
+        class ::DeletedObject
+          include Balloon::Model(Common)
+
+          @@table_name = "objects"
+
+          @[Persistent]
+          property deleted_at : Time?
+        end
+
+        it "returns 400 if the object does not exist" do
+          note.destroy
+          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the object isn't from the activity's actor" do
+          note.assign(attributed_to: actor).save
+          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          expect(response.status_code).to eq(400)
+        end
+
+        it "marks the object as deleted" do
+          expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
+            to change{DeletedObject.find(note.id).deleted_at}
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          expect(response.status_code).to eq(200)
+        end
+
+        context "using a tombstone" do
+          let(tombstone) do
+            ActivityPub::Object::Tombstone.new(
+              iri: note.iri
+            )
+          end
+
+          before_each { delete.object = tombstone }
+
+          it "marks the object as deleted" do
+            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)}.
+              to change{DeletedObject.find(note.id).deleted_at}
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)
+            expect(response.status_code).to eq(200)
+          end
+        end
+      end
+
+      context "actor" do
+        let(delete) do
+          ActivityPub::Activity::Delete.new(
+            iri: "https://remote/activities/delete",
+            actor: other,
+            object: other
+          )
+        end
+
+        class ::DeletedActor
+          include Balloon::Model(Common)
+
+          @@table_name = "actors"
+
+          @[Persistent]
+          property deleted_at : Time?
+        end
+
+        it "returns 400 if the actor does not exist" do
+          other.destroy
+          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the actor isn't the activity's actor" do
+          delete.object = actor
+          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          expect(response.status_code).to eq(400)
+        end
+
+        it "marks the actor as deleted" do
+          expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
+            to change{DeletedActor.find(other.id).deleted_at}
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          expect(response.status_code).to eq(200)
+        end
+      end
+    end
   end
 
   describe "GET /actors/:username/outbox" do

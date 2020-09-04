@@ -236,6 +236,31 @@ class RelationshipsController
       else
         bad_request
       end
+    when ActivityPub::Activity::Delete
+      unless activity.actor?(dereference: true)
+        bad_request
+      end
+      unless activity.object?(dereference: true)
+        bad_request
+      end
+      # fetch the object from the database because we can't trust the
+      # contents of the payload. also because the original object may
+      # be replaced by a tombstone (per the spec).
+      if (object = ActivityPub::Object.find?(activity.object_iri))
+        unless object.attributed_to? == activity.actor
+          bad_request
+        end
+        activity.object = object
+        object.delete
+      elsif (object = ActivityPub::Actor.find?(activity.object_iri))
+        unless object == activity.actor
+          bad_request
+        end
+        activity.actor = activity.object = object
+        object.delete
+      else
+        bad_request
+      end
     else
       bad_request("Activity Not Supported")
     end

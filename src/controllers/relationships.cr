@@ -104,6 +104,46 @@ class RelationshipsController
         ),
         cc: [account.actor.followers].compact
       )
+    when "Delete"
+      if (iri = activity["object"]?)
+        if (object = ActivityPub::Object.find?(iri))
+          unless object.local
+            bad_request
+          end
+          unless object.attributed_to == account.actor
+            bad_request
+          end
+          account.actor = object.attributed_to
+          activity = ActivityPub::Activity::Delete.new(
+            iri: "#{Balloon.host}/activities/#{id}",
+            actor: account.actor,
+            object: object,
+            to: object.to,
+            cc: object.cc
+          )
+          object.delete
+        elsif (object = ActivityPub::Actor.find?(iri))
+          unless object.local
+            bad_request
+          end
+          unless object == account.actor
+            bad_request
+          end
+          account.actor = object
+          activity = ActivityPub::Activity::Delete.new(
+            iri: "#{Balloon.host}/activities/#{id}",
+            actor: account.actor,
+            object: object,
+            to: ["https://www.w3.org/ns/activitystreams#Public"],
+            cc: (_followers = object.followers) ? [_followers] : nil
+          )
+          object.delete
+        else
+          bad_request
+        end
+      else
+        bad_request
+      end
     else
       bad_request
     end

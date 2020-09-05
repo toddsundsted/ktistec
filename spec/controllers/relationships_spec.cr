@@ -271,6 +271,91 @@ Spectator.describe RelationshipsController do
         end
       end
 
+      context "on delete" do
+        context "given an object" do
+          let!(object) do
+            ActivityPub::Object.new(
+              iri: "https://test.test/objects/#{random_string}",
+              attributed_to: actor,
+              to: [other.iri]
+            ).save
+          end
+
+          it "returns 400 if the object does not exist" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=https://test.test/object"
+            expect(response.status_code).to eq(400)
+          end
+
+          it "returns 400 if the object is not local" do
+            object.assign(iri: "https://remote/object").save
+            post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{object.iri}"
+            expect(response.status_code).to eq(400)
+          end
+
+          it "returns 400 if the object was not attributed to the actor" do
+            object.assign(attributed_to: other).save
+            post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{object.iri}"
+            expect(response.status_code).to eq(400)
+          end
+
+          it "deletes the object" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{object.iri}"}.
+              to change{ActivityPub::Object.count(iri: object.iri)}.by(-1)
+          end
+
+          it "puts the activity in the actor's outbox" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{object.iri}"}.
+              to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          end
+
+          it "puts the activity in the other's inbox" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{object.iri}"}.
+              to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+          end
+        end
+
+        context "given an actor" do
+          before_each do
+            actor.assign(followers: "#{actor.iri}/followers").save
+            Relationship::Social::Follow.new(
+              actor: other,
+              object: actor
+            ).save
+          end
+
+          it "returns 400 if the actor does not exist" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=https://test.test/actor"
+            expect(response.status_code).to eq(400)
+          end
+
+          it "returns 400 if the actor is not local" do
+            actor.assign(iri: "https://remote/save").save
+            post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{actor.iri}"
+            expect(response.status_code).to eq(400)
+          end
+
+          it "returns 400 if the actor is not the actor" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{other.iri}"
+            expect(response.status_code).to eq(400)
+          end
+
+          it "deletes the actor" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{actor.iri}"}.
+              to change{ActivityPub::Actor.count(iri: actor.iri)}.by(-1)
+          end
+
+          it "puts the activity in the actor's outbox" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{actor.iri}"}.
+              to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          end
+
+          it "puts the activity in the other's inbox" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{actor.iri}"}.
+              to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+          end
+        end
+      end
+
       context "given a remote object" do
         let(object) do
           ActivityPub::Actor.new(

@@ -27,9 +27,6 @@
   <%- if (media_type = object.media_type) -%>
   "mediaType":<%= media_type.inspect %>,
   <%- end -%>
-  <%- if (source = object.source) -%>
-  "source":<%= source.to_json %>,
-  <%- end -%>
   <%- if (attachments = object.attachments) -%>
   "attachment":<%= attachments.to_json %>,
   <%- end -%>

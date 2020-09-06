@@ -199,11 +199,6 @@ module ActivityPub
         summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
         content: dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
         media_type: dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
-        source: dig_value?(json, "https://www.w3.org/ns/activitystreams#source") do |source|
-          content = dig?(source, "https://www.w3.org/ns/activitystreams#content", "und")
-          media_type = dig?(source, "https://www.w3.org/ns/activitystreams#mediaType")
-          Source.new(content, media_type) if content && media_type
-        end,
         attachments: dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
           url = attachment.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s)
           media_type = attachment.dig?("https://www.w3.org/ns/activitystreams#mediaType").try(&.as_s)

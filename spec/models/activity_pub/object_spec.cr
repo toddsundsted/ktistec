@@ -51,10 +51,6 @@ Spectator.describe ActivityPub::Object do
         "summary":"abc",
         "content":"abc",
         "mediaType":"xyz",
-        "source":{
-          "content":"one",
-          "mediaType":"two"
-        },
         "attachment":[
           {
             "url":"attachment link",
@@ -84,7 +80,6 @@ Spectator.describe ActivityPub::Object do
       expect(object.summary).to eq("abc")
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
-      expect(object.source).to eq(ActivityPub::Object::Source.new("one", "two"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type")])
       expect(object.urls).to eq(["url link"])
     end
@@ -103,7 +98,6 @@ Spectator.describe ActivityPub::Object do
       expect(object.summary).to eq("abc")
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
-      expect(object.source).to eq(ActivityPub::Object::Source.new("one", "two"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type")])
       expect(object.urls).to eq(["url link"])
     end

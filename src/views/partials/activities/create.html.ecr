@@ -12,9 +12,20 @@
     <%- end-%>
 </div>
 <div class='content'>
-    <%- if (_attachments = _object.attachments) && (_attachment = _attachments.shift?) -%>
+    <%- if (_attachments = _object.attachments) -%>
+    <%-
+      _content = _object.content
+      _urls = if _content.nil? || _content.empty?
+        [] of String
+      else
+        XML.parse_html(_content).xpath_nodes("//img/@src").map(&.text)
+      end
+      _attachments.reject! { |a| a.url.in?(_urls) }
+    -%>
+    <%- if (_attachment = _attachments.shift?) -%>
     <%- if _attachment.image? -%>
     <img class='ui large fluid image attachment' src='<%= _attachment.url %>'>
+    <%- end -%>
     <%- end -%>
     <%- unless _attachments.empty? -%>
     <div class='extra images'>

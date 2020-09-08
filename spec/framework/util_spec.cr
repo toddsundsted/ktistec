@@ -1,6 +1,54 @@
 require "../spec_helper"
 
 Spectator.describe Balloon::Util do
+  describe ".enhance" do
+    alias Attachment = ActivityPub::Object::Attachment
+
+    it "returns enhancements" do
+      expect(described_class.enhance("")).to be_a(Balloon::Util::Enhancements)
+    end
+
+    it "returns attachments for embedded images" do
+      content = %q|<figure data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
+      expect(described_class.enhance(content).attachments).to eq([Attachment.new("https://test.test/img.png", "image/png")])
+    end
+
+    it "strips attributes from the figure" do
+      content = %q|<figure data-trix-content-type="" data-trix-attributes=""></figure>|
+      expect(described_class.enhance(content).content).to eq(%q|<figure></figure>|)
+    end
+
+    it "strips attributes from the figcaption" do
+      content = %q|<figure><figcaption id="" class="">the caption</figcaption></figure>|
+      expect(described_class.enhance(content).content).to eq(%q|<figure><figcaption>the caption</figcaption></figure>|)
+    end
+
+    it "removes the anchor but preserves the img and figcaption" do
+      content = %q|<figure data-trix-content-type=""><a href=""><img src=""><figcaption></figcaption></a></figure>|
+      expect(described_class.enhance(content).content).to eq(%q|<figure><img src=""><figcaption></figcaption></figure>|)
+    end
+
+    it "replaces br with p" do
+      content = %q|<div>one<br>two</div>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>one</p><p>two</p>|)
+    end
+
+    it "preserves other elements" do
+      content = %q|<div>one<figure></figure>two</div>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>one</p><figure></figure><p>two</p>|)
+    end
+
+    it "preserves adjacent elements" do
+      content = %q|<h1>one</h1><h1>two</h1>|
+      expect(described_class.enhance(content).content).to eq(%q|<h1>one</h1><h1>two</h1>|)
+    end
+
+    it "preserves text" do
+      content = %q|this is a test|
+      expect(described_class.enhance(content).content).to eq(%q|this is a test|)
+    end
+  end
+
   describe ".sanitize" do
     it "ignores empty content" do
       expect(described_class.sanitize("")).to eq("")

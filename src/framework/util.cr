@@ -4,6 +4,70 @@ module Balloon
   module Util
     extend self
 
+    private alias Attachment = ActivityPub::Object::Attachment
+
+    class Enhancements
+      property attachments : Array(Attachment)?
+      property content : String = ""
+    end
+
+    # Improves the content we generate ourselves.
+    #
+    def enhance(content)
+      return Enhancements.new if content.nil? || content.empty?
+      xml = XML.parse_html("<div>#{content}</div>",
+        XML::HTMLParserOptions::RECOVER |
+        XML::HTMLParserOptions::NODEFDTD |
+        XML::HTMLParserOptions::NOIMPLIED |
+        XML::HTMLParserOptions::NOERROR |
+        XML::HTMLParserOptions::NOWARNING |
+        XML::HTMLParserOptions::NONET
+      )
+      Enhancements.new.tap do |enhancements|
+        enhancements.attachments = ([] of Attachment).tap do |attachments|
+          xml.xpath_nodes("//figure").each do |figure|
+            figure.xpath_nodes(".//img").each do |image|
+              attachments << Attachment.new(image["src"], figure["data-trix-content-type"])
+            end
+            figure.xpath_nodes(".//a[.//img]").each do |anchor|
+              children = anchor.children
+              anchor.unlink
+              children.each do |child|
+                figure.add_child(child)
+              end
+            end
+            figure.xpath_nodes(".//figcaption").each do |caption|
+              caption.attributes.map(&.name).each do |attr|
+                caption.delete(attr)
+              end
+            end
+            figure.attributes.map(&.name).each do |attr|
+              figure.delete(attr)
+            end
+          end
+        end
+        enhancements.content = String.build do |build|
+          xml.xpath_nodes("/*/*|/*/text()").each do |node|
+            if node.name == "div"
+              node.children.each do |child|
+                if child.name == "br"
+                  # ignore
+                elsif child.text?
+                  build << "<p>#{child}</p>"
+                else
+                  build << child.to_xml(options: XML::SaveOptions::AS_HTML)
+                end
+              end
+            else
+              build << node.to_xml(options: XML::SaveOptions::AS_HTML)
+            end
+          end
+        end
+      end
+    end
+
+    # Cleans up the content we receive from others.
+    #
     def sanitize(content)
       return "" if content.nil? || content.empty?
       String.build do |build|
@@ -23,12 +87,13 @@ module Balloon
       "h1", "h2", "h3", "h4", "h5", "h6",
       "ul", "ol", "li",
       "dl", "dt", "dd",
-      "div", "span",
+      "div", "span", "figure", "figcaption",
       "strong", "em",
       "blockquote",
       "pre",
       "img",
-      "a"
+      "a",
+      "br"
     ]
 
     private ATTRIBUTES = {
@@ -43,7 +108,8 @@ module Balloon
     ]
 
     private VOID = [
-      "img"
+      "img",
+      "br"
     ]
 
     private def sanitize(html, build)

@@ -212,6 +212,26 @@ Spectator.describe RelationshipsController do
             to change{ActivityPub::Object::Note.count(content: "this is a test")}.by(1)
         end
 
+        it "creates a visible activity if public" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+        end
+
+        it "creates a visible object if public" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
+          expect(ActivityPub::Object.find(content: "this is a test").visible).to be_true
+        end
+
+        it "addresses the public collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to eq(["https://www.w3.org/ns/activitystreams#Public"])
+        end
+
+        it "addresses the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to eq([actor.followers])
+        end
+
         it "puts the activity in the actor's outbox" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)

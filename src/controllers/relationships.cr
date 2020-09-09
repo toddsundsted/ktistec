@@ -92,6 +92,9 @@ class RelationshipsController
       unless (content = activity["content"]?)
         bad_request
       end
+      visible = !!activity["public"]?
+      to = visible ? ["https://www.w3.org/ns/activitystreams#Public"] : [] of String
+      cc = [account.actor.followers].compact
       activity = ActivityPub::Activity::Create.new(
         iri: "#{Balloon.host}/activities/#{id}",
         actor: account.actor,
@@ -100,9 +103,13 @@ class RelationshipsController
           content: content,
           attributed_to_iri: account.iri,
           published: Time.utc,
-          visible: true
+          visible: visible,
+          to: to,
+          cc: cc
         ),
-        cc: [account.actor.followers].compact
+        visible: visible,
+        to: to,
+        cc: cc
       )
     when "Delete"
       if (iri = activity["object"]?)

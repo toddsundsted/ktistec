@@ -172,7 +172,7 @@ class RelationshipsController
     activity = ActivityPub::Activity.from_json_ld(body)
 
     if activity.id
-      ok
+      conflict
     end
 
     # never use an embedded actor's credentials!

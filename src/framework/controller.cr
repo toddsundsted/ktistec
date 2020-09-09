@@ -106,6 +106,7 @@ module Balloon
     def_response_helper(bad_request, 400, "Bad Request")
     def_response_helper(forbidden, 403, "Forbidden")
     def_response_helper(not_found, 404, "Not Found")
+    def_response_helper(conflict, 409, "Conflict")
     def_response_helper(server_error, 500, "Server Error")
 
     # Don't authenticate specified handlers.

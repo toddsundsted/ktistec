@@ -404,10 +404,10 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(404)
     end
 
-    it "ignores the activity if it already exists" do
+    it "returns 409 if activity already exists" do
       activity.save
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).to eq(200)
+      expect(response.status_code).to eq(409)
     end
 
     it "returns 400 if activity is not supported" do

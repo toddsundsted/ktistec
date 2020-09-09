@@ -32,6 +32,80 @@ Spectator.describe RelationshipsController do
         expect(response.status_code).to eq(400)
       end
 
+      context "on create" do
+        let!(relationship) do
+          Relationship::Social::Follow.new(
+            actor: other,
+            object: actor,
+            confirmed: true
+          ).save
+        end
+
+        before_each do
+          actor.assign(followers: "#{actor.iri}/followers").save
+        end
+
+        it "returns 400 if the content is missing" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "redirects when successful" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "creates a create activity" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+            to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
+        end
+
+        it "creates a note object" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+            to change{ActivityPub::Object::Note.count(content: "this is a test")}.by(1)
+        end
+
+        it "creates a visible activity if public" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+        end
+
+        it "creates a visible object if public" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
+          expect(ActivityPub::Object.find(content: "this is a test").visible).to be_true
+        end
+
+        it "addresses the public collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to eq(["https://www.w3.org/ns/activitystreams#Public"])
+        end
+
+        it "addresses the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to eq([actor.followers])
+        end
+
+        it "enhances the content" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=<div>this+is+a+test</div>"
+          expect(ActivityPub::Object.all.last.content).to eq("<p>this is a test</p>")
+        end
+
+        it "enhances the content" do
+          post "/actors/#{actor.username}/outbox", headers, %q|type=Create&content=<figure data-trix-content-type="1"><img src="2"></figure>|
+          expect(ActivityPub::Object.all.last.attachments).to eq([ActivityPub::Object::Attachment.new("2", "1")])
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the other's inbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        end
+      end
+
       context "on follow" do
         let(object) do
           ActivityPub::Actor.new(
@@ -175,80 +249,6 @@ Spectator.describe RelationshipsController do
 
         it "puts the activity in the other's inbox" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
-            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
-        end
-      end
-
-      context "on create" do
-        let!(relationship) do
-          Relationship::Social::Follow.new(
-            actor: other,
-            object: actor,
-            confirmed: true
-          ).save
-        end
-
-        before_each do
-          actor.assign(followers: "#{actor.iri}/followers").save
-        end
-
-        it "returns 400 if the content is missing" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create"
-          expect(response.status_code).to eq(400)
-        end
-
-        it "redirects when successful" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
-          expect(response.status_code).to eq(302)
-        end
-
-        it "creates a create activity" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
-            to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
-        end
-
-        it "creates a note object" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
-            to change{ActivityPub::Object::Note.count(content: "this is a test")}.by(1)
-        end
-
-        it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
-        end
-
-        it "creates a visible object if public" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
-          expect(ActivityPub::Object.find(content: "this is a test").visible).to be_true
-        end
-
-        it "addresses the public collection" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to eq(["https://www.w3.org/ns/activitystreams#Public"])
-        end
-
-        it "addresses the actor's followers collection" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to eq([actor.followers])
-        end
-
-        it "enhances the content" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=<div>this+is+a+test</div>"
-          expect(ActivityPub::Object.all.last.content).to eq("<p>this is a test</p>")
-        end
-
-        it "enhances the content" do
-          post "/actors/#{actor.username}/outbox", headers, %q|type=Create&content=<figure data-trix-content-type="1"><img src="2"></figure>|
-          expect(ActivityPub::Object.all.last.attachments).to eq([ActivityPub::Object::Attachment.new("2", "1")])
-        end
-
-        it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
-        end
-
-        it "puts the activity in the other's inbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
             to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
         end
       end

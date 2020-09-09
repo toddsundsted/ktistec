@@ -20,6 +20,32 @@ class RelationshipsController
     activity = env.params.body
 
     case activity["type"]?
+    when "Create"
+      unless (content = activity["content"]?)
+        bad_request
+      end
+      enhancements = Balloon::Util.enhance(content)
+      visible = !!activity["public"]?
+      to = visible ? ["https://www.w3.org/ns/activitystreams#Public"] : [] of String
+      cc = [account.actor.followers].compact
+      activity = ActivityPub::Activity::Create.new(
+        iri: "#{Balloon.host}/activities/#{id}",
+        actor: account.actor,
+        object: ActivityPub::Object::Note.new(
+          iri: "#{Balloon.host}/objects/#{id}",
+          media_type: "text/html",
+          content: enhancements.content,
+          attachments: enhancements.attachments,
+          attributed_to_iri: account.iri,
+          published: Time.utc,
+          visible: visible,
+          to: to,
+          cc: cc
+        ),
+        visible: visible,
+        to: to,
+        cc: cc
+      )
     when "Follow"
       unless (iri = activity["object"]?) && (object = ActivityPub::Actor.find?(iri))
         bad_request
@@ -88,32 +114,6 @@ class RelationshipsController
         to: [object.object.iri]
       )
       follow.destroy
-    when "Create"
-      unless (content = activity["content"]?)
-        bad_request
-      end
-      enhancements = Balloon::Util.enhance(content)
-      visible = !!activity["public"]?
-      to = visible ? ["https://www.w3.org/ns/activitystreams#Public"] : [] of String
-      cc = [account.actor.followers].compact
-      activity = ActivityPub::Activity::Create.new(
-        iri: "#{Balloon.host}/activities/#{id}",
-        actor: account.actor,
-        object: ActivityPub::Object::Note.new(
-          iri: "#{Balloon.host}/objects/#{id}",
-          media_type: "text/html",
-          content: enhancements.content,
-          attachments: enhancements.attachments,
-          attributed_to_iri: account.iri,
-          published: Time.utc,
-          visible: visible,
-          to: to,
-          cc: cc
-        ),
-        visible: visible,
-        to: to,
-        cc: cc
-      )
     when "Delete"
       if (iri = activity["object"]?)
         if (object = ActivityPub::Object.find?(iri))

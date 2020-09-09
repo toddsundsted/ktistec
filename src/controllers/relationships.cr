@@ -92,6 +92,7 @@ class RelationshipsController
       unless (content = activity["content"]?)
         bad_request
       end
+      enhancements = Balloon::Util.enhance(content)
       visible = !!activity["public"]?
       to = visible ? ["https://www.w3.org/ns/activitystreams#Public"] : [] of String
       cc = [account.actor.followers].compact
@@ -100,7 +101,9 @@ class RelationshipsController
         actor: account.actor,
         object: ActivityPub::Object::Note.new(
           iri: "#{Balloon.host}/objects/#{id}",
-          content: content,
+          media_type: "text/html",
+          content: enhancements.content,
+          attachments: enhancements.attachments,
           attributed_to_iri: account.iri,
           published: Time.utc,
           visible: visible,

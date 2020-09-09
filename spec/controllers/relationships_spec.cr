@@ -232,6 +232,16 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to eq([actor.followers])
         end
 
+        it "enhances the content" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=<div>this+is+a+test</div>"
+          expect(ActivityPub::Object.all.last.content).to eq("<p>this is a test</p>")
+        end
+
+        it "enhances the content" do
+          post "/actors/#{actor.username}/outbox", headers, %q|type=Create&content=<figure data-trix-content-type="1"><img src="2"></figure>|
+          expect(ActivityPub::Object.all.last.attachments).to eq([ActivityPub::Object::Attachment.new("2", "1")])
+        end
+
         it "puts the activity in the actor's outbox" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)

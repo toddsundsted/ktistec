@@ -10,6 +10,14 @@ Spectator.describe Relationship::Content::Inbox do
     }
   end
 
+  context "creation" do
+    let(relationship) { described_class.new(**options).save }
+
+    it "creates confirmed relationships by default" do
+      expect(relationship.confirmed).to be_true
+    end
+  end
+
   context "validation" do
     it "rejects missing owner" do
       new_relationship = described_class.new(**options.merge({from_iri: "missing"}))

@@ -8,6 +8,8 @@ class Relationship
 
       belongs_to activity, class_name: ActivityPub::Activity, foreign_key: to_iri, primary_key: iri
       validates(activity) { "missing: #{to_iri}" unless activity? }
+
+      property confirmed : Bool { true }
     end
   end
 end

@@ -15,25 +15,25 @@ Spectator.describe ActivitiesController do
 
   describe "GET /activities/:id" do
     it "renders the activity" do
-      headers = HTTP::Headers{"Content-Type" => "application/json"}
+      headers = HTTP::Headers{"Accept" => "application/json"}
       get "/activities/#{visible.iri.split("/").last}", headers
       expect(response.status_code).to eq(200)
     end
 
-    it "returns 404" do
-      headers = HTTP::Headers{"Content-Type" => "application/json"}
+    it "returns 404 if activity is not visible" do
+      headers = HTTP::Headers{"Accept" => "application/json"}
       get "/activities/#{notvisible.iri.split("/").last}", headers
       expect(response.status_code).to eq(404)
     end
 
-    it "returns 404" do
-      headers = HTTP::Headers{"Content-Type" => "application/json"}
+    it "returns 404 if activity is remote" do
+      headers = HTTP::Headers{"Accept" => "application/json"}
       get "/activities/#{remote.iri.split("/").last}", headers
       expect(response.status_code).to eq(404)
     end
 
-    it "returns 404" do
-      headers = HTTP::Headers{"Content-Type" => "application/json"}
+    it "returns 404 if activity does not exist" do
+      headers = HTTP::Headers{"Accept" => "application/json"}
       get "/activities/0", headers
       expect(response.status_code).to eq(404)
     end
@@ -48,13 +48,13 @@ Spectator.describe ActivitiesController do
       end
 
       it "renders the activity" do
-        headers = HTTP::Headers{"Content-Type" => "application/json"}
+        headers = HTTP::Headers{"Accept" => "application/json"}
         get "/activities/#{notvisible.iri.split("/").last}", headers
         expect(response.status_code).to eq(200)
       end
 
-      it "returns 404" do
-        headers = HTTP::Headers{"Content-Type" => "application/json"}
+      it "returns 404 if activity is remote" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
         get "/activities/#{remote.iri.split("/").last}", headers
         expect(response.status_code).to eq(404)
       end
@@ -62,8 +62,8 @@ Spectator.describe ActivitiesController do
   end
 
   describe "GET /remote/activities/:id" do
-    it "returns 401" do
-      headers = HTTP::Headers{"Content-Type" => "application/json"}
+    it "returns 401 if not authorized" do
+      headers = HTTP::Headers{"Accept" => "application/json"}
       get "/remote/activities/0", headers
       expect(response.status_code).to eq(401)
     end
@@ -72,25 +72,25 @@ Spectator.describe ActivitiesController do
       sign_in
 
       it "renders the activity" do
-        headers = HTTP::Headers{"Content-Type" => "application/json"}
+        headers = HTTP::Headers{"Accept" => "application/json"}
         get "/remote/activities/#{visible.id}", headers
         expect(response.status_code).to eq(200)
       end
 
-      it "returns 404" do
-        headers = HTTP::Headers{"Content-Type" => "application/json"}
+      it "returns 404 if activity is not visible" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
         get "/remote/activities/#{notvisible.id}", headers
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 404" do
-        headers = HTTP::Headers{"Content-Type" => "application/json"}
+      it "returns 404 if activity is remote" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
         get "/remote/activities/#{remote.id}", headers
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 404" do
-        headers = HTTP::Headers{"Content-Type" => "application/json"}
+      it "returns 404 if activity does not exist" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
         get "/remote/activities/0", headers
         expect(response.status_code).to eq(404)
       end
@@ -103,13 +103,13 @@ Spectator.describe ActivitiesController do
         end
 
         it "renders the activity" do
-          headers = HTTP::Headers{"Content-Type" => "application/json"}
+          headers = HTTP::Headers{"Accept" => "application/json"}
           get "/remote/activities/#{notvisible.id}", headers
           expect(response.status_code).to eq(200)
         end
 
         it "renders the activity" do
-          headers = HTTP::Headers{"Content-Type" => "application/json"}
+          headers = HTTP::Headers{"Accept" => "application/json"}
           get "/remote/activities/#{remote.id}", headers
           expect(response.status_code).to eq(200)
         end
@@ -123,13 +123,13 @@ Spectator.describe ActivitiesController do
         end
 
         it "renders the activity" do
-          headers = HTTP::Headers{"Content-Type" => "application/json"}
+          headers = HTTP::Headers{"Accept" => "application/json"}
           get "/remote/activities/#{notvisible.id}", headers
           expect(response.status_code).to eq(200)
         end
 
         it "renders the activity" do
-          headers = HTTP::Headers{"Content-Type" => "application/json"}
+          headers = HTTP::Headers{"Accept" => "application/json"}
           get "/remote/activities/#{remote.id}", headers
           expect(response.status_code).to eq(200)
         end

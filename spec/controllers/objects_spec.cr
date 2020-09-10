@@ -3,14 +3,30 @@ require "../spec_helper"
 Spectator.describe ObjectsController do
   setup_spec
 
+  let(author) do
+    ActivityPub::Actor.new(
+      iri: "https://nowhere/#{random_string}"
+    ).save
+  end
   let!(visible) do
-    ActivityPub::Object.new(iri: "https://test.test/objects/#{random_string}", visible: true).save
+    ActivityPub::Object.new(
+      iri: "https://test.test/objects/#{random_string}",
+      attributed_to: author,
+      visible: true
+    ).save
   end
   let!(notvisible) do
-    ActivityPub::Object.new(iri: "https://test.test/objects/#{random_string}", visible: false).save
+    ActivityPub::Object.new(
+      iri: "https://test.test/objects/#{random_string}",
+      attributed_to: author,
+      visible: false
+    ).save
   end
   let!(remote) do
-    ActivityPub::Object.new(iri: "https://remote/#{random_string}").save
+    ActivityPub::Object.new(
+      iri: "https://remote/#{random_string}",
+      attributed_to: author
+    ).save
   end
 
   describe "GET /objects/:id" do

@@ -5,6 +5,10 @@ class ObjectsController
 
   skip_auth ["/objects/:id"], GET
 
+  macro depth(object)
+    "depth-#{{{object}}.depth}"
+  end
+
   get "/objects/:id" do |env|
     iri = "#{host}/objects/#{env.params.url["id"]}"
 
@@ -35,10 +39,6 @@ class ObjectsController
       env.response.content_type = "application/activity+json"
       render "src/views/objects/object.json.ecr"
     end
-  end
-
-  macro depth(object)
-    "depth-#{{{object}}.depth}"
   end
 
   get "/remote/objects/:id/thread" do |env|

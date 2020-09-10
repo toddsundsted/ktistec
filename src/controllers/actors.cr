@@ -12,10 +12,10 @@ class ActorsController
 
     if accepts?("text/html")
       env.response.content_type = "text/html"
-      render "src/views/actors/show.ecr", "src/views/layouts/default.html.ecr"
+      render "src/views/actors/actor.html.slang", "src/views/layouts/default.html.ecr"
     else
       env.response.content_type = "application/activity+json"
-      render "src/views/actors/json.ecr"
+      render "src/views/actors/actor.json.ecr"
     end
   rescue Balloon::Model::NotFound
     not_found
@@ -28,7 +28,7 @@ class ActorsController
 
     if accepts?("text/html")
       env.response.content_type = "text/html"
-      render "src/views/actors/remote.html.ecr", "src/views/layouts/default.html.ecr"
+      render "src/views/actors/remote.html.slang", "src/views/layouts/default.html.ecr"
     else
       env.response.content_type = "application/activity+json"
       render "src/views/actors/remote.json.ecr"
@@ -38,6 +38,6 @@ class ActorsController
   end
 
   def self.render_actor(actor, recursive = false)
-    render "src/views/actors/json.ecr"
+    render "src/views/actors/actor.json.ecr"
   end
 end

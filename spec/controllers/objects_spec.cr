@@ -14,10 +14,28 @@ Spectator.describe ObjectsController do
   end
 
   describe "GET /objects/:id" do
-    it "renders the object" do
+    it "succeeds" do
+      headers = HTTP::Headers{"Accept" => "text/html"}
+      get "/objects/#{visible.iri.split("/").last}", headers
+      expect(response.status_code).to eq(200)
+    end
+
+    it "succeeds" do
       headers = HTTP::Headers{"Accept" => "application/json"}
       get "/objects/#{visible.iri.split("/").last}", headers
       expect(response.status_code).to eq(200)
+    end
+
+    it "renders the object" do
+      headers = HTTP::Headers{"Accept" => "text/html"}
+      get "/objects/#{visible.iri.split("/").last}", headers
+      expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
+    end
+
+    it "renders the object" do
+      headers = HTTP::Headers{"Accept" => "application/json"}
+      get "/objects/#{visible.iri.split("/").last}", headers
+      expect(JSON.parse(response.body)["id"]).to eq(visible.iri)
     end
 
     it "returns 404 if object is not visible" do
@@ -71,10 +89,28 @@ Spectator.describe ObjectsController do
     context "when authorized" do
       sign_in
 
-      it "renders the object" do
+      it "succeeds" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/objects/#{visible.id}", headers
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
         headers = HTTP::Headers{"Accept" => "application/json"}
         get "/remote/objects/#{visible.id}", headers
         expect(response.status_code).to eq(200)
+      end
+
+      it "renders the object" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/objects/#{visible.id}", headers
+        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
+      end
+
+      it "renders the object" do
+        headers = HTTP::Headers{"Accept" => "application/json"}
+        get "/remote/objects/#{visible.id}", headers
+        expect(JSON.parse(response.body)["id"]).to eq(visible.iri)
       end
 
       it "returns 404 if object is not visible" do

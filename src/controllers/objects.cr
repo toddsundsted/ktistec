@@ -12,8 +12,13 @@ class ObjectsController
       not_found
     end
 
-    env.response.content_type = "application/activity+json"
-    render "src/views/objects/object.json.ecr"
+    if accepts?("text/html")
+      env.response.content_type = "text/html"
+      render "src/views/objects/object.html.slang", "src/views/layouts/default.html.ecr"
+    else
+      env.response.content_type = "application/activity+json"
+      render "src/views/objects/object.json.ecr"
+    end
   end
 
   get "/remote/objects/:id" do |env|
@@ -23,8 +28,13 @@ class ObjectsController
       not_found
     end
 
-    env.response.content_type = "application/activity+json"
-    render "src/views/objects/object.json.ecr"
+    if accepts?("text/html")
+      env.response.content_type = "text/html"
+      render "src/views/objects/object.html.slang", "src/views/layouts/default.html.ecr"
+    else
+      env.response.content_type = "application/activity+json"
+      render "src/views/objects/object.json.ecr"
+    end
   end
 
   macro depth(object)

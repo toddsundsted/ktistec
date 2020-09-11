@@ -1,7 +1,7 @@
 <h1><%= env.params.url["relationship"].titleize %></h1>
 <section class='ui cards'>
     <%- related.each do |actor| -%>
-    <%= render "src/views/partials/actor-small.html.ecr" %>
+    <%= render "src/views/partials/actor-small.html.slang" %>
     <%- end -%>
 </section>
 <%= paginate(related, env) %>

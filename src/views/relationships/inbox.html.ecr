@@ -5,15 +5,15 @@
     <%- activities.each do |activity| -%>
     <article class='event activity'>
         <%- if activity.is_a?(ActivityPub::Activity::Create) -%>
-        <%= render "src/views/partials/activities/create.html.ecr" %>
+        <%= render "src/views/partials/activities/create.html.slang" %>
         <%- elsif activity.is_a?(ActivityPub::Activity::Follow) -%>
-        <%= render "src/views/partials/activities/follow/inbox.html.ecr" %>
+        <%= render "src/views/partials/activities/follow/inbox.html.slang" %>
         <%- elsif activity.is_a?(ActivityPub::Activity::Accept) -%>
-        <%= render "src/views/partials/activities/accept/inbox.html.ecr" %>
+        <%= render "src/views/partials/activities/accept/inbox.html.slang" %>
         <%- elsif activity.is_a?(ActivityPub::Activity::Reject) -%>
-        <%= render "src/views/partials/activities/reject/inbox.html.ecr" %>
+        <%= render "src/views/partials/activities/reject/inbox.html.slang" %>
         <%- else -%>
-        <%= render "src/views/partials/activities/default.html.ecr" %>
+        <%= render "src/views/partials/activities/default.html.slang" %>
         <%- end -%>
     </article>
     <%- end -%>

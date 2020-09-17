@@ -13,8 +13,8 @@ dependencies:
     github: kemalcr/kemal
     branch: master
   slang:
-    github: jeromegn/slang
-    version: ~> 1.7.1
+    github: toddsundsted/slang
+    branch: master
   sqlite3:
     github: crystal-lang/crystal-sqlite3
     version: ~> 0.15.0
@@ -23,7 +23,7 @@ dependencies:
     version: ~> 0.1.2
   web_finger:
     github: toddsundsted/web_finger
-    version: ~> 0.1.6
+    version: ~> 0.2.0
 
 development_dependencies:
   spectator:

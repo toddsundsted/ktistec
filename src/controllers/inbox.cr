@@ -58,6 +58,13 @@ class RelationshipsController
     end
 
     case activity
+    when ActivityPub::Activity::Announce
+      unless (object = activity.object?(dereference: true))
+        bad_request
+      end
+      unless object.attributed_to?(dereference: true)
+        bad_request
+      end
     when ActivityPub::Activity::Create
       unless (object = activity.object?(dereference: true))
         bad_request

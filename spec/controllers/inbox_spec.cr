@@ -176,6 +176,62 @@ Spectator.describe RelationshipsController do
       end
     end
 
+    context "on announce" do
+      let(note) do
+        ActivityPub::Object::Note.new(
+          iri: "https://remote/objects/#{random_string}",
+          attributed_to: other
+        )
+      end
+      let(announce) do
+        ActivityPub::Activity::Announce.new(
+          iri: "https://remote/activities/announce",
+          actor: other,
+          to: [actor.iri]
+        )
+      end
+
+      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+
+      it "returns 400 if no object is included" do
+        post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "fetches object if remote" do
+        announce.object_iri = note.iri
+        HTTP::Client.objects << note
+        post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+        expect(HTTP::Client.last?).to match("GET #{note.iri}")
+      end
+
+      it "doesn't fetch the object if embedded" do
+        announce.object = note
+        HTTP::Client.objects << note
+        post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "fetches the attributed to actor" do
+        announce.object = note
+        note.attributed_to_iri = "https://remote/actors/123"
+        post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+        expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
+      end
+
+      it "saves the object" do
+        announce.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
+          to change{ActivityPub::Object.count(iri: note.iri)}.by(1)
+      end
+
+      it "puts the activity in the actor's inbox" do
+        announce.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
+          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+      end
+    end
+
     context "on create" do
       let(note) do
         ActivityPub::Object::Note.new(

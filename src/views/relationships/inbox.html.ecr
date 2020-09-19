@@ -4,7 +4,9 @@
 <section class='ui feed'>
     <%- activities.each do |activity| -%>
     <article class='event activity'>
-        <%- if activity.is_a?(ActivityPub::Activity::Create) -%>
+        <%- if activity.is_a?(ActivityPub::Activity::Announce) -%>
+        <%= render "src/views/partials/activities/create.html.slang" %>
+        <%- elsif activity.is_a?(ActivityPub::Activity::Create) -%>
         <%= render "src/views/partials/activities/create.html.slang" %>
         <%- elsif activity.is_a?(ActivityPub::Activity::Follow) -%>
         <%= render "src/views/partials/activities/follow/inbox.html.slang" %>

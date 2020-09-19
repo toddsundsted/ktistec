@@ -256,23 +256,21 @@ Spectator.describe RelationshipsController do
       it "fetches object if remote" do
         create.object_iri = note.iri
         HTTP::Client.objects << note
-        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-          to change{ActivityPub::Object.count}.by(1) # this check is duplicated below in "saves the object"
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
         expect(HTTP::Client.last?).to match("GET #{note.iri}")
       end
 
       it "doesn't fetch the object if embedded" do
         create.object = note
         HTTP::Client.objects << note
-        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-          to change{ActivityPub::Object.count}.by(1) # also unnecessary
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
         expect(HTTP::Client.last?).to be_nil
       end
 
       it "saves the object" do
         create.object = note
         expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-          to change{ActivityPub::Object.count}.by(1)
+          to change{ActivityPub::Object.count(iri: note.iri)}.by(1)
       end
 
       it "puts the activity in the actor's inbox" do

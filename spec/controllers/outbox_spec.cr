@@ -75,6 +75,22 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_true
         end
 
+        let(object) do
+          ActivityPub::Object.new(
+            iri: "https://remote/objects/#{random_string}",
+          ).save
+        end
+
+        it "includes the IRI of the replied to object" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&in-reply-to=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).in_reply_to_iri).to eq(object.iri)
+        end
+
+        it "returns 400 if the replied to object does not exist" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&in-reply-to=https%3A%2F%2Fremote%2Fpost"
+          expect(response.status_code).to eq(400)
+        end
+
         it "addresses the public collection" do
           post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to eq(["https://www.w3.org/ns/activitystreams#Public"])

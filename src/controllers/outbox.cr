@@ -20,6 +20,9 @@ class RelationshipsController
       unless (content = activity["content"]?)
         bad_request
       end
+      if (in_reply_to_iri = activity["in-reply-to"]?) && !ActivityPub::Object.find?(in_reply_to_iri)
+        bad_request
+      end
       enhancements = Balloon::Util.enhance(content)
       visible = !!activity["public"]?
       to = visible ? ["https://www.w3.org/ns/activitystreams#Public"] : [] of String
@@ -33,6 +36,7 @@ class RelationshipsController
           content: enhancements.content,
           attachments: enhancements.attachments,
           attributed_to_iri: account.iri,
+          in_reply_to_iri: in_reply_to_iri,
           published: Time.utc,
           visible: visible,
           to: to,

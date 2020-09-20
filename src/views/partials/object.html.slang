@@ -24,5 +24,9 @@ article.nested.event id=anchor(_object) class=depth(_object)
     .text class=extra
       == s _object.content
     .meta
-      a href=remote_actor_path(_object.attributed_to) = _object.attributed_to.display_name
-      a href=remote_thread_path(_object) = _object.display_date
+      - if env.current_account?
+        a href=remote_actor_path(_object.attributed_to) = _object.attributed_to.display_name
+        a href=remote_thread_path(_object) = _object.display_date
+      - else
+        a href=_object.attributed_to.display_link = _object.attributed_to.display_name
+        a href=_object.display_link = _object.display_date

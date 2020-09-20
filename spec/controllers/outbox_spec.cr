@@ -62,7 +62,7 @@ Spectator.describe RelationshipsController do
 
         it "creates a note object" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
-            to change{ActivityPub::Object::Note.count(content: "this is a test")}.by(1)
+            to change{ActivityPub::Object::Note.count(attributed_to_iri: actor.iri)}.by(1)
         end
 
         it "creates a visible activity if public" do
@@ -72,7 +72,7 @@ Spectator.describe RelationshipsController do
 
         it "creates a visible object if public" do
           post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
-          expect(ActivityPub::Object.find(content: "this is a test").visible).to be_true
+          expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_true
         end
 
         it "addresses the public collection" do

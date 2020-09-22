@@ -141,6 +141,16 @@ Spectator.describe ActivityPub::Object do
       expect(object1.thread).to eq([subject, object1, object2, object3, object4, object5])
       expect(object5.thread).to eq([subject, object1, object2, object3, object4, object5])
     end
+
+    it "omits deleted replies but includes their children" do
+      object4.delete
+      expect(subject.thread).to eq([subject, object1, object2, object3, object5])
+    end
+
+    it "omits destroyed replies and their children" do
+      object4.destroy
+      expect(subject.thread).to eq([subject, object1, object2, object3])
+    end
   end
 
   describe "#local" do

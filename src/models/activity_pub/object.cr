@@ -139,7 +139,7 @@ module ActivityPub
             )
         SELECT {{ vs.map{ |v| "o.\"#{v}\"" }.join(",").id }}, r.depth
           FROM objects AS o, replies_to AS r
-         WHERE o.iri IN (r.iri)
+         WHERE o.iri IN (r.iri) AND o.deleted_at IS NULL
         QUERY
         Array(Object).new.tap do |array|
           Balloon.database.query(

@@ -91,14 +91,24 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(400)
         end
 
+        it "addresses (to) the specified actor" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&to=#{URI.encode_www_form(other.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (cc) the specified actor" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&cc=#{URI.encode_www_form(other.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
+        end
+
         it "addresses the public collection" do
           post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to eq(["https://www.w3.org/ns/activitystreams#Public"])
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
         it "addresses the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to eq([actor.followers])
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
         end
 
         it "enhances the content" do

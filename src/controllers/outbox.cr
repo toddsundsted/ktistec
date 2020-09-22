@@ -23,10 +23,16 @@ class RelationshipsController
       if (in_reply_to_iri = activity["in-reply-to"]?) && !ActivityPub::Object.find?(in_reply_to_iri)
         bad_request
       end
-      enhancements = Balloon::Util.enhance(content)
       visible = !!activity["public"]?
-      to = visible ? ["https://www.w3.org/ns/activitystreams#Public"] : [] of String
-      cc = [account.actor.followers].compact
+      to = activity["to"]?.presence.try(&.split(",")) || [] of String
+      if visible
+        to << "https://www.w3.org/ns/activitystreams#Public"
+      end
+      cc = activity["cc"]?.presence.try(&.split(",")) || [] of String
+      if (followers = account.actor.followers)
+        cc << followers
+      end
+      enhancements = Balloon::Util.enhance(content)
       activity = ActivityPub::Activity::Create.new(
         iri: "#{Balloon.host}/activities/#{id}",
         actor: account.actor,

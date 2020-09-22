@@ -259,6 +259,35 @@ Spectator.describe ObjectsController do
         expect(XML.parse_html(response.body).xpath_nodes("//trix-editor")).not_to be_empty
       end
 
+      let(other) do
+        ActivityPub::Actor.new(
+          iri: "https://nowhere/#{random_string}"
+        ).save
+      end
+      let(parent) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/#{random_string}",
+          attributed_to: other,
+          visible: true
+        ).save
+      end
+
+      before_each do
+        visible.assign(in_reply_to: parent).save
+      end
+
+      it "addresses (to) the author of the object" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/objects/#{visible.id}/replies", headers
+        expect(XML.parse_html(response.body).xpath_nodes("//form/input[@name='to']/@value").first.text).to eq(author.iri)
+      end
+
+      it "addresses (cc) the other authors in the thread" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/objects/#{visible.id}/replies", headers
+        expect(XML.parse_html(response.body).xpath_nodes("//form/input[@name='cc']/@value").first.text).to eq(other.iri)
+      end
+
       it "returns 404 if object is not visible" do
         headers = HTTP::Headers{"Accept" => "text/html"}
         get "/remote/objects/#{notvisible.id}/replies", headers

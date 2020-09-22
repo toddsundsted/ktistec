@@ -9,6 +9,9 @@ section.ui.feed
   form.ui.form method="POST" action=actor_relationships_path(_actor, "outbox")
     input type="hidden" name="type" value="Create"
     input type="hidden" name="public" value="true"
+    input type="hidden" name="to" value=_author.iri
+    - _ancestors = (ancestors.map(&.attributed_to_iri).compact.uniq - [_author.iri]).join(",")
+    input type="hidden" name="cc" value=_ancestors
     input type="hidden" name="in-reply-to" value=_object.iri
     .field
       input#input-trix-editor type="hidden" name="content"

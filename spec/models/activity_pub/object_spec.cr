@@ -110,7 +110,7 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
-  describe "#thread" do
+  context "when threaded" do
     subject { described_class.new(iri: "https://test.test/objects/#{random_string}").save }
 
     macro reply_to!(object, reply)
@@ -136,20 +136,40 @@ Spectator.describe ActivityPub::Object do
     reply_to!(object2, object3)
     reply_to!(object4, object5)
 
-    it "returns all replies properly nested" do
-      expect(subject.thread).to eq([subject, object1, object2, object3, object4, object5])
-      expect(object1.thread).to eq([subject, object1, object2, object3, object4, object5])
-      expect(object5.thread).to eq([subject, object1, object2, object3, object4, object5])
+    describe "#thread" do
+      it "returns all replies properly nested" do
+        expect(subject.thread).to eq([subject, object1, object2, object3, object4, object5])
+        expect(object1.thread).to eq([subject, object1, object2, object3, object4, object5])
+        expect(object5.thread).to eq([subject, object1, object2, object3, object4, object5])
+      end
+
+      it "omits deleted replies but includes their children" do
+        object4.delete
+        expect(subject.thread).to eq([subject, object1, object2, object3, object5])
+      end
+
+      it "omits destroyed replies and their children" do
+        object4.destroy
+        expect(subject.thread).to eq([subject, object1, object2, object3])
+      end
     end
 
-    it "omits deleted replies but includes their children" do
-      object4.delete
-      expect(subject.thread).to eq([subject, object1, object2, object3, object5])
-    end
+    describe "#ancestors" do
+      it "returns all ancestors" do
+        expect(subject.ancestors).to eq([subject])
+        expect(object3.ancestors).to eq([object3, object2, object1, subject])
+        expect(object5.ancestors).to eq([object5, object4, subject])
+      end
 
-    it "omits destroyed replies and their children" do
-      object4.destroy
-      expect(subject.thread).to eq([subject, object1, object2, object3])
+      it "omits deleted replies but includes their parents" do
+        object1.delete
+        expect(object3.ancestors).to eq([object3, object2, subject])
+      end
+
+      it "omits destroyed replies and their parents" do
+        object1.destroy
+        expect(object3.ancestors).to eq([object3, object2])
+      end
     end
   end
 

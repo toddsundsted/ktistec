@@ -1,6 +1,3 @@
-- content_for "head" do
-  link rel="stylesheet" type="text/css" href="/trix.css"
-  script type="text/javascript" src="/trix.js"
 section.ui.feed
   crystal:
     _object = object

@@ -1,6 +1,3 @@
-- content_for "head" do
-  link rel="stylesheet" type="text/css" href="/trix.css"
-  script type="text/javascript" src="/trix.js"
 h1= actor.username
 .ui.secondary.four.item.menu
   a.item href=actor_relationships_path(actor, "inbox") Inbox

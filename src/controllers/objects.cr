@@ -59,6 +59,17 @@ class ObjectsController
     end
   end
 
+  get "/remote/objects/:id/replies" do |env|
+    id = env.params.url["id"].to_i64
+
+    unless (object = get_object(env, id))
+      not_found
+    end
+
+    env.response.content_type = "text/html"
+    render "src/views/objects/reply.html.slang", "src/views/layouts/default.html.ecr"
+  end
+
   private def self.get_object(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id))
       if object.visible

@@ -230,4 +230,52 @@ Spectator.describe ObjectsController do
       end
     end
   end
+
+  describe "GET /remote/objects/:id/replies" do
+    it "returns 401" do
+      headers = HTTP::Headers{"Accept" => "text/html"}
+      get "/remote/objects/0/replies", headers
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns success" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/objects/#{visible.id}/replies", headers
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the object" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/objects/#{visible.id}/replies", headers
+        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
+      end
+
+      it "renders the form" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/objects/#{visible.id}/replies", headers
+        expect(XML.parse_html(response.body).xpath_nodes("//trix-editor")).not_to be_empty
+      end
+
+      it "returns 404 if object is not visible" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/objects/#{notvisible.id}/replies", headers
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is remote" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/objects/#{remote.id}/replies", headers
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        headers = HTTP::Headers{"Accept" => "text/html"}
+        get "/remote/objects/0/replies", headers
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
 end

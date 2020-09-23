@@ -55,6 +55,26 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(302)
         end
 
+        let(created) do
+          ActivityPub::Object.find(attributed_to_iri: actor.iri)
+        end
+
+        it "redirects to the object view" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
+          expect(response.headers["Location"]).to eq("/remote/objects/#{created.id}")
+        end
+
+        let(object) do
+          ActivityPub::Object.new(
+            iri: "https://remote/objects/#{random_string}",
+          ).save
+        end
+
+        it "redirects to the threaded view" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&in-reply-to=#{URI.encode_www_form(object.iri)}"
+          expect(response.headers["Location"]).to eq("/remote/objects/#{object.id}/thread#object-#{object.id}")
+        end
+
         it "creates a create activity" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
             to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
@@ -73,12 +93,6 @@ Spectator.describe RelationshipsController do
         it "creates a visible object if public" do
           post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_true
-        end
-
-        let(object) do
-          ActivityPub::Object.new(
-            iri: "https://remote/objects/#{random_string}",
-          ).save
         end
 
         it "includes the IRI of the replied to object" do

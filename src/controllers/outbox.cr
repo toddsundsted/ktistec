@@ -174,7 +174,15 @@ class RelationshipsController
       activity: activity
     ).perform
 
-    env.redirect back_path
+    if activity.is_a?(ActivityPub::Activity::Create)
+      if activity.object.in_reply_to?
+        env.redirect remote_thread_path(activity.object.in_reply_to)
+      else
+        env.redirect remote_object_path(activity.object)
+      end
+    else
+      env.redirect back_path
+    end
   end
 
   get "/actors/:username/outbox" do |env|

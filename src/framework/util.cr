@@ -47,17 +47,21 @@ module Balloon
           end
         end
         enhancements.content = String.build do |build|
-          xml.xpath_nodes("/*/*|/*/text()").each do |node|
+          xml.xpath_nodes("/*/node()").each do |node|
             if node.name == "div"
+              build << "<p>"
               node.children.each do |child|
                 if child.name == "br"
-                  # ignore
-                elsif child.text?
-                  build << "<p>#{child}</p>"
+                  build << "</p><p>"
+                elsif child.name == "figure"
+                  build << "</p>"
+                  build << child.to_xml(options: XML::SaveOptions::AS_HTML)
+                  build << "<p>"
                 else
                   build << child.to_xml(options: XML::SaveOptions::AS_HTML)
                 end
               end
+              build << "</p>"
             else
               build << node.to_xml(options: XML::SaveOptions::AS_HTML)
             end

@@ -33,7 +33,52 @@ Spectator.describe Balloon::Util do
       expect(described_class.enhance(content).content).to eq(%q|<p>one</p><p>two</p>|)
     end
 
-    it "preserves other elements" do
+    it "handles inline elements correctly" do
+      content = %q|<div>a <strong>b</strong> c</div>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>a <strong>b</strong> c</p>|)
+    end
+
+    it "handles inline elements correctly" do
+      content = %q|<div>a <em>b</em> c</div>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>a <em>b</em> c</p>|)
+    end
+
+    it "handles inline elements correctly" do
+      content = %q|<div>a <del>b</del> c</div>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>a <del>b</del> c</p>|)
+    end
+
+    it "handles inline elements correctly" do
+      content = %q|<div>a <a href="#">b</a> c</div>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>a <a href="#">b</a> c</p>|)
+    end
+
+    it "handles block elements correctly" do
+      content = %q|<h1>a</h1><div>b<br>c</div>|
+      expect(described_class.enhance(content).content).to eq(%q|<h1>a</h1><p>b</p><p>c</p>|)
+    end
+
+    it "handles block elements correctly" do
+      content = %q|<div>a</div><blockquote>b<br>c</blockquote>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>a</p><blockquote>b<br>c</blockquote>|)
+    end
+
+    it "handles block elements correctly" do
+      content = %q|<div>a</div><pre>b\nc</pre>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>a</p><pre>b\nc</pre>|)
+    end
+
+    it "handles block elements correctly" do
+      content = %q|<div>a</div><ul><li>b</li><li>c</li></ul>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>a</p><ul><li>b</li><li>c</li></ul>|)
+    end
+
+    it "handles block elements correctly" do
+      content = %q|<div>a</div><ol><li>b</li><li>c</li></ol>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>a</p><ol><li>b</li><li>c</li></ol>|)
+    end
+
+    it "handles Trix figure elements correctly" do
       content = %q|<div>one<figure></figure>two</div>|
       expect(described_class.enhance(content).content).to eq(%q|<p>one</p><figure></figure><p>two</p>|)
     end

@@ -124,9 +124,9 @@ Spectator.describe Balloon::Util do
       expect(described_class.sanitize(content)).to eq(content)
     end
 
-    it "preserves src and alt on images" do
+    it "preserves src and alt on images, adds compatibility classes" do
       content = "<img src='https://test.test/pic.jpg' alt='picture'>"
-      expect(described_class.sanitize(content)).to eq(content)
+      expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' alt='picture' class='ui image'>")
     end
 
     it "wraps bare text in a tag" do

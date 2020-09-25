@@ -100,13 +100,14 @@ module Balloon
       "br"
     ]
 
-    private CLASSES = {
-      "img" => "ui image"
-    }
-
     private ATTRIBUTES = {
       "a" => ["href"],
       "img" => ["src", "alt"]
+    }
+
+    private VALUES = {
+      "a" => {"rel", "ugc"},
+      "img" => {"class", "ui image"}
     }
 
     private STRIP = [
@@ -130,8 +131,8 @@ module Balloon
           (attributes & html.attributes.map(&.name)).each do |attr|
             build << " #{attr}='#{html[attr]}'"
           end
-          if (classes = CLASSES[name]?)
-            build << " class='#{classes}'"
+          if (values = VALUES[name]?)
+            build << " #{values[0]}='#{values[1]}'"
           end
           build << ">"
         else

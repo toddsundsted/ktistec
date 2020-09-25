@@ -119,8 +119,8 @@ Spectator.describe Balloon::Util do
       expect(described_class.sanitize(content)).to eq("<span>some text</span>")
     end
 
-    it "preserves href on links" do
-      content = "<a href='https://test.test/index.html'>a link</a>"
+    it "preserves href on links, adds ugc attribute value" do
+      content = "<a href='https://test.test/index.html' rel='ugc'>a link</a>"
       expect(described_class.sanitize(content)).to eq(content)
     end
 

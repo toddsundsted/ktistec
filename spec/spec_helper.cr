@@ -23,6 +23,13 @@ class DummyAuth < Kemal::Handler
   end
 end
 
+class DummyCSRF < Kemal::Handler
+  def call(env)
+    env.session.string("csrf", "CSRF TOKEN")
+    return call_next(env)
+  end
+end
+
 {% for method in %w(get post put head delete patch) %}
   def {{method.id}}(path, headers : HTTP::Headers? = nil, body : String? = nil)
     request = HTTP::Request.new("{{method.id}}".upcase, path, headers, body )
@@ -48,6 +55,8 @@ def build_main_handler
     if handler.is_a?(Balloon::Auth) && Global.session && Global.account
       # if we "sign_in" in a context, swap in the dummy handler
       handler = DummyAuth.new
+    elsif handler.is_a?(CSRF)
+      handler = DummyCSRF.new
     end
     current_handler.next = handler
     current_handler = handler
@@ -263,4 +272,7 @@ Balloon::Server.run do
   Balloon.host = "https://test.test"
   Kemal.config.port = Random.new.rand(49152..65535)
   Kemal.config.logging = false
+  Kemal::Session.config do |config|
+    config.secret = "test"
+  end
 end

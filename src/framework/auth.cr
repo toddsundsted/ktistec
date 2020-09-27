@@ -2,7 +2,7 @@ require "./framework"
 
 class HTTP::Server::Context
   property? current_account : Account?
-  property? session : Session?
+  property? current_session : Session?
 end
 
 module Balloon
@@ -20,7 +20,7 @@ module Balloon
             if Time.parse_iso8601(payload["iat"].as_s) > Time.utc - 1.month
               if session = Session.find(session_key: payload["jti"].as_s)
                 env.current_account = session.account
-                env.session = session
+                env.current_session = session
                 return call_next(env)
               end
             end

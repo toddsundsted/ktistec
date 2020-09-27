@@ -17,7 +17,7 @@ class DummyAuth < Kemal::Handler
   def call(env)
     if (session = Global.session) && (account = Global.account)
       env.current_account = account
-      env.session = session
+      env.current_session = session
     end
     return call_next(env)
   end

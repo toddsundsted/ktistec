@@ -7,6 +7,7 @@ section.ui.feed
     == render "src/views/partials/object.html.slang"
 - if (_actor = env.current_account?.try(&.actor))
   form.ui.form method="POST" action=actor_relationships_path(_actor, "outbox")
+    input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Create"
     input type="hidden" name="public" value="true"
     input type="hidden" name="to" value=_author.iri

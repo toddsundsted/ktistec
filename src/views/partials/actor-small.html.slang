@@ -10,11 +10,13 @@ a.card href=actor.iri
     - if (_account = env.current_account?)
       - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
         form.right.floated method="POST" action=actor_relationships_path(_account, "outbox")
+          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
           input type="hidden" name="type" value="Undo"
           input type="hidden" name="object" value=_follow.iri
           input.ui.mini.primary.button type="submit" value="Unfollow"
       - else
         form.right.floated method="POST" action=actor_relationships_path(_account, "outbox")
+          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
           input type="hidden" name="type" value="Follow"
           input type="hidden" name="object" value=actor.iri
           input.ui.mini.primary.button type="submit" value="Follow"

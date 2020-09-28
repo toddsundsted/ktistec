@@ -13,5 +13,6 @@
         <label>Password</label>
         <input type='password' name='password' value='<%= password %>'>
     </div>
+    <input type='hidden' name='authenticity_token' value='<%= env.session.string?("csrf") %>'>
     <input class='ui primary button' type='submit' value='Sign In'>
 </form>

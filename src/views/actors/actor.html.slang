@@ -6,6 +6,7 @@ h1= actor.username
   a.item href=actor_relationships_path(actor, "following") Following
 - if env.current_account?
   form.ui.form method="POST" action=actor_relationships_path(actor, "outbox")
+    input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Create"
     input type="hidden" name="public" value="true"
     .field

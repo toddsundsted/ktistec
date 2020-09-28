@@ -20,5 +20,6 @@
     <div class='field'>
         <input type='text' name='summary' value='<%= actor.summary %>'>
     </div>
+    <input type='hidden' name='authenticity_token' value='<%= env.session.string?("csrf") %>'>
     <input class='ui primary button' type='submit' value='Sign Up'>
 </form>

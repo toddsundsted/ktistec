@@ -9,6 +9,7 @@
   - unless (_response = activity.accepted_or_rejected?)
     .extra.text
       form.ui.form method="POST" action=actor_relationships_path(account, "outbox")
+        input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
         input type="hidden" name="object" value=activity.iri
         input.ui.mini.primary.button type="submit" name="type" value="Accept"
         input.ui.mini.button type="submit" name="type" value="Reject"

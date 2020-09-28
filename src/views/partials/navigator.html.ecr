@@ -6,6 +6,7 @@
         <div class='right menu'>
             <form method='POST' action='<%= sessions_path %>'>
                 <input type='hidden' name='_method' value='delete'>
+                <input type='hidden' name='authenticity_token' value='<%= env.session.string?("csrf") %>'>
                 <div class='ui action input'>
                     <input class='link item' type='submit' value='Sign Out'>
                 </div>

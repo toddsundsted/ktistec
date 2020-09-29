@@ -2,5 +2,6 @@ require "kemal-session"
 require "kemal-csrf"
 
 add_handler CSRF.new(
-  allowed_routes: ["/actors/:username/inbox"]
+  allowed_routes: ["/actors/:username/inbox"],
+  header: "X-CSRF-Token"
 )

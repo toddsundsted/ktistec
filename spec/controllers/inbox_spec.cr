@@ -14,7 +14,7 @@ Spectator.describe RelationshipsController do
     end
 
     let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
-    let(signed_headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge(headers) }
+    let(signed_headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge(headers) }
 
     it "returns 404 if not found" do
       post "/actors/0/inbox", headers
@@ -105,7 +105,7 @@ Spectator.describe RelationshipsController do
 
       before_each { HTTP::Client.objects << note }
 
-      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
 
       it "does not retrieve the activity" do
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
@@ -191,7 +191,7 @@ Spectator.describe RelationshipsController do
         )
       end
 
-      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
 
       it "returns 400 if no object is included" do
         post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
@@ -246,7 +246,7 @@ Spectator.describe RelationshipsController do
         )
       end
 
-      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
 
       it "returns 400 if no object is included" do
         post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
@@ -310,7 +310,7 @@ Spectator.describe RelationshipsController do
           follow.object = actor
         end
 
-        let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
 
         it "creates an unconfirmed follow relationship" do
           expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
@@ -329,7 +329,7 @@ Spectator.describe RelationshipsController do
           follow.object = other
         end
 
-        let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
 
         it "does not create a follow relationship" do
           expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
@@ -366,7 +366,7 @@ Spectator.describe RelationshipsController do
         )
       end
 
-      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
 
       it "returns 400 if relationship does not exist" do
         relationship.destroy
@@ -416,7 +416,7 @@ Spectator.describe RelationshipsController do
         )
       end
 
-      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
 
       it "returns 400 if relationship does not exist" do
         relationship.destroy
@@ -465,7 +465,7 @@ Spectator.describe RelationshipsController do
         )
       end
 
-      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
 
       it "returns 400 if relationship does not exist" do
         relationship.destroy
@@ -503,7 +503,7 @@ Spectator.describe RelationshipsController do
     end
 
     context "on delete" do
-      let(headers) { Balloon::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox").merge!(HTTP::Headers{"Content-Type" => "application/json"}) }
 
       context "object" do
         let(note) do
@@ -521,7 +521,7 @@ Spectator.describe RelationshipsController do
         end
 
         class ::DeletedObject
-          include Balloon::Model(Common)
+          include Ktistec::Model(Common)
 
           @@table_name = "objects"
 
@@ -582,7 +582,7 @@ Spectator.describe RelationshipsController do
         end
 
         class ::DeletedActor
-          include Balloon::Model(Common)
+          include Ktistec::Model(Common)
 
           @@table_name = "actors"
 

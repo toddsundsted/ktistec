@@ -1,6 +1,6 @@
 require "xml"
 
-module Balloon
+module Ktistec
   module Util
     extend self
 

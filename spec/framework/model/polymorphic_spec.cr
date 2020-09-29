@@ -1,7 +1,7 @@
 require "../../spec_helper"
 
 class PolymorphicModel
-  include Balloon::Model(Polymorphic)
+  include Ktistec::Model(Polymorphic)
 
   @@table_name = "polymorphic_models"
 end
@@ -12,9 +12,9 @@ end
 class Subclass2 < PolymorphicModel
 end
 
-Spectator.describe Balloon::Model::Polymorphic do
+Spectator.describe Ktistec::Model::Polymorphic do
   before_each do
-    Balloon.database.exec <<-SQL
+    Ktistec.database.exec <<-SQL
       CREATE TABLE polymorphic_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         type varchar(32) NOT NULL
@@ -22,14 +22,14 @@ Spectator.describe Balloon::Model::Polymorphic do
     SQL
   end
   after_each do
-    Balloon.database.exec <<-SQL
+    Ktistec.database.exec <<-SQL
       DROP TABLE polymorphic_models
     SQL
   end
 
   describe ".new" do
-    it "includes Balloon::Model::Polymorphic" do
-      expect(PolymorphicModel.new).to be_a(Balloon::Model::Polymorphic)
+    it "includes Ktistec::Model::Polymorphic" do
+      expect(PolymorphicModel.new).to be_a(Ktistec::Model::Polymorphic)
     end
   end
 
@@ -87,13 +87,13 @@ Spectator.describe Balloon::Model::Polymorphic do
     end
 
     it "raises an error" do
-      expect{Subclass1.find(subclass2.id)}.to raise_error(Balloon::Model::NotFound)
-      expect{Subclass1.find(id: subclass2.id)}.to raise_error(Balloon::Model::NotFound)
+      expect{Subclass1.find(subclass2.id)}.to raise_error(Ktistec::Model::NotFound)
+      expect{Subclass1.find(id: subclass2.id)}.to raise_error(Ktistec::Model::NotFound)
     end
 
     it "raises an error" do
-      expect{PolymorphicModel.find(subclass2.id, as: Subclass1)}.to raise_error(Balloon::Model::NotFound)
-      expect{PolymorphicModel.find(id: subclass2.id, as: Subclass1)}.to raise_error(Balloon::Model::NotFound)
+      expect{PolymorphicModel.find(subclass2.id, as: Subclass1)}.to raise_error(Ktistec::Model::NotFound)
+      expect{PolymorphicModel.find(id: subclass2.id, as: Subclass1)}.to raise_error(Ktistec::Model::NotFound)
     end
   end
 
@@ -104,8 +104,8 @@ Spectator.describe Balloon::Model::Polymorphic do
     end
 
     it "raises an error" do
-      expect{PolymorphicModel.find(subclass2.id).as_a(Subclass1)}.to raise_error(Balloon::Model::NotFound)
-      expect{PolymorphicModel.find(id: subclass2.id).as_a(Subclass1)}.to raise_error(Balloon::Model::NotFound)
+      expect{PolymorphicModel.find(subclass2.id).as_a(Subclass1)}.to raise_error(Ktistec::Model::NotFound)
+      expect{PolymorphicModel.find(id: subclass2.id).as_a(Subclass1)}.to raise_error(Ktistec::Model::NotFound)
     end
   end
 end

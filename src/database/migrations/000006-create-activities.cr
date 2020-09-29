@@ -1,6 +1,6 @@
 require "../../framework/database"
 
-extend Balloon::Database::Migration
+extend Ktistec::Database::Migration
 
 up do |db|
   db.exec <<-STR

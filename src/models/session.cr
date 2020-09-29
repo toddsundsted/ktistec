@@ -4,7 +4,7 @@ require "json"
 # Client session.
 #
 class Session
-  include Balloon::Model(Common)
+  include Ktistec::Model(Common)
 
   # Allocates a new session.
   #

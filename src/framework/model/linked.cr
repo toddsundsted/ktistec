@@ -1,10 +1,10 @@
 require "../model"
 
-module Balloon
+module Ktistec
   module Model
     module Linked
       macro included
-        extend Balloon::Util
+        extend Ktistec::Util
 
         def self.find(_iri iri : String?)
           find(iri: iri)
@@ -17,7 +17,7 @@ module Balloon
         def self.dereference?(iri : String?) : self?
           if iri
             unless (instance = self.find?(iri))
-              unless iri.starts_with?(Balloon.host)
+              unless iri.starts_with?(Ktistec.host)
                 self.open?(iri) do |response|
                   instance = self.from_json_ld?(response.body)
                 end
@@ -36,7 +36,7 @@ module Balloon
                   def {{name}}?(*, dereference = false)
                     unless ({{name}} = self.{{name}}?)
                       if ({{name}}_iri = self.{{name}}_iri) && dereference
-                        unless {{name}}_iri.starts_with?(Balloon.host)
+                        unless {{name}}_iri.starts_with?(Ktistec.host)
                           {% for union_type in m.return_type.id.split("|").map(&.strip.id) %}
                             {{union_type}}.open?({{name}}_iri) do |response|
                               if ({{name}} = {{union_type}}.from_json_ld?(response.body))

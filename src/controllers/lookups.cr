@@ -2,8 +2,8 @@ require "../framework"
 require "web_finger"
 
 class LookupsController
-  include Balloon::Controller
-  extend Balloon::Util
+  include Ktistec::Controller
+  extend Ktistec::Util
 
   get "/search" do |env|
     message = nil
@@ -18,7 +18,7 @@ class LookupsController
           WebFinger.query("acct:#{account}").link("self").href.not_nil!
         end
       open(url) do |response|
-        json = Balloon::JSON_LD.expand(response.body)
+        json = Ktistec::JSON_LD.expand(response.body)
         if (iri = json.dig?("@id").try(&.as_s)) && (actor = ActivityPub::Actor.find?(iri))
           actor.from_json_ld(json)
         else
@@ -50,5 +50,5 @@ class LookupsController
 
   private alias LookupErrors = Socket::Addrinfo::Error | JSON::ParseException | NilAssertionError |
                                HostMeta::Error | WebFinger::Error |
-                               Balloon::Util::OpenError
+                               Ktistec::Util::OpenError
 end

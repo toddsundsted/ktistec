@@ -7,7 +7,7 @@ class HTTP::Server
   end
 end
 
-module Balloon
+module Ktistec
   # HTTP method aliasing.
   #
   class Method < Kemal::Handler

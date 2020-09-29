@@ -1,7 +1,7 @@
 require "../spec_helper"
 
 class FooBarController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   skip_auth ["/foo/bar/delete/:id"], DELETE, POST
 
@@ -16,7 +16,7 @@ class FooBarController
   end
 end
 
-Spectator.describe Balloon::Method do
+Spectator.describe Ktistec::Method do
   describe "post /foo/bar/delete/:id" do
     it "invokes the delete action" do
       headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}

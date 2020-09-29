@@ -1,7 +1,7 @@
 require "../framework"
 
 class WellKnownController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   skip_auth ["/.well-known/*"]
 
@@ -31,7 +31,7 @@ class WellKnownController
     }
     env.response.content_type = "application/jrd+json"
     message.to_json
-  rescue Balloon::Model::NotFound
+  rescue Ktistec::Model::NotFound
     not_found
   end
 end

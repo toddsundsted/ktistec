@@ -7,7 +7,7 @@ require "openssl_ext"
 # Also an account.
 #
 class Account
-  include Balloon::Model(Common)
+  include Ktistec::Model(Common)
 
   # :nodoc:
   private def cost
@@ -67,7 +67,7 @@ class Account
   end
 
   @[Persistent]
-  property iri : String { "#{Balloon.host}/actors/#{username}" }
+  property iri : String { "#{Ktistec.host}/actors/#{username}" }
 
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri
 

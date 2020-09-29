@@ -1,6 +1,6 @@
 require "./framework"
 
-module Balloon
+module Ktistec
   module Model(*T)
     # Marks properties as bulk assignable.
     #
@@ -75,7 +75,7 @@ module Balloon
       # Returns the count of saved instances.
       #
       def count(**options)
-        Balloon.database.scalar(
+        Ktistec.database.scalar(
           "SELECT COUNT(id) FROM #{table_name} #{conditions(**options)}", *options.values
         ).as(Int)
       end
@@ -106,7 +106,7 @@ module Balloon
       # Returns all instances.
       #
       def all
-        Balloon.database.query_all(
+        Ktistec.database.query_all(
           "SELECT #{columns} FROM #{table_name} #{conditions}",
           &->compose(DB::ResultSet)
         )
@@ -117,7 +117,7 @@ module Balloon
       # Raises `NotFound` if no such saved instance exists.
       #
       def find(_id id : Int?)
-        Balloon.database.query_one(
+        Ktistec.database.query_one(
           "SELECT #{columns} FROM #{table_name} #{conditions(id: id)}", id,
           &->compose(DB::ResultSet)
         )
@@ -140,7 +140,7 @@ module Balloon
       # Raises `NotFound` if no such saved instance exists.
       #
       def find(**options)
-        Balloon.database.query_one(
+        Ktistec.database.query_one(
           "SELECT #{columns} FROM #{table_name} #{conditions(**options)}", *options.values,
           &->compose(DB::ResultSet)
         )
@@ -161,7 +161,7 @@ module Balloon
       # Returns saved instances.
       #
       def where(**options)
-        Balloon.database.query_all(
+        Ktistec.database.query_all(
           "SELECT #{columns} FROM #{table_name} #{conditions(**options)}", *options.values,
           &->compose(DB::ResultSet)
         )
@@ -170,7 +170,7 @@ module Balloon
       # Returns saved instances.
       #
       def where(where : String, *arguments)
-        Balloon.database.query_all(
+        Ktistec.database.query_all(
           "SELECT #{columns} FROM #{table_name} #{conditions(where)}", *arguments,
           &->compose(DB::ResultSet)
         )
@@ -404,14 +404,14 @@ module Balloon
             self.updated_at = Time.utc
           end
           if @id
-            Balloon.database.exec(
+            Ktistec.database.exec(
               "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{conditions})",
               {% for v in vs %}
                 self.{{v}},
               {% end %}
             )
           else
-            @id = Balloon.database.exec(
+            @id = Ktistec.database.exec(
               "INSERT INTO #{table_name} (#{columns}) VALUES (#{conditions})",
               {% for v in vs %}
                 self.{{v}},
@@ -433,7 +433,7 @@ module Balloon
       # Destroys the instance.
       #
       def destroy
-        Balloon.database.exec("DELETE FROM #{table_name} WHERE id = ?", @id)
+        Ktistec.database.exec("DELETE FROM #{table_name} WHERE id = ?", @id)
         @id = nil
         self
       end
@@ -478,7 +478,7 @@ module Balloon
       include InstanceMethods
 
       {% for type in T.type_vars %}
-        include ::Balloon::Model::{{type}}
+        include ::Ktistec::Model::{{type}}
       {% end %}
     end
 

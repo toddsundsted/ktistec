@@ -1,6 +1,6 @@
 require "benchmark"
 
-module Balloon
+module Ktistec
   # Database utilities.
   #
   module Database
@@ -21,7 +21,7 @@ module Balloon
     # Returns all applied versions.
     #
     def self.all_applied_versions
-      Balloon.database.query_all("SELECT id FROM migrations", as: Int)
+      Ktistec.database.query_all("SELECT id FROM migrations", as: Int)
     end
 
     # Returns all pending versions.
@@ -45,7 +45,7 @@ module Balloon
         if all_applied_versions.includes?(version)
           "#{migration.name}: is already applied"
         else
-          Balloon.database.exec("INSERT INTO migrations VALUES (?, ?)", version, migration.name)
+          Ktistec.database.exec("INSERT INTO migrations VALUES (?, ?)", version, migration.name)
           "#{migration.name}: created but not applied"
         end
       when :apply
@@ -54,15 +54,15 @@ module Balloon
         elsif (up = migration.up).nil?
           "#{migration.name}: is not defined"
         else
-          time = Benchmark.measure { up.call(Balloon.database) }
-          Balloon.database.exec("INSERT INTO migrations VALUES (?, ?)", version, migration.name)
+          time = Benchmark.measure { up.call(Ktistec.database) }
+          Ktistec.database.exec("INSERT INTO migrations VALUES (?, ?)", version, migration.name)
           "#{migration.name}: applied in %.4fs" % time.real
         end
       when :destroy
         if all_pending_versions.includes?(version)
           "#{migration.name}: is already reverted"
         else
-          Balloon.database.exec("DELETE FROM migrations WHERE id = ?", version)
+          Ktistec.database.exec("DELETE FROM migrations WHERE id = ?", version)
           "#{migration.name}: destroyed but not reverted"
         end
       when :revert
@@ -71,8 +71,8 @@ module Balloon
         elsif (down = migration.down).nil?
           "#{migration.name}: is not defined"
         else
-          time = Benchmark.measure { down.call(Balloon.database) }
-          Balloon.database.exec("DELETE FROM migrations WHERE id = ?", version)
+          time = Benchmark.measure { down.call(Ktistec.database) }
+          Ktistec.database.exec("DELETE FROM migrations WHERE id = ?", version)
           "#{migration.name}: reverted in %.4fs" % time.real
         end
       else
@@ -87,7 +87,7 @@ module Balloon
       #
       def up(filename = __FILE__, &proc : Operation)
         if filename.split("/").last =~ PATTERN
-          Balloon::Database.all_migrations.tap do |all_migrations|
+          Ktistec::Database.all_migrations.tap do |all_migrations|
             all_migrations[$1.to_i] =
               if (definition = all_migrations[$1.to_i]?)
                 definition.copy_with(up: proc)
@@ -102,7 +102,7 @@ module Balloon
       #
       def down(filename = __FILE__, &proc : Operation)
         if filename.split("/").last =~ PATTERN
-          Balloon::Database.all_migrations.tap do |all_migrations|
+          Ktistec::Database.all_migrations.tap do |all_migrations|
             all_migrations[$1.to_i] =
               if (definition = all_migrations[$1.to_i]?)
                 definition.copy_with(down: proc)

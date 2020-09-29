@@ -9,7 +9,7 @@ private def wrap(value)
   JSON::Any.new(value)
 end
 
-module Balloon
+module Ktistec
   module JSON_LD
     # Expands the JSON-LD document.
     #

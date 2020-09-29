@@ -29,7 +29,7 @@ class ActivityPub::Activity
           ORDER BY f.created_at desc
              LIMIT 1
         SQL
-        Balloon.database.query_one(query, actor_iri, object_iri, &->compose(DB::ResultSet))
+        Ktistec.database.query_one(query, actor_iri, object_iri, &->compose(DB::ResultSet))
       {% end %}
     rescue ex: DB::Error
       raise ex unless ex.message == "no rows"

@@ -1,6 +1,6 @@
 require "../model"
 
-module Balloon
+module Ktistec
   module Model
     module Deletable
       @[Persistent]
@@ -8,7 +8,7 @@ module Balloon
       property deleted_at : Time?
 
       def delete
-        Balloon.database.exec("UPDATE #{table_name} SET deleted_at = ? WHERE id = ?", @deleted_at = Time.utc, @id)
+        Ktistec.database.exec("UPDATE #{table_name} SET deleted_at = ? WHERE id = ?", @deleted_at = Time.utc, @id)
         @id = nil
         self
       end

@@ -1,12 +1,12 @@
 require "../../spec_helper"
 
 class CommonModel
-  include Balloon::Model(Common)
+  include Ktistec::Model(Common)
 end
 
-Spectator.describe Balloon::Model::Common do
+Spectator.describe Ktistec::Model::Common do
   before_each do
-    Balloon.database.exec <<-SQL
+    Ktistec.database.exec <<-SQL
       CREATE TABLE common_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         created_at datetime NOT NULL,
@@ -15,12 +15,12 @@ Spectator.describe Balloon::Model::Common do
     SQL
   end
   after_each do
-    Balloon.database.exec "DROP TABLE common_models"
+    Ktistec.database.exec "DROP TABLE common_models"
   end
 
   describe ".new" do
-    it "includes Balloon::Model::Common" do
-      expect(CommonModel.new).to be_a(Balloon::Model::Common)
+    it "includes Ktistec::Model::Common" do
+      expect(CommonModel.new).to be_a(Ktistec::Model::Common)
     end
   end
 

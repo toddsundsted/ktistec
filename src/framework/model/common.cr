@@ -1,6 +1,6 @@
 require "../model"
 
-module Balloon
+module Ktistec
   module Model
     module Common
       @[Persistent]

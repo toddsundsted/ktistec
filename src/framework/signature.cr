@@ -1,6 +1,6 @@
 require "./framework"
 
-module Balloon
+module Ktistec
   # HTTP Signature (https://tools.ietf.org/html/draft-cavage-http-signatures-10)
   # support.
   #

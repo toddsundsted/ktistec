@@ -3,7 +3,7 @@ require "json"
 
 module ActivityPub
   class Collection
-    include Balloon::Model(Common)
+    include Ktistec::Model(Common)
 
     @@table_name = "collections"
 
@@ -30,7 +30,7 @@ module ActivityPub
     end
 
     def local
-      iri.starts_with?(Balloon.host)
+      iri.starts_with?(Ktistec.host)
     end
 
     @[Persistent]
@@ -93,7 +93,7 @@ module ActivityPub
     end
 
     def self.map(json, **options)
-      json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
+      json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
       {
         iri: json.dig?("@id").try(&.as_s),
         items_cached: json.dig?("https://www.w3.org/ns/activitystreams#items").try(&.as_a),

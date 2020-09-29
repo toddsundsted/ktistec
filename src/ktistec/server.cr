@@ -1,4 +1,4 @@
 require "../framework"
 
-Balloon::Server.run do
+Ktistec::Server.run do
 end

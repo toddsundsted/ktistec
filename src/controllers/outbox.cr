@@ -1,7 +1,7 @@
 require "../framework"
 
 class RelationshipsController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   skip_auth ["/actors/:username/outbox"], GET
 
@@ -32,12 +32,12 @@ class RelationshipsController
       if (followers = account.actor.followers)
         cc << followers
       end
-      enhancements = Balloon::Util.enhance(content)
+      enhancements = Ktistec::Util.enhance(content)
       activity = ActivityPub::Activity::Create.new(
-        iri: "#{Balloon.host}/activities/#{id}",
+        iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: ActivityPub::Object::Note.new(
-          iri: "#{Balloon.host}/objects/#{id}",
+          iri: "#{host}/objects/#{id}",
           media_type: "text/html",
           content: enhancements.content,
           attachments: enhancements.attachments,
@@ -57,7 +57,7 @@ class RelationshipsController
         bad_request
       end
       activity = ActivityPub::Activity::Follow.new(
-        iri: "#{Balloon.host}/activities/#{id}",
+        iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
         to: [object.iri]
@@ -80,7 +80,7 @@ class RelationshipsController
         bad_request
       end
       activity = ActivityPub::Activity::Accept.new(
-        iri: "#{Balloon.host}/activities/#{id}",
+        iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
         to: [object.actor.iri]
@@ -97,7 +97,7 @@ class RelationshipsController
         bad_request
       end
       activity = ActivityPub::Activity::Reject.new(
-        iri: "#{Balloon.host}/activities/#{id}",
+        iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
         to: [object.actor.iri]
@@ -114,7 +114,7 @@ class RelationshipsController
         bad_request
       end
       activity = ActivityPub::Activity::Undo.new(
-        iri: "#{Balloon.host}/activities/#{id}",
+        iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
         to: [object.object.iri]
@@ -131,7 +131,7 @@ class RelationshipsController
           end
           account.actor = object.attributed_to
           activity = ActivityPub::Activity::Delete.new(
-            iri: "#{Balloon.host}/activities/#{id}",
+            iri: "#{host}/activities/#{id}",
             actor: account.actor,
             object: object,
             to: object.to,
@@ -147,7 +147,7 @@ class RelationshipsController
           end
           account.actor = object
           activity = ActivityPub::Activity::Delete.new(
-            iri: "#{Balloon.host}/activities/#{id}",
+            iri: "#{host}/activities/#{id}",
             actor: account.actor,
             object: object,
             to: ["https://www.w3.org/ns/activitystreams#Public"],

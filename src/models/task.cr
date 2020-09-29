@@ -3,7 +3,7 @@ require "../framework/model"
 # Asynchronous task.
 #
 class Task
-  include Balloon::Model(Common, Polymorphic)
+  include Ktistec::Model(Common, Polymorphic)
 
   @@table_name = "tasks"
 

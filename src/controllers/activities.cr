@@ -1,7 +1,7 @@
 require "../framework/controller"
 
 class ActivitiesController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   skip_auth ["/activities/:id"], GET
 

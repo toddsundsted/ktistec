@@ -3,7 +3,7 @@ require "json"
 
 module ActivityPub
   class Object
-    include Balloon::Model(Common, Deletable, Polymorphic, Serialized, Linked)
+    include Ktistec::Model(Common, Deletable, Polymorphic, Serialized, Linked)
 
     @@table_name = "objects"
 
@@ -22,7 +22,7 @@ module ActivityPub
     end
 
     def local
-      iri.starts_with?(Balloon.host)
+      iri.starts_with?(Ktistec.host)
     end
 
     @[Persistent]
@@ -142,7 +142,7 @@ module ActivityPub
          WHERE o.iri IN (r.iri) AND o.deleted_at IS NULL
         QUERY
         Array(Object).new.tap do |array|
-          Balloon.database.query(
+          Ktistec.database.query(
             query, self.iri
           ) do |rs|
             rs.each do
@@ -185,7 +185,7 @@ module ActivityPub
          WHERE o.iri IN (a.iri) AND o.deleted_at IS NULL
         QUERY
         Array(Object).new.tap do |array|
-          Balloon.database.query(
+          Ktistec.database.query(
             query, self.iri
           ) do |rs|
             rs.each do
@@ -229,7 +229,7 @@ module ActivityPub
     end
 
     def self.map(json, **options)
-      json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+      json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
         iri: json.dig?("@id").try(&.as_s),
         _type: json.dig?("@type").try(&.as_s.split("#").last),

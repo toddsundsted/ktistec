@@ -3,7 +3,7 @@ require "../framework/model"
 # Relationship between things.
 #
 class Relationship
-  include Balloon::Model(Common, Polymorphic)
+  include Ktistec::Model(Common, Polymorphic)
 
   @@table_name = "relationships"
 

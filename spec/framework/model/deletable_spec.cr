@@ -1,14 +1,14 @@
 require "../../spec_helper"
 
 class DeletableModel
-  include Balloon::Model(Deletable)
+  include Ktistec::Model(Deletable)
 
   validates(deleted_at) { "must not be deleted" if deleted_at }
 end
 
-Spectator.describe Balloon::Model::Deletable do
+Spectator.describe Ktistec::Model::Deletable do
   before_each do
-    Balloon.database.exec <<-SQL
+    Ktistec.database.exec <<-SQL
       CREATE TABLE deletable_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime
@@ -16,12 +16,12 @@ Spectator.describe Balloon::Model::Deletable do
     SQL
   end
   after_each do
-    Balloon.database.exec "DROP TABLE deletable_models"
+    Ktistec.database.exec "DROP TABLE deletable_models"
   end
 
   describe ".new" do
-    it "includes Balloon::Model::Deletable" do
-      expect(DeletableModel.new).to be_a(Balloon::Model::Deletable)
+    it "includes Ktistec::Model::Deletable" do
+      expect(DeletableModel.new).to be_a(Ktistec::Model::Deletable)
     end
   end
 
@@ -39,7 +39,7 @@ Spectator.describe Balloon::Model::Deletable do
 
   context "a deleted record" do
     before_each do
-      Balloon.database.exec("INSERT INTO deletable_models (id, deleted_at) VALUES (?, ?)", 9999, Time.utc)
+      Ktistec.database.exec("INSERT INTO deletable_models (id, deleted_at) VALUES (?, ?)", 9999, Time.utc)
     end
 
     it "isn't counted" do

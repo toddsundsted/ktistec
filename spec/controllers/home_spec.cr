@@ -7,8 +7,8 @@ Spectator.describe HomeController do
   let(password) { random_string }
 
   context "on step 1 (set host)" do
-    before_each { Balloon.clear_host }
-    after_each { Balloon.host = "https://test.test" }
+    before_each { Ktistec.clear_host }
+    after_each { Ktistec.host = "https://test.test" }
 
     describe "GET /" do
       it "renders a form" do
@@ -46,7 +46,7 @@ Spectator.describe HomeController do
       it "sets host and redirects" do
         headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
         body = "host=https://foo_bar"
-        expect{post "/", headers, body}.to change{Balloon.host?}
+        expect{post "/", headers, body}.to change{Ktistec.host?}
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end
@@ -54,7 +54,7 @@ Spectator.describe HomeController do
       it "sets host and redirects" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
         body = {host: "https://foo_bar"}.to_json
-        expect{post "/", headers, body}.to change{Balloon.host?}
+        expect{post "/", headers, body}.to change{Ktistec.host?}
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end

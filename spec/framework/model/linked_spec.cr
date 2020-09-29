@@ -1,7 +1,7 @@
 require "../../spec_helper"
 
 class LinkedModel
-  include Balloon::Model(Linked)
+  include Ktistec::Model(Linked)
 
   @[Persistent]
   property iri : String?
@@ -15,11 +15,11 @@ class LinkedModel
   end
 end
 
-Spectator.describe Balloon::Model::Linked do
+Spectator.describe Ktistec::Model::Linked do
   before_each { HTTP::Client.reset }
 
   before_each do
-    Balloon.database.exec <<-SQL
+    Ktistec.database.exec <<-SQL
       CREATE TABLE linked_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         iri varchar(255) NOT NULL,
@@ -28,12 +28,12 @@ Spectator.describe Balloon::Model::Linked do
     SQL
   end
   after_each do
-    Balloon.database.exec "DROP TABLE linked_models"
+    Ktistec.database.exec "DROP TABLE linked_models"
   end
 
   describe ".new" do
-    it "includes Balloon::Model::Linked" do
-      expect(LinkedModel.new).to be_a(Balloon::Model::Linked)
+    it "includes Ktistec::Model::Linked" do
+      expect(LinkedModel.new).to be_a(Ktistec::Model::Linked)
     end
   end
 

@@ -1,9 +1,9 @@
 require "../spec_helper"
 
-Spectator.describe Balloon::JSON_LD do
+Spectator.describe Ktistec::JSON_LD do
   describe "::CONTEXTS" do
     it "loads stored contexts" do
-      expect(Balloon::JSON_LD::CONTEXTS).not_to be_empty
+      expect(Ktistec::JSON_LD::CONTEXTS).not_to be_empty
     end
   end
 
@@ -69,7 +69,7 @@ Spectator.describe Balloon::JSON_LD do
           JSON
         )
       else
-        Balloon::JSON_LD::Loader.new.load(url)
+        Ktistec::JSON_LD::Loader.new.load(url)
       end
     end
   end

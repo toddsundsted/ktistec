@@ -5,18 +5,18 @@ class HTTP::Server::Context
   property? current_session : Session?
 end
 
-module Balloon
+module Ktistec
   # Authentication middleware.
   #
   class Auth < Kemal::Handler
-    include Balloon::Controller
+    include Ktistec::Controller
 
     def call(env)
       return call_next(env) unless env.route_lookup.found?
 
       begin
         if (value = check_authorization(env) || check_cookie(env))
-          if payload = Balloon::JWT.decode(value)
+          if payload = Ktistec::JWT.decode(value)
             if Time.parse_iso8601(payload["iat"].as_s) > Time.utc - 1.month
               if session = Session.find(session_key: payload["jti"].as_s)
                 env.current_account = session.account
@@ -26,7 +26,7 @@ module Balloon
             end
           end
         end
-      rescue Balloon::JWT::Error | Balloon::Model::NotFound
+      rescue Ktistec::JWT::Error | Ktistec::Model::NotFound
       end
 
       return call_next(env) if exclude_match?(env)

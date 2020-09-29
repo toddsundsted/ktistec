@@ -2,7 +2,7 @@ require "../framework"
 require "uuid"
 
 class UploadsController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   post "/uploads" do |env|
     filename = nil
@@ -22,7 +22,7 @@ class UploadsController
       end
     end
     if filename && filepath
-      env.response.headers["Location"] = "#{Balloon.host}/#{filepath}/#{filename}"
+      env.response.headers["Location"] = "#{host}/#{filepath}/#{filename}"
       created
     else
       bad_request

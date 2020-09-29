@@ -1,12 +1,12 @@
-name: balloon
+name: ktistec
 version: 0.1.0
 
 authors:
   - Todd Sundsted <todd@sundsted.com>
 
 targets:
-  balloon:
-    main: src/balloon/server.cr
+  ktistec:
+    main: src/ktistec/server.cr
 
 dependencies:
   kemal:

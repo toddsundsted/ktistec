@@ -1,10 +1,10 @@
 require "../model"
 
-module Balloon
+module Ktistec
   module Model
     module Serialized
       macro included
-        extend Balloon::Model::Serialized::ClassMethods
+        extend Ktistec::Model::Serialized::ClassMethods
       end
 
       module ClassMethods

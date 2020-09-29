@@ -3,7 +3,7 @@ require "json"
 
 module ActivityPub
   class Actor
-    include Balloon::Model(Common, Deletable, Polymorphic, Serialized, Linked)
+    include Ktistec::Model(Common, Deletable, Polymorphic, Serialized, Linked)
 
     @@table_name = "actors"
 
@@ -22,7 +22,7 @@ module ActivityPub
     end
 
     def local
-      iri.starts_with?(Balloon.host)
+      iri.starts_with?(Ktistec.host)
     end
 
     @[Persistent]
@@ -139,8 +139,8 @@ module ActivityPub
     def all_following(page = 1, size = 10, public = true)
       {% begin %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-        Balloon::Util::PaginatedArray(Actor).new.tap do |array|
-          Balloon.database.query(
+        Ktistec::Util::PaginatedArray(Actor).new.tap do |array|
+          Ktistec.database.query(
             query(Relationship::Social::Follow, :to_iri, :from_iri, public),
             self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
@@ -164,8 +164,8 @@ module ActivityPub
     def all_followers(page = 1, size = 10, public = false)
       {% begin %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-        Balloon::Util::PaginatedArray(Actor).new.tap do |array|
-          Balloon.database.query(
+        Ktistec::Util::PaginatedArray(Actor).new.tap do |array|
+          Ktistec.database.query(
             query(Relationship::Social::Follow, :from_iri, :to_iri, public),
             self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
@@ -234,8 +234,8 @@ module ActivityPub
              LIMIT ?
           QUERY
         end
-        Balloon::Util::PaginatedArray(Activity).new.tap do |array|
-          Balloon.database.query(
+        Ktistec::Util::PaginatedArray(Activity).new.tap do |array|
+          Ktistec.database.query(
             query, self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
             rs.each do
@@ -289,7 +289,7 @@ module ActivityPub
     end
 
     def self.map(json, *, include_key = false, **option)
-      json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+      json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
         iri: json.dig?("@id").try(&.as_s),
         _type: json.dig?("@type").try(&.as_s.split("#").last),

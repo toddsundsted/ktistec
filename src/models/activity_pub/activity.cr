@@ -2,7 +2,7 @@ require "../../framework/model"
 
 module ActivityPub
   class Activity
-    include Balloon::Model(Common, Polymorphic, Serialized, Linked)
+    include Ktistec::Model(Common, Polymorphic, Serialized, Linked)
 
     @@table_name = "activities"
 
@@ -21,7 +21,7 @@ module ActivityPub
     end
 
     def local
-      iri.starts_with?(Balloon.host)
+      iri.starts_with?(Ktistec.host)
     end
 
     @[Persistent]
@@ -74,7 +74,7 @@ module ActivityPub
     end
 
     def self.map(json, **options)
-      json = Balloon::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+      json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
         iri: json.dig?("@id").try(&.as_s),
         _type: json.dig?("@type").try(&.as_s.split("#").last),

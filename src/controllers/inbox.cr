@@ -1,8 +1,8 @@
 require "../framework"
 
 class RelationshipsController
-  include Balloon::Controller
-  extend Balloon::Util
+  include Ktistec::Controller
+  extend Ktistec::Util
 
   skip_auth ["/actors/:username/inbox"], POST, GET
 
@@ -34,7 +34,7 @@ class RelationshipsController
     verified = false
 
     if env.request.headers["Signature"]?
-      if actor && Balloon::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
+      if actor && Ktistec::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
         verified = true
       end
     end

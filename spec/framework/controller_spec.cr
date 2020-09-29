@@ -1,7 +1,7 @@
 require "../spec_helper"
 
 class FooBarController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   ID = random_string
   ACTIVITY = ActivityPub::Activity.new(iri: "https://remote/#{ID}").save
@@ -87,7 +87,7 @@ class FooBarController
   get "/foo/bar/paginate" do |env|
     page = env.params.query["page"]?.try(&.to_i) || 1
     size = env.params.query["size"]?.try(&.to_i) || 10
-    results = Balloon::Util::PaginatedArray(Int32).new
+    results = Ktistec::Util::PaginatedArray(Int32).new
     (0..9).to_a[(page - 1) * size, size].each { |v| results << v }
     results.more = (page) * size < 10
     paginate(results, env)
@@ -123,7 +123,7 @@ class FooBarController
   end
 end
 
-Spectator.describe Balloon::Controller do
+Spectator.describe Ktistec::Controller do
   describe "get /foo/bar/helpers" do
     it "gets the host" do
       get "/foo/bar/helpers"

@@ -16,10 +16,10 @@ class HTTP::Server::Context
   end
 end
 
-module Balloon
+module Ktistec
   module Controller
     macro host
-      Balloon.host
+      Ktistec.host
     end
 
     macro home_path
@@ -114,7 +114,7 @@ module Balloon
     #     skip_auth ["/foo", "/bar"], GET, POST
     #
     macro skip_auth(paths, method = GET, *methods)
-      class ::Balloon::Auth < ::Kemal::Handler
+      class ::Ktistec::Auth < ::Kemal::Handler
         {% for method in (methods << method) %}
           exclude {{paths}}, {{method.stringify}}
         {% end %}
@@ -136,7 +136,7 @@ module Balloon
     #     <%= s string %>
     #
     macro s(str)
-      Balloon::Util.sanitize({{str}})
+      Ktistec::Util.sanitize({{str}})
     end
 
     # Emits a comma when one would be necessary when iterating through

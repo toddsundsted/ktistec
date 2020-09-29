@@ -9,7 +9,7 @@ require "sqlite3"
 require "uri"
 require "yaml"
 
-module Balloon
+module Ktistec
   class Config
     include YAML::Serializable
 
@@ -24,7 +24,7 @@ module Balloon
 
   def self.config
     @@config ||=
-      File.open(File.expand_path(File.join("~", ".balloon.yml"), home: true)) do |file|
+      File.open(File.expand_path(File.join("~", ".ktistec.yml"), home: true)) do |file|
         Config.from_yaml(file)
       end
   end
@@ -32,13 +32,13 @@ module Balloon
   @@database : DB::Database?
 
   def self.database
-    @@database ||= DB.open(Balloon.config.db_file)
+    @@database ||= DB.open(Ktistec.config.db_file)
   end
 
   @@secret_key : String?
 
   def self.secret_key
-    @@secret_key ||= Balloon.database.scalar("SELECT value FROM options WHERE key = ?", "secret_key").as(String)
+    @@secret_key ||= Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "secret_key").as(String)
   end
 
   @@host : String?
@@ -59,12 +59,12 @@ module Balloon
     end
     @@host = uri.normalize.to_s
     query = "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)"
-    Balloon.database.exec(query, "host", @@host)
+    Ktistec.database.exec(query, "host", @@host)
     @@host
   end
 
   def self.host
-    @@host ||= Balloon.database.scalar("SELECT value FROM options WHERE key = ?", "host").as(String)
+    @@host ||= Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "host").as(String)
   end
 
   def self.host?
@@ -76,21 +76,21 @@ module Balloon
 
   # An [ActivityPub](https://www.w3.org/TR/activitypub/) server.
   #
-  #     Balloon::Server.run do
+  #     Ktistec::Server.run do
   #       # configuration, initialization, etc.
   #     end
   #
   class Server
     def self.run
-      unless File.exists?(Balloon.config.db_file.split("//").last)
-        DB.open(Balloon.config.db_file) do |db|
+      unless File.exists?(Ktistec.config.db_file.split("//").last)
+        DB.open(Ktistec.config.db_file) do |db|
           db.exec "CREATE TABLE options (key TEXT PRIMARY KEY, value TEXT)"
           db.exec "INSERT INTO options (key, value) VALUES (?, ?)", "secret_key", Random::Secure.hex(64)
           db.exec "CREATE TABLE migrations (id INTEGER PRIMARY KEY, name TEXT)"
         end
       end
-      Balloon::Database.all_pending_versions.each do |version|
-        puts Balloon::Database.do_operation(:apply, version)
+      Ktistec::Database.all_pending_versions.each do |version|
+        puts Ktistec::Database.do_operation(:apply, version)
       end
       with new yield
       Kemal.run

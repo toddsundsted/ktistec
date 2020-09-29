@@ -52,7 +52,7 @@ def build_main_handler
   main_handler = Kemal.config.handlers.first
   current_handler = main_handler
   Kemal.config.handlers.each do |handler|
-    if handler.is_a?(Balloon::Auth) && Global.session && Global.account
+    if handler.is_a?(Ktistec::Auth) && Global.session && Global.account
       # if we "sign_in" in a context, swap in the dummy handler
       handler = DummyAuth.new
     elsif handler.is_a?(CSRF)
@@ -239,16 +239,16 @@ end
 
 macro setup_spec
   before_each { HTTP::Client.reset }
-  before_each { Balloon.database.exec "BEGIN TRANSACTION" }
-  after_each { Balloon.database.exec "ROLLBACK" }
+  before_each { Ktistec.database.exec "BEGIN TRANSACTION" }
+  after_each { Ktistec.database.exec "ROLLBACK" }
 end
 
 require "../src/framework"
 
-module Balloon
+module Ktistec
   class SpecConfig
     def db_file
-      @db_file ||= "sqlite3://#{File.tempname("balloon-test", ".db")}"
+      @db_file ||= "sqlite3://#{File.tempname("ktistec-test", ".db")}"
     end
   end
 
@@ -257,7 +257,7 @@ module Balloon
   end
 
   def self.clear_host
-    Balloon.database.exec("DELETE FROM options WHERE key = ?", "host")
+    Ktistec.database.exec("DELETE FROM options WHERE key = ?", "host")
     @@host = nil
   end
 end
@@ -268,8 +268,8 @@ class Account
   end
 end
 
-Balloon::Server.run do
-  Balloon.host = "https://test.test"
+Ktistec::Server.run do
+  Ktistec.host = "https://test.test"
   Kemal.config.port = Random.new.rand(49152..65535)
   Kemal.config.logging = false
   Kemal::Session.config do |config|

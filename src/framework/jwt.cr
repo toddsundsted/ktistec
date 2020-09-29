@@ -1,14 +1,14 @@
 require "crypto/subtle"
 require "openssl/hmac"
 
-module Balloon
+module Ktistec
   module JWT
     class Error < Exception
     end
 
     # Encodes the payload. Generates a token.
     #
-    def self.encode(payload, secret_key = Balloon.secret_key)
+    def self.encode(payload, secret_key = Ktistec.secret_key)
       parts = [] of String
       header = {"typ" => "JWT", "alg" => "HS256"}
       parts << encode64(header.to_json)
@@ -19,7 +19,7 @@ module Balloon
 
     # Decodes the token. Returns the payload.
     #
-    def self.decode(token, secret_key = Balloon.secret_key)
+    def self.decode(token, secret_key = Ktistec.secret_key)
       hashed_header, hashed_payload, hashed_signature = token.split(".")
       raise Error.new unless verify(
         Base64.decode_string(hashed_signature),

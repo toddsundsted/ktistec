@@ -1,7 +1,7 @@
 require "../spec_helper"
 
 class TestMigraton
-  include Balloon::Database::Migration
+  include Ktistec::Database::Migration
 
   def initialize(name)
     up(name) {}
@@ -9,7 +9,7 @@ class TestMigraton
   end
 end
 
-Spectator.describe Balloon::Database do
+Spectator.describe Ktistec::Database do
   setup_spec
 
   let!(test) { TestMigraton.new("999999-test-migration.cr") }

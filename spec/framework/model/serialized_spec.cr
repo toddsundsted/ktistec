@@ -1,15 +1,15 @@
 require "../../spec_helper"
 
 class SerializedModel
-  include Balloon::Model(Serialized)
+  include Ktistec::Model(Serialized)
 end
 
-Spectator.describe Balloon::Model::Serialized do
+Spectator.describe Ktistec::Model::Serialized do
   subject { SerializedModel }
 
   describe ".new" do
-    it "includes Balloon::Model::Serialized" do
-      expect(subject.new).to be_a(Balloon::Model::Serialized)
+    it "includes Ktistec::Model::Serialized" do
+      expect(subject.new).to be_a(Ktistec::Model::Serialized)
     end
   end
 

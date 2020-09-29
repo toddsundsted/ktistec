@@ -1,11 +1,11 @@
 require "../spec_helper"
 
-Spectator.describe Balloon::Util do
+Spectator.describe Ktistec::Util do
   describe ".enhance" do
     alias Attachment = ActivityPub::Object::Attachment
 
     it "returns enhancements" do
-      expect(described_class.enhance("")).to be_a(Balloon::Util::Enhancements)
+      expect(described_class.enhance("")).to be_a(Ktistec::Util::Enhancements)
     end
 
     it "returns attachments for embedded images" do
@@ -145,7 +145,7 @@ Spectator.describe Balloon::Util do
     end
 
     it "fails on errors" do
-      expect{described_class.open("https://external/returns-500")}.to raise_error(Balloon::Util::OpenError)
+      expect{described_class.open("https://external/returns-500")}.to raise_error(Ktistec::Util::OpenError)
     end
   end
 
@@ -156,8 +156,8 @@ Spectator.describe Balloon::Util do
   end
 end
 
-Spectator.describe Balloon::Util::PaginatedArray do
-  subject { Balloon::Util::PaginatedArray{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} }
+Spectator.describe Ktistec::Util::PaginatedArray do
+  subject { Ktistec::Util::PaginatedArray{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} }
 
   describe ".more" do
     it "changes the indicator" do

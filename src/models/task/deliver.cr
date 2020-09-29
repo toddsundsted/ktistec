@@ -2,7 +2,7 @@ require "../task"
 
 class Task
   class Deliver < Task
-    include Balloon::Util
+    include Ktistec::Util
 
     belongs_to sender, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri
     validates(sender) { "missing: #{source_iri}" unless sender? }
@@ -17,7 +17,7 @@ class Task
     end
 
     private def local?(iri)
-      iri.try(&.starts_with?(Balloon.host))
+      iri.try(&.starts_with?(Ktistec.host))
     end
 
     private def followers_path?(iri)
@@ -105,7 +105,7 @@ class Task
         elsif (inbox = recipient.inbox)
           HTTP::Client.post(
             inbox,
-            Balloon::Signature.sign(sender, inbox),
+            Ktistec::Signature.sign(sender, inbox),
             activity.to_json_ld
           )
         else

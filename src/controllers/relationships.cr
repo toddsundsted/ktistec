@@ -1,7 +1,7 @@
 require "../framework"
 
 class RelationshipsController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   skip_auth ["/actors/:username/following"], GET
   skip_auth ["/actors/:username/followers"], GET

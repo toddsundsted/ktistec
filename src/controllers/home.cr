@@ -1,12 +1,12 @@
 require "../framework"
 
 class HomeController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   skip_auth ["/"], GET, POST
 
   get "/" do |env|
-    if !Balloon.host?
+    if !Ktistec.host?
       _host = ""
       error = nil
 
@@ -42,9 +42,9 @@ class HomeController
   end
 
   post "/" do |env|
-    if !Balloon.host?
+    if !Ktistec.host?
       begin
-        Balloon.host = host_param(env)
+        Ktistec.host = host_param(env)
 
         if accepts?("text/html")
           env.redirect home_path
@@ -66,11 +66,11 @@ class HomeController
     elsif (accounts = Account.all).empty?
       account = Account.new(**params(env))
       actor = ActivityPub::Actor::Person.new(**params(env).merge({
-        iri: "#{Balloon.host}/actors/#{account.username}",
-        inbox: "#{Balloon.host}/actors/#{account.username}/inbox",
-        outbox: "#{Balloon.host}/actors/#{account.username}/outbox",
-        following: "#{Balloon.host}/actors/#{account.username}/following",
-        followers: "#{Balloon.host}/actors/#{account.username}/followers"
+        iri: "#{host}/actors/#{account.username}",
+        inbox: "#{host}/actors/#{account.username}/inbox",
+        outbox: "#{host}/actors/#{account.username}/outbox",
+        following: "#{host}/actors/#{account.username}/following",
+        followers: "#{host}/actors/#{account.username}/followers"
       }))
       account.actor = actor
 
@@ -83,7 +83,7 @@ class HomeController
 
         session = Session.new(account).save
         payload = {sub: account.id, jti: session.session_key, iat: Time.utc}
-        jwt = Balloon::JWT.encode(payload)
+        jwt = Ktistec::JWT.encode(payload)
 
         if accepts?("text/html")
           env.response.cookies["AuthToken"] = jwt

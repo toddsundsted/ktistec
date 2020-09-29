@@ -1,7 +1,7 @@
 require "../framework/controller"
 
 class ActorsController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   skip_auth ["/actors/:username"]
 
@@ -17,7 +17,7 @@ class ActorsController
       env.response.content_type = "application/activity+json"
       render "src/views/actors/actor.json.ecr"
     end
-  rescue Balloon::Model::NotFound
+  rescue Ktistec::Model::NotFound
     not_found
   end
 
@@ -33,7 +33,7 @@ class ActorsController
       env.response.content_type = "application/activity+json"
       render "src/views/actors/remote.json.ecr"
     end
-  rescue Balloon::Model::NotFound
+  rescue Ktistec::Model::NotFound
     not_found
   end
 

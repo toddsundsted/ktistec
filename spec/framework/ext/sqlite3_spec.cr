@@ -6,8 +6,8 @@ Spectator.describe "SQLite3 extensions" do
   it "deserializes a read" do
     r = nil
     c = 0
-    Balloon.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, %Q<["one","two"]>)
-    rs = Balloon.database.query("SELECT value FROM options WHERE key = ?", key)
+    Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, %Q<["one","two"]>)
+    rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
     rs.each do
       r = rs.read(Array(String))
       c += 1
@@ -19,8 +19,8 @@ Spectator.describe "SQLite3 extensions" do
   it "serializes a write" do
     r = nil
     c = 0
-    Balloon.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, ["one", "two"])
-    rs = Balloon.database.query("SELECT value FROM options WHERE key = ?", key)
+    Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, ["one", "two"])
+    rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
     rs.each do
       r = rs.read(String)
       c += 1

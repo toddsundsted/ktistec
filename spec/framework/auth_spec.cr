@@ -1,7 +1,7 @@
 require "../spec_helper"
 
 class FooBarController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   skip_auth ["/foo/bar/skip"]
 
@@ -14,7 +14,7 @@ class FooBarController
   end
 end
 
-Spectator.describe Balloon::Auth do
+Spectator.describe Ktistec::Auth do
   setup_spec
 
   let(username) { random_string }
@@ -23,7 +23,7 @@ Spectator.describe Balloon::Auth do
   let(account) { Account.new(username, password).save }
   let(session) { Session.new(account).save }
   let(payload) { {sub: account.id, jti: session.session_key, iat: Time.utc} }
-  let(jwt) { Balloon::JWT.encode(payload) }
+  let(jwt) { Ktistec::JWT.encode(payload) }
 
   describe "get /foo/bar/auth" do
     it "successfully authenticates" do
@@ -71,7 +71,7 @@ Spectator.describe Balloon::Auth do
     end
 
     context "new secret key" do
-      let(jwt) { Balloon::JWT.encode(payload, "old secret key") }
+      let(jwt) { Ktistec::JWT.encode(payload, "old secret key") }
 
       it "fails to authenticate" do
         get "/foo/bar/auth", HTTP::Headers{"Authorization" => "Bearer #{jwt}"}

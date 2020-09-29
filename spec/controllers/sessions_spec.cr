@@ -9,7 +9,7 @@ Spectator.describe SessionsController do
   let!(account) { Account.new(username, password).save }
   let(session) { Session.new(account).save }
   let(payload) { {sub: account.id, jti: session.session_key, iat: Time.utc} }
-  let(jwt) { Balloon::JWT.encode(payload) }
+  let(jwt) { Ktistec::JWT.encode(payload) }
 
   describe "GET /sessions" do
     it "responds with HTML" do

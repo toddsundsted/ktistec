@@ -3,7 +3,7 @@ require "../spec_helper"
 module None
 end
 
-module Balloon
+module Ktistec
   module Model
     module None
     end
@@ -11,7 +11,7 @@ module Balloon
 end
 
 class FooBarModel
-  include Balloon::Model(None)
+  include Ktistec::Model(None)
 
   @[Persistent]
   property foo : String?
@@ -47,7 +47,7 @@ class FooBarModel
 end
 
 class NotNilModel
-  include Balloon::Model(None)
+  include Ktistec::Model(None)
 
   @[Persistent]
   property key : String = "Key"
@@ -93,14 +93,14 @@ class AnotherModel < NotNilModel
 end
 
 class UnionAssociationModel
-  include Balloon::Model(None)
+  include Ktistec::Model(None)
 
   @[Assignable]
   property model_id : Int64?
   belongs_to model, class_name: FooBarModel | NotNilModel
 end
 
-Spectator.describe Balloon::Model::Utils do
+Spectator.describe Ktistec::Model::Utils do
   describe ".table_name" do
     it "returns the table name" do
       expect(described_class.table_name(Time::Span)).to eq("time_spans")
@@ -110,9 +110,9 @@ Spectator.describe Balloon::Model::Utils do
   end
 end
 
-Spectator.describe Balloon::Model do
+Spectator.describe Ktistec::Model do
   before_each do
-    Balloon.database.exec <<-SQL
+    Ktistec.database.exec <<-SQL
       CREATE TABLE foo_bar_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         not_nil_model_id integer,
@@ -121,7 +121,7 @@ Spectator.describe Balloon::Model do
         bar text
       )
     SQL
-    Balloon.database.exec <<-SQL
+    Ktistec.database.exec <<-SQL
       CREATE TABLE not_nil_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         foo_bar_model_id integer,
@@ -132,8 +132,8 @@ Spectator.describe Balloon::Model do
     SQL
   end
   after_each do
-    Balloon.database.exec "DROP TABLE foo_bar_models"
-    Balloon.database.exec "DROP TABLE not_nil_models"
+    Ktistec.database.exec "DROP TABLE foo_bar_models"
+    Ktistec.database.exec "DROP TABLE not_nil_models"
   end
 
   describe ".new" do
@@ -236,7 +236,7 @@ Spectator.describe Balloon::Model do
       end
 
       it "raises an exception" do
-        expect{NotNilModel.find(999999)}.to raise_error(Balloon::Model::NotFound)
+        expect{NotNilModel.find(999999)}.to raise_error(Ktistec::Model::NotFound)
       end
     end
 
@@ -260,7 +260,7 @@ Spectator.describe Balloon::Model do
       end
 
       it "raises an exception" do
-        expect{NotNilModel.find(val: "Baz")}.to raise_error(Balloon::Model::NotFound)
+        expect{NotNilModel.find(val: "Baz")}.to raise_error(Ktistec::Model::NotFound)
       end
     end
   end
@@ -363,7 +363,7 @@ Spectator.describe Balloon::Model do
 
       it "raises an exception" do
         new_model = NotNilModel.new(val: "")
-        expect{new_model.save}.to raise_error(Balloon::Model::Invalid)
+        expect{new_model.save}.to raise_error(Ktistec::Model::Invalid)
         expect(new_model.errors).not_to be_empty
       end
 
@@ -401,7 +401,7 @@ Spectator.describe Balloon::Model do
 
       it "raises an exception" do
         new_model = NotNilModel.new(val: "Val").save
-        expect{new_model.assign(val: "").save}.to raise_error(Balloon::Model::Invalid)
+        expect{new_model.assign(val: "").save}.to raise_error(Ktistec::Model::Invalid)
         expect(new_model.errors).not_to be_empty
       end
 

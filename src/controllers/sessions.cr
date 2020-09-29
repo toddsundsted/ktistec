@@ -1,7 +1,7 @@
 require "../framework"
 
 class SessionsController
-  include Balloon::Controller
+  include Ktistec::Controller
 
   skip_auth ["/sessions"], GET, POST
 
@@ -23,7 +23,7 @@ class SessionsController
     if account = account?(username, password)
       session = Session.new(account).save
       payload = {sub: account.id, jti: session.session_key, iat: Time.utc}
-      jwt = Balloon::JWT.encode(payload)
+      jwt = Ktistec::JWT.encode(payload)
 
       if accepts?("text/html")
         env.response.cookies["AuthToken"] = jwt

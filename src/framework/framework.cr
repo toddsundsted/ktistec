@@ -1,8 +1,3 @@
-# TODO: remove when https://github.com/kemalcr/kemal/pull/566 is merged
-require "flate"
-require "gzip"
-require "zlib"
-
 require "kemal"
 require "kilt/slang"
 require "sqlite3"

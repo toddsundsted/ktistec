@@ -7,7 +7,12 @@ require "yaml"
 module Ktistec
   class Config
     def db_file
-      @db_file ||= "sqlite3://#{File.expand_path("~/.ktistec.db", home: true)}"
+      @db_file ||=
+        if Kemal.config.env == "production"
+          "sqlite3://#{File.expand_path("~/.ktistec.db", home: true)}"
+        else
+          "sqlite3://ktistec.db"
+        end
     end
   end
 

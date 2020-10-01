@@ -235,6 +235,17 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.in_outbox(1, 2, public: true)).to be_empty
     end
 
+    let(note) do
+      ActivityPub::Object::Note.new(
+        iri: "https://remote/objects/#{random_string}"
+      )
+    end
+
+    it "filters out deleted posts" do
+      activity5.assign(object: note).save ; note.delete
+      expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
+    end
+
     it "paginates the results" do
       expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
       expect(subject.in_outbox(2, 2, public: false)).to eq([activity3, activity2])
@@ -274,6 +285,17 @@ Spectator.describe ActivityPub::Actor do
 
     it "filters out non-public posts" do
       expect(subject.in_inbox(1, 2, public: true)).to be_empty
+    end
+
+    let(note) do
+      ActivityPub::Object::Note.new(
+        iri: "https://remote/objects/#{random_string}"
+      )
+    end
+
+    it "filters out deleted posts" do
+      activity5.assign(object: note).save ; note.delete
+      expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
     end
 
     it "paginates the results" do

@@ -223,47 +223,59 @@ module ActivityPub
         {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
         if public
           query = <<-QUERY
-            SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
-              FROM activities AS a, relationships AS r
-             WHERE r.from_iri = ?
-               AND r.type = "#{type}"
-               AND r.confirmed = 1
-               AND a.iri = r.to_iri
-               AND a.visible = 1
-               AND a.id NOT IN (
-                  SELECT a.id
-                    FROM activities AS a, relationships AS r
-                   WHERE r.from_iri = ?
-                     AND r.type = "#{type}"
-                     AND r.confirmed = 1
-                     AND a.iri = r.to_iri
-                     AND a.visible = 1
-                ORDER BY r.created_at DESC
-                   LIMIT ?
-               )
-          ORDER BY r.created_at DESC
-             LIMIT ?
+             SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
+               FROM activities AS a, relationships AS r
+          LEFT JOIN objects AS o
+                 ON o.iri = a.object_iri
+              WHERE r.from_iri = ?
+                AND r.type = "#{type}"
+                AND r.confirmed = 1
+                AND o.deleted_at is NULL
+                AND a.iri = r.to_iri
+                AND a.visible = 1
+                AND a.id NOT IN (
+                   SELECT a.id
+                     FROM activities AS a, relationships AS r
+                LEFT JOIN objects AS o
+                       ON o.iri = a.object_iri
+                    WHERE r.from_iri = ?
+                      AND r.type = "#{type}"
+                      AND r.confirmed = 1
+                      AND o.deleted_at is NULL
+                      AND a.iri = r.to_iri
+                      AND a.visible = 1
+                 ORDER BY r.created_at DESC
+                    LIMIT ?
+                )
+           ORDER BY r.created_at DESC
+              LIMIT ?
           QUERY
         else
           query = <<-QUERY
-            SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
-              FROM activities AS a, relationships AS r
-             WHERE r.from_iri = ?
-               AND r.type = "#{type}"
-               AND r.confirmed = 1
-               AND a.iri = r.to_iri
-               AND a.id NOT IN (
-                  SELECT a.id
-                    FROM activities AS a, relationships AS r
-                   WHERE r.from_iri = ?
-                     AND r.type = "#{type}"
-                     AND r.confirmed = 1
-                     AND a.iri = r.to_iri
-                ORDER BY r.created_at DESC
-                   LIMIT ?
-               )
-          ORDER BY r.created_at DESC
-             LIMIT ?
+             SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
+               FROM activities AS a, relationships AS r
+          LEFT JOIN objects AS o
+                 ON o.iri = a.object_iri
+              WHERE r.from_iri = ?
+                AND r.type = "#{type}"
+                AND r.confirmed = 1
+                AND o.deleted_at is NULL
+                AND a.iri = r.to_iri
+                AND a.id NOT IN (
+                   SELECT a.id
+                     FROM activities AS a, relationships AS r
+                LEFT JOIN objects AS o
+                       ON o.iri = a.object_iri
+                    WHERE r.from_iri = ?
+                      AND r.type = "#{type}"
+                      AND r.confirmed = 1
+                      AND o.deleted_at is NULL
+                      AND a.iri = r.to_iri
+                 ORDER BY r.created_at DESC
+                    LIMIT ?
+                )
+           ORDER BY r.created_at DESC
+              LIMIT ?
           QUERY
         end
         query_and_paginate(query, page, size)

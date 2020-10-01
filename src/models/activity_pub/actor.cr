@@ -186,6 +186,38 @@ module ActivityPub
       {% end %}
     end
 
+    private def query_and_paginate(query, page = 1, size = 10)
+      {% begin %}
+        {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
+        Ktistec::Util::PaginatedArray(Activity).new.tap do |array|
+          Ktistec.database.query(
+            query, self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
+          ) do |rs|
+            rs.each do
+              attrs = {
+               {% for v in vs %}
+                 {{v}}: rs.read({{v.type}}),
+               {% end %}
+              }
+              array <<
+                case attrs[:type]
+                {% for subclass in ActivityPub::Activity.all_subclasses %}
+                  when {{name = subclass.stringify}}
+                    {{subclass}}.new(**attrs)
+                {% end %}
+                else
+                  ActivityPub::Activity.new(**attrs)
+                end
+            end
+          end
+          if array.size > size
+            array.more = true
+            array.pop
+          end
+        end
+      {% end %}
+    end
+
     private def content(type, page = 1, size = 10, public = true)
       {% begin %}
         {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
@@ -234,32 +266,7 @@ module ActivityPub
              LIMIT ?
           QUERY
         end
-        Ktistec::Util::PaginatedArray(Activity).new.tap do |array|
-          Ktistec.database.query(
-            query, self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
-          ) do |rs|
-            rs.each do
-              attrs = {
-               {% for v in vs %}
-                 {{v}}: rs.read({{v.type}}),
-               {% end %}
-              }
-              array <<
-                case attrs[:type]
-                {% for subclass in ActivityPub::Activity.all_subclasses %}
-                  when {{name = subclass.stringify}}
-                    {{subclass}}.new(**attrs)
-                {% end %}
-                else
-                  ActivityPub::Activity.new(**attrs)
-                end
-            end
-          end
-          if array.size > size
-            array.more = true
-            array.pop
-          end
-        end
+        query_and_paginate(query, page, size)
       {% end %}
     end
 

@@ -6,7 +6,8 @@
     </div>
     <% end %>
     <div class='field'>
-        <input type='text' name='host' value='<%= _host %>'>
+        <label>Host</label>
+        <input type='text' name='host' value='<%= _host %>' placeholder='https://[host]/'>
     </div>
     <input type='hidden' name='authenticity_token' value='<%= env.session.string?("csrf") %>'>
     <input class='ui primary button' type='submit' value='Submit'>

@@ -9,16 +9,20 @@
     </div>
     <% end %>
     <div class='field'>
-        <input type='text' name='username' value='<%= account.username %>'>
+        <label>Username</label>
+        <input type='text' name='username' value='<%= account.username %>' placeholder='letter, number, underscore, dash, period'>
     </div>
     <div class='field'>
-        <input type='password' name='password' value='<%= account.password %>'>
+        <label>Password</label>
+        <input type='password' name='password' value='<%= account.password %>' placeholder='>= 6 characters; at least one letter, one number, one symbol'>
     </div>
     <div class='field'>
-        <input type='text' name='name' value='<%= actor.name %>'>
+        <label>Display Name</label>
+        <input type='text' name='name' value='<%= actor.name %>' placeholder='Display Name'>
     </div>
     <div class='field'>
-        <input type='text' name='summary' value='<%= actor.summary %>'>
+        <label>Summary</label>
+        <input type='text' name='summary' value='<%= actor.summary %>' placeholder='Summary'>
     </div>
     <input type='hidden' name='authenticity_token' value='<%= env.session.string?("csrf") %>'>
     <input class='ui primary button' type='submit' value='Sign Up'>

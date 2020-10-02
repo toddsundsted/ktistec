@@ -213,12 +213,12 @@ Spectator.describe Ktistec::Controller do
 
     it "displays the prev link" do
       get "/foo/bar/paginate?page=2"
-      expect(XML.parse_html(response.body).xpath_nodes("//a[contains(text(),'Prev')]")).not_to be_empty
+      expect(XML.parse_html(response.body).xpath_nodes("//a[contains(@href,'page=1')]")).not_to be_empty
     end
 
     it "displays the next link" do
       get "/foo/bar/paginate?size=9"
-      expect(XML.parse_html(response.body).xpath_nodes("//a[contains(text(),'Next')]")).not_to be_empty
+      expect(XML.parse_html(response.body).xpath_nodes("//a[contains(@href,'page=2')]")).not_to be_empty
     end
   end
 

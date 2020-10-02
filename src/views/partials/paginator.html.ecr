@@ -1,10 +1,10 @@
-<p>
+<nav class='ui secondary pagination menu'>
     <%- if page > 1 -%>
         <%- query["page"] = (page - 1).to_s -%>
-        <a href='<%= path %>?<%= query %>'>Prev</a>
+        <a class='item' href='<%= path %>?<%= query %>'><i class='angle double left icon'></i></a>
     <%- end -%>
     <%- if collection.more? -%>
         <%- query["page"] = (page + 1).to_s -%>
-        <a href='<%= path %>?<%= query %>'>Next</a>
+        <a class='item' href='<%= path %>?<%= query %>'><i class='angle double right icon'></i></a>
     <%- end -%>
-</p>
+</nav>

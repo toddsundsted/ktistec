@@ -92,47 +92,26 @@ module ActivityPub
     private def query(type, orig, dest, public = false)
       {% begin %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-        if public
-          query = <<-QUERY
-            SELECT {{ vs.map{ |v| "a.#{v}" }.join(",").id }}
-              FROM actors AS a, relationships AS r
-             WHERE a.iri = r.#{orig}
-               AND r.type = "#{type}"
-               AND r.confirmed = 1 AND r.visible = 1
-               AND r.#{dest} = ?
-               AND a.id NOT IN (
-                  SELECT a.id
-                    FROM actors AS a, relationships AS r
-                   WHERE a.iri = r.#{orig}
-                     AND r.type = "#{type}"
-                     AND r.confirmed = 1 AND r.visible = 1
-                     AND r.#{dest} = ?
-                ORDER BY r.created_at DESC
-                   LIMIT ?
-               )
-          ORDER BY r.created_at DESC
-             LIMIT ?
-          QUERY
-        else
-          query = <<-QUERY
-            SELECT {{ vs.map{ |v| "a.#{v}" }.join(",").id }}
-              FROM actors AS a, relationships AS r
-             WHERE a.iri = r.#{orig}
-               AND r.type = "#{type}"
-               AND r.#{dest} = ?
-               AND a.id NOT IN (
-                  SELECT a.id
-                    FROM actors AS a, relationships AS r
-                   WHERE a.iri = r.#{orig}
-                     AND r.type = "#{type}"
-                     AND r.#{dest} = ?
-                ORDER BY r.created_at DESC
-                   LIMIT ?
-               )
-          ORDER BY r.created_at DESC
-             LIMIT ?
-          QUERY
-        end
+        query = <<-QUERY
+          SELECT {{ vs.map{ |v| "a.#{v}" }.join(",").id }}
+            FROM actors AS a, relationships AS r
+           WHERE a.iri = r.#{orig}
+             AND r.type = "#{type}"
+        #{public ? "AND r.confirmed = 1 AND r.visible = 1" : nil}
+             AND r.#{dest} = ?
+             AND a.id NOT IN (
+                SELECT a.id
+                  FROM actors AS a, relationships AS r
+                 WHERE a.iri = r.#{orig}
+                   AND r.type = "#{type}"
+              #{public ? "AND r.confirmed = 1 AND r.visible = 1" : nil}
+                   AND r.#{dest} = ?
+              ORDER BY r.created_at DESC
+                 LIMIT ?
+             )
+        ORDER BY r.created_at DESC
+           LIMIT ?
+        QUERY
       {% end %}
     end
 
@@ -221,71 +200,38 @@ module ActivityPub
     private def content(type, page = 1, size = 10, public = true, to = nil, from = nil)
       {% begin %}
         {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
-        if public
-          query = <<-QUERY
-             SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
-               FROM activities AS a, relationships AS r
-          LEFT JOIN objects AS o
-                 ON o.iri = a.object_iri
-              WHERE r.from_iri = ?
-                AND r.type = "#{type}"
-                AND r.confirmed = 1
-                AND o.deleted_at is NULL
-                #{to && %Q|AND o."to" LIKE ?|}
-                #{from && %Q|AND o."attributed_to_iri" = ?|}
-                AND a.iri = r.to_iri
-                AND a.visible = 1
-                AND a.id NOT IN (
-                   SELECT a.id
-                     FROM activities AS a, relationships AS r
-                LEFT JOIN objects AS o
-                       ON o.iri = a.object_iri
-                    WHERE r.from_iri = ?
-                      AND r.type = "#{type}"
-                      AND r.confirmed = 1
-                      AND o.deleted_at is NULL
-                      #{to && %Q|AND o."to" LIKE ?|}
-                      #{from && %Q|AND o."attributed_to_iri" = ?|}
-                      AND a.iri = r.to_iri
-                      AND a.visible = 1
-                 ORDER BY r.created_at DESC
-                    LIMIT ?
-                )
-           ORDER BY r.created_at DESC
-              LIMIT ?
-          QUERY
-        else
-          query = <<-QUERY
-             SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
-               FROM activities AS a, relationships AS r
-          LEFT JOIN objects AS o
-                 ON o.iri = a.object_iri
-              WHERE r.from_iri = ?
-                AND r.type = "#{type}"
-                AND r.confirmed = 1
-                AND o.deleted_at is NULL
-                #{to && %Q|AND o."to" LIKE ?|}
-                #{from && %Q|AND o."attributed_to_iri" = ?|}
-                AND a.iri = r.to_iri
-                AND a.id NOT IN (
-                   SELECT a.id
-                     FROM activities AS a, relationships AS r
-                LEFT JOIN objects AS o
-                       ON o.iri = a.object_iri
-                    WHERE r.from_iri = ?
-                      AND r.type = "#{type}"
-                      AND r.confirmed = 1
-                      AND o.deleted_at is NULL
-                      #{to && %Q|AND o."to" LIKE ?|}
-                      #{from && %Q|AND o."attributed_to_iri" = ?|}
-                      AND a.iri = r.to_iri
-                 ORDER BY r.created_at DESC
-                    LIMIT ?
-                )
-           ORDER BY r.created_at DESC
-              LIMIT ?
-          QUERY
-        end
+        query = <<-QUERY
+           SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
+             FROM activities AS a, relationships AS r
+        LEFT JOIN objects AS o
+               ON o.iri = a.object_iri
+            WHERE r.from_iri = ?
+              AND r.type = "#{type}"
+              AND r.confirmed = 1
+              AND o.deleted_at is NULL
+             #{to && %Q|AND o."to" LIKE ?|}
+           #{from && %Q|AND o."attributed_to_iri" = ?|}
+              AND a.iri = r.to_iri
+         #{public ? %Q|AND a.visible = 1| : nil}
+              AND a.id NOT IN (
+                 SELECT a.id
+                   FROM activities AS a, relationships AS r
+              LEFT JOIN objects AS o
+                     ON o.iri = a.object_iri
+                  WHERE r.from_iri = ?
+                    AND r.type = "#{type}"
+                    AND r.confirmed = 1
+                    AND o.deleted_at is NULL
+                   #{to && %Q|AND o."to" LIKE ?|}
+                 #{from && %Q|AND o."attributed_to_iri" = ?|}
+                    AND a.iri = r.to_iri
+               #{public ? %Q|AND a.visible = 1| : nil}
+               ORDER BY r.created_at DESC
+                  LIMIT ?
+              )
+         ORDER BY r.created_at DESC
+            LIMIT ?
+        QUERY
         to = to ? "%\"#{to}\"%" : nil
         if to && from
           query_and_paginate(query, page, size, to, from)

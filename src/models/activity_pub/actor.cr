@@ -186,12 +186,12 @@ module ActivityPub
       {% end %}
     end
 
-    private def query_and_paginate(query, page = 1, size = 10)
+    private def query_and_paginate(query, page = 1, size = 10, *params)
       {% begin %}
         {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
         Ktistec::Util::PaginatedArray(Activity).new.tap do |array|
           Ktistec.database.query(
-            query, self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
+            query, self.iri, *params, self.iri, *params, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
             rs.each do
               attrs = {
@@ -218,7 +218,7 @@ module ActivityPub
       {% end %}
     end
 
-    private def content(type, page = 1, size = 10, public = true)
+    private def content(type, page = 1, size = 10, public = true, to = nil, from = nil)
       {% begin %}
         {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
         if public
@@ -231,6 +231,8 @@ module ActivityPub
                 AND r.type = "#{type}"
                 AND r.confirmed = 1
                 AND o.deleted_at is NULL
+                #{to && %Q|AND o."to" LIKE ?|}
+                #{from && %Q|AND o."attributed_to_iri" = ?|}
                 AND a.iri = r.to_iri
                 AND a.visible = 1
                 AND a.id NOT IN (
@@ -242,6 +244,8 @@ module ActivityPub
                       AND r.type = "#{type}"
                       AND r.confirmed = 1
                       AND o.deleted_at is NULL
+                      #{to && %Q|AND o."to" LIKE ?|}
+                      #{from && %Q|AND o."attributed_to_iri" = ?|}
                       AND a.iri = r.to_iri
                       AND a.visible = 1
                  ORDER BY r.created_at DESC
@@ -260,6 +264,8 @@ module ActivityPub
                 AND r.type = "#{type}"
                 AND r.confirmed = 1
                 AND o.deleted_at is NULL
+                #{to && %Q|AND o."to" LIKE ?|}
+                #{from && %Q|AND o."attributed_to_iri" = ?|}
                 AND a.iri = r.to_iri
                 AND a.id NOT IN (
                    SELECT a.id
@@ -270,6 +276,8 @@ module ActivityPub
                       AND r.type = "#{type}"
                       AND r.confirmed = 1
                       AND o.deleted_at is NULL
+                      #{to && %Q|AND o."to" LIKE ?|}
+                      #{from && %Q|AND o."attributed_to_iri" = ?|}
                       AND a.iri = r.to_iri
                  ORDER BY r.created_at DESC
                     LIMIT ?
@@ -278,16 +286,25 @@ module ActivityPub
               LIMIT ?
           QUERY
         end
-        query_and_paginate(query, page, size)
+        to = to ? "%\"#{to}\"%" : nil
+        if to && from
+          query_and_paginate(query, page, size, to, from)
+        elsif to
+          query_and_paginate(query, page, size, to)
+        elsif from
+          query_and_paginate(query, page, size, from)
+        else
+          query_and_paginate(query, page, size)
+        end
       {% end %}
     end
 
-    def in_outbox(page = 1, size = 10, public = true)
-      content(Relationship::Content::Outbox, page, size, public)
+    def in_outbox(page = 1, size = 10, public = true, to = nil)
+      content(Relationship::Content::Outbox, page, size, public, to: to)
     end
 
-    def in_inbox(page = 1, size = 10, public = true)
-      content(Relationship::Content::Inbox, page, size, public)
+    def in_inbox(page = 1, size = 10, public = true, from = nil)
+      content(Relationship::Content::Inbox, page, size, public, from: from)
     end
 
     def to_json_ld(recursive = false)

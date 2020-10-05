@@ -91,9 +91,11 @@ module ActivityPub
         target: if (target = json.dig?("https://www.w3.org/ns/activitystreams#target")) && target.as_h?
           ActivityPub.from_json_ld(target)
         end,
-        to: dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
-        cc: dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
-        summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")
+        to: to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
+        cc: cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+        summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+        # use addressing to establish visibility
+        visible: [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
       }
     end
   end

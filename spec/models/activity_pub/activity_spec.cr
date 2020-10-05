@@ -109,6 +109,14 @@ Spectator.describe ActivityPub::Activity do
       expect(activity.cc).to eq(["cc link"])
       expect(activity.summary).to eq("abc")
     end
+
+    context "when addressed to the public collection" do
+      it "is visible" do
+        json = self.json.gsub("to link", "https://www.w3.org/ns/activitystreams#Public")
+        activity = described_class.from_json_ld(json).save
+        expect(activity.visible).to be_true
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -122,6 +130,14 @@ Spectator.describe ActivityPub::Activity do
       expect(activity.to).to eq(["to link"])
       expect(activity.cc).to eq(["cc link"])
       expect(activity.summary).to eq("abc")
+    end
+
+    context "when addressed to the public collection" do
+      it "is visible" do
+        json = self.json.gsub("cc link", "https://www.w3.org/ns/activitystreams#Public")
+        activity = described_class.new.from_json_ld(json).save
+        expect(activity.visible).to be_true
+      end
     end
   end
 

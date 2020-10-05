@@ -79,6 +79,14 @@ Spectator.describe ActivityPub::Object do
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type")])
       expect(object.urls).to eq(["url link"])
     end
+
+    context "when addressed to the public collection" do
+      it "is visible" do
+        json = self.json.gsub("to link", "https://www.w3.org/ns/activitystreams#Public")
+        object = described_class.from_json_ld(json).save
+        expect(object.visible).to be_true
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -96,6 +104,14 @@ Spectator.describe ActivityPub::Object do
       expect(object.media_type).to eq("xyz")
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type")])
       expect(object.urls).to eq(["url link"])
+    end
+
+    context "when addressed to the public collection" do
+      it "is visible" do
+        json = self.json.gsub("cc link", "https://www.w3.org/ns/activitystreams#Public")
+        object = described_class.new.from_json_ld(json).save
+        expect(object.visible).to be_true
+      end
     end
   end
 

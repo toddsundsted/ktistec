@@ -234,8 +234,8 @@ module ActivityPub
         attributed_to_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
         in_reply_to_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
         replies: dig_id?(json, "https://www.w3.org/ns/activitystreams#replies"),
-        to: dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
-        cc: dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+        to: to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
+        cc: cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
         summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
         content: dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
         media_type: dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
@@ -244,7 +244,9 @@ module ActivityPub
           media_type = attachment.dig?("https://www.w3.org/ns/activitystreams#mediaType").try(&.as_s)
           Attachment.new(url, media_type) if url && media_type
         end,
-        urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")
+        urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+        # use addressing to establish visibility
+        visible: [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
       }
     end
   end

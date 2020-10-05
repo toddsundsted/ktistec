@@ -27,9 +27,6 @@ module ActivityPub
 
     @[Persistent]
     property visible : Bool { false }
-    validates(visible) do
-      "may not be true" unless !visible || local
-    end
 
     @[Persistent]
     property published : Time?

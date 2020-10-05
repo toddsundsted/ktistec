@@ -27,10 +27,6 @@ Spectator.describe ActivityPub::Activity do
     it "is valid" do
       expect(described_class.new(iri: "https://test.test/#{random_string}").save.valid?).to be_true
     end
-
-    it "may not be visible if remote" do
-      expect(described_class.new(iri: "https://remote/0", visible: true).valid?).to be_false
-    end
   end
 
   context "given embedded objects" do

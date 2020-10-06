@@ -235,26 +235,15 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.in_outbox(1, 2, public: true)).to be_empty
     end
 
-    let(iri) do
-      "https://test.test/objects/#{random_string}"
-    end
     let(note) do
       ActivityPub::Object::Note.new(
-        iri: "https://test.test/objects/#{random_string}",
-        to: [iri]
+        iri: "https://test.test/objects/#{random_string}"
       )
     end
 
     it "filters out deleted posts" do
       activity5.assign(object: note).save ; note.delete
       expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-    end
-
-    it "includes only posts addressed to the specified actor" do
-      activity5.assign(object: note).save
-      expect(subject.in_outbox(1, 2, public: false, to: iri)).to eq([activity5])
-      [activity1, activity2, activity3, activity4, activity5].each(&.assign(visible: true).save)
-      expect(subject.in_outbox(1, 2, public: true, to: iri)).to eq([activity5])
     end
 
     it "paginates the results" do
@@ -298,26 +287,15 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.in_inbox(1, 2, public: true)).to be_empty
     end
 
-    let(iri) do
-      "https://test.test/objects/#{random_string}"
-    end
     let(note) do
       ActivityPub::Object::Note.new(
-        iri: "https://test.test/objects/#{random_string}",
-        attributed_to_iri: iri
+        iri: "https://test.test/objects/#{random_string}"
       )
     end
 
     it "filters out deleted posts" do
       activity5.assign(object: note).save ; note.delete
       expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-    end
-
-    it "includes only posts from the specified actor" do
-      activity5.assign(object: note).save
-      expect(subject.in_inbox(1, 2, public: false, from: iri)).to eq([activity5])
-      [activity1, activity2, activity3, activity4, activity5].each(&.assign(visible: true).save)
-      expect(subject.in_inbox(1, 2, public: true, from: iri)).to eq([activity5])
     end
 
     it "paginates the results" do

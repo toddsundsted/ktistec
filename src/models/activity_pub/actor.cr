@@ -165,12 +165,12 @@ module ActivityPub
       {% end %}
     end
 
-    private def query_and_paginate(query, page = 1, size = 10, *params)
+    private def query_and_paginate(query, page = 1, size = 10)
       {% begin %}
         {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
         Ktistec::Util::PaginatedArray(Activity).new.tap do |array|
           Ktistec.database.query(
-            query, self.iri, *params, self.iri, *params, ((page - 1) * size).to_i, size.to_i + 1
+            query, self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
             rs.each do
               attrs = {
@@ -197,7 +197,7 @@ module ActivityPub
       {% end %}
     end
 
-    private def content(type, page = 1, size = 10, public = true, to = nil, from = nil)
+    private def content(type, page = 1, size = 10, public = true)
       {% begin %}
         {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
         query = <<-QUERY
@@ -209,8 +209,6 @@ module ActivityPub
               AND r.type = "#{type}"
               AND r.confirmed = 1
               AND o.deleted_at is NULL
-             #{to && %Q|AND o."to" LIKE ?|}
-           #{from && %Q|AND o."attributed_to_iri" = ?|}
               AND a.iri = r.to_iri
          #{public ? %Q|AND a.visible = 1| : nil}
               AND a.id NOT IN (
@@ -222,8 +220,6 @@ module ActivityPub
                     AND r.type = "#{type}"
                     AND r.confirmed = 1
                     AND o.deleted_at is NULL
-                   #{to && %Q|AND o."to" LIKE ?|}
-                 #{from && %Q|AND o."attributed_to_iri" = ?|}
                     AND a.iri = r.to_iri
                #{public ? %Q|AND a.visible = 1| : nil}
                ORDER BY r.created_at DESC
@@ -232,25 +228,16 @@ module ActivityPub
          ORDER BY r.created_at DESC
             LIMIT ?
         QUERY
-        to = to ? "%\"#{to}\"%" : nil
-        if to && from
-          query_and_paginate(query, page, size, to, from)
-        elsif to
-          query_and_paginate(query, page, size, to)
-        elsif from
-          query_and_paginate(query, page, size, from)
-        else
-          query_and_paginate(query, page, size)
-        end
+        query_and_paginate(query, page, size)
       {% end %}
     end
 
-    def in_outbox(page = 1, size = 10, public = true, to = nil)
-      content(Relationship::Content::Outbox, page, size, public, to: to)
+    def in_outbox(page = 1, size = 10, public = true)
+      content(Relationship::Content::Outbox, page, size, public)
     end
 
-    def in_inbox(page = 1, size = 10, public = true, from = nil)
-      content(Relationship::Content::Inbox, page, size, public, from: from)
+    def in_inbox(page = 1, size = 10, public = true)
+      content(Relationship::Content::Inbox, page, size, public)
     end
 
     def public_posts(page = 1, size = 10)

@@ -253,6 +253,37 @@ module ActivityPub
       content(Relationship::Content::Inbox, page, size, public, from: from)
     end
 
+    def public_posts(page = 1, size = 10)
+      {% begin %}
+        {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
+        query = <<-QUERY
+           SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
+             FROM activities AS a
+        LEFT JOIN objects AS o
+               ON o.iri = a.object_iri
+            WHERE o.attributed_to_iri = ?
+              AND o.deleted_at is NULL
+              AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
+              AND a.visible = 1
+              AND a.id NOT IN (
+                 SELECT a.id
+                   FROM activities AS a
+              LEFT JOIN objects AS o
+                     ON o.iri = a.object_iri
+                  WHERE o.attributed_to_iri = ?
+                    AND o.deleted_at is NULL
+                    AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
+                    AND a.visible = 1
+               ORDER BY o.published DESC
+                  LIMIT ?
+              )
+         ORDER BY o.published DESC
+            LIMIT ?
+        QUERY
+        query_and_paginate(query, page, size)
+      {% end %}
+    end
+
     def to_json_ld(recursive = false)
       ActorsController.render_actor(self, recursive)
     end

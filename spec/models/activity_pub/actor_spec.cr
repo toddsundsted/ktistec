@@ -327,6 +327,49 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#public_posts" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro post(index)
+      let!(activity{{index}}) do
+        ActivityPub::Activity::Create.new(
+          iri: "https://test.test/activities/#{random_string}",
+          object: ActivityPub::Object::Note.new(
+            iri: "https://test.test/objects/#{random_string}",
+            published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+            attributed_to: subject
+          ),
+          visible: {{index}}.odd?
+        ).save
+      end
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.public_posts(1, 2).first).to be_a(ActivityPub::Activity::Create)
+    end
+
+    it "filters out non-public posts" do
+      expect(subject.public_posts(1, 2)).to eq([activity5, activity3])
+    end
+
+    it "filters out deleted posts" do
+      activity5.object.delete
+      expect(subject.public_posts(1, 2)).to eq([activity3, activity1])
+    end
+
+    it "paginates the results" do
+      expect(subject.public_posts(1, 2)).to eq([activity5, activity3])
+      expect(subject.public_posts(2, 2)).to eq([activity1])
+      expect(subject.public_posts(2, 2).more?).not_to be_true
+    end
+  end
+
   describe "#local" do
     it "indicates if the actor is local" do
       expect(described_class.new(iri: "https://test.test/foo_bar").local).to be_true

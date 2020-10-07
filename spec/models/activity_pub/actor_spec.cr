@@ -305,6 +305,54 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#both_mailboxes" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro add_to_mailbox(index, box)
+      let(activity{{index}}) do
+        ActivityPub::Activity::Create.new(
+          iri: "https://test.test/activities/#{random_string}",
+          visible: false
+        )
+      end
+      let!(relationship{{index}}) do
+        Relationship::Content::{{box}}.new(
+          owner: subject,
+          activity: activity{{index}},
+          confirmed: true,
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
+        ).save
+      end
+    end
+
+    add_to_mailbox(1, Inbox)
+    add_to_mailbox(2, Outbox)
+    add_to_mailbox(3, Inbox)
+    add_to_mailbox(4, Outbox)
+    add_to_mailbox(5, Inbox)
+
+    it "instantiates the correct subclass" do
+      expect(subject.both_mailboxes(1, 2).first).to be_a(ActivityPub::Activity::Create)
+    end
+
+    let(note) do
+      ActivityPub::Object::Note.new(
+        iri: "https://test.test/objects/#{random_string}"
+      )
+    end
+
+    it "filters out deleted posts" do
+      activity5.assign(object: note).save ; note.delete
+      expect(subject.both_mailboxes(1, 2)).to eq([activity4, activity3])
+    end
+
+    it "paginates the results" do
+      expect(subject.both_mailboxes(1, 2)).to eq([activity5, activity4])
+      expect(subject.both_mailboxes(2, 2)).to eq([activity3, activity2])
+      expect(subject.both_mailboxes(2, 2).more?).to be_true
+    end
+  end
+
   describe "#public_posts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 

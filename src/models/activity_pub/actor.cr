@@ -240,6 +240,41 @@ module ActivityPub
       content(Relationship::Content::Inbox, page, size, public)
     end
 
+    def both_mailboxes(page = 1, size = 10)
+      {% begin %}
+        {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
+        query = <<-QUERY
+           SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
+             FROM activities AS a, relationships AS r
+        LEFT JOIN objects AS o
+               ON o.iri = a.object_iri
+            WHERE r.from_iri = ?
+              AND r.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+              AND r.confirmed = 1
+              AND o.deleted_at is NULL
+              AND a.iri = r.to_iri
+              AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
+              AND a.id NOT IN (
+                 SELECT a.id
+                   FROM activities AS a, relationships AS r
+              LEFT JOIN objects AS o
+                     ON o.iri = a.object_iri
+                  WHERE r.from_iri = ?
+                    AND r.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+                    AND r.confirmed = 1
+                    AND o.deleted_at is NULL
+                    AND a.iri = r.to_iri
+                    AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
+               ORDER BY r.created_at DESC
+                  LIMIT ?
+              )
+         ORDER BY r.created_at DESC
+            LIMIT ?
+        QUERY
+        query_and_paginate(query, page, size)
+      {% end %}
+    end
+
     def public_posts(page = 1, size = 10)
       {% begin %}
         {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}

@@ -13,3 +13,13 @@ h1= actor.username
       input#input-trix-editor type="hidden" name="content"
       trix-editor input="input-trix-editor"
     input.ui.button type="submit" value="Post Status"
+crystal:
+  activities = env.current_account? ?
+    actor.both_mailboxes :
+    actor.public_posts
+h2 Recent
+section.ui.feed
+  - activities.each do |activity|
+    article.event.activity
+      - if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Announce)
+        == render "src/views/partials/activities/create.html.slang"

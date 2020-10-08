@@ -19,11 +19,15 @@ class Relationship
   @[Persistent]
   property visible : Bool { false }
 
+  @@must_be_unique = true
+
   def validate
     super
-    relationship = Relationship.find?(from_iri: from_iri, to_iri: to_iri, type: type)
-    if relationship && relationship.id != self.id
-      errors["relationship"] = ["already exists"]
+    if @@must_be_unique
+      relationship = Relationship.find?(from_iri: from_iri, to_iri: to_iri, type: type)
+      if relationship && relationship.id != self.id
+        errors["relationship"] = ["already exists"]
+      end
     end
     errors
   end

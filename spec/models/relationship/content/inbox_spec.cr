@@ -31,6 +31,12 @@ Spectator.describe Relationship::Content::Inbox do
       expect(new_relationship.errors.keys).to contain("activity")
     end
 
+    it "permits duplicates" do
+      described_class.new(**options).save
+      new_relationship = described_class.new(**options)
+      expect(new_relationship.valid?).to be_true
+    end
+
     it "successfully validates instance" do
       new_relationship = described_class.new(**options)
       expect(new_relationship.valid?).to be_true

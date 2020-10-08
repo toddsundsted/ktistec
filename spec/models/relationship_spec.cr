@@ -28,7 +28,7 @@ Spectator.describe Relationship do
       expect(new_relationship.errors.keys).to contain("to_iri")
     end
 
-    it "rejects duplicate" do
+    it "rejects duplicates" do
       described_class.new(**options).save
       new_relationship = described_class.new(**options)
       expect(new_relationship.valid?).to be_false

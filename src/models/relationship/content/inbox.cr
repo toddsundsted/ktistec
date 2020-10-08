@@ -3,6 +3,8 @@ require "../../relationship"
 class Relationship
   class Content
     class Inbox < Relationship
+      @@must_be_unique = false
+
       belongs_to owner, class_name: ActivityPub::Actor, foreign_key: from_iri, primary_key: iri
       validates(owner) { "missing: #{from_iri}" unless owner? }
 

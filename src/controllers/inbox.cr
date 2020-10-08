@@ -17,7 +17,12 @@ class RelationshipsController
     activity = ActivityPub::Activity.from_json_ld(body)
 
     if activity.id
-      conflict
+      # mastodon reissues identifiers for accept and reject
+      # activities. since these are implemented, here, as idempotent
+      # operations, don't respond with conflict.
+      unless activity.class.in?([ActivityPub::Activity::Accept, ActivityPub::Activity::Reject])
+        conflict
+      end
     end
 
     # never use an embedded actor's credentials!

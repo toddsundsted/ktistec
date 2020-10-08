@@ -27,6 +27,24 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(409)
     end
 
+    # mastodon compatibility
+    it "does not return 409 if the activity is accept" do
+      activity = ActivityPub::Activity::Accept.new(
+        iri: "https://remote/activities/accept"
+      ).save
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(response.status_code).not_to eq(409)
+    end
+
+    # mastodon compatibility
+    it "does not return 409 if the activity is reject" do
+      activity = ActivityPub::Activity::Reject.new(
+        iri: "https://remote/activities/reject"
+      ).save
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(response.status_code).not_to eq(409)
+    end
+
     it "returns 400 if activity is not supported" do
       HTTP::Client.activities << activity
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
@@ -391,6 +409,13 @@ Spectator.describe RelationshipsController do
           to change{Relationship.find(relationship.id).confirmed}
         expect(response.status_code).to eq(200)
       end
+
+      it "accepts the relationship even if previously received" do
+        accept.save
+        expect{post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld}.
+          to change{Relationship.find(relationship.id).confirmed}
+        expect(response.status_code).to eq(200)
+      end
     end
 
     context "on reject" do
@@ -437,6 +462,13 @@ Spectator.describe RelationshipsController do
       end
 
       it "rejects the relationship" do
+        expect{post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld}.
+          to change{Relationship.find(relationship.id).confirmed}
+        expect(response.status_code).to eq(200)
+      end
+
+      it "rejects the relationship even if previously received" do
+        reject.save
         expect{post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld}.
           to change{Relationship.find(relationship.id).confirmed}
         expect(response.status_code).to eq(200)

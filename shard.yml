@@ -12,12 +12,6 @@ dependencies:
   kemal:
     github: kemalcr/kemal
     branch: master
-  kemal-session:
-    github: toddsundsted/kemal-session
-    version: 0.12.1
-  kemal-csrf:
-    github: toddsundsted/kemal-csrf
-    branch: master
   slang:
     github: toddsundsted/slang
     branch: master

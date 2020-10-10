@@ -6,27 +6,20 @@ require "json"
 class Session
   include Ktistec::Model(Common)
 
-  # Allocates a new session.
+  # Allocates a new session for an account.
   #
-  # This constructor is used to create new sessions (which must belong
-  # to an account).
-  #
-  def self.new(account, body = "", **options)
-    new(**options.merge({
-      session_key: Random::Secure.urlsafe_base64,
-      body_json: body.to_json,
-      account_id: account.id,
-    }))
+  def self.new(_account account)
+    new(account_id: account.id)
   end
 
   @[Persistent]
-  property session_key : String
+  property session_key : String { Random::Secure.urlsafe_base64 }
 
   @[Persistent]
-  property body_json : String
+  property body_json : String { "{}" }
 
   @[Persistent]
-  property account_id : Int64
+  property account_id : Int64?
 
   def body
     JSON.parse(body_json)

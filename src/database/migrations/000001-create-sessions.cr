@@ -10,7 +10,7 @@ up do |db|
       updated_at datetime NOT NULL,
       body_json text NOT NULL,
       session_key varchar(22) NOT NULL,
-      account_id integer NOT NULL
+      account_id integer
     )
   STR
   db.exec <<-STR

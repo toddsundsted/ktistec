@@ -22,7 +22,7 @@ Spectator.describe Ktistec::Auth do
 
   let(account) { Account.new(username, password).save }
   let(session) { Session.new(account).save }
-  let(payload) { {sub: account.id, jti: session.session_key, iat: Time.utc} }
+  let(payload) { {jti: session.session_key, iat: Time.utc} }
   let(jwt) { Ktistec::JWT.encode(payload) }
 
   describe "get /foo/bar/auth" do
@@ -53,7 +53,7 @@ Spectator.describe Ktistec::Auth do
     end
 
     context "invalid session" do
-      let(payload) { {sub: account.id, jti: "invalid session key", iat: Time.utc} }
+      let(payload) { {jti: "invalid session key", iat: Time.utc} }
 
       it "fails to authenticate" do
         get "/foo/bar/auth", HTTP::Headers{"Authorization" => "Bearer #{jwt}"}
@@ -62,7 +62,7 @@ Spectator.describe Ktistec::Auth do
     end
 
     context "invalid time" do
-      let(payload) { {sub: account.id, jti: session.session_key, iat: Time.utc - 1.year} }
+      let(payload) { {jti: session.session_key, iat: Time.utc - 1.year} }
 
       it "fails to authenticate" do
         get "/foo/bar/auth", HTTP::Headers{"Cookie" => "one=two; AuthToken=#{jwt}"}

@@ -82,7 +82,7 @@ class HomeController
         account.save
 
         session = Session.new(account).save
-        payload = {sub: account.id, jti: session.session_key, iat: Time.utc}
+        payload = {jti: session.session_key, iat: Time.utc}
         jwt = Ktistec::JWT.encode(payload)
 
         if accepts?("text/html")

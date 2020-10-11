@@ -11,15 +11,36 @@ Spectator.describe Session do
 
   describe "#body=" do
     it "sets the body" do
-      body = {"foo" => "bar"}
-      expect{subject.body = body}.to change{subject.body_json}
+      subject.body = {"foo" => "bar"}
+      expect(subject.body_json).to eq(%q|{"foo":"bar"}|)
     end
   end
 
   describe "#body" do
     it "gets the body" do
-      body = subject.body = {"foo" => "bar"}
-      expect(subject.body).to eq(body)
+      subject.body_json = %q|{"foo":"bar"}|
+      expect(subject.body).to eq({"foo" => "bar"})
+    end
+  end
+
+  describe "#string" do
+    it "stores a string value in the session" do
+      subject.string("foo", "bar")
+      expect(subject.body_json).to eq(%q|{"foo":"bar"}|)
+    end
+  end
+
+  describe "#string" do
+    it "retrieves a string value from the session" do
+      subject.body_json = %q|{"foo":"bar"}|
+      expect(subject.string("foo")).to eq("bar")
+    end
+  end
+
+  describe "#string?" do
+    it "retrieves a string value from the session" do
+      subject.body_json = %q|{"foo":"bar"}|
+      expect(subject.string?("foo")).to eq("bar")
     end
   end
 

@@ -30,5 +30,18 @@ class Session
     body
   end
 
+  def string(key, value)
+    self.body = self.body.as_h.merge({key => value})
+    save
+  end
+
+  def string(key)
+    self.body[key].as_s
+  end
+
+  def string?(key)
+    self.body[key]?.try(&.as_s)
+  end
+
   belongs_to account
 end

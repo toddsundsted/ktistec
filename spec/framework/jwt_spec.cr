@@ -28,4 +28,16 @@ Spectator.describe Ktistec::JWT do
       expect{described_class.decode(token[0..-2], secret)}.to raise_error(Ktistec::JWT::Error)
     end
   end
+
+  describe ".expired?" do
+    it "returns true if payload is expired" do
+      payload = JSON.parse({"iat" => 2.months.ago}.to_json)
+      expect(described_class.expired?(payload)).to be_true
+    end
+
+    it "returns false if payload is not expired" do
+      payload = JSON.parse({"iat" => 2.days.ago}.to_json)
+      expect(described_class.expired?(payload)).to be_false
+    end
+  end
 end

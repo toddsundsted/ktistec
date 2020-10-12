@@ -12,7 +12,7 @@ module Ktistec
       begin
         if (value = check_authorization(env) || check_cookie(env))
           if payload = Ktistec::JWT.decode(value)
-            if Time.parse_iso8601(payload["iat"].as_s) > Time.utc - 1.month
+            unless JWT.expired?(payload)
               if session = Session.find(session_key: payload["jti"].as_s)
                 env.current_account = session.account
                 env.current_session = session

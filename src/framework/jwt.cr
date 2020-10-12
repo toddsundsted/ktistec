@@ -31,6 +31,10 @@ module Ktistec
       raise Error.new(ex.message)
     end
 
+    def self.expired?(payload)
+      Time.parse_iso8601(payload["iat"].as_s) < Time.utc - 1.month
+    end
+
     private def self.encode64(str)
       Base64.urlsafe_encode(str, padding: false)
     end

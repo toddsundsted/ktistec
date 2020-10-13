@@ -17,89 +17,85 @@ end
 Spectator.describe Ktistec::Auth do
   setup_spec
 
-  let(username) { random_string }
-  let(password) { random_string }
-
-  let(account) { Account.new(username, password).save }
-  let(session) { Session.new(account).save }
-  let(payload) { {jti: session.session_key, iat: Time.utc} }
-  let(jwt) { Ktistec::JWT.encode(payload) }
-
   describe "get /foo/bar/auth" do
-    it "successfully authenticates" do
-      get "/foo/bar/auth", HTTP::Headers{"Authorization" => "Bearer #{jwt}"}
-      expect(response.status_code).to eq(200)
-      expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
-      expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
-    end
+    let(payload) { {jti: session.session_key, iat: Time.utc} }
+    let(jwt) { Ktistec::JWT.encode(payload) }
 
-    it "successfully authenticates" do
-      get "/foo/bar/auth", HTTP::Headers{"Cookie" => "one=two; AuthToken=#{jwt}"}
-      expect(response.status_code).to eq(200)
-      expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
-      expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
-    end
-
-    it "fails to authenticate, as HTML" do
-      get "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html"}
-      expect(response.status_code).to eq(401)
-      expect(XML.parse_html(response.body).xpath_nodes("/html//title").first.text).to match(/Unauthorized/)
-    end
-
-    it "fails to authenticate" do
-      get "/foo/bar/auth"
-      expect(response.status_code).to eq(401)
-      expect(JSON.parse(response.body)["msg"]).to eq("Unauthorized")
-    end
-
-    context "invalid session" do
-      let(payload) { {jti: "invalid session key", iat: Time.utc} }
+    context "anonymous session" do
+      let!(session) { Session.new.save }
 
       it "fails to authenticate" do
-        get "/foo/bar/auth", HTTP::Headers{"Authorization" => "Bearer #{jwt}"}
+        get "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html", "Authorization" => "Bearer #{jwt}"}
         expect(response.status_code).to eq(401)
+        expect(XML.parse_html(response.body).xpath_nodes("/html//title").first.text).to match(/Unauthorized/)
+      end
+
+      it "fails to authenticate" do
+        get "/foo/bar/auth", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        expect(response.status_code).to eq(401)
+        expect(JSON.parse(response.body)["msg"]).to eq("Unauthorized")
       end
     end
 
-    context "invalid time" do
-      let(payload) { {jti: session.session_key, iat: Time.utc - 1.year} }
+    context "authenticated session" do
+      let(account) { Account.new(random_string, random_string).save }
+      let!(session) { Session.new(account).save }
 
-      it "fails to authenticate" do
-        get "/foo/bar/auth", HTTP::Headers{"Cookie" => "one=two; AuthToken=#{jwt}"}
-        expect(response.status_code).to eq(401)
+      it "successfully authenticates" do
+        get "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html", "Authorization" => "Bearer #{jwt}"}
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
+        expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
       end
-    end
 
-    context "new secret key" do
-      let(jwt) { Ktistec::JWT.encode(payload, "old secret key") }
-
-      it "fails to authenticate" do
-        get "/foo/bar/auth", HTTP::Headers{"Authorization" => "Bearer #{jwt}"}
-        expect(response.status_code).to eq(401)
+      it "successfully authenticates" do
+        get "/foo/bar/auth", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
+        expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
       end
     end
   end
 
   describe "get /foo/bar/skip" do
-    it "successfully authenticates" do
-      get "/foo/bar/skip", HTTP::Headers{"Authorization" => "Bearer #{jwt}"}
-      expect(response.status_code).to eq(200)
-      expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
-      expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
+    let(payload) { {jti: session.session_key, iat: Time.utc} }
+    let(jwt) { Ktistec::JWT.encode(payload) }
+
+    context "anonymous session" do
+      let!(session) { Session.new.save }
+
+      it "doesn't authenticate but doesn't fail" do
+        get "/foo/bar/skip", HTTP::Headers{"Accept" => "text/html", "Authorization" => "Bearer #{jwt}"}
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("account")).to eq(nil)
+        expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
+      end
+
+      it "doesn't authenticate but doesn't fail" do
+        get "/foo/bar/skip", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("account")).to eq(nil)
+        expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
+      end
     end
 
-    it "successfully authenticates" do
-      get "/foo/bar/skip", HTTP::Headers{"Cookie" => "one=two; AuthToken=#{jwt}"}
-      expect(response.status_code).to eq(200)
-      expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
-      expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
-    end
+    context "authenticated session" do
+      let(account) { Account.new(random_string, random_string).save }
+      let!(session) { Session.new(account).save }
 
-    it "doesn't authenticate and doesn't fail" do
-      get "/foo/bar/skip"
-      expect(response.status_code).to eq(200)
-      expect(JSON.parse(response.body).dig("account")).to eq(nil)
-      expect(JSON.parse(response.body).dig("session")).to eq(nil)
+      it "successfully authenticates" do
+        get "/foo/bar/skip", HTTP::Headers{"Accept" => "text/html", "Authorization" => "Bearer #{jwt}"}
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
+        expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
+      end
+
+      it "successfully authenticates" do
+        get "/foo/bar/skip", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
+        expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
+      end
     end
   end
 end

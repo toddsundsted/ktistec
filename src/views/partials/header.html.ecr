@@ -1,6 +1,6 @@
 <nav class='ui top fixed inverted navigation menu'>
     <div class='ui text container'>
-        <%- if (_account = env.current_account?) -%>
+        <%- if (_account = env.account?) -%>
         <a class='item' href='<%= actor_path(_account) %>'>Home</a>
         <a class='item' href='<%= search_path %>'>Search</a>
         <div class='right menu'>

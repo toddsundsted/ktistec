@@ -6,11 +6,11 @@ class FooBarController
   skip_auth ["/foo/bar/skip"]
 
   get "/foo/bar/auth" do |env|
-    {account: env.current_account?, session: env.current_session?}.to_json
+    {account: env.account?, session: env.session?}.to_json
   end
 
   get "/foo/bar/skip" do |env|
-    {account: env.current_account?, session: env.current_session?}.to_json
+    {account: env.account?, session: env.session?}.to_json
   end
 end
 

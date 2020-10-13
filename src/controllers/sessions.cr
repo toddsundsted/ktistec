@@ -49,7 +49,7 @@ class SessionsController
   end
 
   delete "/sessions" do |env|
-    if (session = env.current_session?)
+    if (session = env.session?)
       session.destroy
     end
     env.redirect sessions_path

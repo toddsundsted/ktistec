@@ -28,7 +28,7 @@ class HomeController
         env.response.content_type = "application/json"
         render "src/views/home/step_2.json.ecr"
       end
-    elsif (account = env.current_account?).nil?
+    elsif (account = env.account?).nil?
       if accepts?("text/html")
         env.response.content_type = "text/html"
         render "src/views/home/index.html.ecr", "src/views/layouts/default.html.ecr"

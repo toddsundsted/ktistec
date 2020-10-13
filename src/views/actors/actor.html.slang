@@ -4,7 +4,7 @@ h1= actor.username
   a.item href=actor_relationships_path(actor, "outbox") Outbox
   a.item href=actor_relationships_path(actor, "followers") Followers
   a.item href=actor_relationships_path(actor, "following") Following
-- if env.current_account?
+- if env.account?
   form.ui.form method="POST" action=actor_relationships_path(actor, "outbox")
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Create"
@@ -14,7 +14,7 @@ h1= actor.username
       trix-editor input="input-trix-editor"
     input.ui.button type="submit" value="Post Status"
 crystal:
-  activities = env.current_account? ?
+  activities = env.account? ?
     actor.both_mailboxes :
     actor.public_posts
 h2 Recent

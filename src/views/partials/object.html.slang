@@ -24,7 +24,7 @@
   .text class=(_attachment ? "extra" : nil)
     == s _object.content
   .meta
-    - if (__account = env.current_account?)
+    - if (__account = env.account?)
       a href=remote_actor_path(_author) = _author.display_name
       a href=remote_thread_path(_object) = _object.display_date
     - else

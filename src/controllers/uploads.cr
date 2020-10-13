@@ -9,7 +9,7 @@ class UploadsController
     filepath = nil
     HTTP::FormData.parse(env.request) do |part|
       if part.name == "file"
-        filename = env.current_account?.not_nil!.actor.id.to_s
+        filename = env.account.actor.id.to_s
         filepath = File.join("uploads", *Tuple(String, String, String).from(UUID.random.to_s.split("-")[0..2]))
         if (extension = part.filename)
           extension = File.extname(extension)
@@ -37,7 +37,7 @@ class UploadsController
     unless id =~ /^([0-9-]+)(\.[^.]+)?$/
       bad_request
     end
-    unless env.current_account?.not_nil!.actor.id.to_s == $1
+    unless env.account.actor.id.to_s == $1
       forbidden
     end
     filepath = File.join(Kemal.config.public_folder, "uploads", p1, p2, p3, id)

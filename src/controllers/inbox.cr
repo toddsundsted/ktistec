@@ -176,7 +176,7 @@ class RelationshipsController
     unless (account = get_account(env))
       not_found
     end
-    activities = account.actor.in_inbox(*pagination_params(env), public: env.current_account? != account)
+    activities = account.actor.in_inbox(*pagination_params(env), public: env.account? != account)
 
     if accepts?("text/html")
       env.response.content_type = "text/html"

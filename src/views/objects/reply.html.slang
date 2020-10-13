@@ -5,7 +5,7 @@ section.ui.feed
     _author = object.attributed_to
   article.event id=anchor(_object)
     == render "src/views/partials/object.html.slang"
-- if (_actor = env.current_account?.try(&.actor))
+- if (_actor = env.account?.try(&.actor))
   form.ui.form method="POST" action=actor_relationships_path(_actor, "outbox")
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Create"

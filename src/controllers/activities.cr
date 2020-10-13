@@ -37,7 +37,7 @@ class ActivitiesController
         activity
       elsif activity.to.try(&.includes?(PUBLIC)) || activity.cc.try(&.includes?(PUBLIC))
         activity
-      elsif (iri = env.current_account?.try(&.iri))
+      elsif (iri = env.account?.try(&.iri))
         if activity.actor_iri == iri
           activity
         end

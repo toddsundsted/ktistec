@@ -11,7 +11,7 @@ class RelationshipsController
       not_found
     end
     actor = account.actor
-    unless (related = all_related(env, actor, public: env.current_account? != account))
+    unless (related = all_related(env, actor, public: env.account? != account))
       bad_request
     end
 

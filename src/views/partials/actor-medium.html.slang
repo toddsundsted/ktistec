@@ -3,7 +3,7 @@ h1: a href=actor.display_link = actor.display_name
   p: img.ui.small.image src=icon
 - if (summary = actor.summary)
   p == s summary
-- if (_account = env.current_account?)
+- if (_account = env.account?)
   - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
     form method="POST" action=outbox_path(_account)
       input type="hidden" name="authenticity_token" value=env.session.string?("csrf")

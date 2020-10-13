@@ -78,7 +78,7 @@ class ObjectsController
         object
       elsif object.to.try(&.includes?(PUBLIC)) || object.cc.try(&.includes?(PUBLIC))
         object
-      elsif (iri = env.current_account?.try(&.iri))
+      elsif (iri = env.account?.try(&.iri))
         if object.to.try(&.includes?(iri)) || object.cc.try(&.includes?(iri))
           object
         end

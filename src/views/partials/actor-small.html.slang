@@ -7,7 +7,7 @@ a.card href=actor.iri
       img.ui.mini.image src=icon
     - else
       i.ui.user.icon
-    - if (_account = env.current_account?)
+    - if (_account = env.account?)
       - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
         form.right.floated method="POST" action=actor_relationships_path(_account, "outbox")
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")

@@ -9,7 +9,7 @@ class RelationshipsController
     unless (account = get_account(env))
       not_found
     end
-    unless env.current_account? == account
+    unless env.account? == account
       forbidden
     end
 
@@ -189,7 +189,7 @@ class RelationshipsController
     unless (account = get_account(env))
       not_found
     end
-    activities = account.actor.in_outbox(*pagination_params(env), public: env.current_account? != account)
+    activities = account.actor.in_outbox(*pagination_params(env), public: env.account? != account)
 
     if accepts?("text/html")
       env.response.content_type = "text/html"

@@ -55,7 +55,7 @@ def build_main_handler
     if handler.is_a?(Ktistec::Auth) && Global.session && Global.account
       # if we "sign_in" in a context, swap in the dummy handler
       handler = DummyAuth.new
-    elsif handler.is_a?(CSRF)
+    elsif handler.is_a?(Ktistec::CSRF)
       handler = DummyCSRF.new
     end
     current_handler.next = handler
@@ -272,7 +272,4 @@ Ktistec::Server.run do
   Ktistec.host = "https://test.test"
   Kemal.config.port = Random.new.rand(49152..65535)
   Kemal.config.logging = false
-  Kemal::Session.config do |config|
-    config.secret = "test"
-  end
 end

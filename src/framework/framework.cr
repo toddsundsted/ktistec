@@ -83,6 +83,8 @@ module Ktistec
       Ktistec::Database.all_pending_versions.each do |version|
         puts Ktistec::Database.do_operation(:apply, version)
       end
+      # clean out stale, anonymous sessions
+      Ktistec.database.exec "DELETE FROM sessions WHERE account_id IS NULL AND updated_at < date('now', '-1 days')"
       with new yield
       Kemal.run
     end

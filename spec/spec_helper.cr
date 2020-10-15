@@ -269,6 +269,7 @@ class Account
 end
 
 Ktistec::Server.run do
+  Log.setup_from_env
   Ktistec.host = "https://test.test"
   Kemal.config.port = Random.new.rand(49152..65535)
   Kemal.config.logging = false

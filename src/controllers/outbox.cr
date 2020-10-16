@@ -23,6 +23,7 @@ class RelationshipsController
       if (in_reply_to_iri = activity["in-reply-to"]?) && !ActivityPub::Object.find?(in_reply_to_iri)
         bad_request
       end
+      now = Time.utc
       visible = !!activity["public"]?
       to = activity["to"]?.presence.try(&.split(",")) || [] of String
       if visible
@@ -43,11 +44,12 @@ class RelationshipsController
           attachments: enhancements.attachments,
           attributed_to_iri: account.iri,
           in_reply_to_iri: in_reply_to_iri,
-          published: Time.utc,
+          published: now,
           visible: visible,
           to: to,
           cc: cc
         ),
+        published: now,
         visible: visible,
         to: to,
         cc: cc

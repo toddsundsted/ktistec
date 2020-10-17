@@ -34,6 +34,10 @@ module Ktistec
       "/sessions"
     end
 
+    macro settings_path
+      "/settings"
+    end
+
     macro back_path
       env.request.headers.fetch("Referer", "/")
     end

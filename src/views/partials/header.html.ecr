@@ -3,6 +3,7 @@
         <%- if (_account = env.account?) -%>
         <a class='item' href='<%= actor_path(_account) %>'>Home</a>
         <a class='item' href='<%= search_path %>'>Search</a>
+        <a class='item' href='<%= settings_path %>'>Settings</a>
         <div class='right menu'>
             <form method='POST' action='<%= sessions_path %>'>
                 <input type='hidden' name='_method' value='delete'>

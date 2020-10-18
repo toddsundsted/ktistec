@@ -1,6 +1,8 @@
 require "../spec_helper"
 
 Spectator.describe "partials" do
+  setup_spec
+
   include Ktistec::Controller
 
   describe "collection.json.ecr" do
@@ -94,6 +96,74 @@ Spectator.describe "partials" do
 
         it "contains a link to the next page" do
           expect(subject.dig?("first", "next")).to eq("#{Ktistec.host}/collection?page=2")
+        end
+      end
+    end
+  end
+
+  describe "follow.html.slang" do
+    let(env) do
+      HTTP::Server::Context.new(
+        HTTP::Request.new("GET", "/actor"),
+        HTTP::Server::Response.new(IO::Memory.new)
+      )
+    end
+
+    let(actor) do
+      ActivityPub::Actor.new(
+        iri: "https://remote/actors/foo_bar"
+      ).save
+    end
+
+    subject do
+      begin
+        XML.parse(render "./src/views/partials/follow.html.slang")
+      rescue XML::Error
+        XML.parse("<div/>").document
+      end
+    end
+
+    context "if anonymous" do
+      it "does not render a form" do
+        expect(subject.xpath_nodes("//form")).to be_empty
+      end
+    end
+
+    context "if authenticated" do
+      let(account) { register }
+
+      before_each { env.account = account }
+
+      context "if account actor is actor" do
+        let(actor) { account.actor }
+
+        it "does not render a form" do
+          expect(subject.xpath_nodes("//form")).to be_empty
+        end
+      end
+
+      context "if following actor" do
+        before_each do
+          ActivityPub::Activity::Follow.new(
+            iri: "https://test.test/activities/follow",
+            actor: account.actor,
+            object: actor
+          ).save
+          account.actor.follow(
+            actor,
+            confirmed: true,
+            visible: true
+          ).save
+        end
+
+        it "renders a button to unfollow" do
+          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Unfollow")
+        end
+      end
+
+      context "if not following actor" do
+        it "renders a button to follow" do
+          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
         end
       end
     end

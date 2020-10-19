@@ -9,7 +9,7 @@ Spectator.describe RelationshipsController do
     let(activity) do
       ActivityPub::Activity.new(
         iri: "https://remote/activities/foo_bar",
-        actor_iri: other.iri,
+        actor_iri: other.iri
       )
     end
 

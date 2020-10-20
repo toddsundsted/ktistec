@@ -81,6 +81,10 @@ module ActivityPub
       urls.try(&.first?) || iri
     end
 
+    def account_uri
+      %Q|#{username}@#{URI.parse(iri).host}|
+    end
+
     def follow(other : Actor, **options)
       Relationship::Social::Follow.new(**options.merge({from_iri: self.iri, to_iri: other.iri}))
     end

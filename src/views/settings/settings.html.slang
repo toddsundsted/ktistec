@@ -1,3 +1,4 @@
+== render "src/views/partials/actor-large.html.slang"
 h1 Settings
 form.ui.form method="POST"
   .field

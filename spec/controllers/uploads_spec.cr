@@ -48,6 +48,11 @@ Spectator.describe UploadsController do
         expect(response.headers["Location"]).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.txt$/)
       end
 
+      it "returns the resource path in the response" do
+        post "/uploads", headers, form
+        expect(JSON.parse(response.body)["msg"].as_s).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.txt$/)
+      end
+
       it "stores the file" do
         post "/uploads", headers, form
         expect(File.read_lines(uploaded_file).last).to eq("0123456789")

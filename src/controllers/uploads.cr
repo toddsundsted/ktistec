@@ -23,7 +23,7 @@ class UploadsController
     end
     if filename && filepath
       env.response.headers["Location"] = "#{host}/#{filepath}/#{filename}"
-      created
+      created "/#{filepath}/#{filename}"
     else
       bad_request
     end

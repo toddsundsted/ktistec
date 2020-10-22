@@ -8,7 +8,7 @@ class UploadsController
     filename = nil
     filepath = nil
     HTTP::FormData.parse(env.request) do |part|
-      if part.name == "file"
+      if part.filename.presence
         filename = env.account.actor.id.to_s
         filepath = File.join("uploads", *Tuple(String, String, String).from(UUID.random.to_s.split("-")[0..2]))
         if (extension = part.filename)

@@ -95,9 +95,11 @@ class FooBarController
 
   get "/foo/bar/accept" do |env|
     if accepts?("text/html")
-      "html"
+      ok "html"
+    elsif accepts?("text/plain")
+      ok "text"
     elsif accepts?("application/json")
-      "json"
+      ok "json"
     end
   end
 
@@ -223,14 +225,19 @@ Spectator.describe Ktistec::Controller do
   end
 
   describe "get /foo/bar/accept" do
-    it "responds with HTML" do
+    it "responds with html" do
       get "/foo/bar/accept", HTTP::Headers{"Accept" => "text/html"}
-      expect(response.body).to eq("html")
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).to eq("html")
     end
 
-    it "responds with JSON" do
+    it "responds with text" do
+      get "/foo/bar/accept", HTTP::Headers{"Accept" => "text/plain"}
+      expect(response.body).to eq("text")
+    end
+
+    it "responds with json" do
       get "/foo/bar/accept", HTTP::Headers{"Accept" => "application/json"}
-      expect(response.body).to eq("json")
+      expect(JSON.parse(response.body)["msg"]).to eq("json")
     end
   end
 

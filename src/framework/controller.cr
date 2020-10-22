@@ -98,9 +98,12 @@ module Ktistec
           _message = \{{message}}
           env.response.content_type = "text/html"
           halt env, status_code: \{{code}}, response: render "src/views/pages/generic.html.ecr", "src/views/layouts/default.html.ecr"
+        elsif accepts?("text/plain")
+          env.response.content_type = "text/plain"
+          halt env, status_code: \{{code}}, response: \{{message}}.downcase
         else
           env.response.content_type = "application/json"
-          halt env, status_code: \{{code}}, response: %<{"msg":\{{message.downcase}}}>
+          halt env, status_code: \{{code}}, response: ({msg: \{{message}}.downcase}.to_json)
         end
       end
     end

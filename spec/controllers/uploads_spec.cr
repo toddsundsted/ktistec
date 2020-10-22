@@ -121,4 +121,51 @@ Spectator.describe UploadsController do
       end
     end
   end
+
+  describe "DELETE /uploads" do
+    it "returns 401 if not authorized" do
+      delete "/uploads"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      let(path) { UUID.random.to_s.to_s.split("-")[0..2].join("/") }
+
+      let(file) { "#{Dir.tempdir}/uploads/#{path}/#{current_actor_id}" }
+
+      before_each do
+        Dir.mkdir_p(Path[file].parent)
+        File.open(file, "w") do |file|
+          file << "0123456789"
+        end
+      end
+
+      it "is successful" do
+        delete "/uploads", body: "/uploads/#{path}/#{current_actor_id}"
+        expect(response.status_code).to eq(200)
+      end
+
+      it "deletes the file" do
+        delete "/uploads", body: "/uploads/#{path}/#{current_actor_id}"
+        expect(File.exists?(file)).to be_false
+      end
+
+      it "returns 400 if the path contains invalid characters" do
+        delete "/uploads", body: "/uploads/../../../#{current_actor_id}"
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 403 if the upload does not belong to the user" do
+        delete "/uploads", body: "/uploads/#{path}/0"
+        expect(response.status_code).to eq(403)
+      end
+
+      it "returns 404 if the upload does not exist" do
+        delete "/uploads", body: "/uploads/foo/bar/baz/#{current_actor_id}"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
 end

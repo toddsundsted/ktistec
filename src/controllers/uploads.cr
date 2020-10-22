@@ -48,4 +48,22 @@ class UploadsController
       not_found
     end
   end
+
+  private PATH_RE = /^\/uploads\/([a-z0-9-]+)\/([a-z0-9-]+)\/([a-z0-9-]+)\/(([0-9-]+)(\.[^.]+)?)$/
+
+  delete "/uploads" do |env|
+    unless (p = env.request.body.try(&.gets)) && (m = p.match(PATH_RE))
+      bad_request
+    end
+    unless env.account.actor.id.to_s == m[5]
+      forbidden
+    end
+    filepath = File.join(Kemal.config.public_folder, "uploads", m[1], m[2], m[3], m[4])
+    if File.exists?(filepath)
+      File.delete(filepath)
+      ok
+    else
+      not_found
+    end
+  end
 end

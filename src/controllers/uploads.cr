@@ -29,6 +29,8 @@ class UploadsController
     end
   end
 
+  # trix-style deleting
+
   delete "/uploads/:p1/:p2/:p3/:id" do |env|
     p1, p2, p3, id = env.params.url.select("p1", "p2", "p3", "id").values
     unless [p1, p2, p3].all? { |n| n =~ /^[a-z0-9-]+$/ }
@@ -48,6 +50,8 @@ class UploadsController
       not_found
     end
   end
+
+  # filepond-style deleting
 
   private PATH_RE = /^\/uploads\/([a-z0-9-]+)\/([a-z0-9-]+)\/([a-z0-9-]+)\/(([0-9-]+)(\.[^.]+)?)$/
 

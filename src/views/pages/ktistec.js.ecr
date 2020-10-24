@@ -1,2 +1,43 @@
 window.Ktistec = {
 }
+
+FilePond.registerPlugin(
+  FilePondPluginFileValidateType,
+  FilePondPluginImageResize,
+  FilePondPluginImageTransform,
+  FilePondPluginImagePreview
+)
+FilePond.setOptions({
+  allowPaste: false,
+  server: {
+    process: {
+      url: '/uploads',
+      headers: {'X-CSRF-Token': '<%= env.session.string?("csrf") %>', 'Accept': 'text/plain'}
+    },
+    revert: {
+      url: '/uploads',
+      headers: {'X-CSRF-Token': '<%= env.session.string?("csrf") %>'}
+    },
+    restore: null,
+    load: null,
+    fetch: null,
+    patch: null
+  }
+})
+
+!!(function($) {
+  $(document).on("turbolinks:load", function () {
+    FilePond.create(
+      document.querySelector('form[action="/settings"] input[type="file"][name="image"]'), {
+        acceptedFileTypes: ['image/png', 'image/jpeg', 'image/gif'],
+        imageResizeTargetWidth: 1400,
+        imageResizeTargetHeight: 700,
+    })
+    FilePond.create(
+      document.querySelector('form[action="/settings"] input[type="file"][name="icon"]'), {
+        acceptedFileTypes: ['image/png', 'image/jpeg', 'image/gif'],
+        imageResizeTargetWidth: 240,
+        imageResizeTargetHeight: 240
+    })
+  })
+})(jQuery)

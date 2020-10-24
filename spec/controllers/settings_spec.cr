@@ -24,7 +24,7 @@ Spectator.describe SettingsController do
 
         it "renders a form" do
           get "/settings", headers
-          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='name']][.//input[@name='summary']]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='name']][.//input[@name='summary']][.//input[@name='image']][.//input[@name='icon']]")).not_to be_empty
         end
       end
 
@@ -38,7 +38,7 @@ Spectator.describe SettingsController do
 
         it "renders a form" do
           get "/settings", headers
-          expect(JSON.parse(response.body).as_h.keys).to have("name", "summary")
+          expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon")
         end
       end
     end

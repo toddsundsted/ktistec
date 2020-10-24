@@ -26,8 +26,10 @@ class SettingsController
   private def self.params(env)
     params = (env.params.body.presence || env.params.json.presence).not_nil!
     {
-      name: params["name"].to_s,
-      summary: params["summary"].to_s
+      name: params["name"]?.try(&.to_s),
+      summary: params["summary"]?.try(&.to_s),
+      image: params["image"]?.try(&.to_s),
+      icon: params["icon"]?.try(&.to_s)
     }
   end
 end

@@ -39,5 +39,16 @@ FilePond.setOptions({
         imageResizeTargetWidth: 240,
         imageResizeTargetHeight: 240
     })
+    $('.ui.feed .event')
+      .find('.content img')
+      .each(function () {
+        $this = $(this)
+        $this.attr('data-src', $this.attr('src'))
+      })
+      .end()
+      .lightGallery({
+        selector: '.content img',
+        download: false
+      })
   })
 })(jQuery)

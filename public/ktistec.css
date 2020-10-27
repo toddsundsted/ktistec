@@ -1,0 +1,9 @@
+html { font-size: 16px; }
+
+/* space for the top menu */
+html { scroll-padding-top: 3.65rem; }
+.ui.fixed.menu + .ui.container { padding-top: 3.65rem; }
+
+/* footer */
+body { display: flex; flex-direction: column; }
+.ui.forced.menu { border-radius: 0 !important; margin-top: auto; white-space: pre-wrap; }

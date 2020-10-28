@@ -1,0 +1,6 @@
+.ui.feed .event .content { overflow-wrap: anywhere; }
+
+/** threaded posts **/
+<%- (1..9).each do |i| -%>
+.threaded.depth-<%= i %> { margin-left: <%= i %>rem !important; width: calc(100% - <%= i %>rem) !important; }
+<%- end -%>

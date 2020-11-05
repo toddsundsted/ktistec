@@ -3,8 +3,8 @@ require "../spec_helper"
 Spectator.describe HomeController do
   setup_spec
 
-  let(username) { random_string }
-  let(password) { random_string }
+  let(username) { random_username }
+  let(password) { random_password }
 
   context "on step 1 (set host)" do
     before_each { Ktistec.clear_host }

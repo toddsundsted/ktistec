@@ -3,8 +3,8 @@ require "../spec_helper"
 Spectator.describe Account do
   setup_spec
 
-  let(username) { random_string }
-  let(password) { random_string }
+  let(username) { random_username }
+  let(password) { random_password }
 
   subject { described_class.new(username, password).save }
 

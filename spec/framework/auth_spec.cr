@@ -38,7 +38,7 @@ Spectator.describe Ktistec::Auth do
     end
 
     context "authenticated session" do
-      let(account) { Account.new(random_string, random_string).save }
+      let(account) { Account.new(random_username, random_password).save }
       let!(session) { Session.new(account).save }
 
       it "successfully authenticates" do
@@ -80,7 +80,7 @@ Spectator.describe Ktistec::Auth do
     end
 
     context "authenticated session" do
-      let(account) { Account.new(random_string, random_string).save }
+      let(account) { Account.new(random_username, random_password).save }
       let!(session) { Session.new(account).save }
 
       it "successfully authenticates" do

@@ -69,10 +69,18 @@ def response
 end
 
 def self.random_string
-  ('a'..'z').to_a.shuffle.first(8).join + "1="
+  ('a'..'z').to_a.shuffle.first(8).join
 end
 
-def self.register(username = random_string, password = random_string, *, with_keys = false)
+def self.random_username
+  random_string
+end
+
+def self.random_password
+  random_string + "1="
+end
+
+def self.register(username = random_username, password = random_password, *, with_keys = false)
   pem_public_key, pem_private_key =
     if with_keys
       keypair = OpenSSL::RSA.generate(2048, 17)

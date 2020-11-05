@@ -4,8 +4,8 @@ Spectator.describe ActorsController do
   setup_spec
 
   describe "GET /actors/:username" do
-    let(username) { random_string }
-    let(password) { random_string }
+    let(username) { random_username }
+    let(password) { random_password }
 
     let!(account) { register(username, password) }
 

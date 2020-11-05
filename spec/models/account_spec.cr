@@ -36,6 +36,11 @@ Spectator.describe Account do
       expect(new_account.validate["username"]).to eq(["is too short"])
     end
 
+    it "rejects the username as containing invalid characters" do
+      new_account = described_class.new(username: "@", password: "")
+      expect(new_account.validate["username"]).to eq(["contains invalid characters"])
+    end
+
     it "rejects the username as not unique" do
       new_account = described_class.new(username: subject.username, password: password)
       expect(new_account.validate["username"]).to eq(["must be unique"])

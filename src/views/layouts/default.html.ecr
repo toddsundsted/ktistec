@@ -3,7 +3,7 @@
     <head>
         <meta charset='utf-8'>
         <meta content='width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,shrink-to-fit=no' name='viewport'>
-        <title><%= yield_content("title") || "Ktistec" %></title>
+        <title><%= Ktistec.site? || "Ktistec" %><%= (title = yield_content("title")) && " | #{title}" %></title>
         <script src="/jquery.min.js"></script>
         <link rel="stylesheet" href="/semantic/semantic.min.css">
         <script src="/semantic/semantic.min.js"></script>

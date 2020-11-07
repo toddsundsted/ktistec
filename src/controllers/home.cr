@@ -7,7 +7,7 @@ class HomeController
 
   get "/" do |env|
     if !Ktistec.host?
-      _host = ""
+      _host = _site = ""
       error = nil
 
       if accepts?("text/html")
@@ -42,9 +42,9 @@ class HomeController
   end
 
   post "/" do |env|
-    if !Ktistec.host?
+    if !Ktistec.host? || !Ktistec.site?
       begin
-        Ktistec.host = host_param(env)
+        Ktistec.host, Ktistec.site = step_1_params(env)
 
         if accepts?("text/html")
           env.redirect home_path
@@ -52,8 +52,8 @@ class HomeController
           env.redirect home_path
         end
       rescue ex : Exception
-        _host = host_param(env)
         error = ex.message
+        _host, _site = step_1_params(env)
 
         if accepts?("text/html")
           env.response.content_type = "text/html"
@@ -64,8 +64,8 @@ class HomeController
         end
       end
     elsif (accounts = Account.all).empty?
-      account = Account.new(**params(env))
-      actor = ActivityPub::Actor::Person.new(**params(env).merge({
+      account = Account.new(**step_2_params(env))
+      actor = ActivityPub::Actor::Person.new(**step_2_params(env).merge({
         iri: "#{host}/actors/#{account.username}",
         inbox: "#{host}/actors/#{account.username}/inbox",
         outbox: "#{host}/actors/#{account.username}/outbox",
@@ -108,12 +108,15 @@ class HomeController
     env.redirect home_path
   end
 
-  private def self.host_param(env)
+  private def self.step_1_params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
-    params["host"].as(String)
+    [
+      params["host"].as(String),
+      params["site"].as(String)
+    ]
   end
 
-  private def self.params(env)
+  private def self.step_2_params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
     {
       username: params["username"].as(String),

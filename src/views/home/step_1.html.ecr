@@ -1,4 +1,4 @@
-<h1>Specify the Host</h1>
+<h1>Specify the Host Name and Site Name</h1>
 <form class='ui form<%= error ? " error" : "" %>' method='POST'>
     <% if error %>
     <div class='ui error message'>
@@ -6,8 +6,12 @@
     </div>
     <% end %>
     <div class='field'>
-        <label>Host</label>
+        <label>Host Name</label>
         <input type='text' name='host' value='<%= _host %>' placeholder='https://[host]/'>
+    </div>
+    <div class='field'>
+        <label>Site Name</label>
+        <input type='text' name='site' value='<%= _site %>'>
     </div>
     <input type='hidden' name='authenticity_token' value='<%= env.session.string?("csrf") %>'>
     <input class='ui primary button' type='submit' value='Submit'>

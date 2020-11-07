@@ -268,6 +268,11 @@ module Ktistec
     Ktistec.database.exec("DELETE FROM options WHERE key = ?", "host")
     @@host = nil
   end
+
+  def self.clear_site
+    Ktistec.database.exec("DELETE FROM options WHERE key = ?", "site")
+    @@site = nil
+  end
 end
 
 class Account
@@ -279,6 +284,7 @@ end
 Ktistec::Server.run do
   Log.setup_from_env
   Ktistec.host = "https://test.test"
+  Ktistec.site = "Ktistec"
   Kemal.config.port = Random.new.rand(49152..65535)
   Kemal.config.logging = false
 end

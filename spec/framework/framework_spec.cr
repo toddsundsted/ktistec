@@ -42,22 +42,42 @@ Spectator.describe Ktistec do
       expect{Ktistec.host = "https://test.test/path"}.to raise_error("path must not be present")
     end
 
-    it "returns the host" do
-      expect(Ktistec.host).to eq("https://test.test")
-    end
-
     it "updates the database" do
-      Ktistec.host = "https://test.test"
-      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "host")).to eq("https://test.test")
-    end
-
-    it "updates the database" do
+      Ktistec.clear_host
       Ktistec.host = "https://test.test/"
       expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "host")).to eq("https://test.test")
     end
 
     it "returns the host" do
       expect(Ktistec.host).to eq("https://test.test")
+    end
+  end
+
+  context "site" do
+    setup_spec
+
+    it "raises an error when not set" do
+      Ktistec.clear_site
+      expect{Ktistec.site}.to raise_error
+    end
+
+    it "returns false when not set" do
+      Ktistec.clear_site
+      expect{Ktistec.site?}.to be_false
+    end
+
+    it "must be present" do
+      expect{Ktistec.site = ""}.to raise_error("must be present")
+    end
+
+    it "updates the database" do
+      Ktistec.clear_site
+      Ktistec.site = "Ktistec"
+      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "site")).to eq("Ktistec")
+    end
+
+    it "returns the site" do
+      expect(Ktistec.site).to eq("Ktistec")
     end
   end
 end

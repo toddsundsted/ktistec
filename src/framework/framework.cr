@@ -65,6 +65,25 @@ module Ktistec
     false
   end
 
+  def self.site=(site)
+    raise "must be present" unless present?(site)
+    @@site = site
+    query = "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)"
+    Ktistec.database.exec(query, "site", @@site)
+    @@site
+  end
+
+  def self.site
+    @@site ||= Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "site").as(String)
+  end
+
+  def self.site?
+    site
+  rescue ex : Exception
+    raise ex unless ex.message == "no results"
+    false
+  end
+
   # An [ActivityPub](https://www.w3.org/TR/activitypub/) server.
   #
   #     Ktistec::Server.run do

@@ -121,7 +121,7 @@ Spectator.describe Ktistec::Util do
 
     it "replaces unsupported tags with their content" do
       content = "<body>this is the body</body>"
-      expect(described_class.sanitize(content)).to eq("<p>this is the body</p>")
+      expect(described_class.sanitize(content)).to eq("this is the body")
     end
 
     it "preserves supported tags" do
@@ -144,9 +144,14 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' alt='picture' class='ui image'>")
     end
 
-    it "wraps bare text in a tag" do
+    it "doesn't corrupt element order" do
+      content = "<figure></figure><p></p>"
+      expect(described_class.sanitize(content)).to eq("<figure></figure><p></p>")
+    end
+
+    it "leaves bare text alone" do
       content = "some text"
-      expect(described_class.sanitize(content)).to eq("<p>some text</p>")
+      expect(described_class.sanitize(content)).to eq("some text")
     end
   end
 

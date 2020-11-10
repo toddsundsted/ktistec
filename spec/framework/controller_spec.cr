@@ -251,7 +251,7 @@ Spectator.describe Ktistec::Controller do
   describe "/foo/bar/sanitize" do
     it "sanitizes HTML" do
       get "/foo/bar/sanitize"
-      expect(response.body).to eq("<p>Foo Bar</p>")
+      expect(response.body).to eq("Foo Bar")
     end
   end
 

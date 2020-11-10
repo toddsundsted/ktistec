@@ -77,7 +77,7 @@ module Ktistec
     def sanitize(content)
       return "" if content.nil? || content.empty?
       String.build do |build|
-        sanitize(XML.parse_html(content,
+        sanitize(XML.parse_html("<div>#{content}</div>",
           XML::HTMLParserOptions::RECOVER |
           XML::HTMLParserOptions::NODEFDTD |
           XML::HTMLParserOptions::NOIMPLIED |
@@ -85,7 +85,7 @@ module Ktistec
           XML::HTMLParserOptions::NOWARNING |
           XML::HTMLParserOptions::NONET
         ), build)
-      end
+      end.gsub(/^<div>|<\/div>$/, "")
     end
 
     private ELEMENTS = [

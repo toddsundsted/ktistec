@@ -65,7 +65,7 @@ Spectator.describe LookupsController do
           headers = HTTP::Headers{"Accept" => "text/html"}
           expect{get "/search?account=foo_bar@test.test", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//h1/a[contains(text(),'foo_bar')]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an actor" do
@@ -116,14 +116,14 @@ Spectator.describe LookupsController do
 
         before_each { HTTP::Client.actors << actor.dup.assign(username: "foo_bar") }
 
-        it "retrieves and stores an actor" do
+        it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
           expect{get "/search?account=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//h1/a[contains(text(),'foo_bar')]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
-        it "retrieves and stores an actor" do
+        it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "application/json"}
           expect{get "/search?account=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)

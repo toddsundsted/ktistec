@@ -51,7 +51,9 @@ module Ktistec
             if node.name == "div"
               build << "<p>"
               node.children.each do |child|
-                if child.name == "br"
+                if child.name == "br" && child.next.try(&.name) == "br"
+                  # SKIP
+                elsif child.name == "br" && child.previous.try(&.name) == "br"
                   build << "</p><p>"
                 elsif child.name == "figure"
                   build << "</p>"
@@ -66,7 +68,7 @@ module Ktistec
               build << node.to_xml(options: XML::SaveOptions::AS_HTML)
             end
           end
-        end
+        end.gsub(/^<p><\/p>|<p><\/p>$/, "")
       end
     end
 

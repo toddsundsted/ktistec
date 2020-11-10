@@ -28,8 +28,13 @@ Spectator.describe Ktistec::Util do
       expect(described_class.enhance(content).content).to eq(%q|<figure><img src=""><figcaption></figcaption></figure>|)
     end
 
-    it "replaces br with p" do
+    it "preserves lone br" do
       content = %q|<div>one<br>two</div>|
+      expect(described_class.enhance(content).content).to eq(%q|<p>one<br>two</p>|)
+    end
+
+    it "replaces double br with p" do
+      content = %q|<div>one<br><br>two</div>|
       expect(described_class.enhance(content).content).to eq(%q|<p>one</p><p>two</p>|)
     end
 
@@ -55,6 +60,11 @@ Spectator.describe Ktistec::Util do
 
     it "handles block elements correctly" do
       content = %q|<h1>a</h1><div>b<br>c</div>|
+      expect(described_class.enhance(content).content).to eq(%q|<h1>a</h1><p>b<br>c</p>|)
+    end
+
+    it "handles block elements correctly" do
+      content = %q|<h1>a</h1><div>b<br><br>c</div>|
       expect(described_class.enhance(content).content).to eq(%q|<h1>a</h1><p>b</p><p>c</p>|)
     end
 
@@ -91,6 +101,11 @@ Spectator.describe Ktistec::Util do
     it "preserves text" do
       content = %q|this is a test|
       expect(described_class.enhance(content).content).to eq(%q|this is a test|)
+    end
+
+    it "trims empty p" do
+      content = %q|<div><figure></figure></div>|
+      expect(described_class.enhance(content).content).to eq(%q|<figure></figure>|)
     end
   end
 

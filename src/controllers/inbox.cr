@@ -10,7 +10,7 @@ class RelationshipsController
     unless (account = get_account(env))
       not_found
     end
-    unless (body = env.request.body)
+    unless (body = env.request.body.try(&.gets_to_end))
       bad_request
     end
 
@@ -39,7 +39,7 @@ class RelationshipsController
     verified = false
 
     if env.request.headers["Signature"]?
-      if actor && Ktistec::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers)
+      if actor && Ktistec::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers, body)
         verified = true
       end
     end

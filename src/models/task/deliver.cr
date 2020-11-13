@@ -88,7 +88,9 @@ class Task
 
       results.sort.uniq.map do |result|
         unless (actor = ActivityPub::Actor.dereference?(result))
-          failures << Failure.new("recipient does not exist: #{result}")
+          message = "recipient does not exist: #{result}"
+          failures << Failure.new(message)
+          Log.debug { message }
         end
         actor
       end.compact
@@ -103,13 +105,18 @@ class Task
             confirmed: true
           ).save
         elsif (inbox = recipient.inbox)
-          HTTP::Client.post(
-            inbox,
-            Ktistec::Signature.sign(sender, inbox),
-            activity.to_json_ld
-          )
+          body = activity.to_json_ld
+          headers = Ktistec::Signature.sign(sender, inbox, body)
+          response = HTTP::Client.post(inbox, headers, body)
+          unless response.success?
+            message = "failed to deliver to #{inbox}: #{response.body}"
+            failures << Failure.new(message)
+            Log.debug { message }
+          end
         else
-          failures << Failure.new("recipient has no inbox: #{recipient}")
+          message = "recipient has no inbox: #{recipient}"
+          failures << Failure.new(message)
+          Log.debug { message }
         end
       end
       save

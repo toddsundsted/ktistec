@@ -4,6 +4,14 @@ Spectator.describe ActivityPub do
   setup_spec
 
   describe ".from_json_ld" do
+    it "raises an error if the type is not specified" do
+      expect{described_class.from_json_ld("{}")}.to raise_error(NotImplementedError)
+    end
+
+    it "defaults the instance to the specified class" do
+      expect(described_class.from_json_ld("{}", default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
+    end
+
     it "raises an error if the type is not supported" do
       expect{described_class.from_json_ld(%q[{"@type":"FooBar"}])}.to raise_error(NotImplementedError)
     end

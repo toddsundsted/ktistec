@@ -85,7 +85,8 @@ class RelationshipsController
         unless Relationship::Social::Follow.find?(from_iri: actor.iri, to_iri: object.iri)
           Relationship::Social::Follow.new(
             actor: actor,
-            object: object
+            object: object,
+            visible: true
           ).save
         end
       end

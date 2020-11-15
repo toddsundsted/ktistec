@@ -69,7 +69,8 @@ class RelationshipsController
       end
       Relationship::Social::Follow.new(
         actor: account.actor,
-        object: object
+        object: object,
+        visible: true
       ).save
     when "Accept"
       unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))

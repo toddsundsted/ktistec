@@ -116,6 +116,7 @@ module Ktistec
         uri = URI.parse(url)
         CONTEXTS.dig("#{uri.host}#{uri.path}/context.jsonld", "@context")
       rescue KeyError
+        Log.info { "uncached external context not loaded: #{url}" }
         empty
       end
     end

@@ -28,7 +28,7 @@ class Task
       actor = ActivityPub::Actor.dereference?(activity.actor_iri)
       object = ActivityPub::Object.dereference?(activity.object_iri)
 
-      recipients = [activity.to, activity.cc].compact.flatten
+      recipients = [activity.to, activity.cc, activity.deliver_to].compact.flatten
 
       # for remote activities, prune recipients that aren't 1) the
       # public collection, 2) the sender itself, 3) the activity's

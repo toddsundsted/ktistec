@@ -338,6 +338,17 @@ Spectator.describe RelationshipsController do
           expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
             to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
         end
+
+        context "and activity isn't addressed" do
+          before_each do
+            follow.to.try(&.clear)
+          end
+
+          it "puts the activity in the actor's inbox" do
+            expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
+              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          end
+        end
       end
 
       context "when object is not this account" do
@@ -356,6 +367,17 @@ Spectator.describe RelationshipsController do
         it "puts the activity in the actor's inbox" do
           expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
             to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        context "and activity isn't addressed" do
+          before_each do
+            follow.to.try(&.clear)
+          end
+
+          it "puts the activity in the actor's inbox" do
+            expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
+              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          end
         end
       end
     end

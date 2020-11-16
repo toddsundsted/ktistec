@@ -90,6 +90,8 @@ class RelationshipsController
           ).save
         end
       end
+      # compatibility with implementations that don't address follows
+      activity.deliver_to = [account.iri]
     when ActivityPub::Activity::Accept
       unless activity.object?.try(&.local)
         bad_request

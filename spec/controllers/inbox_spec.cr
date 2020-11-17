@@ -20,6 +20,11 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(404)
     end
 
+    it "returns 400 if not a verifiable activity" do
+      post "/actors/#{actor.username}/inbox", headers, "{}"
+      expect(response.status_code).to eq(400)
+    end
+
     it "returns 409 if activity already exists" do
       activity.save
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld

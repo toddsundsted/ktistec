@@ -45,7 +45,7 @@ class RelationshipsController
     end
 
     unless verified
-      if (activity = ActivityPub::Activity.dereference?(activity.iri))
+      if activity.iri.presence && (activity = ActivityPub::Activity.dereference?(activity.iri))
         verified = true
       end
     end

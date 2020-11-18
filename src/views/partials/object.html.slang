@@ -30,3 +30,15 @@
     - else
       a href=_author.display_link = _author.display_name
       a href=_object.display_link = _object.display_date
+    - if __account
+      a href=replies_path(_object)
+        button.ui.mini.iconic.button
+          i.reply.icon
+          | Reply
+      - if _author == __account.actor
+        form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
+          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+          input type="hidden" name="object" value=_object.iri
+          button.ui.mini.dangerous.iconic.button type="submit" name="type" value="Delete"
+            i.trash.icon
+            | Delete

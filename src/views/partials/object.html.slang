@@ -1,7 +1,10 @@
 .label
-  - if _author.icon
-    - if _author != _actor && _actor.icon
+  - if _author != _actor
+    - if _actor.icon
       img src=_actor.icon
+    - else
+      i.user.icon
+  - if _author.icon
     img src=_author.icon
   - else
     i.user.icon

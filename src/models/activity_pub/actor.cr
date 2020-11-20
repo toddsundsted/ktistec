@@ -169,41 +169,9 @@ module ActivityPub
       {% end %}
     end
 
-    private def query_and_paginate(query, *args, page = 1, size = 10)
-      {% begin %}
-        {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
-        Ktistec::Util::PaginatedArray(Activity).new.tap do |array|
-          Ktistec.database.query(
-            query, *args, ((page - 1) * size).to_i, size.to_i + 1
-          ) do |rs|
-            rs.each do
-              attrs = {
-               {% for v in vs %}
-                 {{v}}: rs.read({{v.type}}),
-               {% end %}
-              }
-              array <<
-                case attrs[:type]
-                {% for subclass in ActivityPub::Activity.all_subclasses %}
-                  when {{name = subclass.stringify}}
-                    {{subclass}}.new(**attrs)
-                {% end %}
-                else
-                  ActivityPub::Activity.new(**attrs)
-                end
-            end
-          end
-          if array.size > size
-            array.more = true
-            array.pop
-          end
-        end
-      {% end %}
-    end
-
     private def content(type, page = 1, size = 10, public = true)
       {% begin %}
-        {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
+        {% vs = Activity.instance_vars.select(&.annotation(Persistent)) %}
         query = <<-QUERY
            SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
              FROM activities AS a, relationships AS r
@@ -232,7 +200,7 @@ module ActivityPub
          ORDER BY r.created_at DESC
             LIMIT ?
         QUERY
-        query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+        Activity.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
       {% end %}
     end
 
@@ -246,7 +214,7 @@ module ActivityPub
 
     def both_mailboxes(page = 1, size = 10)
       {% begin %}
-        {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
+        {% vs = Activity.instance_vars.select(&.annotation(Persistent)) %}
         query = <<-QUERY
            SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
              FROM activities AS a, relationships AS r
@@ -275,13 +243,13 @@ module ActivityPub
          ORDER BY r.created_at DESC
             LIMIT ?
         QUERY
-        query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+        Activity.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
       {% end %}
     end
 
     def public_posts(page = 1, size = 10)
       {% begin %}
-        {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
+        {% vs = Activity.instance_vars.select(&.annotation(Persistent)) %}
         query = <<-QUERY
            SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
              FROM activities AS a
@@ -306,7 +274,7 @@ module ActivityPub
          ORDER BY o.published DESC
             LIMIT ?
         QUERY
-        query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+        Activity.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
       {% end %}
     end
 

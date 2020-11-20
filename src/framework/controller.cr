@@ -163,6 +163,13 @@ module Ktistec
     end
 
     macro included
+      def self.pagination_params(env)
+        {
+          env.params.query["page"]?.try(&.to_i) || 1,
+          env.params.query["size"]?.try(&.to_i) || 10
+        }
+      end
+
       def self.paginate(collection, env)
         path = env.request.path
         query = env.params.query

@@ -28,13 +28,6 @@ class RelationshipsController
     Account.find?(username: env.params.url["username"]?)
   end
 
-  private def self.pagination_params(env)
-    {
-      env.params.query["page"]?.try(&.to_i) || 1,
-      env.params.query["size"]?.try(&.to_i) || 10
-    }
-  end
-
   private def self.all_related(env, actor, public = true)
     case env.params.url["relationship"]?
     when "following"

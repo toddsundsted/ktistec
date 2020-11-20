@@ -193,11 +193,4 @@ class RelationshipsController
   private def self.get_account(env)
     Account.find?(username: env.params.url["username"]?)
   end
-
-  private def self.pagination_params(env)
-    {
-      env.params.query["page"]?.try(&.to_i) || 1,
-      env.params.query["size"]?.try(&.to_i) || 10
-    }
-  end
 end

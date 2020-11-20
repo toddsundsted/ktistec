@@ -249,5 +249,37 @@ module ActivityPub
         visible: [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
       }
     end
+
+    def self.query_and_paginate(query, *args, page = 1, size = 10)
+      {% begin %}
+        {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+        Ktistec::Util::PaginatedArray(self).new.tap do |array|
+          Ktistec.database.query(
+            query, *args, ((page - 1) * size).to_i, size.to_i + 1
+          ) do |rs|
+            rs.each do
+              attrs = {
+               {% for v in vs %}
+                 {{v}}: rs.read({{v.type}}),
+               {% end %}
+              }
+              array <<
+                case attrs[:type]
+                {% for subclass in @type.all_subclasses %}
+                  when {{name = subclass.stringify}}
+                    {{subclass}}.new(**attrs)
+                {% end %}
+                else
+                  self.new(**attrs)
+                end
+            end
+          end
+          if array.size > size
+            array.more = true
+            array.pop
+          end
+        end
+      {% end %}
+    end
   end
 end

@@ -165,8 +165,8 @@ module Ktistec
     macro included
       def self.pagination_params(env)
         {
-          env.params.query["page"]?.try(&.to_i) || 1,
-          env.params.query["size"]?.try(&.to_i) || 10
+          Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
+          Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
         }
       end
 

@@ -15,8 +15,8 @@ h1= actor.username
     input.ui.button type="submit" value="Post Status"
 crystal:
   activities = env.account? ?
-    actor.both_mailboxes :
-    actor.public_posts
+    actor.both_mailboxes(*pagination_params(env)) :
+    actor.public_posts(*pagination_params(env))
 h2 Recent
 section.ui.feed
   - activities.each do |activity|

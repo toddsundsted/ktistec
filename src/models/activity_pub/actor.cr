@@ -169,12 +169,12 @@ module ActivityPub
       {% end %}
     end
 
-    private def query_and_paginate(query, page = 1, size = 10)
+    private def query_and_paginate(query, *args, page = 1, size = 10)
       {% begin %}
         {% vs = ActivityPub::Activity.instance_vars.select(&.annotation(Persistent)) %}
         Ktistec::Util::PaginatedArray(Activity).new.tap do |array|
           Ktistec.database.query(
-            query, self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
+            query, *args, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
             rs.each do
               attrs = {
@@ -232,7 +232,7 @@ module ActivityPub
          ORDER BY r.created_at DESC
             LIMIT ?
         QUERY
-        query_and_paginate(query, page, size)
+        query_and_paginate(query, self.iri, self.iri, page: page, size: size)
       {% end %}
     end
 
@@ -275,7 +275,7 @@ module ActivityPub
          ORDER BY r.created_at DESC
             LIMIT ?
         QUERY
-        query_and_paginate(query, page, size)
+        query_and_paginate(query, self.iri, self.iri, page: page, size: size)
       {% end %}
     end
 
@@ -306,7 +306,7 @@ module ActivityPub
          ORDER BY o.published DESC
             LIMIT ?
         QUERY
-        query_and_paginate(query, page, size)
+        query_and_paginate(query, self.iri, self.iri, page: page, size: size)
       {% end %}
     end
 

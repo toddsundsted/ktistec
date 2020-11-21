@@ -312,15 +312,18 @@ Spectator.describe ActivityPub::Actor do
       let(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
-          visible: false
+          visible: false,
+          object: ActivityPub::Object::Note.new(
+            iri: "https://test.test/objects/#{random_string}",
+            published: Time.utc(2016, 2, 15, 10, 20, {{index}})
+          )
         )
       end
       let!(relationship{{index}}) do
         Relationship::Content::{{box}}.new(
           owner: subject,
           activity: activity{{index}},
-          confirmed: true,
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
+          confirmed: true
         ).save
       end
     end

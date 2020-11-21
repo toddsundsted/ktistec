@@ -255,7 +255,7 @@ module ActivityPub
              FROM activities AS a
         LEFT JOIN objects AS o
                ON o.iri = a.object_iri
-            WHERE o.attributed_to_iri = ?
+            WHERE a.actor_iri = ?
               AND o.deleted_at is NULL
               AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
               AND a.visible = 1
@@ -264,7 +264,7 @@ module ActivityPub
                    FROM activities AS a
               LEFT JOIN objects AS o
                      ON o.iri = a.object_iri
-                  WHERE o.attributed_to_iri = ?
+                  WHERE a.actor_iri = ?
                     AND o.deleted_at is NULL
                     AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
                     AND a.visible = 1

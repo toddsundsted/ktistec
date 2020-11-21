@@ -360,12 +360,12 @@ Spectator.describe ActivityPub::Actor do
       let!(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
+          visible: {{index}}.odd?,
           object: ActivityPub::Object::Note.new(
             iri: "https://test.test/objects/#{random_string}",
-            published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-            attributed_to: subject
+            published: Time.utc(2016, 2, 15, 10, 20, {{index}})
           ),
-          visible: {{index}}.odd?
+          actor: subject
         ).save
       end
     end

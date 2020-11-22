@@ -28,6 +28,13 @@ class RelationshipsController
     # never use an embedded actor's credentials!
     # only trust credentials retrieved from the origin!
 
+    # always find or fetch the actor. if the activity is signed but we
+    # don't have the actor's public key, fetch the actor, including
+    # their public key. if the activity is signed, verify the activity
+    # against the actor's public key (this will fail on relays). if
+    # the activity is not signed or verification fails for some
+    # reason, retrieve the activity from the origin.
+
     if (actor_iri = activity.actor_iri)
       unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!env.request.headers["Signature"]? || actor.pem_public_key)
         open?(actor_iri) do |response|

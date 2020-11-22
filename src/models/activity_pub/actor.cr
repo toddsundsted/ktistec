@@ -93,7 +93,7 @@ module ActivityPub
       Relationship::Social::Follow.find?(from_iri: self.iri, to_iri: other.iri)
     end
 
-    private def query(type, orig, dest, public = false)
+    private def query(type, orig, dest, public = true)
       {% begin %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
         query = <<-QUERY

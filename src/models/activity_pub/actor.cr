@@ -89,8 +89,8 @@ module ActivityPub
       Relationship::Social::Follow.new(**options.merge({from_iri: self.iri, to_iri: other.iri}))
     end
 
-    def follows?(other : Actor)
-      Relationship::Social::Follow.find?(from_iri: self.iri, to_iri: other.iri)
+    def follows?(other : Actor, **options)
+      Relationship::Social::Follow.find?(**options.merge({from_iri: self.iri, to_iri: other.iri}))
     end
 
     private def query(type, orig, dest, public = true)

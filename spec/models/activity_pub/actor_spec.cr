@@ -174,7 +174,7 @@ Spectator.describe ActivityPub::Actor do
   end
 
   describe "#follow" do
-    let!(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
+    let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     it "adds a public following relationship" do
       foo_bar.follow(other, confirmed: true, visible: true).save
@@ -198,6 +198,22 @@ Spectator.describe ActivityPub::Actor do
       other.follow(foo_bar).save
       expect(foo_bar.all_followers(public: true)).to be_empty
       expect(foo_bar.all_followers(public: false)).to eq([other])
+    end
+  end
+
+  describe "#follows?" do
+    let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    before_each { foo_bar.follow(other, confirmed: true, visible: true).save }
+
+    it "filters response based on confirmed state" do
+      expect(foo_bar.follows?(other, confirmed: true)).to be_truthy
+      expect(foo_bar.follows?(other, confirmed: false)).to be_falsey
+    end
+
+    it "filters response based on visible state" do
+      expect(foo_bar.follows?(other, visible: true)).to be_truthy
+      expect(foo_bar.follows?(other, visible: false)).to be_falsey
     end
   end
 

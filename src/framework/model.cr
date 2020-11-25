@@ -124,6 +124,26 @@ module Ktistec
         {% end %}
       end
 
+      protected def query_all(query, *args)
+        {% begin %}
+          Ktistec.database.query_all(
+            query, *args
+          ) do |rs|
+            compose(rs)
+          end
+        {% end %}
+      end
+
+      protected def query_one(query, *args)
+        {% begin %}
+          Ktistec.database.query_one(
+            query, *args
+          ) do |rs|
+            compose(rs)
+          end
+        {% end %}
+      end
+
       # Returns all instances.
       #
       def all

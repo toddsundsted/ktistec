@@ -90,7 +90,7 @@ module Ktistec
         {% end %}
       end
 
-      private def compose(rs : DB::ResultSet)
+      private def compose(rs : DB::ResultSet) : self
         {% begin %}
           attrs = read(rs)
           {% if @type < Polymorphic %}
@@ -147,10 +147,7 @@ module Ktistec
       # Returns all instances.
       #
       def all
-        Ktistec.database.query_all(
-          "SELECT #{columns} FROM #{table_name} #{conditions}",
-          &->compose(DB::ResultSet)
-        )
+        query_all("SELECT #{columns} FROM #{table_name} #{conditions}")
       end
 
       # Finds the saved instance.
@@ -158,10 +155,7 @@ module Ktistec
       # Raises `NotFound` if no such saved instance exists.
       #
       def find(_id id : Int?)
-        Ktistec.database.query_one(
-          "SELECT #{columns} FROM #{table_name} #{conditions(id: id)}", id,
-          &->compose(DB::ResultSet)
-        )
+        query_one("SELECT #{columns} FROM #{table_name} #{conditions(id: id)}", id)
       rescue ex: DB::Error
         raise NotFound.new("#{self}: #{id}") if ex.message == "no rows"
         raise ex
@@ -181,10 +175,7 @@ module Ktistec
       # Raises `NotFound` if no such saved instance exists.
       #
       def find(**options)
-        Ktistec.database.query_one(
-          "SELECT #{columns} FROM #{table_name} #{conditions(**options)}", *options.values,
-          &->compose(DB::ResultSet)
-        )
+        query_one("SELECT #{columns} FROM #{table_name} #{conditions(**options)}", *options.values)
       rescue ex: DB::Error
         raise NotFound.new("#{self}: #{options}") if ex.message == "no rows"
         raise ex
@@ -202,19 +193,13 @@ module Ktistec
       # Returns saved instances.
       #
       def where(**options)
-        Ktistec.database.query_all(
-          "SELECT #{columns} FROM #{table_name} #{conditions(**options)}", *options.values,
-          &->compose(DB::ResultSet)
-        )
+        query_all("SELECT #{columns} FROM #{table_name} #{conditions(**options)}", *options.values)
       end
 
       # Returns saved instances.
       #
       def where(where : String, *arguments)
-        Ktistec.database.query_all(
-          "SELECT #{columns} FROM #{table_name} #{conditions(where)}", *arguments,
-          &->compose(DB::ResultSet)
-        )
+        query_all("SELECT #{columns} FROM #{table_name} #{conditions(where)}", *arguments)
       end
     end
 

@@ -80,14 +80,19 @@ module Ktistec
         ).as(Int)
       end
 
-      private def compose(rs : DB::ResultSet)
+      private def read(rs : DB::ResultSet)
         {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          attrs = {
-            {% for v in vs %}
+          {
+            {% for v in @type.instance_vars.select(&.annotation(Persistent)) %}
               {{v}}: rs.read({{v.type}}),
             {% end %}
           }
+        {% end %}
+      end
+
+      private def compose(rs : DB::ResultSet)
+        {% begin %}
+          attrs = read(rs)
           {% if @type < Polymorphic %}
             case attrs[:type]
             {% for subclass in @type.all_subclasses %}

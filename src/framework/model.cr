@@ -108,6 +108,22 @@ module Ktistec
         {% end %}
       end
 
+      protected def query_and_paginate(query, *args, page = 1, size = 10)
+        {% begin %}
+          Ktistec::Util::PaginatedArray(self).new.tap do |array|
+            Ktistec.database.query(
+              query, *args, ((page - 1) * size).to_i, size.to_i + 1
+            ) do |rs|
+              rs.each { array << compose(rs) }
+            end
+            if array.size > size
+              array.more = true
+              array.pop
+            end
+          end
+        {% end %}
+      end
+
       # Returns all instances.
       #
       def all

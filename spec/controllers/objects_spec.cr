@@ -72,12 +72,18 @@ Spectator.describe ObjectsController do
       expect(response.status_code).to eq(404)
     end
 
-    context "when the user is a recipient" do
+    context "when it's in the user's inbox" do
       sign_in
 
       before_each do
         [visible, notvisible, remote].each do |object|
-          object.assign(to: [Global.account.not_nil!.iri]).save
+          Relationship::Content::Inbox.new(
+            from_iri: Global.account.not_nil!.iri,
+            to_iri: ActivityPub::Activity.new(
+              iri: "https://test.test/activities/#{random_string}",
+              object_iri: object.iri
+            ).save.iri
+          ).save
         end
       end
 
@@ -147,30 +153,16 @@ Spectator.describe ObjectsController do
         expect(response.status_code).to eq(404)
       end
 
-      context "and it is addressed to the public collection" do
+      context "and it's in the user's inbox" do
         before_each do
           [visible, notvisible, remote].each do |object|
-            object.assign(to: ["https://www.w3.org/ns/activitystreams#Public"]).save
-          end
-        end
-
-        it "renders the object" do
-          headers = HTTP::Headers{"Accept" => "application/json"}
-          get "/remote/objects/#{notvisible.id}", headers
-          expect(response.status_code).to eq(200)
-        end
-
-        it "renders the object" do
-          headers = HTTP::Headers{"Accept" => "application/json"}
-          get "/remote/objects/#{remote.id}", headers
-          expect(response.status_code).to eq(200)
-        end
-      end
-
-      context "and the user is a recipient" do
-        before_each do
-          [visible, notvisible, remote].each do |object|
-            object.assign(cc: [Global.account.not_nil!.iri]).save
+            Relationship::Content::Inbox.new(
+              from_iri: Global.account.not_nil!.iri,
+              to_iri: ActivityPub::Activity.new(
+                iri: "https://test.test/activities/#{random_string}",
+                object_iri: object.iri
+              ).save.iri
+            ).save
           end
         end
 

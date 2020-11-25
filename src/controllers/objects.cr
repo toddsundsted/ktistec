@@ -74,17 +74,9 @@ class ObjectsController
 
   private def self.get_object(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id))
-      if object.visible
+      if object.visible || env.account?.try(&.actor.in_inbox?(object))
         object
-      elsif object.to.try(&.includes?(PUBLIC)) || object.cc.try(&.includes?(PUBLIC))
-        object
-      elsif (iri = env.account?.try(&.iri))
-        if object.to.try(&.includes?(iri)) || object.cc.try(&.includes?(iri))
-          object
-        end
       end
     end
   end
-
-  private PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 end

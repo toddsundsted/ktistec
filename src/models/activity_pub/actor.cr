@@ -204,12 +204,40 @@ module ActivityPub
       {% end %}
     end
 
+    private def find_in?(type, object_iri)
+      {% begin %}
+        {% vs = Activity.instance_vars.select(&.annotation(Persistent)) %}
+        query = <<-QUERY
+           SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
+             FROM activities AS a, objects AS o, relationships AS r
+            WHERE r.from_iri = ?
+              AND r.to_iri = a.iri
+              AND r.type = "#{type}"
+              AND r.confirmed = 1
+              AND a.object_iri = o.iri
+              AND o.iri = "#{object_iri}"
+              AND o.deleted_at is NULL
+        QUERY
+        Activity.query_one(query, self.iri)
+      {% end %}
+    rescue ex: DB::Error
+      raise ex unless ex.message == "no rows"
+    end
+
     def in_outbox(page = 1, size = 10, public = true)
       content(Relationship::Content::Outbox, page, size, public)
     end
 
+    def in_outbox?(object : Object)
+      find_in?(Relationship::Content::Outbox, object.iri)
+    end
+
     def in_inbox(page = 1, size = 10, public = true)
       content(Relationship::Content::Inbox, page, size, public)
+    end
+
+    def in_inbox?(object : Object)
+      find_in?(Relationship::Content::Inbox, object.iri)
     end
 
     def both_mailboxes(page = 1, size = 10)

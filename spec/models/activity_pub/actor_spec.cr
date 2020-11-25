@@ -217,7 +217,7 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
-  describe "#in_outbox" do
+  context "for outbox" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_outbox(index)
@@ -243,33 +243,52 @@ Spectator.describe ActivityPub::Actor do
     add_to_outbox(4)
     add_to_outbox(5)
 
-    it "instantiates the correct subclass" do
-      expect(subject.in_outbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
+    describe "#in_outbox" do
+      it "instantiates the correct subclass" do
+        expect(subject.in_outbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
+      end
+
+      it "filters out non-public posts" do
+        expect(subject.in_outbox(1, 2, public: true)).to be_empty
+      end
+
+      let(note) do
+        ActivityPub::Object::Note.new(
+          iri: "https://test.test/objects/#{random_string}"
+        )
+      end
+
+      it "filters out deleted posts" do
+        activity5.assign(object: note).save ; note.delete
+        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "paginates the results" do
+        expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
+        expect(subject.in_outbox(2, 2, public: false)).to eq([activity3, activity2])
+        expect(subject.in_outbox(2, 2, public: false).more?).to be_true
+      end
     end
 
-    it "filters out non-public posts" do
-      expect(subject.in_outbox(1, 2, public: true)).to be_empty
-    end
+    describe "#in_outbox?" do
+      let(note) do
+        ActivityPub::Object::Note.new(
+          iri: "https://test.test/objects/#{random_string}"
+        ).save
+      end
 
-    let(note) do
-      ActivityPub::Object::Note.new(
-        iri: "https://test.test/objects/#{random_string}"
-      )
-    end
+      it "returns true if object is in outbox" do
+        activity1.assign(object: note).save
+        expect(subject.in_outbox?(note)).to be_truthy
+      end
 
-    it "filters out deleted posts" do
-      activity5.assign(object: note).save ; note.delete
-      expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-    end
-
-    it "paginates the results" do
-      expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
-      expect(subject.in_outbox(2, 2, public: false)).to eq([activity3, activity2])
-      expect(subject.in_outbox(2, 2, public: false).more?).to be_true
+      it "returns false if object is not in outbox" do
+        expect(subject.in_outbox?(note)).to be_falsey
+      end
     end
   end
 
-  describe "#in_inbox" do
+  context "for inbox" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_inbox(index)
@@ -295,29 +314,48 @@ Spectator.describe ActivityPub::Actor do
     add_to_inbox(4)
     add_to_inbox(5)
 
-    it "instantiates the correct subclass" do
-      expect(subject.in_inbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
+    describe "#in_inbox" do
+      it "instantiates the correct subclass" do
+        expect(subject.in_inbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
+      end
+
+      it "filters out non-public posts" do
+        expect(subject.in_inbox(1, 2, public: true)).to be_empty
+      end
+
+      let(note) do
+        ActivityPub::Object::Note.new(
+          iri: "https://test.test/objects/#{random_string}"
+        )
+      end
+
+      it "filters out deleted posts" do
+        activity5.assign(object: note).save ; note.delete
+        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "paginates the results" do
+        expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
+        expect(subject.in_inbox(2, 2, public: false)).to eq([activity3, activity2])
+        expect(subject.in_inbox(2, 2, public: false).more?).to be_true
+      end
     end
 
-    it "filters out non-public posts" do
-      expect(subject.in_inbox(1, 2, public: true)).to be_empty
-    end
+    describe "#in_inbox?" do
+      let(note) do
+        ActivityPub::Object::Note.new(
+          iri: "https://test.test/objects/#{random_string}"
+        ).save
+      end
 
-    let(note) do
-      ActivityPub::Object::Note.new(
-        iri: "https://test.test/objects/#{random_string}"
-      )
-    end
+      it "returns true if object is in inbox" do
+        activity1.assign(object: note).save
+        expect(subject.in_inbox?(note)).to be_truthy
+      end
 
-    it "filters out deleted posts" do
-      activity5.assign(object: note).save ; note.delete
-      expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-    end
-
-    it "paginates the results" do
-      expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
-      expect(subject.in_inbox(2, 2, public: false)).to eq([activity3, activity2])
-      expect(subject.in_inbox(2, 2, public: false).more?).to be_true
+      it "returns false if object is not in inbox" do
+        expect(subject.in_inbox?(note)).to be_falsey
+      end
     end
   end
 

@@ -137,9 +137,7 @@ class RelationshipsController
           bad_request
         end
         follow.destroy
-        if [activity.to, activity.cc].compact.flatten.empty?
-          activity.to = [account.iri]
-        end
+        activity.deliver_to = [account.iri]
       else
         bad_request
       end

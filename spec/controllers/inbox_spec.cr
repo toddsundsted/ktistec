@@ -549,6 +549,11 @@ Spectator.describe RelationshipsController do
         expect(response.status_code).to eq(400)
       end
 
+      it "puts the activity in the actor's inbox" do
+        expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
+          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+      end
+
       it "destroys the relationship" do
         expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
           to change{Relationship::Social::Follow.count(from_iri: other.iri, to_iri: actor.iri)}.by(-1)

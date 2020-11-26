@@ -86,6 +86,10 @@ module Ktistec
       "/remote/objects/#{{{object}}.id}/thread#object-#{{{object}}.id}"
     end
 
+    macro replies_path(object)
+      "/remote/objects/#{{{object}}.id}/replies"
+    end
+
     macro accepts?(mime_type)
       env.accepts?({{mime_type}})
     end

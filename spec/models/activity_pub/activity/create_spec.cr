@@ -16,4 +16,29 @@ Spectator.describe ActivityPub::Activity::Create do
       expect(typeof(subject.object)).to eq({{(ActivityPub::Object.all_subclasses << ActivityPub::Object).join("|").id}})
     end
   end
+
+  context "validations" do
+    let(actor) { ActivityPub::Actor.new }
+    let(object) { ActivityPub::Object.new }
+
+    it "validates the actor is local" do
+      activity = subject.assign(actor: actor, object: object)
+      expect(activity.valid_for_send?).to be_false
+      expect(activity.errors["activity"]). to contain("actor must be local")
+    end
+
+    it "validates the object is attributed to the actor" do
+      activity = subject.assign(actor: actor, object: object)
+      expect(activity.valid_for_send?).to be_false
+      expect(activity.errors["activity"]). to contain("object must be attributed to actor")
+    end
+
+    it "passes validation" do
+      actor.assign(iri: "https://test.test/actors/foo_bar")
+      object.assign(iri: "https://test.test/objects/foo_bar", attributed_to: actor)
+      activity = subject.assign(actor: actor, object: object)
+      expect(activity.valid_for_send?).to be_true
+      expect(activity.errors["activity"]?). to be_nil
+    end
+  end
 end

@@ -54,6 +54,9 @@ class RelationshipsController
         to: to,
         cc: cc
       )
+      unless activity.valid_for_send?
+        bad_request
+      end
     when "Follow"
       unless (iri = activity["object"]?) && (object = ActivityPub::Actor.find?(iri))
         bad_request

@@ -47,7 +47,7 @@ class ActivityPub::Activity
       messages << "actor must be local" unless actor?.try(&.local)
       messages << "object must have an inbox" unless object?.try(&.inbox)
       unless messages.empty?
-        errors["activity"] = errors["activity"]? ? errors["activity"] + messages : messages
+        errors["activity"] = errors.fetch("activity", [] of String) + messages
       end
       errors.empty?
     end

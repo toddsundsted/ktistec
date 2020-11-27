@@ -101,7 +101,7 @@ Spectator.describe ActivityPub::Activity::Follow do
       expect(activity.errors["activity"]). to contain("object must have an inbox")
     end
 
-    it "validates" do
+    it "passes validation" do
       actor.assign(iri: "https://test.test/actors/foo_bar")
       object.assign(iri: "https://remote/", inbox: "https://remote/inbox")
       activity = subject.assign(actor: actor, object: object)

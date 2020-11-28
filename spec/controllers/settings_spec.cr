@@ -72,6 +72,16 @@ Spectator.describe SettingsController do
           post "/settings", headers, "name=&summary=Foo+Bar"
           expect(ActivityPub::Actor.find(actor.id).summary).to eq("Foo Bar")
         end
+
+        it "updates the image" do
+          post "/settings", headers, "image=%2Ffoo%2Fbar%2Fbaz"
+          expect(ActivityPub::Actor.find(actor.id).image).to eq("https://test.test/foo/bar/baz")
+        end
+
+        it "updates the icon" do
+          post "/settings", headers, "icon=%2Ffoo%2Fbar%2Fbaz"
+          expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
+        end
       end
 
       context "and receiving JSON data" do
@@ -90,6 +100,16 @@ Spectator.describe SettingsController do
         it "updates the summary" do
           post "/settings", headers, %q|{"name":"","summary":"Foo Bar"}|
           expect(ActivityPub::Actor.find(actor.id).summary).to eq("Foo Bar")
+        end
+
+        it "updates the image" do
+          post "/settings", headers, %q|{"image":"/foo/bar/baz"}|
+          expect(ActivityPub::Actor.find(actor.id).image).to eq("https://test.test/foo/bar/baz")
+        end
+
+        it "updates the icon" do
+          post "/settings", headers, %q|{"icon":"/foo/bar/baz"}|
+          expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
         end
       end
     end

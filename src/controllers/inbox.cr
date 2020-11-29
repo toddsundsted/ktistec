@@ -93,7 +93,7 @@ class RelationshipsController
           Relationship::Social::Follow.new(
             actor: actor,
             object: object,
-            visible: true
+            visible: false
           ).save
         end
       end

@@ -1,10 +1,10 @@
-h1= actor.username
-.ui.secondary.four.item.menu
-  a.item href=actor_relationships_path(actor, "inbox") Inbox
-  a.item href=actor_relationships_path(actor, "outbox") Outbox
-  a.item href=actor_relationships_path(actor, "followers") Followers
-  a.item href=actor_relationships_path(actor, "following") Following
 - if env.account?
+  h1= actor.username
+  .ui.secondary.four.item.menu
+    a.item href=actor_relationships_path(actor, "inbox") Inbox
+    a.item href=actor_relationships_path(actor, "outbox") Outbox
+    a.item href=actor_relationships_path(actor, "followers") Followers
+    a.item href=actor_relationships_path(actor, "following") Following
   form.ui.form method="POST" action=actor_relationships_path(actor, "outbox")
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Create"
@@ -13,6 +13,8 @@ h1= actor.username
       input#input-trix-editor type="hidden" name="content"
       trix-editor input="input-trix-editor"
     input.ui.button type="submit" value="Post Status"
+- else
+  == render "src/views/partials/actor-medium.html.slang"
 crystal:
   activities = env.account? ?
     actor.both_mailboxes(*pagination_params(env)) :

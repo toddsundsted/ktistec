@@ -63,7 +63,7 @@ module Ktistec
     end
 
     macro actor_path(actor = nil)
-      ((%iri = {{actor}}.try(&.iri)) && URI.parse(%iri).path) || "/actors/#{env.params.url["id"]}"
+      ((%iri = {{actor}}.try(&.iri)) && URI.parse(%iri).path) || "/actors/#{env.params.url["username"]}"
     end
 
     macro actor_relationships_path(actor = nil, relationship = nil)

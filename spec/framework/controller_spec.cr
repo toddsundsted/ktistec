@@ -15,8 +15,9 @@ class FooBarController
     "/foo/bar/helpers/objects",
     "/foo/bar/helpers/objects/:id",
     "/foo/bar/helpers/actors",
-    "/foo/bar/helpers/actors/:username",
-    "/foo/bar/helpers/:id/:relationship",
+    "/foo/bar/helpers/actors/by-id/:id",
+    "/foo/bar/helpers/actors/by-username/:username",
+    "/foo/bar/helpers/:username/:relationship",
     "/foo/bar/paginate",
     "/foo/bar/accept",
     "/foo/bar/escape",
@@ -71,14 +72,19 @@ class FooBarController
     }.to_json
   end
 
-  get "/foo/bar/helpers/actors/:id" do |env|
+  get "/foo/bar/helpers/actors/by-id/:id" do |env|
     {
-      remote_actor_path: remote_actor_path,
+      remote_actor_path: remote_actor_path
+    }.to_json
+  end
+
+  get "/foo/bar/helpers/actors/by-username/:username" do |env|
+    {
       actor_path: actor_path
     }.to_json
   end
 
-  get "/foo/bar/helpers/:id/:relationship" do |env|
+  get "/foo/bar/helpers/:username/:relationship" do |env|
     {
       actor_relationships_path: actor_relationships_path
     }.to_json
@@ -190,14 +196,14 @@ Spectator.describe Ktistec::Controller do
     it "gets the remote actor path" do
       get "/foo/bar/helpers/actors"
       expect(JSON.parse(response.body)["remote_actor_path"]).to eq("/remote/actors/#{FooBarController::ACTOR.id}")
-      get "/foo/bar/helpers/actors/999999"
+      get "/foo/bar/helpers/actors/by-id/999999"
       expect(JSON.parse(response.body)["remote_actor_path"]).to eq("/remote/actors/999999")
     end
 
     it "gets the actor path" do
       get "/foo/bar/helpers/actors"
       expect(JSON.parse(response.body)["actor_path"]).to eq("/#{FooBarController::ID}")
-      get "/foo/bar/helpers/actors/foo_bar"
+      get "/foo/bar/helpers/actors/by-username/foo_bar"
       expect(JSON.parse(response.body)["actor_path"]).to eq("/actors/foo_bar")
     end
 

@@ -265,10 +265,10 @@ module ActivityPub
                     AND o.deleted_at is NULL
                     AND a.iri = r.to_iri
                     AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
-               ORDER BY o.published DESC
+               ORDER BY a.published DESC
                   LIMIT ?
               )
-         ORDER BY o.published DESC
+         ORDER BY a.published DESC
             LIMIT ?
         QUERY
         Activity.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
@@ -296,10 +296,10 @@ module ActivityPub
                     AND o.deleted_at is NULL
                     AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
                     AND a.visible = 1
-               ORDER BY o.published DESC
+               ORDER BY a.published DESC
                   LIMIT ?
               )
-         ORDER BY o.published DESC
+         ORDER BY a.published DESC
             LIMIT ?
         QUERY
         Activity.query_and_paginate(query, self.iri, self.iri, page: page, size: size)

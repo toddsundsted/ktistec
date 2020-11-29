@@ -366,11 +366,8 @@ Spectator.describe ActivityPub::Actor do
       let(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
-          visible: false,
-          object: ActivityPub::Object::Note.new(
-            iri: "https://test.test/objects/#{random_string}",
-            published: Time.utc(2016, 2, 15, 10, 20, {{index}})
-          )
+          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+          visible: false
         )
       end
       let!(relationship{{index}}) do
@@ -417,11 +414,8 @@ Spectator.describe ActivityPub::Actor do
       let!(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
+          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
           visible: {{index}}.odd?,
-          object: ActivityPub::Object::Note.new(
-            iri: "https://test.test/objects/#{random_string}",
-            published: Time.utc(2016, 2, 15, 10, 20, {{index}})
-          ),
           actor: subject
         ).save
       end
@@ -441,8 +435,14 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.public_posts(1, 2)).to eq([activity5, activity3])
     end
 
+    let(note) do
+      ActivityPub::Object::Note.new(
+        iri: "https://test.test/objects/#{random_string}"
+      )
+    end
+
     it "filters out deleted posts" do
-      activity5.object.delete
+      activity5.assign(object: note).save ; note.delete
       expect(subject.public_posts(1, 2)).to eq([activity3, activity1])
     end
 

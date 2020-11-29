@@ -4,7 +4,7 @@ class RelationshipsController
   include Ktistec::Controller
   extend Ktistec::Util
 
-  skip_auth ["/actors/:username/inbox"], POST, GET
+  skip_auth ["/actors/:username/inbox"], POST
 
   post "/actors/:username/inbox" do |env|
     unless (account = get_account(env))

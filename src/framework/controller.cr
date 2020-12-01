@@ -70,6 +70,10 @@ module Ktistec
       "#{actor_path({{actor}})}/#{{{relationship}} || env.params.url["relationship"]}"
     end
 
+    macro actor_remote_follow_path(actor = nil)
+      "#{actor_path({{actor}})}/remote-follow"
+    end
+
     macro outbox_path(actor = nil)
       "#{actor_path({{actor}})}/outbox"
     end

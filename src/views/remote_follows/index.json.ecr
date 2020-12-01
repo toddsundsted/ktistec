@@ -1,0 +1,6 @@
+{
+  <%- if error -%>
+  "msg":<%= error.capitalize.inspect %>,
+  <%- end -%>
+  "account":<%= account.try(&.inspect) || "null" %>
+}

@@ -16,3 +16,5 @@ h1: a href=actor.display_link = actor.display_name
       input type="hidden" name="type" value="Follow"
       input type="hidden" name="object" value=actor.iri
       input.ui.primary.button type="submit" value="Follow"
+- else
+  a.ui.primary.button href=actor_remote_follow_path Follow

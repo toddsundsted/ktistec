@@ -233,6 +233,35 @@ class HTTP::Client
   end
 end
 
+# WebFinger mock.
+#
+module WebFinger
+  def self.query(account)
+    account =~ /^acct:([^@]+)@([^@]+)$/
+    _, name, host = $~.to_a
+    case account
+    when /no-such-host/
+      raise WebFinger::NotFoundError.new("No such host")
+    else
+      WebFinger::Result.from_json(<<-JSON
+        {
+          "links":[
+            {
+              "rel":"self",
+              "href":"https://#{host}/actors/#{name}"
+            },
+            {
+              "rel":"http://ostatus.org/schema/1.0/subscribe",
+              "template":"https://#{host}/actors/#{name}/authorize-follow?uri={uri}"
+            }
+          ]
+        }
+        JSON
+      )
+    end
+  end
+end
+
 class String
   def ===(other : HTTP::Request)
     "#{other.method} #{other.resource}" == self

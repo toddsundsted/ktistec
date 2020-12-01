@@ -1,28 +1,5 @@
 require "../spec_helper"
 
-module WebFinger
-  def self.query(account)
-    account =~ /^acct:([^@]+)@([^@]+)$/
-    _, name, host = $~.to_a
-    case account
-    when /no-such-host/
-      raise WebFinger::NotFoundError.new("No such host")
-    else
-      WebFinger::Result.from_json(<<-JSON
-        {
-          "links":[
-            {
-              "rel":"self",
-              "href":"https://#{host}/actors/#{name}"
-            }
-          ]
-        }
-        JSON
-      )
-    end
-  end
-end
-
 Spectator.describe LookupsController do
   setup_spec
 

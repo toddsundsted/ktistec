@@ -1,28 +1,5 @@
 require "../spec_helper"
 
-module WebFinger
-  def self.query(account)
-    account =~ /^acct:([^@]+)@([^@]+)$/
-    _, name, host = $~.to_a
-    case account
-    when /no-such-host/
-      raise WebFinger::NotFoundError.new("No such host")
-    else
-      WebFinger::Result.from_json(<<-JSON
-        {
-          "links":[
-            {
-              "rel":"http://ostatus.org/schema/1.0/subscribe",
-              "template":"https://#{host}/actors/#{name}/authorize-follow?uri={uri}"
-            }
-          ]
-        }
-        JSON
-      )
-    end
-  end
-end
-
 Spectator.describe RemoteFollowsController do
   setup_spec
 

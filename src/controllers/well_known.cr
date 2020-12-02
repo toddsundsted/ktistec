@@ -25,7 +25,7 @@ class WellKnownController
                 type: "application/activity+json"
               }, {
                 rel: "http://webfinger.net/rel/profile-page",
-                href: "#{host}/actors/#{$1}",
+                href: "#{host}/@#{$1}",
                 type: "text/html"
               }, {
                 rel: "http://ostatus.org/schema/1.0/subscribe",

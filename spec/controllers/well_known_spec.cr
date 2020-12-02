@@ -47,7 +47,7 @@ Spectator.describe WellKnownController do
 
     it "returns reference to the profile page" do
       get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
-      message = {"rel" => "http://webfinger.net/rel/profile-page", "href" => "https://test.test/actors/#{username}", "type" => "text/html"}
+      message = {"rel" => "http://webfinger.net/rel/profile-page", "href" => "https://test.test/@#{username}", "type" => "text/html"}
       expect(JSON.parse(response.body)["links"].as_a).to contain(message)
     end
 

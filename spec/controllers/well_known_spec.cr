@@ -50,5 +50,11 @@ Spectator.describe WellKnownController do
       message = {"rel" => "http://webfinger.net/rel/profile-page", "href" => "https://test.test/actors/#{username}", "type" => "text/html"}
       expect(JSON.parse(response.body)["links"].as_a).to contain(message)
     end
+
+    it "returns reference to the template" do
+      get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
+      message = {"rel" => "http://ostatus.org/schema/1.0/subscribe", "template" => "https://test.test/actors/#{username}/authorize-follow?uri={uri}"}
+      expect(JSON.parse(response.body)["links"].as_a).to contain(message)
+    end
   end
 end

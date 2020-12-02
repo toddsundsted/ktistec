@@ -27,6 +27,9 @@ class WellKnownController
                 rel: "http://webfinger.net/rel/profile-page",
                 href: "#{host}/actors/#{$1}",
                 type: "text/html"
+              }, {
+                rel: "http://ostatus.org/schema/1.0/subscribe",
+                template: "#{host}/actors/#{$1}/authorize-follow?uri={uri}"
               }]
     }
     env.response.content_type = "application/jrd+json"

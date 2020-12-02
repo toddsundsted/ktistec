@@ -57,6 +57,23 @@ class RemoteFollowsController
     end
   end
 
+  get "/actors/:username/authorize-follow" do |env|
+    unless (uri = env.params.query["uri"]?)
+      bad_request("Missing URI")
+    end
+    unless (actor = ActivityPub::Actor.dereference?(uri).try(&.save))
+      bad_request("Can't Dereference URI")
+    end
+
+    if accepts?("text/html")
+      env.response.content_type = "text/html"
+      render "src/views/actors/remote.html.slang", "src/views/layouts/default.html.ecr"
+    else
+      env.response.content_type = "application/activity+json"
+      render "src/views/actors/remote.json.ecr"
+    end
+  end
+
   private def self.lookup(account)
     WebFinger.query("acct:#{account}").link("http://ostatus.org/schema/1.0/subscribe").template.not_nil!
   end

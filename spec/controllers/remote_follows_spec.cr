@@ -102,4 +102,66 @@ Spectator.describe RemoteFollowsController do
       end
     end
   end
+
+  describe "GET /actors/:username/authorize-follow" do
+    sign_in(as: actor.username)
+
+    let(other) do
+      ActivityPub::Actor.new(
+        iri: "https://remote/actors/foobar"
+      )
+    end
+
+    before_each { HTTP::Client.actors << other }
+
+    context "when accepting HTML" do
+      let(headers) { HTTP::Headers{"Accept" => "text/html"} }
+
+      it "returns 400 if the uri is missing" do
+        get "/actors/#{actor.username}/authorize-follow", headers
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the uri can't be dereferenced" do
+        get "/actors/#{actor.username}/authorize-follow?uri=returns-404", headers
+        expect(response.status_code).to eq(400)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/authorize-follow?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", headers
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders a follow page" do
+        get "/actors/#{actor.username}/authorize-follow?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", headers
+        expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@value='Follow']][.//input[@value='https://remote/actors/foobar']]")).
+          not_to be_empty
+      end
+    end
+
+    context "when accepting JSON" do
+      let(headers) { HTTP::Headers{"Accept" => "application/json"} }
+
+      it "returns 400 if the uri is missing" do
+        get "/actors/#{actor.username}/authorize-follow", headers
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the uri can't be dereferenced" do
+        get "/actors/#{actor.username}/authorize-follow?uri=returns-404", headers
+        expect(response.status_code).to eq(400)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/authorize-follow?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", headers
+        expect(response.status_code).to eq(200)
+      end
+
+      it "returns the actor" do
+        get "/actors/#{actor.username}/authorize-follow?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", headers
+        expect(JSON.parse(response.body)["id"]?).
+          to eq("https://remote/actors/foobar")
+      end
+    end
+  end
 end

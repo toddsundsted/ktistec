@@ -42,6 +42,7 @@
         form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
           input type="hidden" name="object" value=_object.iri
-          button.ui.mini.dangerous.iconic.button type="submit" name="type" value="Delete"
+          input type="hidden" name="type" value="Delete"
+          button.ui.mini.dangerous.iconic.button type="submit" data-modal="delete"
             i.trash.icon
             | Delete

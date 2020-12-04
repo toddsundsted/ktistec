@@ -368,6 +368,21 @@ Spectator.describe RelationshipsController do
             expect(response.status_code).to eq(400)
           end
 
+          it "redirects when successful" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{object.iri}"
+            expect(response.status_code).to eq(302)
+          end
+
+          it "redirects to the actor's home page" do
+            post "/actors/#{actor.username}/outbox", headers.merge!({"Referer" => "https://test.test/remote/objects/#{object.id}"}), "type=Delete&object=#{object.iri}"
+            expect(response.headers["Location"]).to eq("/actors/#{actor.username}")
+          end
+
+          it "redirects back" do
+            post "/actors/#{actor.username}/outbox", headers.merge!({"Referer" => "https://test.test/the/previous/page"}), "type=Delete&object=#{object.iri}"
+            expect(response.headers["Location"]).to eq("https://test.test/the/previous/page")
+          end
+
           it "deletes the object" do
             expect{post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{object.iri}"}.
               to change{ActivityPub::Object.count(iri: object.iri)}.by(-1)

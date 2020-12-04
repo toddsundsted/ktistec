@@ -186,6 +186,8 @@ class RelationshipsController
       else
         env.redirect remote_object_path(activity.object)
       end
+    elsif activity.is_a?(ActivityPub::Activity::Delete) && back_path =~ /\/remote\/objects|\/objects/
+      env.redirect actor_path
     else
       env.redirect back_path
     end

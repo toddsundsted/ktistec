@@ -28,8 +28,8 @@ class SettingsController
     {
       name: params["name"]?.try(&.to_s),
       summary: params["summary"]?.try(&.to_s),
-      image: params["image"]?.try { |path| "#{host}#{path}" },
-      icon: params["icon"]?.try { |path| "#{host}#{path}" }
+      image: params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
+      icon: params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" }
     }
   end
 end

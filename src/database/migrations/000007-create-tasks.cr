@@ -11,12 +11,22 @@ up do |db|
       "type" varchar(63) NOT NULL,
       "source_iri" text,
       "subject_iri" text,
-      "failures" text
+      "failures" text,
+      "running" boolean DEFAULT 0,
+      "complete" boolean DEFAULT 0,
+      "backtrace" text,
+      "next_attempt_at" datetime,
+      "last_attempt_at" datetime,
+      "state" text
     )
   STR
   db.exec <<-STR
     CREATE INDEX idx_tasks_type
       ON tasks (type ASC)
+  STR
+  db.exec <<-STR
+    CREATE INDEX idx_tasks_type_running_complete_backtrace_next_attempt_at_created_at
+      ON tasks (type ASC, running ASC, complete ASC, backtrace ASC, next_attempt_at ASC, created_at ASC)
   STR
 end
 

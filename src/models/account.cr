@@ -49,7 +49,7 @@ class Account
     @password.not_nil!
   end
 
-  def validate
+  def validate(**options)
     super
     if username = self.username
       messages = [] of String

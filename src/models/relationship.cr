@@ -21,7 +21,7 @@ class Relationship
 
   @@must_be_unique = true
 
-  def validate
+  def validate(**options)
     super
     if @@must_be_unique
       relationship = Relationship.find?(from_iri: from_iri, to_iri: to_iri, type: type)

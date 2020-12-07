@@ -57,7 +57,7 @@ class NotNilModel
   property val : String
   validates val { "is not capitalized" unless val.starts_with?(/[A-Z]/) }
 
-  def validate
+  def validate(**options)
     super
     @errors["instance"] = ["key is equal to val"] if key == val
     @errors

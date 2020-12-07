@@ -259,13 +259,13 @@ module Ktistec
 
       # Returns true if the instance is valid.
       #
-      def valid?
-        validate.empty?
+      def valid?(skip_autosave = false)
+        validate(skip_autosave: skip_autosave).empty?
       end
 
       # Validates the instance and returns any errors.
       #
-      def validate
+      def validate(skip_autosave = false)
         @errors.clear
         {% if @type < Deletable %}
           return @errors if self.deleted?
@@ -280,23 +280,25 @@ module Ktistec
               end
             end
           {% end %}
-          {% for d in @type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
-            if (%body = {{d.body}})
-              if %body.responds_to?(:each)
-                %body.each_with_index do |b, i|
-                  if (errors = b.validate)
-                    errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{i}.#{k}" }
+          unless skip_autosave
+            {% for d in @type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
+              if (%body = {{d.body}})
+                if %body.responds_to?(:each)
+                  %body.each_with_index do |b, i|
+                    if (errors = b.validate)
+                      errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{i}.#{k}" }
+                      @errors.merge!(errors)
+                    end
+                  end
+                else
+                  if (errors = %body.validate)
+                    errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{k}" }
                     @errors.merge!(errors)
                   end
                 end
-              else
-                if (errors = %body.validate)
-                  errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{k}" }
-                  @errors.merge!(errors)
-                end
               end
-            end
-          {% end %}
+            {% end %}
+          end
         {% end %}
         @errors
       end
@@ -417,11 +419,11 @@ module Ktistec
 
       # Saves the instance.
       #
-      def save
+      def save(skip_validation = false, skip_autosave = false)
         {% if @type < Deletable %}
           return self if self.deleted?
         {% end %}
-        raise Invalid.new(errors) unless valid?
+        raise Invalid.new(errors) unless skip_validation || valid?(skip_autosave: skip_autosave)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify.stringify).join(",")}}
@@ -447,11 +449,14 @@ module Ktistec
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
           {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
-          {% for d in methods %}
-            if (%body = {{d.body}})
-              %body.responds_to?(:each) ? %body.each(&.save) : %body.save
-            end
-          {% end %}
+          unless skip_autosave
+            options = {skip_validation: skip_validation, skip_autosave: skip_autosave}
+            {% for d in methods %}
+              if (%body = {{d.body}})
+                %body.responds_to?(:each) ? %body.each(&.save(**options)) : %body.save(**options)
+              end
+            {% end %}
+          end
         {% end %}
         self
       end

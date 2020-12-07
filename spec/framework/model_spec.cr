@@ -343,6 +343,14 @@ Spectator.describe Ktistec::Model do
       expect(not_nil_model.errors).to eq({"val" => ["is not capitalized"]})
       expect(foo_bar_model.errors).to eq({"not_nil_model.val" => ["is not capitalized"]})
     end
+
+    it "does not validate the associated instance" do
+      not_nil_model = NotNilModel.new(val: "")
+      foo_bar_model = FooBarModel.new(not_nil_model: not_nil_model)
+      expect(foo_bar_model.valid?(skip_autosave: true)).to be_true
+      expect(not_nil_model.errors).to be_empty
+      expect(foo_bar_model.errors).to be_empty
+    end
   end
 
   describe "#save" do
@@ -367,6 +375,12 @@ Spectator.describe Ktistec::Model do
         expect(new_model.errors).not_to be_empty
       end
 
+      it "doesn't raise an exception" do
+        new_model = NotNilModel.new(val: "")
+        expect{new_model.save(skip_validation: true)}.not_to raise_error
+        expect(new_model.errors).to be_empty
+      end
+
       it "saves the properties" do
         saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
         expect(FooBarModel.find(saved_model.id).foo).to eq("Foo")
@@ -381,6 +395,11 @@ Spectator.describe Ktistec::Model do
       it "saves the associated instance" do
         another_model = AnotherModel.new(val: "Val")
         expect{DerivedModel.new(not_nil_model: another_model).save}.to change{another_model.id}
+      end
+
+      it "doesn't save the associated instance" do
+        another_model = AnotherModel.new(val: "Val")
+        expect{DerivedModel.new(not_nil_model: another_model).save(skip_autosave: true)}.not_to change{another_model.id}
       end
     end
 
@@ -405,6 +424,12 @@ Spectator.describe Ktistec::Model do
         expect(new_model.errors).not_to be_empty
       end
 
+      it "doesn't raise an exception" do
+        new_model = NotNilModel.new(val: "Val").save
+        expect{new_model.assign(val: "").save(skip_validation: true)}.not_to raise_error
+        expect(new_model.errors).to be_empty
+      end
+
       it "updates the properties" do
         updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
         expect(FooBarModel.find(updated_model.id).foo).to eq("Bar")
@@ -419,6 +444,11 @@ Spectator.describe Ktistec::Model do
       it "saves the associated instance" do
         another_model = AnotherModel.new(val: "Val")
         expect{DerivedModel.new.save.assign(not_nil_model: another_model).save}.to change{another_model.id}
+      end
+
+      it "doesn't save the associated instance" do
+        another_model = AnotherModel.new(val: "Val")
+        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save(skip_autosave: true)}.not_to change{another_model.id}
       end
     end
   end

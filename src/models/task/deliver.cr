@@ -119,7 +119,6 @@ class Task
           Log.debug { message }
         end
       end
-      save
     end
   end
 end

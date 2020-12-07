@@ -175,10 +175,15 @@ class RelationshipsController
       activity: activity
     ).save
 
-    Task::Deliver.new(
+    task = Task::Deliver.new(
       sender: account.actor,
       activity: activity
-    ).perform
+    )
+    if Kemal.config.env == "test"
+      task.perform
+    else
+      task.schedule
+    end
 
     if activity.is_a?(ActivityPub::Activity::Create)
       if activity.object.in_reply_to?

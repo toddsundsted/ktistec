@@ -1,4 +1,3 @@
-require "spectator"
 require "kemal"
 require "json"
 require "yaml"
@@ -66,18 +65,6 @@ end
 
 def response
   Global.response.not_nil!
-end
-
-def self.random_string
-  ('a'..'z').to_a.shuffle.first(8).join
-end
-
-def self.random_username
-  random_string
-end
-
-def self.random_password
-  random_string + "1="
 end
 
 def self.register(username = random_username, password = random_password, *, with_keys = false)
@@ -262,52 +249,12 @@ module WebFinger
   end
 end
 
-class String
-  def ===(other : HTTP::Request)
-    "#{other.method} #{other.resource}" == self
-  end
-end
-
-class Regex
-  def ===(other : HTTP::Request)
-    "#{other.method} #{other.resource}" =~ self
-  end
-end
-
-macro setup_spec
-  before_each { HTTP::Client.reset }
-  before_each { Ktistec.database.exec "BEGIN TRANSACTION" }
-  after_each { Ktistec.database.exec "ROLLBACK" }
-end
-
 require "../src/framework"
 
-module Ktistec
-  def self.db_file
-    @@db_file ||= "sqlite3://#{File.tempname("ktistec-test", ".db")}"
-  end
-
-  def self.clear_host
-    Ktistec.database.exec("DELETE FROM options WHERE key = ?", "host")
-    @@host = nil
-  end
-
-  def self.clear_site
-    Ktistec.database.exec("DELETE FROM options WHERE key = ?", "site")
-    @@site = nil
-  end
-end
-
-class Account
-  private def cost
-    4 # reduce the cost of computing a bcrypt hash
-  end
-end
+require "./spec_helper/base"
 
 Ktistec::Server.run do
   Log.setup_from_env
-  Ktistec.host = "https://test.test"
-  Ktistec.site = "Ktistec"
   Kemal.config.port = Random.new.rand(49152..65535)
   Kemal.config.logging = false
 end

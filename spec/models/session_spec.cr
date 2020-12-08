@@ -57,4 +57,20 @@ Spectator.describe Session do
       expect(subject.account).to eq(account)
     end
   end
+
+  let(anonymous) { described_class.new.save }
+
+  describe ".clean_up_stale_sessions" do
+    before_each do
+      Ktistec.database.exec(
+        "UPDATE sessions SET updated_at = date('now', '-2 days') WHERE id IN (?, ?)",
+        anonymous.id,
+        subject.id
+      )
+    end
+
+    it "removes old, anonymous sessions" do
+      expect{Session.clean_up_stale_sessions}.to change{Session.count}.by(-1)
+    end
+  end
 end

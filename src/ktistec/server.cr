@@ -1,5 +1,6 @@
 require "../framework"
 require "../framework/ext/**"
+require "../framework/open"
 require "../framework/util"
 require "../framework/controller"
 require "../framework/database"

@@ -99,6 +99,7 @@ end
 
 require "../src/framework"
 require "../src/framework/ext/**"
+require "../src/framework/open"
 require "../src/framework/util"
 require "../src/framework/controller"
 require "../src/framework/database"

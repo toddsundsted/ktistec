@@ -250,6 +250,19 @@ module WebFinger
 end
 
 require "../src/framework"
+require "../src/framework/ext/**"
+require "../src/framework/util"
+require "../src/framework/controller"
+require "../src/framework/database"
+require "../src/framework/model"
+require "../src/framework/json_ld"
+require "../src/framework/jwt"
+require "../src/framework/signature"
+require "../src/framework/csrf"
+require "../src/framework/auth"
+require "../src/framework/rewrite"
+require "../src/framework/method"
+require "../src/workers/**"
 
 require "./spec_helper/base"
 

@@ -1,4 +1,17 @@
 require "../framework"
+require "../framework/ext/**"
+require "../framework/util"
+require "../framework/controller"
+require "../framework/database"
+require "../framework/model"
+require "../framework/json_ld"
+require "../framework/jwt"
+require "../framework/signature"
+require "../framework/csrf"
+require "../framework/auth"
+require "../framework/rewrite"
+require "../framework/method"
+require "../workers/**"
 
 Ktistec::Server.run do
   Log.setup_from_env

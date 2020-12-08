@@ -106,17 +106,3 @@ module Ktistec
   # :nodoc:
   VERSION = {{ `shards version "#{__DIR__}"`.chomp.stringify }}
 end
-
-require "./ext/**"
-require "./util"
-require "./controller"
-require "./database"
-require "./model"
-require "./json_ld"
-require "./jwt"
-require "./signature"
-require "./csrf"
-require "./auth"
-require "./rewrite"
-require "./method"
-require "../workers/**"

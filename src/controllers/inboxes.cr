@@ -2,7 +2,7 @@ require "../framework"
 
 class RelationshipsController
   include Ktistec::Controller
-  extend Ktistec::Util
+  extend Ktistec::Open
 
   skip_auth ["/actors/:username/inbox"], POST
 

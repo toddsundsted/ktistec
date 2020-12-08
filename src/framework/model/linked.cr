@@ -4,7 +4,7 @@ module Ktistec
   module Model
     module Linked
       macro included
-        extend Ktistec::Util
+        extend Ktistec::Open
 
         def self.find(_iri iri : String?)
           find(iri: iri)

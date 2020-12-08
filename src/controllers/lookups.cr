@@ -3,7 +3,7 @@ require "web_finger"
 
 class LookupsController
   include Ktistec::Controller
-  extend Ktistec::Util
+  extend Ktistec::Open
 
   get "/search" do |env|
     message = nil
@@ -50,5 +50,5 @@ class LookupsController
 
   private alias LookupErrors = Socket::Addrinfo::Error | JSON::ParseException | NilAssertionError |
                                HostMeta::Error | WebFinger::Error |
-                               Ktistec::Util::OpenError
+                               Ktistec::Open::Error
 end

@@ -17,7 +17,16 @@ module Ktistec
   @@database : DB::Database?
 
   def self.database
-    @@database ||= DB.open(Ktistec.db_file)
+    @@database ||= begin
+      unless File.exists?(Ktistec.db_file.split("//").last)
+        DB.open(Ktistec.db_file) do |db|
+          db.exec "CREATE TABLE options (key TEXT PRIMARY KEY, value TEXT)"
+          db.exec "INSERT INTO options (key, value) VALUES (?, ?)", "secret_key", Random::Secure.hex(64)
+          db.exec "CREATE TABLE migrations (id INTEGER PRIMARY KEY, name TEXT)"
+        end
+      end
+      DB.open(Ktistec.db_file)
+    end
   end
 
   @@secret_key : String?
@@ -86,13 +95,6 @@ module Ktistec
   #
   class Server
     def self.run
-      unless File.exists?(Ktistec.db_file.split("//").last)
-        DB.open(Ktistec.db_file) do |db|
-          db.exec "CREATE TABLE options (key TEXT PRIMARY KEY, value TEXT)"
-          db.exec "INSERT INTO options (key, value) VALUES (?, ?)", "secret_key", Random::Secure.hex(64)
-          db.exec "CREATE TABLE migrations (id INTEGER PRIMARY KEY, name TEXT)"
-        end
-      end
       Ktistec::Database.all_pending_versions.each do |version|
         puts Ktistec::Database.do_operation(:apply, version)
       end

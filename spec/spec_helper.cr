@@ -283,14 +283,8 @@ end
 require "../src/framework"
 
 module Ktistec
-  class SpecConfig
-    def db_file
-      @db_file ||= "sqlite3://#{File.tempname("ktistec-test", ".db")}"
-    end
-  end
-
-  def self.config
-    @@spec_config ||= SpecConfig.new
+  def self.db_file
+    @@db_file ||= "sqlite3://#{File.tempname("ktistec-test", ".db")}"
   end
 
   def self.clear_host

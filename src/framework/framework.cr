@@ -5,25 +5,19 @@ require "uri"
 require "yaml"
 
 module Ktistec
-  class Config
-    def db_file
-      @db_file ||=
-        if Kemal.config.env == "production"
-          "sqlite3://#{File.expand_path("~/.ktistec.db", home: true)}"
-        else
-          "sqlite3://ktistec.db"
-        end
-    end
-  end
-
-  def self.config
-    @@config ||= Config.new
+  def self.db_file
+    @@db_file ||=
+      if Kemal.config.env == "production"
+        "sqlite3://#{File.expand_path("~/.ktistec.db", home: true)}"
+      else
+        "sqlite3://ktistec.db"
+      end
   end
 
   @@database : DB::Database?
 
   def self.database
-    @@database ||= DB.open(Ktistec.config.db_file)
+    @@database ||= DB.open(Ktistec.db_file)
   end
 
   @@secret_key : String?
@@ -92,8 +86,8 @@ module Ktistec
   #
   class Server
     def self.run
-      unless File.exists?(Ktistec.config.db_file.split("//").last)
-        DB.open(Ktistec.config.db_file) do |db|
+      unless File.exists?(Ktistec.db_file.split("//").last)
+        DB.open(Ktistec.db_file) do |db|
           db.exec "CREATE TABLE options (key TEXT PRIMARY KEY, value TEXT)"
           db.exec "INSERT INTO options (key, value) VALUES (?, ?)", "secret_key", Random::Secure.hex(64)
           db.exec "CREATE TABLE migrations (id INTEGER PRIMARY KEY, name TEXT)"

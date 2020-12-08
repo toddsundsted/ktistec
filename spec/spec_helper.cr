@@ -109,11 +109,22 @@ end
 # `expect(...last).to match("GET /foo/bar")`
 #
 class HTTP::Client
+  class Cache < Hash(String, String)
+    def <<(object)
+      if object.responds_to?(:iri) && object.responds_to?(:to_json_ld)
+        self[object.iri] = object.to_json_ld(recursive: true)
+      else
+        raise "Unsupported: #{object}"
+      end
+    end
+  end
+
   @@requests = [] of HTTP::Request
-  @@activities = [] of ActivityPub::Activity
-  @@collections = [] of ActivityPub::Collection
-  @@actors = [] of ActivityPub::Actor
-  @@objects = [] of ActivityPub::Object
+
+  @@activities = Cache.new
+  @@collections = Cache.new
+  @@actors = Cache.new
+  @@objects = Cache.new
 
   def self.last?
     @@requests.last?
@@ -177,27 +188,27 @@ class HTTP::Client
       )
     when /activities\/([^\/]+)/
       HTTP::Client::Response.new(
-        (activity = @@activities.find { |a| a.iri == url.to_s }) ? 200 : 404,
+        (activity = @@activities[url.to_s]?) ? 200 : 404,
         headers: HTTP::Headers.new,
-        body: activity ? activity.to_json_ld(recursive: true) : nil
+        body: activity
       )
     when /actors\/([^\/]+)\/([^\/]+)/
       HTTP::Client::Response.new(
-        (collection = @@collections.find { |c| c.iri == url.to_s }) ? 200 : 404,
+        (collection = @@collections[url.to_s]?) ? 200 : 404,
         headers: HTTP::Headers.new,
-        body: collection ? collection.to_json_ld : nil
+        body: collection
       )
     when /actors\/([^\/]+)/
       HTTP::Client::Response.new(
-        (actor = @@actors.find { |a| a.iri == url.to_s }) ? 200 : 404,
+        (actor = @@actors[url.to_s]?) ? 200 : 404,
         headers: HTTP::Headers.new,
-        body: actor ? actor.to_json_ld : nil
+        body: actor
       )
     when /objects\/([^\/]+)/
       HTTP::Client::Response.new(
-        (object = @@objects.find { |o| o.iri == url.to_s }) ? 200 : 404,
+        (object = @@objects.[url.to_s]?) ? 200 : 404,
         headers: HTTP::Headers.new,
-        body: object ? object.to_json_ld : nil
+        body: object
       )
     else
       raise "request not mocked: GET #{url}"

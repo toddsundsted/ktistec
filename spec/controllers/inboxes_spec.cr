@@ -161,9 +161,9 @@ Spectator.describe RelationshipsController do
 
         context "which doesn't have a public key" do
           before_each do
-            pem_public_key, other.pem_public_key = other.pem_public_key, nil
-            HTTP::Client.actors << other.save
-            other.pem_public_key = pem_public_key
+            HTTP::Client.actors << other
+            other.pem_public_key = nil
+            other.save
           end
 
           it "retrieves the remote actor from the origin" do

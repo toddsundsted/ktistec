@@ -36,8 +36,4 @@ class ActorsController
   rescue Ktistec::Model::NotFound
     not_found
   end
-
-  def self.render_actor(actor, recursive = false)
-    render "src/views/actors/actor.json.ecr"
-  end
 end

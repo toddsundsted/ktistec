@@ -67,21 +67,6 @@ def response
   Global.response.not_nil!
 end
 
-def self.register(username = random_username, password = random_password, *, with_keys = false)
-  pem_public_key, pem_private_key =
-    if with_keys
-      keypair = OpenSSL::RSA.generate(2048, 17)
-      {keypair.public_key.to_pem, keypair.to_pem}
-    else
-      {nil, nil}
-    end
-  Account.new(
-    actor: ActivityPub::Actor.new(iri: "https://test.test/actors/#{username}", username: username, pem_public_key: pem_public_key, pem_private_key: pem_private_key),
-    username: username,
-    password: password
-  ).save
-end
-
 def self._sign_in(username = nil)
   Global.account = account = username ? Account.find(username: username) : register
   Global.session = Session.new(account).save
@@ -115,6 +100,7 @@ require "../src/workers/**"
 
 require "./spec_helper/base"
 require "./spec_helper/network"
+require "./spec_helper/register"
 
 Ktistec::Server.run do
   Log.setup_from_env

@@ -136,15 +136,6 @@ module Ktistec
       end
     end
 
-    # Escapes newline characters.
-    #
-    # For use in views:
-    #     <%= e string %>
-    #
-    macro e(str)
-      {{str}}.gsub("\n", "\\n")
-    end
-
     # Sanitizes HTML.
     #
     # For use in views:

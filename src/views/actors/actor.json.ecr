@@ -10,7 +10,7 @@
   "publicKey":{
     "id":"<%= actor.iri %>#main-key",
     "owner":"<%= actor.iri %>",
-    "publicKeyPem":"<%= e pem_public_key %>"
+    "publicKeyPem":<%= pem_public_key.inspect %>
   },
   <%- end -%>
   <%- if (inbox = actor.inbox) -%>

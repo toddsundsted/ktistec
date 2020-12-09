@@ -20,7 +20,6 @@ class FooBarController
     "/foo/bar/helpers/:username/:relationship",
     "/foo/bar/paginate",
     "/foo/bar/accept",
-    "/foo/bar/escape",
     "/foo/bar/sanitize",
     "/foo/bar/comma",
     "/foo/bar/id"
@@ -107,10 +106,6 @@ class FooBarController
     elsif accepts?("application/json")
       ok "json"
     end
-  end
-
-  get "/foo/bar/escape" do |env|
-    e "foo\nbar"
   end
 
   get "/foo/bar/sanitize" do |env|
@@ -244,13 +239,6 @@ Spectator.describe Ktistec::Controller do
     it "responds with json" do
       get "/foo/bar/accept", HTTP::Headers{"Accept" => "application/json"}
       expect(JSON.parse(response.body)["msg"]).to eq("json")
-    end
-  end
-
-  describe "/foo/bar/escape" do
-    it "escapes newline characters" do
-      get "/foo/bar/escape"
-      expect(response.body).to eq("foo\\nbar")
     end
   end
 

@@ -51,14 +51,14 @@ class Account
 
   def validate(**options)
     super
-    if username = self.username
+    if (username = @username)
       messages = [] of String
       messages << "is too short" unless username.size >= 1
       messages << "contains invalid characters" unless username.each_char.all? { |char| char.ascii_alphanumeric? || char.in?('_', '.', '-', '~') }
       messages << "must be unique" unless (accounts = Account.where(username: username)).empty? || accounts.all? { |account| account.id == self.id }
       errors["username"] = messages unless messages.empty?
     end
-    if password = self.password
+    if (password = @password)
       messages = [] of String
       messages << "is too short" unless password.size >= 6
       messages << "is weak" unless password =~ /[^a-zA-Z0-9]/ && password =~ /[a-zA-Z]/ && password =~ /[0-9]/

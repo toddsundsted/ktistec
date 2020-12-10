@@ -1,8 +1,6 @@
 require "kemal"
-require "kilt/slang"
 require "sqlite3"
 require "uri"
-require "yaml"
 
 module Ktistec
   def self.db_file
@@ -34,8 +32,6 @@ module Ktistec
   def self.secret_key
     @@secret_key ||= Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "secret_key").as(String)
   end
-
-  @@host : String?
 
   private def self.present?(value)
     !value.nil? && !value.empty? && value

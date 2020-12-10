@@ -218,6 +218,20 @@ module Ktistec
         super
       end
 
+      # Bulk assigns properties.
+      #
+      def assign(**options)
+        {% begin %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
+          {% for v in vs %}
+            unless (o = options[{{v.symbolize}}]?).nil?
+              self.{{v}} = o.as(typeof(self.{{v}}))
+            end
+          {% end %}
+        {% end %}
+        self
+      end
+
       # Returns true if all properties are equal.
       #
       def ==(other : self)
@@ -233,20 +247,6 @@ module Ktistec
             false
           end
         {% end %}
-      end
-
-      # Bulk assigns properties.
-      #
-      def assign(**options)
-        {% begin %}
-          {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
-          {% for v in vs %}
-            unless (o = options[{{v.symbolize}}]?).nil?
-              self.{{v}} = o.as(typeof(self.{{v}}))
-            end
-          {% end %}
-        {% end %}
-        self
       end
 
       # Returns the table name.

@@ -533,5 +533,5 @@ module Ktistec
   end
 end
 
-require "./model/**"
-require "../models/**"
+require "./model/deletable"
+require "./model/polymorphic"

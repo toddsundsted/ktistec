@@ -1,4 +1,8 @@
-require "../spec_helper"
+require "../../src/controllers/outboxes"
+require "../../src/models/activity_pub/object/note"
+
+require "../spec_helper/controller"
+require "../spec_helper/network"
 
 Spectator.describe RelationshipsController do
   setup_spec

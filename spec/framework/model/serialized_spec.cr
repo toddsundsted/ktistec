@@ -1,4 +1,6 @@
-require "../../spec_helper"
+require "../../../src/framework/model/serialized"
+
+require "../../spec_helper/base"
 
 class SerializedModel
   include Ktistec::Model(Serialized)

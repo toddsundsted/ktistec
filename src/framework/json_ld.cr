@@ -1,4 +1,5 @@
 require "json"
+require "log"
 require "uri"
 
 private def empty

@@ -1,4 +1,6 @@
-require "../framework"
+require "../framework/controller"
+require "../models/activity_pub/activity/follow"
+require "../models/activity_pub/actor/person"
 
 class HomeController
   include Ktistec::Controller

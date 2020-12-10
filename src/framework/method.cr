@@ -1,4 +1,4 @@
-require "./framework"
+require "kemal"
 
 class HTTP::Server
   class Context

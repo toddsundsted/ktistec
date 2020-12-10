@@ -1,4 +1,9 @@
-require "../spec_helper"
+require "../../src/models/activity_pub"
+require "../../src/models/activity_pub/actor/person"
+require "../../src/models/activity_pub/collection"
+require "../../src/models/activity_pub/object/note"
+
+require "../spec_helper/model"
 
 Spectator.describe ActivityPub do
   setup_spec

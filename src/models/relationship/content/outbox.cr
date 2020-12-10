@@ -1,4 +1,6 @@
 require "../../relationship"
+require "../../activity_pub/actor"
+require "../../activity_pub/activity"
 
 class Relationship
   class Content

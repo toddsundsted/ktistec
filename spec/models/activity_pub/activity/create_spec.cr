@@ -1,4 +1,6 @@
-require "../../../spec_helper"
+require "../../../../src/models/activity_pub/activity/create"
+
+require "../../../spec_helper/model"
 
 Spectator.describe ActivityPub::Activity::Create do
   setup_spec

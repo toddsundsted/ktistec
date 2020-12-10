@@ -1,3 +1,7 @@
+require "http/server"
+
+require "../jwt"
+
 class HTTP::Server::Context
   property! session : Session
 

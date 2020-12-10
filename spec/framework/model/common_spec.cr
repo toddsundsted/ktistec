@@ -1,4 +1,6 @@
-require "../../spec_helper"
+require "../../../src/framework/model/common"
+
+require "../../spec_helper/base"
 
 class CommonModel
   include Ktistec::Model(Common)

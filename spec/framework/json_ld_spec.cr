@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "spectator"
+
+require "../../src/framework/json_ld"
 
 Spectator.describe Ktistec::JSON_LD do
   describe "::CONTEXTS" do

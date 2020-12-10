@@ -1,4 +1,7 @@
-require "../spec_helper"
+require "../../src/controllers/remote_follows"
+
+require "../spec_helper/controller"
+require "../spec_helper/network"
 
 Spectator.describe RemoteFollowsController do
   setup_spec

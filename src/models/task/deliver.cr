@@ -1,4 +1,9 @@
 require "../task"
+require "../../framework/signature"
+require "../activity_pub/activity"
+require "../activity_pub/collection"
+require "../activity_pub/actor"
+require "../activity_pub/object"
 
 class Task
   class Deliver < Task

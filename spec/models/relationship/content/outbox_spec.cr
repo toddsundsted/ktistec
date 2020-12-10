@@ -1,4 +1,6 @@
-require "../../../spec_helper"
+require "../../../../src/models/relationship/content/inbox"
+
+require "../../../spec_helper/model"
 
 Spectator.describe Relationship::Content::Outbox do
   setup_spec

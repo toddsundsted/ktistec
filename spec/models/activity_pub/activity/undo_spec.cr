@@ -1,4 +1,6 @@
-require "../../../spec_helper"
+require "../../../../src/models/activity_pub/activity/undo"
+
+require "../../../spec_helper/model"
 
 Spectator.describe ActivityPub::Activity::Undo do
   setup_spec

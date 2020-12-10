@@ -1,4 +1,8 @@
-require "../../spec_helper"
+require "../../../src/models/task/deliver"
+
+require "../../spec_helper/model"
+require "../../spec_helper/network"
+require "../../spec_helper/register"
 
 Spectator.describe Task::Deliver do
   setup_spec

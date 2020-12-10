@@ -1,5 +1,7 @@
 require "json"
 
+require "../framework/json_ld"
+
 module ActivityPub
   def self.from_json_ld(json, **options)
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)

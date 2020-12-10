@@ -1,5 +1,8 @@
 require "xml"
 
+require "./ext/libxml2"
+require "../models/activity_pub/object"
+
 module Ktistec
   module Util
     extend self

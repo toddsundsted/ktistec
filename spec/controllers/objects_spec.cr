@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/controllers/objects"
+
+require "../spec_helper/controller"
 
 Spectator.describe ObjectsController do
   setup_spec

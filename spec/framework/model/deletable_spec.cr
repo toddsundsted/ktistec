@@ -1,4 +1,6 @@
-require "../../spec_helper"
+require "../../../src/framework/model/deletable"
+
+require "../../spec_helper/base"
 
 class DeletableModel
   include Ktistec::Model(Deletable)

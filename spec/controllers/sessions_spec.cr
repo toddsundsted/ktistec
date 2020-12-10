@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/controllers/sessions"
+
+require "../spec_helper/controller"
 
 Spectator.describe SessionsController do
   setup_spec

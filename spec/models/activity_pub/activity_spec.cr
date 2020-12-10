@@ -1,4 +1,8 @@
-require "../../spec_helper"
+require "../../../src/models/activity_pub/activity"
+require "../../../src/models/activity_pub/actor"
+require "../../../src/models/activity_pub/object"
+
+require "../../spec_helper/model"
 
 class FooBarActivity < ActivityPub::Activity
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: actor_iri, primary_key: iri

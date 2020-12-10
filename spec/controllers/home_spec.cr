@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/controllers/home"
+
+require "../spec_helper/controller"
 
 Spectator.describe HomeController do
   setup_spec

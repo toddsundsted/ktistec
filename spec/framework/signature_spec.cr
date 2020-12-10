@@ -1,4 +1,7 @@
-require "../spec_helper"
+require "../../src/framework/signature"
+
+require "../spec_helper/model"
+require "../spec_helper/register"
 
 Spectator.describe Ktistec::Signature do
   setup_spec

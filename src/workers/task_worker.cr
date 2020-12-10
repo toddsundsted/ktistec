@@ -1,3 +1,5 @@
+require "../models/task"
+
 class TaskWorker
   def work(now = Time.utc)
     tasks = Task.scheduled(now)

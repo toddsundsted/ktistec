@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../models/activity_pub/activity/follow"
 
 class SettingsController
   include Ktistec::Controller

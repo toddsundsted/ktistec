@@ -1,4 +1,9 @@
-require "../spec_helper"
+require "json"
+require "yaml"
+
+require "../../src/framework/model"
+
+require "../spec_helper/base"
 
 module None
 end

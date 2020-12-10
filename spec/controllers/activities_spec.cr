@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/controllers/activities"
+
+require "../spec_helper/controller"
 
 Spectator.describe ActivitiesController do
   setup_spec

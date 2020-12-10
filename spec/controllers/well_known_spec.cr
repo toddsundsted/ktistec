@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/controllers/well_known"
+
+require "../spec_helper/controller"
 
 Spectator.describe WellKnownController do
   setup_spec

@@ -1,4 +1,4 @@
-require "../framework"
+require "../framework/controller"
 
 class WellKnownController
   include Ktistec::Controller

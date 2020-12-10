@@ -1,5 +1,8 @@
-require "../framework/model"
 require "json"
+
+require "../framework/model"
+require "../framework/model/**"
+require "./account"
 
 # Client session.
 #

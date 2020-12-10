@@ -1,4 +1,7 @@
 require "kemal"
+require "kilt/slang"
+
+require "./ext/context"
 
 class HTTP::Server::Context
   def accepts?(mime_type)
@@ -184,5 +187,3 @@ module Ktistec
     end
   end
 end
-
-require "../controllers/**"

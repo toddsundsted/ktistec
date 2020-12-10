@@ -1,4 +1,7 @@
-require "../spec_helper"
+require "../../src/controllers/lookups"
+
+require "../spec_helper/controller"
+require "../spec_helper/network"
 
 Spectator.describe LookupsController do
   setup_spec

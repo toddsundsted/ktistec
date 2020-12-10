@@ -1,4 +1,7 @@
-require "../../spec_helper"
+require "../../../src/models/activity_pub/actor"
+require "../../../src/models/activity_pub/object/note"
+
+require "../../spec_helper/model"
 
 class FooBarActor < ActivityPub::Actor
 end

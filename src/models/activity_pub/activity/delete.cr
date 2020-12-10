@@ -1,4 +1,6 @@
 require "../activity"
+require "../actor"
+require "../object"
 
 class ActivityPub::Activity
   class Delete < ActivityPub::Activity

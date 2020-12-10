@@ -1,5 +1,18 @@
-require "../../framework/model"
 require "json"
+require "openssl_ext"
+
+require "../../framework/util"
+require "../../framework/json_ld"
+require "../../framework/model"
+require "../../framework/model/**"
+require "../activity_pub"
+require "../relationship/content/inbox"
+require "../relationship/content/outbox"
+require "../relationship/social/follow"
+require "./activity"
+require "./activity/announce"
+require "./activity/create"
+require "./object"
 
 module ActivityPub
   class Actor

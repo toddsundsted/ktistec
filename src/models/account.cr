@@ -1,6 +1,10 @@
-require "../framework/model"
 require "crypto/bcrypt/password"
 require "openssl_ext"
+
+require "../framework/model"
+require "../framework/model/**"
+require "./activity_pub/actor"
+require "./session"
 
 # An ActivityPub account.
 #

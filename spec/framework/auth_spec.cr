@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/framework/auth"
+
+require "../spec_helper/controller"
 
 class FooBarController
   include Ktistec::Controller

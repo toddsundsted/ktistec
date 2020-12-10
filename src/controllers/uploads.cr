@@ -1,5 +1,6 @@
-require "../framework"
 require "uuid"
+
+require "../framework/controller"
 
 class UploadsController
   include Ktistec::Controller

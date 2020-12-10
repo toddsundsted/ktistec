@@ -1,4 +1,5 @@
 require "../../relationship"
+require "../../activity_pub/actor"
 
 class Relationship
   class Social

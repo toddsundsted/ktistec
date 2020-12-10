@@ -1,6 +1,6 @@
-require "../spec_helper/network"
-
 require "../../src/framework/open"
+
+require "../spec_helper/network"
 
 Spectator.describe Ktistec::Open do
   describe ".open" do

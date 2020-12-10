@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/workers/task_worker"
+
+require "../spec_helper/model"
 
 class FooBarTask < Task
   class_property performed : Array(Int64) { [] of Int64 }

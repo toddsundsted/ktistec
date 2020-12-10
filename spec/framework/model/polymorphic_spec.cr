@@ -1,4 +1,6 @@
-require "../../spec_helper"
+require "../../../src/framework/model/polymorphic"
+
+require "../../spec_helper/base"
 
 class PolymorphicModel
   include Ktistec::Model(Polymorphic)

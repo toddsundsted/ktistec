@@ -1,4 +1,7 @@
 require "../activity"
+require "../actor"
+require "./accept"
+require "./reject"
 
 class ActivityPub::Activity
   class Follow < ActivityPub::Activity

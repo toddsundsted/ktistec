@@ -1,4 +1,6 @@
-require "../../spec_helper"
+require "spectator"
+
+require "../../../src/framework/ext/libxml2"
 
 Spectator.describe "LibXML2 extensions" do
   let(parent) { XML.parse("<parent/>").first_element_child.not_nil! }

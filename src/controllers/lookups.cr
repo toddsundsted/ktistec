@@ -1,5 +1,8 @@
-require "../framework"
 require "web_finger"
+
+require "../framework/controller"
+require "../framework/open"
+require "../models/activity_pub/activity/follow"
 
 class LookupsController
   include Ktistec::Controller

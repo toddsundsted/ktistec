@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/controllers/relationships"
+
+require "../spec_helper/controller"
 
 Spectator.describe RelationshipsController do
   setup_spec

@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/models/activity_pub/activity/follow"
+
+require "../spec_helper/controller"
 
 Spectator.describe "partials" do
   setup_spec

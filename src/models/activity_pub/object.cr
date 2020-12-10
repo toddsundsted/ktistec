@@ -1,5 +1,10 @@
-require "../../framework/model"
 require "json"
+
+require "../../framework/json_ld"
+require "../../framework/model"
+require "../../framework/model/**"
+require "../activity_pub"
+require "../activity_pub/actor"
 
 module ActivityPub
   class Object

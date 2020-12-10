@@ -1,4 +1,4 @@
-require "../framework"
+require "../framework/controller"
 
 class SessionsController
   include Ktistec::Controller

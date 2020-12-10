@@ -1,4 +1,7 @@
-require "../../spec_helper"
+require "../../../src/framework/model/linked"
+
+require "../../spec_helper/base"
+require "../../spec_helper/network"
 
 class LinkedModel
   include Ktistec::Model(Linked)

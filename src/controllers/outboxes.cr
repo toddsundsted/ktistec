@@ -1,4 +1,6 @@
-require "../framework"
+require "../framework/controller"
+require "../models/activity_pub/activity/**"
+require "../models/task/deliver"
 
 class RelationshipsController
   include Ktistec::Controller

@@ -1,4 +1,5 @@
 require "../model"
+require "../open"
 
 module Ktistec
   module Model

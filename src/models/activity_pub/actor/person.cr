@@ -1,4 +1,4 @@
-require "../object"
+require "../actor"
 
 class ActivityPub::Actor
   class Person < ActivityPub::Actor

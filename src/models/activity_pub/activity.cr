@@ -1,4 +1,9 @@
+require "json"
+
+require "../../framework/json_ld"
 require "../../framework/model"
+require "../../framework/model/**"
+require "../activity_pub"
 
 module ActivityPub
   class Activity

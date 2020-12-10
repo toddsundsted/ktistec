@@ -1,4 +1,6 @@
-require "../../spec_helper"
+require "../../../src/models/activity_pub/object"
+
+require "../../spec_helper/model"
 
 class FooBarObject < ActivityPub::Object
 end

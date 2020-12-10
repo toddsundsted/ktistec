@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/models/account"
+
+require "../spec_helper/model"
 
 Spectator.describe Account do
   setup_spec

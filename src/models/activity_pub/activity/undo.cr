@@ -1,4 +1,6 @@
 require "../activity"
+require "../object"
+require "./follow"
 
 class ActivityPub::Activity
   class Undo < ActivityPub::Activity

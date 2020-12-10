@@ -1,4 +1,6 @@
-require "../../../spec_helper"
+require "../../../../src/models/activity_pub/activity/delete"
+
+require "../../../spec_helper/model"
 
 Spectator.describe ActivityPub::Activity::Delete do
   setup_spec

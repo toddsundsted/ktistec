@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "spectator"
+
+require "../../src/framework/jwt"
 
 Spectator.describe Ktistec::JWT do
   let(secret) { "my$ecretK3y" }

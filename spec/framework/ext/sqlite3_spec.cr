@@ -1,4 +1,6 @@
-require "../../spec_helper"
+require "../../../src/framework/ext/sqlite3"
+
+require "../../spec_helper/base"
 
 Spectator.describe "SQLite3 extensions" do
   let(key) { random_string }

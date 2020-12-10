@@ -20,7 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-require "../spec_helper"
+require "../../src/framework/csrf"
+
+require "../spec_helper/controller"
 
 def process_request_and_return_response(handler, request)
   io = IO::Memory.new

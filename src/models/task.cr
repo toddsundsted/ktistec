@@ -1,4 +1,5 @@
 require "../framework/model"
+require "../framework/model/**"
 
 # Asynchronous task.
 #

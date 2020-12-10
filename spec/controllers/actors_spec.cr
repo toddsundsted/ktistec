@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/controllers/actors"
+
+require "../spec_helper/controller"
 
 Spectator.describe ActorsController do
   setup_spec

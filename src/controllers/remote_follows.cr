@@ -1,4 +1,7 @@
-require "../framework"
+require "web_finger"
+
+require "../framework/controller"
+require "../models/activity_pub/activity/follow"
 
 class RemoteFollowsController
   include Ktistec::Controller

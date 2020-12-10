@@ -1,4 +1,5 @@
-require "../framework"
+require "../framework/controller"
+require "../models/activity_pub/activity/follow"
 
 class RelationshipsController
   include Ktistec::Controller

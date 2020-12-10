@@ -1,8 +1,8 @@
 require "yaml"
 
-require "../spec_helper/base"
-
 require "../../src/framework"
+
+require "../spec_helper/base"
 
 Spectator.describe Ktistec do
   describe "::VERSION" do

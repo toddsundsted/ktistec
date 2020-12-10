@@ -1,4 +1,6 @@
-require "../../../spec_helper"
+require "../../../../src/models/activity_pub/activity/reject"
+
+require "../../../spec_helper/model"
 
 Spectator.describe ActivityPub::Activity::Reject do
   setup_spec

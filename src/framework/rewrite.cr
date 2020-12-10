@@ -1,4 +1,4 @@
-require "./framework"
+require "kemal"
 
 module Ktistec
   # Path rewriting middleware.

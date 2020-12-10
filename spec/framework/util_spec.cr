@@ -1,4 +1,6 @@
-require "../spec_helper"
+require "../../src/framework/util"
+
+require "../spec_helper/model"
 
 Spectator.describe Ktistec::Util do
   describe ".enhance" do

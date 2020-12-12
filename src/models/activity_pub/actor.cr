@@ -3,6 +3,7 @@ require "openssl_ext"
 
 require "../../framework/util"
 require "../../framework/json_ld"
+require "../../framework/ext/sqlite3"
 require "../../framework/model"
 require "../../framework/model/**"
 require "../activity_pub"

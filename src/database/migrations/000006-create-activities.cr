@@ -24,6 +24,10 @@ up do |db|
     CREATE UNIQUE INDEX idx_activities_iri
       ON activities (iri ASC)
   STR
+  db.exec <<-STR
+    CREATE INDEX idx_activities_object_iri
+      ON activities (object_iri ASC)
+  STR
 end
 
 down do |db|

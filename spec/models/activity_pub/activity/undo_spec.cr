@@ -1,4 +1,5 @@
 require "../../../../src/models/activity_pub/activity/undo"
+require "../../../../src/models/activity_pub/activity/follow"
 
 require "../../../spec_helper/model"
 
@@ -14,8 +15,8 @@ Spectator.describe ActivityPub::Activity::Undo do
   end
 
   describe "#object" do
-    it "returns a follow or follow subclass" do
-      expect(typeof(subject.object)).to eq({{(ActivityPub::Activity::Follow.all_subclasses << ActivityPub::Activity::Follow).join("|").id}})
+    it "returns a activity or activity subclass" do
+      expect(typeof(subject.object)).to eq({{(ActivityPub::Activity.all_subclasses << ActivityPub::Activity).join("|").id}})
     end
   end
 

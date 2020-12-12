@@ -12,6 +12,8 @@ require "../relationship/social/follow"
 require "./activity"
 require "./activity/announce"
 require "./activity/create"
+require "./activity/delete"
+require "./activity/undo"
 require "./object"
 
 module ActivityPub
@@ -191,22 +193,36 @@ module ActivityPub
         LEFT JOIN objects AS o
                ON o.iri = a.object_iri
             WHERE r.from_iri = ?
+              AND r.to_iri = a.iri
               AND r.type = "#{type}"
               AND r.confirmed = 1
+              AND a.type NOT IN ("#{ActivityPub::Activity::Delete}", "#{ActivityPub::Activity::Undo}")
               AND o.deleted_at is NULL
-              AND a.iri = r.to_iri
          #{public ? %Q|AND a.visible = 1| : nil}
+              AND (
+                SELECT iri FROM activities
+                 WHERE type = "#{ActivityPub::Activity::Undo}"
+                   AND actor_iri = a.actor_iri
+                   AND object_iri = a.iri
+                ) IS NULL
               AND a.id NOT IN (
                  SELECT a.id
                    FROM activities AS a, relationships AS r
               LEFT JOIN objects AS o
                      ON o.iri = a.object_iri
                   WHERE r.from_iri = ?
+                    AND r.to_iri = a.iri
                     AND r.type = "#{type}"
                     AND r.confirmed = 1
+                    AND a.type NOT IN ("#{ActivityPub::Activity::Delete}", "#{ActivityPub::Activity::Undo}")
                     AND o.deleted_at is NULL
-                    AND a.iri = r.to_iri
                #{public ? %Q|AND a.visible = 1| : nil}
+                    AND (
+                      SELECT iri FROM activities
+                       WHERE type = "#{ActivityPub::Activity::Undo}"
+                         AND actor_iri = a.actor_iri
+                         AND object_iri = a.iri
+                      ) IS NULL
                ORDER BY r.created_at DESC
                   LIMIT ?
               )
@@ -227,9 +243,15 @@ module ActivityPub
               AND r.to_iri = a.iri
               AND r.type = "#{type}"
               AND r.confirmed = 1
-              AND a.object_iri = o.iri
+              AND o.iri = a.object_iri
               AND o.iri = "#{object_iri}"
               AND o.deleted_at is NULL
+              AND (
+                SELECT iri FROM activities
+                 WHERE type = "#{ActivityPub::Activity::Undo}"
+                   AND actor_iri = a.actor_iri
+                   AND object_iri = a.iri
+                ) IS NULL
         QUERY
         Activity.query_one(query, self.iri)
       {% end %}
@@ -262,22 +284,34 @@ module ActivityPub
         LEFT JOIN objects AS o
                ON o.iri = a.object_iri
             WHERE r.from_iri = ?
+              AND r.to_iri = a.iri
               AND r.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
               AND r.confirmed = 1
               AND o.deleted_at is NULL
-              AND a.iri = r.to_iri
               AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
+              AND (
+                SELECT iri FROM activities
+                 WHERE type = "#{ActivityPub::Activity::Undo}"
+                   AND actor_iri = a.actor_iri
+                   AND object_iri = a.iri
+                ) IS NULL
               AND a.id NOT IN (
                  SELECT a.id
                    FROM activities AS a, relationships AS r
               LEFT JOIN objects AS o
                      ON o.iri = a.object_iri
                   WHERE r.from_iri = ?
+                    AND r.to_iri = a.iri
                     AND r.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
                     AND r.confirmed = 1
                     AND o.deleted_at is NULL
-                    AND a.iri = r.to_iri
                     AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
+                    AND (
+                      SELECT iri FROM activities
+                       WHERE type = "#{ActivityPub::Activity::Undo}"
+                         AND actor_iri = a.actor_iri
+                         AND object_iri = a.iri
+                      ) IS NULL
                ORDER BY a.published DESC
                   LIMIT ?
               )
@@ -300,6 +334,12 @@ module ActivityPub
               AND o.deleted_at is NULL
               AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
               AND a.visible = 1
+              AND (
+                SELECT iri FROM activities
+                 WHERE type = "#{ActivityPub::Activity::Undo}"
+                   AND actor_iri = a.actor_iri
+                   AND object_iri = a.iri
+                ) IS NULL
               AND a.id NOT IN (
                  SELECT a.id
                    FROM activities AS a
@@ -309,6 +349,12 @@ module ActivityPub
                     AND o.deleted_at is NULL
                     AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
                     AND a.visible = 1
+                    AND (
+                      SELECT iri FROM activities
+                       WHERE type = "#{ActivityPub::Activity::Undo}"
+                         AND actor_iri = a.actor_iri
+                         AND object_iri = a.iri
+                      ) IS NULL
                ORDER BY a.published DESC
                   LIMIT ?
               )

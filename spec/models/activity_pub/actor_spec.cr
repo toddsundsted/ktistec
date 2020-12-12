@@ -227,6 +227,7 @@ Spectator.describe ActivityPub::Actor do
       let(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
+          actor: subject,
           visible: false
         )
       end
@@ -246,6 +247,20 @@ Spectator.describe ActivityPub::Actor do
     add_to_outbox(4)
     add_to_outbox(5)
 
+    let(note) do
+      ActivityPub::Object::Note.new(
+        iri: "https://test.test/note"
+      )
+    end
+
+    let(undo) do
+      ActivityPub::Activity::Undo.new(
+        iri: "https://test.test/undo",
+        actor: subject,
+        object: activity5
+      )
+    end
+
     describe "#in_outbox" do
       it "instantiates the correct subclass" do
         expect(subject.in_outbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
@@ -255,14 +270,13 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_outbox(1, 2, public: true)).to be_empty
       end
 
-      let(note) do
-        ActivityPub::Object::Note.new(
-          iri: "https://test.test/objects/#{random_string}"
-        )
-      end
-
       it "filters out deleted posts" do
         activity5.assign(object: note).save ; note.delete
+        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "filters out undone activities" do
+        undo.save
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
@@ -274,15 +288,19 @@ Spectator.describe ActivityPub::Actor do
     end
 
     describe "#in_outbox?" do
-      let(note) do
-        ActivityPub::Object::Note.new(
-          iri: "https://test.test/objects/#{random_string}"
-        ).save
-      end
-
       it "returns true if object is in outbox" do
         activity1.assign(object: note).save
         expect(subject.in_outbox?(note)).to be_truthy
+      end
+
+      it "returns false if object has been deleted" do
+        activity1.assign(object: note).save ; note.delete
+        expect(subject.in_outbox?(note)).to be_falsey
+      end
+
+      it "returns false if activity has been undone" do
+        activity5.assign(object: note).save ; undo.save
+        expect(subject.in_outbox?(note)).to be_falsey
       end
 
       it "returns false if object is not in outbox" do
@@ -298,6 +316,7 @@ Spectator.describe ActivityPub::Actor do
       let(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
+          actor: subject,
           visible: false
         )
       end
@@ -317,6 +336,20 @@ Spectator.describe ActivityPub::Actor do
     add_to_inbox(4)
     add_to_inbox(5)
 
+    let(note) do
+      ActivityPub::Object::Note.new(
+        iri: "https://test.test/note"
+      )
+    end
+
+    let(undo) do
+      ActivityPub::Activity::Undo.new(
+        iri: "https://test.test/undo",
+        actor: subject,
+        object: activity5
+      )
+    end
+
     describe "#in_inbox" do
       it "instantiates the correct subclass" do
         expect(subject.in_inbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
@@ -326,14 +359,13 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_inbox(1, 2, public: true)).to be_empty
       end
 
-      let(note) do
-        ActivityPub::Object::Note.new(
-          iri: "https://test.test/objects/#{random_string}"
-        )
-      end
-
       it "filters out deleted posts" do
         activity5.assign(object: note).save ; note.delete
+        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "filters out undone activities" do
+        undo.save
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
@@ -345,15 +377,19 @@ Spectator.describe ActivityPub::Actor do
     end
 
     describe "#in_inbox?" do
-      let(note) do
-        ActivityPub::Object::Note.new(
-          iri: "https://test.test/objects/#{random_string}"
-        ).save
-      end
-
       it "returns true if object is in inbox" do
         activity1.assign(object: note).save
         expect(subject.in_inbox?(note)).to be_truthy
+      end
+
+      it "returns false if object has been deleted" do
+        activity1.assign(object: note).save ; note.delete
+        expect(subject.in_inbox?(note)).to be_falsey
+      end
+
+      it "returns false if activity has been undone" do
+        activity5.assign(object: note).save ; undo.save
+        expect(subject.in_inbox?(note)).to be_falsey
       end
 
       it "returns false if object is not in inbox" do
@@ -369,6 +405,7 @@ Spectator.describe ActivityPub::Actor do
       let(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
+          actor: subject,
           published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
           visible: false
         )
@@ -388,18 +425,31 @@ Spectator.describe ActivityPub::Actor do
     add_to_mailbox(4, Outbox)
     add_to_mailbox(5, Inbox)
 
+    let(note) do
+      ActivityPub::Object::Note.new(
+        iri: "https://test.test/note"
+      )
+    end
+
+    let(undo) do
+      ActivityPub::Activity::Undo.new(
+        iri: "https://test.test/undo",
+        actor: subject,
+        object: activity5
+      )
+    end
+
     it "instantiates the correct subclass" do
       expect(subject.both_mailboxes(1, 2).first).to be_a(ActivityPub::Activity::Create)
     end
 
-    let(note) do
-      ActivityPub::Object::Note.new(
-        iri: "https://test.test/objects/#{random_string}"
-      )
-    end
-
     it "filters out deleted posts" do
       activity5.assign(object: note).save ; note.delete
+      expect(subject.both_mailboxes(1, 2)).to eq([activity4, activity3])
+    end
+
+    it "filters out undone activities" do
+      undo.save
       expect(subject.both_mailboxes(1, 2)).to eq([activity4, activity3])
     end
 
@@ -417,9 +467,9 @@ Spectator.describe ActivityPub::Actor do
       let!(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
+          actor: subject,
           published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-          visible: {{index}}.odd?,
-          actor: subject
+          visible: {{index}}.odd?
         ).save
       end
     end
@@ -430,6 +480,20 @@ Spectator.describe ActivityPub::Actor do
     post(4)
     post(5)
 
+    let(note) do
+      ActivityPub::Object::Note.new(
+        iri: "https://test.test/note"
+      )
+    end
+
+    let(undo) do
+      ActivityPub::Activity::Undo.new(
+        iri: "https://test.test/undo",
+        actor: subject,
+        object: activity5
+      )
+    end
+
     it "instantiates the correct subclass" do
       expect(subject.public_posts(1, 2).first).to be_a(ActivityPub::Activity::Create)
     end
@@ -438,14 +502,13 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.public_posts(1, 2)).to eq([activity5, activity3])
     end
 
-    let(note) do
-      ActivityPub::Object::Note.new(
-        iri: "https://test.test/objects/#{random_string}"
-      )
-    end
-
     it "filters out deleted posts" do
       activity5.assign(object: note).save ; note.delete
+      expect(subject.public_posts(1, 2)).to eq([activity3, activity1])
+    end
+
+    it "filters out undone activities" do
+      undo.save
       expect(subject.public_posts(1, 2)).to eq([activity3, activity1])
     end
 

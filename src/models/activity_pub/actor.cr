@@ -23,20 +23,6 @@ module ActivityPub
 
     @@table_name = "actors"
 
-    @[Persistent]
-    property iri : String { "" }
-    validates(iri) { unique_absolute_uri?(iri) }
-
-    private def unique_absolute_uri?(iri)
-      if iri.blank?
-        "must be present"
-      elsif !URI.parse(iri).absolute?
-        "must be an absolute URI"
-      elsif (actor = Actor.find?(iri)) && actor.id != self.id
-        "must be unique"
-      end
-    end
-
     def local
       iri.starts_with?(Ktistec.host)
     end

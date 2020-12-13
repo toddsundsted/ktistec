@@ -7,6 +7,24 @@ module Ktistec
       macro included
         extend Ktistec::Open
 
+        def initialize(**options)
+          super(**options)
+        end
+
+        @[Persistent]
+        property iri : String { "" }
+        validates(iri) { unique_absolute_uri?(iri) }
+
+        private def unique_absolute_uri?(iri)
+          if iri.blank?
+            "must be present"
+          elsif !URI.parse(iri).absolute?
+            "must be an absolute URI"
+          elsif (instance = self.class.find?(iri)) && instance.id != self.id
+            "must be unique"
+          end
+        end
+
         def self.find(_iri iri : String?)
           find(iri: iri)
         end

@@ -63,22 +63,8 @@ Spectator.describe ActivityPub::Actor do
   end
 
   context "when validating" do
-    let!(actor) { described_class.new(iri: "http://test.test/foo_bar").save }
-
-    it "must be present" do
-      expect(described_class.new.valid?).to be_false
-    end
-
-    it "must be an absolute URI" do
-      expect(described_class.new(iri: "/some_actor").valid?).to be_false
-    end
-
-    it "must be unique" do
-      expect(described_class.new(iri: "http://test.test/foo_bar").valid?).to be_false
-    end
-
     it "is valid" do
-      expect(described_class.new(iri: "http://test.test/#{random_string}").save.valid?).to be_true
+      expect(described_class.new(iri: "http://test.test/#{random_string}").valid?).to be_true
     end
   end
 

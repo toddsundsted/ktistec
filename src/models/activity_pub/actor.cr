@@ -23,10 +23,6 @@ module ActivityPub
 
     @@table_name = "actors"
 
-    def local
-      iri.starts_with?(Ktistec.host)
-    end
-
     @[Persistent]
     property username : String?
 

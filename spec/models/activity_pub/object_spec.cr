@@ -172,11 +172,4 @@ Spectator.describe ActivityPub::Object do
       end
     end
   end
-
-  describe "#local" do
-    it "indicates if the object is local" do
-      expect(described_class.new(iri: "https://test.test/foo_bar").local).to be_true
-      expect(described_class.new(iri: "https://remote/foo_bar").local).to be_false
-    end
-  end
 end

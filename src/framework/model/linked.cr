@@ -25,6 +25,10 @@ module Ktistec
           end
         end
 
+        def local
+          iri.starts_with?(Ktistec.host)
+        end
+
         def self.find(_iri iri : String?)
           find(iri: iri)
         end

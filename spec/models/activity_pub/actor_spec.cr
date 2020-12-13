@@ -505,13 +505,6 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
-  describe "#local" do
-    it "indicates if the actor is local" do
-      expect(described_class.new(iri: "https://test.test/actors/foo_bar").local).to be_true
-      expect(described_class.new(iri: "https://remote/foo_bar").local).to be_false
-    end
-  end
-
   describe "#account_uri" do
     it "returns the webfinger account uri" do
       expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar").account_uri).to eq("foobar@test.test")

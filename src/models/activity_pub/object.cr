@@ -12,10 +12,6 @@ module ActivityPub
 
     @@table_name = "objects"
 
-    def local
-      iri.starts_with?(Ktistec.host)
-    end
-
     @[Persistent]
     property visible : Bool { false }
 

@@ -4,6 +4,14 @@ require "../open"
 module Ktistec
   module Model
     module Linked
+      def local?
+        iri.starts_with?(Ktistec.host)
+      end
+
+      def cached?
+        !local?
+      end
+
       macro included
         extend Ktistec::Open
 
@@ -23,10 +31,6 @@ module Ktistec
           elsif (instance = self.class.find?(iri)) && instance.id != self.id
             "must be unique"
           end
-        end
-
-        def local?
-          iri.starts_with?(Ktistec.host)
         end
 
         def self.find(_iri iri : String?)

@@ -107,4 +107,11 @@ Spectator.describe Ktistec::Model::Linked do
       expect(LinkedModel.new(iri: "https://remote/foo_bar").local?).to be_false
     end
   end
+
+  describe "#cached?" do
+    it "indicates if the instance is cached" do
+      expect(LinkedModel.new(iri: "https://test.test/foo_bar").cached?).to be_false
+      expect(LinkedModel.new(iri: "https://remote/foo_bar").cached?).to be_true
+    end
+  end
 end

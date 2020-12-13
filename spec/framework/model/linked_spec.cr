@@ -101,10 +101,10 @@ Spectator.describe Ktistec::Model::Linked do
     end
   end
 
-  describe "#local" do
+  describe "#local?" do
     it "indicates if the instance is local" do
-      expect(LinkedModel.new(iri: "https://test.test/foo_bar").local).to be_true
-      expect(LinkedModel.new(iri: "https://remote/foo_bar").local).to be_false
+      expect(LinkedModel.new(iri: "https://test.test/foo_bar").local?).to be_true
+      expect(LinkedModel.new(iri: "https://remote/foo_bar").local?).to be_false
     end
   end
 end

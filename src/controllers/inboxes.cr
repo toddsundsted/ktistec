@@ -104,7 +104,7 @@ class RelationshipsController
       # compatibility with implementations that don't address follows
       activity.deliver_to = [account.iri]
     when ActivityPub::Activity::Accept
-      unless activity.object?.try(&.local)
+      unless activity.object?.try(&.local?)
         bad_request
       end
       unless activity.object.actor == account.actor
@@ -115,7 +115,7 @@ class RelationshipsController
       end
       follow.assign(confirmed: true).save
     when ActivityPub::Activity::Reject
-      unless activity.object?.try(&.local)
+      unless activity.object?.try(&.local?)
         bad_request
       end
       unless activity.object.actor == account.actor

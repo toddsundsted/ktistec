@@ -131,7 +131,7 @@ class RelationshipsController
     when "Delete"
       if (iri = activity["object"]?)
         if (object = ActivityPub::Object.find?(iri))
-          unless object.local
+          unless object.local?
             bad_request
           end
           unless object.attributed_to == account.actor
@@ -147,7 +147,7 @@ class RelationshipsController
           )
           object.delete
         elsif (object = ActivityPub::Actor.find?(iri))
-          unless object.local
+          unless object.local?
             bad_request
           end
           unless object == account.actor

@@ -39,7 +39,7 @@ class Task
       # public collection, 2) the sender itself, 3) the activity's
       # actor's followers collection to which the sender belongs, 4) a
       # local followers collection to which a reply is addressed.
-      unless activity.try(&.local)
+      unless activity.try(&.local?)
         recipients.select! do |recipient|
           public?(recipient) ||
             (sender.iri == recipient) ||
@@ -103,7 +103,7 @@ class Task
 
     def perform
       recipients.each do |recipient|
-        if recipient.local
+        if recipient.local?
           Relationship::Content::Inbox.new(
             owner: recipient,
             activity: activity,

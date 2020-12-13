@@ -47,7 +47,7 @@ class ActivityPub::Activity
     def valid_for_send?
       valid?
       messages = [] of String
-      messages << "actor must be local" unless actor?.try(&.local)
+      messages << "actor must be local" unless actor?.try(&.local?)
       messages << "object must have an inbox" unless object?.try(&.inbox)
       unless messages.empty?
         errors["activity"] = errors.fetch("activity", [] of String) + messages

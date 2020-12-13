@@ -25,7 +25,7 @@ module Ktistec
           end
         end
 
-        def local
+        def local?
           iri.starts_with?(Ktistec.host)
         end
 

@@ -1,9 +1,16 @@
+require "uri"
+
 require "../model"
 require "../open"
 
 module Ktistec
   module Model
     module Linked
+      def origin
+        uri = URI.parse(iri)
+        "#{uri.scheme}://#{uri.host}"
+      end
+
       def local?
         iri.starts_with?(Ktistec.host)
       end

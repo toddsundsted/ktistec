@@ -101,6 +101,13 @@ Spectator.describe Ktistec::Model::Linked do
     end
   end
 
+  describe "#origin" do
+    it "returns the origin" do
+      expect(LinkedModel.new(iri: "https://test.test/foo_bar").origin).to eq("https://test.test")
+      expect(LinkedModel.new(iri: "https://remote/foo_bar").origin).to eq("https://remote")
+    end
+  end
+
   describe "#local?" do
     it "indicates if the instance is local" do
       expect(LinkedModel.new(iri: "https://test.test/foo_bar").local?).to be_true

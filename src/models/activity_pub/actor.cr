@@ -27,9 +27,11 @@ module ActivityPub
     property username : String?
 
     @[Persistent]
+    @[Insignificant]
     property pem_public_key : String?
 
     @[Persistent]
+    @[Insignificant]
     property pem_private_key : String?
 
     def public_key

@@ -67,8 +67,9 @@ module Ktistec
               {% for m in type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
                 {% name = m.name[12..-1] %}
                 class ::{{type}}
-                  def {{name}}?(*, dereference = false)
-                    unless ({{name}} = self.{{name}}?)
+                  def {{name}}?(*, dereference = false, ignore_cached = false)
+                    {{name}} = self.{{name}}?
+                    unless ({{name}} && !ignore_cached) || ({{name}} && {{name}}.changed?)
                       if ({{name}}_iri = self.{{name}}_iri) && dereference
                         unless {{name}}_iri.starts_with?(Ktistec.host)
                           {% for union_type in m.return_type.id.split("|").map(&.strip.id) %}

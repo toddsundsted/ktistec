@@ -60,8 +60,7 @@ Spectator.describe Ktistec::Model::Linked do
   describe "the generated accessor" do
     let(subject) do
       LinkedModel.new(
-        iri: "https://test.test/objects/subject",
-        linked_model_iri: "https://remote/objects/object"
+        iri: "https://test.test/objects/subject"
       )
     end
     let(object) do
@@ -70,16 +69,7 @@ Spectator.describe Ktistec::Model::Linked do
       )
     end
 
-    context "when object is saved" do
-      before_each { object.save }
-
-      it "does not fetch the linked model instance" do
-        subject.linked_model?(dereference: true)
-        expect(HTTP::Client.last?).to be_nil
-      end
-    end
-
-    context "when object is local" do
+    context "when linked object is local" do
       before_each { subject.linked_model_iri = "https://test.test/objects/object" }
 
       it "does not fetch the linked model instance" do
@@ -88,15 +78,31 @@ Spectator.describe Ktistec::Model::Linked do
       end
     end
 
-    context "when object is remote" do
+    context "when linked object is remote" do
+      before_each { subject.linked_model_iri = "https://remote/objects/object" }
+
+      it "does not fetch the linked model instance" do
+        subject.linked_model?(dereference: false)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
       it "fetches the linked model instance" do
         subject.linked_model?(dereference: true)
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
 
-      it "does not fetch the linked model instance" do
-        subject.linked_model?(dereference: false)
-        expect(HTTP::Client.last?).to be_nil
+      context "when object is cached" do
+        before_each { object.save }
+
+        it "does not fetch the linked model instance" do
+          subject.linked_model?(dereference: true)
+          expect(HTTP::Client.last?).to be_nil
+        end
+
+        it "fetches the linked model instance" do
+          subject.linked_model?(dereference: true, ignore_cached: true)
+          expect(HTTP::Client.last?).to match("GET #{object.iri}")
+        end
       end
     end
   end

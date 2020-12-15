@@ -89,6 +89,14 @@ class RelationshipsController
         bad_request
       end
       object.attributed_to = activity.actor
+    when ActivityPub::Activity::Update
+      unless (object = activity.object?(dereference: true, ignore_cached: true))
+        bad_request
+      end
+      unless activity.actor == object.attributed_to?(dereference: true)
+        bad_request
+      end
+      object.attributed_to = activity.actor
     when ActivityPub::Activity::Follow
       unless actor
         bad_request

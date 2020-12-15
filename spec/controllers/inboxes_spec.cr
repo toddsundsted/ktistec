@@ -362,6 +362,69 @@ Spectator.describe RelationshipsController do
       end
     end
 
+    context "on update" do
+      let(note) do
+        ActivityPub::Object::Note.new(
+          iri: "https://remote/objects/#{random_string}",
+          attributed_to: other
+        )
+      end
+      let(update) do
+        ActivityPub::Activity::Update.new(
+          iri: "https://remote/activities/update",
+          actor: other,
+          to: [actor.iri]
+        )
+      end
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", update.to_json_ld(true), "application/json") }
+
+      before_each { HTTP::Client.objects << note.save.assign(content: "content") }
+
+      it "returns 400 if no object is included" do
+        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if object is not attributed to activity's actor" do
+        update.object = note
+        note.attributed_to = actor
+        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "fetches object if remote" do
+        update.object_iri = note.iri
+        headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", update.to_json_ld(false), "application/json")
+        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(false)
+        expect(HTTP::Client.last?).to match("GET #{note.iri}")
+      end
+
+      it "doesn't fetch the object if embedded" do
+        update.object = note
+        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "updates the object" do
+        update.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
+          to change{ActivityPub::Object.find(note.iri).content}
+      end
+
+      it "puts the activity in the actor's inbox" do
+        update.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
+          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+      end
+
+      it "is successful" do
+        update.object = note
+        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+        expect(response.status_code).to eq(200)
+      end
+    end
+
     context "on follow" do
       let(follow) do
         ActivityPub::Activity::Follow.new(

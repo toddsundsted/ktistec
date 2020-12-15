@@ -78,7 +78,8 @@ Spectator.describe RelationshipsController do
     context "when unsigned" do
       let(note) do
         ActivityPub::Object::Note.new(
-          iri: "https://remote/objects/note"
+          iri: "https://remote/objects/note",
+          attributed_to: other
         )
       end
       let(activity) do
@@ -101,8 +102,17 @@ Spectator.describe RelationshipsController do
           to change{ActivityPub::Activity.count}.by(1)
       end
 
+      it "is successful" do
+        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
+        expect(response.status_code).to eq(200)
+      end
+
       context "and the actor is remote" do
-        before_each { HTTP::Client.actors << other.destroy }
+        let(other) do
+          build_actor(base_uri: "https://remote/actors", with_keys: true)
+        end
+
+        before_each { HTTP::Client.actors << other }
 
         it "retrieves the actor from the origin" do
           post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
@@ -113,13 +123,19 @@ Spectator.describe RelationshipsController do
           expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)}.
             to change{ActivityPub::Actor.count}.by(1)
         end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
+          expect(response.status_code).to eq(200)
+        end
       end
     end
 
     context "when signed" do
       let(note) do
         ActivityPub::Object::Note.new(
-          iri: "https://remote/objects/note"
+          iri: "https://remote/objects/note",
+          attributed_to_iri: other.iri
         )
       end
       let(activity) do
@@ -144,8 +160,17 @@ Spectator.describe RelationshipsController do
           to change{ActivityPub::Activity.count}.by(1)
       end
 
+      it "is successful" do
+        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+        expect(response.status_code).to eq(200)
+      end
+
       context "by remote actor" do
-        before_each { HTTP::Client.actors << other.destroy }
+        let(other) do
+          build_actor(base_uri: "https://remote/actors", with_keys: true)
+        end
+
+        before_each { HTTP::Client.actors << other }
 
         it "retrieves the remote actor from the origin" do
           post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
@@ -156,17 +181,32 @@ Spectator.describe RelationshipsController do
           expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
             to change{ActivityPub::Actor.count}.by(1)
         end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(response.status_code).to eq(200)
+        end
       end
 
-      context "by saved actor" do
+      context "by cached actor" do
+        let(other) do
+          build_actor(base_uri: "https://remote/actors", with_keys: true).save
+        end
+
+        before_each { HTTP::Client.actors << other }
+
         it "does not retrieve the actor" do
           post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
           expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
         end
 
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(response.status_code).to eq(200)
+        end
+
         context "which doesn't have a public key" do
           before_each do
-            HTTP::Client.actors << other
             other.pem_public_key = nil
             other.save
           end
@@ -262,7 +302,8 @@ Spectator.describe RelationshipsController do
     context "on create" do
       let(note) do
         ActivityPub::Object::Note.new(
-          iri: "https://remote/objects/#{random_string}"
+          iri: "https://remote/objects/#{random_string}",
+          attributed_to: other
         )
       end
       let(create) do
@@ -275,21 +316,29 @@ Spectator.describe RelationshipsController do
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", create.to_json_ld(true), "application/json") }
 
+      before_each { HTTP::Client.objects << note.assign(content: "content") }
+
       it "returns 400 if no object is included" do
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if object is not attributed to activity's actor" do
+        create.object = note
+        note.attributed_to = actor
         post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
         expect(response.status_code).to eq(400)
       end
 
       it "fetches object if remote" do
         create.object_iri = note.iri
-        HTTP::Client.objects << note
-        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+        headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", create.to_json_ld(false), "application/json")
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(false)
         expect(HTTP::Client.last?).to match("GET #{note.iri}")
       end
 
       it "doesn't fetch the object if embedded" do
         create.object = note
-        HTTP::Client.objects << note
         post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
         expect(HTTP::Client.last?).to be_nil
       end
@@ -304,6 +353,12 @@ Spectator.describe RelationshipsController do
         create.object = note
         expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
           to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+      end
+
+      it "is successful" do
+        create.object = note
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+        expect(response.status_code).to eq(200)
       end
     end
 

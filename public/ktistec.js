@@ -47,6 +47,9 @@ FilePond.setOptions({
         selector: '.content img',
         download: false
       })
+    $('.ui.feed .event img').on('error', function() {
+      $(this).replaceWith('<i class="user icon"></i>')
+    })
     $('.dangerous.button').on('click', function (event) {
       event.preventDefault()
       let $this = $(this)

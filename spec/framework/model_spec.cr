@@ -465,6 +465,38 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe "#new_record?" do
+    it "returns true if the record has not been saved" do
+      expect(FooBarModel.new.new_record?).to be_true
+    end
+
+    it "returns false if the record has been saved" do
+      expect(FooBarModel.new.save.new_record?).to be_false
+    end
+  end
+
+  describe "#changed?" do
+    it "returns false if the record has not been changed" do
+      expect(NotNilModel.new(val: "Val").save.changed?).to be_false
+    end
+
+    it "returns true if the record has been changed" do
+      expect(NotNilModel.new(val: "Val").save.assign(val: "Baz").changed?).to be_true
+    end
+
+    it "returns false if the record has been saved" do
+      expect(NotNilModel.new(val: "Val").save.assign(val: "Baz").save.changed?).to be_false
+    end
+
+    it "returns false if the record has been saved" do
+      expect(NotNilModel.new(val: "Val").save.tap(&.changed?).assign(val: "Baz").save.changed?).to be_false
+    end
+
+    it "returns true if the record is new" do
+      expect(NotNilModel.new(val: "Val").changed?).to be_true
+    end
+  end
+
   describe "#to_json" do
     it "returns the JSON representation" do
       saved_model = FooBarModel.new

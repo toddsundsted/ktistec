@@ -204,6 +204,8 @@ module Ktistec
     end
 
     module InstanceMethods
+      @saved_record : self | Nil = nil
+
       # Initializes the new instance.
       #
       def initialize(**options)
@@ -458,6 +460,7 @@ module Ktistec
             {% end %}
           end
         {% end %}
+        @saved_record = self.dup
         self
       end
 
@@ -467,6 +470,15 @@ module Ktistec
         Ktistec.database.exec("DELETE FROM #{table_name} WHERE id = ?", @id)
         @id = nil
         self
+      end
+
+      def new_record?
+        @id.nil?
+      end
+
+      def changed?
+        @saved_record ||= self.class.find?(@id)
+        @saved_record != self
       end
 
       def to_json(json : JSON::Builder)

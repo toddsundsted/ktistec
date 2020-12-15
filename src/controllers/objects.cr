@@ -6,7 +6,7 @@ class ObjectsController
   skip_auth ["/objects/:id"], GET
 
   macro depth(object)
-    "depth-#{{{object}}.depth}"
+    "depth-#{Math.min({{object}}.depth, 9)}"
   end
 
   get "/objects/:id" do |env|

@@ -34,9 +34,9 @@ module Ktistec
           if iri.blank?
             "must be present"
           elsif !URI.parse(iri).absolute?
-            "must be an absolute URI"
+            "must be an absolute URI: #{iri}"
           elsif (instance = self.class.find?(iri)) && instance.id != self.id
-            "must be unique"
+            "must be unique: #{iri}"
           end
         end
 

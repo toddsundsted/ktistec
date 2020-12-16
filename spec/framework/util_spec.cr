@@ -4,15 +4,13 @@ require "../spec_helper/model"
 
 Spectator.describe Ktistec::Util do
   describe ".enhance" do
-    alias Attachment = ActivityPub::Object::Attachment
-
     it "returns enhancements" do
       expect(described_class.enhance("")).to be_a(Ktistec::Util::Enhancements)
     end
 
     it "returns attachments for embedded images" do
       content = %q|<figure data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
-      expect(described_class.enhance(content).attachments).to eq([Attachment.new("https://test.test/img.png", "image/png")])
+      expect(described_class.enhance(content).attachments).to eq([Ktistec::Util::Attachment.new("https://test.test/img.png", "image/png")])
     end
 
     it "strips attributes from the figure" do

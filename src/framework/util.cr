@@ -1,13 +1,35 @@
+require "json"
 require "xml"
 
 require "./ext/libxml2"
-require "../models/activity_pub/object"
 
 module Ktistec
   module Util
     extend self
 
-    private alias Attachment = ActivityPub::Object::Attachment
+    struct Attachment
+      include JSON::Serializable
+
+      property url : String
+
+      @[JSON::Field(key: "mediaType")]
+      property media_type : String
+
+      def initialize(@url, @media_type)
+      end
+
+      def image?
+        media_type.in?(%w[image/bmp image/gif image/jpeg image/png image/svg+xml image/x-icon image/apng image/webp])
+      end
+
+      def video?
+        media_type.in?(%w[video/mp4 video/webm video/ogg])
+      end
+
+      def audio?
+        media_type.in?(%w[audio/mp4 audio/webm audio/ogg audio/flac])
+      end
+    end
 
     class Enhancements
       property attachments : Array(Attachment)?

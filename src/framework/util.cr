@@ -180,13 +180,7 @@ module Ktistec
     end
 
     class PaginatedArray(T) < Array(T)
-      def more=(more : Bool)
-        @more = more
-      end
-
-      def more?
-        @more
-      end
+      property? more : Bool = false
     end
   end
 end

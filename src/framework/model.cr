@@ -213,26 +213,26 @@ module Ktistec
 
       # Initializes the new instance.
       #
-      def initialize(**options)
+      def initialize(*, _prefix prefix : String = "", **options)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
-            unless (o = options[{{v.symbolize}}]?).nil?
-              self.{{v}} = o.as(typeof(self.{{v}}))
+            unless (o = options[prefix + {{v.stringify}}]?).nil? || !o.is_a?(typeof(self.{{v}}))
+              self.{{v}} = o
             end
           {% end %}
         {% end %}
-        super
+        super()
       end
 
       # Bulk assigns properties.
       #
-      def assign(**options)
+      def assign(*, _prefix prefix : String = "", **options)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
-            unless (o = options[{{v.symbolize}}]?).nil?
-              self.{{v}} = o.as(typeof(self.{{v}}))
+            unless (o = options[prefix + {{v.stringify}}]?).nil? || !o.is_a?(typeof(self.{{v}}))
+              self.{{v}} = o
             end
           {% end %}
         {% end %}

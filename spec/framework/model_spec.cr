@@ -196,6 +196,10 @@ Spectator.describe Ktistec::Model do
     it "creates a new instance" do
       expect(NotNilModel.new(val: "Val").val).to eq("Val")
     end
+
+    it "ignores supplied prefix" do
+      expect(FooBarModel.new(_prefix: "prefix.", "prefix.foo": "Foo").foo).to eq("Foo")
+    end
   end
 
   describe "#assign" do
@@ -205,6 +209,10 @@ Spectator.describe Ktistec::Model do
 
     it "bulk assigns properties" do
       expect(NotNilModel.new(val: "").assign(val: "Val").val).to eq("Val")
+    end
+
+    it "ignores supplied prefix" do
+      expect(FooBarModel.new(foo: "").assign(_prefix: "prefix.", "prefix.foo": "Foo").foo).to eq("Foo")
     end
   end
 

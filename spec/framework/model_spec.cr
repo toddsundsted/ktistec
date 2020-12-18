@@ -105,6 +105,32 @@ class UnionAssociationModel
   belongs_to model, class_name: FooBarModel | NotNilModel
 end
 
+class QueryModel
+  include Ktistec::Model(None)
+
+  @[Assignable]
+  property foo : String?
+
+  @[Assignable]
+  property bar : String?
+
+  def ==(other : self)
+    other.id == self.id && other.foo == self.foo && other.bar == self.bar
+  end
+
+  def self.query_and_paginate(*args, **opts)
+    super(*args, **opts)
+  end
+
+  def self.query_all(*args, **opts)
+    super(*args, **opts)
+  end
+
+  def self.query_one(*args, **opts)
+    super(*args, **opts)
+  end
+end
+
 Spectator.describe Ktistec::Model::Utils do
   describe ".table_name" do
     it "returns the table name" do
@@ -139,6 +165,27 @@ Spectator.describe Ktistec::Model do
   after_each do
     Ktistec.database.exec "DROP TABLE foo_bar_models"
     Ktistec.database.exec "DROP TABLE not_nil_models"
+  end
+
+  describe ".query_and_paginate" do
+    it "includes the additional columns" do
+      query = %Q|SELECT 0, "foo", "bar", ?, ?|
+      expect(QueryModel.query_and_paginate(query, additional_columns: {foo: String, bar: String})).to eq([QueryModel.new(id: 0_i64, foo: "foo", bar: "bar")])
+    end
+  end
+
+  describe ".query_all" do
+    it "includes the additional columns" do
+      query = %Q|SELECT 0, "foo", "bar", ?, ?|
+      expect(QueryModel.query_all(query, additional_columns: {foo: String, bar: String})).to eq([QueryModel.new(id: 0_i64, foo: "foo", bar: "bar")])
+    end
+  end
+
+  describe ".query_one" do
+    it "includes the additional columns" do
+      query = %Q|SELECT 0, "foo", "bar", ?, ?|
+      expect(QueryModel.query_one(query, additional_columns: {foo: String, bar: String})).to eq(QueryModel.new(id: 0_i64, foo: "foo", bar: "bar"))
+    end
   end
 
   describe ".new" do

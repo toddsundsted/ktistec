@@ -1,4 +1,5 @@
 require "./framework"
+require "./util"
 
 module Ktistec
   module Model(*T)
@@ -80,19 +81,29 @@ module Ktistec
         ).as(Int)
       end
 
-      private def read(rs : DB::ResultSet)
+      private def persistent_columns
         {% begin %}
           {
             {% for v in @type.instance_vars.select(&.annotation(Persistent)) %}
-              {{v}}: rs.read({{v.type}}),
+              {{v}}: {{v.type}},
             {% end %}
           }
         {% end %}
       end
 
-      private def compose(rs : DB::ResultSet) : self
+      private def read(rs : DB::ResultSet, **types : **T) forall T
         {% begin %}
-          attrs = read(rs)
+          {
+            {% for name, type in T %}
+              "{{name}}": rs.read({{type.instance}}),
+            {% end %}
+          }
+        {% end %}
+      end
+
+      private def compose(rs : DB::ResultSet, additional_columns = NamedTuple.new) : self
+        {% begin %}
+          attrs = read(rs, **persistent_columns.merge(additional_columns))
           {% if @type < Polymorphic %}
             case attrs[:type]
             {% for subclass in @type.all_subclasses %}
@@ -108,40 +119,34 @@ module Ktistec
         {% end %}
       end
 
-      protected def query_and_paginate(query, *args, page = 1, size = 10)
-        {% begin %}
-          Ktistec::Util::PaginatedArray(self).new.tap do |array|
-            Ktistec.database.query(
-              query, *args, ((page - 1) * size).to_i, size.to_i + 1
-            ) do |rs|
-              rs.each { array << compose(rs) }
-            end
-            if array.size > size
-              array.more = true
-              array.pop
-            end
+      protected def query_and_paginate(query, *args, additional_columns = NamedTuple.new, page = 1, size = 10)
+        Ktistec::Util::PaginatedArray(self).new.tap do |array|
+          Ktistec.database.query(
+            query, *args, ((page - 1) * size).to_i, size.to_i + 1
+          ) do |rs|
+            rs.each { array << compose(rs, additional_columns) }
           end
-        {% end %}
+          if array.size > size
+            array.more = true
+            array.pop
+          end
+        end
       end
 
-      protected def query_all(query, *args)
-        {% begin %}
-          Ktistec.database.query_all(
-            query, *args
-          ) do |rs|
-            compose(rs)
-          end
-        {% end %}
+      protected def query_all(query, *args, additional_columns = NamedTuple.new)
+        Ktistec.database.query_all(
+          query, *args
+        ) do |rs|
+          compose(rs, additional_columns)
+        end
       end
 
-      protected def query_one(query, *args)
-        {% begin %}
-          Ktistec.database.query_one(
-            query, *args
-          ) do |rs|
-            compose(rs)
-          end
-        {% end %}
+      protected def query_one(query, *args, additional_columns = NamedTuple.new)
+        Ktistec.database.query_one(
+          query, *args
+        ) do |rs|
+          compose(rs, additional_columns)
+        end
       end
 
       # Returns all instances.

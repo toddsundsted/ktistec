@@ -19,7 +19,7 @@ class FooBarModel
   include Ktistec::Model(None)
 
   @[Persistent]
-  property foo : String?
+  property foo : String? = "Foo"
   validates foo do
     # no op
   end
@@ -190,21 +190,25 @@ Spectator.describe Ktistec::Model do
 
   describe ".new" do
     it "creates a new instance" do
-      expect(FooBarModel.new.foo).to be_nil
+      expect(FooBarModel.new.foo).to eq("Foo")
     end
 
-    it "creates a new instance" do
+    it "bulk assigns properties" do
       expect(NotNilModel.new(val: "Val").val).to eq("Val")
     end
 
     it "ignores supplied prefix" do
       expect(FooBarModel.new(_prefix: "prefix.", "prefix.foo": "Foo").foo).to eq("Foo")
     end
+
+    it "supports assignment of nil" do
+      expect(FooBarModel.new(foo: nil).foo).to be_nil
+    end
   end
 
   describe "#assign" do
     it "bulk assigns properties" do
-      expect(FooBarModel.new.assign(foo: "Foo").foo).to eq("Foo")
+      expect(FooBarModel.new.assign(foo: "").foo).to eq("")
     end
 
     it "bulk assigns properties" do
@@ -213,6 +217,10 @@ Spectator.describe Ktistec::Model do
 
     it "ignores supplied prefix" do
       expect(FooBarModel.new(foo: "").assign(_prefix: "prefix.", "prefix.foo": "Foo").foo).to eq("Foo")
+    end
+
+    it "supports assignment of nil" do
+      expect(FooBarModel.new(foo: "Foo").assign(foo: nil).foo).to be_nil
     end
   end
 

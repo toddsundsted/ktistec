@@ -217,8 +217,11 @@ module Ktistec
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
-            unless (o = options[prefix + {{v.stringify}}]?).nil? || !o.is_a?(typeof(self.{{v}}))
-              self.{{v}} = o
+            key = prefix + {{v.stringify}}
+            if options.has_key?(key)
+              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+                self.{{v}} = o
+              end
             end
           {% end %}
         {% end %}
@@ -231,8 +234,11 @@ module Ktistec
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
-            unless (o = options[prefix + {{v.stringify}}]?).nil? || !o.is_a?(typeof(self.{{v}}))
-              self.{{v}} = o
+            key = prefix + {{v.stringify}}
+            if options.has_key?(key)
+              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+                self.{{v}} = o
+              end
             end
           {% end %}
         {% end %}

@@ -104,29 +104,7 @@ module ActivityPub
           FROM objects AS o, replies_to AS r
          WHERE o.iri IN (r.iri) AND o.deleted_at IS NULL
         QUERY
-        Array(Object).new.tap do |array|
-          Ktistec.database.query(
-            query, self.iri
-          ) do |rs|
-            rs.each do
-              attrs = {
-               {% for v in vs %}
-                 {{v}}: rs.read({{v.type}}),
-               {% end %}
-               depth: rs.read(Int32)
-              }
-              array <<
-                case attrs[:type]
-                {% for subclass in ActivityPub::Object.all_subclasses %}
-                  when {{name = subclass.stringify}}
-                    {{subclass}}.new(**attrs)
-                {% end %}
-                else
-                  ActivityPub::Object.new(**attrs)
-                end
-            end
-          end
-        end
+        Object.query_all(query, self.iri, additional_columns: {depth: Int32})
       {% end %}
     end
 
@@ -147,29 +125,7 @@ module ActivityPub
           FROM objects AS o, ancestors_of AS a
          WHERE o.iri IN (a.iri) AND o.deleted_at IS NULL
         QUERY
-        Array(Object).new.tap do |array|
-          Ktistec.database.query(
-            query, self.iri
-          ) do |rs|
-            rs.each do
-              attrs = {
-               {% for v in vs %}
-                 {{v}}: rs.read({{v.type}}),
-               {% end %}
-               depth: rs.read(Int32)
-              }
-              array <<
-                case attrs[:type]
-                {% for subclass in ActivityPub::Object.all_subclasses %}
-                  when {{name = subclass.stringify}}
-                    {{subclass}}.new(**attrs)
-                {% end %}
-                else
-                  ActivityPub::Object.new(**attrs)
-                end
-            end
-          end
-        end
+        Object.query_all(query, self.iri, additional_columns: {depth: Int32})
       {% end %}
     end
 

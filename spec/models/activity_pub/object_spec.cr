@@ -152,6 +152,10 @@ Spectator.describe ActivityPub::Object do
         object4.destroy
         expect(subject.thread).to eq([subject, object1, object2, object3])
       end
+
+      it "returns the depths" do
+        expect(object5.thread.map(&.depth)).to eq([0, 1, 2, 3, 1, 2])
+      end
     end
 
     describe "#ancestors" do
@@ -169,6 +173,10 @@ Spectator.describe ActivityPub::Object do
       it "omits destroyed replies and their parents" do
         object1.destroy
         expect(object3.ancestors).to eq([object3, object2])
+      end
+
+      it "returns the depths" do
+        expect(object5.ancestors.map(&.depth)).to eq([0, 1, 2])
       end
     end
   end

@@ -19,18 +19,18 @@ class SettingsController
   post "/settings" do |env|
     actor = env.account.actor
 
-    actor.assign(**params(env)).save
+    actor.assign(**params(env, actor)).save
 
     env.redirect back_path
   end
 
-  private def self.params(env)
+  private def self.params(env, actor)
     params = (env.params.body.presence || env.params.json.presence).not_nil!
     {
       name: params["name"]?.try(&.to_s),
       summary: params["summary"]?.try(&.to_s),
-      image: params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
-      icon: params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" }
+      image: params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" } || actor.image,
+      icon: params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" } || actor.icon
     }
   end
 end

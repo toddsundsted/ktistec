@@ -8,6 +8,41 @@ require "../spec_helper/model"
 Spectator.describe ActivityPub do
   setup_spec
 
+  describe ".from_named_tuple" do
+    it "raises an error if the type is not specified" do
+      expect{described_class.from_named_tuple(**NamedTuple.new)}.to raise_error(NotImplementedError)
+    end
+
+    it "defaults the instance to the specified class" do
+      expect(described_class.from_named_tuple(default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
+    end
+
+    it "raises an error if the type is not supported" do
+      expect{described_class.from_named_tuple(type: "FooBar")}.to raise_error(NotImplementedError)
+    end
+
+    it "defaults the instance to the specified class" do
+      expect(described_class.from_named_tuple(type: "FooBar", default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
+    end
+
+    it "instantiates the correct subclass" do
+      expect(described_class.from_named_tuple(type: "ActivityPub::Actor::Person")).to be_a(ActivityPub::Actor::Person)
+      expect(described_class.from_named_tuple(type: "ActivityPub::Object::Note")).to be_a(ActivityPub::Object::Note)
+    end
+
+    subject { ActivityPub::Activity.new(iri: "https://test.test/foo_bar").save }
+
+    it "creates an instance if one doesn't exist" do
+      options = {iri: "https://test.test/bar_foo", type: "ActivityPub::Activity"}
+      expect{described_class.from_named_tuple(**options).save}.to change{ActivityPub::Activity.count}.by(1)
+    end
+
+    it "updates the instance if it already exists" do
+      options = {iri: "https://test.test/foo_bar", type: "ActivityPub::Activity", summary: "foo bar baz"}
+      expect{described_class.from_named_tuple(**options).save}.to change{ActivityPub::Activity.find(subject.iri).summary}
+    end
+  end
+
   describe ".from_json_ld" do
     it "raises an error if the type is not specified" do
       expect{described_class.from_json_ld("{}")}.to raise_error(NotImplementedError)

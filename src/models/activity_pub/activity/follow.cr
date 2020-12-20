@@ -32,7 +32,7 @@ class ActivityPub::Activity
           ORDER BY f.created_at desc
              LIMIT 1
         SQL
-        Ktistec.database.query_one(query, actor_iri, object_iri, &->compose(DB::ResultSet))
+        query_one(query, actor_iri, object_iri)
       {% end %}
     rescue ex: DB::Error
       raise ex unless ex.message == "no rows"

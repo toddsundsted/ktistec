@@ -259,7 +259,7 @@ module Ktistec
         self
       end
 
-      # Returns true if all properties are equal.
+      # Returns true if all persistent properties are equal.
       #
       def ==(other : self)
         {% begin %}

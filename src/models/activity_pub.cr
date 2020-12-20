@@ -41,16 +41,19 @@ module ActivityPub
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
     {% begin %}
       case json["@type"]?.try(&.as_s.split("#").last)
-      {% for subclass in @type.constants.reduce([] of TypeNode) { |a, t| a + @type.constant(t).all_subclasses << t } %}
+      {% for subclass in @type.constants.reduce([] of TypeNode) { |a, t| a + @type.constant(t).all_subclasses << @type.constant(t) } %}
         when {{name = subclass.stringify.split("::").last}}
           {% id = name.downcase.id %}
-          {{id}} = {{subclass}}.find?(json["@id"]?.try(&.as_s)) || {{subclass}}.new
-          {{id}}.assign(**{{subclass}}.map(json, **options))
+          attrs = {{subclass}}.map(json, **options)
+          {{id}} = {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(**attrs)) ||
+            {{subclass}}.new(**attrs)
+          return {{id}}
       {% end %}
       else
         if (default = options[:default]?)
-          instance = default.find?(json["@id"]?.try(&.as_s)) || default.new
-          instance.assign(**default.map(json, **options))
+          attrs = default.map(json, **options)
+          instance = default.find?(json["@id"]?.try(&.as_s)).try(&.assign(**attrs)) ||
+            default.new(**attrs)
           return instance
         end
         if (type = json["@type"]?)

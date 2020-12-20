@@ -101,30 +101,40 @@ module Ktistec
         {% end %}
       end
 
-      private def compose(rs : DB::ResultSet, additional_columns = NamedTuple.new) : self
+      private def compose(**options) : self
         {% begin %}
-          attrs = read(rs, **persistent_columns.merge(additional_columns))
           {% if @type < Polymorphic %}
-            case attrs[:type]
+            case options[:type]
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
-                {{subclass}}.new(**attrs)
+                {{subclass}}.new(**options)
             {% end %}
             else
-              self.new(**attrs)
+              self.new(**options)
             end
           {% else %}
-            self.new(**attrs)
+            self.new(**options)
           {% end %}
         {% end %}
       end
+
+      # Note: The following query helpers process query results in two
+      # steps, first (within the scope of the database call) mapping
+      # named tuples, and then (in a separate block) creating
+      # instances. This is intentional. Model initializers can make
+      # database calls, and nested database calls currently crash the
+      # runtime.
 
       protected def query_and_paginate(query, *args, additional_columns = NamedTuple.new, page = 1, size = 10)
         Ktistec::Util::PaginatedArray(self).new.tap do |array|
           Ktistec.database.query(
             query, *args, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
-            rs.each { array << compose(rs, additional_columns) }
+            ([] of typeof(read(rs, **persistent_columns.merge(additional_columns)))).tap do |array|
+              rs.each { array << read(rs, **persistent_columns.merge(additional_columns)) }
+            end
+          end.each do |options|
+            array << compose(**options)
           end
           if array.size > size
             array.more = true
@@ -137,7 +147,9 @@ module Ktistec
         Ktistec.database.query_all(
           query, *args
         ) do |rs|
-          compose(rs, additional_columns)
+          read(rs, **persistent_columns.merge(additional_columns))
+        end.map do |options|
+          compose(**options)
         end
       end
 
@@ -145,7 +157,9 @@ module Ktistec
         Ktistec.database.query_one(
           query, *args
         ) do |rs|
-          compose(rs, additional_columns)
+          read(rs, **persistent_columns.merge(additional_columns))
+        end.try do |options|
+          compose(**options)
         end
       end
 

@@ -37,6 +37,16 @@ module ActivityPub
     nil
   end
 
+  macro included
+    def self.from_named_tuple(**options)
+      ActivityPub.from_named_tuple(**options.merge({default: self})).as(self)
+    end
+
+    def self.from_named_tuple?(**options)
+      ActivityPub.from_named_tuple?(**options.merge({default: self})).as(self)
+    end
+  end
+
   def self.from_json_ld(json, **options)
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
     {% begin %}
@@ -69,5 +79,15 @@ module ActivityPub
     from_json_ld(json, **options)
   rescue NotImplementedError
     nil
+  end
+
+  macro included
+    def self.from_json_ld(json, **options)
+      ActivityPub.from_json_ld(json, **options.merge({default: self})).as(self)
+    end
+
+    def self.from_json_ld?(json, **options)
+      ActivityPub.from_json_ld?(json, **options.merge({default: self})).as(self)
+    end
   end
 end

@@ -5,6 +5,32 @@ require "../../src/models/activity_pub/object/note"
 
 require "../spec_helper/model"
 
+module ActivityPub
+  class ActivityPubModel
+    include ActivityPub
+
+    property iri : String = ""
+
+    def initialize(**options)
+    end
+
+    def assign(**options)
+      self
+    end
+
+    def save
+      self
+    end
+
+    def self.find?(iri)
+    end
+
+    def self.map(json, **options)
+      NamedTuple.new
+    end
+  end
+end
+
 Spectator.describe ActivityPub do
   setup_spec
 
@@ -41,6 +67,11 @@ Spectator.describe ActivityPub do
       options = {iri: "https://test.test/foo_bar", type: "ActivityPub::Activity", summary: "foo bar baz"}
       expect{described_class.from_named_tuple(**options).save}.to change{ActivityPub::Activity.find(subject.iri).summary}
     end
+
+    it "is defined on includers" do
+      options = {type: "ActivityPub::ActivityPubModel"}
+      expect{ActivityPub::ActivityPubModel.from_named_tuple(**options)}.to be_a(ActivityPub::ActivityPubModel)
+    end
   end
 
   describe ".from_json_ld" do
@@ -75,6 +106,11 @@ Spectator.describe ActivityPub do
     it "updates the instance if it already exists" do
       json = %q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"https://test.test/foo_bar","@type":"Activity","summary":"foo bar baz"}]
       expect{described_class.from_json_ld(json).save}.to change{ActivityPub::Activity.find(subject.iri).summary}
+    end
+
+    it "is defined on includers" do
+      json = %q[{"@type":"ActivityPubModel"}]
+      expect{ActivityPub::ActivityPubModel.from_json_ld(json)}.to be_a(ActivityPub::ActivityPubModel)
     end
   end
 end

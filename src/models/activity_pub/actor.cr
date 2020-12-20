@@ -20,6 +20,7 @@ require "./object"
 module ActivityPub
   class Actor
     include Ktistec::Model(Common, Deletable, Polymorphic, Serialized, Linked)
+    include ActivityPub
 
     @@table_name = "actors"
 
@@ -353,15 +354,6 @@ module ActivityPub
     def to_json_ld(recursive = false)
       actor = self
       render "src/views/actors/actor.json.ecr"
-    end
-
-    def self.from_json_ld(json, *, include_key = false)
-      ActivityPub.from_json_ld(json, include_key: include_key, default: self).as(self)
-    end
-
-    def self.from_json_ld?(json, *, include_key = false)
-      ActivityPub.from_json_ld?(json, include_key: include_key, default: self).as(self?)
-    rescue TypeCastError
     end
 
     def from_json_ld(json, *, include_key = false)

@@ -7,6 +7,7 @@ require "../../framework/model/**"
 module ActivityPub
   class Collection
     include Ktistec::Model(Common)
+    include ActivityPub
 
     @@table_name = "collections"
 

@@ -5,31 +5,29 @@ require "../../src/models/activity_pub/object/note"
 
 require "../spec_helper/model"
 
-module ActivityPub
-  class ActivityPubModel
-    include Ktistec::Model(Linked)
-    include ActivityPub
+class ActivityPubModel
+  include Ktistec::Model(Linked)
+  include ActivityPub
 
-    def save
-      self
-    end
+  def save
+    self
+  end
 
-    def self.find?(iri)
-      nil
-    end
+  def self.find?(iri)
+    nil
+  end
 
-    def self.map(json, **options)
-      NamedTuple.new
-    end
+  def self.map(json, **options)
+    NamedTuple.new
   end
 end
 
-class Foo < ActivityPub::ActivityPubModel
+class Foo < ActivityPubModel
   @[Assignable]
   property bar : Bar?
 end
 
-class Bar < ActivityPub::ActivityPubModel
+class Bar < ActivityPubModel
   @[Assignable]
   property foo : Foo?
 end
@@ -86,8 +84,8 @@ Spectator.describe ActivityPub do
     end
 
     it "is defined on includers" do
-      options = {type: "ActivityPub::ActivityPubModel"}
-      expect{ActivityPub::ActivityPubModel.from_named_tuple(**options)}.to be_a(ActivityPub::ActivityPubModel)
+      options = {type: "ActivityPubModel"}
+      expect{ActivityPubModel.from_named_tuple(**options)}.to be_a(ActivityPubModel)
     end
   end
 
@@ -127,7 +125,7 @@ Spectator.describe ActivityPub do
 
     it "is defined on includers" do
       json = %q[{"@type":"ActivityPubModel"}]
-      expect{ActivityPub::ActivityPubModel.from_json_ld(json)}.to be_a(ActivityPub::ActivityPubModel)
+      expect{ActivityPubModel.from_json_ld(json)}.to be_a(ActivityPubModel)
     end
   end
 end

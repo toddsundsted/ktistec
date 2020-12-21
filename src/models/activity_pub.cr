@@ -39,7 +39,7 @@ module ActivityPub
     {% begin %}
       key = prefix + "type"
       case options[key]?
-      {% for subclass in @type.constants.reduce([] of TypeNode) { |a, t| a + @type.constant(t).all_subclasses << @type.constant(t) } %}
+      {% for subclass in @type.includers.reduce([] of TypeNode) { |a, t| a + t.all_subclasses << t }.uniq %}
         when {{name = subclass.stringify}}
           {% id = name.split("::").last.downcase.id %}
           attrs = options.merge({_prefix: prefix})
@@ -83,7 +83,7 @@ module ActivityPub
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
     {% begin %}
       case json["@type"]?.try(&.as_s.split("#").last)
-      {% for subclass in @type.constants.reduce([] of TypeNode) { |a, t| a + @type.constant(t).all_subclasses << @type.constant(t) } %}
+      {% for subclass in @type.includers.reduce([] of TypeNode) { |a, t| a + t.all_subclasses << t }.uniq %}
         when {{name = subclass.stringify.split("::").last}}
           {% id = name.downcase.id %}
           attrs = {{subclass}}.map(json, **options)

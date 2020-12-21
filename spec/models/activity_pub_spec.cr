@@ -7,22 +7,15 @@ require "../spec_helper/model"
 
 module ActivityPub
   class ActivityPubModel
+    include Ktistec::Model(Linked)
     include ActivityPub
-
-    property iri : String = ""
-
-    def initialize(**options)
-    end
-
-    def assign(**options)
-      self
-    end
 
     def save
       self
     end
 
     def self.find?(iri)
+      nil
     end
 
     def self.map(json, **options)
@@ -31,8 +24,32 @@ module ActivityPub
   end
 end
 
+class Foo < ActivityPub::ActivityPubModel
+  @[Assignable]
+  property bar : Bar?
+end
+
+class Bar < ActivityPub::ActivityPubModel
+  @[Assignable]
+  property foo : Foo?
+end
+
 Spectator.describe ActivityPub do
   setup_spec
+
+  describe ".new" do
+    it "instantiates nested models" do
+      expect(Foo.new("bar.type": "Bar", "bar.iri": "bar").bar).to eq(Bar.new(iri: "bar"))
+      expect(Bar.new("foo.type": "Foo", "foo.iri": "foo").foo).to eq(Foo.new(iri: "foo"))
+    end
+  end
+
+  describe "#assign" do
+    it "assigns nested models" do
+      expect(Foo.new.assign("bar.type": "Bar", "bar.iri": "bar").bar).to eq(Bar.new(iri: "bar"))
+      expect(Bar.new.assign("foo.type": "Foo", "foo.iri": "foo").foo).to eq(Foo.new(iri: "foo"))
+    end
+  end
 
   describe ".from_named_tuple" do
     it "raises an error if the type is not specified" do

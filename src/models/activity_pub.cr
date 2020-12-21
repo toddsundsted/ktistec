@@ -1,8 +1,40 @@
 require "json"
 
 require "../framework/json_ld"
+require "../framework/model"
 
 module ActivityPub
+  def initialize(*, _prefix prefix : String = "", **options)
+    super(**options.merge({_prefix: prefix}))
+    {% begin %}
+      {% vs = @type.instance_vars.select { |v| v.annotation(Ktistec::Model::Assignable) || v.annotation(Ktistec::Model::Persistent) } %}
+      {% for v in vs %}
+        key = prefix + {{v.stringify}}
+        if options.keys.any? { |k| k.to_s.starts_with?(key + ".") }
+          if (o = ActivityPub.from_named_tuple?(**options.merge({_prefix: key + "."}))) && o.is_a?(typeof(self.{{v}}))
+            self.{{v}} = o
+          end
+        end
+      {% end %}
+    {% end %}
+  end
+
+  def assign(*, _prefix prefix : String = "", **options)
+    super(**options.merge({_prefix: prefix}))
+    {% begin %}
+      {% vs = @type.instance_vars.select { |v| v.annotation(Ktistec::Model::Assignable) || v.annotation(Ktistec::Model::Persistent) } %}
+      {% for v in vs %}
+        key = prefix + {{v.stringify}}
+        if options.keys.any? { |k| k.to_s.starts_with?(key + ".") }
+          if (o = ActivityPub.from_named_tuple?(**options.merge({_prefix: key + "."}))) && o.is_a?(typeof(self.{{v}}))
+            self.{{v}} = o
+          end
+        end
+      {% end %}
+    {% end %}
+    self
+  end
+
   def self.from_named_tuple(*, _prefix prefix : String = "", **options)
     {% begin %}
       key = prefix + "type"

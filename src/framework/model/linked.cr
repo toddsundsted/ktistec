@@ -22,10 +22,6 @@ module Ktistec
       macro included
         extend Ktistec::Open
 
-        def initialize(**options)
-          super(**options)
-        end
-
         @[Persistent]
         property iri : String { "" }
         validates(iri) { unique_absolute_uri?(iri) }

@@ -227,7 +227,24 @@ module Ktistec
 
       # Initializes the new instance.
       #
-      def initialize(*, _prefix prefix : String = "", **options)
+      def initialize(_prefix prefix, _options options)
+        {% begin %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
+          {% for v in vs %}
+            key = prefix + {{v.stringify}}
+            if options.has_key?(key)
+              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+                self.{{v}} = o
+              end
+            end
+          {% end %}
+        {% end %}
+        super()
+      end
+
+      # Initializes the new instance.
+      #
+      def initialize(*, _prefix prefix = "", **options)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
@@ -244,7 +261,24 @@ module Ktistec
 
       # Bulk assigns properties.
       #
-      def assign(*, _prefix prefix : String = "", **options)
+      def assign(_prefix prefix, _options options)
+        {% begin %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
+          {% for v in vs %}
+            key = prefix + {{v.stringify}}
+            if options.has_key?(key)
+              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+                self.{{v}} = o
+              end
+            end
+          {% end %}
+        {% end %}
+        self
+      end
+
+      # Bulk assigns properties.
+      #
+      def assign(*, _prefix prefix = "", **options)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}

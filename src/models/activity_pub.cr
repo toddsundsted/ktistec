@@ -4,7 +4,22 @@ require "../framework/json_ld"
 require "../framework/model"
 
 module ActivityPub
-  def initialize(*, _prefix prefix : String = "", **options)
+  def initialize(_prefix prefix, _options options)
+    super(prefix, options)
+    {% begin %}
+      {% vs = @type.instance_vars.select { |v| v.annotation(Ktistec::Model::Assignable) || v.annotation(Ktistec::Model::Persistent) } %}
+      {% for v in vs %}
+        key = prefix + {{v.stringify}}
+        if options.keys.any? { |k| k.to_s.starts_with?(key + ".") }
+          if (o = ActivityPub.from_named_tuple?(key + ".", options, default: nil)) && o.is_a?(typeof(self.{{v}}))
+            self.{{v}} = o
+          end
+        end
+      {% end %}
+    {% end %}
+  end
+
+  def initialize(*, _prefix prefix = "", **options)
     super(**options.merge({_prefix: prefix}))
     {% begin %}
       {% vs = @type.instance_vars.select { |v| v.annotation(Ktistec::Model::Assignable) || v.annotation(Ktistec::Model::Persistent) } %}
@@ -19,7 +34,23 @@ module ActivityPub
     {% end %}
   end
 
-  def assign(*, _prefix prefix : String = "", **options)
+  def assign(_prefix prefix, _options options)
+    super(prefix, options)
+    {% begin %}
+      {% vs = @type.instance_vars.select { |v| v.annotation(Ktistec::Model::Assignable) || v.annotation(Ktistec::Model::Persistent) } %}
+      {% for v in vs %}
+        key = prefix + {{v.stringify}}
+        if options.keys.any? { |k| k.to_s.starts_with?(key + ".") }
+          if (o = ActivityPub.from_named_tuple?(key + ".", options, default: nil)) && o.is_a?(typeof(self.{{v}}))
+            self.{{v}} = o
+          end
+        end
+      {% end %}
+    {% end %}
+    self
+  end
+
+  def assign(*, _prefix prefix = "", **options)
     super(**options.merge({_prefix: prefix}))
     {% begin %}
       {% vs = @type.instance_vars.select { |v| v.annotation(Ktistec::Model::Assignable) || v.annotation(Ktistec::Model::Persistent) } %}
@@ -35,26 +66,20 @@ module ActivityPub
     self
   end
 
-  def self.from_named_tuple(*, _prefix prefix : String = "", **options)
+  def self.from_named_tuple(_prefix prefix, _options options, *, default = nil)
     {% begin %}
       key = prefix + "type"
       case options[key]?
       {% for subclass in @type.includers.reduce([] of TypeNode) { |a, t| a + t.all_subclasses << t }.uniq %}
         when {{name = subclass.stringify}}
-          {% id = name.split("::").last.downcase.id %}
-          attrs = options.merge({_prefix: prefix})
-          {{id}} = {{subclass}}.find?(options["iri"]?).try(&.assign(**attrs)) ||
-            {{subclass}}.new(**attrs)
-          return {{id}}
+          {{subclass}}.find?(options["iri"]?.try(&.to_s)).try(&.assign(prefix, options)) ||
+            {{subclass}}.new(prefix, options)
       {% end %}
       else
-        if (default = options[:default]?)
-          attrs = options.merge({_prefix: prefix})
-          instance = default.find?(options["iri"]?).try(&.assign(**attrs)) ||
-            default.new(**attrs)
-          return instance
-        end
-        if (type = options[key]?)
+        if default
+          default.find?(options["iri"]?.try(&.to_s)).try(&.assign(prefix, options)) ||
+            default.new(prefix, options)
+        elsif (type = options[key]?)
           raise NotImplementedError.new(type.to_s)
         else
           raise NotImplementedError.new("no type")
@@ -63,7 +88,17 @@ module ActivityPub
     {% end %}
   end
 
-  def self.from_named_tuple?(*, _prefix prefix : String = "", **options)
+  def self.from_named_tuple?(_prefix prefix, _options options, *, default = nil)
+    from_named_tuple(prefix, options, default: default)
+  rescue NotImplementedError
+    nil
+  end
+
+  def self.from_named_tuple(*, _prefix prefix = "", **options)
+    from_named_tuple(prefix, options.to_h.transform_keys(&.to_s.as(String)), default: options[:default]?)
+  end
+
+  def self.from_named_tuple?(*, _prefix prefix = "", **options)
     from_named_tuple(**options.merge({_prefix: prefix}))
   rescue NotImplementedError
     nil

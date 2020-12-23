@@ -51,26 +51,28 @@ module Ktistec
         "\"#{table_name}\"#{as_name}"
       end
 
-      private def columns
+      private def columns(prefix = nil)
+        prefix = prefix ? "\"#{prefix}\"." : ""
         {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          {{vs.map(&.stringify.stringify).join(",")}}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)).map(&.stringify.stringify) %}
+          {{vs}}.map { |v| "#{prefix}#{v}" }.join(",")
         {% end %}
       end
 
-      private def conditions(*terms, **options)
+      private def conditions(*terms, prefix = nil, **options)
+        prefix = prefix ? "\"#{prefix}\"." : ""
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           conditions =
             [
               {% if @type < Deletable %}
-                "deleted_at IS NULL",
+                "#{prefix}\"deleted_at\" IS NULL",
               {% end %}
               {% if @type < Polymorphic %}
-                "type IN (%s)" % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
+                "#{prefix}\"type\" IN (%s)" % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
               {% end %}
             ] of String +
-            options.keys.select { |o| o.in?({{vs.map(&.symbolize)}}) }.map { |v| "#{v} = ?" } +
+            options.keys.select { |o| o.in?({{vs.map(&.symbolize)}}) }.map { |v| "#{prefix}\"#{v}\" = ?" } +
             terms.to_a
           conditions.size > 0 ?
             conditions.join(" AND ") :

@@ -21,7 +21,7 @@ class ActivityPub::Activity
         columns = {{vs.map { |v| "f.#{v.stringify}" }.join(",")}}
         query = <<-SQL
             SELECT #{columns}
-              FROM #{table_name} f
+              FROM #{table} f
               JOIN relationships r
                 ON r.from_iri = f.actor_iri
                AND r.to_iri = f.object_iri

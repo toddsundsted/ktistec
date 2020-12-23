@@ -46,6 +46,11 @@ module Ktistec
         count == 0
       end
 
+      private def table(as_name = nil)
+        as_name = as_name ? " AS \"#{as_name}\"" : ""
+        "\"#{table_name}\"#{as_name}"
+      end
+
       private def columns
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
@@ -77,7 +82,7 @@ module Ktistec
       #
       def count(**options)
         Ktistec.database.scalar(
-          "SELECT COUNT(id) FROM #{table_name} WHERE #{conditions(**options)}", *options.values
+          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options)}", *options.values
         ).as(Int)
       end
 
@@ -166,7 +171,7 @@ module Ktistec
       # Returns all instances.
       #
       def all
-        query_all("SELECT #{columns} FROM #{table_name} WHERE #{conditions}")
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions}")
       end
 
       # Finds the saved instance.
@@ -174,7 +179,7 @@ module Ktistec
       # Raises `NotFound` if no such saved instance exists.
       #
       def find(_id id : Int?)
-        query_one("SELECT #{columns} FROM #{table_name} WHERE #{conditions(id: id)}", id)
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id)}", id)
       rescue ex: DB::Error
         raise NotFound.new("#{self}: #{id}") if ex.message == "no rows"
         raise ex
@@ -194,7 +199,7 @@ module Ktistec
       # Raises `NotFound` if no such saved instance exists.
       #
       def find(**options)
-        query_one("SELECT #{columns} FROM #{table_name} WHERE #{conditions(**options)}", *options.values)
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options)}", *options.values)
       rescue ex: DB::Error
         raise NotFound.new("#{self}: #{options}") if ex.message == "no rows"
         raise ex
@@ -212,13 +217,13 @@ module Ktistec
       # Returns saved instances.
       #
       def where(**options)
-        query_all("SELECT #{columns} FROM #{table_name} WHERE #{conditions(**options)}", *options.values)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options)}", *options.values)
       end
 
       # Returns saved instances.
       #
       def where(where : String, *arguments)
-        query_all("SELECT #{columns} FROM #{table_name} WHERE #{conditions(where)}", *arguments)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(where)}", *arguments)
       end
     end
 

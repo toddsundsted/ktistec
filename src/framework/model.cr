@@ -46,12 +46,12 @@ module Ktistec
         count == 0
       end
 
-      private def table(as_name = nil)
+      def table(as_name = nil)
         as_name = as_name ? " AS \"#{as_name}\"" : ""
         "\"#{table_name}\"#{as_name}"
       end
 
-      private def columns(prefix = nil)
+      def columns(prefix = nil)
         prefix = prefix ? "\"#{prefix}\"." : ""
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)).map(&.stringify.stringify) %}
@@ -59,7 +59,7 @@ module Ktistec
         {% end %}
       end
 
-      private def conditions(*terms, prefix = nil, **options)
+      def conditions(*terms, prefix = nil, **options)
         prefix = prefix ? "\"#{prefix}\"." : ""
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
@@ -88,7 +88,7 @@ module Ktistec
         ).as(Int)
       end
 
-      private def persistent_columns
+      def persistent_columns
         {% begin %}
           {
             {% for v in @type.instance_vars.select(&.annotation(Persistent)) %}

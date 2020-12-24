@@ -78,7 +78,13 @@ module ActivityPub
     end
 
     @[Assignable]
-    property depth : Int32 { 0 }
+    property announces : Int64 = 0
+
+    @[Assignable]
+    property likes : Int64 = 0
+
+    @[Assignable]
+    property depth : Int32 = 0
 
     def thread
       {% begin %}

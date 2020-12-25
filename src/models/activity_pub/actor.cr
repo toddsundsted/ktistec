@@ -219,27 +219,21 @@ module ActivityPub
     end
 
     private def find_in?(type, object_iri)
-      {% begin %}
-        {% vs = Activity.instance_vars.select(&.annotation(Persistent)) %}
-        query = <<-QUERY
-           SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
-             FROM activities AS a, objects AS o, relationships AS r
-            WHERE r.from_iri = ?
-              AND r.to_iri = a.iri
-              AND r.type = "#{type}"
-              AND r.confirmed = 1
-              AND o.iri = a.object_iri
-              AND o.iri = "#{object_iri}"
-              AND o.deleted_at is NULL
-              AND (
-                SELECT iri FROM activities
-                 WHERE type = "#{ActivityPub::Activity::Undo}"
-                   AND actor_iri = a.actor_iri
-                   AND object_iri = a.iri
-                ) IS NULL
-        QUERY
-        Activity.query_one(query, self.iri)
-      {% end %}
+      query = <<-QUERY
+         SELECT #{Activity.columns(prefix: "a")}
+           FROM activities AS a, objects AS o, relationships AS r
+      LEFT JOIN activities AS u
+             ON u.object_iri = a.iri AND u.type = "#{ActivityPub::Activity::Undo}" AND u.actor_iri = a.actor_iri
+          WHERE r.from_iri = ?
+            AND r.to_iri = a.iri
+            AND r.type = "#{type}"
+            AND r.confirmed = 1
+            AND o.iri = a.object_iri
+            AND o.iri = ?
+            AND o.deleted_at is NULL
+            AND u.iri IS NULL
+      QUERY
+      Activity.query_one(query, self.iri, object_iri)
     rescue ex: DB::Error
       raise ex unless ex.message == "no rows"
     end

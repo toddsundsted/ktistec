@@ -33,6 +33,16 @@ module Ktistec
       end
     end
 
+    macro persistent_columns(prefix = nil)
+      {
+        {% prefix = prefix ? "#{prefix.id}." : "" %}
+        {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+        {% for v in vs %}
+          "{{prefix.id}}{{v.id}}": {{v.type}},
+        {% end %}
+      }
+    end
+
     module ClassMethods
       # Returns the table name.
       #

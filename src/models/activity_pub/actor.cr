@@ -171,52 +171,51 @@ module ActivityPub
     end
 
     private def content(type, page = 1, size = 10, public = true)
-      {% begin %}
-        {% vs = Activity.instance_vars.select(&.annotation(Persistent)) %}
-        query = <<-QUERY
-           SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
-             FROM activities AS a, relationships AS r
-        LEFT JOIN objects AS o
-               ON o.iri = a.object_iri
-            WHERE r.from_iri = ?
-              AND r.to_iri = a.iri
-              AND r.type = "#{type}"
-              AND r.confirmed = 1
-              AND a.type NOT IN ("#{ActivityPub::Activity::Delete}", "#{ActivityPub::Activity::Undo}")
-              AND o.deleted_at is NULL
-         #{public ? %Q|AND a.visible = 1| : nil}
-              AND (
-                SELECT iri FROM activities
-                 WHERE type = "#{ActivityPub::Activity::Undo}"
-                   AND actor_iri = a.actor_iri
-                   AND object_iri = a.iri
-                ) IS NULL
-              AND a.id NOT IN (
-                 SELECT a.id
-                   FROM activities AS a, relationships AS r
-              LEFT JOIN objects AS o
-                     ON o.iri = a.object_iri
-                  WHERE r.from_iri = ?
-                    AND r.to_iri = a.iri
-                    AND r.type = "#{type}"
-                    AND r.confirmed = 1
-                    AND a.type NOT IN ("#{ActivityPub::Activity::Delete}", "#{ActivityPub::Activity::Undo}")
-                    AND o.deleted_at is NULL
-               #{public ? %Q|AND a.visible = 1| : nil}
-                    AND (
-                      SELECT iri FROM activities
-                       WHERE type = "#{ActivityPub::Activity::Undo}"
-                         AND actor_iri = a.actor_iri
-                         AND object_iri = a.iri
-                      ) IS NULL
-               ORDER BY r.created_at DESC
-                  LIMIT ?
-              )
-         ORDER BY r.created_at DESC
-            LIMIT ?
-        QUERY
-        Activity.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
-      {% end %}
+      query = <<-QUERY
+         SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "o")}, sum(c.announces), sum(c.likes)
+           FROM activities AS a, relationships AS r
+      LEFT JOIN objects AS o
+             ON o.iri = a.object_iri
+      LEFT JOIN activities AS u
+             ON u.object_iri = a.iri AND u.type = "#{ActivityPub::Activity::Undo}" AND u.actor_iri = a.actor_iri
+      LEFT JOIN (select id, object_iri, actor_iri, (type = "#{ActivityPub::Activity::Announce}") as announces, (type = "#{ActivityPub::Activity::Like}") as likes from activities) AS c
+             ON c.object_iri = o.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
+          WHERE r.from_iri = ?
+            AND r.to_iri = a.iri
+            AND r.type = "#{type}"
+            AND r.confirmed = 1
+            AND a.type NOT IN ("#{ActivityPub::Activity::Delete}", "#{ActivityPub::Activity::Undo}")
+            AND o.deleted_at is NULL
+            AND u.iri IS NULL
+       #{public ? %Q|AND a.visible = 1| : nil}
+            AND a.id NOT IN (
+               SELECT a.id
+                 FROM activities AS a, relationships AS r
+            LEFT JOIN objects AS o
+                   ON o.iri = a.object_iri
+            LEFT JOIN activities AS u
+                   ON u.object_iri = a.iri AND u.type = "#{ActivityPub::Activity::Undo}" AND u.actor_iri = a.actor_iri
+            LEFT JOIN (select id, object_iri, actor_iri, (type = "#{ActivityPub::Activity::Announce}") as announces, (type = "#{ActivityPub::Activity::Like}") as likes from activities) AS c
+                   ON c.object_iri = o.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
+                WHERE r.from_iri = ?
+                  AND r.to_iri = a.iri
+                  AND r.type = "#{type}"
+                  AND r.confirmed = 1
+                  AND a.type NOT IN ("#{ActivityPub::Activity::Delete}", "#{ActivityPub::Activity::Undo}")
+                  AND o.deleted_at is NULL
+                  AND u.iri IS NULL
+             #{public ? %Q|AND a.visible = 1| : nil}
+             GROUP BY a.id
+             ORDER BY r.created_at DESC
+                LIMIT ?
+            )
+       GROUP BY a.id
+       ORDER BY r.created_at DESC
+          LIMIT ?
+      QUERY
+      counts  ={"object.announces": Int64?, "object.likes": Int64?}
+      object_columns = Object.persistent_columns(prefix: :object).merge(counts)
+      Activity.query_and_paginate(query, self.iri, self.iri, additional_columns: object_columns, page: page, size: size)
     end
 
     private def find_in?(type, object_iri)

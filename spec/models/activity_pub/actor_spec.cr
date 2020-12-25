@@ -1,4 +1,5 @@
 require "../../../src/models/activity_pub/actor"
+require "../../../src/models/activity_pub/activity/like"
 require "../../../src/models/activity_pub/object/note"
 
 require "../../spec_helper/model"
@@ -208,12 +209,19 @@ Spectator.describe ActivityPub::Actor do
 
   context "for outbox" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+    let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_outbox(index)
+      let(note{{index}}) do
+        ActivityPub::Object::Note.new(
+          iri: "https://test.test/objects/#{random_string}"
+        )
+      end
       let(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
           actor: subject,
+          object: note{{index}},
           visible: false
         )
       end
@@ -238,12 +246,25 @@ Spectator.describe ActivityPub::Actor do
         iri: "https://test.test/note"
       )
     end
-
     let(undo) do
       ActivityPub::Activity::Undo.new(
         iri: "https://test.test/undo",
         actor: subject,
         object: activity5
+      )
+    end
+    let(announce) do
+      ActivityPub::Activity::Announce.new(
+        iri: "https://test.test/announce",
+        actor: other,
+        object: note5
+      )
+    end
+    let(like) do
+      ActivityPub::Activity::Like.new(
+        iri: "https://test.test/like",
+        actor: other,
+        object: note4
       )
     end
 
@@ -257,13 +278,23 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "filters out deleted posts" do
-        activity5.assign(object: note).save ; note.delete
+        note5.delete
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
       it "filters out undone activities" do
         undo.save
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "includes count of announcements" do
+        announce.save
+        expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces)).to eq([1, 0])
+      end
+
+      it "includes count of likes" do
+        like.save
+        expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.likes)).to eq([0, 1])
       end
 
       it "paginates the results" do
@@ -275,18 +306,17 @@ Spectator.describe ActivityPub::Actor do
 
     describe "#in_outbox?" do
       it "returns true if object is in outbox" do
-        activity1.assign(object: note).save
-        expect(subject.in_outbox?(note)).to be_truthy
+        expect(subject.in_outbox?(note1)).to be_truthy
       end
 
       it "returns false if object has been deleted" do
-        activity1.assign(object: note).save ; note.delete
-        expect(subject.in_outbox?(note)).to be_falsey
+        note1.delete
+        expect(subject.in_outbox?(note1)).to be_falsey
       end
 
       it "returns false if activity has been undone" do
-        activity5.assign(object: note).save ; undo.save
-        expect(subject.in_outbox?(note)).to be_falsey
+        undo.save
+        expect(subject.in_outbox?(note5)).to be_falsey
       end
 
       it "returns false if object is not in outbox" do
@@ -297,12 +327,19 @@ Spectator.describe ActivityPub::Actor do
 
   context "for inbox" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+    let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_inbox(index)
+      let(note{{index}}) do
+        ActivityPub::Object::Note.new(
+          iri: "https://test.test/objects/#{random_string}"
+        )
+      end
       let(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
           actor: subject,
+          object: note{{index}},
           visible: false
         )
       end
@@ -327,12 +364,25 @@ Spectator.describe ActivityPub::Actor do
         iri: "https://test.test/note"
       )
     end
-
     let(undo) do
       ActivityPub::Activity::Undo.new(
         iri: "https://test.test/undo",
         actor: subject,
         object: activity5
+      )
+    end
+    let(announce) do
+      ActivityPub::Activity::Announce.new(
+        iri: "https://test.test/announce",
+        actor: other,
+        object: note5
+      )
+    end
+    let(like) do
+      ActivityPub::Activity::Like.new(
+        iri: "https://test.test/like",
+        actor: other,
+        object: note4
       )
     end
 
@@ -346,13 +396,23 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "filters out deleted posts" do
-        activity5.assign(object: note).save ; note.delete
+        note5.delete
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
       it "filters out undone activities" do
         undo.save
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "includes count of announcements" do
+        announce.save
+        expect(subject.in_inbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces)).to eq([1, 0])
+      end
+
+      it "includes count of likes" do
+        like.save
+        expect(subject.in_inbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.likes)).to eq([0, 1])
       end
 
       it "paginates the results" do
@@ -364,18 +424,17 @@ Spectator.describe ActivityPub::Actor do
 
     describe "#in_inbox?" do
       it "returns true if object is in inbox" do
-        activity1.assign(object: note).save
-        expect(subject.in_inbox?(note)).to be_truthy
+        expect(subject.in_inbox?(note1)).to be_truthy
       end
 
       it "returns false if object has been deleted" do
-        activity1.assign(object: note).save ; note.delete
-        expect(subject.in_inbox?(note)).to be_falsey
+        note1.delete
+        expect(subject.in_inbox?(note1)).to be_falsey
       end
 
       it "returns false if activity has been undone" do
-        activity5.assign(object: note).save ; undo.save
-        expect(subject.in_inbox?(note)).to be_falsey
+        undo.save
+        expect(subject.in_inbox?(note5)).to be_falsey
       end
 
       it "returns false if object is not in inbox" do

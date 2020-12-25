@@ -287,6 +287,11 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
+      it "excludes undo activities" do
+        Relationship::Content::Outbox.new(owner: subject, activity: undo).save
+        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
+      end
+
       it "includes count of announcements" do
         announce.save
         expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces)).to eq([1, 0])
@@ -405,6 +410,11 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
+      it "excludes undo activities" do
+        Relationship::Content::Inbox.new(owner: subject, activity: undo).save
+        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
+      end
+
       it "includes count of announcements" do
         announce.save
         expect(subject.in_inbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces)).to eq([1, 0])
@@ -451,7 +461,6 @@ Spectator.describe ActivityPub::Actor do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
           actor: subject,
-          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
           visible: false
         )
       end
@@ -459,7 +468,8 @@ Spectator.describe ActivityPub::Actor do
         Relationship::Content::{{box}}.new(
           owner: subject,
           activity: activity{{index}},
-          confirmed: true
+          confirmed: true,
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
         ).save
       end
     end
@@ -509,12 +519,19 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let!(activity{{index}}) do
+      let(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
           actor: subject,
-          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
           visible: {{index}}.odd?
+        ).save
+      end
+      let!(relationship{{index}}) do
+        Relationship::Content::Outbox.new(
+          owner: subject,
+          activity: activity{{index}},
+          confirmed: true,
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
         ).save
       end
     end

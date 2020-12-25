@@ -170,7 +170,28 @@ module ActivityPub
       {% end %}
     end
 
-    private def content(type, page = 1, size = 10, public = true)
+    private def content(mailbox, inclusion = nil, exclusion = nil, page = 1, size = 10, public = true)
+      mailbox =
+        case mailbox
+        when Class
+          %Q|AND r.type = "#{mailbox}"|
+        when Array
+          %Q|AND r.type IN (#{mailbox.map(&.to_s.inspect).join(",")})|
+        end
+      inclusion =
+        case inclusion
+        when Class
+          %Q|AND a.type = "#{inclusion}"|
+        when Array
+          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        end
+      exclusion =
+        case exclusion
+        when Class
+          %Q|AND a.type != "#{exclusion}"|
+        when Array
+          %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
+        end
       query = <<-QUERY
          SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "o")}, sum(c.announces), sum(c.likes)
            FROM activities AS a, relationships AS r
@@ -182,9 +203,10 @@ module ActivityPub
              ON c.object_iri = o.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
           WHERE r.from_iri = ?
             AND r.to_iri = a.iri
-            AND r.type = "#{type}"
+            #{mailbox}
             AND r.confirmed = 1
-            AND a.type NOT IN ("#{ActivityPub::Activity::Delete}", "#{ActivityPub::Activity::Undo}")
+            #{inclusion}
+            #{exclusion}
             AND o.deleted_at is NULL
             AND u.iri IS NULL
        #{public ? %Q|AND a.visible = 1| : nil}
@@ -199,9 +221,10 @@ module ActivityPub
                    ON c.object_iri = o.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
                 WHERE r.from_iri = ?
                   AND r.to_iri = a.iri
-                  AND r.type = "#{type}"
+                  #{mailbox}
                   AND r.confirmed = 1
-                  AND a.type NOT IN ("#{ActivityPub::Activity::Delete}", "#{ActivityPub::Activity::Undo}")
+                  #{inclusion}
+                  #{exclusion}
                   AND o.deleted_at is NULL
                   AND u.iri IS NULL
              #{public ? %Q|AND a.visible = 1| : nil}
@@ -239,7 +262,7 @@ module ActivityPub
     end
 
     def in_outbox(page = 1, size = 10, public = true)
-      content(Relationship::Content::Outbox, page, size, public)
+      content(Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
     def in_outbox?(object : Object)
@@ -247,7 +270,7 @@ module ActivityPub
     end
 
     def in_inbox(page = 1, size = 10, public = true)
-      content(Relationship::Content::Inbox, page, size, public)
+      content(Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
     def in_inbox?(object : Object)
@@ -255,93 +278,25 @@ module ActivityPub
     end
 
     def both_mailboxes(page = 1, size = 10)
-      {% begin %}
-        {% vs = Activity.instance_vars.select(&.annotation(Persistent)) %}
-        query = <<-QUERY
-           SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
-             FROM activities AS a, relationships AS r
-        LEFT JOIN objects AS o
-               ON o.iri = a.object_iri
-            WHERE r.from_iri = ?
-              AND r.to_iri = a.iri
-              AND r.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-              AND r.confirmed = 1
-              AND o.deleted_at is NULL
-              AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
-              AND (
-                SELECT iri FROM activities
-                 WHERE type = "#{ActivityPub::Activity::Undo}"
-                   AND actor_iri = a.actor_iri
-                   AND object_iri = a.iri
-                ) IS NULL
-              AND a.id NOT IN (
-                 SELECT a.id
-                   FROM activities AS a, relationships AS r
-              LEFT JOIN objects AS o
-                     ON o.iri = a.object_iri
-                  WHERE r.from_iri = ?
-                    AND r.to_iri = a.iri
-                    AND r.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-                    AND r.confirmed = 1
-                    AND o.deleted_at is NULL
-                    AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
-                    AND (
-                      SELECT iri FROM activities
-                       WHERE type = "#{ActivityPub::Activity::Undo}"
-                         AND actor_iri = a.actor_iri
-                         AND object_iri = a.iri
-                      ) IS NULL
-               ORDER BY a.published DESC
-                  LIMIT ?
-              )
-         ORDER BY a.published DESC
-            LIMIT ?
-        QUERY
-        Activity.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
-      {% end %}
+      content(
+        [Relationship::Content::Inbox, Relationship::Content::Outbox],
+        [ActivityPub::Activity::Create, ActivityPub::Activity::Announce],
+        nil,
+        page,
+        size,
+        false
+      )
     end
 
     def public_posts(page = 1, size = 10)
-      {% begin %}
-        {% vs = Activity.instance_vars.select(&.annotation(Persistent)) %}
-        query = <<-QUERY
-           SELECT {{ vs.map{ |v| "a.\"#{v}\"" }.join(",").id }}
-             FROM activities AS a
-        LEFT JOIN objects AS o
-               ON o.iri = a.object_iri
-            WHERE a.actor_iri = ?
-              AND o.deleted_at is NULL
-              AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
-              AND a.visible = 1
-              AND (
-                SELECT iri FROM activities
-                 WHERE type = "#{ActivityPub::Activity::Undo}"
-                   AND actor_iri = a.actor_iri
-                   AND object_iri = a.iri
-                ) IS NULL
-              AND a.id NOT IN (
-                 SELECT a.id
-                   FROM activities AS a
-              LEFT JOIN objects AS o
-                     ON o.iri = a.object_iri
-                  WHERE a.actor_iri = ?
-                    AND o.deleted_at is NULL
-                    AND a.type IN ("#{ActivityPub::Activity::Create}", "#{ActivityPub::Activity::Announce}")
-                    AND a.visible = 1
-                    AND (
-                      SELECT iri FROM activities
-                       WHERE type = "#{ActivityPub::Activity::Undo}"
-                         AND actor_iri = a.actor_iri
-                         AND object_iri = a.iri
-                      ) IS NULL
-               ORDER BY a.published DESC
-                  LIMIT ?
-              )
-         ORDER BY a.published DESC
-            LIMIT ?
-        QUERY
-        Activity.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
-      {% end %}
+      content(
+        Relationship::Content::Outbox,
+        [ActivityPub::Activity::Create, ActivityPub::Activity::Announce],
+        nil,
+        page,
+        size,
+        true
+      )
     end
 
     def to_json_ld(recursive = false)

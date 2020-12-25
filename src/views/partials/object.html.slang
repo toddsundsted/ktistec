@@ -33,6 +33,14 @@
     - else
       a href=_author.display_link = _author.display_name
       a href=_object.display_link = _object.display_date
+    - if _object.likes > 0
+      button.ui.mini.iconic.button
+        i.star.icon
+        = (c = _object.likes) > 1 ? "#{c} Likes" : "1 Like"
+    - if _object.announces > 0
+      button.ui.mini.iconic.button
+        i.share.icon
+        = (c = _object.announces) > 1 ? "#{c} Shares" : "1 Share"
     - if __account
       a href=replies_path(_object)
         button.ui.mini.iconic.button

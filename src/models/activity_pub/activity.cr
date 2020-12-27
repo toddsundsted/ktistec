@@ -41,7 +41,7 @@ module ActivityPub
     property summary : String?
 
     def display_date
-      published.try(&.to_local) || created_at.to_local
+      (published || created_at).to_local.to_s("%l:%M%P · %b %-d, %Y").lstrip(' ')
     end
 
     def to_json_ld(recursive = false)

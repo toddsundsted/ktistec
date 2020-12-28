@@ -1,3 +1,4 @@
+require "../../src/framework/model/linked"
 require "../../src/models/activity_pub"
 require "../../src/models/activity_pub/actor/person"
 require "../../src/models/activity_pub/collection"
@@ -37,55 +38,55 @@ Spectator.describe ActivityPub do
 
   describe ".new" do
     it "instantiates nested models" do
-      expect(Foo.new("bar.type": "Bar", "bar.iri": "bar").bar).to eq(Bar.new(iri: "bar"))
-      expect(Bar.new("foo.type": "Foo", "foo.iri": "foo").foo).to eq(Foo.new(iri: "foo"))
+      expect(Foo.new("", {"bar.type" => "Bar", "bar.iri" => "bar"}).bar).to eq(Bar.new(iri: "bar"))
+      expect(Bar.new("", {"foo.type" => "Foo", "foo.iri" => "foo"}).foo).to eq(Foo.new(iri: "foo"))
     end
   end
 
   describe "#assign" do
     it "assigns nested models" do
-      expect(Foo.new.assign("bar.type": "Bar", "bar.iri": "bar").bar).to eq(Bar.new(iri: "bar"))
-      expect(Bar.new.assign("foo.type": "Foo", "foo.iri": "foo").foo).to eq(Foo.new(iri: "foo"))
+      expect(Foo.new.assign("", {"bar.type" => "Bar", "bar.iri" => "bar"}).bar).to eq(Bar.new(iri: "bar"))
+      expect(Bar.new.assign("", {"foo.type" => "Foo", "foo.iri" => "foo"}).foo).to eq(Foo.new(iri: "foo"))
     end
   end
 
-  describe ".from_named_tuple" do
+  describe ".from_hash" do
     it "raises an error if the type is not specified" do
-      expect{described_class.from_named_tuple(**NamedTuple.new)}.to raise_error(NotImplementedError)
+      expect{described_class.from_hash("", Hash(String, String).new)}.to raise_error(NotImplementedError)
     end
 
     it "defaults the instance to the specified class" do
-      expect(described_class.from_named_tuple(default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
+      expect(described_class.from_hash("", Hash(String, String).new, default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
     end
 
     it "raises an error if the type is not supported" do
-      expect{described_class.from_named_tuple(type: "FooBar")}.to raise_error(NotImplementedError)
+      expect{described_class.from_hash("", {"type" => "FooBar"})}.to raise_error(NotImplementedError)
     end
 
     it "defaults the instance to the specified class" do
-      expect(described_class.from_named_tuple(type: "FooBar", default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
+      expect(described_class.from_hash("", {"type" => "FooBar"}, default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
     end
 
     it "instantiates the correct subclass" do
-      expect(described_class.from_named_tuple(type: "ActivityPub::Actor::Person")).to be_a(ActivityPub::Actor::Person)
-      expect(described_class.from_named_tuple(type: "ActivityPub::Object::Note")).to be_a(ActivityPub::Object::Note)
+      expect(described_class.from_hash("", {"type" => "ActivityPub::Actor::Person"})).to be_a(ActivityPub::Actor::Person)
+      expect(described_class.from_hash("", {"type" => "ActivityPub::Object::Note"})).to be_a(ActivityPub::Object::Note)
     end
 
     subject { ActivityPub::Activity.new(iri: "https://test.test/foo_bar").save }
 
     it "creates an instance if one doesn't exist" do
-      options = {iri: "https://test.test/bar_foo", type: "ActivityPub::Activity"}
-      expect{described_class.from_named_tuple(**options).save}.to change{ActivityPub::Activity.count}.by(1)
+      options = {"iri" => "https://test.test/bar_foo", "type" => "ActivityPub::Activity"}
+      expect{described_class.from_hash("", options).save}.to change{ActivityPub::Activity.count}.by(1)
     end
 
     it "updates the instance if it already exists" do
-      options = {iri: "https://test.test/foo_bar", type: "ActivityPub::Activity", summary: "foo bar baz"}
-      expect{described_class.from_named_tuple(**options).save}.to change{ActivityPub::Activity.find(subject.iri).summary}
+      options = {"iri" => "https://test.test/foo_bar", "type" => "ActivityPub::Activity", "summary" => "foo bar baz"}
+      expect{described_class.from_hash("", options).save}.to change{ActivityPub::Activity.find(subject.iri).summary}
     end
 
     it "is defined on includers" do
-      options = {type: "ActivityPubModel"}
-      expect{ActivityPubModel.from_named_tuple(**options)}.to be_a(ActivityPubModel)
+      options = {"type" => "ActivityPubModel"}
+      expect{ActivityPubModel.from_hash(options)}.to be_a(ActivityPubModel)
     end
   end
 

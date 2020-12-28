@@ -23,7 +23,7 @@ class Account
   # This constructor is used to create new accounts (which must have a
   # valid username and password).
   #
-  def self.new(user username, pass password, **options)
+  def self.new(user username : String, pass password : String, **options)
     new(**options.merge({
       username: username,
       password: password

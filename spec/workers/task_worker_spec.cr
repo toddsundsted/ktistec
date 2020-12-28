@@ -11,12 +11,12 @@ class FooBarTask < Task
 end
 
 class ExceptionTask < Task
-  def initialize(**options)
+  def initialize(prefix = "", options = Hash(String, String).new)
     options = {
-      source_iri: "https://test.test/source",
-      subject_iri: "https://test.test/subject"
-    }.merge(**options)
-    super(**options)
+      "source_iri" => "https://test.test/source",
+      "subject_iri" => "https://test.test/subject"
+    }.merge(options)
+    super(prefix, options)
   end
 
   def perform
@@ -25,12 +25,12 @@ class ExceptionTask < Task
 end
 
 class RescheduleTask < Task
-  def initialize(**options)
+  def initialize(prefix = "", options = Hash(String, String).new)
     options = {
-      source_iri: "https://test.test/source",
-      subject_iri: "https://test.test/subject"
-    }.merge(**options)
-    super(**options)
+      "source_iri" => "https://test.test/source",
+      "subject_iri" => "https://test.test/subject"
+    }.merge(options)
+    super(prefix, options)
   end
 
   def perform

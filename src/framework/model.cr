@@ -119,18 +119,19 @@ module Ktistec
       end
 
       private def compose(**options) : self
+        options = options.to_h.transform_keys(&.to_s.as(String))
         {% begin %}
           {% if @type < Polymorphic %}
-            case options[:type]
+            case options["type"]
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
-                {{subclass}}.new(**options)
+                {{subclass}}.new("", options)
             {% end %}
             else
-              self.new(**options)
+              self.new("", options)
             end
           {% else %}
-            self.new(**options)
+            self.new("", options)
           {% end %}
         {% end %}
       end
@@ -244,7 +245,7 @@ module Ktistec
 
       # Initializes the new instance.
       #
-      def initialize(_prefix prefix, _options options)
+      def initialize(prefix : String, options : Hash)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
@@ -261,11 +262,11 @@ module Ktistec
 
       # Initializes the new instance.
       #
-      def initialize(*, _prefix prefix = "", **options)
+      def initialize(**options)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
-            key = prefix + {{v.stringify}}
+            key = {{v.stringify}}
             if options.has_key?(key)
               if (o = options[key]?).is_a?(typeof(self.{{v}}))
                 self.{{v}} = o
@@ -278,7 +279,7 @@ module Ktistec
 
       # Bulk assigns properties.
       #
-      def assign(_prefix prefix, _options options)
+      def assign(prefix : String, options : Hash)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
@@ -295,11 +296,11 @@ module Ktistec
 
       # Bulk assigns properties.
       #
-      def assign(*, _prefix prefix = "", **options)
+      def assign(**options)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
-            key = prefix + {{v.stringify}}
+            key = {{v.stringify}}
             if options.has_key?(key)
               if (o = options[key]?).is_a?(typeof(self.{{v}}))
                 self.{{v}} = o

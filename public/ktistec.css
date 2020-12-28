@@ -15,6 +15,8 @@ body { display: flex; flex-direction: column; }
 /* overlapping profile icons */
 .ui.feed > .event > .label img + img { display: block; margin: -1.85rem 0 0 0.95rem; width: 75%; }
 .ui.feed > .event > .label img + i { display: block; margin: -2.15rem 0 0 0.95rem; width: 75%; }
+.ui.feed > .event > .label i + img { display: block; margin: -1.05rem 0 0 0.95rem; width: 75%; }
+.ui.feed > .event > .label i + i { display: block; margin: -1.75rem 0 0 0.95rem; width: 75%; }
 
 /* remove margin on figures */
 .ui.feed > .event > .content figure { margin: auto; }

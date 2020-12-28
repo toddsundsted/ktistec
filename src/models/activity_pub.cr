@@ -89,18 +89,15 @@ module ActivityPub
         when {{name = subclass.stringify.split("::").last}}
           {% id = name.downcase.id %}
           attrs = {{subclass}}.map(json, **options)
-          {{id}} = {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(**attrs)) ||
+          {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(**attrs)) ||
             {{subclass}}.new(**attrs)
-          return {{id}}
       {% end %}
       else
         if (default = options[:default]?)
           attrs = default.map(json, **options)
-          instance = default.find?(json["@id"]?.try(&.as_s)).try(&.assign(**attrs)) ||
+          default.find?(json["@id"]?.try(&.as_s)).try(&.assign(**attrs)) ||
             default.new(**attrs)
-          return instance
-        end
-        if (type = json["@type"]?)
+        elsif (type = json["@type"]?)
           raise NotImplementedError.new(type.as_s)
         else
           raise NotImplementedError.new("no type")

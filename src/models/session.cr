@@ -11,7 +11,7 @@ class Session
 
   # Allocates a new session for an account.
   #
-  def self.new(_account account)
+  def self.new(_account account : Account)
     new(account_id: account.id)
   end
 

@@ -198,7 +198,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "ignores supplied prefix" do
-      expect(FooBarModel.new("prefix.", {"prefix.foo" => "Foo"}).foo).to eq("Foo")
+      expect(FooBarModel.new({"prefix.foo" => "Foo"}, prefix: "prefix.").foo).to eq("Foo")
     end
 
     it "supports assignment of nil" do
@@ -216,7 +216,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "ignores supplied prefix" do
-      expect(FooBarModel.new(foo: "").assign("prefix.", {"prefix.foo" => "Foo"}).foo).to eq("Foo")
+      expect(FooBarModel.new(foo: "").assign({"prefix.foo" => "Foo"}, prefix: "prefix.").foo).to eq("Foo")
     end
 
     it "supports assignment of nil" do

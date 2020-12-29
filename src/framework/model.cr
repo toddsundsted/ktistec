@@ -125,13 +125,13 @@ module Ktistec
             case options["type"]
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
-                {{subclass}}.new("", options)
+                {{subclass}}.new(options)
             {% end %}
             else
-              self.new("", options)
+              self.new(options)
             end
           {% else %}
-            self.new("", options)
+            self.new(options)
           {% end %}
         {% end %}
       end
@@ -245,7 +245,7 @@ module Ktistec
 
       # Initializes the new instance.
       #
-      def initialize(prefix : String, options : Hash)
+      def initialize(options : Hash, prefix : String = "")
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
@@ -279,7 +279,7 @@ module Ktistec
 
       # Bulk assigns properties.
       #
-      def assign(prefix : String, options : Hash)
+      def assign(options : Hash, prefix : String = "")
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}

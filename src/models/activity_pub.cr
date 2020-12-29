@@ -4,8 +4,8 @@ require "../framework/json_ld"
 require "../framework/model"
 
 module ActivityPub
-  def initialize(prefix : String, options : Hash)
-    super(prefix, options)
+  def initialize(options : Hash, prefix : String = "")
+    super(options, prefix: prefix)
     {% begin %}
       {% vs = @type.instance_vars.select { |v| v.annotation(Ktistec::Model::Assignable) || v.annotation(Ktistec::Model::Persistent) } %}
       {% for v in vs %}
@@ -23,8 +23,8 @@ module ActivityPub
     super(**options)
   end
 
-  def assign(prefix : String, options : Hash)
-    super(prefix, options)
+  def assign(options : Hash, prefix : String = "")
+    super(options, prefix: prefix)
     {% begin %}
       {% vs = @type.instance_vars.select { |v| v.annotation(Ktistec::Model::Assignable) || v.annotation(Ktistec::Model::Persistent) } %}
       {% for v in vs %}
@@ -49,13 +49,13 @@ module ActivityPub
       case options[key]?
       {% for subclass in @type.includers.reduce([] of TypeNode) { |a, t| a + t.all_subclasses << t }.uniq %}
         when {{name = subclass.stringify}}
-          {{subclass}}.find?(options["iri"]?.try(&.to_s)).try(&.assign(prefix, options)) ||
-            {{subclass}}.new(prefix, options)
+          {{subclass}}.find?(options["iri"]?.try(&.to_s)).try(&.assign(options, prefix: prefix)) ||
+            {{subclass}}.new(options, prefix: prefix)
       {% end %}
       else
         if default
-          default.find?(options["iri"]?.try(&.to_s)).try(&.assign(prefix, options)) ||
-            default.new(prefix, options)
+          default.find?(options["iri"]?.try(&.to_s)).try(&.assign(options, prefix: prefix)) ||
+            default.new(options, prefix: prefix)
         elsif (type = options[key]?)
           raise NotImplementedError.new(type.to_s)
         else

@@ -38,15 +38,15 @@ Spectator.describe ActivityPub do
 
   describe ".new" do
     it "instantiates nested models" do
-      expect(Foo.new("", {"bar.type" => "Bar", "bar.iri" => "bar"}).bar).to eq(Bar.new(iri: "bar"))
-      expect(Bar.new("", {"foo.type" => "Foo", "foo.iri" => "foo"}).foo).to eq(Foo.new(iri: "foo"))
+      expect(Foo.new({"bar.type" => "Bar", "bar.iri" => "bar"}).bar).to eq(Bar.new(iri: "bar"))
+      expect(Bar.new({"foo.type" => "Foo", "foo.iri" => "foo"}).foo).to eq(Foo.new(iri: "foo"))
     end
   end
 
   describe "#assign" do
     it "assigns nested models" do
-      expect(Foo.new.assign("", {"bar.type" => "Bar", "bar.iri" => "bar"}).bar).to eq(Bar.new(iri: "bar"))
-      expect(Bar.new.assign("", {"foo.type" => "Foo", "foo.iri" => "foo"}).foo).to eq(Foo.new(iri: "foo"))
+      expect(Foo.new.assign({"bar.type" => "Bar", "bar.iri" => "bar"}).bar).to eq(Bar.new(iri: "bar"))
+      expect(Bar.new.assign({"foo.type" => "Foo", "foo.iri" => "foo"}).foo).to eq(Foo.new(iri: "foo"))
     end
   end
 

@@ -28,8 +28,8 @@ body { display: flex; flex-direction: column; }
 .ui.feed .meta > form { display: inline; }
 
 /* images in posts */
-.ui.feed .ui.image { object-fit: cover; }
-.ui.feed .extra.images img { object-fit: cover; }
+.ui.feed .ui.image { object-fit: cover; cursor: zoom-in; }
+.ui.feed .extra.images img { object-fit: cover; cursor: zoom-in; }
 @media screen and (max-width: 599px) { /* phones */
     .ui.feed .ui.image { width: 250px; height: 250px; }
     .ui.feed .extra.images img { width: 95px; height: 95px; }

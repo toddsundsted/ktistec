@@ -86,7 +86,7 @@ module Ktistec
             terms.to_a
           conditions.size > 0 ?
             conditions.join(" AND ") :
-            "true"
+            "1"
         {% end %}
       end
 

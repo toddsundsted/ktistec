@@ -734,6 +734,44 @@ Spectator.describe RelationshipsController do
         end
       end
 
+      context "a like" do
+        let(like) do
+          ActivityPub::Activity::Like.new(
+            iri: "https://test.test/activities/like",
+            actor: other,
+            object: ActivityPub::Object.new(
+              iri: "https://test.test/objects/object",
+            )
+          ).save
+        end
+
+        before_each do
+          undo.assign(object: like)
+        end
+
+        it "returns 400 if related activity does not exist" do
+          like.destroy
+          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the like and undo aren't from the same actor" do
+          like.assign(actor: actor).save
+          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          expect(response.status_code).to eq(400)
+        end
+
+        it "puts the activity in the actor's inbox" do
+          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
+            to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          expect(response.status_code).to eq(200)
+        end
+      end
+
       context "a follow" do
         let(follow) do
           ActivityPub::Activity::Follow.new(

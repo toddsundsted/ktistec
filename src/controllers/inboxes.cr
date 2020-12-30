@@ -149,7 +149,7 @@ class RelationshipsController
         bad_request
       end
       case (object = activity.object?(dereference: true))
-      when ActivityPub::Activity::Announce
+      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like
         unless object.actor == activity.actor
           bad_request
         end

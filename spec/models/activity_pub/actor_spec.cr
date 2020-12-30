@@ -297,9 +297,19 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces)).to eq([1, 0])
       end
 
+      it "filters out undone activities" do
+        undo.assign(actor: announce.actor, object: announce).save
+        expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces)).to eq([0, 0])
+      end
+
       it "includes count of likes" do
         like.save
         expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.likes)).to eq([0, 1])
+      end
+
+      it "filters out undone activities" do
+        undo.assign(actor: like.actor, object: like).save
+        expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces)).to eq([0, 0])
       end
 
       it "paginates the results" do

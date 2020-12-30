@@ -198,8 +198,17 @@ module ActivityPub
       LEFT JOIN objects AS o
              ON o.iri = a.object_iri
       LEFT JOIN activities AS u
-             ON u.object_iri = a.iri AND u.type = "#{ActivityPub::Activity::Undo}" AND u.actor_iri = a.actor_iri
-      LEFT JOIN (select id, object_iri, actor_iri, (type = "#{ActivityPub::Activity::Announce}") as announces, (type = "#{ActivityPub::Activity::Like}") as likes from activities) AS c
+             ON u.object_iri = a.iri
+            AND u.type = "#{ActivityPub::Activity::Undo}"
+            AND u.actor_iri = a.actor_iri
+      LEFT JOIN (   SELECT a.id, a.object_iri, a.actor_iri, (a.type = "#{ActivityPub::Activity::Announce}") AS announces, (a.type = "#{ActivityPub::Activity::Like}") AS likes
+                      FROM activities AS a
+                 LEFT JOIN activities AS u
+                        ON u.object_iri = a.iri
+                       AND u.type = "#{ActivityPub::Activity::Undo}"
+                       AND u.actor_iri = a.actor_iri
+                     WHERE u.iri IS NULL
+                ) AS c
              ON c.object_iri = o.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
           WHERE r.from_iri = ?
             AND r.to_iri = a.iri
@@ -216,8 +225,17 @@ module ActivityPub
             LEFT JOIN objects AS o
                    ON o.iri = a.object_iri
             LEFT JOIN activities AS u
-                   ON u.object_iri = a.iri AND u.type = "#{ActivityPub::Activity::Undo}" AND u.actor_iri = a.actor_iri
-            LEFT JOIN (select id, object_iri, actor_iri, (type = "#{ActivityPub::Activity::Announce}") as announces, (type = "#{ActivityPub::Activity::Like}") as likes from activities) AS c
+                   ON u.object_iri = a.iri
+                  AND u.type = "#{ActivityPub::Activity::Undo}"
+                  AND u.actor_iri = a.actor_iri
+            LEFT JOIN (   SELECT a.id, a.object_iri, a.actor_iri, (a.type = "#{ActivityPub::Activity::Announce}") AS announces, (a.type = "#{ActivityPub::Activity::Like}") AS likes
+                            FROM activities AS a
+                       LEFT JOIN activities AS u
+                              ON u.object_iri = a.iri
+                             AND u.type = "#{ActivityPub::Activity::Undo}"
+                             AND u.actor_iri = a.actor_iri
+                           WHERE u.iri IS NULL
+                      ) AS c
                    ON c.object_iri = o.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
                 WHERE r.from_iri = ?
                   AND r.to_iri = a.iri

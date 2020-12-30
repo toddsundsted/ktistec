@@ -33,19 +33,59 @@
     - else
       a href=_author.display_link = _author.display_name
       a href=_object.display_link = _object.display_date
-    - if _object.likes > 0
-      button.ui.mini.iconic.button
-        i.star.icon
-        = (c = _object.likes) > 1 ? "#{c} Likes" : "1 Like"
-    - if _object.announces > 0
-      button.ui.mini.iconic.button
-        i.share.icon
-        = (c = _object.announces) > 1 ? "#{c} Shares" : "1 Share"
     - if __account
       a href=replies_path(_object)
         button.ui.mini.iconic.button
           i.reply.icon
           | Reply
+      - if (c = _object.likes) > 0 && (to_undo = __account.actor.in_outbox?(_object, ActivityPub::Activity::Like))
+        form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
+          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+          input type="hidden" name="object" value=to_undo.iri
+          input type="hidden" name="type" value="Undo"
+          button.ui.mini.blue.iconic.button type="submit"
+            i.star.icon
+            - if c == 1
+              | 1 Like
+            - else
+              | #{c} Likes
+      - else
+        form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
+          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+          input type="hidden" name="object" value=_object.iri
+          input type="hidden" name="type" value="Like"
+          button.ui.mini.iconic.button type="submit"
+            i.star.icon
+            - if c == 0
+              | Like
+            - elsif c == 1
+              | 1 Like
+            - else
+              | #{c} Likes
+      - if (c = _object.announces) > 0 && (to_undo = __account.actor.in_outbox?(_object, ActivityPub::Activity::Announce))
+        form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
+          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+          input type="hidden" name="object" value=to_undo.iri
+          input type="hidden" name="type" value="Undo"
+          button.ui.mini.blue.iconic.button type="submit"
+            i.share.icon
+            - if c == 1
+              | 1 Share
+            - else
+              | #{c} Shares
+      - else
+        form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
+          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+          input type="hidden" name="object" value=_object.iri
+          input type="hidden" name="type" value="Announce"
+          button.ui.mini.iconic.button type="submit"
+            i.share.icon
+            - if c == 0
+              | Share
+            - elsif c == 1
+              | 1 Share
+            - else
+              | #{c} Shares
       - if _author == __account.actor
         form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
@@ -54,3 +94,12 @@
           button.ui.mini.dangerous.iconic.button type="submit" data-modal="delete"
             i.trash.icon
             | Delete
+    - else
+      - if (c = _object.likes) > 0
+        button.ui.mini.iconic.button
+          i.star.icon
+          = c > 1 ? "#{c} Likes" : "1 Like"
+      - if (c = _object.announces) > 0
+        button.ui.mini.iconic.button
+          i.share.icon
+          = c > 1 ? "#{c} Shares" : "1 Share"

@@ -299,6 +299,62 @@ Spectator.describe RelationshipsController do
       end
     end
 
+    context "on like" do
+      let(note) do
+        ActivityPub::Object::Note.new(
+          iri: "https://remote/objects/#{random_string}",
+          attributed_to: other
+        )
+      end
+      let(like) do
+        ActivityPub::Activity::Like.new(
+          iri: "https://remote/activities/like",
+          actor: other,
+          to: [actor.iri]
+        )
+      end
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", like.to_json_ld(true), "application/json") }
+
+      it "returns 400 if no object is included" do
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "fetches object if remote" do
+        like.object_iri = note.iri
+        HTTP::Client.objects << note
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(HTTP::Client.last?).to match("GET #{note.iri}")
+      end
+
+      it "doesn't fetch the object if embedded" do
+        like.object = note
+        HTTP::Client.objects << note
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "fetches the attributed to actor" do
+        like.object = note
+        note.attributed_to_iri = "https://remote/actors/123"
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
+      end
+
+      it "saves the object" do
+        like.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)}.
+          to change{ActivityPub::Object.count(iri: note.iri)}.by(1)
+      end
+
+      it "puts the activity in the actor's inbox" do
+        like.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)}.
+          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+      end
+    end
+
     context "on create" do
       let(note) do
         ActivityPub::Object::Note.new(

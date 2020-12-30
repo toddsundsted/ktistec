@@ -81,6 +81,13 @@ class RelationshipsController
       unless object.attributed_to?(dereference: true)
         bad_request
       end
+    when ActivityPub::Activity::Like
+      unless (object = activity.object?(dereference: true))
+        bad_request
+      end
+      unless object.attributed_to?(dereference: true)
+        bad_request
+      end
     when ActivityPub::Activity::Create
       unless (object = activity.object?(dereference: true, ignore_cached: true))
         bad_request

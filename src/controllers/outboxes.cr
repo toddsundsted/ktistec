@@ -164,22 +164,38 @@ class RelationshipsController
       )
       follow.assign(confirmed: false).save
     when "Undo"
-      unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))
+      unless (iri = activity["object"]?) && (object = ActivityPub::Activity.find?(iri))
         bad_request
       end
-      unless object.actor == account.actor
+      unless object.actor_iri == account.actor.iri
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+      to = [] of String
+      cc = [] of String
+      case object
+      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like
+        if (attributed_to = object.object.attributed_to?)
+          to << attributed_to.iri
+        end
+        if (followers = account.actor.followers)
+          cc << followers
+        end
+      when ActivityPub::Activity::Follow
+        to << object.object.iri
+        unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+          bad_request
+        end
+        follow.destroy
+      else
         bad_request
       end
       activity = ActivityPub::Activity::Undo.new(
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
-        to: [object.object.iri]
+        to: to,
+        cc: cc
       )
-      follow.destroy
     when "Delete"
       if (iri = activity["object"]?)
         if (object = ActivityPub::Object.find?(iri))

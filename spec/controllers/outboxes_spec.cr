@@ -423,7 +423,95 @@ Spectator.describe RelationshipsController do
         end
       end
 
-      context "on undo" do
+      context "when undoing an announce" do
+        let!(announce) do
+          ActivityPub::Activity::Announce.new(
+            iri: "https://test.test/activities/announce",
+            actor: actor,
+            object: ActivityPub::Object.new(
+              iri: "https://test.test/objects/announce",
+              attributed_to: other
+            )
+          ).save
+        end
+
+        before_each do
+          actor.assign(followers: "#{actor.iri}/followers").save
+        end
+
+        it "returns 400 if the announce activity does not exist" do
+          announce.destroy
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the announce activity does not belong to the actor" do
+          announce.assign(actor: other).save
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "addresses (cc) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"
+          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the other's inbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"}.
+            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        end
+      end
+
+      context "when undoing a like" do
+        let!(like) do
+          ActivityPub::Activity::Like.new(
+            iri: "https://test.test/activities/like",
+            actor: actor,
+            object: ActivityPub::Object.new(
+              iri: "https://test.test/objects/likw",
+              attributed_to: other
+            )
+          ).save
+        end
+
+        before_each do
+          actor.assign(followers: "#{actor.iri}/followers").save
+        end
+
+        it "returns 400 if the like activity does not exist" do
+          like.destroy
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(like.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the like activity does not belong to the actor" do
+          like.assign(actor: other).save
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(like.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "addresses (cc) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(like.iri)}"
+          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(like.iri)}"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the other's inbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(like.iri)}"}.
+            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        end
+      end
+
+      context "when undoing a follow" do
         let!(relationship) do
           Relationship::Social::Follow.new(
             actor: actor,

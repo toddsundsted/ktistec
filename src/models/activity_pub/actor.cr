@@ -254,7 +254,7 @@ module ActivityPub
        ORDER BY r.created_at DESC
           LIMIT ?
       QUERY
-      counts  ={"object.announces": Int64?, "object.likes": Int64?}
+      counts = {"object.announces": Int64?, "object.likes": Int64?}
       object_columns = Object.persistent_columns(prefix: :object).merge(counts)
       Activity.query_and_paginate(query, self.iri, self.iri, additional_columns: object_columns, page: page, size: size)
     end

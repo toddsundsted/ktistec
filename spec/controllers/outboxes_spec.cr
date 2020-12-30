@@ -196,7 +196,7 @@ Spectator.describe RelationshipsController do
 
         let(object) do
           ActivityPub::Object.new(
-            iri: "https://remote/objects/#{random_string}",
+            iri: "https://remote/objects/#{random_string}"
           ).save
         end
 

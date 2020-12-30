@@ -36,6 +36,132 @@ Spectator.describe RelationshipsController do
         expect(response.status_code).to eq(400)
       end
 
+      context "on announce" do
+        before_each do
+          actor.assign(followers: "#{actor.iri}/followers").save
+        end
+
+        it "returns 400 if the object iri is missing" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Announce"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if object does not exist" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=https://remote/objects/blah_blah"
+          expect(response.status_code).to eq(400)
+        end
+
+        let(object) do
+          ActivityPub::Object.new(
+            iri: "https://remote/objects/#{random_string}",
+            attributed_to: other
+          ).save
+        end
+
+        it "redirects when successful" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "creates an announce activity" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
+            to change{ActivityPub::Activity::Announce.count(actor_iri: actor.iri)}.by(1)
+        end
+
+        it "creates a visible activity if public" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}&public=true"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+        end
+
+        it "addresses (to) the public collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}&public=true"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "addresses (to) the object's actor" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (cc) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the other's inbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
+            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        end
+      end
+
+      context "on like" do
+        before_each do
+          actor.assign(followers: "#{actor.iri}/followers").save
+        end
+
+        it "returns 400 if the object iri is missing" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Like"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if object does not exist" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Like&object=https://remote/objects/blah_blah"
+          expect(response.status_code).to eq(400)
+        end
+
+        let(object) do
+          ActivityPub::Object.new(
+            iri: "https://remote/objects/#{random_string}",
+            attributed_to: other
+          ).save
+        end
+
+        it "redirects when successful" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "creates a like activity" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"}.
+            to change{ActivityPub::Activity::Like.count(actor_iri: actor.iri)}.by(1)
+        end
+
+        it "creates a visible activity if public" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}&public=true"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+        end
+
+        it "addresses (to) the public collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}&public=true"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "addresses (to) the object's actor" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (cc) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the other's inbox" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"}.
+            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        end
+      end
+
       context "on create" do
         let!(relationship) do
           Relationship::Social::Follow.new(

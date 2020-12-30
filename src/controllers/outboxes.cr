@@ -18,6 +18,58 @@ class RelationshipsController
     activity = env.params.body
 
     case activity["type"]?
+    when "Announce"
+      unless (iri = activity["object"]?) && (object = ActivityPub::Object.find?(iri))
+        bad_request
+      end
+      now = Time.utc
+      visible = !!activity["public"]?
+      to = [] of String
+      if visible
+        to << "https://www.w3.org/ns/activitystreams#Public"
+      end
+      if (attributed_to = object.attributed_to?)
+        to << attributed_to.iri
+      end
+      cc = [] of String
+      if (followers = account.actor.followers)
+        cc << followers
+      end
+      activity = ActivityPub::Activity::Announce.new(
+        iri: "#{host}/activities/#{id}",
+        actor: account.actor,
+        object: object,
+        published: now,
+        visible: visible,
+        to: to,
+        cc: cc
+      )
+    when "Like"
+      unless (iri = activity["object"]?) && (object = ActivityPub::Object.find?(iri))
+        bad_request
+      end
+      now = Time.utc
+      visible = !!activity["public"]?
+      to = [] of String
+      if visible
+        to << "https://www.w3.org/ns/activitystreams#Public"
+      end
+      if (attributed_to = object.attributed_to?)
+        to << attributed_to.iri
+      end
+      cc = [] of String
+      if (followers = account.actor.followers)
+        cc << followers
+      end
+      activity = ActivityPub::Activity::Like.new(
+        iri: "#{host}/activities/#{id}",
+        actor: account.actor,
+        object: object,
+        published: now,
+        visible: visible,
+        to: to,
+        cc: cc
+      )
     when "Create"
       unless (content = activity["content"]?)
         bad_request

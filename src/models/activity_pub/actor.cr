@@ -241,22 +241,46 @@ module ActivityPub
       Activity.query_and_paginate(query, self.iri, self.iri, additional_columns: object_columns, page: page, size: size)
     end
 
-    private def find_in?(type, object_iri)
+    private def find_in?(object, mailbox, inclusion = nil, exclusion = nil)
+      mailbox =
+        case mailbox
+        when Class
+          %Q|AND r.type = "#{mailbox}"|
+        when Array
+          %Q|AND r.type IN (#{mailbox.map(&.to_s.inspect).join(",")})|
+        end
+      inclusion =
+        case inclusion
+        when Class
+          %Q|AND a.type = "#{inclusion}"|
+        when Array
+          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        end
+      exclusion =
+        case exclusion
+        when Class
+          %Q|AND a.type != "#{exclusion}"|
+        when Array
+          %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
+        end
       query = <<-QUERY
          SELECT #{Activity.columns(prefix: "a")}
-           FROM activities AS a, objects AS o, relationships AS r
+           FROM activities AS a, relationships AS r
+           JOIN objects AS o
+             ON o.iri = a.object_iri
       LEFT JOIN activities AS u
              ON u.object_iri = a.iri AND u.type = "#{ActivityPub::Activity::Undo}" AND u.actor_iri = a.actor_iri
           WHERE r.from_iri = ?
             AND r.to_iri = a.iri
-            AND r.type = "#{type}"
-            AND r.confirmed = 1
-            AND o.iri = a.object_iri
             AND o.iri = ?
+            #{mailbox}
+            AND r.confirmed = 1
+            #{inclusion}
+            #{exclusion}
             AND o.deleted_at is NULL
             AND u.iri IS NULL
       QUERY
-      Activity.query_one(query, self.iri, object_iri)
+      Activity.query_one(query, self.iri, object.iri)
     rescue ex: DB::Error
       raise ex unless ex.message == "no rows"
     end
@@ -265,16 +289,16 @@ module ActivityPub
       content(Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
-    def in_outbox?(object : Object)
-      find_in?(Relationship::Content::Outbox, object.iri)
+    def in_outbox?(object : Object, inclusion = nil, exclusion = nil)
+      find_in?(object, Relationship::Content::Outbox, inclusion, exclusion)
     end
 
     def in_inbox(page = 1, size = 10, public = true)
       content(Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
-    def in_inbox?(object : Object)
-      find_in?(Relationship::Content::Inbox, object.iri)
+    def in_inbox?(object : Object, inclusion = nil, exclusion = nil)
+      find_in?(object, Relationship::Content::Inbox, inclusion, exclusion)
     end
 
     def both_mailboxes(page = 1, size = 10)

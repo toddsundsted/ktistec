@@ -87,53 +87,47 @@ module ActivityPub
     property depth : Int32 = 0
 
     def thread
-      {% begin %}
-        {% vs = ActivityPub::Object.instance_vars.select(&.annotation(Persistent)) %}
-        query = <<-QUERY
-          WITH RECURSIVE
-           ancestors_of(iri, depth) AS (
-                VALUES(?, 0)
-                 UNION
-                SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
-                  FROM objects AS o, ancestors_of AS p
-                 WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
-              ORDER BY depth DESC
-           ),
-           replies_to(iri, depth) AS (
-              SELECT * FROM (SELECT iri, 0 FROM ancestors_of ORDER BY depth DESC LIMIT 1)
-                 UNION
-                SELECT o.iri, r.depth + 1 AS depth
-                  FROM objects AS o, replies_to AS r
-                 WHERE o.in_reply_to_iri = r.iri
-              ORDER BY depth DESC
-            )
-        SELECT {{ vs.map{ |v| "o.\"#{v}\"" }.join(",").id }}, r.depth
-          FROM objects AS o, replies_to AS r
-         WHERE o.iri IN (r.iri) AND o.deleted_at IS NULL
-        QUERY
-        Object.query_all(query, self.iri, additional_columns: {depth: Int32})
-      {% end %}
+      query = <<-QUERY
+        WITH RECURSIVE
+         ancestors_of(iri, depth) AS (
+              VALUES(?, 0)
+               UNION
+              SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
+                FROM objects AS o, ancestors_of AS p
+               WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
+            ORDER BY depth DESC
+         ),
+         replies_to(iri, depth) AS (
+            SELECT * FROM (SELECT iri, 0 FROM ancestors_of ORDER BY depth DESC LIMIT 1)
+               UNION
+              SELECT o.iri, r.depth + 1 AS depth
+                FROM objects AS o, replies_to AS r
+               WHERE o.in_reply_to_iri = r.iri
+            ORDER BY depth DESC
+          )
+      SELECT #{Object.columns(prefix: "o")}, r.depth
+        FROM objects AS o, replies_to AS r
+       WHERE o.iri IN (r.iri) AND o.deleted_at IS NULL
+      QUERY
+      Object.query_all(query, self.iri, additional_columns: {depth: Int32})
     end
 
     def ancestors
-      {% begin %}
-        {% vs = ActivityPub::Object.instance_vars.select(&.annotation(Persistent)) %}
-        query = <<-QUERY
-          WITH RECURSIVE
-           ancestors_of(iri, depth) AS (
-                VALUES(?, 0)
-                 UNION
-                SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
-                  FROM objects AS o, ancestors_of AS p
-                 WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
-              ORDER BY depth DESC
-           )
-        SELECT {{ vs.map{ |v| "o.\"#{v}\"" }.join(",").id }}, a.depth
-          FROM objects AS o, ancestors_of AS a
-         WHERE o.iri IN (a.iri) AND o.deleted_at IS NULL
-        QUERY
-        Object.query_all(query, self.iri, additional_columns: {depth: Int32})
-      {% end %}
+      query = <<-QUERY
+        WITH RECURSIVE
+         ancestors_of(iri, depth) AS (
+              VALUES(?, 0)
+               UNION
+              SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
+                FROM objects AS o, ancestors_of AS p
+               WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
+            ORDER BY depth DESC
+         )
+      SELECT #{Object.columns(prefix: "o")}, a.depth
+        FROM objects AS o, ancestors_of AS a
+       WHERE o.iri IN (a.iri) AND o.deleted_at IS NULL
+      QUERY
+      Object.query_all(query, self.iri, additional_columns: {depth: Int32})
     end
 
     def to_json_ld(recursive = false)

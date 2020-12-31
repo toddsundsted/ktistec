@@ -24,6 +24,9 @@ body { display: flex; flex-direction: column; }
 /* style figcaptions */
 .ui.feed > .event > .content figcaption { text-align: center; font-style: italic; }
 
+/* fix line breaking */
+.ui.feed > .event > .label + .content { overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; -ms-hyphens: auto; -moz-hyphens: auto; -webkit-hyphens: auto; hyphens: auto; }
+
 /* reply and delete actions */
 .ui.feed .meta > form { display: inline; }
 

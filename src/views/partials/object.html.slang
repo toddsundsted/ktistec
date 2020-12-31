@@ -33,6 +33,7 @@
     - else
       a href=_author.display_link = _author.display_name
       a href=_object.display_link = _object.display_date
+  .meta
     - if __account
       a href=replies_path(_object)
         button.ui.mini.iconic.button

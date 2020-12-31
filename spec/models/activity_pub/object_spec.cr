@@ -1,4 +1,6 @@
 require "../../../src/models/activity_pub/object"
+require "../../../src/models/activity_pub/activity/announce"
+require "../../../src/models/activity_pub/activity/like"
 
 require "../../spec_helper/model"
 
@@ -136,6 +138,19 @@ Spectator.describe ActivityPub::Object do
     reply_to!(object2, object3)
     reply_to!(object4, object5)
 
+    let(announce) do
+      ActivityPub::Activity::Announce.new(
+        iri: "https://test.test/announce",
+        object: object2
+      )
+    end
+    let(like) do
+      ActivityPub::Activity::Like.new(
+        iri: "https://test.test/like",
+        object: object5
+      )
+    end
+
     describe "#thread" do
       it "returns all replies properly nested" do
         expect(subject.thread).to eq([subject, object1, object2, object3, object4, object5])
@@ -155,6 +170,16 @@ Spectator.describe ActivityPub::Object do
 
       it "returns the depths" do
         expect(object5.thread.map(&.depth)).to eq([0, 1, 2, 3, 1, 2])
+      end
+
+      it "includes count of announcements" do
+        announce.save
+        expect(object5.thread.map(&.announces)).to eq([0, 0, 1, 0, 0, 0])
+      end
+
+      it "includes count of likes" do
+        like.save
+        expect(object5.thread.map(&.likes)).to eq([0, 0, 0, 0, 0, 1])
       end
     end
 

@@ -88,28 +88,40 @@ module ActivityPub
 
     def thread
       query = <<-QUERY
-        WITH RECURSIVE
-         ancestors_of(iri, depth) AS (
-              VALUES(?, 0)
-               UNION
-              SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
-                FROM objects AS o, ancestors_of AS p
-               WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
-            ORDER BY depth DESC
-         ),
-         replies_to(iri, depth) AS (
-            SELECT * FROM (SELECT iri, 0 FROM ancestors_of ORDER BY depth DESC LIMIT 1)
-               UNION
-              SELECT o.iri, r.depth + 1 AS depth
-                FROM objects AS o, replies_to AS r
-               WHERE o.in_reply_to_iri = r.iri
-            ORDER BY depth DESC
-          )
-      SELECT #{Object.columns(prefix: "o")}, r.depth
-        FROM objects AS o, replies_to AS r
-       WHERE o.iri IN (r.iri) AND o.deleted_at IS NULL
+           WITH RECURSIVE
+            ancestors_of(iri, depth) AS (
+                 VALUES(?, 0)
+                  UNION
+                 SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
+                   FROM objects AS o, ancestors_of AS p
+                  WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
+               ORDER BY depth DESC
+            ),
+            replies_to(iri, position, depth) AS (
+               SELECT * FROM (SELECT iri, "", 0 FROM ancestors_of ORDER BY depth DESC LIMIT 1)
+                  UNION
+                 SELECT o.iri, r.position || "." || o.id, r.depth + 1 AS depth
+                   FROM objects AS o, replies_to AS r
+                  WHERE o.in_reply_to_iri = r.iri
+               ORDER BY depth DESC
+             )
+         SELECT #{Object.columns(prefix: "o")}, sum(c.announces), sum(c.likes), r.depth
+           FROM objects AS o, replies_to AS r
+      LEFT JOIN (   SELECT a.id, a.object_iri, a.actor_iri, (a.type = "ActivityPub::Activity::Announce") AS announces, (a.type = "ActivityPub::Activity::Like") AS likes
+                      FROM activities AS a
+                 LEFT JOIN activities AS u
+                        ON u.object_iri = a.iri
+                       AND u.type = "ActivityPub::Activity::Undo"
+                       AND u.actor_iri = a.actor_iri
+                     WHERE u.iri IS NULL
+                ) AS c
+             ON c.object_iri = o.iri
+          WHERE o.iri IN (r.iri)
+           AND o.deleted_at IS NULL
+         GROUP BY o.id
+         ORDER BY r.position
       QUERY
-      Object.query_all(query, self.iri, additional_columns: {depth: Int32})
+      Object.query_all(query, self.iri, additional_columns: {announces: Int64?, likes: Int64?, depth: Int32})
     end
 
     def ancestors
@@ -125,7 +137,8 @@ module ActivityPub
          )
       SELECT #{Object.columns(prefix: "o")}, a.depth
         FROM objects AS o, ancestors_of AS a
-       WHERE o.iri IN (a.iri) AND o.deleted_at IS NULL
+       WHERE o.iri IN (a.iri)
+         AND o.deleted_at IS NULL
       QUERY
       Object.query_all(query, self.iri, additional_columns: {depth: Int32})
     end

@@ -12,13 +12,13 @@ class SearchesController
     message = nil
     actor = nil
 
-    if (account = env.params.query["account"]?)
-      url = URI.parse(account)
+    if (query = env.params.query["query"]?)
+      url = URI.parse(query)
       url =
         if url.scheme && url.host && url.path
-          account
+          query
         else
-          WebFinger.query("acct:#{account}").link("self").href.not_nil!
+          WebFinger.query("acct:#{query}").link("self").href.not_nil!
         end
       open(url) do |response|
         json = Ktistec::JSON_LD.expand(response.body)

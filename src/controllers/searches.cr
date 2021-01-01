@@ -4,7 +4,7 @@ require "../framework/controller"
 require "../framework/open"
 require "../models/activity_pub/activity/follow"
 
-class LookupsController
+class SearchesController
   include Ktistec::Controller
   extend Ktistec::Open
 
@@ -33,25 +33,24 @@ class LookupsController
 
     if accepts?("text/html")
       env.response.content_type = "text/html"
-      render "src/views/lookups/actor.html.ecr", "src/views/layouts/default.html.ecr"
+      render "src/views/searches/actor.html.ecr", "src/views/layouts/default.html.ecr"
     else
       env.response.content_type = "application/json"
-      render "src/views/lookups/actor.json.ecr"
+      render "src/views/searches/actor.json.ecr"
     end
-  rescue ex : LookupErrors
+  rescue ex : Errors
     message = ex.message
 
     env.response.status_code = 400
     if accepts?("text/html")
       env.response.content_type = "text/html"
-      render "src/views/lookups/actor.html.ecr", "src/views/layouts/default.html.ecr"
+      render "src/views/searches/actor.html.ecr", "src/views/layouts/default.html.ecr"
     else
       env.response.content_type = "application/json"
-      render "src/views/lookups/actor.json.ecr"
+      render "src/views/searches/actor.json.ecr"
     end
   end
 
-  private alias LookupErrors = Socket::Addrinfo::Error | JSON::ParseException | NilAssertionError |
-                               HostMeta::Error | WebFinger::Error |
-                               Ktistec::Open::Error
+  private alias Errors = Socket::Addrinfo::Error | JSON::ParseException | NilAssertionError |
+                         HostMeta::Error | WebFinger::Error | Ktistec::Open::Error
 end

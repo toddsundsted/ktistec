@@ -1,9 +1,9 @@
-require "../../src/controllers/lookups"
+require "../../src/controllers/searches"
 
 require "../spec_helper/controller"
 require "../spec_helper/network"
 
-Spectator.describe LookupsController do
+Spectator.describe SearchesController do
   setup_spec
 
   describe "GET /search" do

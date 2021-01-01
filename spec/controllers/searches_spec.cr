@@ -37,20 +37,20 @@ Spectator.describe SearchesController do
       end
 
       context "given a handle" do
-        let(actor) { ActivityPub::Actor.new(iri: "https://test.test/actors/foo_bar") }
+        let(actor) { ActivityPub::Actor.new(iri: "https://remote/actors/foo_bar") }
 
         before_each { HTTP::Client.actors << actor.dup.assign(username: "foo_bar") }
 
         it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          expect{get "/search?query=foo_bar@test.test", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/search?query=foo_bar@remote", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          expect{get "/search?query=foo_bar@test.test", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/search?query=foo_bar@remote", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
@@ -60,19 +60,19 @@ Spectator.describe SearchesController do
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            expect{get "/search?query=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
+            expect{get "/search?query=foo_bar@remote", headers}.not_to change{ActivityPub::Actor.count}
+            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "application/json"}
-            expect{get "/search?query=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
+            expect{get "/search?query=foo_bar@remote", headers}.not_to change{ActivityPub::Actor.count}
+            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            get "/search?query=foo_bar@test.test", headers
+            get "/search?query=foo_bar@remote", headers
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Follow']")).not_to be_empty
           end
 
@@ -84,7 +84,7 @@ Spectator.describe SearchesController do
 
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
-              get "/search?query=foo_bar@test.test", headers
+              get "/search?query=foo_bar@remote", headers
               expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Unfollow']")).not_to be_empty
             end
           end
@@ -92,20 +92,20 @@ Spectator.describe SearchesController do
       end
 
       context "given a URL" do
-        let(actor) { ActivityPub::Actor.new(iri: "https://test.test/actors/foo_bar") }
+        let(actor) { ActivityPub::Actor.new(iri: "https://remote/actors/foo_bar") }
 
         before_each { HTTP::Client.actors << actor.dup.assign(username: "foo_bar") }
 
         it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          expect{get "/search?query=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/search?query=https://remote/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          expect{get "/search?query=https://test.test/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
+          expect{get "/search?query=https://remote/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
@@ -115,19 +115,19 @@ Spectator.describe SearchesController do
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            expect{get "/search?query=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
+            expect{get "/search?query=https://remote/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
+            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "application/json"}
-            expect{get "/search?query=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://test.test/actors/foo_bar").username).to eq("foo_bar")
+            expect{get "/search?query=https://remote/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
+            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
           end
 
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
-            get "/search?query=https://test.test/actors/foo_bar", headers
+            get "/search?query=https://remote/actors/foo_bar", headers
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Follow']")).not_to be_empty
           end
 
@@ -139,7 +139,7 @@ Spectator.describe SearchesController do
 
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
-              get "/search?query=https://test.test/actors/foo_bar", headers
+              get "/search?query=https://remote/actors/foo_bar", headers
               expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Unfollow']")).not_to be_empty
             end
           end
@@ -165,14 +165,14 @@ Spectator.describe SearchesController do
       context "given bad JSON" do
         it "returns 400" do
           headers = HTTP::Headers{"Accept" => "text/html"}
-          get "/search?query=bad-json@test.test", headers
+          get "/search?query=bad-json@remote", headers
           expect(response.status_code).to eq(400)
           expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first.text).to match(/Unexpected char/)
         end
 
         it "returns 400" do
           headers = HTTP::Headers{"Accept" => "application/json"}
-          get "/search?query=bad-json@test.test", headers
+          get "/search?query=bad-json@remote", headers
           expect(response.status_code).to eq(400)
           expect(JSON.parse(response.body).as_h["msg"]).to match(/Unexpected char/)
         end

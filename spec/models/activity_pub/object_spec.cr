@@ -112,6 +112,43 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#with_statistics!" do
+    let(object) do
+      described_class.new(
+        iri: "https://test.test/objects/#{random_string}"
+      )
+    end
+    let(announce) do
+      ActivityPub::Activity::Announce.new(
+        iri: "https://test.test/announce",
+        object: object
+      )
+    end
+    let(like) do
+      ActivityPub::Activity::Like.new(
+        iri: "https://test.test/like",
+        object: object
+      )
+    end
+
+    it "updates announces" do
+      announce.save
+      expect(object.with_statistics!.announces).to eq(1)
+      expect(object.with_statistics!.likes).to eq(0)
+    end
+
+    it "updates likes" do
+      like.save
+      expect(object.with_statistics!.announces).to eq(0)
+      expect(object.with_statistics!.likes).to eq(1)
+    end
+
+    it "doesn't fail when the object hasn't been saved" do
+      expect(object.with_statistics!.announces).to eq(0)
+      expect(object.with_statistics!.likes).to eq(0)
+    end
+  end
+
   context "when threaded" do
     subject { described_class.new(iri: "https://test.test/objects/#{random_string}").save }
 

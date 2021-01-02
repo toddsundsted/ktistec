@@ -1,0 +1,9 @@
+<%- _object = object -%>
+<%- _actor = _object.attributed_to -%>
+<%- _author = _object.attributed_to -%>
+<section class="ui feed">
+    <article class="event">
+        <%= render "src/views/partials/object.html.slang" %>
+    </article>
+</section>
+<%= render "src/views/searches/form.html.slang" %>

@@ -1,17 +1,2 @@
-<%- if actor -%>
 <%= render "src/views/partials/actor-large.html.slang" %>
-<h1>Search Again</h1>
-<%- else -%>
-<h1>Search</h1>
-<%- end -%>
-<form class='ui form<%= message ? " error" : "" %>' method='GET'>
-    <%- if message -%>
-    <div class='ui error message'>
-        <div class='header'><%= message %></div>
-    </div>
-    <%- end -%>
-    <div class='field'>
-        <input type='text' name='query' value='<%= query %>'>
-    </div>
-    <input class='ui primary button' type='submit' value='Search'>
-</form>
+<%= render "src/views/searches/form.html.slang" %>

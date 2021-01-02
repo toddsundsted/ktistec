@@ -2,15 +2,13 @@ require "web_finger"
 
 require "../framework/controller"
 require "../framework/open"
-require "../models/activity_pub/activity/follow"
 
 class SearchesController
   include Ktistec::Controller
   extend Ktistec::Open
 
   get "/search" do |env|
-    message = nil
-    actor = nil
+    actor_or_object = nil
 
     if (query = env.params.query["query"]?)
       url = URI.parse(query)
@@ -21,36 +19,84 @@ class SearchesController
           WebFinger.query("acct:#{query}").link("self").href.not_nil!
         end
       open(url) do |response|
-        json = Ktistec::JSON_LD.expand(response.body)
-        if (iri = json.dig?("@id").try(&.as_s)) && (actor = ActivityPub::Actor.find?(iri))
-          actor.from_json_ld(json)
-        else
-          actor = ActivityPub::Actor.from_json_ld(json)
-        end
-        actor.save
+        actor_or_object = ActivityPub.from_json_ld(response.body)
       end
     end
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/searches/actor.html.ecr", "src/views/layouts/default.html.ecr"
+    case actor_or_object
+    when ActivityPub::Actor
+      actor_or_object.save
+
+      accepts?("text/html") ?
+        actor_html(env, actor_or_object, query) :
+        actor_json(env, actor_or_object, query)
+    when ActivityPub::Object
+      actor_or_object.attributed_to?(dereference: true)
+      actor_or_object.save.with_statistics!
+
+      accepts?("text/html") ?
+        object_html(env, actor_or_object, query) :
+        object_json(env, actor_or_object, query)
     else
-      env.response.content_type = "application/json"
-      render "src/views/searches/actor.json.ecr"
+      accepts?("text/html") ?
+        form_html(env, query) :
+        form_json(env, query)
     end
   rescue ex : Errors
-    message = ex.message
-
     env.response.status_code = 400
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/searches/actor.html.ecr", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/json"
-      render "src/views/searches/actor.json.ecr"
+    accepts?("text/html") ?
+      form_html(env, query, ex.message) :
+      form_json(env, query, ex.message)
+  end
+
+  private alias Errors = Socket::Addrinfo::Error | JSON::ParseException |
+                         HostMeta::Error | WebFinger::Error | Ktistec::Open::Error |
+                         NilAssertionError
+
+  private def self.actor_html(env, actor, query = nil, message = nil)
+    env.response.content_type = "text/html"
+    render "src/views/searches/actor.html.ecr", "src/views/layouts/default.html.ecr"
+  end
+
+  private def self.actor_json(env, actor, query = nil, message = nil)
+    env.response.content_type = "application/json"
+    JSON.build do |json|
+      json.object do
+        json.field "msg", message if message
+        json.field "query", query || ""
+        json.field "actor", actor
+      end
     end
   end
 
-  private alias Errors = Socket::Addrinfo::Error | JSON::ParseException | NilAssertionError |
-                         HostMeta::Error | WebFinger::Error | Ktistec::Open::Error
+  private def self.object_html(env, object, query = nil, message = nil)
+    env.response.content_type = "text/html"
+    render "src/views/searches/object.html.ecr", "src/views/layouts/default.html.ecr"
+  end
+
+  private def self.object_json(env, object, query = nil, message = nil)
+    env.response.content_type = "application/json"
+    JSON.build do |json|
+      json.object do
+        json.field "msg", message if message
+        json.field "query", query || ""
+        json.field "object", object
+      end
+    end
+  end
+
+  private def self.form_html(env, query = nil, message = nil)
+    env.response.content_type = "text/html"
+    render "src/views/searches/form.html.slang", "src/views/layouts/default.html.ecr"
+  end
+
+  private def self.form_json(env, query = nil, message = nil)
+    env.response.content_type = "application/json"
+    JSON.build do |json|
+      json.object do
+        json.field "msg", message if message
+        json.field "query", query || ""
+      end
+    end
+  end
 end

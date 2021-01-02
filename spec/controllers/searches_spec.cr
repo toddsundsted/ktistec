@@ -1,4 +1,8 @@
 require "../../src/controllers/searches"
+require "../../src/models/activity_pub/activity/follow"
+require "../../src/models/activity_pub/activity/like"
+require "../../src/models/relationship/content/outbox"
+require "../../src/models/relationship/social/follow"
 
 require "../spec_helper/controller"
 require "../spec_helper/network"
@@ -36,11 +40,15 @@ Spectator.describe SearchesController do
         expect(JSON.parse(response.body).as_h.keys).to have("query")
       end
 
+      let(actor) { ActivityPub::Actor.new(iri: "https://remote/actors/foo_bar") }
+
+      before_each { HTTP::Client.actors << actor.assign(username: "foo_bar") }
+
+      let(object) { ActivityPub::Object.new(iri: "https://remote/objects/foo_bar", attributed_to: actor) }
+
+      before_each { HTTP::Client.objects << object.assign(content: "foo bar") }
+
       context "given a handle" do
-        let(actor) { ActivityPub::Actor.new(iri: "https://remote/actors/foo_bar") }
-
-        before_each { HTTP::Client.actors << actor.dup.assign(username: "foo_bar") }
-
         it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
           expect{get "/search?query=foo_bar@remote", headers}.to change{ActivityPub::Actor.count}.by(1)
@@ -56,7 +64,7 @@ Spectator.describe SearchesController do
         end
 
         context "to an existing actor" do
-          before_each { actor.save }
+          before_each { actor.assign(username: "bar_foo").save }
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
@@ -76,10 +84,10 @@ Spectator.describe SearchesController do
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Follow']")).not_to be_empty
           end
 
-          context "with an existing relationship" do
+          context "with an existing follow" do
             before_each do
-              ActivityPub::Activity::Follow.new(iri: "https://remote/#{random_string}", actor_iri: Global.account.try(&.iri), object_iri: actor.iri).save
-              Relationship::Social::Follow.new(from_iri: Global.account.try(&.iri), to_iri: actor.iri).save
+              ActivityPub::Activity::Follow.new(iri: "https://remote/#{random_string}", actor: Global.account.try(&.actor), object: actor).save
+              Relationship::Social::Follow.new(actor: Global.account.try(&.actor), object: actor).save
             end
 
             it "presents an unfollow button" do
@@ -91,11 +99,7 @@ Spectator.describe SearchesController do
         end
       end
 
-      context "given a URL" do
-        let(actor) { ActivityPub::Actor.new(iri: "https://remote/actors/foo_bar") }
-
-        before_each { HTTP::Client.actors << actor.dup.assign(username: "foo_bar") }
-
+      context "given a URL to an actor" do
         it "retrieves and saves an actor" do
           headers = HTTP::Headers{"Accept" => "text/html"}
           expect{get "/search?query=https://remote/actors/foo_bar", headers}.to change{ActivityPub::Actor.count}.by(1)
@@ -111,7 +115,7 @@ Spectator.describe SearchesController do
         end
 
         context "to an existing actor" do
-          before_each { actor.save }
+          before_each { actor.assign(username: "bar_foo").save }
 
           it "updates the actor" do
             headers = HTTP::Headers{"Accept" => "text/html"}
@@ -131,16 +135,67 @@ Spectator.describe SearchesController do
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Follow']")).not_to be_empty
           end
 
-          context "with an existing relationship" do
+          context "with an existing follow" do
             before_each do
-              ActivityPub::Activity::Follow.new(iri: "https://remote/#{random_string}", actor_iri: Global.account.try(&.iri), object_iri: actor.iri).save
-              Relationship::Social::Follow.new(from_iri: Global.account.try(&.iri), to_iri: actor.iri).save
+              ActivityPub::Activity::Follow.new(iri: "https://remote/#{random_string}", actor: Global.account.try(&.actor), object: actor).save
+              Relationship::Social::Follow.new(actor: Global.account.try(&.actor), object: actor).save
             end
 
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
               get "/search?query=https://remote/actors/foo_bar", headers
               expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Unfollow']")).not_to be_empty
+            end
+          end
+        end
+      end
+
+      context "given a URL to an object" do
+        it "retrieves and saves an object" do
+          headers = HTTP::Headers{"Accept" => "text/html"}
+          expect{get "/search?query=https://remote/objects/foo_bar", headers}.to change{ActivityPub::Object.count}.by(1)
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo bar')]")).not_to be_empty
+        end
+
+        it "retrieves and saves an object" do
+          headers = HTTP::Headers{"Accept" => "application/json"}
+          expect{get "/search?query=https://remote/objects/foo_bar", headers}.to change{ActivityPub::Object.count}.by(1)
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).as_h.dig("object", "content")).to eq("foo bar")
+        end
+
+        context "to an existing object" do
+          before_each { object.assign(content: "bar foo").save }
+
+          it "updates the object" do
+            headers = HTTP::Headers{"Accept" => "text/html"}
+            expect{get "/search?query=https://remote/objects/foo_bar", headers}.not_to change{ActivityPub::Object.count}
+            expect(ActivityPub::Object.find("https://remote/objects/foo_bar").content).to eq("foo bar")
+          end
+
+          it "updates the object" do
+            headers = HTTP::Headers{"Accept" => "application/json"}
+            expect{get "/search?query=https://remote/objects/foo_bar", headers}.not_to change{ActivityPub::Object.count}
+            expect(ActivityPub::Object.find("https://remote/objects/foo_bar").content).to eq("foo bar")
+          end
+
+          it "presents a like button" do
+            headers = HTTP::Headers{"Accept" => "text/html"}
+            get "/search?query=https://remote/objects/foo_bar", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Like']")).not_to be_empty
+          end
+
+          context "with an existing like" do
+            before_each do
+              like = ActivityPub::Activity::Like.new(iri: "https://remote/#{random_string}", actor: Global.account.try(&.actor), object: object).save
+              Relationship::Content::Outbox.new(owner: Global.account.try(&.actor), activity: like).save
+            end
+
+            it "presents an undo button" do
+              headers = HTTP::Headers{"Accept" => "text/html"}
+              get "/search?query=https://remote/objects/foo_bar", headers
+              expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Undo']")).not_to be_empty
             end
           end
         end

@@ -194,7 +194,7 @@ module Ktistec
       def find(_id id : Int?)
         query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id)}", id)
       rescue ex: DB::Error
-        raise NotFound.new("#{self}: #{id}") if ex.message == "no rows"
+        raise NotFound.new("#{self} id=#{id}: not found") if ex.message == "no rows"
         raise ex
       end
 
@@ -214,7 +214,7 @@ module Ktistec
       def find(**options)
         query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options)}", *options.values)
       rescue ex: DB::Error
-        raise NotFound.new("#{self}: #{options}") if ex.message == "no rows"
+        raise NotFound.new("#{self} options=#{options}: not found") if ex.message == "no rows"
         raise ex
       end
 
@@ -421,7 +421,7 @@ module Ktistec
             {% for union_type in union_types %}
               {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}) ||
             {% end %}
-            raise NotFound.new
+            raise NotFound.new("#{self.class} {{name}} {{primary_key}}=#{self.{{foreign_key}}}: not found")
           end
         end
         def _belongs_to_{{name}} : {{class_name}}

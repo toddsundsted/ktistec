@@ -77,7 +77,7 @@ module ActivityPub
     end
 
     def self.from_hash?(options)
-      ActivityPub.from_hash?("", options, default: self).as(self)
+      ActivityPub.from_hash?("", options, default: self).as(self?)
     end
   end
 
@@ -118,7 +118,7 @@ module ActivityPub
     end
 
     def self.from_json_ld?(json, **options)
-      ActivityPub.from_json_ld?(json, **options.merge({default: self})).as(self)
+      ActivityPub.from_json_ld?(json, **options.merge({default: self})).as(self?)
     end
   end
 end

@@ -23,6 +23,22 @@ FilePond.setOptions({
 })
 
 !!(function($) {
+  $(document).on('submit', 'section form:has(.iconic.button):has(.share.icon,.star.icon)', function (e) {
+    e.preventDefault()
+    let $form = $(this)
+    let $section = $('section')
+    $.ajax({
+      type: $form.attr('method'),
+      url: $form.attr('action'),
+      data: $form.serialize(),
+      dataType: 'html',
+      success: function (data) {
+        let $data = $($.parseHTML(data)).find('section')
+        $section.replaceWith($data)
+      }
+    })
+  })
+
   $(document).on("turbolinks:load", function () {
     FilePond.create(
       document.querySelector('form[action="/settings"] input[type="file"][name="image"]'), {

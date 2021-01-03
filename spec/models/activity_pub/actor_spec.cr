@@ -189,6 +189,20 @@ Spectator.describe ActivityPub::Actor do
       expect(foo_bar.all_followers(public: true)).to be_empty
       expect(foo_bar.all_followers(public: false)).to eq([other])
     end
+
+    it "does not display a deleted following actor" do
+      foo_bar.follow(other, confirmed: true, visible: true).save
+      other.delete
+      expect(foo_bar.all_following(public: true)).to be_empty
+      expect(foo_bar.all_following(public: false)).to be_empty
+    end
+
+    it "does not display a deleted followers actor" do
+      other.follow(foo_bar, confirmed: true, visible: true).save
+      other.delete
+      expect(foo_bar.all_followers(public: true)).to be_empty
+      expect(foo_bar.all_followers(public: false)).to be_empty
+    end
   end
 
   describe "#follows?" do
@@ -204,6 +218,11 @@ Spectator.describe ActivityPub::Actor do
     it "filters response based on visible state" do
       expect(foo_bar.follows?(other, visible: true)).to be_truthy
       expect(foo_bar.follows?(other, visible: false)).to be_falsey
+    end
+
+    it "returns false for deleted actors" do
+      other.delete
+      expect(foo_bar.follows?(other)).to be_false
     end
   end
 

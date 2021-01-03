@@ -91,7 +91,9 @@ module ActivityPub
     end
 
     def follows?(other : Actor, **options)
-      Relationship::Social::Follow.find?(**options.merge({from_iri: self.iri, to_iri: other.iri}))
+      !other.deleted? ?
+        Relationship::Social::Follow.find?(**options.merge({from_iri: self.iri, to_iri: other.iri})) :
+        false
     end
 
     private def query(type, orig, dest, public = true)
@@ -100,14 +102,16 @@ module ActivityPub
         query = <<-QUERY
           SELECT {{ vs.map{ |v| "a.#{v}" }.join(",").id }}
             FROM actors AS a, relationships AS r
-           WHERE a.iri = r.#{orig}
+           WHERE a.deleted_at IS NULL
+             AND a.iri = r.#{orig}
              AND r.type = "#{type}"
         #{public ? "AND r.confirmed = 1 AND r.visible = 1" : nil}
              AND r.#{dest} = ?
              AND a.id NOT IN (
                 SELECT a.id
                   FROM actors AS a, relationships AS r
-                 WHERE a.iri = r.#{orig}
+                 WHERE a.deleted_at IS NULL
+                   AND a.iri = r.#{orig}
                    AND r.type = "#{type}"
               #{public ? "AND r.confirmed = 1 AND r.visible = 1" : nil}
                    AND r.#{dest} = ?

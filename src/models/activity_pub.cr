@@ -78,6 +78,7 @@ module ActivityPub
 
     def self.from_hash?(options)
       ActivityPub.from_hash?("", options, default: self).as(self?)
+    rescue TypeCastError
     end
   end
 
@@ -119,6 +120,7 @@ module ActivityPub
 
     def self.from_json_ld?(json, **options)
       ActivityPub.from_json_ld?(json, **options.merge({default: self})).as(self?)
+    rescue TypeCastError
     end
   end
 end

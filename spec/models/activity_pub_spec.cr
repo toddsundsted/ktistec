@@ -90,6 +90,12 @@ Spectator.describe ActivityPub do
     end
   end
 
+  describe ".from_hash?" do
+    it "returns nil if type is not correct" do
+      expect(Foo.from_hash?({"type" => "Bar"})).to be_nil
+    end
+  end
+
   describe ".from_json_ld" do
     it "raises an error if the type is not specified" do
       expect{described_class.from_json_ld("{}")}.to raise_error(NotImplementedError)
@@ -127,6 +133,12 @@ Spectator.describe ActivityPub do
     it "is defined on includers" do
       json = %q[{"@type":"ActivityPubModel"}]
       expect{ActivityPubModel.from_json_ld(json)}.to be_a(ActivityPubModel)
+    end
+  end
+
+  describe ".from_json_ld?" do
+    it "returns nil if type is not correct" do
+      expect(Foo.from_json_ld?(%q[{"@type":"Bar"}])).to be_nil
     end
   end
 end

@@ -83,6 +83,7 @@ Spectator.describe ObjectsController do
             from_iri: Global.account.not_nil!.iri,
             to_iri: ActivityPub::Activity.new(
               iri: "https://test.test/activities/#{random_string}",
+              actor_iri: Global.account.not_nil!.iri,
               object_iri: object.iri
             ).save.iri
           ).save
@@ -162,6 +163,7 @@ Spectator.describe ObjectsController do
               from_iri: Global.account.not_nil!.iri,
               to_iri: ActivityPub::Activity.new(
                 iri: "https://test.test/activities/#{random_string}",
+                actor_iri: Global.account.not_nil!.iri,
                 object_iri: object.iri
               ).save.iri
             ).save

@@ -228,6 +228,7 @@ Spectator.describe ActivityPub::Actor do
 
   context "for outbox" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+    let(deleted) { described_class.new(iri: "https://test.test/#{random_string}").save.delete }
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_outbox(index)
@@ -301,6 +302,11 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
+      it "filters out posts by deleted actors" do
+        activity5.assign(actor: deleted).save
+        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
+      end
+
       it "filters out undone activities" do
         undo.save
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
@@ -348,6 +354,11 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_outbox?(note1)).to be_falsey
       end
 
+      it "returns false if actor of activity has been deleted" do
+        activity5.assign(actor: deleted).save
+        expect(subject.in_outbox?(note5)).to be_falsey
+      end
+
       it "returns false if activity has been undone" do
         undo.save
         expect(subject.in_outbox?(note5)).to be_falsey
@@ -361,6 +372,7 @@ Spectator.describe ActivityPub::Actor do
 
   context "for inbox" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+    let(deleted) { described_class.new(iri: "https://test.test/#{random_string}").save.delete }
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_inbox(index)
@@ -434,6 +446,11 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
+      it "filters out posts by deleted actors" do
+        activity5.assign(actor: deleted).save
+        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
+      end
+
       it "filters out undone activities" do
         undo.save
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
@@ -469,6 +486,11 @@ Spectator.describe ActivityPub::Actor do
       it "returns false if object has been deleted" do
         note1.delete
         expect(subject.in_inbox?(note1)).to be_falsey
+      end
+
+      it "returns false if actor of activity has been deleted" do
+        activity5.assign(actor: deleted).save
+        expect(subject.in_inbox?(note5)).to be_falsey
       end
 
       it "returns false if activity has been undone" do

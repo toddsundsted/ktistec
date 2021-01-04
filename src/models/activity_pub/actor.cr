@@ -197,10 +197,14 @@ module ActivityPub
           %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
-         SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "o")}, sum(c.announces), sum(c.likes)
-           FROM activities AS a, relationships AS r
-      LEFT JOIN objects AS o
-             ON o.iri = a.object_iri
+         SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "obj")}, sum(c.announces), sum(c.likes)
+           FROM activities AS a
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+      LEFT JOIN actors AS act
+             ON act.iri = a.actor_iri
+      LEFT JOIN objects AS obj
+             ON obj.iri = a.object_iri
       LEFT JOIN activities AS u
              ON u.object_iri = a.iri
             AND u.type = "#{ActivityPub::Activity::Undo}"
@@ -213,21 +217,25 @@ module ActivityPub
                        AND u.actor_iri = a.actor_iri
                      WHERE u.iri IS NULL
                 ) AS c
-             ON c.object_iri = o.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
+             ON c.object_iri = obj.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
           WHERE r.from_iri = ?
-            AND r.to_iri = a.iri
             #{mailbox}
             AND r.confirmed = 1
             #{inclusion}
             #{exclusion}
-            AND o.deleted_at is NULL
+            AND act.deleted_at is NULL
+            AND obj.deleted_at is NULL
             AND u.iri IS NULL
        #{public ? %Q|AND a.visible = 1| : nil}
             AND a.id NOT IN (
                SELECT a.id
-                 FROM activities AS a, relationships AS r
-            LEFT JOIN objects AS o
-                   ON o.iri = a.object_iri
+                 FROM activities AS a
+                 JOIN relationships AS r
+                   ON r.to_iri = a.iri
+            LEFT JOIN actors AS act
+                   ON act.iri = a.actor_iri
+            LEFT JOIN objects AS obj
+                   ON obj.iri = a.object_iri
             LEFT JOIN activities AS u
                    ON u.object_iri = a.iri
                   AND u.type = "#{ActivityPub::Activity::Undo}"
@@ -240,14 +248,14 @@ module ActivityPub
                              AND u.actor_iri = a.actor_iri
                            WHERE u.iri IS NULL
                       ) AS c
-                   ON c.object_iri = o.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
+                   ON c.object_iri = obj.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
                 WHERE r.from_iri = ?
-                  AND r.to_iri = a.iri
                   #{mailbox}
                   AND r.confirmed = 1
                   #{inclusion}
                   #{exclusion}
-                  AND o.deleted_at is NULL
+                  AND act.deleted_at is NULL
+                  AND obj.deleted_at is NULL
                   AND u.iri IS NULL
              #{public ? %Q|AND a.visible = 1| : nil}
              GROUP BY a.id
@@ -287,19 +295,23 @@ module ActivityPub
         end
       query = <<-QUERY
          SELECT #{Activity.columns(prefix: "a")}
-           FROM activities AS a, relationships AS r
-           JOIN objects AS o
-             ON o.iri = a.object_iri
+           FROM activities AS a
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+           JOIN actors AS act
+             ON act.iri = a.actor_iri
+           JOIN objects AS obj
+             ON obj.iri = a.object_iri
       LEFT JOIN activities AS u
              ON u.object_iri = a.iri AND u.type = "#{ActivityPub::Activity::Undo}" AND u.actor_iri = a.actor_iri
           WHERE r.from_iri = ?
-            AND r.to_iri = a.iri
-            AND o.iri = ?
+            AND obj.iri = ?
             #{mailbox}
             AND r.confirmed = 1
             #{inclusion}
             #{exclusion}
-            AND o.deleted_at is NULL
+            AND act.deleted_at is NULL
+            AND obj.deleted_at is NULL
             AND u.iri IS NULL
       QUERY
       Activity.query_one(query, self.iri, object.iri)

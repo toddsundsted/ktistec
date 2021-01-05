@@ -34,8 +34,7 @@ class ActivityPub::Activity
         SQL
         query_one(query, actor_iri, object_iri)
       {% end %}
-    rescue ex: DB::Error
-      raise ex unless ex.message == "no rows"
+    rescue DB::NoResultsError
     end
 
     private QUERY = "object_iri = ? AND type IN ('#{Accept}', '#{Reject}') LIMIT 1"

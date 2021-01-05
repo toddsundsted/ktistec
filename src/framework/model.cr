@@ -193,9 +193,8 @@ module Ktistec
       #
       def find(_id id : Int?)
         query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id)}", id)
-      rescue ex: DB::Error
-        raise NotFound.new("#{self} id=#{id}: not found") if ex.message == "no rows"
-        raise ex
+      rescue DB::NoResultsError
+        raise NotFound.new("#{self} id=#{id}: not found")
       end
 
       # Finds the saved instance.
@@ -213,9 +212,8 @@ module Ktistec
       #
       def find(**options)
         query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options)}", *options.values)
-      rescue ex: DB::Error
-        raise NotFound.new("#{self} options=#{options}: not found") if ex.message == "no rows"
-        raise ex
+      rescue DB::NoResultsError
+        raise NotFound.new("#{self} options=#{options}: not found")
       end
 
       # Finds the saved instance.

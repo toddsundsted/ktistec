@@ -315,8 +315,7 @@ module ActivityPub
             AND u.iri IS NULL
       QUERY
       Activity.query_one(query, self.iri, object.iri)
-    rescue ex: DB::Error
-      raise ex unless ex.message == "no rows"
+    rescue DB::NoResultsError
     end
 
     def in_outbox(page = 1, size = 10, public = true)

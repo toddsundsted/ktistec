@@ -59,8 +59,7 @@ module Ktistec
 
   def self.host?
     host
-  rescue ex : Exception
-    raise ex unless ex.message == "no results"
+  rescue DB::NoResultsError
     false
   end
 
@@ -78,8 +77,7 @@ module Ktistec
 
   def self.site?
     site
-  rescue ex : Exception
-    raise ex unless ex.message == "no results"
+  rescue DB::NoResultsError
     false
   end
 

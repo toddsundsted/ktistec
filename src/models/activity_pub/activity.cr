@@ -33,10 +33,6 @@ module ActivityPub
     @[Persistent]
     property cc : Array(String)?
 
-    # non-persistent property for holding server-specific addresses
-    @[Assignable]
-    property deliver_to : Array(String)?
-
     @[Persistent]
     property summary : String?
 

@@ -33,6 +33,32 @@ Spectator.describe Task::Deliver do
     end
   end
 
+  describe "#deliver_to" do
+    subject do
+      described_class.new(
+        source_iri: "https://foo/bar/source",
+        subject_iri: "https://foo/bar/subject",
+        state: %Q|{"deliver_to":[]}|
+      )
+    end
+
+    it "returns an array of strings" do
+      expect(subject.deliver_to).to be_a(Array(String))
+    end
+
+    it "returns an empty array" do
+      expect(subject.deliver_to).to be_empty
+    end
+  end
+
+  describe "#deliver_to=" do
+    subject { described_class.new }
+
+    it "updates state" do
+      expect{subject.deliver_to = ["https://recipient"]}.to change{subject.state}
+    end
+  end
+
   describe "#perform" do
     let!(actor) { register(with_keys: true).actor }
 

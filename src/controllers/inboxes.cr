@@ -121,7 +121,7 @@ class RelationshipsController
         end
       end
       # compatibility with implementations that don't address follows
-      activity.deliver_to = [account.iri]
+      deliver_to = [account.iri]
     when ActivityPub::Activity::Accept
       unless activity.object?.try(&.local?)
         bad_request
@@ -153,7 +153,7 @@ class RelationshipsController
         unless object.actor == activity.actor
           bad_request
         end
-        activity.deliver_to = [account.iri]
+        deliver_to = [account.iri]
       when ActivityPub::Activity::Follow
         unless object.object == account.actor
           bad_request
@@ -165,7 +165,7 @@ class RelationshipsController
           bad_request
         end
         follow.destroy
-        activity.deliver_to = [account.iri]
+        deliver_to = [account.iri]
       else
         bad_request
       end
@@ -202,7 +202,8 @@ class RelationshipsController
 
     task = Task::Deliver.new(
       sender: account.actor,
-      activity: activity
+      activity: activity,
+      deliver_to: deliver_to
     )
     if Kemal.config.env == "test"
       task.perform

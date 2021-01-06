@@ -29,11 +29,38 @@ class Task
       iri && URI.parse(iri).path =~ /^\/actors\/#{sender.username}\/followers$/
     end
 
+    class State
+      include JSON::Serializable
+
+      property deliver_to : Array(String)
+
+      def initialize(@deliver_to = [] of String)
+      end
+    end
+
+    @[Assignable]
+    property deliver_to : Array(String)?
+
+    def deliver_to
+      @deliver_to ||= (temp = self.state.presence) ?
+        State.from_json(temp).deliver_to :
+        nil
+    end
+
+    def deliver_to=(@deliver_to : Array(String)?)
+      state = (temp = self.state.presence) ?
+        State.from_json(temp) :
+        State.new
+      state.deliver_to = deliver_to if deliver_to
+      self.state = state.to_json
+      deliver_to
+    end
+
     private def recipients
       actor = ActivityPub::Actor.dereference?(activity.actor_iri)
       object = ActivityPub::Object.dereference?(activity.object_iri)
 
-      recipients = [activity.to, activity.cc, activity.deliver_to].compact.flatten
+      recipients = [activity.to, activity.cc, self.deliver_to].compact.flatten
 
       # for remote activities, prune recipients that aren't 1) the
       # public collection, 2) the sender itself, 3) the activity's

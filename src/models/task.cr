@@ -70,5 +70,5 @@ class Task
   end
 
   @[Persistent]
-  property state : JSON::Any?
+  property state : String?
 end

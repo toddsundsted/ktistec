@@ -97,31 +97,29 @@ module ActivityPub
     end
 
     private def query(type, orig, dest, public = true)
-      {% begin %}
-        {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-        query = <<-QUERY
-          SELECT {{ vs.map{ |v| "a.#{v}" }.join(",").id }}
-            FROM actors AS a, relationships AS r
-           WHERE a.deleted_at IS NULL
-             AND a.iri = r.#{orig}
-             AND r.type = "#{type}"
-        #{public ? "AND r.confirmed = 1 AND r.visible = 1" : nil}
-             AND r.#{dest} = ?
-             AND a.id NOT IN (
-                SELECT a.id
-                  FROM actors AS a, relationships AS r
-                 WHERE a.deleted_at IS NULL
-                   AND a.iri = r.#{orig}
-                   AND r.type = "#{type}"
-              #{public ? "AND r.confirmed = 1 AND r.visible = 1" : nil}
-                   AND r.#{dest} = ?
-              ORDER BY r.created_at DESC
-                 LIMIT ?
-             )
-        ORDER BY r.created_at DESC
-           LIMIT ?
-        QUERY
-      {% end %}
+      public = public ? "AND r.confirmed = 1 AND r.visible = 1" : nil
+      query = <<-QUERY
+        SELECT #{Actor.columns(prefix: "a")}
+          FROM actors AS a, relationships AS r
+         WHERE a.deleted_at IS NULL
+           AND a.iri = r.#{orig}
+           AND r.type = "#{type}"
+           AND r.#{dest} = ?
+           #{public}
+           AND a.id NOT IN (
+              SELECT a.id
+                FROM actors AS a, relationships AS r
+               WHERE a.deleted_at IS NULL
+                 AND a.iri = r.#{orig}
+                 AND r.type = "#{type}"
+                 AND r.#{dest} = ?
+                 #{public}
+            ORDER BY r.created_at DESC
+               LIMIT ?
+           )
+      ORDER BY r.created_at DESC
+         LIMIT ?
+      QUERY
     end
 
     def all_following(page = 1, size = 10, public = true)

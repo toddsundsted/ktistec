@@ -170,4 +170,151 @@ Spectator.describe "partials" do
       end
     end
   end
+
+  describe "actor-small.html.slang" do
+    let(env) do
+      HTTP::Server::Context.new(
+        HTTP::Request.new("GET", "/actors/foo_bar"),
+        HTTP::Server::Response.new(IO::Memory.new)
+      )
+    end
+
+    let(actor) do
+      ActivityPub::Actor.new(
+        iri: "https://remote/actors/foo_bar"
+      ).save
+    end
+
+    subject do
+      begin
+        XML.parse_html(render "./src/views/partials/actor-small.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    context "if anonymous" do
+      it "does not render a form" do
+        expect(subject.xpath_nodes("//form")).to be_empty
+      end
+
+      context "and actor is local" do
+        before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
+
+        it "renders a link to remote follow" do
+          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
+        end
+      end
+    end
+
+    context "if authenticated" do
+      let(account) { register }
+
+      before_each { env.account = account }
+
+      context "if account actor is actor" do
+        let(actor) { account.actor }
+
+        it "does not render a form" do
+          expect(subject.xpath_nodes("//form")).to be_empty
+        end
+      end
+
+      macro follow(from, to, confirmed = true)
+        before_each do
+          ActivityPub::Activity::Follow.new(
+            iri: "#{{{from}}.origin}/activities/follow",
+            actor: {{from}},
+            object: {{to}}
+          ).save
+          {{from}}.follow(
+            {{to}},
+            confirmed: {{confirmed}},
+            visible: true
+          ).save
+        end
+      end
+
+      # on a page of the actors the actor is following, the actor
+      # expects to focus on actions regarding their decision to follow
+      # those actors, so don't present accept/reject actions.
+
+      context "and on a page of actors the actor is following" do
+        let(env) do
+          HTTP::Server::Context.new(
+            HTTP::Request.new("GET", "/actors/foo_bar/following"),
+            HTTP::Server::Response.new(IO::Memory.new)
+          )
+        end
+
+        follow(actor, account.actor, confirmed: false)
+
+        context "if already following" do
+          follow(account.actor, actor)
+
+          it "renders a button to unfollow" do
+            expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Unfollow")
+          end
+        end
+
+        it "renders a button to follow" do
+          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
+        end
+      end
+
+      # otherwise...
+
+      context "having not accepted or rejected a follow" do
+        follow(actor, account.actor, confirmed: false)
+
+        context "but already following" do
+          follow(account.actor, actor)
+
+          it "renders a button to accept" do
+            expect(subject.xpath_nodes("//form//input[@type='submit']/@value").map(&.text)).to have("Accept")
+          end
+
+          it "renders a button to reject" do
+            expect(subject.xpath_nodes("//form//input[@type='submit']/@value").map(&.text)).to have("Reject")
+          end
+        end
+
+        it "renders a button to accept" do
+          expect(subject.xpath_nodes("//form//input[@type='submit']/@value").map(&.text)).to have("Accept")
+        end
+
+        it "renders a button to reject" do
+          expect(subject.xpath_nodes("//form//input[@type='submit']/@value").map(&.text)).to have("Reject")
+        end
+      end
+
+      context "having accepted or rejected a follow" do
+        follow(actor, account.actor, confirmed: true)
+
+        context "and already following" do
+          follow(account.actor, actor)
+
+          it "renders a button to unfollow" do
+            expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Unfollow")
+          end
+        end
+
+        it "renders a button to follow" do
+          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
+        end
+      end
+
+      context "when already following" do
+        follow(account.actor, actor)
+
+        it "renders a button to unfollow" do
+          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Unfollow")
+        end
+      end
+
+      it "renders a button to follow" do
+        expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
+      end
+    end
+  end
 end

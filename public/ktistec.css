@@ -68,3 +68,6 @@ body { display: flex; flex-direction: column; }
 .ui.iconic.button { background: transparent none !important; padding: 0; margin: 0; }
 .ui.iconic.blue.button { color: #2185d0 !important; }
 .ui.dangerous.button:hover { color: #FF2733 !important; transition: 0.2s color ease; }
+/* used on social actions */
+.ui.accept.button { background: #21ba45 !important; color: #fff !important; }
+.ui.reject.button { background: #db2828 !important; color: #fff !important; }

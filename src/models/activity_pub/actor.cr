@@ -93,7 +93,7 @@ module ActivityPub
     def follows?(other : Actor, **options)
       !other.deleted? ?
         Relationship::Social::Follow.find?(**options.merge({from_iri: self.iri, to_iri: other.iri})) :
-        false
+        nil
     end
 
     private def query(type, orig, dest, public = true)

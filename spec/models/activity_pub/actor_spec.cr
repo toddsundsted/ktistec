@@ -220,9 +220,9 @@ Spectator.describe ActivityPub::Actor do
       expect(foo_bar.follows?(other, visible: false)).to be_falsey
     end
 
-    it "returns false for deleted actors" do
+    it "returns falsey for deleted actors" do
       other.delete
-      expect(foo_bar.follows?(other)).to be_false
+      expect(foo_bar.follows?(other)).to be_falsey
     end
   end
 

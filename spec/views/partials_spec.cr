@@ -103,6 +103,21 @@ Spectator.describe "partials" do
     end
   end
 
+  macro follow(from, to, confirmed = true)
+    before_each do
+      ActivityPub::Activity::Follow.new(
+        iri: "#{{{from}}.origin}/activities/follow",
+        actor: {{from}},
+        object: {{to}}
+      ).save
+      {{from}}.follow(
+        {{to}},
+        confirmed: {{confirmed}},
+        visible: true
+      ).save
+    end
+  end
+
   describe "actor-large.html.slang" do
     let(env) do
       HTTP::Server::Context.new(
@@ -145,28 +160,15 @@ Spectator.describe "partials" do
       end
 
       context "if following actor" do
-        before_each do
-          ActivityPub::Activity::Follow.new(
-            iri: "https://test.test/activities/follow",
-            actor: account.actor,
-            object: actor
-          ).save
-          account.actor.follow(
-            actor,
-            confirmed: true,
-            visible: true
-          ).save
-        end
+        follow(account.actor, actor)
 
         it "renders a button to unfollow" do
           expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Unfollow")
         end
       end
 
-      context "if not following actor" do
-        it "renders a button to follow" do
-          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
-        end
+      it "renders a button to follow" do
+        expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
       end
     end
   end
@@ -217,21 +219,6 @@ Spectator.describe "partials" do
 
         it "does not render a form" do
           expect(subject.xpath_nodes("//form")).to be_empty
-        end
-      end
-
-      macro follow(from, to, confirmed = true)
-        before_each do
-          ActivityPub::Activity::Follow.new(
-            iri: "#{{{from}}.origin}/activities/follow",
-            actor: {{from}},
-            object: {{to}}
-          ).save
-          {{from}}.follow(
-            {{to}},
-            confirmed: {{confirmed}},
-            visible: true
-          ).save
         end
       end
 

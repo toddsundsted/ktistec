@@ -20,6 +20,7 @@ class FooBarController
     "/foo/bar/helpers/actors/by-id/:id",
     "/foo/bar/helpers/actors/by-username/:username",
     "/foo/bar/helpers/:username/:relationship",
+    "/foo/bar/helpers/tag",
     "/foo/bar/paginate",
     "/foo/bar/accept",
     "/foo/bar/sanitize",
@@ -89,6 +90,26 @@ class FooBarController
     {
       actor_relationships_path: actor_relationships_path
     }.to_json
+  end
+
+  get "/foo/bar/helpers/tag" do |env|
+    form = tag :form, id: 1, class: "basic" do |html|
+      html << tag :input, type: "hidden", value: "secret"
+      html << tag :input, type: "submit"
+    end
+    <<-HTML
+    <div id="1">#{tag div}</div>
+    <div id="2.1">#{tag div, "foobar"}</div>
+    <div id="2.2">#{tag div, "foo", "bar"}</div>
+    <div id="2.3">#{tag div, "foo" + "bar"}</div>
+    <div id="2.4">#{tag div, "f" + "oo", "b" + "ar"}</div>
+    <div id="3.1">#{tag div, tag span}</div>
+    <div id="3.2">#{tag div, tag(span, "foobar")}</div>
+    <div id="4">#{tag div, tag(span, id: 5, class: "quux"), style: "foobar"}</div>
+    <div id="5.1">#{tag div do |h| h << tag span end}</div>
+    <div id="5.2">#{tag div do |h| h << tag span, "foobar" end}</div>
+    <div id="6">#{form}</div>
+    HTML
   end
 
   get "/foo/bar/paginate" do |env|
@@ -207,6 +228,69 @@ Spectator.describe Ktistec::Controller do
     it "gets the actor relationships path" do
       get "/foo/bar/helpers/foo_bar/helping"
       expect(JSON.parse(response.body)["actor_relationships_path"]).to eq("/actors/foo_bar/helping")
+    end
+  end
+
+  describe "get /foo/bar/helpers/tag" do
+    let(options) { {options: XML::SaveOptions::AS_HTML} }
+
+    macro tag(id)
+      XML.parse_html(response.body).xpath_nodes("//div[@id='{{id}}']/node()").map(&.to_xml(**options)).join
+    end
+
+    it "renders a tag" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(1)).to eq(%Q|<div></div>|)
+    end
+
+    it "renders a tag with content" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(2.1)).to eq(%Q|<div>foobar</div>|)
+    end
+
+    it "renders a tag with content" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(2.2)).to eq(%Q|<div>foobar</div>|)
+    end
+
+    it "renders a tag with content" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(2.3)).to eq(%Q|<div>foobar</div>|)
+    end
+
+    it "renders a tag with content" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(2.4)).to eq(%Q|<div>foobar</div>|)
+    end
+
+    it "renders nested tags" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(3.1)).to eq(%Q|<div><span></span></div>|)
+    end
+
+    it "renders nested tags" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(3.2)).to eq(%Q|<div><span>foobar</span></div>|)
+    end
+
+    it "renders a tag with attributes" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(4)).to eq(%Q|<div style="foobar"><span id="5" class="quux"></span></div>|)
+    end
+
+    it "renders block as content" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(5.1)).to eq(%Q|<div><span></span></div>|)
+    end
+
+    it "renders block as content" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(5.2)).to eq(%Q|<div><span>foobar</span></div>|)
+    end
+
+    it "renders complex form" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(6)).to eq(%Q|<form id="1" class="basic"><input type="hidden" value="secret"><input type="submit"></form>|)
     end
   end
 

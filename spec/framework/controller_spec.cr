@@ -109,6 +109,7 @@ class FooBarController
     <div id="5.1">#{tag div do |h| h << tag span end}</div>
     <div id="5.2">#{tag div do |h| h << tag span, "foobar" end}</div>
     <div id="6">#{form}</div>
+    <div id="7">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_class: "foobar", button_class: "barfoo"}</div>
     HTML
   end
 
@@ -291,6 +292,41 @@ Spectator.describe Ktistec::Controller do
     it "renders complex form" do
       get "/foo/bar/helpers/tag"
       expect(tag(6)).to eq(%Q|<form id="1" class="basic"><input type="hidden" value="secret"><input type="submit"></form>|)
+    end
+
+    it "renders a submit button" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/input[@type='submit']/@value)")).to eq("Foo Bar")
+    end
+
+    it "renders a hidden input with the authenticity token" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/input[@name='authenticity_token']/@value)")).to eq("CSRF TOKEN")
+    end
+
+    it "renders a hidden input with the activity type" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/input[@name='type']/@value)")).to eq("FooBar")
+    end
+
+    it "renders a hidden input with the object iri" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/input[@name='object']/@value)")).to eq("object iri")
+    end
+
+    it "renders a form with the outbox url" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/@action)")).to eq("outbox url")
+    end
+
+    it "renders submit button with classes" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/input[@type='submit']/@class)")).to eq("ui button barfoo")
+    end
+
+    it "renders form with classes" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/@class)")).to eq("ui form foobar")
     end
   end
 

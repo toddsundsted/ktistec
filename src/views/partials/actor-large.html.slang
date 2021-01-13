@@ -13,14 +13,6 @@
     .ui.basic.segment
       - if (_account = env.account?) && _account.actor != actor
         - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
-          form method="POST" action=outbox_path(_account)
-            input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-            input type="hidden" name="type" value="Undo"
-            input type="hidden" name="object" value=_follow.iri
-            input.ui.button type="submit" value="Unfollow"
+          == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo"
         - else
-          form method="POST" action=outbox_path(_account)
-            input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-            input type="hidden" name="type" value="Follow"
-            input type="hidden" name="object" value=actor.iri
-            input.ui.primary.button type="submit" value="Follow"
+          == activity_button "Follow", outbox_path(_account), actor.iri, button_class: "primary"

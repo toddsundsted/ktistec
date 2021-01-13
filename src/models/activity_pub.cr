@@ -49,12 +49,14 @@ module ActivityPub
       case options[key]?
       {% for subclass in @type.includers.reduce([] of TypeNode) { |a, t| a + t.all_subclasses << t }.uniq %}
         when {{name = subclass.stringify}}
-          {{subclass}}.find?(options["iri"]?.try(&.to_s)).try(&.assign(options, prefix: prefix)) ||
+          key = prefix + "iri"
+          (options.has_key?(key) ? {{subclass}}.find?(options[key].to_s).try(&.assign(options, prefix: prefix)) : nil) ||
             {{subclass}}.new(options, prefix: prefix)
       {% end %}
       else
         if default
-          default.find?(options["iri"]?.try(&.to_s)).try(&.assign(options, prefix: prefix)) ||
+          key = prefix + "iri"
+          (options.has_key?(key) ? default.find?(options[key].to_s).try(&.assign(options, prefix: prefix)) : nil) ||
             default.new(options, prefix: prefix)
         elsif (type = options[key]?)
           raise NotImplementedError.new(type.to_s)

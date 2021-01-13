@@ -79,9 +79,19 @@ Spectator.describe ActivityPub do
       expect{described_class.from_hash("", options).save}.to change{ActivityPub::Activity.count}.by(1)
     end
 
+    it "creates an instance if one doesn't exist" do
+      options = {"prefix.iri" => "https://test.test/bar_foo", "prefix.type" => "ActivityPub::Activity"}
+      expect{described_class.from_hash("prefix.", options).save}.to change{ActivityPub::Activity.count}.by(1)
+    end
+
     it "updates the instance if it already exists" do
       options = {"iri" => "https://test.test/foo_bar", "type" => "ActivityPub::Activity", "summary" => "foo bar baz"}
       expect{described_class.from_hash("", options).save}.to change{ActivityPub::Activity.find(subject.iri).summary}
+    end
+
+    it "updates the instance if it already exists" do
+      options = {"prefix.iri" => "https://test.test/foo_bar", "prefix.type" => "ActivityPub::Activity", "prefix.summary" => "foo bar baz"}
+      expect{described_class.from_hash("prefix.", options).save}.to change{ActivityPub::Activity.find(subject.iri).summary}
     end
 
     it "is defined on includers" do

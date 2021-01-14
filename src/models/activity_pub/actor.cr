@@ -172,7 +172,7 @@ module ActivityPub
       {% end %}
     end
 
-    private def content(mailbox, inclusion = nil, exclusion = nil, page = 1, size = 10, public = true)
+    private def content(mailbox, inclusion = nil, exclusion = nil, page = 1, size = 10, public = true, replies = true)
       mailbox =
         case mailbox
         when Class
@@ -225,6 +225,7 @@ module ActivityPub
             AND obj.deleted_at is NULL
             AND u.iri IS NULL
        #{public ? %Q|AND a.visible = 1| : nil}
+       #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
             AND a.id NOT IN (
                SELECT a.id
                  FROM activities AS a
@@ -256,6 +257,7 @@ module ActivityPub
                   AND obj.deleted_at is NULL
                   AND u.iri IS NULL
              #{public ? %Q|AND a.visible = 1| : nil}
+             #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
              GROUP BY a.id
              ORDER BY r.created_at DESC
                 LIMIT ?
@@ -339,6 +341,7 @@ module ActivityPub
         nil,
         page,
         size,
+        false,
         false
       )
     end

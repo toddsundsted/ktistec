@@ -337,6 +337,11 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces)).to eq([0, 0])
       end
 
+      it "includes replies" do
+        note5.assign(in_reply_to: note4).save
+        expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
+      end
+
       it "paginates the results" do
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
         expect(subject.in_outbox(2, 2, public: false)).to eq([activity3, activity2])
@@ -471,6 +476,11 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_inbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.likes)).to eq([0, 1])
       end
 
+      it "includes replies" do
+        note5.assign(in_reply_to: note4).save
+        expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
+      end
+
       it "paginates the results" do
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
         expect(subject.in_inbox(2, 2, public: false)).to eq([activity3, activity2])
@@ -508,10 +518,16 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_mailbox(index, box)
+      let(note{{index}}) do
+        ActivityPub::Object::Note.new(
+          iri: "https://test.test/objects/#{random_string}"
+        )
+      end
       let(activity{{index}}) do
         ActivityPub::Activity::Create.new(
           iri: "https://test.test/activities/#{random_string}",
           actor: subject,
+          object: note{{index}},
           visible: false
         )
       end
@@ -531,12 +547,6 @@ Spectator.describe ActivityPub::Actor do
     add_to_mailbox(4, Outbox)
     add_to_mailbox(5, Inbox)
 
-    let(note) do
-      ActivityPub::Object::Note.new(
-        iri: "https://test.test/note"
-      )
-    end
-
     let(undo) do
       ActivityPub::Activity::Undo.new(
         iri: "https://test.test/undo",
@@ -549,8 +559,13 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.both_mailboxes(1, 2).first).to be_a(ActivityPub::Activity::Create)
     end
 
+    it "filters out replies" do
+      note5.assign(in_reply_to: note3).save
+      expect(subject.both_mailboxes(1, 2)).to eq([activity4, activity3])
+    end
+
     it "filters out deleted posts" do
-      activity5.assign(object: note).save ; note.delete
+      note5.delete
       expect(subject.both_mailboxes(1, 2)).to eq([activity4, activity3])
     end
 

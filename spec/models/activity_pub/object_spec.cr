@@ -131,21 +131,21 @@ Spectator.describe ActivityPub::Object do
       )
     end
 
-    it "updates announces" do
+    it "updates announces count" do
       announce.save
-      expect(object.with_statistics!.announces).to eq(1)
-      expect(object.with_statistics!.likes).to eq(0)
+      expect(object.with_statistics!.announces_count).to eq(1)
+      expect(object.with_statistics!.likes_count).to eq(0)
     end
 
-    it "updates likes" do
+    it "updates likes count" do
       like.save
-      expect(object.with_statistics!.announces).to eq(0)
-      expect(object.with_statistics!.likes).to eq(1)
+      expect(object.with_statistics!.announces_count).to eq(0)
+      expect(object.with_statistics!.likes_count).to eq(1)
     end
 
     it "doesn't fail when the object hasn't been saved" do
-      expect(object.with_statistics!.announces).to eq(0)
-      expect(object.with_statistics!.likes).to eq(0)
+      expect(object.with_statistics!.announces_count).to eq(0)
+      expect(object.with_statistics!.likes_count).to eq(0)
     end
   end
 
@@ -211,12 +211,12 @@ Spectator.describe ActivityPub::Object do
 
       it "includes count of announcements" do
         announce.save
-        expect(object5.thread.map(&.announces)).to eq([0, 0, 1, 0, 0, 0])
+        expect(object5.thread.map(&.announces_count)).to eq([0, 0, 1, 0, 0, 0])
       end
 
       it "includes count of likes" do
         like.save
-        expect(object5.thread.map(&.likes)).to eq([0, 0, 0, 0, 0, 1])
+        expect(object5.thread.map(&.likes_count)).to eq([0, 0, 0, 0, 0, 1])
       end
     end
 

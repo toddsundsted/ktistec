@@ -78,10 +78,10 @@ module ActivityPub
     end
 
     @[Assignable]
-    property announces : Int64 = 0
+    property announces_count : Int64 = 0
 
     @[Assignable]
-    property likes : Int64 = 0
+    property likes_count : Int64 = 0
 
     def with_statistics!
       query = <<-QUERY
@@ -95,8 +95,8 @@ module ActivityPub
             AND a.object_iri = ?
       QUERY
       Ktistec.database.query_one(query, iri) do |rs|
-        rs.read(Int64?).try { |announces| self.announces = announces }
-        rs.read(Int64?).try { |likes| self.likes = likes }
+        rs.read(Int64?).try { |announces_count| self.announces_count = announces_count }
+        rs.read(Int64?).try { |likes_count| self.likes_count = likes_count }
       end
       self
     end
@@ -139,7 +139,7 @@ module ActivityPub
          GROUP BY o.id
          ORDER BY r.position
       QUERY
-      Object.query_all(query, self.iri, additional_columns: {announces: Int64?, likes: Int64?, depth: Int32})
+      Object.query_all(query, self.iri, additional_columns: {announces_count: Int64?, likes_count: Int64?, depth: Int32})
     end
 
     def ancestors

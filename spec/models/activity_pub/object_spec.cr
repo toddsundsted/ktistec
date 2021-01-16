@@ -188,6 +188,23 @@ Spectator.describe ActivityPub::Object do
       )
     end
 
+    describe "#replies_count!" do
+      it "returns the count of replies" do
+        expect(subject.with_replies_count!.replies_count).to eq(5)
+        expect(object5.with_replies_count!.replies_count).to eq(0)
+      end
+
+      it "omits deleted replies but includes their children" do
+        object4.delete
+        expect(subject.with_replies_count!.replies_count).to eq(4)
+      end
+
+      it "omits destroyed replies and their children" do
+        object4.destroy
+        expect(subject.with_replies_count!.replies_count).to eq(3)
+      end
+    end
+
     describe "#thread" do
       it "returns all replies properly nested" do
         expect(subject.thread).to eq([subject, object1, object2, object3, object4, object5])

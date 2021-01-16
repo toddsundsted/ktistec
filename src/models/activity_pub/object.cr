@@ -102,6 +102,30 @@ module ActivityPub
     end
 
     @[Assignable]
+    property replies_count : Int64 = 0
+
+    def with_replies_count!
+      query = <<-QUERY
+           WITH RECURSIVE
+            replies_to(iri) AS (
+               VALUES(?)
+                  UNION
+                 SELECT o.iri
+                   FROM objects AS o, replies_to AS r
+                  WHERE o.in_reply_to_iri = r.iri
+             )
+         SELECT count(o.iri) - 1
+           FROM objects AS o, replies_to AS r
+          WHERE o.iri IN (r.iri)
+           AND o.deleted_at IS NULL
+      QUERY
+      Ktistec.database.query_one(query, iri) do |rs|
+        rs.read(Int64?).try { |replies_count| self.replies_count = replies_count }
+      end
+      self
+    end
+
+    @[Assignable]
     property depth : Int32 = 0
 
     def thread

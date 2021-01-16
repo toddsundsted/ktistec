@@ -35,10 +35,16 @@
       a href=_object.display_link = _object.display_date
   .meta
     - if __account
+      - c = _object.with_replies_count!.replies_count
       a href=replies_path(_object)
         button.ui.mini.iconic.button
           i.reply.icon
-          | Reply
+          - if c == 0
+            | Reply
+          - elsif c == 1
+            | 1 Reply
+          - else
+            | #{c} Replies
       - if (c = _object.likes_count) > 0 && (to_undo = __account.actor.in_outbox?(_object, ActivityPub::Activity::Like))
         form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")

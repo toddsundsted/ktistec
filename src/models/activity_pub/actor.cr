@@ -334,6 +334,19 @@ module ActivityPub
       find_in?(object, Relationship::Content::Inbox, inclusion, exclusion)
     end
 
+    def self.local_timeline(page = 1, size = 10)
+      content(
+        "#{Ktistec.host}%",
+        Relationship::Content::Outbox,
+        [ActivityPub::Activity::Create, ActivityPub::Activity::Announce],
+        nil,
+        page,
+        size,
+        true,
+        false
+      )
+    end
+
     def both_mailboxes(page = 1, size = 10)
       self.class.content(
         self.iri,

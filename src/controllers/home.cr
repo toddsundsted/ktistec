@@ -31,6 +31,8 @@ class HomeController
         render "src/views/home/step_2.json.ecr"
       end
     elsif (account = env.account?).nil?
+      activities = ActivityPub::Actor.local_timeline(*pagination_params(env))
+
       if accepts?("text/html")
         env.response.content_type = "text/html"
         render "src/views/home/index.html.ecr", "src/views/layouts/default.html.ecr"

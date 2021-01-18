@@ -216,7 +216,7 @@ module ActivityPub
                      WHERE u.iri IS NULL
                 ) AS c
              ON c.object_iri = obj.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
-          WHERE r.from_iri = ?
+          WHERE r.from_iri LIKE ?
             #{mailbox}
             AND r.confirmed = 1
             #{inclusion}
@@ -248,7 +248,7 @@ module ActivityPub
                            WHERE u.iri IS NULL
                       ) AS c
                    ON c.object_iri = obj.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
-                WHERE r.from_iri = ?
+                WHERE r.from_iri LIKE ?
                   #{mailbox}
                   AND r.confirmed = 1
                   #{inclusion}

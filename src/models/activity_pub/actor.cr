@@ -172,7 +172,7 @@ module ActivityPub
       {% end %}
     end
 
-    private def content(mailbox, inclusion = nil, exclusion = nil, page = 1, size = 10, public = true, replies = true)
+    protected def self.content(iri, mailbox, inclusion = nil, exclusion = nil, page = 1, size = 10, public = true, replies = true)
       mailbox =
         case mailbox
         when Class
@@ -268,7 +268,7 @@ module ActivityPub
       QUERY
       counts = {"object.announces_count": Int64?, "object.likes_count": Int64?}
       object_columns = Object.persistent_columns(prefix: :object).merge(counts)
-      Activity.query_and_paginate(query, self.iri, self.iri, additional_columns: object_columns, page: page, size: size)
+      Activity.query_and_paginate(query, iri, iri, additional_columns: object_columns, page: page, size: size)
     end
 
     private def find_in?(object, mailbox, inclusion = nil, exclusion = nil)
@@ -319,7 +319,7 @@ module ActivityPub
     end
 
     def in_outbox(page = 1, size = 10, public = true)
-      content(Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
+      self.class.content(self.iri, Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
     def in_outbox?(object : Object, inclusion = nil, exclusion = nil)
@@ -327,7 +327,7 @@ module ActivityPub
     end
 
     def in_inbox(page = 1, size = 10, public = true)
-      content(Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
+      self.class.content(self. iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
     def in_inbox?(object : Object, inclusion = nil, exclusion = nil)
@@ -335,7 +335,8 @@ module ActivityPub
     end
 
     def both_mailboxes(page = 1, size = 10)
-      content(
+      self.class.content(
+        self.iri,
         [Relationship::Content::Inbox, Relationship::Content::Outbox],
         [ActivityPub::Activity::Create, ActivityPub::Activity::Announce],
         nil,
@@ -347,7 +348,8 @@ module ActivityPub
     end
 
     def public_posts(page = 1, size = 10)
-      content(
+      self.class.content(
+        self.iri,
         Relationship::Content::Outbox,
         [ActivityPub::Activity::Create, ActivityPub::Activity::Announce],
         nil,

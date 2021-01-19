@@ -79,6 +79,13 @@ FilePond.setOptions({
       $(this).replaceWith('<i class="user icon"></i>')
     })
   })
+  $(window).on("trix-change", function (event) {
+    if (event.target.hasContent != !!event.target.textContent) {
+      (event.target.hasContent = !!event.target.textContent) ?
+        $(event.target).closest('form').find('.buttons .button').removeClass('disabled') :
+        $(event.target).closest('form').find('.buttons .button').addClass('disabled')
+    }
+  })
   $(window).on("trix-attachment-add", function(event) {
     event = event.originalEvent
     var attachment = event.attachment

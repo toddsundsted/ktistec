@@ -17,4 +17,5 @@ section.ui.feed
     .field
       input#input-trix-editor type="hidden" name="content"
       trix-editor input="input-trix-editor"
-    input.ui.button type="submit" value="Reply"
+    .ui.buttons
+      input.ui.disabled.primary.button type="submit" value="Reply"

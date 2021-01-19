@@ -12,7 +12,8 @@
     .field
       input#input-trix-editor type="hidden" name="content"
       trix-editor input="input-trix-editor"
-    input.ui.button type="submit" value="Post Status"
+    .ui.buttons
+      input.ui.disabled.primary.button type="submit" value="Post Status"
 - else
   == render "src/views/partials/actor-medium.html.slang"
 crystal:

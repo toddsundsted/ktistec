@@ -38,7 +38,19 @@ FilePond.setOptions({
       }
     })
   })
-
+  $(document).on('click', '.dangerous.button', function (e) {
+    e.preventDefault()
+    let $this = $(this)
+    let $form = $this.closest('form')
+    let modal = $this.data('modal')
+    $('.ui.modal.' + modal)
+      .modal({
+        onApprove: function() {
+          $form.submit()
+        }
+      })
+      .modal('show')
+  })
   $(document).on("turbolinks:load", function () {
     FilePond.create(
       document.querySelector('form[action="/settings"] input[type="file"][name="image"]'), {
@@ -63,21 +75,8 @@ FilePond.setOptions({
         selector: '.content img',
         download: false
       })
-    $('.ui.feed .event img').on('error', function() {
+    $('.ui.feed .event .label img').on('error', function() {
       $(this).replaceWith('<i class="user icon"></i>')
-    })
-    $('.dangerous.button').on('click', function (event) {
-      event.preventDefault()
-      let $this = $(this)
-      let $form = $this.closest('form')
-      let modal = $this.data('modal')
-      $('.ui.modal.' + modal)
-        .modal({
-          onApprove: function() {
-            $form.submit()
-          }
-        })
-        .modal('show')
     })
   })
   $(window).on("trix-attachment-add", function(event) {

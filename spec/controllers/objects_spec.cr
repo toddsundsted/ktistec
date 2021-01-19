@@ -57,20 +57,17 @@ Spectator.describe ObjectsController do
     end
 
     it "returns 404 if object is not visible" do
-      headers = HTTP::Headers{"Accept" => "application/json"}
-      get "/objects/#{notvisible.iri.split("/").last}", headers
+      get "/objects/#{notvisible.iri.split("/").last}"
       expect(response.status_code).to eq(404)
     end
 
     it "returns 404 if object is remote" do
-      headers = HTTP::Headers{"Accept" => "application/json"}
-      get "/objects/#{remote.iri.split("/").last}", headers
+      get "/objects/#{remote.iri.split("/").last}"
       expect(response.status_code).to eq(404)
     end
 
     it "returns 404 if object does not exist" do
-      headers = HTTP::Headers{"Accept" => "application/json"}
-      get "/objects/0", headers
+      get "/objects/0"
       expect(response.status_code).to eq(404)
     end
 
@@ -97,8 +94,7 @@ Spectator.describe ObjectsController do
       end
 
       it "returns 404 if object is remote" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/objects/#{remote.iri.split("/").last}", headers
+        get "/objects/#{remote.iri.split("/").last}"
         expect(response.status_code).to eq(404)
       end
     end
@@ -106,8 +102,7 @@ Spectator.describe ObjectsController do
 
   describe "GET /remote/objects/:id" do
     it "returns 401 if not authorized" do
-      headers = HTTP::Headers{"Accept" => "application/json"}
-      get "/remote/objects/0", headers
+      get "/remote/objects/0"
       expect(response.status_code).to eq(401)
     end
 
@@ -139,20 +134,17 @@ Spectator.describe ObjectsController do
       end
 
       it "returns 404 if object is not visible" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/objects/#{notvisible.id}", headers
+        get "/remote/objects/#{notvisible.id}"
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if object is remote" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/objects/#{remote.id}", headers
+        get "/remote/objects/#{remote.id}"
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if object does not exist" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/objects/0", headers
+        get "/remote/objects/0"
         expect(response.status_code).to eq(404)
       end
 
@@ -187,8 +179,7 @@ Spectator.describe ObjectsController do
 
   describe "GET /remote/objects/:id/thread" do
     it "returns 401" do
-      headers = HTTP::Headers{"Accept" => "application/json"}
-      get "/remote/objects/0/thread", headers
+      get "/remote/objects/0/thread"
       expect(response.status_code).to eq(401)
     end
 
@@ -208,20 +199,17 @@ Spectator.describe ObjectsController do
       end
 
       it "returns 404 if object is not visible" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/objects/#{notvisible.id}/thread", headers
+        get "/remote/objects/#{notvisible.id}/thread"
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if object is remote" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/objects/#{remote.id}/thread", headers
+        get "/remote/objects/#{remote.id}/thread"
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if object does not exist" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/objects/0/thread", headers
+        get "/remote/objects/0/thread"
         expect(response.status_code).to eq(404)
       end
     end
@@ -229,8 +217,7 @@ Spectator.describe ObjectsController do
 
   describe "GET /remote/objects/:id/replies" do
     it "returns 401" do
-      headers = HTTP::Headers{"Accept" => "text/html"}
-      get "/remote/objects/0/replies", headers
+      get "/remote/objects/0/replies"
       expect(response.status_code).to eq(401)
     end
 
@@ -285,20 +272,17 @@ Spectator.describe ObjectsController do
       end
 
       it "returns 404 if object is not visible" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{notvisible.id}/replies", headers
+        get "/remote/objects/#{notvisible.id}/replies"
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if object is remote" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{remote.id}/replies", headers
+        get "/remote/objects/#{remote.id}/replies"
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if object does not exist" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/0/replies", headers
+        get "/remote/objects/0/replies"
         expect(response.status_code).to eq(404)
       end
     end

@@ -40,28 +40,38 @@ Spectator.describe ObjectsController do
     ).save
   end
 
+  macro put_in_inbox(object)
+    Relationship::Content::Inbox.new(
+      from_iri: actor.iri,
+      to_iri: ActivityPub::Activity.new(
+        iri: "https://test.test/activities/#{random_string}",
+        actor_iri: actor.iri,
+        object_iri: {{object}}.iri
+      ).save.iri
+    ).save
+  end
+
+  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
+  ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
+
   describe "GET /objects/:id" do
     it "succeeds" do
-      headers = HTTP::Headers{"Accept" => "text/html"}
-      get "/objects/#{visible.iri.split("/").last}", headers
+      get "/objects/#{visible.iri.split("/").last}", ACCEPT_HTML
       expect(response.status_code).to eq(200)
     end
 
     it "succeeds" do
-      headers = HTTP::Headers{"Accept" => "application/json"}
-      get "/objects/#{visible.iri.split("/").last}", headers
+      get "/objects/#{visible.iri.split("/").last}", ACCEPT_JSON
       expect(response.status_code).to eq(200)
     end
 
     it "renders the object" do
-      headers = HTTP::Headers{"Accept" => "text/html"}
-      get "/objects/#{visible.iri.split("/").last}", headers
+      get "/objects/#{visible.iri.split("/").last}", ACCEPT_HTML
       expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
     end
 
     it "renders the object" do
-      headers = HTTP::Headers{"Accept" => "application/json"}
-      get "/objects/#{visible.iri.split("/").last}", headers
+      get "/objects/#{visible.iri.split("/").last}", ACCEPT_JSON
       expect(JSON.parse(response.body)["id"]).to eq(visible.iri)
     end
 
@@ -89,14 +99,12 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds if draft" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/objects/#{draft.iri.split("/").last}", headers
+        get "/objects/#{draft.iri.split("/").last}", ACCEPT_HTML
         expect(response.status_code).to eq(200)
       end
 
       it "succeeds if draft" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/objects/#{draft.iri.split("/").last}", headers
+        get "/objects/#{draft.iri.split("/").last}", ACCEPT_JSON
         expect(response.status_code).to eq(200)
       end
 
@@ -111,30 +119,19 @@ Spectator.describe ObjectsController do
 
       context "and it's in the user's inbox" do
         before_each do
-          [visible, notvisible, remote].each do |object|
-            Relationship::Content::Inbox.new(
-              from_iri: Global.account.not_nil!.iri,
-              to_iri: ActivityPub::Activity.new(
-                iri: "https://test.test/activities/#{random_string}",
-                actor_iri: Global.account.not_nil!.iri,
-                object_iri: object.iri
-              ).save.iri
-            ).save
-          end
+          [visible, notvisible, remote].each { |object| put_in_inbox(object) }
         end
 
         it "succeeds if local" do
           [visible, notvisible].each do |object|
-            headers = HTTP::Headers{"Accept" => "text/html"}
-            get "/objects/#{object.iri.split("/").last}", headers
+            get "/objects/#{object.iri.split("/").last}", ACCEPT_HTML
             expect(response.status_code).to eq(200)
           end
         end
 
         it "succeeds if local" do
           [visible, notvisible].each do |object|
-            headers = HTTP::Headers{"Accept" => "application/json"}
-            get "/objects/#{object.iri.split("/").last}", headers
+            get "/objects/#{object.iri.split("/").last}", ACCEPT_JSON
             expect(response.status_code).to eq(200)
           end
         end
@@ -157,26 +154,22 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{visible.id}", headers
+        get "/remote/objects/#{visible.id}", ACCEPT_HTML
         expect(response.status_code).to eq(200)
       end
 
       it "succeeds" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/objects/#{visible.id}", headers
+        get "/remote/objects/#{visible.id}", ACCEPT_JSON
         expect(response.status_code).to eq(200)
       end
 
       it "renders the object" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{visible.id}", headers
+        get "/remote/objects/#{visible.id}", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
       end
 
       it "renders the object" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/objects/#{visible.id}", headers
+        get "/remote/objects/#{visible.id}", ACCEPT_JSON
         expect(JSON.parse(response.body)["id"]).to eq(visible.iri)
       end
 
@@ -202,30 +195,19 @@ Spectator.describe ObjectsController do
 
       context "and it's in the user's inbox" do
         before_each do
-          [visible, notvisible, remote].each do |object|
-            Relationship::Content::Inbox.new(
-              from_iri: Global.account.not_nil!.iri,
-              to_iri: ActivityPub::Activity.new(
-                iri: "https://test.test/activities/#{random_string}",
-                actor_iri: Global.account.not_nil!.iri,
-                object_iri: object.iri
-              ).save.iri
-            ).save
-          end
+          [visible, notvisible, remote].each { |object| put_in_inbox(object) }
         end
 
         it "succeeds" do
           [visible, notvisible, remote].each do |object|
-            headers = HTTP::Headers{"Accept" => "text/html"}
-            get "/remote/objects/#{object.id}", headers
+            get "/remote/objects/#{object.id}", ACCEPT_HTML
             expect(response.status_code).to eq(200)
           end
         end
 
         it "succeeds" do
           [visible, notvisible, remote].each do |object|
-            headers = HTTP::Headers{"Accept" => "application/json"}
-            get "/remote/objects/#{object.id}", headers
+            get "/remote/objects/#{object.id}", ACCEPT_JSON
             expect(response.status_code).to eq(200)
           end
         end
@@ -243,26 +225,22 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{visible.id}/thread", headers
+        get "/remote/objects/#{visible.id}/thread", ACCEPT_HTML
         expect(response.status_code).to eq(200)
       end
 
       it "succeeds" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/objects/#{visible.id}/thread", headers
+        get "/remote/objects/#{visible.id}/thread", ACCEPT_JSON
         expect(response.status_code).to eq(200)
       end
 
       it "renders the collection" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{visible.id}/thread", headers
+        get "/remote/objects/#{visible.id}/thread", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{visible.id}")
       end
 
       it "renders the collection" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/objects/#{visible.id}/thread", headers
+        get "/remote/objects/#{visible.id}/thread", ACCEPT_JSON
         expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri)
       end
 
@@ -288,30 +266,19 @@ Spectator.describe ObjectsController do
 
       context "and it's in the user's inbox" do
         before_each do
-          [visible, notvisible, remote].each do |object|
-            Relationship::Content::Inbox.new(
-              from_iri: Global.account.not_nil!.iri,
-              to_iri: ActivityPub::Activity.new(
-                iri: "https://test.test/activities/#{random_string}",
-                actor_iri: Global.account.not_nil!.iri,
-                object_iri: object.iri
-              ).save.iri
-            ).save
-          end
+          [visible, notvisible, remote].each { |object| put_in_inbox(object) }
         end
 
         it "succeeds" do
           [visible, notvisible, remote].each do |object|
-            headers = HTTP::Headers{"Accept" => "text/html"}
-            get "/remote/objects/#{object.id}/thread", headers
+            get "/remote/objects/#{object.id}/thread", ACCEPT_HTML
             expect(response.status_code).to eq(200)
           end
         end
 
         it "succeeds" do
           [visible, notvisible, remote].each do |object|
-            headers = HTTP::Headers{"Accept" => "application/json"}
-            get "/remote/objects/#{object.id}/thread", headers
+            get "/remote/objects/#{object.id}/thread", ACCEPT_JSON
             expect(response.status_code).to eq(200)
           end
         end
@@ -329,20 +296,17 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{visible.id}/replies", headers
+        get "/remote/objects/#{visible.id}/replies"
         expect(response.status_code).to eq(200)
       end
 
       it "renders the object" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{visible.id}/replies", headers
+        get "/remote/objects/#{visible.id}/replies"
         expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
       end
 
       it "renders the form" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{visible.id}/replies", headers
+        get "/remote/objects/#{visible.id}/replies"
         expect(XML.parse_html(response.body).xpath_nodes("//trix-editor")).not_to be_empty
       end
 
@@ -364,14 +328,12 @@ Spectator.describe ObjectsController do
       end
 
       it "addresses (to) the author of the object" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{visible.id}/replies", headers
+        get "/remote/objects/#{visible.id}/replies"
         expect(XML.parse_html(response.body).xpath_nodes("//form/input[@name='to']/@value").first.text).to eq(author.iri)
       end
 
       it "addresses (cc) the other authors in the thread" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/objects/#{visible.id}/replies", headers
+        get "/remote/objects/#{visible.id}/replies"
         expect(XML.parse_html(response.body).xpath_nodes("//form/input[@name='cc']/@value").first.text).to eq(other.iri)
       end
 

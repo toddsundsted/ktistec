@@ -57,6 +57,10 @@ module ActivityPub
     @[Persistent]
     property urls : Array(String)?
 
+    def draft?
+      published.nil? && local?
+    end
+
     def display_link
       urls.try(&.first?) || iri
     end

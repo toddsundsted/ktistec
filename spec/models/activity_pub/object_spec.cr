@@ -258,5 +258,25 @@ Spectator.describe ActivityPub::Object do
         expect(object5.ancestors.map(&.depth)).to eq([0, 1, 2])
       end
     end
+
+    describe "#draft?" do
+      subject do
+        described_class.new(
+          iri: "https://test.test/objects/#{random_string}"
+        ).save
+      end
+
+      it "returns true if draft" do
+        expect(subject.draft?).to be_true
+      end
+
+      it "returns false if not local" do
+        expect(subject.assign(iri: "https://remote/object").draft?).to be_false
+      end
+
+      it "returns false if published" do
+        expect(subject.assign(published: Time.utc).draft?).to be_false
+      end
+    end
   end
 end

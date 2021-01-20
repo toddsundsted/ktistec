@@ -74,7 +74,10 @@ class ObjectsController
 
   private def self.get_object(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id))
-      if object.visible || env.account?.try(&.actor.in_inbox?(object))
+      if object.visible ||
+         ((account = env.account?) &&
+          ((account.actor == object.attributed_to? && (!env.request.path.starts_with?("/remote/") || !object.draft?)) ||
+           account.actor.in_inbox?(object)))
         object
       end
     end

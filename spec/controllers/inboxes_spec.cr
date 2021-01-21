@@ -826,8 +826,8 @@ Spectator.describe RelationshipsController do
       end
     end
 
-    context "on delete" do
-      context "object" do
+    context "when deleting" do
+      context "an object" do
         let(note) do
           ActivityPub::Object::Note.new(
             iri: "https://remote/objects/#{random_string}",
@@ -898,7 +898,7 @@ Spectator.describe RelationshipsController do
         end
       end
 
-      context "actor" do
+      context "an actor" do
         let(delete) do
           ActivityPub::Activity::Delete.new(
             iri: "https://remote/activities/delete",

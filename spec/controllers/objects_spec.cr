@@ -35,6 +35,7 @@ Spectator.describe ObjectsController do
   let!(draft) do
     ActivityPub::Object.new(
       iri: "https://test.test/objects/#{random_string}",
+      content: "this is a test",
       attributed_to: actor,
       visible: false
     ).save
@@ -53,6 +54,8 @@ Spectator.describe ObjectsController do
 
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
+  FORM_DATA = HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"}
+  JSON_DATA = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
 
   describe "GET /objects/:id" do
     it "succeeds" do
@@ -140,6 +143,102 @@ Spectator.describe ObjectsController do
           get "/objects/#{remote.iri.split("/").last}"
           expect(response.status_code).to eq(404)
         end
+      end
+    end
+  end
+
+  describe "GET /objects/:id/edit" do
+    it "returns 401 if not authorized" do
+      get "/objects/0/edit"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders a form with the object" do
+        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
+      end
+
+      it "renders a form that posts to the outbox path" do
+        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//form[@id]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
+      end
+
+      it "renders an input with the draft content" do
+        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("this is a test")
+      end
+
+      it "renders the object" do
+        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_JSON
+        expect(JSON.parse(response.body)["id"]).to eq(draft.iri)
+      end
+
+      it "returns 404 if not a draft" do
+        [visible, notvisible, remote].each do |object|
+          get "/objects/#{object.iri.split("/").last}/edit"
+          expect(response.status_code).to eq(404)
+        end
+      end
+
+      it "returns 404 if object does not exist" do
+        get "/objects/0/edit"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /objects/:id" do
+    it "returns 401 if not authorized" do
+      post "/objects/0"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/objects/#{draft.iri.split("/").last}", FORM_DATA, "content="
+        expect(response.status_code).to eq(302)
+      end
+
+      it "succeeds" do
+        post "/objects/#{draft.iri.split("/").last}", JSON_DATA, %Q|{"content":""}|
+        expect(response.status_code).to eq(302)
+      end
+
+      it "changes the content" do
+        expect{post "/objects/#{draft.iri.split("/").last}", FORM_DATA, "content=foo+bar"}.
+          to change{ActivityPub::Object.find(draft.id).content}
+      end
+
+      it "changes the content" do
+        expect{post "/objects/#{draft.iri.split("/").last}", JSON_DATA, %Q|{"content":"foo bar"}|}.
+          to change{ActivityPub::Object.find(draft.id).content}
+      end
+
+      it "returns 404 if not a draft" do
+        [visible, notvisible, remote].each do |object|
+          post "/objects/#{object.iri.split("/").last}"
+          expect(response.status_code).to eq(404)
+        end
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/objects/0"
+        expect(response.status_code).to eq(404)
       end
     end
   end

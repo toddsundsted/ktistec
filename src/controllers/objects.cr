@@ -13,10 +13,12 @@ class ObjectsController
     "#{host}/objects/#{env.params.url["id"]}"
   end
 
-  get "/objects/:id" do |env|
-    iri = "#{host}/objects/#{env.params.url["id"]}"
+  macro id_param
+    env.params.url["id"].to_i64
+  end
 
-    unless (object = get_object(env, iri))
+  get "/objects/:id" do |env|
+    unless (object = get_object(env, iri_param))
       not_found
     end
 
@@ -54,9 +56,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id" do |env|
-    id = env.params.url["id"].to_i64
-
-    unless (object = get_object(env, id))
+    unless (object = get_object(env, id_param))
       not_found
     end
 
@@ -70,9 +70,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id/thread" do |env|
-    id = env.params.url["id"].to_i64
-
-    unless (object = get_object(env, id))
+    unless (object = get_object(env, id_param))
       not_found
     end
 

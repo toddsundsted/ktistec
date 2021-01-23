@@ -60,6 +60,37 @@ Spectator.describe ObjectsController do
   FORM_DATA = HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"}
   JSON_DATA = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
 
+  describe "POST /objects" do
+    it "returns 401 if not authorized" do
+      post "/objects"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/objects", FORM_DATA, "content="
+        expect(response.status_code).to eq(302)
+      end
+
+      it "succeeds" do
+        post "/objects", JSON_DATA, %Q|{"content":""}|
+        expect(response.status_code).to eq(302)
+      end
+
+      it "creates an object" do
+        expect{post "/objects", FORM_DATA, "content=foo+bar"}.
+          to change{ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri)}.by(1)
+      end
+
+      it "creates an object" do
+        expect{post "/objects", JSON_DATA, %Q|{"content":"foo bar"}|}.
+          to change{ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri)}.by(1)
+      end
+    end
+  end
+
   describe "GET /objects/:id" do
     it "succeeds" do
       get "/objects/#{visible.iri.split("/").last}", ACCEPT_HTML

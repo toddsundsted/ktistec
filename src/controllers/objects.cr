@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../models/activity_pub/object/note"
 
 class ObjectsController
   include Ktistec::Controller
@@ -15,6 +16,17 @@ class ObjectsController
 
   macro id_param
     env.params.url["id"].to_i64
+  end
+
+  post "/objects" do |env|
+    object = ActivityPub::Object::Note.new(
+      iri: "#{host}/objects/#{id}",
+      attributed_to: env.account.actor
+    )
+
+    object.assign(params(env)).save
+
+    env.redirect object_path(object)
   end
 
   get "/objects/:id" do |env|
@@ -54,7 +66,7 @@ class ObjectsController
 
     object.assign(params(env)).save
 
-    env.redirect object_path
+    env.redirect object_path(object)
   end
 
   get "/remote/objects/:id" do |env|
@@ -104,6 +116,7 @@ class ObjectsController
     params = accepts?("text/html") ? env.params.body : env.params.json
     enhancements = Ktistec::Util.enhance params["content"].as(String)
     {
+      "media_type" => "text/html",
       "content" => enhancements.content,
       "attachments" => enhancements.attachments
     }

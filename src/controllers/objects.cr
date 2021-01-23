@@ -22,6 +22,8 @@ class ObjectsController
       not_found
     end
 
+    env.redirect edit_object_path if object.draft?
+
     if accepts?("text/html")
       env.response.content_type = "text/html"
       render "src/views/objects/object.html.slang", "src/views/layouts/default.html.ecr"

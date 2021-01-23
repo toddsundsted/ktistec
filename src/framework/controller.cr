@@ -57,6 +57,10 @@ module Ktistec
       "/remote/objects/#{{{object}}.try(&.id) || env.params.url["id"]}"
     end
 
+    macro edit_object_path(object = nil)
+      ((%iri = {{object}}.try(&.iri)) && (URI.parse(%iri).path) + "/edit") || "/objects/#{env.params.url["id"]}/edit"
+    end
+
     macro object_path(object = nil)
       ((%iri = {{object}}.try(&.iri)) && URI.parse(%iri).path) || "/objects/#{env.params.url["id"]}"
     end

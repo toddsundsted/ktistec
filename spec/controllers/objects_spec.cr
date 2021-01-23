@@ -16,6 +16,7 @@ Spectator.describe ObjectsController do
     ActivityPub::Object.new(
       iri: "https://test.test/objects/#{random_string}",
       attributed_to: author,
+      published: Time.utc,
       visible: true
     ).save
   end
@@ -23,13 +24,15 @@ Spectator.describe ObjectsController do
     ActivityPub::Object.new(
       iri: "https://test.test/objects/#{random_string}",
       attributed_to: author,
+      published: Time.utc,
       visible: false
     ).save
   end
   let!(remote) do
     ActivityPub::Object.new(
       iri: "https://remote/#{random_string}",
-      attributed_to: author
+      attributed_to: author,
+      published: Time.utc
     ).save
   end
   let!(draft) do
@@ -101,14 +104,9 @@ Spectator.describe ObjectsController do
     context "when authorized" do
       sign_in(as: actor.username)
 
-      it "succeeds if draft" do
-        get "/objects/#{draft.iri.split("/").last}", ACCEPT_HTML
-        expect(response.status_code).to eq(200)
-      end
-
-      it "succeeds if draft" do
-        get "/objects/#{draft.iri.split("/").last}", ACCEPT_JSON
-        expect(response.status_code).to eq(200)
+      it "redirects if draft" do
+        get "/objects/#{draft.iri.split("/").last}"
+        expect(response.status_code).to eq(302)
       end
 
       context "but not the author" do

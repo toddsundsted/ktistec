@@ -114,6 +114,13 @@ Spectator.describe Ktistec::Model::Linked do
     end
   end
 
+  describe "#uid" do
+    it "returns the unique identifier" do
+      expect(LinkedModel.new(iri: "https://test.test/foo_bar").uid).to eq("foo_bar")
+      expect(LinkedModel.new(iri: "https://remote/foo_bar").uid).to eq("foo_bar")
+    end
+  end
+
   describe "#local?" do
     it "indicates if the instance is local" do
       expect(LinkedModel.new(iri: "https://test.test/foo_bar").local?).to be_true

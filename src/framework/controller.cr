@@ -50,7 +50,7 @@ module Ktistec
     end
 
     macro activity_path(activity = nil)
-      ((%iri = {{activity}}.try(&.iri)) && URI.parse(%iri).path) || "/activities/#{env.params.url["id"]}"
+      "/activities/#{{{activity}}.try(&.uid) || env.params.url["id"]}"
     end
 
     macro remote_object_path(object = nil)
@@ -58,11 +58,11 @@ module Ktistec
     end
 
     macro edit_object_path(object = nil)
-      ((%iri = {{object}}.try(&.iri)) && (URI.parse(%iri).path) + "/edit") || "/objects/#{env.params.url["id"]}/edit"
+      "/objects/#{{{object}}.try(&.uid) || env.params.url["id"]}/edit"
     end
 
     macro object_path(object = nil)
-      ((%iri = {{object}}.try(&.iri)) && URI.parse(%iri).path) || "/objects/#{env.params.url["id"]}"
+      "/objects/#{{{object}}.try(&.uid) || env.params.url["id"]}"
     end
 
     macro remote_actor_path(actor = nil)
@@ -70,7 +70,7 @@ module Ktistec
     end
 
     macro actor_path(actor = nil)
-      ((%iri = {{actor}}.try(&.iri)) && URI.parse(%iri).path) || "/actors/#{env.params.url["username"]}"
+      "/actors/#{{{actor}}.try(&.uid) || env.params.url["username"]}"
     end
 
     macro actor_relationships_path(actor = nil, relationship = nil)

@@ -193,7 +193,7 @@ Spectator.describe Ktistec::Controller do
 
     it "gets the activity path" do
       get "/foo/bar/helpers/activities"
-      expect(JSON.parse(response.body)["activity_path"]).to eq("/#{FooBarController::ID}")
+      expect(JSON.parse(response.body)["activity_path"]).to eq("/activities/#{FooBarController::ID}")
       get "/foo/bar/helpers/activities/foo_bar"
       expect(JSON.parse(response.body)["activity_path"]).to eq("/activities/foo_bar")
     end
@@ -207,7 +207,7 @@ Spectator.describe Ktistec::Controller do
 
     it "gets the object path" do
       get "/foo/bar/helpers/objects"
-      expect(JSON.parse(response.body)["object_path"]).to eq("/#{FooBarController::ID}")
+      expect(JSON.parse(response.body)["object_path"]).to eq("/objects/#{FooBarController::ID}")
       get "/foo/bar/helpers/objects/foo_bar"
       expect(JSON.parse(response.body)["object_path"]).to eq("/objects/foo_bar")
     end
@@ -221,7 +221,7 @@ Spectator.describe Ktistec::Controller do
 
     it "gets the actor path" do
       get "/foo/bar/helpers/actors"
-      expect(JSON.parse(response.body)["actor_path"]).to eq("/#{FooBarController::ID}")
+      expect(JSON.parse(response.body)["actor_path"]).to eq("/actors/#{FooBarController::ID}")
       get "/foo/bar/helpers/actors/by-username/foo_bar"
       expect(JSON.parse(response.body)["actor_path"]).to eq("/actors/foo_bar")
     end

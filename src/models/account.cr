@@ -77,4 +77,10 @@ class Account
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri
 
   has_many sessions
+
+  # permits an account to be used in path helpers in place of
+  # an actor.
+  def uid
+    username
+  end
 end

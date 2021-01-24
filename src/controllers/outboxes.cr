@@ -257,9 +257,9 @@ class RelationshipsController
 
     if activity.is_a?(ActivityPub::Activity::Create)
       if activity.object.in_reply_to?
-        env.redirect remote_thread_path(activity.object.in_reply_to)
+        env.created remote_thread_path(activity.object.in_reply_to)
       else
-        env.redirect remote_object_path(activity.object)
+        env.created remote_object_path(activity.object)
       end
     elsif activity.is_a?(ActivityPub::Activity::Delete) && back_path =~ /\/remote\/objects|\/objects/
       env.redirect actor_path

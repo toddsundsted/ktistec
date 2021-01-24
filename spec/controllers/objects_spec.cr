@@ -76,7 +76,7 @@ Spectator.describe ObjectsController do
 
       it "succeeds" do
         post "/objects", JSON_DATA, %Q|{"content":""}|
-        expect(response.status_code).to eq(302)
+        expect(response.status_code).to eq(201)
       end
 
       it "creates an object" do

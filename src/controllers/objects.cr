@@ -26,7 +26,7 @@ class ObjectsController
 
     object.assign(params(env)).save
 
-    env.redirect object_path(object)
+    env.created edit_object_path(object)
   end
 
   get "/objects/:id" do |env|

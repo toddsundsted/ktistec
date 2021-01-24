@@ -200,9 +200,14 @@ Spectator.describe ObjectsController do
         expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
       end
 
-      it "renders a form that posts to the outbox path" do
+      it "renders a button that submits to the outbox path" do
         get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form[@id]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
+        expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Post')]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
+      end
+
+      it "renders a button that submits to the object update path" do
+        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@action").first.text).to eq("/objects/#{draft.uid}")
       end
 
       it "renders an input with the draft content" do

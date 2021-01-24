@@ -63,6 +63,10 @@ module Ktistec
       "/activities/#{{{activity}}.try(&.uid) || env.params.url["id"]}"
     end
 
+    macro objects_path
+      "/objects"
+    end
+
     macro remote_object_path(object = nil)
       "/remote/objects/#{{{object}}.try(&.id) || env.params.url["id"]}"
     end

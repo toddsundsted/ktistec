@@ -5,7 +5,7 @@
     a.item href=actor_relationships_path(actor, "outbox") Outbox
     a.item href=actor_relationships_path(actor, "followers") Followers
     a.item href=actor_relationships_path(actor, "following") Following
-  form.ui.form method="POST" action=actor_relationships_path(actor, "outbox")
+  form.ui.form method="POST"
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Create"
     input type="hidden" name="public" value="true"
@@ -13,7 +13,8 @@
       input#input-trix-editor type="hidden" name="content"
       trix-editor input="input-trix-editor"
     .ui.buttons
-      input.ui.disabled.primary.button type="submit" value="Post Status"
+      input.ui.disabled.primary.button type="submit" value="Post Status" action=outbox_path(actor)
+      input.ui.disabled.button type="submit" value="Save Draft" action=objects_path
 - else
   == render "src/views/partials/actor-medium.html.slang"
 crystal:

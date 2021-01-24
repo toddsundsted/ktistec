@@ -79,6 +79,24 @@ FilePond.setOptions({
       $(this).replaceWith('<i class="user icon"></i>')
     })
   })
+  $(document).on('submit', 'form:has(trix-editor)', function (e) {
+    e.preventDefault()
+  })
+  $(document).on('click', 'form:has(trix-editor) input.ui.button', function (e) {
+    e.preventDefault()
+    const $this = $(this)
+    const $form = $this.closest('form')
+    $.ajax({
+      type: $form.attr('method'),
+      url: $this.attr('action'),
+      data: $form.serialize(),
+      dataType: 'html',
+      success: function (_, _, xhr) {
+        const location = xhr.getResponseHeader("Location")
+        Turbolinks.visit(location || window.location)
+      }
+    })
+  })
   $(window).on("trix-change", function (event) {
     if (event.target.hasContent != !!event.target.textContent) {
       (event.target.hasContent = !!event.target.textContent) ?

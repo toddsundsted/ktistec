@@ -23,6 +23,8 @@ class FooBarController
     "/foo/bar/helpers/tag",
     "/foo/bar/paginate",
     "/foo/bar/accept",
+    "/foo/bar/xhr",
+    "/foo/bar/created",
     "/foo/bar/sanitize",
     "/foo/bar/comma",
     "/foo/bar/id"
@@ -130,6 +132,18 @@ class FooBarController
     elsif accepts?("application/json")
       ok "json"
     end
+  end
+
+  get "/foo/bar/xhr" do |env|
+    if xhr?
+      ok "xhr"
+    else
+      ok
+    end
+  end
+
+  get "/foo/bar/created" do |env|
+    env.created "/foobar"
   end
 
   get "/foo/bar/sanitize" do |env|
@@ -361,6 +375,35 @@ Spectator.describe Ktistec::Controller do
     it "responds with json" do
       get "/foo/bar/accept", HTTP::Headers{"Accept" => "application/json"}
       expect(JSON.parse(response.body)["msg"]).to eq("json")
+    end
+  end
+
+  describe "get /foo/bar/xhr" do
+    it "responds with xhr" do
+      get "/foo/bar/xhr", HTTP::Headers{"Accept" => "text/html", "X-Requested-With" => "XMLHttpRequest"}
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).to eq("xhr")
+    end
+
+    it "does not respond with xhr" do
+      get "/foo/bar/xhr", HTTP::Headers{"Accept" => "text/html"}
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).not_to eq("xhr")
+    end
+  end
+
+  describe "get /foo/bar/created" do
+    it "redirects with 302" do
+      get "/foo/bar/created", HTTP::Headers{"Accept" => "text/html"}
+      expect(response.status_code).to eq(302)
+    end
+
+    it "redirects with 201" do
+      get "/foo/bar/created", HTTP::Headers{"Accept" => "text/html", "X-Requested-With" => "XMLHttpRequest"}
+      expect(response.status_code).to eq(201)
+    end
+
+    it "redirects with 201" do
+      get "/foo/bar/created", HTTP::Headers{"Accept" => "application/json"}
+      expect(response.status_code).to eq(201)
     end
   end
 

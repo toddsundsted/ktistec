@@ -17,6 +17,16 @@ class HTTP::Server::Context
       accepts.includes?(mime_type)
     end
   end
+
+  def xhr?
+    @request.headers["X-Requested-With"]? == "XMLHttpRequest"
+  end
+
+  def created(url, status_code = nil, *, body = nil)
+    @response.headers.add("Location", url)
+    @response.status_code = status_code.nil? ? (accepts?("text/html") && !xhr?) ? 302 : 201 : status_code
+    @response.print(body) if body
+  end
 end
 
 module Ktistec
@@ -173,6 +183,10 @@ module Ktistec
 
     macro accepts?(mime_type)
       env.accepts?({{mime_type}})
+    end
+
+    macro xhr?
+      env.xhr?
     end
 
     # Define a simple response helper.

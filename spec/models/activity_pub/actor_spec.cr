@@ -227,6 +227,52 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#drafts" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+    let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_draft(index)
+      let!(note{{index}}) do
+        ActivityPub::Object::Note.new(
+          iri: "https://test.test/objects/#{random_string}",
+          attributed_to: subject,
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
+        ).save
+      end
+    end
+
+    create_draft(1)
+    create_draft(2)
+    create_draft(3)
+    create_draft(4)
+    create_draft(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.drafts(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete
+      expect(subject.drafts(1, 2)).to eq([note4, note3])
+    end
+
+    it "filters out published posts" do
+      note5.assign(published: Time.utc).save
+      expect(subject.drafts(1, 2)).to eq([note4, note3])
+    end
+
+    it "includes only posts attributed to subject" do
+      note5.assign(attributed_to: other).save
+      expect(subject.drafts(1, 2)).to eq([note4, note3])
+    end
+
+    it "paginates the results" do
+      expect(subject.drafts(1, 2)).to eq([note5, note4])
+      expect(subject.drafts(2, 2)).to eq([note3, note2])
+      expect(subject.drafts(2, 2).more?).to be_true
+    end
+  end
+
   context "for outbox" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
     let(deleted) { described_class.new(iri: "https://test.test/#{random_string}").save.delete }

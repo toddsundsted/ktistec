@@ -172,6 +172,28 @@ module ActivityPub
       {% end %}
     end
 
+    def drafts(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+          WHERE o.attributed_to_iri = ?
+            AND o.published IS NULL
+            AND o.deleted_at is NULL
+            AND o.id NOT IN (
+               SELECT o.id
+                 FROM objects AS o
+                WHERE o.attributed_to_iri = ?
+                  AND o.published IS NULL
+                  AND o.deleted_at is NULL
+             ORDER BY o.created_at DESC
+                LIMIT ?
+            )
+       ORDER BY o.created_at DESC
+          LIMIT ?
+      QUERY
+      Object.query_and_paginate(query, iri, iri, page: page, size: size)
+    end
+
     protected def self.content(iri, mailbox, inclusion = nil, exclusion = nil, page = 1, size = 10, public = true, replies = true)
       mailbox =
         case mailbox

@@ -60,6 +60,37 @@ Spectator.describe ObjectsController do
   FORM_DATA = HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"}
   JSON_DATA = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
 
+  describe "GET /objects" do
+    it "returns 401 if not authorized" do
+      get "/objects"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        get "/objects", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/objects", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the collection" do
+        get "/objects", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{draft.id}")
+      end
+
+      it "renders the collection" do
+        get "/objects", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(draft.iri)
+      end
+    end
+  end
+
   describe "POST /objects" do
     it "returns 401 if not authorized" do
       post "/objects"

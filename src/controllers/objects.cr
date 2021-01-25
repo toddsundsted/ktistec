@@ -18,6 +18,18 @@ class ObjectsController
     env.params.url["id"].to_i64
   end
 
+  get "/objects" do |env|
+    drafts = env.account.actor.drafts
+
+    if accepts?("text/html")
+      env.response.content_type = "text/html"
+      render "src/views/objects/index.html.slang", "src/views/layouts/default.html.ecr"
+    else
+      env.response.content_type = "application/activity+json"
+      render "src/views/objects/index.json.ecr"
+    end
+  end
+
   post "/objects" do |env|
     object = ActivityPub::Object::Note.new(
       iri: "#{host}/objects/#{id}",

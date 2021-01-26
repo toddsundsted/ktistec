@@ -171,8 +171,8 @@ module Ktistec
     # Posts an activity to an outbox.
     #
     macro activity_button(text, outbox_url, object_iri, type = nil, form_class = nil, button_class = nil)
-      {% form_class = ["ui", "form", form_class].reject(&.nil?).join(" ") %}
-      {% button_class = ["ui", "button", button_class].reject(&.nil?).join(" ") %}
+      {% form_class = ["ui", "form", form_class].select{ |i| i }.join(" ") %}
+      {% button_class = ["ui", "button", button_class].select{ |i| i }.join(" ") %}
       # see BUG: https://github.com/crystal-lang/crystal/issues/10236
       tag(
         :form,

@@ -131,13 +131,13 @@ module Ktistec
       {% for c in contents %}
         {% if c.is_a?(Call) && !c.receiver && c.name == "tag" %}
           {% if c.args && c.named_args %}
-            _{{c.name}}({{_io}}, {{*c.args}}, {{*c.named_args}})
+            _{{c.name}}({{_io}}, {{*c.args}}, {{*c.named_args}}) {{c.block}}
           {% elsif c.args %}
-            _{{c.name}}({{_io}}, {{*c.args}})
+            _{{c.name}}({{_io}}, {{*c.args}}) {{c.block}}
           {% elsif c.named_args %}
-            _{{c.name}}({{_io}}, {{*c.named_args}})
+            _{{c.name}}({{_io}}, {{*c.named_args}}) {{c.block}}
           {% else %}
-            _{{c.name}}({{_io}})
+            _{{c.name}}({{_io}}) {{c.block}}
           {% end %}
         {% elsif c.is_a?(Call) || c.is_a?(StringLiteral) %}
           {{_io}} << {{c}}

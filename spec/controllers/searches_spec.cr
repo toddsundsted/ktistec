@@ -81,7 +81,7 @@ Spectator.describe SearchesController do
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
             get "/search?query=foo_bar@remote", headers
-            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Follow']")).not_to be_empty
+            expect(XML.parse_html(response.body).xpath_nodes("//form//button[./text()='Follow']")).not_to be_empty
           end
 
           context "with an existing follow" do
@@ -93,7 +93,7 @@ Spectator.describe SearchesController do
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
               get "/search?query=foo_bar@remote", headers
-              expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Unfollow']")).not_to be_empty
+              expect(XML.parse_html(response.body).xpath_nodes("//form//button[./text()='Unfollow']")).not_to be_empty
             end
           end
         end
@@ -132,7 +132,7 @@ Spectator.describe SearchesController do
           it "presents a follow button" do
             headers = HTTP::Headers{"Accept" => "text/html"}
             get "/search?query=https://remote/actors/foo_bar", headers
-            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Follow']")).not_to be_empty
+            expect(XML.parse_html(response.body).xpath_nodes("//form//button[./text()='Follow']")).not_to be_empty
           end
 
           context "with an existing follow" do
@@ -144,7 +144,7 @@ Spectator.describe SearchesController do
             it "presents an unfollow button" do
               headers = HTTP::Headers{"Accept" => "text/html"}
               get "/search?query=https://remote/actors/foo_bar", headers
-              expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Unfollow']")).not_to be_empty
+              expect(XML.parse_html(response.body).xpath_nodes("//form//button[./text()='Unfollow']")).not_to be_empty
             end
           end
         end

@@ -163,12 +163,12 @@ Spectator.describe "partials" do
         follow(account.actor, actor)
 
         it "renders a button to unfollow" do
-          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Unfollow")
+          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
         end
       end
 
       it "renders a button to follow" do
-        expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
+        expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
       end
     end
   end
@@ -240,12 +240,12 @@ Spectator.describe "partials" do
           follow(account.actor, actor)
 
           it "renders a button to unfollow" do
-            expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Unfollow")
+            expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
           end
         end
 
         it "renders a button to follow" do
-          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
+          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
         end
       end
 
@@ -258,20 +258,20 @@ Spectator.describe "partials" do
           follow(account.actor, actor)
 
           it "renders a button to accept" do
-            expect(subject.xpath_nodes("//form//input[@type='submit']/@value").map(&.text)).to have("Accept")
+            expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).to have("Accept")
           end
 
           it "renders a button to reject" do
-            expect(subject.xpath_nodes("//form//input[@type='submit']/@value").map(&.text)).to have("Reject")
+            expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).to have("Reject")
           end
         end
 
         it "renders a button to accept" do
-          expect(subject.xpath_nodes("//form//input[@type='submit']/@value").map(&.text)).to have("Accept")
+          expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).to have("Accept")
         end
 
         it "renders a button to reject" do
-          expect(subject.xpath_nodes("//form//input[@type='submit']/@value").map(&.text)).to have("Reject")
+          expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).to have("Reject")
         end
       end
 
@@ -282,12 +282,12 @@ Spectator.describe "partials" do
           follow(account.actor, actor)
 
           it "renders a button to unfollow" do
-            expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Unfollow")
+            expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
           end
         end
 
         it "renders a button to follow" do
-          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
+          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
         end
       end
 
@@ -295,12 +295,12 @@ Spectator.describe "partials" do
         follow(account.actor, actor)
 
         it "renders a button to unfollow" do
-          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Unfollow")
+          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
         end
       end
 
       it "renders a button to follow" do
-        expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
+        expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
       end
     end
   end

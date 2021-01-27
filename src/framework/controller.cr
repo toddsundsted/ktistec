@@ -170,7 +170,12 @@ module Ktistec
 
     # Posts an activity to an outbox.
     #
-    macro activity_button(text, outbox_url, object_iri, type = nil, form_class = nil, button_class = nil)
+    macro activity_button(arg1, arg2, arg3, type = nil, form_class = nil, button_class = nil, &block)
+      {% if block %}
+        {% outbox_url = arg1 ; object_iri = arg2 ; type = arg3 %}
+      {% else %}
+        {% outbox_url = arg2 ; object_iri = arg3 ; text = arg1 %}
+      {% end %}
       {% form_class = ["ui", "form", form_class].select{ |i| i }.join(" ") %}
       {% button_class = ["ui", "button", button_class].select{ |i| i }.join(" ") %}
       # see BUG: https://github.com/crystal-lang/crystal/issues/10236
@@ -179,7 +184,11 @@ module Ktistec
         tag(:input, type: "hidden", name: "authenticity_token", value: env.session.string?("csrf")),
         tag(:input, type: "hidden", name: "type", value: {{type || text}}),
         tag(:input, type: "hidden", name: "object", value: {{object_iri}}),
-        tag(:input, type: "submit", value: {{text}}, "class": {{button_class}}),
+        {% if block %}
+          tag(:button, type: "submit", "class": {{button_class}}) {{block}},
+        {% else %}
+          tag(:button, {{text}}, type: "submit", "class": {{button_class}}),
+        {% end %}
         method: "POST", action: {{outbox_url}},
         "class": {{form_class}}
       )

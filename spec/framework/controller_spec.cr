@@ -112,6 +112,7 @@ class FooBarController
     <div id="5.2">#{tag div do |h| h << tag span, "foobar" end}</div>
     <div id="6">#{form}</div>
     <div id="7">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_class: "foobar", button_class: "barfoo"}</div>
+    <div id="8">#{activity_button "outbox url", "object iri", "FooBar" { |html| html << tag div, "Foo Bar" } }</div>
     HTML
   end
 
@@ -310,7 +311,7 @@ Spectator.describe Ktistec::Controller do
 
     it "renders a submit button" do
       get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/input[@type='submit']/@value)")).to eq("Foo Bar")
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/button[@type='submit']/text())")).to eq("Foo Bar")
     end
 
     it "renders a hidden input with the authenticity token" do
@@ -335,12 +336,17 @@ Spectator.describe Ktistec::Controller do
 
     it "renders submit button with classes" do
       get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/input[@type='submit']/@class)")).to eq("ui button barfoo")
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/button[@type='submit']/@class)")).to eq("ui button barfoo")
     end
 
     it "renders form with classes" do
       get "/foo/bar/helpers/tag"
       expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/@class)")).to eq("ui form foobar")
+    end
+
+    it "renders a form with nested content" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form//div/text())")).to eq("Foo Bar")
     end
   end
 

@@ -81,6 +81,16 @@ class ObjectsController
     env.redirect object_path(object)
   end
 
+  delete "/objects/:id" do |env|
+    unless (object = get_draft(env, iri_param))
+      not_found
+    end
+
+    object.delete
+
+    env.redirect back_path
+  end
+
   get "/remote/objects/:id" do |env|
     unless (object = get_object(env, id_param))
       not_found

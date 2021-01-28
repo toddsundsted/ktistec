@@ -308,6 +308,50 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "DELETE /objects/:id" do
+    it "returns 401 if not authorized" do
+      delete "/objects/0"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        delete "/objects/#{draft.iri.split("/").last}", FORM_DATA
+        expect(response.status_code).to eq(302)
+      end
+
+      it "succeeds" do
+        delete "/objects/#{draft.iri.split("/").last}", JSON_DATA
+        expect(response.status_code).to eq(302)
+      end
+
+      it "deletes the object" do
+        expect{delete "/objects/#{draft.iri.split("/").last}", FORM_DATA}.
+          to change{ActivityPub::Object.count(id: draft.id)}.by(-1)
+      end
+
+      it "deletes the object" do
+        expect{delete "/objects/#{draft.iri.split("/").last}", JSON_DATA}.
+          to change{ActivityPub::Object.count(id: draft.id)}.by(-1)
+      end
+
+      it "returns 404 if not a draft" do
+        [visible, notvisible, remote].each do |object|
+          delete "/objects/#{object.iri.split("/").last}"
+          expect(response.status_code).to eq(404)
+        end
+      end
+
+      it "returns 404 if object does not exist" do
+        delete "/objects/0"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+
   describe "GET /remote/objects/:id" do
     it "returns 401 if not authorized" do
       get "/remote/objects/0"

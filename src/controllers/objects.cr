@@ -18,8 +18,15 @@ class ObjectsController
     env.params.url["id"].to_i64
   end
 
-  get "/objects" do |env|
-    drafts = env.account.actor.drafts(*pagination_params(env))
+  get "/actors/:username/drafts" do |env|
+    unless (account = get_account(env))
+      not_found
+    end
+    unless env.account == account
+      forbidden
+    end
+
+    drafts = account.actor.drafts(*pagination_params(env))
 
     if accepts?("text/html")
       env.response.content_type = "text/html"
@@ -161,5 +168,9 @@ class ObjectsController
         object
       end
     end
+  end
+
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"]?)
   end
 end

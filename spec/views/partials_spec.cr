@@ -304,4 +304,59 @@ Spectator.describe "partials" do
       end
     end
   end
+
+  describe "object.html.slang" do
+    let(env) do
+      HTTP::Server::Context.new(
+        HTTP::Request.new("GET", "/object"),
+        HTTP::Server::Response.new(IO::Memory.new)
+      )
+    end
+
+    subject do
+      begin
+        XML.parse_html(render "./src/views/partials/object.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    context "if authenticated" do
+      let(account) { register }
+
+      before_each { env.account = account }
+
+      context "and a draft" do
+        let(_author) { account.actor }
+        let(_actor) { account.actor }
+        let(_object) do
+          ActivityPub::Object.new(
+            iri: "https://test.test/objects/object"
+          ).save
+        end
+
+        pre_condition { expect(_object.draft?).to be_true }
+
+        it "does not render a button to reply" do
+          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Reply")
+        end
+
+        it "does not render a button to like" do
+          expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).not_to have("Like")
+        end
+
+        it "does not render a button to share" do
+          expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).not_to have("Share")
+        end
+
+        it "renders a button to delete" do
+          expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).to have("Delete")
+        end
+
+        it "renders a button to edit" do
+          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Edit")
+        end
+      end
+    end
+  end
 end

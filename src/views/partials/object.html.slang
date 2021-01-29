@@ -34,7 +34,18 @@
       a href=_author.display_link = _author.display_name
       a href=_object.display_link = _object.display_date
   .meta
-    - if __account
+    - if __account && _object.draft?
+      a href=edit_object_path(_object)
+        button.ui.mini.iconic.button
+          i.edit.icon
+          | Edit
+      form.ui.form method="POST" action=object_path(_object)
+        input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+        input type="hidden" name="_method" value="delete"
+        button.ui.mini.dangerous.iconic.button type="submit" data-modal="delete"
+          i.trash.icon
+          | Delete
+    - elsif __account
       - c = _object.with_replies_count!.replies_count
       a href=replies_path(_object)
         button.ui.mini.iconic.button

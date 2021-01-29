@@ -19,7 +19,7 @@ class ObjectsController
   end
 
   get "/objects" do |env|
-    drafts = env.account.actor.drafts
+    drafts = env.account.actor.drafts(*pagination_params(env))
 
     if accepts?("text/html")
       env.response.content_type = "text/html"

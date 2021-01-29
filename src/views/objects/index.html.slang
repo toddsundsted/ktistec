@@ -5,3 +5,4 @@ section.ui.feed
       _author = _object.attributed_to
     article.event id=anchor(_object)
       == render "src/views/partials/object.html.slang"
+== paginate(drafts, env)

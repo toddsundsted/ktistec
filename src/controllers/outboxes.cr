@@ -87,15 +87,12 @@ class RelationshipsController
       if (followers = account.actor.followers)
         cc << followers
       end
-      enhancements = Ktistec::Util.enhance(content)
       activity = ActivityPub::Activity::Create.new(
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: ActivityPub::Object::Note.new(
           iri: "#{host}/objects/#{id}",
-          media_type: "text/html",
-          content: enhancements.content,
-          attachments: enhancements.attachments,
+          source: ActivityPub::Object::Source.new(content, "text/html; editor=trix"),
           attributed_to_iri: account.iri,
           in_reply_to_iri: in_reply_to_iri,
           published: now,

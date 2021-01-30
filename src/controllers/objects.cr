@@ -143,11 +143,8 @@ class ObjectsController
 
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
-    enhancements = Ktistec::Util.enhance params["content"].as(String)
     {
-      "media_type" => "text/html",
-      "content" => enhancements.content,
-      "attachments" => enhancements.attachments
+      "source" => ActivityPub::Object::Source.new(params["content"].as(String), "text/html; editor=trix")
     }
   end
 

@@ -57,6 +57,19 @@ module ActivityPub
     @[Persistent]
     property urls : Array(String)?
 
+    def source=(source : Source?)
+      previous_def(source)
+      if source
+        media_type = source.media_type.split(";").map(&.strip).first?
+        if media_type == "text/html"
+          enhancements = Ktistec::Util.enhance(source.content)
+          self.content = enhancements.content
+          self.media_type = media_type
+          self.attachments = enhancements.attachments
+        end
+      end
+    end
+
     def draft?
       published.nil? && local?
     end

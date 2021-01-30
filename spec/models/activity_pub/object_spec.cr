@@ -10,6 +10,23 @@ end
 Spectator.describe ActivityPub::Object do
   setup_spec
 
+  describe "#source=" do
+    subject { described_class.new(iri: "https://test.test/objects/#{random_string}").save }
+    let(source) { ActivityPub::Object::Source.new("foobar", "text/html") }
+
+    it "assigns content" do
+      expect{subject.assign(source: source)}.to change{subject.content}
+    end
+
+    it "assigns media type" do
+      expect{subject.assign(source: source)}.to change{subject.media_type}
+    end
+
+    it "assigns attachments" do
+      expect{subject.assign(source: source)}.to change{subject.attachments}
+    end
+  end
+
   context "when validating" do
     it "is valid" do
       expect(described_class.new(iri: "https://test.test/#{random_string}").valid?).to be_true

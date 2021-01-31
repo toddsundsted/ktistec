@@ -194,15 +194,15 @@ Spectator.describe RelationshipsController do
           expect(response.headers["Location"]).to eq("/remote/objects/#{created.id}")
         end
 
-        let(object) do
+        let(topic) do
           ActivityPub::Object.new(
             iri: "https://remote/objects/#{random_string}"
           ).save
         end
 
         it "redirects to the threaded view" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&in-reply-to=#{URI.encode_www_form(object.iri)}"
-          expect(response.headers["Location"]).to eq("/remote/objects/#{object.id}/thread#object-#{object.id}")
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&in-reply-to=#{URI.encode_www_form(topic.iri)}"
+          expect(response.headers["Location"]).to eq("/remote/objects/#{topic.id}/thread#object-#{topic.id}")
         end
 
         it "creates a create activity" do
@@ -226,8 +226,8 @@ Spectator.describe RelationshipsController do
         end
 
         it "includes the IRI of the replied to object" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&in-reply-to=#{URI.encode_www_form(object.iri)}"
-          expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).in_reply_to_iri).to eq(object.iri)
+          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&in-reply-to=#{URI.encode_www_form(topic.iri)}"
+          expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).in_reply_to_iri).to eq(topic.iri)
         end
 
         it "returns 400 if the replied to object does not exist" do

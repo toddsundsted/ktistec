@@ -74,8 +74,14 @@ class RelationshipsController
       unless (content = activity["content"]?)
         bad_request
       end
-      if (in_reply_to_iri = activity["in-reply-to"]?) && !ActivityPub::Object.find?(in_reply_to_iri)
+      if (in_reply_to_iri = activity["in-reply-to"]?) && !(in_reply_to = ActivityPub::Object.find?(in_reply_to_iri))
         bad_request
+      end
+      if (object_iri = activity["object"]?) && !(object = ActivityPub::Object.find?(object_iri))
+        bad_request
+      end
+      if object && object.attributed_to != account.actor
+        forbidden
       end
       now = Time.utc
       visible = !!activity["public"]?
@@ -87,25 +93,30 @@ class RelationshipsController
       if (followers = account.actor.followers)
         cc << followers
       end
-      activity = ActivityPub::Activity::Create.new(
-        iri: "#{host}/activities/#{id}",
-        actor: account.actor,
-        object: ActivityPub::Object::Note.new(
-          iri: "#{host}/objects/#{id}",
-          source: ActivityPub::Object::Source.new(content, "text/html; editor=trix"),
-          attributed_to_iri: account.iri,
-          in_reply_to_iri: in_reply_to_iri,
-          published: now,
-          visible: visible,
-          to: to,
-          cc: cc
-        ),
+      activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
+      object ||= ActivityPub::Object::Note.new(iri: "#{host}/objects/#{id}")
+      object.assign(
+        source: ActivityPub::Object::Source.new(content, "text/html; editor=trix"),
+        attributed_to_iri: account.iri,
+        in_reply_to: in_reply_to,
         published: now,
         visible: visible,
         to: to,
         cc: cc
       )
-      unless activity.valid_for_send?
+      # hack to sidestep typing of unions as their nearest common ancestor
+      if activity.responds_to?(:actor=) && activity.responds_to?(:object=)
+        activity.assign(
+          iri: "#{host}/activities/#{id}",
+          actor: account.actor,
+          object: object,
+          published: now,
+          visible: visible,
+          to: to,
+          cc: cc
+        )
+      end
+      unless activity.responds_to?(:valid_for_send?) && activity.valid_for_send?
         bad_request
       end
     when "Follow"

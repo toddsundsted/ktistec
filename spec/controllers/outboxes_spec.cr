@@ -215,6 +215,91 @@ Spectator.describe RelationshipsController do
             to change{ActivityPub::Object::Note.count(attributed_to_iri: actor.iri)}.by(1)
         end
 
+        context "when a draft object is specified" do
+          let(object) do
+            ActivityPub::Object.new(
+              iri: "https://test.test/objects/#{random_string}",
+              attributed_to: actor
+            ).save
+          end
+
+          pre_condition { expect(object.draft?).to be_true }
+
+          it "creates a create activity" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+              to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
+          end
+
+          it "does not create an object" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+              not_to change{ActivityPub::Object.count(attributed_to_iri: actor.iri)}
+          end
+
+          it "does not change the iri" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).iri}
+          end
+
+          it "changes the published timestamp" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
+          end
+
+          it "returns 400 if object does not exist" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=http://test.test/does-not-exist"
+            expect(response.status_code).to eq(400)
+          end
+
+          it "returns 403 if attributed to another account" do
+            object.assign(attributed_to: other).save
+            post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"
+            expect(response.status_code).to eq(403)
+          end
+        end
+
+        context "when a published object is specified" do
+          let(object) do
+            ActivityPub::Object.new(
+              iri: "https://test.test/objects/#{random_string}",
+              attributed_to: actor,
+              published: Time.utc
+            ).save
+          end
+
+          pre_condition { expect(object.draft?).to be_false }
+
+          it "creates an update activity" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+              to change{ActivityPub::Activity::Update.count(actor_iri: actor.iri)}.by(1)
+          end
+
+          it "does not create an object" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+              not_to change{ActivityPub::Object.count(attributed_to_iri: actor.iri)}
+          end
+
+          it "does not change the iri" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).iri}
+          end
+
+          it "changes the published timestamp" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
+          end
+
+          it "returns 400 if object does not exist" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=http://test.test/does-not-exist"
+            expect(response.status_code).to eq(400)
+          end
+
+          it "returns 403 if attributed to another account" do
+            object.assign(attributed_to: other).save
+            post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"
+            expect(response.status_code).to eq(403)
+          end
+        end
+
         it "creates a visible activity if public" do
           post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true

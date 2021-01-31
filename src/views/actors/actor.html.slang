@@ -1,8 +1,9 @@
 - if env.account?
   h1= actor.username
-  .ui.secondary.four.item.menu
+  .ui.secondary.five.item.menu
     a.item href=actor_relationships_path(actor, "inbox") Inbox
     a.item href=actor_relationships_path(actor, "outbox") Outbox
+    a.item href=actor_relationships_path(actor, "drafts") Drafts
     a.item href=actor_relationships_path(actor, "followers") Followers
     a.item href=actor_relationships_path(actor, "following") Following
   form.ui.form method="POST"

@@ -7,7 +7,7 @@
     a.item href=actor_relationships_path(actor, "following") Following
   form.ui.form method="POST"
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-    input type="hidden" name="type" value="Create"
+    input type="hidden" name="type" value="Publish"
     input type="hidden" name="public" value="true"
     .field
       input#input-trix-editor type="hidden" name="content"

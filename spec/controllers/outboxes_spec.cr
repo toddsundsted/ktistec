@@ -162,7 +162,7 @@ Spectator.describe RelationshipsController do
         end
       end
 
-      context "on create" do
+      context "on publish" do
         let!(relationship) do
           Relationship::Social::Follow.new(
             actor: other,
@@ -176,12 +176,12 @@ Spectator.describe RelationshipsController do
         end
 
         it "returns 400 if the content is missing" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish"
           expect(response.status_code).to eq(400)
         end
 
         it "redirects when successful" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"
           expect(response.status_code).to eq(302)
         end
 
@@ -190,7 +190,7 @@ Spectator.describe RelationshipsController do
         end
 
         it "redirects to the object view" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"
           expect(response.headers["Location"]).to eq("/remote/objects/#{created.id}")
         end
 
@@ -201,17 +201,17 @@ Spectator.describe RelationshipsController do
         end
 
         it "redirects to the threaded view" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&in-reply-to=#{URI.encode_www_form(topic.iri)}"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&in-reply-to=#{URI.encode_www_form(topic.iri)}"
           expect(response.headers["Location"]).to eq("/remote/objects/#{topic.id}/thread#object-#{topic.id}")
         end
 
         it "creates a create activity" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"}.
             to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
         end
 
         it "creates a note object" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"}.
             to change{ActivityPub::Object::Note.count(attributed_to_iri: actor.iri)}.by(1)
         end
 
@@ -226,33 +226,33 @@ Spectator.describe RelationshipsController do
           pre_condition { expect(object.draft?).to be_true }
 
           it "creates a create activity" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
               to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
           end
 
           it "does not create an object" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
               not_to change{ActivityPub::Object.count(attributed_to_iri: actor.iri)}
           end
 
           it "does not change the iri" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
               not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).iri}
           end
 
           it "changes the published timestamp" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
               to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
           end
 
           it "returns 400 if object does not exist" do
-            post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=http://test.test/does-not-exist"
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=http://test.test/does-not-exist"
             expect(response.status_code).to eq(400)
           end
 
           it "returns 403 if attributed to another account" do
             object.assign(attributed_to: other).save
-            post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"
             expect(response.status_code).to eq(403)
           end
         end
@@ -269,94 +269,94 @@ Spectator.describe RelationshipsController do
           pre_condition { expect(object.draft?).to be_false }
 
           it "creates an update activity" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
               to change{ActivityPub::Activity::Update.count(actor_iri: actor.iri)}.by(1)
           end
 
           it "does not create an object" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
               not_to change{ActivityPub::Object.count(attributed_to_iri: actor.iri)}
           end
 
           it "does not change the iri" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
               not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).iri}
           end
 
           it "changes the published timestamp" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"}.
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
               to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
           end
 
           it "returns 400 if object does not exist" do
-            post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=http://test.test/does-not-exist"
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=http://test.test/does-not-exist"
             expect(response.status_code).to eq(400)
           end
 
           it "returns 403 if attributed to another account" do
             object.assign(attributed_to: other).save
-            post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&object=#{object.iri}"
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"
             expect(response.status_code).to eq(403)
           end
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&public=true"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "creates a visible object if public" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&public=true"
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_true
         end
 
         it "includes the IRI of the replied to object" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&in-reply-to=#{URI.encode_www_form(topic.iri)}"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&in-reply-to=#{URI.encode_www_form(topic.iri)}"
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).in_reply_to_iri).to eq(topic.iri)
         end
 
         it "returns 400 if the replied to object does not exist" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&in-reply-to=https%3A%2F%2Fremote%2Fpost"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&in-reply-to=https%3A%2F%2Fremote%2Fpost"
           expect(response.status_code).to eq(400)
         end
 
         it "addresses (to) the specified actor" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&to=#{URI.encode_www_form(other.iri)}"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&to=#{URI.encode_www_form(other.iri)}"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
         it "addresses (cc) the specified actor" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=test&cc=#{URI.encode_www_form(other.iri)}"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&cc=#{URI.encode_www_form(other.iri)}"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
         end
 
         it "addresses the public collection" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test&public=true"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&public=true"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
         it "addresses the actor's followers collection" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
         end
 
         it "enhances the content" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Create&content=<div>this+is+a+test</div>"
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=<div>this+is+a+test</div>"
           expect(ActivityPub::Object.all.last.content).to eq("<p>this is a test</p>")
         end
 
         it "enhances the content" do
-          post "/actors/#{actor.username}/outbox", headers, %q|type=Create&content=<figure data-trix-content-type="1"><img src="2"></figure>|
+          post "/actors/#{actor.username}/outbox", headers, %q|type=Publish&content=<figure data-trix-content-type="1"><img src="2"></figure>|
           expect(ActivityPub::Object.all.last.attachments).to eq([ActivityPub::Object::Attachment.new("2", "1")])
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"}.
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
         it "puts the activity in the other's inbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Create&content=this+is+a+test"}.
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"}.
             to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
         end
       end

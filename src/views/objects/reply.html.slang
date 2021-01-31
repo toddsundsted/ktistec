@@ -8,7 +8,7 @@ section.ui.feed
 - if (_actor = env.account?.try(&.actor))
   form.ui.form method="POST" action=actor_relationships_path(_actor, "outbox")
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-    input type="hidden" name="type" value="Create"
+    input type="hidden" name="type" value="Publish"
     input type="hidden" name="public" value="true"
     input type="hidden" name="to" value=_author.iri
     - _ancestors = (ancestors.map(&.attributed_to_iri).compact.uniq - [_author.iri]).join(",")

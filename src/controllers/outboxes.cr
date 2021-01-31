@@ -70,7 +70,7 @@ class RelationshipsController
         to: to,
         cc: cc
       )
-    when "Create"
+    when "Publish"
       unless (content = activity["content"]?)
         bad_request
       end

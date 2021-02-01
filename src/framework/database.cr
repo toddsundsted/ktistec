@@ -1,4 +1,7 @@
 require "benchmark"
+require "sqlite3"
+
+require "./framework"
 
 module Ktistec
   # Database utilities.

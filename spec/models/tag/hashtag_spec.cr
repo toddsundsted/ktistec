@@ -27,4 +27,58 @@ Spectator.describe Tag::Hashtag do
       expect(new_tag.errors.keys).to contain("subject")
     end
   end
+
+  describe ".objects_with_tag" do
+    let(author) { ActivityPub::Actor.new(iri: "https://test.test/actors/author") }
+
+    macro create_tagged_object(index, *tags)
+      let!(object{{index}}) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/object{{index}}",
+          attributed_to: author,
+          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+          visible: true
+        ).save
+      end
+      before_each do
+        {% for tag in tags %}
+          described_class.new(
+            name: {{tag}},
+            subject: object{{index}}
+          ).save
+        {% end %}
+      end
+    end
+
+    create_tagged_object(1, "foo", "bar")
+    create_tagged_object(2, "foo")
+    create_tagged_object(3, "foo", "bar")
+    create_tagged_object(4, "foo")
+    create_tagged_object(5, "foo", "quux")
+
+    it "returns objects with the tag" do
+      expect(described_class.objects_with_tag("bar")).to eq([object3, object1])
+    end
+
+    it "filters out non-published objects" do
+      object5.assign(published: nil).save
+      expect(described_class.objects_with_tag("foo")).not_to have(object5)
+    end
+
+    it "filters out non-visible objects" do
+      object5.assign(visible: false).save
+      expect(described_class.objects_with_tag("foo")).not_to have(object5)
+    end
+
+    it "filters out deleted objects" do
+      ActivityPub::Object.find(object5.id).delete
+      expect(described_class.objects_with_tag("foo")).not_to have(object5)
+    end
+
+    it "paginates the results" do
+      expect(described_class.objects_with_tag("foo", 1, 2)).to eq([object5, object4])
+      expect(described_class.objects_with_tag("foo", 2, 2)).to eq([object3, object2])
+      expect(described_class.objects_with_tag("foo", 2, 2).more?).to be_true
+    end
+  end
 end

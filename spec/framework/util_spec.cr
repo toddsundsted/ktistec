@@ -107,6 +107,28 @@ Spectator.describe Ktistec::Util do
       content = %q|<div><figure></figure></div>|
       expect(described_class.enhance(content).content).to eq(%q|<figure></figure>|)
     end
+
+    context "hashtags" do
+      it "replaces hashtags with markup" do
+        content = %q|<div>#hashtag</div>|
+        expect(described_class.enhance(content).content).to eq(%Q|<p><a href="#{Ktistec.host}/tags/hashtag" class="hashtag" rel="tag">#hashtag</a></p>|)
+      end
+
+      it "preserves adjacent text" do
+        content = %q|<div> #hashtag </div>|
+        expect(described_class.enhance(content).content).to eq(%Q|<p> <a href="#{Ktistec.host}/tags/hashtag" class="hashtag" rel="tag">#hashtag</a> </p>|)
+      end
+
+      it "skips hashtags inside links" do
+        content = %q|<a href="#">#hashtag</a>|
+        expect(described_class.enhance(content).content).to eq(%q|<a href="#">#hashtag</a>|)
+      end
+
+      it "returns hashtags" do
+        content = %q|<div>#hashtag</div>|
+        expect(described_class.enhance(content).hashtags).to eq(["hashtag"])
+      end
+    end
   end
 
   describe ".sanitize" do

@@ -31,8 +31,9 @@ module Ktistec
     end
 
     class Enhancements
-      property attachments : Array(Attachment)?
       property content : String = ""
+      property attachments : Array(Attachment)?
+      property hashtags : Array(String)?
     end
 
     # Improves the content we generate ourselves.
@@ -67,6 +68,26 @@ module Ktistec
             end
             figure.attributes.map(&.name).each do |attr|
               figure.delete(attr)
+            end
+          end
+        end
+        enhancements.hashtags = ([] of String).tap do |hashtags|
+          xml.xpath_nodes("//node()[not(self::a)]/text()").each do |text|
+            if (remainder = text.text).includes?('#')
+              cursor = insertion = XML.parse("<span/>").first_element_child.not_nil!
+              text.replace_with(insertion)
+              while !remainder.empty?
+                text, hashtag, remainder = remainder.partition(%r|\B#([[:alnum:]_-]+)\b|)
+                unless text.empty?
+                  cursor = cursor.add_sibling(XML::Node.new(text))
+                end
+                unless hashtag.empty?
+                  hashtags << (hashtag = hashtag[1..])
+                  node = %Q|<a href="#{Ktistec.host}/tags/#{hashtag}" class="hashtag" rel="tag">##{hashtag}</a>|
+                  cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
+                end
+              end
+              insertion.unlink
             end
           end
         end

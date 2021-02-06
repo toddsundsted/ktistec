@@ -34,6 +34,7 @@ module Ktistec
       property content : String = ""
       property attachments : Array(Attachment)?
       property hashtags : Array(String)?
+      property mentions : Array(String)?
     end
 
     # Improves the content we generate ourselves.
@@ -71,26 +72,46 @@ module Ktistec
             end
           end
         end
-        enhancements.hashtags = ([] of String).tap do |hashtags|
-          xml.xpath_nodes("//node()[not(self::a)]/text()").each do |text|
-            if (remainder = text.text).includes?('#')
-              cursor = insertion = XML.parse("<span/>").first_element_child.not_nil!
-              text.replace_with(insertion)
-              while !remainder.empty?
-                text, hashtag, remainder = remainder.partition(%r|\B#([[:alnum:]_-]+)\b|)
-                unless text.empty?
-                  cursor = cursor.add_sibling(XML::Node.new(text))
-                end
-                unless hashtag.empty?
-                  hashtags << (hashtag = hashtag[1..])
-                  node = %Q|<a href="#{Ktistec.host}/tags/#{hashtag}" class="hashtag" rel="tag">##{hashtag}</a>|
-                  cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
-                end
+
+        enhancements.hashtags = hashtags = [] of String
+        enhancements.mentions = mentions = [] of String
+
+        xml.xpath_nodes("//node()[not(self::a)]/text()").each do |text|
+          if (remainder = text.text).includes?('#')
+            cursor = insertion = XML.parse("<span/>").first_element_child.not_nil!
+            text.replace_with(insertion)
+            while !remainder.empty?
+              text, hashtag, remainder = remainder.partition(%r|\B#([[:alnum:]_-]+)\b|)
+              unless text.empty?
+                cursor = cursor.add_sibling(XML::Node.new(text))
               end
-              insertion.unlink
+              unless hashtag.empty?
+                hashtags << (hashtag = hashtag[1..])
+                node = %Q|<a href="#{Ktistec.host}/tags/#{hashtag}" class="hashtag" rel="tag">##{hashtag}</a>|
+                cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
+              end
             end
+            insertion.unlink
+          elsif remainder.includes?('@')
+            cursor = insertion = XML.parse("<span/>").first_element_child.not_nil!
+            text.replace_with(insertion)
+            while !remainder.empty?
+              text, mention, remainder = remainder.partition(%r|\B@[^@\s]+@[^@\s]+\b|)
+              unless text.empty?
+                cursor = cursor.add_sibling(XML::Node.new(text))
+              end
+              unless mention.empty?
+                mentions << (mention = mention[1..])
+                node = (actor = ActivityPub::Actor.match?(mention)) ?
+                  %Q|<a href="#{actor.iri}" class="mention" rel="tag">@#{actor.username}</a>| :
+                  %Q|<span class="mention">@#{mention}</span>|
+                cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
+              end
+            end
+            insertion.unlink
           end
         end
+
         enhancements.content = String.build do |build|
           xml.xpath_nodes("/*/node()").each do |node|
             if node.name == "div"

@@ -3,6 +3,8 @@ require "../../src/framework/util"
 require "../spec_helper/model"
 
 Spectator.describe Ktistec::Util do
+  setup_spec
+
   describe ".enhance" do
     it "returns enhancements" do
       expect(described_class.enhance("")).to be_a(Ktistec::Util::Enhancements)
@@ -127,6 +129,41 @@ Spectator.describe Ktistec::Util do
       it "returns hashtags" do
         content = %q|<div>#hashtag</div>|
         expect(described_class.enhance(content).hashtags).to eq(["hashtag"])
+      end
+    end
+
+    context "mentions" do
+      let!(actor) do
+        ActivityPub::Actor.new(
+          iri: "https://bar.com/actors/foo",
+          username: "foo",
+          urls: ["https://bar.com/@foo"]
+        ).save
+      end
+
+      it "replaces matched mentions with links" do
+        content = %q|<div>@foo@bar.com</div>|
+        expect(described_class.enhance(content).content).to eq(%Q|<p><a href="https://bar.com/actors/foo" class="mention" rel="tag">@foo</a></p>|)
+      end
+
+      it "replaces unmatched mentions with spans" do
+        content = %q|<div>@bar@foo.com</div>|
+        expect(described_class.enhance(content).content).to eq(%Q|<p><span class="mention">@bar@foo.com</span></p>|)
+      end
+
+      it "preserves adjacent text" do
+        content = %q|<div> @foo@bar.com </div>|
+        expect(described_class.enhance(content).content).to eq(%Q|<p> <a href="https://bar.com/actors/foo" class="mention" rel="tag">@foo</a> </p>|)
+      end
+
+      it "skips mentions inside links" do
+        content = %q|<a href="#">@foo@bar.com</a>|
+        expect(described_class.enhance(content).content).to eq(%Q|<a href="#">@foo@bar.com</a>|)
+      end
+
+      it "returns mentions" do
+        content = %q|<div>@bar@foo.com</div>|
+        expect(described_class.enhance(content).mentions).to eq(["bar@foo.com"])
       end
     end
   end

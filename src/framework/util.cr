@@ -1,7 +1,6 @@
 require "json"
 require "xml"
-
-require "./ext/libxml2"
+require "libxml_ext"
 
 module Ktistec
   module Util

@@ -18,6 +18,9 @@ dependencies:
   sqlite3:
     github: crystal-lang/crystal-sqlite3
     version: ~> 0.17
+  libxml_ext:
+    github: toddsundsted/libxml_ext
+    version: ~> 0.1.0
   openssl_ext:
     github: toddsundsted/openssl_ext
     version: ~> 0.1.2

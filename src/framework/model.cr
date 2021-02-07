@@ -536,7 +536,13 @@ module Ktistec
           end
         {% end %}
         @saved_record = self.dup
+        # don't maintain a linked list of previously saved records
+        @saved_record.try(&.clear_saved_record)
         self
+      end
+
+      protected def clear_saved_record
+        @saved_record = nil
       end
 
       # Destroys the instance.

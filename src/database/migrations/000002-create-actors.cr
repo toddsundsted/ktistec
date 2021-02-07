@@ -29,6 +29,10 @@ up do |db|
     CREATE INDEX idx_actors_iri
       ON actors (iri ASC)
   STR
+  db.exec <<-STR
+    CREATE INDEX idx_actors_username
+      ON actors (username ASC)
+  STR
 end
 
 down do |db|

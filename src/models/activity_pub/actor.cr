@@ -86,6 +86,20 @@ module ActivityPub
       %Q|#{username}@#{URI.parse(iri).host}|
     end
 
+    def self.match?(account)
+      if account =~ /^@?([^@]+)@([^@]+)$/
+        where(username: $1).find do |actor|
+          if (urls = actor.urls)
+            urls.any? do |url|
+              uri = URI.parse(url)
+              uri.host.try(&.downcase) == $2.downcase && uri.path[2..].downcase == $1.downcase
+            rescue URI::Error
+            end
+          end
+        end
+      end
+    end
+
     def follow(other : Actor, **options)
       Relationship::Social::Follow.new(**options.merge({from_iri: self.iri, to_iri: other.iri}))
     end

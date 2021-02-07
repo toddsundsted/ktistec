@@ -14,6 +14,24 @@ Spectator.describe ActivityPub::Actor do
   let(username) { random_string }
   let(password) { random_string }
 
+  describe ".match?" do
+    let!(actor) do
+      described_class.new(
+        iri: "https://test.test/actors/foo",
+        username: "foo",
+        urls: ["https://bar.com/@foo"]
+      ).save
+    end
+
+    it "returns the matched actor" do
+      expect(described_class.match?("foo@bar.com")).to eq(actor)
+    end
+
+    it "returns nil on failed match" do
+      expect(described_class.match?("")).to be_nil
+    end
+  end
+
   let(foo_bar) do
     FooBarActor.new(
       iri: "https://test.test/#{random_string}",

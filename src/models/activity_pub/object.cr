@@ -3,9 +3,9 @@ require "json"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
-require "../../framework/util"
 require "../activity_pub"
 require "../activity_pub/actor"
+require "../../utils/html"
 
 module ActivityPub
   class Object
@@ -49,7 +49,7 @@ module ActivityPub
     @[Persistent]
     property source : Source?
 
-    alias Attachment = Ktistec::Util::Attachment
+    alias Attachment = Ktistec::HTML::Attachment
 
     @[Persistent]
     property attachments : Array(Attachment)?
@@ -62,7 +62,7 @@ module ActivityPub
       if source
         media_type = source.media_type.split(";").map(&.strip).first?
         if media_type == "text/html"
-          enhancements = Ktistec::Util.enhance(source.content)
+          enhancements = Ktistec::HTML.enhance(source.content)
           self.content = enhancements.content
           self.media_type = media_type
           self.attachments = enhancements.attachments

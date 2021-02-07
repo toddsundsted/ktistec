@@ -12,7 +12,7 @@ Spectator.describe ActivityPub::Object do
 
   describe "#source=" do
     subject { described_class.new(iri: "https://test.test/objects/#{random_string}").save }
-    let(source) { ActivityPub::Object::Source.new("foobar", "text/html") }
+    let(source) { ActivityPub::Object::Source.new("foobar #foobar @foo@bar.com", "text/html") }
 
     it "assigns content" do
       expect{subject.assign(source: source)}.to change{subject.content}
@@ -24,6 +24,22 @@ Spectator.describe ActivityPub::Object do
 
     it "assigns attachments" do
       expect{subject.assign(source: source)}.to change{subject.attachments}
+    end
+
+    it "assigns hashtags" do
+      expect{subject.assign(source: source)}.to change{subject.hashtags}
+    end
+
+    it "creates hashtags" do
+      expect{subject.assign(source: source).save}.to change{Tag::Hashtag.count(subject_iri: subject.iri)}.by(1)
+    end
+
+    it "assigns mentions" do
+      expect{subject.assign(source: source)}.to change{subject.mentions}
+    end
+
+    it "creates mentions" do
+      expect{subject.assign(source: source).save}.to change{Tag::Mention.count(subject_iri: subject.iri)}.by(1)
     end
   end
 

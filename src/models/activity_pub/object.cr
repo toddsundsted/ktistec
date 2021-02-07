@@ -70,6 +70,8 @@ module ActivityPub
           self.content = enhancements.content
           self.media_type = media_type
           self.attachments = enhancements.attachments
+          self.hashtags = enhancements.hashtags
+          self.mentions = enhancements.mentions
         end
       end
     end
@@ -103,6 +105,9 @@ module ActivityPub
 
     @[Persistent]
     property urls : Array(String)?
+
+    has_many hashtags, class_name: Tag::Hashtag, foreign_key: subject_iri, primary_key: iri
+    has_many mentions, class_name: Tag::Mention, foreign_key: subject_iri, primary_key: iri
 
     def draft?
       published.nil? && local?

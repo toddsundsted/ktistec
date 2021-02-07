@@ -17,9 +17,9 @@ module Ktistec
 
     class Enhancements
       property content : String = ""
-      property attachments : Array(Attachment)?
-      property hashtags : Array(Hashtag)?
-      property mentions : Array(Mention)?
+      property attachments : Array(Attachment) = [] of Attachment
+      property hashtags : Array(Hashtag) = [] of Hashtag
+      property mentions : Array(Mention) = [] of Mention
     end
 
     # Improves the content we generate ourselves.
@@ -35,31 +35,26 @@ module Ktistec
         XML::HTMLParserOptions::NONET
       )
       Enhancements.new.tap do |enhancements|
-        enhancements.attachments = ([] of Attachment).tap do |attachments|
-          xml.xpath_nodes("//figure").each do |figure|
-            figure.xpath_nodes(".//img").each do |image|
-              attachments << Attachment.new(image["src"], figure["data-trix-content-type"])
-            end
-            figure.xpath_nodes(".//a[.//img]").each do |anchor|
-              children = anchor.children
-              anchor.unlink
-              children.each do |child|
-                figure.add_child(child)
-              end
-            end
-            figure.xpath_nodes(".//figcaption").each do |caption|
-              caption.attributes.map(&.name).each do |attr|
-                caption.delete(attr)
-              end
-            end
-            figure.attributes.map(&.name).each do |attr|
-              figure.delete(attr)
+        xml.xpath_nodes("//figure").each do |figure|
+          figure.xpath_nodes(".//img").each do |image|
+            enhancements.attachments << Attachment.new(image["src"], figure["data-trix-content-type"])
+          end
+          figure.xpath_nodes(".//a[.//img]").each do |anchor|
+            children = anchor.children
+            anchor.unlink
+            children.each do |child|
+              figure.add_child(child)
             end
           end
+          figure.xpath_nodes(".//figcaption").each do |caption|
+            caption.attributes.map(&.name).each do |attr|
+              caption.delete(attr)
+            end
+          end
+          figure.attributes.map(&.name).each do |attr|
+            figure.delete(attr)
+          end
         end
-
-        enhancements.hashtags = hashtags = [] of Hashtag
-        enhancements.mentions = mentions = [] of Mention
 
         xml.xpath_nodes("//node()[not(self::a)]/text()").each do |text|
           if (remainder = text.text).includes?('#')
@@ -74,7 +69,7 @@ module Ktistec
                 hashtag = hashtag[1..]
                 node = %Q|<a href="#{Ktistec.host}/tags/#{hashtag}" class="hashtag" rel="tag">##{hashtag}</a>|
                 cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
-                hashtags << Hashtag.new(name: hashtag, href: "#{Ktistec.host}/tags/#{hashtag}")
+                enhancements.hashtags << Hashtag.new(name: hashtag, href: "#{Ktistec.host}/tags/#{hashtag}")
               end
             end
             insertion.unlink
@@ -92,7 +87,7 @@ module Ktistec
                   %Q|<a href="#{actor.iri}" class="mention" rel="tag">@#{actor.username}</a>| :
                   %Q|<span class="mention">@#{mention}</span>|
                 cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
-                mentions << Mention.new(name: mention, href: actor.try(&.iri))
+                enhancements.mentions << Mention.new(name: mention, href: actor.try(&.iri))
               end
             end
             insertion.unlink

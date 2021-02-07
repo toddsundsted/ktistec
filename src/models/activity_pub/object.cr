@@ -49,7 +49,29 @@ module ActivityPub
     @[Persistent]
     property source : Source?
 
-    alias Attachment = Ktistec::HTML::Attachment
+    struct Attachment
+      include JSON::Serializable
+
+      property url : String
+
+      @[JSON::Field(key: "mediaType")]
+      property media_type : String
+
+      def initialize(@url, @media_type)
+      end
+
+      def image?
+        media_type.in?(%w[image/bmp image/gif image/jpeg image/png image/svg+xml image/x-icon image/apng image/webp])
+      end
+
+      def video?
+        media_type.in?(%w[video/mp4 video/webm video/ogg])
+      end
+
+      def audio?
+        media_type.in?(%w[audio/mp4 audio/webm audio/ogg audio/flac])
+      end
+    end
 
     @[Persistent]
     property attachments : Array(Attachment)?

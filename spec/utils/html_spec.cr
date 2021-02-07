@@ -128,7 +128,8 @@ Spectator.describe Ktistec::HTML do
 
       it "returns hashtags" do
         content = %q|<div>#hashtag</div>|
-        expect(described_class.enhance(content).hashtags).to eq(["hashtag"])
+        expect(described_class.enhance(content).hashtags).
+          to eq([Ktistec::HTML::Hashtag.new(name: "hashtag", href: "#{Ktistec.host}/tags/hashtag")])
       end
     end
 
@@ -162,8 +163,9 @@ Spectator.describe Ktistec::HTML do
       end
 
       it "returns mentions" do
-        content = %q|<div>@bar@foo.com</div>|
-        expect(described_class.enhance(content).mentions).to eq(["bar@foo.com"])
+        content = %q|<div>@foo@bar.com</div>|
+        expect(described_class.enhance(content).mentions).
+          to eq([Ktistec::HTML::Mention.new(name: "foo@bar.com", href: "https://bar.com/actors/foo")])
       end
     end
   end

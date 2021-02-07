@@ -168,5 +168,11 @@ Spectator.describe Ktistec::HTML do
           to eq([Ktistec::HTML::Mention.new(name: "foo@bar.com", href: "https://bar.com/actors/foo")])
       end
     end
+
+    it "handles both hashtags and mentions" do
+      content = %q|<div>#hashtag @bar@foo.com</div>|
+      expect(described_class.enhance(content).content).
+        to eq(%Q|<p><a href="#{Ktistec.host}/tags/hashtag" class="hashtag" rel="tag">#hashtag</a> <span class="mention">@bar@foo.com</span></p>|)
+    end
   end
 end

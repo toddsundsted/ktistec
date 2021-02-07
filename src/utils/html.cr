@@ -57,37 +57,28 @@ module Ktistec
         end
 
         xml.xpath_nodes("//node()[not(self::a)]/text()").each do |text|
-          if (remainder = text.text).includes?('#')
+          if (remainder = text.text).includes?('#') || remainder.includes?('@')
             cursor = insertion = XML.parse("<span/>").first_element_child.not_nil!
             text.replace_with(insertion)
             while !remainder.empty?
-              text, hashtag, remainder = remainder.partition(%r|\B#([[:alnum:]_-]+)\b|)
+              text, tag, remainder = remainder.partition(%r{\B(#([[:alnum:]_-]+)|@[^@\s]+@[^@\s]+)\b})
               unless text.empty?
                 cursor = cursor.add_sibling(XML::Node.new(text))
               end
-              unless hashtag.empty?
-                hashtag = hashtag[1..]
-                node = %Q|<a href="#{Ktistec.host}/tags/#{hashtag}" class="hashtag" rel="tag">##{hashtag}</a>|
-                cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
-                enhancements.hashtags << Hashtag.new(name: hashtag, href: "#{Ktistec.host}/tags/#{hashtag}")
-              end
-            end
-            insertion.unlink
-          elsif remainder.includes?('@')
-            cursor = insertion = XML.parse("<span/>").first_element_child.not_nil!
-            text.replace_with(insertion)
-            while !remainder.empty?
-              text, mention, remainder = remainder.partition(%r|\B@[^@\s]+@[^@\s]+\b|)
-              unless text.empty?
-                cursor = cursor.add_sibling(XML::Node.new(text))
-              end
-              unless mention.empty?
-                mention = mention[1..]
-                node = (actor = ActivityPub::Actor.match?(mention)) ?
-                  %Q|<a href="#{actor.iri}" class="mention" rel="tag">@#{actor.username}</a>| :
-                  %Q|<span class="mention">@#{mention}</span>|
-                cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
-                enhancements.mentions << Mention.new(name: mention, href: actor.try(&.iri))
+              unless tag.empty?
+                if tag[0] == '#'
+                  hashtag = tag[1..]
+                  node = %Q|<a href="#{Ktistec.host}/tags/#{hashtag}" class="hashtag" rel="tag">##{hashtag}</a>|
+                  cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
+                  enhancements.hashtags << Hashtag.new(name: hashtag, href: "#{Ktistec.host}/tags/#{hashtag}")
+                else
+                  mention = tag[1..]
+                  node = (actor = ActivityPub::Actor.match?(mention)) ?
+                    %Q|<a href="#{actor.iri}" class="mention" rel="tag">@#{actor.username}</a>| :
+                    %Q|<span class="mention">@#{mention}</span>|
+                  cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
+                  enhancements.mentions << Mention.new(name: mention, href: actor.try(&.iri))
+                end
               end
             end
             insertion.unlink

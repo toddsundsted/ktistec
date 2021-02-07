@@ -46,8 +46,33 @@ module ActivityPub
     @[Persistent]
     property media_type : String?
 
+    struct Source
+      include JSON::Serializable
+
+      property content : String
+
+      @[JSON::Field(key: "mediaType")]
+      property media_type : String
+
+      def initialize(@content, @media_type)
+      end
+    end
+
     @[Persistent]
     property source : Source?
+
+    def source=(source : Source?)
+      previous_def(source)
+      if source
+        media_type = source.media_type.split(";").map(&.strip).first?
+        if media_type == "text/html"
+          enhancements = Ktistec::HTML.enhance(source.content)
+          self.content = enhancements.content
+          self.media_type = media_type
+          self.attachments = enhancements.attachments
+        end
+      end
+    end
 
     struct Attachment
       include JSON::Serializable
@@ -79,19 +104,6 @@ module ActivityPub
     @[Persistent]
     property urls : Array(String)?
 
-    def source=(source : Source?)
-      previous_def(source)
-      if source
-        media_type = source.media_type.split(";").map(&.strip).first?
-        if media_type == "text/html"
-          enhancements = Ktistec::HTML.enhance(source.content)
-          self.content = enhancements.content
-          self.media_type = media_type
-          self.attachments = enhancements.attachments
-        end
-      end
-    end
-
     def draft?
       published.nil? && local?
     end
@@ -102,18 +114,6 @@ module ActivityPub
 
     def display_date
       (published || created_at).to_local.to_s("%l:%M%P · %b %-d, %Y").lstrip(' ')
-    end
-
-    struct Source
-      include JSON::Serializable
-
-      property content : String
-
-      @[JSON::Field(key: "mediaType")]
-      property media_type : String
-
-      def initialize(@content, @media_type)
-      end
     end
 
     @[Assignable]

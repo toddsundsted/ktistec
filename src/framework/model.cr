@@ -256,6 +256,7 @@ module Ktistec
           {% end %}
         {% end %}
         super()
+        @saved_record = self.dup
       end
 
       # Initializes the new instance.
@@ -273,6 +274,7 @@ module Ktistec
           {% end %}
         {% end %}
         super()
+        @saved_record = self.dup
       end
 
       # Bulk assigns properties.
@@ -558,8 +560,10 @@ module Ktistec
       end
 
       def changed?
-        @saved_record ||= self.class.find?(@id)
-        @saved_record != self
+        new_record? || begin
+          @saved_record ||= self.class.find?(@id)
+          self != @saved_record
+        end
       end
 
       def to_json(json : JSON::Builder)

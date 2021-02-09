@@ -114,10 +114,6 @@ class QueryModel
   @[Assignable]
   property bar : String?
 
-  def ==(other : self)
-    other.id == self.id && other.foo == self.foo && other.bar == self.bar
-  end
-
   def self.query_and_paginate(*args, **opts)
     super(*args, **opts)
   end

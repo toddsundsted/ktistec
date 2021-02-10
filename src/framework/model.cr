@@ -316,15 +316,7 @@ module Ktistec
       def ==(other : self)
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
-          if
-            {% for v in vs %}
-              self.{{v}} == other.{{v}} &&
-            {% end %}
-            self.id == other.id
-            true
-          else
-            false
-          end
+          self.same?(other) || ({{vs.map { |v| "self.#{v} == other.#{v}" }.join(" && ").id}})
         {% end %}
       end
 

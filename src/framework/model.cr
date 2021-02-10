@@ -502,7 +502,8 @@ module Ktistec
         {% if @type < Deletable %}
           return self if self.deleted?
         {% end %}
-        raise Invalid.new(errors) unless skip_validation || valid?(skip_autosave: skip_autosave)
+        # don't validate nested models at this point
+        raise Invalid.new(errors) unless skip_validation || valid?(skip_autosave: true)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify.stringify).join(",")}}
@@ -525,6 +526,9 @@ module Ktistec
               {% end %}
             ).last_insert_id
           end
+          @saved_record = self.dup
+          # don't maintain a linked list of previously saved records
+          @saved_record.try(&.clear_saved_record)
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
           {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
@@ -532,14 +536,15 @@ module Ktistec
             options = {skip_validation: skip_validation, skip_autosave: skip_autosave}
             {% for d in methods %}
               if (%body = {{d.body}})
-                %body.responds_to?(:each) ? %body.each(&.save(**options)) : %body.save(**options)
+                if %body.responds_to?(:each)
+                  %body.each { |model| model.save(**options) if model.changed? }
+                else
+                  %body.save(**options) if %body.changed?
+                end
               end
             {% end %}
           end
         {% end %}
-        @saved_record = self.dup
-        # don't maintain a linked list of previously saved records
-        @saved_record.try(&.clear_saved_record)
         self
       end
 

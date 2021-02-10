@@ -18,7 +18,7 @@ class TaskWorker
         task.running = false
         task.complete = true unless (task.next_attempt_at != next_attempt_at) || task.backtrace
         task.last_attempt_at = Time.utc
-        task.save(skip_autosave: true)
+        task.save(skip_nested: true)
       end
     end
     !tasks.empty?

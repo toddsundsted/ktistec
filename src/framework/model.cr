@@ -338,13 +338,13 @@ module Ktistec
 
       # Returns true if the instance is valid.
       #
-      def valid?(skip_autosave = false)
-        validate(skip_autosave: skip_autosave).empty?
+      def valid?(skip_nested = false)
+        validate(skip_nested: skip_nested).empty?
       end
 
       # Validates the instance and returns any errors.
       #
-      def validate(skip_autosave = false)
+      def validate(skip_nested = false)
         @errors.clear
         {% if @type < Deletable %}
           return @errors if self.deleted?
@@ -359,7 +359,7 @@ module Ktistec
               end
             end
           {% end %}
-          unless skip_autosave
+          unless skip_nested
             {% for d in @type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
               if (%body = {{d.body}})
                 if %body.responds_to?(:each)
@@ -498,12 +498,12 @@ module Ktistec
 
       # Saves the instance.
       #
-      def save(skip_validation = false, skip_autosave = false)
+      def save(skip_validation = false, skip_nested = false)
         {% if @type < Deletable %}
           return self if self.deleted?
         {% end %}
         # don't validate nested models at this point
-        raise Invalid.new(errors) unless skip_validation || valid?(skip_autosave: true)
+        raise Invalid.new(errors) unless skip_validation || valid?(skip_nested: true)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify.stringify).join(",")}}
@@ -523,8 +523,8 @@ module Ktistec
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
           {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
-          unless skip_autosave
-            options = {skip_validation: skip_validation, skip_autosave: skip_autosave}
+          unless skip_nested
+            options = {skip_validation: skip_validation, skip_nested: skip_nested}
             {% for d in methods %}
               if (%body = {{d.body}})
                 if %body.responds_to?(:each)

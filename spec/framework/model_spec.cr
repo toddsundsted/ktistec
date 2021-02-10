@@ -411,7 +411,7 @@ Spectator.describe Ktistec::Model do
     it "does not validate the associated instance" do
       not_nil_model = NotNilModel.new(val: "")
       foo_bar_model = FooBarModel.new(not_nil_model: not_nil_model)
-      expect(foo_bar_model.valid?(skip_autosave: true)).to be_true
+      expect(foo_bar_model.valid?(skip_nested: true)).to be_true
       expect(not_nil_model.errors).to be_empty
       expect(foo_bar_model.errors).to be_empty
     end
@@ -463,7 +463,7 @@ Spectator.describe Ktistec::Model do
 
       it "doesn't save the associated instance" do
         another_model = AnotherModel.new(val: "Val")
-        expect{DerivedModel.new(not_nil_model: another_model).save(skip_autosave: true)}.not_to change{another_model.id}
+        expect{DerivedModel.new(not_nil_model: another_model).save(skip_nested: true)}.not_to change{another_model.id}
       end
     end
 
@@ -512,7 +512,7 @@ Spectator.describe Ktistec::Model do
 
       it "doesn't save the associated instance" do
         another_model = AnotherModel.new(val: "Val")
-        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save(skip_autosave: true)}.not_to change{another_model.id}
+        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save(skip_nested: true)}.not_to change{another_model.id}
       end
     end
   end

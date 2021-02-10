@@ -465,6 +465,11 @@ Spectator.describe Ktistec::Model do
         another_model = AnotherModel.new(val: "Val")
         expect{DerivedModel.new(not_nil_model: another_model).save(skip_nested: true)}.not_to change{another_model.id}
       end
+
+      it "doesn't save the instance" do
+        derived_model = DerivedModel.new(bar: "Bar", not_nil_model: AnotherModel.new(val: ""))
+        expect{begin derived_model.save; rescue; end}.not_to change{DerivedModel.count(bar: "Bar")}
+      end
     end
 
     context "existing instance" do
@@ -513,6 +518,11 @@ Spectator.describe Ktistec::Model do
       it "doesn't save the associated instance" do
         another_model = AnotherModel.new(val: "Val")
         expect{DerivedModel.new.save.assign(not_nil_model: another_model).save(skip_nested: true)}.not_to change{another_model.id}
+      end
+
+      it "doesn't save the instance" do
+        derived_model = DerivedModel.new.save.assign(bar: "Bar", not_nil_model: AnotherModel.new(val: ""))
+        expect{begin derived_model.save; rescue; end}.not_to change{DerivedModel.count(bar: "Bar")}
       end
     end
   end

@@ -496,9 +496,23 @@ module Ktistec
         {% end %}
       end
 
+      private macro savepoint
+        Ktistec.database.exec(savepoint = "SAVEPOINT _#{Random.new.hex(8)}")
+      end
+
+      private macro rollback
+        Ktistec.database.exec("ROLLBACK TO #{savepoint}")
+      end
+
+      private macro commit
+        Ktistec.database.exec("RELEASE #{savepoint}")
+      end
+
       # Saves the instance.
       #
       def save(skip_validation = false, skip_nested = false)
+        savepoint
+        success = false
         {% if @type < Deletable %}
           return self if self.deleted?
         {% end %}
@@ -517,9 +531,6 @@ module Ktistec
               self.{{v}},
             {% end %}
           ).last_insert_id
-          @saved_record = self.dup
-          # don't maintain a linked list of previously saved records
-          @saved_record.try(&.clear_saved_record)
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
           {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
@@ -536,7 +547,13 @@ module Ktistec
             {% end %}
           end
         {% end %}
+        @saved_record = self.dup
+        # don't maintain a linked list of previously saved records
+        @saved_record.try(&.clear_saved_record)
+        success = true
         self
+      ensure
+        !success ? rollback : commit
       end
 
       protected def clear_saved_record

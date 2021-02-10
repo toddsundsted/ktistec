@@ -511,21 +511,12 @@ module Ktistec
           if self.responds_to?(:updated_at=)
             self.updated_at = Time.utc
           end
-          if @id
-            Ktistec.database.exec(
-              "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{conditions})",
-              {% for v in vs %}
-                self.{{v}},
-              {% end %}
-            )
-          else
-            @id = Ktistec.database.exec(
-              "INSERT INTO #{table_name} (#{columns}) VALUES (#{conditions})",
-              {% for v in vs %}
-                self.{{v}},
-              {% end %}
-            ).last_insert_id
-          end
+          @id = Ktistec.database.exec(
+            "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{conditions})",
+            {% for v in vs %}
+              self.{{v}},
+            {% end %}
+          ).last_insert_id
           @saved_record = self.dup
           # don't maintain a linked list of previously saved records
           @saved_record.try(&.clear_saved_record)

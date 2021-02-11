@@ -430,13 +430,13 @@ Spectator.describe Ktistec::Model do
 
       it "saves a new instance with an assigned id" do
         new_model = FooBarModel.new(id: 9999_i64)
-        expect{new_model.save}.to change{FooBarModel.count}.by(1)
+        expect{new_model.save}.to change{FooBarModel.count(id: 9999_i64)}.by(1)
       end
 
-      it "raises an exception" do
+      it "raises a validation exception" do
         new_model = NotNilModel.new(val: "")
         expect{new_model.save}.to raise_error(Ktistec::Model::Invalid)
-        expect(new_model.errors).not_to be_empty
+        expect(new_model.errors).to have_key("val")
       end
 
       it "doesn't raise an exception" do
@@ -487,10 +487,10 @@ Spectator.describe Ktistec::Model do
         expect{new_model.save}.not_to change{FooBarModel.count}
       end
 
-      it "raises an exception" do
+      it "raises a validation exception" do
         new_model = NotNilModel.new(val: "Val").save
         expect{new_model.assign(val: "").save}.to raise_error(Ktistec::Model::Invalid)
-        expect(new_model.errors).not_to be_empty
+        expect(new_model.errors).to have_key("val")
       end
 
       it "doesn't raise an exception" do
@@ -588,85 +588,72 @@ Spectator.describe Ktistec::Model do
   end
 
   context "associations" do
-    let(foo_bar) { FooBarModel.new.save }
-    let(not_nil) { NotNilModel.new(val: "Val").save }
+    let(foo_bar) { FooBarModel.new(id: 13_i64).save }
+    let(not_nil) { NotNilModel.new(id: 17_i64, val: "Val").save }
     let(union) { UnionAssociationModel.new }
 
-    it "assigns the associated instance" do
+    pre_condition do
+      expect(foo_bar.not_nil?).to be_nil
       expect(foo_bar.not_nil_model?).to be_nil
+      expect(not_nil.foo_bar?).to be_nil
       expect(not_nil.foo_bar_models).to be_empty
+    end
+
+    it "assigns the associated instance" do
       (foo_bar.not_nil_model = not_nil) && foo_bar.save
       expect(foo_bar.not_nil_model).to eq(not_nil)
       expect(not_nil.foo_bar_models).to eq([foo_bar])
     end
 
     it "assigns the associated instance" do
-      expect(foo_bar.not_nil_model?).to be_nil
-      expect(not_nil.foo_bar_models).to be_empty
       foo_bar.assign(not_nil_model: not_nil).save
       expect(foo_bar.not_nil_model).to eq(not_nil)
       expect(not_nil.foo_bar_models).to eq([foo_bar])
     end
 
     it "assigns the associated instance" do
-      expect(not_nil.foo_bar?).to be_nil
-      expect(foo_bar.not_nil?).to be_nil
       (not_nil.foo_bar = foo_bar) && not_nil.save
       expect(not_nil.foo_bar).to eq(foo_bar)
       expect(foo_bar.not_nil).to eq(not_nil)
     end
 
     it "assigns the associated instance" do
-      expect(not_nil.foo_bar?).to be_nil
-      expect(foo_bar.not_nil?).to be_nil
       not_nil.assign(foo_bar: foo_bar).save
       expect(not_nil.foo_bar).to eq(foo_bar)
       expect(foo_bar.not_nil).to eq(not_nil)
     end
 
     it "assigns the reciprocal instance" do
-      expect(foo_bar.not_nil_model?).to be_nil
-      expect(not_nil.foo_bar_models).to be_empty
       (not_nil.foo_bar_models = [foo_bar]) && not_nil.save
       expect(foo_bar.not_nil_model).to eq(not_nil)
       expect(not_nil.foo_bar_models).to eq([foo_bar])
     end
 
     it "assigns the reciprocal instance" do
-      expect(foo_bar.not_nil_model?).to be_nil
-      expect(not_nil.foo_bar_models).to be_empty
       not_nil.assign(foo_bar_models: [foo_bar]).save
       expect(foo_bar.not_nil_model).to eq(not_nil)
       expect(not_nil.foo_bar_models).to eq([foo_bar])
     end
 
     it "assigns the reciprocal instance" do
-      expect(not_nil.foo_bar?).to be_nil
-      expect(foo_bar.not_nil?).to be_nil
       (foo_bar.not_nil = not_nil) && foo_bar.save
       expect(not_nil.foo_bar).to eq(foo_bar)
       expect(foo_bar.not_nil).to eq(not_nil)
     end
 
     it "assigns the reciprocal instance" do
-      expect(not_nil.foo_bar?).to be_nil
-      expect(foo_bar.not_nil?).to be_nil
       foo_bar.assign(not_nil: not_nil).save
       expect(not_nil.foo_bar).to eq(foo_bar)
       expect(foo_bar.not_nil).to eq(not_nil)
     end
 
     it "returns nil" do
-      expect(foo_bar.not_nil_model?).to be_nil
-      expect(not_nil.foo_bar_models).to be_empty
       (foo_bar.not_nil_model_id = 999999) && foo_bar.save
       expect(foo_bar.not_nil_model?).to be_nil
       expect(not_nil.foo_bar_models).to be_empty
     end
 
     it "returns nil" do
-      expect(not_nil.foo_bar?).to be_nil
-      expect(foo_bar.not_nil?).to be_nil
       (not_nil.foo_bar_model_id = 999999) && not_nil.save
       expect(not_nil.foo_bar?).to be_nil
       expect(foo_bar.not_nil?).to be_nil

@@ -383,6 +383,20 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe "#serialize_graph" do
+    let(foo_bar) { FooBarModel.new }
+    let(not_nil) { NotNilModel.new(val: "Val") }
+    let(graph) do
+      foo_bar.assign(not_nil: not_nil)
+      not_nil.assign(foo_bar: foo_bar)
+      UnionAssociationModel.new(model: foo_bar)
+    end
+
+    it "serializes the graph of models" do
+      expect(graph.serialize_graph.map(&.node)).to eq([graph, foo_bar, not_nil])
+    end
+  end
+
   describe "#valid?" do
     it "performs the validations" do
       new_model = NotNilModel.new(key: "Test", val: "Test")

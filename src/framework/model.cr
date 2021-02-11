@@ -434,6 +434,46 @@ module Ktistec
         {% end %}
       end
 
+      record(
+        Node,
+        node : Model::InstanceMethods,
+        association : String?,
+        index : Int32?
+      )
+
+      def serialize_graph(skip_nested = false)
+        ([] of Node).tap do |result|
+          _serialize_graph(result, skip_nested: skip_nested)
+        end
+      end
+
+      def _serialize_graph(result, association = nil, index = nil, skip_nested = false)
+        result << Node.new(self, association, index)
+        {% begin %}
+          {% ancestors = @type.ancestors << @type %}
+          {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+          {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
+          unless skip_nested
+            options = {skip_nested: skip_nested}
+            {% for d in methods %}
+              if (%body = {{d.body}})
+                if %body.responds_to?(:each)
+                  %body.each_with_index do |model, i|
+                    unless result.any? { |node| model == node.node }
+                      model._serialize_graph(result, {{d.name[12..-1].stringify}}, i, **options)
+                    end
+                  end
+                else
+                  unless result.any? { |node| %body == node.node }
+                    %body._serialize_graph(result, {{d.name[12..-1].stringify}}, **options)
+                  end
+                end
+              end
+            {% end %}
+          end
+        {% end %}
+      end
+
       getter errors = Errors.new
 
       # Returns true if the instance is valid.

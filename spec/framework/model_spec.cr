@@ -659,6 +659,20 @@ Spectator.describe Ktistec::Model do
       expect(foo_bar.not_nil?).to be_nil
     end
 
+    it "destroys unassociated instances" do
+      not_nil.assign(foo_bar_models: [FooBarModel.new]).save
+      NotNilModel.find(not_nil.id).assign(foo_bar_models: [foo_bar]).save
+      expect(FooBarModel.count(not_nil_model_id: not_nil.id)).to eq(1)
+      expect(NotNilModel.find(not_nil.id).foo_bar_models).to eq([foo_bar])
+    end
+
+    it "destroys unassociated instances" do
+      foo_bar.assign(not_nil: NotNilModel.new(val: "Val")).save
+      FooBarModel.find(foo_bar.id).assign(not_nil: not_nil).save
+      expect(NotNilModel.count(foo_bar_model_id: foo_bar.id)).to eq(1)
+      expect(FooBarModel.find(foo_bar.id).not_nil).to eq(not_nil)
+    end
+
     it "returns the correct instance" do
       expect(union.assign(model_id: not_nil.id).model).to eq(not_nil)
     end

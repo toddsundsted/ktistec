@@ -433,7 +433,11 @@ module Ktistec
         {% class_name = class_name || singular.camelcase.id %}
         @[Assignable]
         @{{name}} : Enumerable({{class_name}})?
-        def {{name}}=(@{{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
+        def {{name}}=({{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
+          self.{{name}}.each do |other|
+            other.destroy unless other.in?({{name}})
+          end
+          @{{name}} = {{name}}
           {{name}}.each { |n| n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}})) }
           {{name}}
         end
@@ -456,7 +460,11 @@ module Ktistec
         {% class_name = class_name || name.stringify.camelcase.id %}
         @[Assignable]
         @{{name}} : {{class_name}}?
-        def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
+        def {{name}}=({{name}} : {{class_name}}) : {{class_name}}
+          if (other = self.{{name}}?)
+            other.destroy unless other == {{name}}
+          end
+          @{{name}} = {{name}}
           {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
           {{name}}
         end

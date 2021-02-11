@@ -342,7 +342,6 @@ module Ktistec
           return @errors if self.deleted?
         {% end %}
         {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             if self.responds_to?(:_validate_{{v}})
@@ -351,18 +350,22 @@ module Ktistec
               end
             end
           {% end %}
+          {% ancestors = @type.ancestors << @type %}
+          {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+          {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
           unless skip_nested
-            {% for d in @type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
+            options = {skip_nested: skip_nested}
+            {% for d in methods %}
               if (%body = {{d.body}})
                 if %body.responds_to?(:each)
                   %body.each_with_index do |b, i|
-                    if (errors = b.validate)
+                    if (errors = b.validate(**options))
                       errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{i}.#{k}" }
                       @errors.merge!(errors)
                     end
                   end
                 else
-                  if (errors = %body.validate)
+                  if (errors = %body.validate(**options))
                     errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{k}" }
                     @errors.merge!(errors)
                   end

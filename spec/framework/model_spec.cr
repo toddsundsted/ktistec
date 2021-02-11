@@ -30,6 +30,10 @@ class FooBarModel
     # no op
   end
 
+  def validate_model
+    errors["instance"] = ["foo or bar is quux"] if [foo, bar].compact.any? { |a| a.downcase == "quux" }
+  end
+
   @[Persistent]
   property not_nil_model_id : Int64?
 
@@ -62,10 +66,8 @@ class NotNilModel
   property val : String
   validates val { "is not capitalized" unless val.starts_with?(/[A-Z]/) }
 
-  def validate(**options)
-    super
-    @errors["instance"] = ["key is equal to val"] if key == val
-    @errors
+  def validate_model
+    errors["instance"] = ["key is equal to val"] if key == val
   end
 
   @[Persistent]
@@ -406,6 +408,14 @@ Spectator.describe Ktistec::Model do
       expect(foo_bar_model.valid?).to be_false
       expect(not_nil_model.errors).to eq({"val" => ["is not capitalized"]})
       expect(foo_bar_model.errors).to eq({"not_nil_model.val" => ["is not capitalized"]})
+    end
+
+    it "validates the associated instance" do
+      foo_bar_model = FooBarModel.new(foo: "Quux", bar: "Quux")
+      not_nil_model = NotNilModel.new(val: "Val", foo_bar_models: [foo_bar_model])
+      expect(not_nil_model.valid?).to be_false
+      expect(foo_bar_model.errors).to eq({"instance" => ["foo or bar is quux"]})
+      expect(not_nil_model.errors).to eq({"foo_bar_models.0.instance" => ["foo or bar is quux"]})
     end
 
     it "does not validate the associated instance" do

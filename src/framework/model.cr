@@ -452,6 +452,9 @@ module Ktistec
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
+            if self.responds_to?(:validate_model)
+              self.validate_model
+            end
             if self.responds_to?(:_validate_{{v}})
               if error = self._validate_{{v}}
                 @errors[{{v.stringify}}] = [error]

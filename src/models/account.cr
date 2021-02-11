@@ -53,8 +53,7 @@ class Account
     @password.not_nil!
   end
 
-  def validate(**options)
-    super
+  def validate_model
     if (username = @username)
       messages = [] of String
       messages << "is too short" unless username.size >= 1
@@ -68,7 +67,6 @@ class Account
       messages << "is weak" unless password =~ /[^a-zA-Z0-9]/ && password =~ /[a-zA-Z]/ && password =~ /[0-9]/
       errors["password"] = messages unless messages.empty?
     end
-    errors
   end
 
   @[Persistent]

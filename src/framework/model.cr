@@ -552,22 +552,21 @@ module Ktistec
       #
       def save(skip_validation = false, skip_nested = false)
         savepoint
-        success = false
         {% if @type < Deletable %}
           return self if self.deleted?
         {% end %}
         serialize_graph(skip_nested: skip_nested).each do |node|
           node.node._save_model(skip_validation: skip_validation)
         end
-        success = true
+        raise Invalid.new(errors) unless skip_validation || valid?(skip_nested: skip_nested)
+        commit
         self
-      ensure
-        !success ? rollback : commit
+      rescue ex
+        rollback
+        raise ex
       end
 
       def _save_model(skip_validation = false)
-        # don't validate nested models
-        raise Invalid.new(errors) unless skip_validation || valid?(skip_nested: true)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify.stringify).join(",")}}

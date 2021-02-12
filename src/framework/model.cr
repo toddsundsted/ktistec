@@ -602,10 +602,24 @@ module Ktistec
         @id.nil?
       end
 
-      def changed?
+      def changed?(property = nil)
         new_record? || begin
           @saved_record ||= self.class.find?(@id)
-          self != @saved_record
+          if property
+            {% begin %}
+              {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
+              case property
+              {% for v in vs %}
+                when .==({{v.symbolize}})
+                  self.{{v}} != @saved_record.try(&.as(typeof(self)).{{v}})
+              {% end %}
+              else
+                false
+              end
+            {% end %}
+          else
+            self != @saved_record
+          end
         end
       end
 

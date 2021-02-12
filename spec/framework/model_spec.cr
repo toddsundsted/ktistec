@@ -588,6 +588,14 @@ Spectator.describe Ktistec::Model do
     it "returns true if the record is new" do
       expect(NotNilModel.new(val: "Val").changed?).to be_true
     end
+
+    it "returns false if the property has not been changed" do
+      expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").changed?(:val)).to be_false
+    end
+
+    it "returns true if the property has been changed" do
+      expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").changed?(:key)).to be_true
+    end
   end
 
   describe "#to_json" do

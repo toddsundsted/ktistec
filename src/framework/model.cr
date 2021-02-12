@@ -489,41 +489,35 @@ module Ktistec
         {% if @type < Deletable %}
           return @errors if self.deleted?
         {% end %}
+        serialize_graph(skip_nested: skip_nested).each do |node|
+          if (errors = node.node._run_validations)
+            if (association = node.association)
+              if (index = node.index)
+                errors = errors.transform_keys { |key| "#{association}.#{index}.#{key}" }
+              else
+                errors = errors.transform_keys { |key| "#{association}.#{key}" }
+              end
+            end
+            @errors.merge!(errors)
+          end
+        end
+        @errors
+      end
+
+      def _run_validations
+        @errors.clear
         {% begin %}
+          if self.responds_to?(:validate_model)
+            self.validate_model
+          end
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
-            if self.responds_to?(:validate_model)
-              self.validate_model
-            end
             if self.responds_to?(:_validate_{{v}})
               if error = self._validate_{{v}}
                 @errors[{{v.stringify}}] = [error]
               end
             end
           {% end %}
-          {% ancestors = @type.ancestors << @type %}
-          {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
-          {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
-          unless skip_nested
-            options = {skip_nested: skip_nested}
-            {% for d in methods %}
-              if (%body = {{d.body}})
-                if %body.responds_to?(:each)
-                  %body.each_with_index do |b, i|
-                    if (errors = b.validate(**options))
-                      errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{i}.#{k}" }
-                      @errors.merge!(errors)
-                    end
-                  end
-                else
-                  if (errors = %body.validate(**options))
-                    errors = errors.transform_keys { |k| "{{d.name[12..-1]}}.#{k}" }
-                    @errors.merge!(errors)
-                  end
-                end
-              end
-            {% end %}
-          end
         {% end %}
         @errors
       end
@@ -562,7 +556,17 @@ module Ktistec
         {% if @type < Deletable %}
           return self if self.deleted?
         {% end %}
-        # don't validate nested models at this point
+        serialize_graph(skip_nested: skip_nested).each do |node|
+          node.node._save_model(skip_validation: skip_validation)
+        end
+        success = true
+        self
+      ensure
+        !success ? rollback : commit
+      end
+
+      def _save_model(skip_validation = false)
+        # don't validate nested models
         raise Invalid.new(errors) unless skip_validation || valid?(skip_nested: true)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
@@ -577,29 +581,10 @@ module Ktistec
               self.{{v}},
             {% end %}
           ).last_insert_id
-          {% ancestors = @type.ancestors << @type %}
-          {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
-          {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
-          unless skip_nested
-            options = {skip_validation: skip_validation, skip_nested: skip_nested}
-            {% for d in methods %}
-              if (%body = {{d.body}})
-                if %body.responds_to?(:each)
-                  %body.each { |model| model.save(**options) if model.changed? }
-                else
-                  %body.save(**options) if %body.changed?
-                end
-              end
-            {% end %}
-          end
         {% end %}
         @saved_record = self.dup
         # don't maintain a linked list of previously saved records
         @saved_record.try(&.clear_saved_record)
-        success = true
-        self
-      ensure
-        !success ? rollback : commit
       end
 
       protected def clear_saved_record

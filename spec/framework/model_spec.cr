@@ -650,67 +650,45 @@ Spectator.describe Ktistec::Model do
       expect(not_nil.foo_bar_models).to be_empty
     end
 
-    it "assigns the associated instance" do
-      (foo_bar.not_nil = not_nil) && foo_bar.save
-      expect(foo_bar.not_nil).to eq(not_nil)
-      expect(not_nil.foo_bar_models).to eq([foo_bar])
-    end
+    context "belongs_to" do
+      it "assigns the associated instance" do
+        (foo_bar.not_nil = not_nil) && foo_bar.save
+        expect(foo_bar.not_nil).to eq(not_nil)
+        expect(not_nil.foo_bar_models).to eq([foo_bar])
+      end
 
-    it "assigns the associated instance" do
-      foo_bar.assign(not_nil: not_nil).save
-      expect(foo_bar.not_nil).to eq(not_nil)
-      expect(not_nil.foo_bar_models).to eq([foo_bar])
-    end
+      it "assigns the associated instance" do
+        foo_bar.assign(not_nil: not_nil).save
+        expect(foo_bar.not_nil).to eq(not_nil)
+        expect(not_nil.foo_bar_models).to eq([foo_bar])
+      end
 
-    it "assigns the associated instance" do
-      (not_nil.foo_bar = foo_bar) && not_nil.save
-      expect(not_nil.foo_bar).to eq(foo_bar)
-      expect(foo_bar.not_nil_model).to eq(not_nil)
-    end
+      it "assigns the associated instance" do
+        (not_nil.foo_bar = foo_bar) && not_nil.save
+        expect(not_nil.foo_bar).to eq(foo_bar)
+        expect(foo_bar.not_nil_model).to eq(not_nil)
+      end
 
-    it "assigns the associated instance" do
-      not_nil.assign(foo_bar: foo_bar).save
-      expect(not_nil.foo_bar).to eq(foo_bar)
-      expect(foo_bar.not_nil_model).to eq(not_nil)
-    end
-
-    it "assigns the reciprocal instance" do
-      (not_nil.foo_bar_models = [foo_bar]) && not_nil.save
-      expect(foo_bar.not_nil).to eq(not_nil)
-      expect(not_nil.foo_bar_models).to eq([foo_bar])
-    end
-
-    it "assigns the reciprocal instance" do
-      not_nil.assign(foo_bar_models: [foo_bar]).save
-      expect(foo_bar.not_nil).to eq(not_nil)
-      expect(not_nil.foo_bar_models).to eq([foo_bar])
-    end
-
-    it "assigns the reciprocal instance" do
-      (foo_bar.not_nil_model = not_nil) && foo_bar.save
-      expect(not_nil.foo_bar).to eq(foo_bar)
-      expect(foo_bar.not_nil_model).to eq(not_nil)
-    end
-
-    it "assigns the reciprocal instance" do
-      foo_bar.assign(not_nil_model: not_nil).save
-      expect(not_nil.foo_bar).to eq(foo_bar)
-      expect(foo_bar.not_nil_model).to eq(not_nil)
-    end
-
-    it "returns nil" do
-      (foo_bar.not_nil_model_id = 999999) && foo_bar.save
-      expect(foo_bar.not_nil_model?).to be_nil
-      expect(not_nil.foo_bar_models).to be_empty
-    end
-
-    it "returns nil" do
-      (not_nil.foo_bar_model_id = 999999) && not_nil.save
-      expect(not_nil.foo_bar?).to be_nil
-      expect(foo_bar.not_nil?).to be_nil
+      it "assigns the associated instance" do
+        not_nil.assign(foo_bar: foo_bar).save
+        expect(not_nil.foo_bar).to eq(foo_bar)
+        expect(foo_bar.not_nil_model).to eq(not_nil)
+      end
     end
 
     context "has_many" do
+      it "assigns the reciprocal instance" do
+        (not_nil.foo_bar_models = [foo_bar]) && not_nil.save
+        expect(foo_bar.not_nil).to eq(not_nil)
+        expect(not_nil.foo_bar_models).to eq([foo_bar])
+      end
+
+      it "assigns the reciprocal instance" do
+        not_nil.assign(foo_bar_models: [foo_bar]).save
+        expect(foo_bar.not_nil).to eq(not_nil)
+        expect(not_nil.foo_bar_models).to eq([foo_bar])
+      end
+
       it "destroys unassociated instances on assignment" do
         not_nil.assign(foo_bar_models: [FooBarModel.new]).save
         NotNilModel.find(not_nil.id).assign(foo_bar_models: [foo_bar]).save
@@ -736,6 +714,18 @@ Spectator.describe Ktistec::Model do
     end
 
     context "has_one" do
+      it "assigns the reciprocal instance" do
+        (foo_bar.not_nil_model = not_nil) && foo_bar.save
+        expect(not_nil.foo_bar).to eq(foo_bar)
+        expect(foo_bar.not_nil_model).to eq(not_nil)
+      end
+
+      it "assigns the reciprocal instance" do
+        foo_bar.assign(not_nil_model: not_nil).save
+        expect(not_nil.foo_bar).to eq(foo_bar)
+        expect(foo_bar.not_nil_model).to eq(not_nil)
+      end
+
       it "destroys unassociated instances on assignment" do
         foo_bar.assign(not_nil_model: NotNilModel.new(val: "Val")).save
         FooBarModel.find(foo_bar.id).assign(not_nil_model: not_nil).save
@@ -758,6 +748,18 @@ Spectator.describe Ktistec::Model do
         not_nil.key = "Changed"
         expect{new_not_nil_model.save}.not_to change{NotNilModel.count(key: "Changed")}
       end
+    end
+
+    it "returns nil" do
+      (foo_bar.not_nil_model_id = 999999) && foo_bar.save
+      expect(foo_bar.not_nil_model?).to be_nil
+      expect(not_nil.foo_bar_models).to be_empty
+    end
+
+    it "returns nil" do
+      (not_nil.foo_bar_model_id = 999999) && not_nil.save
+      expect(not_nil.foo_bar?).to be_nil
+      expect(foo_bar.not_nil?).to be_nil
     end
 
     it "returns the correct instance" do

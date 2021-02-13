@@ -11,23 +11,23 @@ Spectator.describe ActivityPub::Object do
   setup_spec
 
   describe "#source=" do
-    subject { described_class.new(iri: "https://test.test/objects/#{random_string}").save }
+    subject { described_class.new(iri: "https://test.test/objects/#{random_string}") }
     let(source) { ActivityPub::Object::Source.new("foobar #foobar @foo@bar.com", "text/html") }
 
     it "assigns content" do
-      expect{subject.assign(source: source)}.to change{subject.content}
+      expect{subject.assign(source: source).save}.to change{subject.content}
     end
 
     it "assigns media type" do
-      expect{subject.assign(source: source)}.to change{subject.media_type}
+      expect{subject.assign(source: source).save}.to change{subject.media_type}
     end
 
     it "assigns attachments" do
-      expect{subject.assign(source: source)}.to change{subject.attachments}
+      expect{subject.assign(source: source).save}.to change{subject.attachments}
     end
 
     it "assigns hashtags" do
-      expect{subject.assign(source: source)}.to change{subject.hashtags}
+      expect{subject.assign(source: source).save}.to change{subject.hashtags}
     end
 
     it "creates hashtags" do
@@ -35,11 +35,15 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "assigns mentions" do
-      expect{subject.assign(source: source)}.to change{subject.mentions}
+      expect{subject.assign(source: source).save}.to change{subject.mentions}
     end
 
     it "creates mentions" do
       expect{subject.assign(source: source).save}.to change{Tag::Mention.count(subject_iri: subject.iri)}.by(1)
+    end
+
+    it "doesn't assign if the object isn't local" do
+      expect{subject.assign(iri: "https://remote/object", source: source).save}.not_to change{subject.content}
     end
   end
 
@@ -55,7 +59,7 @@ Spectator.describe ActivityPub::Object do
         "@context":[
           "https://www.w3.org/ns/activitystreams"
         ],
-        "@id":"https://test.test/foo_bar",
+        "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",
         "published":"2016-02-15T10:20:30Z",
         "attributedTo":{
@@ -89,7 +93,7 @@ Spectator.describe ActivityPub::Object do
 
     it "creates a new instance" do
       object = described_class.from_json_ld(json).save
-      expect(object.iri).to eq("https://test.test/foo_bar")
+      expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
@@ -115,7 +119,7 @@ Spectator.describe ActivityPub::Object do
   describe "#from_json_ld" do
     it "updates an existing instance" do
       object = described_class.new.from_json_ld(json).save
-      expect(object.iri).to eq("https://test.test/foo_bar")
+      expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")

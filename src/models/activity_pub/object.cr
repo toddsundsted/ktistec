@@ -61,21 +61,6 @@ module ActivityPub
     @[Persistent]
     property source : Source?
 
-    def source=(source : Source?)
-      previous_def(source)
-      if source
-        media_type = source.media_type.split(";").map(&.strip).first?
-        if media_type == "text/html"
-          enhancements = Ktistec::HTML.enhance(source.content)
-          self.content = enhancements.content
-          self.media_type = media_type
-          self.attachments = enhancements.attachments
-          self.hashtags = enhancements.hashtags
-          self.mentions = enhancements.mentions
-        end
-      end
-    end
-
     struct Attachment
       include JSON::Serializable
 
@@ -108,6 +93,22 @@ module ActivityPub
 
     has_many hashtags, class_name: Tag::Hashtag, foreign_key: subject_iri, primary_key: iri
     has_many mentions, class_name: Tag::Mention, foreign_key: subject_iri, primary_key: iri
+
+    def before_validate
+      if self.changed?(:source)
+        if (source = self.source) && local?
+          media_type = source.media_type.split(";").map(&.strip).first?
+          if media_type == "text/html"
+            enhancements = Ktistec::HTML.enhance(source.content)
+            self.content = enhancements.content
+            self.media_type = media_type
+            self.attachments = enhancements.attachments
+            self.hashtags = enhancements.hashtags
+            self.mentions = enhancements.mentions
+          end
+        end
+      end
+    end
 
     def draft?
       published.nil? && local?

@@ -718,6 +718,14 @@ Spectator.describe Ktistec::Model do
         expect(NotNilModel.find(not_nil.id).foo_bar_models).to eq([foo_bar])
       end
 
+      it "does not save through a destroyed instance" do
+        not_nil.assign(foo_bar_models: [foo_bar])
+        new_foo_bar_model = FooBarModel.new(not_nil_model: not_nil).save
+        not_nil.destroy
+        foo_bar.foo = "Changed"
+        expect{new_foo_bar_model.save}.not_to change{FooBarModel.count(foo: "Changed")}
+      end
+
       it "does not save through a deleted instance" do
         not_nil.assign(foo_bar_models: [foo_bar])
         new_foo_bar_model = FooBarModel.new(not_nil_model: not_nil).save
@@ -733,6 +741,14 @@ Spectator.describe Ktistec::Model do
         FooBarModel.find(foo_bar.id).assign(not_nil: not_nil).save
         expect(NotNilModel.count(foo_bar_model_id: foo_bar.id)).to eq(1)
         expect(FooBarModel.find(foo_bar.id).not_nil).to eq(not_nil)
+      end
+
+      it "does not save through a destroyed instance" do
+        foo_bar.assign(not_nil: not_nil)
+        new_not_nil_model = NotNilModel.new(val: "Val", foo_bar: foo_bar).save
+        foo_bar.destroy
+        not_nil.key = "Changed"
+        expect{new_not_nil_model.save}.not_to change{NotNilModel.count(key: "Changed")}
       end
 
       it "does not save through a deleted instance" do

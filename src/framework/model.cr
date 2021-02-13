@@ -448,6 +448,7 @@ module Ktistec
       end
 
       def _serialize_graph(result, association = nil, index = nil, skip_nested = false)
+        return if self.destroyed?
         {% if @type < Deletable %}
           return if self.deleted?
         {% end %}
@@ -601,10 +602,13 @@ module Ktistec
         @saved_record = nil
       end
 
+      getter? destroyed = false
+
       # Destroys the instance.
       #
       def destroy
         Ktistec.database.exec("DELETE FROM #{table_name} WHERE id = ?", @id)
+        @destroyed = true
         @id = nil
         self
       end

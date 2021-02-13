@@ -5,18 +5,8 @@ require "../../src/framework/model"
 
 require "../spec_helper/base"
 
-module None
-end
-
-module Ktistec
-  module Model
-    module None
-    end
-  end
-end
-
 class FooBarModel
-  include Ktistec::Model(None)
+  include Ktistec::Model(Deletable)
 
   @[Persistent]
   property foo : String? = "Foo"
@@ -56,7 +46,7 @@ class FooBarModel
 end
 
 class NotNilModel
-  include Ktistec::Model(None)
+  include Ktistec::Model(Deletable)
 
   @[Persistent]
   property key : String = "Key"
@@ -97,6 +87,16 @@ end
 
 class AnotherModel < NotNilModel
   @@table_name = "not_nil_models"
+end
+
+module None
+end
+
+module Ktistec
+  module Model
+    module None
+    end
+  end
 end
 
 class UnionAssociationModel
@@ -144,6 +144,7 @@ Spectator.describe Ktistec::Model do
     Ktistec.database.exec <<-SQL
       CREATE TABLE foo_bar_models (
         id integer PRIMARY KEY AUTOINCREMENT,
+        deleted_at datetime,
         not_nil_model_id integer,
         body_json text,
         foo text,
@@ -153,6 +154,7 @@ Spectator.describe Ktistec::Model do
     Ktistec.database.exec <<-SQL
       CREATE TABLE not_nil_models (
         id integer PRIMARY KEY AUTOINCREMENT,
+        deleted_at datetime,
         foo_bar_model_id integer,
         body_yaml text,
         key text NOT NULL,
@@ -708,18 +710,38 @@ Spectator.describe Ktistec::Model do
       expect(foo_bar.not_nil?).to be_nil
     end
 
-    it "destroys unassociated instances" do
-      not_nil.assign(foo_bar_models: [FooBarModel.new]).save
-      NotNilModel.find(not_nil.id).assign(foo_bar_models: [foo_bar]).save
-      expect(FooBarModel.count(not_nil_model_id: not_nil.id)).to eq(1)
-      expect(NotNilModel.find(not_nil.id).foo_bar_models).to eq([foo_bar])
+    context "has_many" do
+      it "destroys unassociated instances on assignment" do
+        not_nil.assign(foo_bar_models: [FooBarModel.new]).save
+        NotNilModel.find(not_nil.id).assign(foo_bar_models: [foo_bar]).save
+        expect(FooBarModel.count(not_nil_model_id: not_nil.id)).to eq(1)
+        expect(NotNilModel.find(not_nil.id).foo_bar_models).to eq([foo_bar])
+      end
+
+      it "does not save through a deleted instance" do
+        not_nil.assign(foo_bar_models: [foo_bar])
+        new_foo_bar_model = FooBarModel.new(not_nil_model: not_nil).save
+        not_nil.delete
+        foo_bar.foo = "Changed"
+        expect{new_foo_bar_model.save}.not_to change{FooBarModel.count(foo: "Changed")}
+      end
     end
 
-    it "destroys unassociated instances" do
-      foo_bar.assign(not_nil: NotNilModel.new(val: "Val")).save
-      FooBarModel.find(foo_bar.id).assign(not_nil: not_nil).save
-      expect(NotNilModel.count(foo_bar_model_id: foo_bar.id)).to eq(1)
-      expect(FooBarModel.find(foo_bar.id).not_nil).to eq(not_nil)
+    context "has_one" do
+      it "destroys unassociated instances on assignment" do
+        foo_bar.assign(not_nil: NotNilModel.new(val: "Val")).save
+        FooBarModel.find(foo_bar.id).assign(not_nil: not_nil).save
+        expect(NotNilModel.count(foo_bar_model_id: foo_bar.id)).to eq(1)
+        expect(FooBarModel.find(foo_bar.id).not_nil).to eq(not_nil)
+      end
+
+      it "does not save through a deleted instance" do
+        foo_bar.assign(not_nil: not_nil)
+        new_not_nil_model = NotNilModel.new(val: "Val", foo_bar: foo_bar).save
+        foo_bar.delete
+        not_nil.key = "Changed"
+        expect{new_not_nil_model.save}.not_to change{NotNilModel.count(key: "Changed")}
+      end
     end
 
     it "returns the correct instance" do

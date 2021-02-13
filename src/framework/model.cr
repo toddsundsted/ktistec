@@ -448,6 +448,9 @@ module Ktistec
       end
 
       def _serialize_graph(result, association = nil, index = nil, skip_nested = false)
+        {% if @type < Deletable %}
+          return if self.deleted?
+        {% end %}
         result << Node.new(self, association, index)
         {% begin %}
           {% ancestors = @type.ancestors << @type %}
@@ -486,9 +489,6 @@ module Ktistec
       #
       def validate(skip_nested = false)
         @errors.clear
-        {% if @type < Deletable %}
-          return @errors if self.deleted?
-        {% end %}
         serialize_graph(skip_nested: skip_nested).each do |node|
           if (errors = node.node._run_validations)
             if (association = node.association)
@@ -552,9 +552,6 @@ module Ktistec
       #
       def save(skip_validation = false, skip_nested = false)
         savepoint
-        {% if @type < Deletable %}
-          return self if self.deleted?
-        {% end %}
         # iteratively run before save lifecycle callbacks, which can
         # add new nested models, which must be processed in turn
         all = [] of Node

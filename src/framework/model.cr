@@ -354,7 +354,7 @@ module Ktistec
             raise NotFound.new("#{self.class} {{name}} {{primary_key}}=#{self.{{foreign_key}}}: not found")
           end
         end
-        def _belongs_to_{{name}} : {{class_name}}
+        def _belongs_to_{{name}} : {{class_name}}?
           @{{name}}
         end
       end
@@ -383,7 +383,7 @@ module Ktistec
           end
           @{{name}}.not_nil!
         end
-        def _belongs_to_{{name}} : Enumerable({{class_name}})
+        def _belongs_to_{{name}} : Enumerable({{class_name}})?
           @{{name}}
         end
       end
@@ -409,7 +409,7 @@ module Ktistec
         def {{name}} : {{class_name}}
           @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}})
         end
-        def _belongs_to_{{name}} : {{class_name}}
+        def _belongs_to_{{name}} : {{class_name}}?
           @{{name}}
         end
       end

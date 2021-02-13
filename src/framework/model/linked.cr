@@ -72,7 +72,7 @@ module Ktistec
                     unless ({{name}} && !ignore_cached) || ({{name}} && {{name}}.changed?)
                       if ({{name}}_iri = self.{{name}}_iri) && dereference
                         unless {{name}}_iri.starts_with?(Ktistec.host)
-                          {% for union_type in m.return_type.id.split("|").map(&.strip.id) %}
+                          {% for union_type in m.return_type.id.split(" | ").reject(&.==("::Nil")).map(&.id) %}
                             {{union_type}}.open?({{name}}_iri) do |response|
                               if ({{name}} = {{union_type}}.from_json_ld?(response.body))
                                 return self.{{name}} = {{name}}

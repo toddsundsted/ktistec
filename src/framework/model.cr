@@ -555,7 +555,21 @@ module Ktistec
         {% if @type < Deletable %}
           return self if self.deleted?
         {% end %}
-        serialize_graph(skip_nested: skip_nested).each do |node|
+        # iteratively run before save lifecycle callbacks, which can
+        # add new nested models, which must be processed in turn
+        all = [] of Node
+        loop do
+          new = serialize_graph(skip_nested: skip_nested)
+          delta = new - all
+          all = new
+          break if delta.empty?
+          delta.each do |node|
+            if (model = node.node) && model.responds_to?(:before_save)
+              model.before_save
+            end
+          end
+        end
+        all.each do |node|
           node.node._save_model(skip_validation: skip_validation)
         end
         raise Invalid.new(errors) unless skip_validation || valid?(skip_nested: skip_nested)

@@ -549,6 +549,23 @@ Spectator.describe Ktistec::Model do
         expect{begin derived_model.save; rescue; end}.not_to change{DerivedModel.count(bar: "Bar")}
       end
     end
+
+    context "before save lifecycle callback" do
+      class AllCapsModel < NotNilModel
+        @@table_name = "not_nil_models"
+
+        def before_save
+          @key = @key.try(&.upcase)
+          @val = @val.try(&.upcase)
+        end
+      end
+
+      it "converts properties to all capitals" do
+        all_caps_model = AllCapsModel.new(key: "key", val: "val").save
+        expect(all_caps_model.key).to eq("KEY")
+        expect(all_caps_model.val).to eq("VAL")
+      end
+    end
   end
 
   describe "#destroy" do

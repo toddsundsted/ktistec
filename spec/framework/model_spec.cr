@@ -395,7 +395,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "serializes the graph of models" do
-      expect(graph.serialize_graph.map(&.node)).to eq([graph, foo_bar, not_nil])
+      expect(graph.serialize_graph.map(&.model)).to eq([graph, foo_bar, not_nil])
     end
   end
 

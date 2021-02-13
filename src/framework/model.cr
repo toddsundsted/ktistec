@@ -436,7 +436,7 @@ module Ktistec
 
       record(
         Node,
-        node : Model::InstanceMethods,
+        model : Model::InstanceMethods,
         association : String?,
         index : Int32?
       )
@@ -463,12 +463,12 @@ module Ktistec
               if (%body = {{d.body}})
                 if %body.responds_to?(:each)
                   %body.each_with_index do |model, i|
-                    unless result.any? { |node| model == node.node }
+                    unless result.any? { |node| model == node.model }
                       model._serialize_graph(result, {{d.name[12..-1].stringify}}, i, **options)
                     end
                   end
                 else
-                  unless result.any? { |node| %body == node.node }
+                  unless result.any? { |node| %body == node.model }
                     %body._serialize_graph(result, {{d.name[12..-1].stringify}}, **options)
                   end
                 end
@@ -491,7 +491,7 @@ module Ktistec
       def validate(skip_nested = false)
         @errors.clear
         serialize_graph(skip_nested: skip_nested).each do |node|
-          if (errors = node.node._run_validations)
+          if (errors = node.model._run_validations)
             if (association = node.association)
               if (index = node.index)
                 errors = errors.transform_keys { |key| "#{association}.#{index}.#{key}" }
@@ -562,13 +562,13 @@ module Ktistec
           all = new
           break if delta.empty?
           delta.each do |node|
-            if (model = node.node) && model.responds_to?(:before_save)
+            if (model = node.model) && model.responds_to?(:before_save)
               model.before_save
             end
           end
         end
         all.each do |node|
-          node.node._save_model(skip_validation: skip_validation)
+          node.model._save_model(skip_validation: skip_validation)
         end
         raise Invalid.new(errors) unless skip_validation || valid?(skip_nested: skip_nested)
         commit

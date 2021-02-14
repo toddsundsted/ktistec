@@ -441,6 +441,23 @@ Spectator.describe Ktistec::Model do
       expect(not_nil_model.errors).to be_empty
       expect(foo_bar_model.errors).to be_empty
     end
+
+    context "before validate lifecycle callback" do
+      class AllCapsModel < NotNilModel
+        @@table_name = "not_nil_models"
+
+        def before_validate
+          @key = @key.try(&.upcase)
+          @val = @val.try(&.upcase)
+        end
+      end
+
+      it "converts properties to all capitals" do
+        all_caps_model = AllCapsModel.new(key: "key", val: "val").tap(&.valid?)
+        expect(all_caps_model.key).to eq("KEY")
+        expect(all_caps_model.val).to eq("VAL")
+      end
+    end
   end
 
   describe "#save" do

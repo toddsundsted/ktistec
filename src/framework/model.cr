@@ -490,7 +490,21 @@ module Ktistec
       #
       def validate(skip_associated = false)
         @errors.clear
-        serialize_graph(skip_associated: skip_associated).each do |node|
+        # iteratively run before validate lifecycle callbacks, which can
+        # add new associated models, which must be processed in turn
+        all = [] of Node
+        loop do
+          new = serialize_graph(skip_associated: skip_associated)
+          delta = new - all
+          all = new
+          break if delta.empty?
+          delta.each do |node|
+            if (model = node.model) && model.responds_to?(:before_validate)
+              model.before_validate
+            end
+          end
+        end
+        all.each do |node|
           if (errors = node.model._run_validations)
             if (association = node.association)
               if (index = node.index)

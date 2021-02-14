@@ -441,13 +441,13 @@ module Ktistec
         index : Int32?
       )
 
-      def serialize_graph(skip_nested = false)
+      def serialize_graph(skip_associated = false)
         ([] of Node).tap do |result|
-          _serialize_graph(result, skip_nested: skip_nested)
+          _serialize_graph(result, skip_associated: skip_associated)
         end
       end
 
-      def _serialize_graph(result, association = nil, index = nil, skip_nested = false)
+      def _serialize_graph(result, association = nil, index = nil, skip_associated = false)
         return if self.destroyed?
         {% if @type < Deletable %}
           return if self.deleted?
@@ -457,8 +457,8 @@ module Ktistec
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
           {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
-          unless skip_nested
-            options = {skip_nested: skip_nested}
+          unless skip_associated
+            options = {skip_associated: skip_associated}
             {% for d in methods %}
               if (%body = {{d.body}})
                 if %body.responds_to?(:each)
@@ -482,15 +482,15 @@ module Ktistec
 
       # Returns true if the instance is valid.
       #
-      def valid?(skip_nested = false)
-        validate(skip_nested: skip_nested).empty?
+      def valid?(skip_associated = false)
+        validate(skip_associated: skip_associated).empty?
       end
 
       # Validates the instance and returns any errors.
       #
-      def validate(skip_nested = false)
+      def validate(skip_associated = false)
         @errors.clear
-        serialize_graph(skip_nested: skip_nested).each do |node|
+        serialize_graph(skip_associated: skip_associated).each do |node|
           if (errors = node.model._run_validations)
             if (association = node.association)
               if (index = node.index)
@@ -551,13 +551,13 @@ module Ktistec
 
       # Saves the instance.
       #
-      def save(skip_validation = false, skip_nested = false)
+      def save(skip_validation = false, skip_associated = false)
         savepoint
         # iteratively run before save lifecycle callbacks, which can
-        # add new nested models, which must be processed in turn
+        # add new associated models, which must be processed in turn
         all = [] of Node
         loop do
-          new = serialize_graph(skip_nested: skip_nested)
+          new = serialize_graph(skip_associated: skip_associated)
           delta = new - all
           all = new
           break if delta.empty?
@@ -570,7 +570,7 @@ module Ktistec
         all.each do |node|
           node.model._save_model(skip_validation: skip_validation)
         end
-        raise Invalid.new(errors) unless skip_validation || valid?(skip_nested: skip_nested)
+        raise Invalid.new(errors) unless skip_validation || valid?(skip_associated: skip_associated)
         commit
         self
       rescue ex

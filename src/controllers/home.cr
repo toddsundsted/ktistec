@@ -69,21 +69,14 @@ class HomeController
       end
     elsif (accounts = Account.all).empty?
       account = Account.new(**step_2_params(env))
-      actor = ActivityPub::Actor::Person.new(**step_2_params(env).merge({
-        iri: "#{host}/actors/#{account.username}",
-        inbox: "#{host}/actors/#{account.username}/inbox",
-        outbox: "#{host}/actors/#{account.username}/outbox",
-        following: "#{host}/actors/#{account.username}/following",
-        followers: "#{host}/actors/#{account.username}/followers"
-      }))
-      account.actor = actor
+      actor = ActivityPub::Actor::Person.new(**step_2_params(env))
 
-      if account.valid?
+      if account.valid? && actor.valid?
         keypair = OpenSSL::RSA.generate(2048, 17)
         actor.pem_public_key = keypair.public_key.to_pem
         actor.pem_private_key = keypair.to_pem
 
-        account.save
+        account.assign(actor: actor).save
 
         session = Session.new(account).save
         payload = {jti: session.session_key, iat: Time.utc}

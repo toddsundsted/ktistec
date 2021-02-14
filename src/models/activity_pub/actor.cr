@@ -74,6 +74,20 @@ module ActivityPub
     @[Persistent]
     property urls : Array(String)?
 
+    def before_validate
+      if self.changed?(:username)
+        if (username = self.username) && ((iri.blank? && new_record?) || local?)
+          host = Ktistec.host
+          self.iri = "#{host}/actors/#{username}"
+          self.inbox = "#{host}/actors/#{username}/inbox"
+          self.outbox = "#{host}/actors/#{username}/outbox"
+          self.following = "#{host}/actors/#{username}/following"
+          self.followers = "#{host}/actors/#{username}/followers"
+          self.urls = ["#{host}/@#{username}"]
+        end
+      end
+    end
+
     def display_name
       name.presence || username.presence || iri
     end

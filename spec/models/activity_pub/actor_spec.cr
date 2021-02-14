@@ -14,10 +14,42 @@ Spectator.describe ActivityPub::Actor do
   let(username) { random_string }
   let(password) { random_string }
 
+  describe "#username=" do
+    subject { described_class.new(iri: "https://test.test/actors/#{random_string}") }
+
+    it "assigns iri" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.iri}
+    end
+
+    it "assigns inbox" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.inbox}
+    end
+
+    it "assigns outbox" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.outbox}
+    end
+
+    it "assigns following" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.following}
+    end
+
+    it "assigns followers" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.followers}
+    end
+
+    it "assigns urls" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.urls}
+    end
+
+    it "doesn't assign if the actor isn't local" do
+      expect{subject.assign(iri: "https://remote/object", username: "foobar").save}.not_to change{subject.urls}
+    end
+  end
+
   describe ".match?" do
     let!(actor) do
       described_class.new(
-        iri: "https://test.test/actors/foo",
+        iri: "https://bar.com/actors/foo",
         username: "foo",
         urls: ["https://bar.com/@foo"]
       ).save
@@ -95,12 +127,12 @@ Spectator.describe ActivityPub::Actor do
           "https://www.w3.org/ns/activitystreams",
           "https://w3id.org/security/v1"
         ],
-        "@id":"https://test.test/foo_bar",
+        "@id":"https://remote/foo_bar",
         "@type":"FooBarActor",
         "preferredUsername":"foo_bar",
         "publicKey":{
-          "id":"https://test.test/foo_bar#public-key",
-          "owner":"https://test.test/foo_bar",
+          "id":"https://remote/foo_bar#public-key",
+          "owner":"https://remote/foo_bar",
           "publicKeyPem":"---PEM PUBLIC KEY---"
         },
         "inbox": "inbox link",
@@ -132,7 +164,7 @@ Spectator.describe ActivityPub::Actor do
 
     it "creates a new instance" do
       actor = described_class.from_json_ld(json).save
-      expect(actor.iri).to eq("https://test.test/foo_bar")
+      expect(actor.iri).to eq("https://remote/foo_bar")
       expect(actor.username).to eq("foo_bar")
       expect(actor.pem_public_key).to be_nil
       expect(actor.inbox).to eq("inbox link")
@@ -155,7 +187,7 @@ Spectator.describe ActivityPub::Actor do
   describe "#from_json_ld" do
     it "updates an existing instance" do
       actor = described_class.new.from_json_ld(json).save
-      expect(actor.iri).to eq("https://test.test/foo_bar")
+      expect(actor.iri).to eq("https://remote/foo_bar")
       expect(actor.username).to eq("foo_bar")
       expect(actor.pem_public_key).to be_nil
       expect(actor.inbox).to eq("inbox link")

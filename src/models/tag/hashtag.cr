@@ -11,21 +11,27 @@ class Tag
       query = <<-QUERY
         SELECT #{ActivityPub::Object.columns(prefix: "o")}
           FROM objects AS o
-          JOIN tags AS t
-            ON t.subject_iri = o.iri
-           AND t.name = ?
-         WHERE o.published IS NOT NULL
-           AND o.visible = 1
+         WHERE EXISTS (
+              SELECT 1
+                FROM tags AS t
+               WHERE t.type = "#{Tag::Hashtag}"
+                 AND t.subject_iri = o.iri
+                 AND t.name = ?)
+           AND o.published IS NOT NULL
            AND o.deleted_at IS NULL
+           AND o.visible = 1
            AND o.id NOT IN (
               SELECT o.id
                 FROM objects AS o
-                JOIN tags AS t
-                  ON t.subject_iri = o.iri
-                 AND t.name = ?
-               WHERE o.published IS NOT NULL
-                 AND o.visible = 1
+               WHERE EXISTS (
+                    SELECT 1
+                      FROM tags AS t
+                     WHERE t.type = "#{Tag::Hashtag}"
+                       AND t.subject_iri = o.iri
+                       AND t.name = ?)
+                 AND o.published IS NOT NULL
                  AND o.deleted_at IS NULL
+                 AND o.visible = 1
             ORDER BY o.published DESC
                LIMIT ?)
       ORDER BY o.published DESC

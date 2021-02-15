@@ -575,6 +575,7 @@ module Ktistec
       #
       def save(skip_validation = false, skip_associated = false)
         savepoint
+        raise Invalid.new(errors) unless skip_validation || valid?(skip_associated: skip_associated)
         # iteratively run before save lifecycle callbacks, which can
         # add new associated models, which must be processed in turn
         all = [] of Node
@@ -592,7 +593,6 @@ module Ktistec
         all.each do |node|
           node.model._save_model(skip_validation: skip_validation)
         end
-        raise Invalid.new(errors) unless skip_validation || valid?(skip_associated: skip_associated)
         commit
         self
       rescue ex

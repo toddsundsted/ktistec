@@ -580,7 +580,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "converts properties to all capitals" do
-        all_caps_model = AllCapsModel.new(key: "key", val: "val").save
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val").save
         expect(all_caps_model.key).to eq("KEY")
         expect(all_caps_model.val).to eq("VAL")
       end

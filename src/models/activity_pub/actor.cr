@@ -75,8 +75,9 @@ module ActivityPub
     property urls : Array(String)?
 
     def before_validate
-      if self.changed?(:username)
+      if changed?(:username)
         if (username = self.username) && ((iri.blank? && new_record?) || local?)
+          clear!(:username)
           host = Ktistec.host
           self.iri = "#{host}/actors/#{username}"
           self.inbox = "#{host}/actors/#{username}/inbox"

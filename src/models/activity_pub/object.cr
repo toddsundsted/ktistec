@@ -95,10 +95,11 @@ module ActivityPub
     has_many mentions, class_name: Tag::Mention, foreign_key: subject_iri, primary_key: iri
 
     def before_validate
-      if self.changed?(:source)
+      if changed?(:source)
         if (source = self.source) && local?
           media_type = source.media_type.split(";").map(&.strip).first?
           if media_type == "text/html"
+            clear!(:source)
             enhancements = Ktistec::HTML.enhance(source.content)
             self.content = enhancements.content
             self.media_type = media_type

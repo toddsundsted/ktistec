@@ -91,8 +91,8 @@ module ActivityPub
     @[Persistent]
     property urls : Array(String)?
 
-    has_many hashtags, class_name: Tag::Hashtag, foreign_key: subject_iri, primary_key: iri
-    has_many mentions, class_name: Tag::Mention, foreign_key: subject_iri, primary_key: iri
+    has_many hashtags, class_name: Tag::Hashtag, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
+    has_many mentions, class_name: Tag::Mention, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
 
     def before_validate
       if changed?(:source)

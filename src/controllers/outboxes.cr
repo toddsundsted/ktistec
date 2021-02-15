@@ -104,16 +104,20 @@ class RelationshipsController
         to: to,
         cc: cc
       )
+      # validate ensures properties are populated from source
+      unless object.valid?
+        bad_request
+      end
       # hack to sidestep typing of unions as their nearest common ancestor
       if activity.responds_to?(:actor=) && activity.responds_to?(:object=)
         activity.assign(
           iri: "#{host}/activities/#{id}",
           actor: account.actor,
           object: object,
-          published: now,
-          visible: visible,
-          to: to,
-          cc: cc
+          published: object.published,
+          visible: object.visible,
+          to: object.to,
+          cc: object.cc
         )
       end
       unless activity.responds_to?(:valid_for_send?) && activity.valid_for_send?

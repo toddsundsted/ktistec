@@ -173,6 +173,7 @@ Spectator.describe RelationshipsController do
 
         before_each do
           actor.assign(followers: "#{actor.iri}/followers").save
+          other.assign(urls: ["#{Ktistec.host}/@#{other.username}"]).save
         end
 
         it "returns 400 if the content is missing" do
@@ -323,6 +324,16 @@ Spectator.describe RelationshipsController do
         it "addresses (to) the specified actor" do
           post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&to=#{URI.encode_www_form(other.iri)}"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (to) all mentioned actors" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=@#{other.username}@test.test"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (to) the specified actor and all mentioned actors" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=@#{other.username}@test.test&to=#{URI.encode_www_form(actor.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.iri, other.iri)
         end
 
         it "addresses (cc) the specified actor" do

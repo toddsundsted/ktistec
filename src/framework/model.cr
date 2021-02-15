@@ -256,7 +256,7 @@ module Ktistec
           {% end %}
         {% end %}
         super()
-        @saved_record = self.dup
+        clear!
       end
 
       # Initializes the new instance.
@@ -274,7 +274,7 @@ module Ktistec
           {% end %}
         {% end %}
         super()
-        @saved_record = self.dup
+        clear!
       end
 
       # Bulk assigns properties.
@@ -607,9 +607,7 @@ module Ktistec
             {% end %}
           ).last_insert_id
         {% end %}
-        @saved_record = self.dup
-        # don't maintain a linked list of previously saved records
-        @saved_record.try(&.clear_saved_record)
+        clear!
       end
 
       protected def clear_saved_record
@@ -649,6 +647,27 @@ module Ktistec
           else
             self != @saved_record
           end
+        end
+      end
+
+      def clear!(property = nil)
+        if property
+          @saved_record ||= self.class.find?(@id)
+          @saved_record.try do |saved_record|
+            {% begin %}
+              {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
+              case property
+              {% for v in vs %}
+              when .==({{v.symbolize}})
+                saved_record.as(typeof(self)).{{v}} = self.{{v}}
+              {% end %}
+              end
+            {% end %}
+          end
+        else
+          @saved_record = self.dup
+          # don't maintain a linked list of previously saved records
+          @saved_record.try(&.clear_saved_record)
         end
       end
 

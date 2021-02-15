@@ -613,6 +613,10 @@ Spectator.describe Ktistec::Model do
       expect(NotNilModel.new(val: "Val").save.assign(val: "Baz").changed?).to be_true
     end
 
+    it "returns false if the record has been cleared after it was changed" do
+      expect(NotNilModel.new(val: "Val").save.assign(val: "Baz").tap(&.clear!).changed?).to be_false
+    end
+
     it "returns false if the record has been saved" do
       expect(NotNilModel.new(val: "Val").save.assign(val: "Baz").save.changed?).to be_false
     end
@@ -625,12 +629,24 @@ Spectator.describe Ktistec::Model do
       expect(NotNilModel.new(val: "Val").changed?).to be_true
     end
 
+    it "returns true if the record is new even if it was cleared" do
+      expect(NotNilModel.new(val: "Val").tap(&.clear!).changed?).to be_true
+    end
+
     it "returns false if the property has not been changed" do
       expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").changed?(:val)).to be_false
     end
 
     it "returns true if the property has been changed" do
       expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").changed?(:key)).to be_true
+    end
+
+    it "returns false if the property has been cleared after it was changed" do
+      expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").tap(&.clear!(:key)).changed?(:key)).to be_false
+    end
+
+    it "returns true if the property has been changed" do
+      expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").tap(&.clear!(:val)).changed?(:key)).to be_true
     end
   end
 

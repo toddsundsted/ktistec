@@ -361,7 +361,7 @@ module Ktistec
 
       # Specifies a one-to-many association with another model.
       #
-      macro has_many(name, primary_key = id, foreign_key = nil, class_name = nil)
+      macro has_many(name, primary_key = id, foreign_key = nil, class_name = nil, inverse_of = nil)
         {% singular = name.stringify %}
         {% singular = singular =~ /(ses|sses|shes|ches|xes|zes)$/ ? singular[0..-3] : singular[0..-2] %}
         {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
@@ -373,7 +373,12 @@ module Ktistec
             other.destroy unless other.in?({{name}})
           end
           @{{name}} = {{name}}
-          {{name}}.each { |n| n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}})) }
+          {{name}}.each do |n|
+            n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}}))
+            {% if inverse_of %}
+              n.{{inverse_of}} = self
+            {% end %}
+          end
           {{name}}
         end
         def {{name}} : Enumerable({{class_name}})
@@ -390,7 +395,7 @@ module Ktistec
 
       # Specifies a one-to-one association with another model.
       #
-      macro has_one(name, primary_key = id, foreign_key = nil, class_name = nil)
+      macro has_one(name, primary_key = id, foreign_key = nil, class_name = nil, inverse_of = nil)
         {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
         {% class_name = class_name || name.stringify.camelcase.id %}
         @[Assignable]
@@ -401,6 +406,9 @@ module Ktistec
           end
           @{{name}} = {{name}}
           {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
+          {% if inverse_of %}
+            {{name}}.{{inverse_of}} = self
+          {% end %}
           {{name}}
         end
         def {{name}}? : {{class_name}}?

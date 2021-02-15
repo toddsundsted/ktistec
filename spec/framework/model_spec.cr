@@ -28,7 +28,7 @@ class FooBarModel
   property not_nil_model_id : Int64?
 
   belongs_to not_nil, class_name: NotNilModel, foreign_key: not_nil_model_id
-  has_one not_nil_model
+  has_one not_nil_model, inverse_of: foo_bar
 
   @[Persistent]
   property body_json : String?
@@ -64,7 +64,7 @@ class NotNilModel
   property foo_bar_model_id : Int64?
 
   belongs_to foo_bar, class_name: FooBarModel, foreign_key: foo_bar_model_id
-  has_many foo_bar_models
+  has_many foo_bar_models, inverse_of: not_nil
 
   @[Persistent]
   property body_yaml : String?
@@ -672,8 +672,8 @@ Spectator.describe Ktistec::Model do
   end
 
   context "associations" do
-    let(foo_bar) { FooBarModel.new(id: 13_i64).save }
-    let(not_nil) { NotNilModel.new(id: 17_i64, val: "Val").save }
+    let(foo_bar) { FooBarModel.new(id: 13_i64) }
+    let(not_nil) { NotNilModel.new(id: 17_i64, val: "Val") }
     let(union) { UnionAssociationModel.new }
 
     pre_condition do
@@ -711,13 +711,13 @@ Spectator.describe Ktistec::Model do
 
     context "has_many" do
       it "assigns the reciprocal instance" do
-        (not_nil.foo_bar_models = [foo_bar]) && not_nil.save
+        (not_nil.foo_bar_models = [foo_bar])
         expect(foo_bar.not_nil).to eq(not_nil)
         expect(not_nil.foo_bar_models).to eq([foo_bar])
       end
 
       it "assigns the reciprocal instance" do
-        not_nil.assign(foo_bar_models: [foo_bar]).save
+        not_nil.assign(foo_bar_models: [foo_bar])
         expect(foo_bar.not_nil).to eq(not_nil)
         expect(not_nil.foo_bar_models).to eq([foo_bar])
       end
@@ -748,13 +748,13 @@ Spectator.describe Ktistec::Model do
 
     context "has_one" do
       it "assigns the reciprocal instance" do
-        (foo_bar.not_nil_model = not_nil) && foo_bar.save
+        (foo_bar.not_nil_model = not_nil)
         expect(not_nil.foo_bar).to eq(foo_bar)
         expect(foo_bar.not_nil_model).to eq(not_nil)
       end
 
       it "assigns the reciprocal instance" do
-        foo_bar.assign(not_nil_model: not_nil).save
+        foo_bar.assign(not_nil_model: not_nil)
         expect(not_nil.foo_bar).to eq(foo_bar)
         expect(foo_bar.not_nil_model).to eq(not_nil)
       end
@@ -796,10 +796,12 @@ Spectator.describe Ktistec::Model do
     end
 
     it "returns the correct instance" do
+      not_nil.save
       expect(union.assign(model_id: not_nil.id).model).to eq(not_nil)
     end
 
     it "returns the correct instance" do
+      foo_bar.save
       expect(union.assign(model_id: foo_bar.id).model).to eq(foo_bar)
     end
   end

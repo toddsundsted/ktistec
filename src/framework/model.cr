@@ -610,10 +610,6 @@ module Ktistec
         clear!
       end
 
-      protected def clear_saved_record
-        @saved_record = nil
-      end
-
       getter? destroyed = false
 
       # Destroys the instance.
@@ -665,10 +661,14 @@ module Ktistec
             {% end %}
           end
         else
-          @saved_record = self.dup
           # don't maintain a linked list of previously saved records
-          @saved_record.try(&.clear_saved_record)
+          @saved_record = self.dup.clear_saved_record
         end
+      end
+
+      protected def clear_saved_record
+        @saved_record = nil
+        self
       end
 
       def to_json(json : JSON::Builder)

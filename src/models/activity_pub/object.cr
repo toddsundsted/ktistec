@@ -105,6 +105,13 @@ module ActivityPub
             self.attachments = enhancements.attachments
             self.hashtags = enhancements.hashtags
             self.mentions = enhancements.mentions
+            old = self.to
+            new = enhancements.mentions.map(&.href).compact
+            if draft? || old.nil?
+              self.to = new
+            else
+              self.to = old | new
+            end
           end
         end
       end

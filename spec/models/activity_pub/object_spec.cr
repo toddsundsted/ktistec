@@ -45,6 +45,26 @@ Spectator.describe ActivityPub::Object do
     it "doesn't assign if the object isn't local" do
       expect{subject.assign(iri: "https://remote/object", source: source).save}.not_to change{subject.content}
     end
+
+    context "addressing (to)" do
+      before_each do
+        ActivityPub::Actor.new(
+          iri: "https://bar.com/foo",
+          urls: ["https://bar.com/@foo"],
+          username: "foo"
+        ).save
+      end
+
+      it "replaces recipients if draft" do
+        subject.assign(to: ["https://test.test/actor"], source: source).save
+        expect(subject.to).to eq(["https://bar.com/foo"])
+      end
+
+      it "appends recipients if published" do
+        subject.assign(to: ["https://test.test/actor"], source: source, published: Time.utc).save
+        expect(subject.to).to eq(["https://test.test/actor", "https://bar.com/foo"])
+      end
+    end
   end
 
   context "when validating" do

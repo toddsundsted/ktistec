@@ -335,5 +335,21 @@ Spectator.describe ActivityPub::Object do
         expect(subject.assign(published: Time.utc).draft?).to be_false
       end
     end
+
+    describe "#tags" do
+      let(hashtag) { Tag::Hashtag.new(name: "foo", href: "https://test.test/tags/foo") }
+      let(mention) { Tag::Mention.new(name: "foo@test.test", href: "https://test.test/actors/foo") }
+      subject do
+        described_class.new(
+          iri: "https://test.test/object",
+          hashtags: [hashtag],
+          mentions: [mention]
+        ).save
+      end
+
+      it "returns tags" do
+        expect(subject.tags).to contain_exactly(hashtag, mention)
+      end
+    end
   end
 end

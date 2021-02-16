@@ -238,6 +238,10 @@ module ActivityPub
       Object.query_all(query, self.iri, additional_columns: {depth: Int32})
     end
 
+    def tags
+      Tag.where(subject_iri: iri)
+    end
+
     def to_json_ld(recursive = false)
       object = self
       render "src/views/objects/object.json.ecr"

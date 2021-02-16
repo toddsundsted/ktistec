@@ -167,6 +167,22 @@ Spectator.describe ActivityPub::Object do
       object = described_class.from_json_ld(json)
       expect(described_class.from_json_ld(object.to_json_ld)).to eq(object)
     end
+
+    it "renders hashtags" do
+      object = described_class.new(
+        iri: "https://test.test/object",
+        hashtags: [Tag::Hashtag.new(name: "foo", href: "https://test.test/tags/foo")]
+      ).save
+      expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Hashtag", "name" => "#foo", "href" => "https://test.test/tags/foo"})
+    end
+
+    it "renders mentions" do
+      object = described_class.new(
+        iri: "https://test.test/object",
+        mentions: [Tag::Mention.new(name: "foo@test.test", href: "https://test.test/actors/foo")]
+      ).save
+      expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Mention", "name" => "@foo@test.test", "href" => "https://test.test/actors/foo"})
+    end
   end
 
   describe "#with_statistics!" do

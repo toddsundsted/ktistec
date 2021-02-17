@@ -486,6 +486,25 @@ module Ktistec
         {% end %}
       end
 
+      private macro run_callback(callback, skip_associated = false, nodes = nil)
+        %nodes = [] of Node
+        # iteratively run lifecycle callbacks, which can add new
+        # associated models, which must be processed in turn
+        loop do
+          %new = serialize_graph(skip_associated: skip_associated)
+          %delta = %new - %nodes
+          %nodes = %new
+          break if %delta.empty?
+          %delta.each do |%node|
+            if (%model = %node.model) && %model.responds_to?({{callback.symbolize}})
+              %model.{{callback}}
+            end
+          end
+        end
+        # return the serialize graph
+        {{nodes}} = %nodes if {{nodes}}
+      end
+
       getter errors = Errors.new
 
       # Returns true if the instance is valid.
@@ -498,21 +517,9 @@ module Ktistec
       #
       def validate(skip_associated = false)
         @errors.clear
-        # iteratively run before validate lifecycle callbacks, which can
-        # add new associated models, which must be processed in turn
-        all = [] of Node
-        loop do
-          new = serialize_graph(skip_associated: skip_associated)
-          delta = new - all
-          all = new
-          break if delta.empty?
-          delta.each do |node|
-            if (model = node.model) && model.responds_to?(:before_validate)
-              model.before_validate
-            end
-          end
-        end
-        all.each do |node|
+        nodes = [] of Node
+        run_callback(before_validate, skip_associated: skip_associated, nodes: nodes)
+        nodes.each do |node|
           if (errors = node.model._run_validations)
             if (association = node.association)
               if (index = node.index)
@@ -576,21 +583,9 @@ module Ktistec
       def save(skip_validation = false, skip_associated = false)
         savepoint
         raise Invalid.new(errors) unless skip_validation || valid?(skip_associated: skip_associated)
-        # iteratively run before save lifecycle callbacks, which can
-        # add new associated models, which must be processed in turn
-        all = [] of Node
-        loop do
-          new = serialize_graph(skip_associated: skip_associated)
-          delta = new - all
-          all = new
-          break if delta.empty?
-          delta.each do |node|
-            if (model = node.model) && model.responds_to?(:before_save)
-              model.before_save
-            end
-          end
-        end
-        all.each do |node|
+        nodes = [] of Node
+        run_callback(before_save, skip_associated: skip_associated, nodes: nodes)
+        nodes.each do |node|
           node.model._save_model(skip_validation: skip_validation)
         end
         commit

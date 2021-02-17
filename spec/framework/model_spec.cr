@@ -592,6 +592,24 @@ Spectator.describe Ktistec::Model do
       saved_model = FooBarModel.new.save
       expect{saved_model.destroy}.to change{FooBarModel.count}.by(-1)
     end
+
+    context "before destroy lifecycle callback" do
+      class DestroyedAtModel < FooBarModel
+        @@table_name = "foo_bar_models"
+
+        @[Assignable]
+        property destroyed_at : Time?
+
+        def before_destroy
+          @destroyed_at = Time.utc
+        end
+      end
+
+      it "timestamps the model" do
+        destroyed_at_model = DestroyedAtModel.new.save
+        expect{destroyed_at_model.destroy}.to change{destroyed_at_model.destroyed_at}
+      end
+    end
   end
 
   describe "#new_record?" do

@@ -531,6 +531,7 @@ module Ktistec
             @errors.merge!(errors)
           end
         end
+        run_callback(after_validate, skip_associated: skip_associated, nodes: nodes)
         @errors
       end
 
@@ -588,6 +589,7 @@ module Ktistec
         nodes.each do |node|
           node.model._save_model(skip_validation: skip_validation)
         end
+        run_callback(after_save, skip_associated: skip_associated, nodes: nodes)
         commit
         self
       rescue ex
@@ -618,7 +620,9 @@ module Ktistec
       # Destroys the instance.
       #
       def destroy
+        self.before_destroy if self.responds_to?(:before_destroy)
         Ktistec.database.exec("DELETE FROM #{table_name} WHERE id = ?", @id)
+        self.after_destroy if self.responds_to?(:after_destroy)
         @destroyed = true
         @id = nil
         self

@@ -567,22 +567,9 @@ module Ktistec
         end
       end
 
-      private macro savepoint
-        Ktistec.database.exec(savepoint = "SAVEPOINT _#{Random.new.hex(8)}")
-      end
-
-      private macro rollback
-        Ktistec.database.exec("ROLLBACK TO #{savepoint}")
-      end
-
-      private macro commit
-        Ktistec.database.exec("RELEASE #{savepoint}")
-      end
-
       # Saves the instance.
       #
       def save(skip_validation = false, skip_associated = false)
-        savepoint
         raise Invalid.new(errors) unless skip_validation || valid?(skip_associated: skip_associated)
         nodes = [] of Node
         run_callback(before_save, skip_associated: skip_associated, nodes: nodes)
@@ -590,11 +577,7 @@ module Ktistec
           node.model._save_model(skip_validation: skip_validation)
         end
         run_callback(after_save, skip_associated: skip_associated, nodes: nodes)
-        commit
         self
-      rescue ex
-        rollback
-        raise ex
       end
 
       def _save_model(skip_validation = false)

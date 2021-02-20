@@ -20,6 +20,45 @@ class Tag
     end
   end
 
+  def short_type
+    self.class.to_s.split("::").last.underscore
+  end
+
+  def count
+    query = <<-QUERY
+      SELECT ifnull(sum(count), 0) FROM tag_statistics WHERE type = ? AND name = ?
+    QUERY
+    Ktistec.database.scalar(
+      query,
+      self.short_type,
+      self.name
+    )
+  end
+
+  private def recount
+    query = <<-QUERY
+      INSERT OR REPLACE INTO tag_statistics (type, name, count)
+      VALUES (?, ?, (
+        SELECT count(*) FROM tags WHERE type = ? AND name = ?)
+      )
+    QUERY
+    Ktistec.database.exec(
+      query,
+      self.short_type,
+      self.name,
+      self.type,
+      self.name
+    )
+  end
+
+  def after_save
+    recount
+  end
+
+  def after_destroy
+    recount
+  end
+
   @[Persistent]
   property name : String
 

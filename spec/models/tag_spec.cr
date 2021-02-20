@@ -21,6 +21,30 @@ Spectator.describe Tag do
     end
   end
 
+  context ".match" do
+    class FooBarTag < Tag
+    end
+
+    macro create_tag(name)
+      FooBarTag.new(subject_iri: "http://remote/thing/#{random_string}", name: {{name}}).save
+    end
+
+    before_each do
+      create_tag("foobar")
+      create_tag("foobar")
+      create_tag("foo")
+      create_tag("quux")
+    end
+
+    it "returns the best match" do
+      expect(FooBarTag.match("foo")).to eq([{"foobar", 2}])
+    end
+
+    it "returns no match" do
+      expect(FooBarTag.match("bar")).to be_empty
+    end
+  end
+
   context "validations" do
     it "rejects if subject_iri is blank" do
       new_tag = described_class.new(name: "tag")

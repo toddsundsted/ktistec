@@ -20,6 +20,30 @@ class Tag
     end
   end
 
+  macro inherited
+    def self.short_type
+      self.to_s.split("::").last.underscore
+    end
+
+    def self.match(prefix, limit = 1)
+      query = <<-QUERY
+          SELECT name, count
+            FROM tag_statistics
+           WHERE type = ?
+             AND name LIKE ?
+        ORDER BY count DESC
+           LIMIT ?
+      QUERY
+      Ktistec.database.query_all(
+        query,
+        short_type,
+        prefix + "%",
+        limit,
+        as: {String, Int64}
+      )
+    end
+  end
+
   def short_type
     self.class.to_s.split("::").last.underscore
   end

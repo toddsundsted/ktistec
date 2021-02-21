@@ -104,6 +104,89 @@ FilePond.setOptions({
         $(event.target).closest('form').find('.buttons .button').addClass('disabled')
     }
   })
+  /**
+   * Typeahead.
+   */
+  $(document).on('turbolinks:load', function () {
+    $('trix-editor').each(function() {
+      const editor = this.editor
+      const previous_keydown = editor.composition.delegate.inputController.events.keydown
+      editor.composition.delegate.inputController.events.keydown = function(keydown) {
+        if (keydown.keyCode == 8 /* backspace */ && editor.suggestion) {
+          editor.backspacing = true
+        }
+        else if (keydown.keyCode == 27 /* escape */ && editor.suggestion) {
+          editor.insertString('')
+          editor.selectionManager.delegate.requestedRender = true
+          editor.backspacing = true
+          keydown.preventDefault()
+        }
+        else if (keydown.keyCode == 9 /* tab */ && editor.suggestion) {
+          let [begin, end] = editor.getSelectedRange()
+          editor.setSelectedRange([end, end])
+          editor.suggestion = undefined
+          keydown.preventDefault()
+        }
+        previous_keydown.call(this, keydown)
+      }
+    })
+  })
+  $(window).on('trix-change', function (event) {
+    const editor =  event.target.editor
+    const document = editor.getDocument().toString()
+    const position = editor.getPosition()
+    if (editor.edit_lock)
+      return
+    if (editor.backspacing) {
+      editor.backspacing = false
+      return
+    }
+    for (var i = 1; i < 64; i++) {
+      let ch1 = document[position - i]
+      let ch2 = document[position - i - 1]
+      if ((ch1 == "#" || ch1 == "@") && (ch2 == " " || ch2 == "\n" || !ch2)) {
+        break
+      }
+      if (ch1 == " " || ch1 == "\n" || !ch1) {
+        i--
+        break
+      }
+    }
+    for (var j = 0; j < 64; j++) {
+      let ch = document[position + j]
+      if (ch == " " || ch == "\n" || !ch) {
+        break
+      }
+    }
+    let prefix = document.substring(position - i, position)
+    let suffix = document.substring(position, position + j)
+    if (!suffix && prefix.length > 2 && (prefix[0] == "#" || prefix[0] == "@")) {
+      editor.edit_lock = true
+      if (!editor.suggestion || !editor.suggestion.startsWith(prefix)) {
+        let url
+        switch (prefix[0]) {
+        case '#':
+          url = `/tags?hashtag=${prefix.slice(1)}`
+          break
+        case '@':
+          url = `/tags?mention=${prefix.slice(1)}`
+          break
+        }
+        if (url) {
+          $.get(url).then(function(suggestion) {
+            editor.suggestion = `${prefix[0]}${suggestion}`
+          })
+        }
+      }
+      if (editor.suggestion && editor.suggestion.toLowerCase().startsWith(prefix.toLowerCase())) {
+        let suggestion = editor.suggestion.substring(prefix.length)
+        editor.insertString(suggestion)
+        editor.setSelectedRange([position, position + suggestion.length])
+      }
+      editor.edit_lock = false
+    }
+  })
+
   $(window).on("trix-attachment-add", function(event) {
     event = event.originalEvent
     var attachment = event.attachment

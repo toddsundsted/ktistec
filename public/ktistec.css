@@ -78,3 +78,8 @@ body { display: flex; flex-direction: column; }
 .actor-small.card > .content:first-child i { position: absolute; bottom: 1.5rem; left: 1.5rem; color: rgba(0,0,0,.6); line-height: 3rem; font-size: 3rem; }
 .actor-small.card > .summary.content { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 .actor-small.card > .summary.content > * { display: inline; }
+
+/** toolbar **/
+trix-toolbar .trix-toolbar-container { white-space: normal !important; margin-bottom: 1em; display: flex; flex-wrap: wrap; gap: 0.30em 0.25em; }
+trix-toolbar .trix-toolbar-container button { border: none !important; padding: 0.75em !important; }
+trix-toolbar .trix-toolbar-container button.trix-active { background: rgba(0,0,0,.05) !important; }

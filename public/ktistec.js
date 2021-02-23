@@ -116,12 +116,15 @@ FilePond.setOptions({
         <button class="item" data-trix-attribute="bold" data-trix-key="b" title="${lang.bold}"><i class="bold icon"></i></button>
         <button class="item" data-trix-attribute="italic" data-trix-key="i" title="${lang.italic}"><i class="italic icon"></i></button>
         <button class="item" data-trix-attribute="strike" title="${lang.strike}"><i class="strikethrough icon"></i></button>
+        <button class="item" data-trix-attribute="code" title="${lang.code}"><i class="code icon"></i></button>
+        <button class="item" data-trix-attribute="sup" title="Superscript"><i class="superscript icon"></i></button>
+        <button class="item" data-trix-attribute="sub" title="Subscript"><i class="subscript icon"></i></button>
         <button class="item" data-trix-attribute="href" data-trix-action="link" data-trix-key="k"title="${lang.link}"><i class="linkify icon"></i></button>
       </div>
       <div class="ui compact mini icon menu">
           <button class="item" data-trix-attribute="heading1" title="${lang.heading1}"><i class="heading icon"></i></button>
           <button class="item" data-trix-attribute="quote" title="${lang.quote}"><i class="quote right icon"></i></button>
-          <button class="item" data-trix-attribute="code" title="${lang.code}"><i class="code icon"></i></button>
+          <button class="item" data-trix-attribute="pre" title="${lang.code}"><i class="code icon"></i></button>
           <button class="item" data-trix-attribute="bullet" title="${lang.bullets}"><i class="list ul icon"></i></button>
           <button class="item" data-trix-attribute="number" title="${lang.numbers}"><i class="list ol icon"></i></button>
           <button class="item" data-trix-action="decreaseNestingLevel" title="${lang.outdent}"><i class="outdent icon"></i></button>
@@ -148,6 +151,12 @@ FilePond.setOptions({
     </div>
     `
   }
+
+  delete Trix.config.blockAttributes.code
+  Trix.config.blockAttributes.pre = { tagName: "pre", terminal: true, text: { plaintext: true } }
+  Trix.config.textAttributes.code = { tagName: "code", inheritable: true }
+  Trix.config.textAttributes.sub = { tagName: "sub", inheritable: true }
+  Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
 
   /**
    * Typeahead.

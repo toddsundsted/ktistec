@@ -53,6 +53,11 @@ body { display: flex; flex-direction: column; }
 @media screen and (min-width: 1800px) { /* big desktops & larger */
 }
 
+/* general styles */
+.ui.feed > .event > .content pxxx { line-height: 1.5; }
+.ui.feed > .event > .content code { background: #f3f3f3; padding: .2em .3em; font-size: 95%; line-height: normal; }
+.ui.feed > .event > .content pre { background: #f6f8fa; padding: .2em .4em; font-size: 95%; }
+
 /** large actor partial **/
 .actor-large.segments { margin-top: 1rem !important; margin-bottom: 1rem; }
 .actor-large.segments > .segment:first-child { min-height: 18rem; background-position: center; background-repeat: no-repeat; background-size: cover; }
@@ -83,3 +88,24 @@ body { display: flex; flex-direction: column; }
 trix-toolbar .trix-toolbar-container { white-space: normal !important; margin-bottom: 1em; display: flex; flex-wrap: wrap; gap: 0.30em 0.25em; }
 trix-toolbar .trix-toolbar-container button { border: none !important; padding: 0.75em !important; }
 trix-toolbar .trix-toolbar-container button.trix-active { background: rgba(0,0,0,.05) !important; }
+
+/** trix editor **/
+trix-editor code { background: #f3f3f3; padding: .2em .3em; font-size: 95%; line-height: normal; }
+trix-editor pre { background: #f6f8fa; padding: .2em .4em; font-size: 95%; }
+
+/* fix style conflicts with semantic ui */
+trix-editor .attachment__caption-editor { padding: 0 !important; border: none !important; resize: unset !important; height: unset !important; min-height: unset !important; max-height: unset !important; }
+
+trix-editor .attachment__caption { text-align: center; }
+
+trix-editor figure img { object-fit: cover; }
+@media screen and (max-width: 599px) { /* phones */
+    trix-editor figure img { width: 250px; height: 250px; }
+    trix-editor figure .attachment__toolbar { width: 250px; }
+    trix-editor figure figcaption { width: 250px; }
+}
+@media screen and (min-width: 600px) { /* tablets portrait & larger */
+    trix-editor figure img { width: 450px; height: 450px; }
+    trix-editor figure .attachment__toolbar { width: 450px; }
+    trix-editor figure figcaption { width: 450px; }
+}

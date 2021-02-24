@@ -135,8 +135,6 @@ class ObjectsController
       not_found
     end
 
-    ancestors = object.ancestors.tap(&.shift?)
-
     env.response.content_type = "text/html"
     render "src/views/objects/reply.html.slang", "src/views/layouts/default.html.ecr"
   end

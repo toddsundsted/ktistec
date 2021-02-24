@@ -359,4 +359,57 @@ Spectator.describe "partials" do
       end
     end
   end
+
+  describe "reply.html.slang" do
+    let(env) do
+      HTTP::Server::Context.new(
+        HTTP::Request.new("GET", "/object"),
+        HTTP::Server::Response.new(IO::Memory.new)
+      )
+    end
+
+    subject do
+      begin
+        XML.parse_html(render "./src/views/objects/reply.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    context "if authenticated" do
+      let(account) { register }
+
+      before_each { env.account = account }
+
+      let(actor) do
+        ActivityPub::Actor.new(
+          iri: "https://remote/actors/actor",
+          username: "actor"
+        ).save
+      end
+      let(object) do
+        ActivityPub::Object.new(
+          iri: "https://remote/objects/object",
+          attributed_to: actor,
+          in_reply_to: ActivityPub::Object.new(
+            iri: "https://test.test/objects/object",
+            attributed_to: account.actor
+          )
+        ).save
+      end
+
+      it "addresses (to) the author of the replied to post" do
+        expect(subject.xpath_nodes("//form//input[@name='to']/@value").first.text).to eq(actor.iri)
+      end
+
+      it "addresses (cc) the authors of the posts in the thread" do
+        expect(subject.xpath_nodes("//form//input[@name='cc']/@value").first.text).to eq(account.actor.iri)
+      end
+
+      it "prepopulates editor with mentions" do
+        expect(subject.xpath_nodes("//form//input[@name='content']/@value").first.text).
+          to eq("@#{actor.account_uri} @#{account.actor.account_uri} ")
+      end
+    end
+  end
 end

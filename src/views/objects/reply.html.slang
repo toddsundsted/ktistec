@@ -6,7 +6,7 @@ section.ui.feed
   article.event id=anchor(_object)
     == render "src/views/partials/object.html.slang"
 - if (_actor = env.account?.try(&.actor))
-  form.ui.form method="POST" action=actor_relationships_path(_actor, "outbox")
+  form.ui.form method="POST"
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Publish"
     input type="hidden" name="public" value="true"
@@ -18,4 +18,4 @@ section.ui.feed
       input#input-trix-editor type="hidden" name="content"
       trix-editor input="input-trix-editor"
     .ui.buttons
-      input.ui.disabled.primary.button type="submit" value="Reply"
+      input.ui.disabled.primary.button type="submit" value="Reply" action=outbox_path(_actor)

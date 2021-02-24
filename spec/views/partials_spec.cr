@@ -1,4 +1,6 @@
 require "../../src/models/activity_pub/activity/follow"
+require "../../src/models/activity_pub/activity/announce"
+require "../../src/models/activity_pub/activity/like"
 
 require "../spec_helper/controller"
 

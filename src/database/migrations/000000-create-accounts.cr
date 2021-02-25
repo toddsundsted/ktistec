@@ -10,7 +10,7 @@ up do |db|
       updated_at datetime NOT NULL,
       username varchar(255) NOT NULL,
       encrypted_password varchar(255) NOT NULL,
-      iri varchar(255) NOT NULL
+      iri varchar(255) NOT NULL COLLATE NOCASE
     )
   STR
   db.exec <<-STR

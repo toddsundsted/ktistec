@@ -9,8 +9,8 @@ up do |db|
       created_at datetime NOT NULL,
       updated_at datetime NOT NULL,
       type varchar(63) NOT NULL,
-      from_iri varchar(255) NOT NULL,
-      to_iri varchar(255) NOT NULL,
+      from_iri varchar(255) NOT NULL COLLATE NOCASE,
+      to_iri varchar(255) NOT NULL COLLATE NOCASE,
       confirmed boolean,
       visible boolean
     )

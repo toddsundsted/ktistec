@@ -8,7 +8,7 @@ up do |db|
       "id" integer PRIMARY KEY AUTOINCREMENT,
       "created_at" datetime NOT NULL,
       "updated_at" datetime NOT NULL,
-      "subject_iri" text NOT NULL,
+      "subject_iri" text NOT NULL COLLATE NOCASE,
       "type" varchar(99) NOT NULL,
       "name" varchar(99) NOT NULL COLLATE NOCASE,
       "href" text

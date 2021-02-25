@@ -8,7 +8,7 @@ up do |db|
       id integer PRIMARY KEY AUTOINCREMENT,
       created_at datetime NOT NULL,
       updated_at datetime NOT NULL,
-      iri varchar(255) NOT NULL,
+      iri varchar(255) NOT NULL COLLATE NOCASE,
       items_json varchar(1023),
       total_items integer,
       first varchar(255),

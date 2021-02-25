@@ -9,7 +9,7 @@ up do |db|
       "created_at" datetime NOT NULL,
       "updated_at" datetime NOT NULL,
       "type" varchar(63) NOT NULL,
-      "iri" varchar(255) NOT NULL,
+      "iri" varchar(255) NOT NULL COLLATE NOCASE,
       "username" varchar(255),
       "pem_public_key" text,
       "pem_private_key" text,

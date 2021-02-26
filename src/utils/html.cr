@@ -107,7 +107,7 @@ module Ktistec
               build << node.to_xml(options: XML::SaveOptions::AS_HTML)
             end
           end
-        end.gsub(/^<p><\/p>|<p><\/p>$/, "")
+        end.gsub(%r{<p><br></p>|<p></p>}, "")
       end
     end
   end

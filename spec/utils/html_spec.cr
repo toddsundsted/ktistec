@@ -71,6 +71,26 @@ Spectator.describe Ktistec::HTML do
     end
 
     it "handles block elements correctly" do
+      content = %q|<ul><li>one</li><li>two</li></ul><div><br></div>|
+      expect(described_class.enhance(content).content).to eq(%q|<ul><li>one</li><li>two</li></ul>|)
+    end
+
+    it "handles block elements correctly" do
+      content = %q|<ul><li>one</li><li>two</li></ul><div><br><br></div>|
+      expect(described_class.enhance(content).content).to eq(%q|<ul><li>one</li><li>two</li></ul>|)
+    end
+
+    it "handles block elements correctly" do
+      content = %q|<div><br></div><ul><li>one</li><li>two</li></ul>|
+      expect(described_class.enhance(content).content).to eq(%q|<ul><li>one</li><li>two</li></ul>|)
+    end
+
+    it "handles block elements correctly" do
+      content = %q|<div><br><br></div><ul><li>one</li><li>two</li></ul>|
+      expect(described_class.enhance(content).content).to eq(%q|<ul><li>one</li><li>two</li></ul>|)
+    end
+
+    it "handles block elements correctly" do
       content = %q|<div>a</div><blockquote>b<br>c</blockquote>|
       expect(described_class.enhance(content).content).to eq(%q|<p>a</p><blockquote>b<br>c</blockquote>|)
     end

@@ -96,15 +96,15 @@ module Ktistec
                   build << "</p><p>"
                 elsif child.name == "figure"
                   build << "</p>"
-                  build << child.to_xml(options: XML::SaveOptions::AS_HTML)
+                  child.to_xml(build, options: XML::SaveOptions::AS_HTML)
                   build << "<p>"
                 else
-                  build << child.to_xml(options: XML::SaveOptions::AS_HTML)
+                  child.to_xml(build, options: XML::SaveOptions::AS_HTML)
                 end
               end
               build << "</p>"
             else
-              build << node.to_xml(options: XML::SaveOptions::AS_HTML)
+              node.to_xml(build, options: XML::SaveOptions::AS_HTML)
             end
           end
         end.gsub(%r{<p><br></p>|<p></p>}, "")

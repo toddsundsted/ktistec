@@ -86,7 +86,11 @@ module Ktistec
       end
     end
 
-    class PaginatedArray(T) < Array(T)
+    class PaginatedArray(T)
+      @array = [] of T
+
+      delegate :<<, :each, :each_with_index, :empty?, :first, :map, :pop, :size, :to_a, :to_s, :inspect, to: @array
+
       property? more : Bool = false
     end
   end

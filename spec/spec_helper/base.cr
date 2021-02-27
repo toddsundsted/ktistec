@@ -15,6 +15,12 @@ class Regex
   end
 end
 
+class Array(T)
+  def ==(other : Ktistec::Util::PaginatedArray(U)) forall U
+    other.to_a == self
+  end
+end
+
 module Ktistec
   def self.db_file
     @@db_file ||= "sqlite3://#{File.tempname("ktistec-test", ".db")}"

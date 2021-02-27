@@ -57,7 +57,7 @@
           - else
             | #{c} Replies
       - if (c = _object.likes_count) > 0 && (to_undo = __account.actor.in_outbox?(_object, ActivityPub::Activity::Like))
-        form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
+        form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
           input type="hidden" name="object" value=to_undo.iri
           input type="hidden" name="type" value="Undo"
@@ -68,7 +68,7 @@
             - else
               | #{c} Likes
       - else
-        form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
+        form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
           input type="hidden" name="object" value=_object.iri
           input type="hidden" name="type" value="Like"
@@ -81,7 +81,7 @@
             - else
               | #{c} Likes
       - if (c = _object.announces_count) > 0 && (to_undo = __account.actor.in_outbox?(_object, ActivityPub::Activity::Announce))
-        form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
+        form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
           input type="hidden" name="object" value=to_undo.iri
           input type="hidden" name="type" value="Undo"
@@ -92,7 +92,7 @@
             - else
               | #{c} Shares
       - else
-        form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
+        form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
           input type="hidden" name="object" value=_object.iri
           input type="hidden" name="type" value="Announce"
@@ -105,7 +105,7 @@
             - else
               | #{c} Shares
       - if _author == __account.actor
-        form.ui.form method="POST" action=actor_relationships_path(__account, "outbox")
+        form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
           input type="hidden" name="object" value=_object.iri
           input type="hidden" name="type" value="Delete"

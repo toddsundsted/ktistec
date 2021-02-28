@@ -29,6 +29,10 @@ class RelationshipsController
       end
     end
 
+    if activity.local?
+      forbidden
+    end
+
     # never use an embedded actor's credentials!
     # only trust credentials retrieved from the origin!
 
@@ -47,6 +51,14 @@ class RelationshipsController
       end
     end
 
+    unless actor
+      bad_request("Actor Not Present")
+    end
+
+    if actor.local?
+      forbidden
+    end
+
     verified = false
 
     if env.request.headers["Signature"]?
@@ -63,10 +75,6 @@ class RelationshipsController
 
     unless activity && verified
       bad_request("Can't Be Verified")
-    end
-
-    unless actor
-      bad_request("Actor Not Present")
     end
 
     if activity.responds_to?(:actor=)

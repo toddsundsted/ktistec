@@ -4,6 +4,8 @@ require "../activity_pub/activity"
 require "../activity_pub/collection"
 require "../activity_pub/actor"
 require "../activity_pub/object"
+require "../relationship/content/inbox"
+require "../relationship/social/follow"
 
 class Task
   class Deliver < Task

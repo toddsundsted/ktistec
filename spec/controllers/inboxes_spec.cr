@@ -20,17 +20,18 @@ Spectator.describe RelationshipsController do
 
     let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 
-    it "returns 404 if not found" do
+    it "returns 404 if account not found" do
       post "/actors/0/inbox", headers
       expect(response.status_code).to eq(404)
     end
 
-    it "returns 400 if not a verifiable activity" do
-      post "/actors/#{actor.username}/inbox", headers, "{}"
+    it "returns 400 if activity can't be verified" do
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
       expect(response.status_code).to eq(400)
     end
 
-    it "returns 409 if activity already exists" do
+    it "returns 409 if activity was already received and processed" do
       activity.save
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(response.status_code).to eq(409)

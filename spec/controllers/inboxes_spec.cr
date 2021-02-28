@@ -10,7 +10,7 @@ Spectator.describe RelationshipsController do
 
   describe "POST /actors/:username/inbox" do
     let!(actor) { register(with_keys: true).actor }
-    let(other) { register(with_keys: true).actor }
+    let(other) { register(base_uri: "https://remote/actors", with_keys: true).actor }
     let(activity) do
       ActivityPub::Activity.new(
         iri: "https://remote/activities/foo_bar",

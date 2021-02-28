@@ -22,9 +22,9 @@ def self.build_actor(username = random_username, *, base_uri = "https://test.tes
   )
 end
 
-def self.register(username = random_username, password = random_password, *, with_keys = false)
+def self.register(username = random_username, password = random_password, *, base_uri = "https://test.test/actors", with_keys = false)
   Account.new(
-    actor: build_actor(username, with_keys: with_keys),
+    actor: build_actor(username, base_uri: base_uri, with_keys: with_keys),
     username: username,
     password: password
   ).save

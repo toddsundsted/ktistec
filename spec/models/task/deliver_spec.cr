@@ -95,11 +95,13 @@ Spectator.describe Task::Deliver do
     let(local_collection) do
       Relationship::Social::Follow.new(
         actor: local_recipient,
-        object: actor
+        object: actor,
+        confirmed: true
       ).save
       Relationship::Social::Follow.new(
         actor: remote_recipient,
-        object: actor
+        object: actor,
+        confirmed: true
       ).save
       ActivityPub::Collection.new(
         iri: "#{actor.iri}/followers"
@@ -205,11 +207,23 @@ Spectator.describe Task::Deliver do
         end
 
         context "in which the actor is a follower" do
-          before_each do
+          let!(follow) do
             Relationship::Social::Follow.new(
               actor: actor,
-              object: remote_actor
+              object: remote_actor,
+              confirmed: true
             ).save
+          end
+
+          context "but the follow is not confirmed" do
+            before_each do
+              follow.assign(confirmed: false).save
+            end
+
+            it "does not put it in an inbox" do
+              expect{subject.perform}.
+                not_to change{Relationship::Content::Inbox.count}
+            end
           end
 
           it "puts it in the actors's inbox" do
@@ -247,12 +261,34 @@ Spectator.describe Task::Deliver do
           context "when cached" do
             before_each { reply.save }
 
+            context "but the follow is not confirmed" do
+              before_each do
+                Relationship::Social::Follow.find(from_iri: local_recipient.iri).assign(confirmed: false).save
+              end
+
+              it "does not put it in an inbox" do
+                expect{subject.perform}.
+                  not_to change{Relationship::Content::Inbox.count}
+              end
+            end
+
+            context "but the follow is not confirmed" do
+              before_each do
+                Relationship::Social::Follow.find(from_iri: remote_recipient.iri).assign(confirmed: false).save
+              end
+
+              it "does not forward it" do
+                subject.perform
+                expect(HTTP::Client.requests).not_to have(/POST/)
+              end
+            end
+
             it "puts the activity in the local recipient's inbox" do
               expect{subject.perform}.
                 to change{Relationship::Content::Inbox.count(from_iri: local_recipient.iri, to_iri: activity.iri)}.by(1)
             end
 
-            it "sends the activity to the remote recipient's inbox" do
+            it "forwards the activity to the remote recipient's inbox" do
               subject.perform
               expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
             end
@@ -261,12 +297,35 @@ Spectator.describe Task::Deliver do
           context "when not cached" do
             before_each { HTTP::Client.objects << reply }
 
+
+            context "and the follow is not confirmed" do
+              before_each do
+                Relationship::Social::Follow.find(from_iri: local_recipient.iri).assign(confirmed: false).save
+              end
+
+              it "does not put it in an inbox" do
+                expect{subject.perform}.
+                  not_to change{Relationship::Content::Inbox.count}
+              end
+            end
+
+            context "and the follow is not confirmed" do
+              before_each do
+                Relationship::Social::Follow.find(from_iri: remote_recipient.iri).assign(confirmed: false).save
+              end
+
+              it "does not forward it" do
+                subject.perform
+                expect(HTTP::Client.requests).not_to have(/POST/)
+              end
+            end
+
             it "puts the activity in the local recipient's inbox" do
               expect{subject.perform}.
                 to change{Relationship::Content::Inbox.count(from_iri: local_recipient.iri, to_iri: activity.iri)}.by(1)
             end
 
-            it "sends the activity to the remote recipient's inbox" do
+            it "forwards the activity to the remote recipient's inbox" do
               subject.perform
               expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
             end
@@ -278,7 +337,7 @@ Spectator.describe Task::Deliver do
                 not_to change{Relationship::Content::Inbox.count}
             end
 
-            it "does not send the activity to the remote recipient's inbox" do
+            it "does not forward the activity to the remote recipient's inbox" do
               subject.perform
               expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.inbox}")
             end
@@ -305,11 +364,23 @@ Spectator.describe Task::Deliver do
         before_each { activity.to = ["https://www.w3.org/ns/activitystreams#Public"] }
 
         context "and the actor is a follower" do
-          before_each do
+          let!(follow) do
             Relationship::Social::Follow.new(
               actor: actor,
-              object: remote_actor
+              object: remote_actor,
+              confirmed: true
             ).save
+          end
+
+          context "but the follow is not confirmed" do
+            before_each do
+              follow.assign(confirmed: false).save
+            end
+
+            it "does not put it in an inbox" do
+              expect{subject.perform}.
+                not_to change{Relationship::Content::Inbox.count}
+            end
           end
 
           it "puts it in the actors's inbox" do
@@ -464,6 +535,28 @@ Spectator.describe Task::Deliver do
           activity.to = [recipient.iri]
         end
 
+        context "when the follow is not confirmed" do
+          before_each do
+            Relationship::Social::Follow.find(from_iri: local_recipient.iri).assign(confirmed: false).save
+          end
+
+          it "does not put it in an inbox" do
+            expect{subject.perform}.
+              not_to change{Relationship::Content::Inbox.count}
+          end
+        end
+
+        context "when the follow is not confirmed" do
+          before_each do
+            Relationship::Social::Follow.find(from_iri: remote_recipient.iri).assign(confirmed: false).save
+          end
+
+          it "does not send it" do
+            subject.perform
+            expect(HTTP::Client.requests).not_to have(/POST/)
+          end
+        end
+
         it "puts the activity in the local recipient's inbox" do
           expect{subject.perform}.
             to change{Relationship::Content::Inbox.count(from_iri: local_recipient.iri, to_iri: activity.iri)}.by(1)
@@ -485,6 +578,28 @@ Spectator.describe Task::Deliver do
 
         context "and the actor has followers" do
           before_each { local_collection }
+
+          context "but the follow is not confirmed" do
+            before_each do
+              Relationship::Social::Follow.find(from_iri: local_recipient.iri).assign(confirmed: false).save
+            end
+
+            it "does not put it in an inbox" do
+              expect{subject.perform}.
+                not_to change{Relationship::Content::Inbox.count}
+            end
+          end
+
+          context "but the follow is not confirmed" do
+            before_each do
+              Relationship::Social::Follow.find(from_iri: remote_recipient.iri).assign(confirmed: false).save
+            end
+
+            it "does not send it" do
+              subject.perform
+              expect(HTTP::Client.requests).not_to have(/POST/)
+            end
+          end
 
           it "puts the activity in the local follower's inbox" do
             expect{subject.perform}.

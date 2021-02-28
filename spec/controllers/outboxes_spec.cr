@@ -611,7 +611,8 @@ Spectator.describe RelationshipsController do
         let!(relationship) do
           Relationship::Social::Follow.new(
             actor: actor,
-            object: other
+            object: other,
+            confirmed: true
           ).save
         end
         let!(follow) do
@@ -718,7 +719,8 @@ Spectator.describe RelationshipsController do
             actor.assign(followers: "#{actor.iri}/followers").save
             Relationship::Social::Follow.new(
               actor: other,
-              object: actor
+              object: actor,
+              confirmed: true
             ).save
           end
 

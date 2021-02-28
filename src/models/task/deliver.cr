@@ -63,15 +63,15 @@ class Task
       recipients = [activity.to, activity.cc, self.deliver_to].compact.flatten
 
       # for remote activities, prune recipients that aren't 1) the
-      # public collection, 2) the sender itself, 3) the activity's
-      # actor's followers collection to which the sender belongs, 4) a
-      # local followers collection to which a reply is addressed.
+      # public collection, 2) the sender itself, 3) a local followers
+      # collection to which a reply is addressed, 4) the activity's
+      # actor's followers collection.
       unless activity.try(&.local?)
         recipients.select! do |recipient|
           public?(recipient) ||
             (sender.iri == recipient) ||
             (object && local?(object.in_reply_to_iri) && local?(recipient) && followers_path?(recipient)) ||
-            (actor && actor.followers == recipient && sender.follows?(actor))
+            (actor && actor.followers == recipient)
         end
       end
 
@@ -88,13 +88,15 @@ class Task
       recipients.each do |recipient|
         if public?(recipient)
           results += Relationship::Social::Follow.where(
-            to_iri: actor.try(&.iri)
+            to_iri: actor.try(&.iri),
+            confirmed: true
           ).map(&.from_iri)
 
         elsif local?(recipient)
           if followers_path?(recipient)
             results += Relationship::Social::Follow.where(
-              to_iri: sender.iri
+              to_iri: sender.iri,
+              confirmed: true
             ).map(&.from_iri)
           else
             results << recipient
@@ -106,7 +108,7 @@ class Task
               target = ActivityPub.from_json_ld?(response.body)
               if target.is_a?(ActivityPub::Collection)
                 target =
-                  actor && actor.followers == target.iri && sender.follows?(actor) ?
+                  actor && actor.followers == target.iri && sender.follows?(actor, confirmed: true) ?
                   sender :
                   nil
               end

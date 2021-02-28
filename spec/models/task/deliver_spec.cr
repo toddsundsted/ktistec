@@ -122,6 +122,41 @@ Spectator.describe Task::Deliver do
       )
     end
 
+    context "given an activity" do
+      let(activity) do
+        ActivityPub::Activity.new(
+          iri: "https://test.test/activities/#{random_string}",
+          actor_iri: actor.iri
+        )
+      end
+
+      context "addressed to a deleted remote recipient" do
+        let(recipient) { remote_recipient }
+        before_each do
+          recipient.save.delete
+          activity.to = [recipient.iri]
+        end
+
+        it "does not send it" do
+          subject.perform
+          expect(HTTP::Client.requests).not_to have(/POST/)
+        end
+      end
+
+      context "addressed to a deleted local recipient" do
+        let(recipient) { local_recipient }
+        before_each do
+          recipient.save.delete
+          activity.to = [recipient.iri]
+        end
+
+        it "does not put it in an inbox" do
+          expect{subject.perform}.
+            not_to change{Relationship::Content::Inbox.count}
+        end
+      end
+    end
+
     context "given an activity of remote origin" do
       let(activity) do
         ActivityPub::Activity.new(

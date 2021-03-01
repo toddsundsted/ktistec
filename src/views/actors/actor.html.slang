@@ -21,7 +21,7 @@
 crystal:
   activities = env.account? ?
     actor.both_mailboxes(*pagination_params(env)) :
-    actor.public_posts(*pagination_params(env))
+    actor.my_timeline(*pagination_params(env))
 h2 Recent
 section.ui.feed
   - activities.each do |activity|

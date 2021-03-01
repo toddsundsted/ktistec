@@ -411,7 +411,7 @@ module ActivityPub
       )
     end
 
-    def public_posts(page = 1, size = 10)
+    def my_timeline(page = 1, size = 10)
       self.class.content(
         self.iri,
         Relationship::Content::Outbox,
@@ -421,6 +421,28 @@ module ActivityPub
         size,
         true
       )
+    end
+
+    def public_posts(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+          WHERE o.attributed_to_iri = ?
+            AND o.visible = 1
+            AND o.deleted_at is NULL
+            AND o.id NOT IN (
+               SELECT o.id
+                 FROM objects AS o
+                WHERE o.attributed_to_iri = ?
+                  AND o.visible = 1
+                  AND o.deleted_at is NULL
+             ORDER BY o.published DESC
+                LIMIT ?
+            )
+       ORDER BY o.published DESC
+          LIMIT ?
+      QUERY
+      Object.query_and_paginate(query, iri, iri, page: page, size: size)
     end
 
     def to_json_ld(recursive = false)

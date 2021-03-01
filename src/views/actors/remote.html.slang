@@ -1,9 +1,11 @@
 == render "src/views/partials/actor-medium.html.slang"
 h2 Recent
 section.ui.feed
-  - activities = actor.public_posts(*pagination_params(env))
-  - activities.each do |activity|
-    article.event.activity
-      - if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Announce)
-        == render "src/views/partials/activities/create.html.slang"
-== paginate(activities, env)
+  - posts = actor.public_posts(*pagination_params(env))
+  - posts.each do |post|
+    article.event
+      - _actor = post.attributed_to
+      - _author = post.attributed_to
+      - _object = post.with_statistics!
+      == render "src/views/partials/object.html.slang"
+== paginate(posts, env)

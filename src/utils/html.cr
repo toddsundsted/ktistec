@@ -61,7 +61,7 @@ module Ktistec
             cursor = insertion = XML.parse("<span/>").first_element_child.not_nil!
             text.replace_with(insertion)
             while !remainder.empty?
-              text, tag, remainder = remainder.partition(%r{\B(#([[:alnum:]_-]+)|@[^@\s]+@[^@\s]+)\b})
+              text, tag, remainder = remainder.partition(%r{\B(#([[:alnum:]][[:alnum:]_-]+)|@[^@\s]+@[^@\s]+)\b})
               unless text.empty?
                 cursor = cursor.add_sibling(XML::Node.new(text))
               end

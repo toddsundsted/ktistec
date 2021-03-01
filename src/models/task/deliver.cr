@@ -126,7 +126,7 @@ class Task
         unless (actor = ActivityPub::Actor.dereference?(result))
           message = "recipient does not exist: #{result}"
           failures << Failure.new(message)
-          Log.debug { message }
+          Log.info { message }
         end
         actor
       end.compact
@@ -147,12 +147,12 @@ class Task
           unless response.success?
             message = "failed to deliver to #{inbox}: #{response.body}"
             failures << Failure.new(message)
-            Log.debug { message }
+            Log.info { message }
           end
         else
           message = "recipient has no inbox: #{recipient}"
           failures << Failure.new(message)
-          Log.debug { message }
+          Log.info { message }
         end
       end
     end

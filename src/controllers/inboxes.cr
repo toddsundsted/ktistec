@@ -33,15 +33,17 @@ class RelationshipsController
       forbidden
     end
 
-    # never use an embedded actor's credentials!
-    # only trust credentials retrieved from the origin!
+    # important: never use credentials in an embedded actor!
 
-    # always find or fetch the actor. if the activity is signed but we
-    # don't have the actor's public key, fetch the actor, including
-    # their public key. if the activity is signed, verify the activity
-    # against the actor's public key (this will fail on relays). if
-    # the activity is not signed or verification fails for some
-    # reason, retrieve the activity from the origin.
+    # if the activity is signed but we don't have the actor's public
+    # key, 1) fetch the actor, including their public key. 2) verify
+    # the activity against the actor's public key (this will fail for
+    # relays). if the activity is not signed or verification fails,
+    # 3) verify the activity by retrieving it from the origin.
+    # finally, 4) ensure the verified activity is associated with the
+    # fetched actor.
+
+    # 1
 
     if (actor_iri = activity.actor_iri)
       unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!env.request.headers["Signature"]? || actor.pem_public_key)
@@ -61,11 +63,15 @@ class RelationshipsController
 
     verified = false
 
+    # 2
+
     if env.request.headers["Signature"]?
       if actor && Ktistec::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers, body)
         verified = true
       end
     end
+
+    # 3
 
     unless verified
       if activity.iri.presence && (activity = ActivityPub::Activity.dereference?(activity.iri))
@@ -76,6 +82,8 @@ class RelationshipsController
     unless activity && verified
       bad_request("Can't Be Verified")
     end
+
+    # 4
 
     if activity.responds_to?(:actor=)
       activity.actor = actor

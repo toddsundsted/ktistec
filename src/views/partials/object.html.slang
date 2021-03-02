@@ -46,7 +46,7 @@
           i.trash.icon
           | Delete
     - elsif __account
-      - c = _object.with_replies_count!.replies_count
+      - c = _object.with_statistics!.with_replies_count!.replies_count
       a href=replies_path(_object)
         button.ui.mini.iconic.button
           i.reply.icon

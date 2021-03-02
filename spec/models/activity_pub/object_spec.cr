@@ -261,7 +261,7 @@ Spectator.describe ActivityPub::Object do
       )
     end
 
-    describe "#replies_count!" do
+    describe "#with_replies_count!" do
       it "returns the count of replies" do
         expect(subject.with_replies_count!.replies_count).to eq(5)
         expect(object5.with_replies_count!.replies_count).to eq(0)

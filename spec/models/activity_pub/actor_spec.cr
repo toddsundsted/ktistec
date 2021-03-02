@@ -1,5 +1,4 @@
 require "../../../src/models/activity_pub/actor"
-require "../../../src/models/activity_pub/activity/like"
 require "../../../src/models/activity_pub/object/note"
 
 require "../../spec_helper/model"
@@ -370,20 +369,6 @@ Spectator.describe ActivityPub::Actor do
         object: activity5
       )
     end
-    let(announce) do
-      ActivityPub::Activity::Announce.new(
-        iri: "https://test.test/announce",
-        actor: other,
-        object: note5
-      )
-    end
-    let(like) do
-      ActivityPub::Activity::Like.new(
-        iri: "https://test.test/like",
-        actor: other,
-        object: note4
-      )
-    end
 
     describe "#in_outbox" do
       it "instantiates the correct subclass" do
@@ -412,26 +397,6 @@ Spectator.describe ActivityPub::Actor do
       it "excludes undo activities" do
         Relationship::Content::Outbox.new(owner: subject, activity: undo).save
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "includes count of announcements" do
-        announce.save
-        expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces_count)).to eq([1, 0])
-      end
-
-      it "filters out undone activities" do
-        undo.assign(actor: announce.actor, object: announce).save
-        expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces_count)).to eq([0, 0])
-      end
-
-      it "includes count of likes" do
-        like.save
-        expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.likes_count)).to eq([0, 1])
-      end
-
-      it "filters out undone activities" do
-        undo.assign(actor: like.actor, object: like).save
-        expect(subject.in_outbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.likes_count)).to eq([0, 0])
       end
 
       it "includes replies" do
@@ -519,20 +484,6 @@ Spectator.describe ActivityPub::Actor do
         object: activity5
       )
     end
-    let(announce) do
-      ActivityPub::Activity::Announce.new(
-        iri: "https://test.test/announce",
-        actor: other,
-        object: note5
-      )
-    end
-    let(like) do
-      ActivityPub::Activity::Like.new(
-        iri: "https://test.test/like",
-        actor: other,
-        object: note4
-      )
-    end
 
     describe "#in_inbox" do
       it "instantiates the correct subclass" do
@@ -561,16 +512,6 @@ Spectator.describe ActivityPub::Actor do
       it "excludes undo activities" do
         Relationship::Content::Inbox.new(owner: subject, activity: undo).save
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "includes count of announcements" do
-        announce.save
-        expect(subject.in_inbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.announces_count)).to eq([1, 0])
-      end
-
-      it "includes count of likes" do
-        like.save
-        expect(subject.in_inbox(1, 2, public: false).map(&.as(ActivityPub::Activity::Create).object.likes_count)).to eq([0, 1])
       end
 
       it "includes replies" do

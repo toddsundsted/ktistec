@@ -32,7 +32,7 @@ class SearchesController
         actor_json(env, actor_or_object, query)
     when ActivityPub::Object
       actor_or_object.attributed_to?(dereference: true)
-      actor_or_object.save.with_statistics!
+      actor_or_object.save
 
       accepts?("text/html") ?
         object_html(env, actor_or_object, query) :

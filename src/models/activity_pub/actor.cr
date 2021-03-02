@@ -246,7 +246,7 @@ module ActivityPub
           %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
-         SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "obj")}, sum(c.announces), sum(c.likes)
+         SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "obj")}
            FROM activities AS a
            JOIN relationships AS r
              ON r.to_iri = a.iri
@@ -258,15 +258,6 @@ module ActivityPub
              ON u.object_iri = a.iri
             AND u.type = "#{ActivityPub::Activity::Undo}"
             AND u.actor_iri = a.actor_iri
-      LEFT JOIN (   SELECT a.id, a.object_iri, a.actor_iri, (a.type = "#{ActivityPub::Activity::Announce}") AS announces, (a.type = "#{ActivityPub::Activity::Like}") AS likes
-                      FROM activities AS a
-                 LEFT JOIN activities AS u
-                        ON u.object_iri = a.iri
-                       AND u.type = "#{ActivityPub::Activity::Undo}"
-                       AND u.actor_iri = a.actor_iri
-                     WHERE u.iri IS NULL
-                ) AS c
-             ON c.object_iri = obj.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
           WHERE r.from_iri LIKE ?
             #{mailbox}
             AND r.confirmed = 1
@@ -290,15 +281,6 @@ module ActivityPub
                    ON u.object_iri = a.iri
                   AND u.type = "#{ActivityPub::Activity::Undo}"
                   AND u.actor_iri = a.actor_iri
-            LEFT JOIN (   SELECT a.id, a.object_iri, a.actor_iri, (a.type = "#{ActivityPub::Activity::Announce}") AS announces, (a.type = "#{ActivityPub::Activity::Like}") AS likes
-                            FROM activities AS a
-                       LEFT JOIN activities AS u
-                              ON u.object_iri = a.iri
-                             AND u.type = "#{ActivityPub::Activity::Undo}"
-                             AND u.actor_iri = a.actor_iri
-                           WHERE u.iri IS NULL
-                      ) AS c
-                   ON c.object_iri = obj.iri AND c.id != a.id AND c.actor_iri != a.actor_iri
                 WHERE r.from_iri LIKE ?
                   #{mailbox}
                   AND r.confirmed = 1
@@ -309,16 +291,13 @@ module ActivityPub
                   AND u.iri IS NULL
              #{public ? %Q|AND a.visible = 1| : nil}
              #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
-             GROUP BY a.id
              ORDER BY r.created_at DESC
                 LIMIT ?
             )
-       GROUP BY a.id
        ORDER BY r.created_at DESC
           LIMIT ?
       QUERY
-      counts = {"object.announces_count": Int64?, "object.likes_count": Int64?}
-      object_columns = Object.persistent_columns(prefix: :object).merge(counts)
+      object_columns = Object.persistent_columns(prefix: :object)
       Activity.query_and_paginate(query, iri, iri, additional_columns: object_columns, page: page, size: size)
     end
 

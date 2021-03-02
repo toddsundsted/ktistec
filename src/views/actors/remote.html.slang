@@ -6,6 +6,6 @@ section.ui.feed
     article.event
       - _actor = post.attributed_to
       - _author = post.attributed_to
-      - _object = post.with_statistics!
+      - _object = post
       == render "src/views/partials/object.html.slang"
 == paginate(posts, env)

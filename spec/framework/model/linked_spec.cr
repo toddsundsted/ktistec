@@ -141,6 +141,11 @@ Spectator.describe Ktistec::Model::Linked do
           subject.dereference?(object_iri)
           expect(HTTP::Client.last?).to be_nil
         end
+
+        it "fetches the object" do
+          subject.dereference?(object_iri, ignore_cached: true)
+          expect(HTTP::Client.last?).to match("GET #{object_iri}")
+        end
       end
     end
   end

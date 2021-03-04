@@ -48,9 +48,9 @@ module Ktistec
           find?(iri: iri)
         end
 
-        def self.dereference?(iri : String?) : self?
+        def self.dereference?(iri : String?, ignore_cached = false) : self?
           if iri
-            unless (instance = self.find?(iri))
+            unless (instance = self.find?(iri)) && !ignore_cached
               unless iri.starts_with?(Ktistec.host)
                 self.open?(iri) do |response|
                   instance = self.from_json_ld?(response.body)

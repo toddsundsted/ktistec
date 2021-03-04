@@ -107,6 +107,44 @@ Spectator.describe Ktistec::Model::Linked do
     end
   end
 
+  describe ".dereference?" do
+    let(subject) do
+      LinkedModel
+    end
+    let(object) do
+      LinkedModel.new(
+        iri: "https://remote/objects/object"
+      )
+    end
+
+    context "when linked object is local" do
+      let(object_iri) { "https://test.test/objects/object" }
+
+      it "does not fetch the object" do
+        subject.dereference?(object_iri)
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
+
+    context "when linked object is remote" do
+      let(object_iri) { "https://remote/objects/object" }
+
+      it "fetches the object" do
+        subject.dereference?(object_iri)
+        expect(HTTP::Client.last?).to match("GET #{object_iri}")
+      end
+
+      context "when object is cached" do
+        before_each { object.save }
+
+        it "does not fetch the object" do
+          subject.dereference?(object_iri)
+          expect(HTTP::Client.last?).to be_nil
+        end
+      end
+    end
+  end
+
   describe "#origin" do
     it "returns the origin" do
       expect(LinkedModel.new(iri: "https://test.test/foo_bar").origin).to eq("https://test.test")

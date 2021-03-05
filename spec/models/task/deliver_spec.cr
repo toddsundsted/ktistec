@@ -15,7 +15,7 @@ Spectator.describe Task::Deliver do
       }
     end
 
-    it "rejects missing actor" do
+    it "rejects missing sender" do
       new_relationship = described_class.new(**options.merge({source_iri: "missing"}))
       expect(new_relationship.valid?).to be_false
       expect(new_relationship.errors.keys).to contain("sender")

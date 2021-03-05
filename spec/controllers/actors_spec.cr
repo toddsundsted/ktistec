@@ -35,7 +35,7 @@ Spectator.describe ActorsController do
   describe "GET /remote/actors/:id" do
     let!(actor) do
       ActivityPub::Actor.new(
-        iri: "https://external/#{random_string}"
+        iri: "https://remote/#{random_string}"
       ).save
     end
 

@@ -76,7 +76,15 @@ FilePond.setOptions({
         download: false
       })
     $('.ui.feed .event .label img').on('error', function() {
-      $(this).replaceWith('<i class="user icon"></i>')
+      let $this = $(this)
+      $this.replaceWith('<i class="user icon"></i>')
+      $.ajax({
+        type: "POST",
+        url: `/remote/actors/${$this.data("actor-id")}/refresh`,
+        headers: {
+          "X-CSRF-Token": Ktistec.csrf
+        }
+      })
     })
   })
   $(document).on('submit', 'form:has(trix-editor)', function (e) {

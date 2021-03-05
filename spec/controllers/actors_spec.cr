@@ -81,4 +81,31 @@ Spectator.describe ActorsController do
       end
     end
   end
+
+  describe "POST /remote/actors/:id/refresh" do
+    let!(actor) do
+      ActivityPub::Actor.new(
+        iri: "https://remote/#{random_string}"
+      ).save
+    end
+
+    it "returns 401 if not authorized" do
+      post "/remote/actors/0/refresh"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if not found" do
+        post "/remote/actors/999999/refresh"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "schedules the refresh task" do
+        expect{post "/remote/actors/#{actor.id}/refresh"}.
+          to change{Task::RefreshActor.exists?(actor.iri)}
+      end
+    end
+  end
 end

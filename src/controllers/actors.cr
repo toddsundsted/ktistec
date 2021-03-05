@@ -1,5 +1,6 @@
 require "../framework/controller"
 require "../models/activity_pub/activity/follow"
+require "../models/task/refresh_actor"
 
 class ActorsController
   include Ktistec::Controller
@@ -33,6 +34,18 @@ class ActorsController
     else
       env.response.content_type = "application/activity+json"
       render "src/views/actors/remote.json.ecr"
+    end
+  rescue Ktistec::Model::NotFound
+    not_found
+  end
+
+  post "/remote/actors/:id/refresh" do |env|
+    id = env.params.url["id"].to_i
+
+    actor = ActivityPub::Actor.find(id)
+
+    unless Task::RefreshActor.exists?(actor.iri)
+      Task::RefreshActor.new(source: env.account.actor, actor: actor).schedule
     end
   rescue Ktistec::Model::NotFound
     not_found

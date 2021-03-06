@@ -28,7 +28,7 @@ body { display: flex; flex-direction: column; }
 .ui.feed > .event > .content > .meta { margin-right: 0.75em; }
 
 /* fix line breaking */
-.ui.feed > .event > .label + .content { overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; -ms-hyphens: auto; -moz-hyphens: auto; -webkit-hyphens: auto; hyphens: auto; }
+.ui.feed > .event > .label + .content { width: inherit; overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; -ms-hyphens: auto; -moz-hyphens: auto; -webkit-hyphens: auto; hyphens: auto; }
 
 /* reply and delete actions */
 .ui.feed .meta > form { display: inline; }
@@ -56,7 +56,7 @@ body { display: flex; flex-direction: column; }
 /* general styles */
 .ui.feed > .event > .content pxxx { line-height: 1.5; }
 .ui.feed > .event > .content code { background: #f3f3f3; padding: .2em .3em; font-size: 95%; line-height: normal; }
-.ui.feed > .event > .content pre { background: #f6f8fa; padding: .2em .4em; font-size: 95%; }
+.ui.feed > .event > .content pre { background: #f6f8fa; padding: .2em .4em; font-size: 95%; overflow-x: auto; }
 
 /** large actor partial **/
 .actor-large.segments { margin-top: 1rem !important; margin-bottom: 1rem; }

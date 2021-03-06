@@ -47,6 +47,11 @@ Spectator.describe Ktistec::Util do
       content = "some text"
       expect(described_class.sanitize(content)).to eq("some text")
     end
+
+    it "leaves escaped content alone" do
+      content = "&lt;foo&gt;"
+      expect(described_class.sanitize(content)).to eq("&lt;foo&gt;")
+    end
   end
 end
 

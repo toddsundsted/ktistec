@@ -82,7 +82,7 @@ module Ktistec
         html.children.each { |child| sanitize(child, build) }
         build << "</p>" if empty
       elsif html.text?
-        build << html.text
+        html.to_s(build)
       end
     end
 

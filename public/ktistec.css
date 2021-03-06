@@ -54,7 +54,6 @@ body { display: flex; flex-direction: column; }
 }
 
 /* general styles */
-.ui.feed > .event > .content pxxx { line-height: 1.5; }
 .ui.feed > .event > .content code { background: #f3f3f3; padding: .2em .3em; font-size: 95%; line-height: normal; }
 .ui.feed > .event > .content pre { background: #f6f8fa; padding: .2em .4em; font-size: 95%; overflow-x: auto; }
 

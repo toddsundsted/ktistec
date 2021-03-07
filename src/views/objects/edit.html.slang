@@ -9,5 +9,7 @@ form.ui.form id="object-#{object.id}" method="POST"
     input#input-trix-editor type="hidden" name="content" value=content
     trix-editor input="input-trix-editor"
   .ui.buttons
-    input.ui.disabled.primary.button type="submit" value="Post Status" action=outbox_path(actor)
+    input.ui.disabled.primary.button type="submit" value="Post Note" action=outbox_path(actor)
     input.ui.disabled.button type="submit" value="Save Draft" action=object_path(object)
+  a.ui.teal.right.floated.button href=actor_relationships_path(actor, "drafts")
+    | Back to Drafts

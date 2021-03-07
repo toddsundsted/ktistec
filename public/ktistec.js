@@ -105,7 +105,7 @@ FilePond.setOptions({
       }
     })
   })
-  $(window).on("trix-change", function (event) {
+  $(window).on("trix-initialize trix-change", function (event) {
     if (event.target.hasContent != !!event.target.textContent) {
       (event.target.hasContent = !!event.target.textContent) ?
         $(event.target).closest('form').find('.buttons .button').removeClass('disabled') :

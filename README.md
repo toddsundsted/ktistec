@@ -1,6 +1,6 @@
-# ktistec
+# ![Mint](public/logo.png)
 
-Ktistec is an ActivityPub (https://www.w3.org/TR/activitypub/) server.
+**Ktistec** is an ActivityPub (https://www.w3.org/TR/activitypub/) server.
 It is intended for individual users, not farms of users, although
 support for additional users will be added in the future. It is
 designed to have few runtime dependencies -- for example, it uses

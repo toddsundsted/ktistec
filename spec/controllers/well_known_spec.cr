@@ -59,4 +59,57 @@ Spectator.describe WellKnownController do
       expect(JSON.parse(response.body)["links"].as_a).to contain(message)
     end
   end
+
+  context "nodeinfo" do
+    it "returns 200" do
+      get "/.well-known/nodeinfo"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns reference to the nodeinfo document" do
+      get "/.well-known/nodeinfo"
+      message = {"rel" => "http://nodeinfo.diaspora.software/ns/schema/2.1", "href" => "https://test.test/.well-known/nodeinfo/2.1"}
+      expect(JSON.parse(response.body)["links"].as_a).to contain(message)
+    end
+
+    it "returns the version" do
+      get "/.well-known/nodeinfo/2.1"
+      expect(JSON.parse(response.body)["version"].as_s).to eq("2.1")
+    end
+
+    it "returns software" do
+      get "/.well-known/nodeinfo/2.1"
+      message = {"name" => "ktistec", "version" => Ktistec::VERSION, "repository" => "https://github.com/toddsundsted/ktistec", "homepage" => "https://ktistec.com/"}
+      expect(JSON.parse(response.body)["software"].as_h).to eq(message)
+    end
+
+    it "returns protocols" do
+      get "/.well-known/nodeinfo/2.1"
+      message = ["activitypub"]
+      expect(JSON.parse(response.body)["protocols"].as_a).to eq(message)
+    end
+
+    it "returns services" do
+      get "/.well-known/nodeinfo/2.1"
+      message = {"inbound" => [] of String, "outbound" => [] of String}
+      expect(JSON.parse(response.body)["services"].as_h).to eq(message)
+    end
+
+    it "returns open registrations" do
+      get "/.well-known/nodeinfo/2.1"
+      expect(JSON.parse(response.body)["openRegistrations"].as_bool).to be_false
+    end
+
+    it "returns usage" do
+      get "/.well-known/nodeinfo/2.1"
+      message = {"users" => {"total" => 1}}
+      expect(JSON.parse(response.body)["usage"].as_h).to eq(message)
+    end
+
+    it "returns metadata" do
+      get "/.well-known/nodeinfo/2.1"
+      message = {"siteName" => "Test"}
+      expect(JSON.parse(response.body)["metadata"].as_h).to eq(message)
+    end
+  end
 end

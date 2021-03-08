@@ -37,4 +37,45 @@ class WellKnownController
   rescue Ktistec::Model::NotFound
     not_found
   end
+
+  get "/.well-known/nodeinfo" do |env|
+    message = {
+      links: [{
+                rel: "http://nodeinfo.diaspora.software/ns/schema/2.1",
+                href: "#{host}/.well-known/nodeinfo/2.1"
+              }]
+    }
+    env.response.content_type = "application/jrd+json"
+    message.to_json
+  end
+
+  get "/.well-known/nodeinfo/2.1" do |env|
+    message = {
+      version: "2.1",
+      software: {
+        name: "ktistec",
+        version: Ktistec::VERSION,
+        repository: "https://github.com/toddsundsted/ktistec",
+        homepage: "https://ktistec.com/"
+      },
+      protocols: [
+        "activitypub"
+      ],
+      services: {
+        inbound: [] of String,
+        outbound: [] of String
+      },
+      openRegistrations: false,
+      usage: {
+        users: {
+          total: Account.count
+        }
+      },
+      metadata: {
+        siteName: Ktistec.site
+      }
+    }
+    env.response.content_type = "application/jrd+json"
+    message.to_json
+  end
 end

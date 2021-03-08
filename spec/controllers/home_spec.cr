@@ -15,7 +15,7 @@ Spectator.describe HomeController do
     end
     after_each do
       Ktistec.host = "https://test.test"
-      Ktistec.site = "Ktistec"
+      Ktistec.site = "Test"
     end
 
     describe "GET /" do

@@ -75,12 +75,12 @@ Spectator.describe Ktistec do
 
     it "updates the database" do
       Ktistec.clear_site
-      Ktistec.site = "Ktistec"
-      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "site")).to eq("Ktistec")
+      Ktistec.site = "Test"
+      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "site")).to eq("Test")
     end
 
     it "returns the site" do
-      expect(Ktistec.site).to eq("Ktistec")
+      expect(Ktistec.site).to eq("Test")
     end
   end
 end

@@ -67,4 +67,4 @@ def self.random_password
 end
 
 Ktistec.host = "https://test.test"
-Ktistec.site = "Ktistec"
+Ktistec.site = "Test"

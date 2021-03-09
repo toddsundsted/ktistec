@@ -204,7 +204,7 @@ module Ktistec
 
     # Define a simple response helper.
     #
-    macro def_response_helper(name, code, message)
+    macro def_response_helper(name, message, code)
       macro {{name.id}}(message = {{message}}, code = {{code}})
         if accepts?("text/html")
           _message = \{{message}}
@@ -220,13 +220,13 @@ module Ktistec
       end
     end
 
-    def_response_helper(ok, 200, "OK")
-    def_response_helper(created, 201, "Created")
-    def_response_helper(bad_request, 400, "Bad Request")
-    def_response_helper(forbidden, 403, "Forbidden")
-    def_response_helper(not_found, 404, "Not Found")
-    def_response_helper(conflict, 409, "Conflict")
-    def_response_helper(server_error, 500, "Server Error")
+    def_response_helper(ok, "OK", 200)
+    def_response_helper(created, "Created", 201)
+    def_response_helper(bad_request, "Bad Request", 400)
+    def_response_helper(forbidden, "Forbidden", 403)
+    def_response_helper(not_found, "Not Found", 404)
+    def_response_helper(conflict, "Conflict", 409)
+    def_response_helper(server_error, "Server Error", 500)
 
     # Don't authenticate specified handlers.
     #

@@ -27,7 +27,8 @@ class FooBarController
     "/foo/bar/created",
     "/foo/bar/sanitize",
     "/foo/bar/comma",
-    "/foo/bar/id"
+    "/foo/bar/id",
+    "/foo/bar/ok"
   ]
 
   get "/foo/bar/helpers" do |env|
@@ -162,6 +163,10 @@ class FooBarController
 
   get "/foo/bar/id" do |env|
     id
+  end
+
+  get "/foo/bar/ok" do |env|
+    ok "views/index", basedir: "spec/spec_helper"
   end
 end
 
@@ -431,6 +436,33 @@ Spectator.describe Ktistec::Controller do
     it "generates a URL-safe random string" do
       get "/foo/bar/id"
       expect(response.body).to match(/^[a-zA-Z0-9_-]+$/)
+    end
+  end
+
+  describe "/foo/bar/ok" do
+    it "responds with html" do
+      get "/foo/bar/ok", HTTP::Headers{"Accept" => "text/html"}
+      expect(XML.parse_html(response.body).xpath_nodes("//cite").first.text).to eq("html")
+    end
+
+    it "responds with text" do
+      get "/foo/bar/ok", HTTP::Headers{"Accept" => "text/plain"}
+      expect(response.body.strip).to eq("text")
+    end
+
+    it "responds with json" do
+      get "/foo/bar/ok"
+      expect(JSON.parse(response.body)).to eq("json")
+    end
+
+    it "sets the content type" do
+      get "/foo/bar/ok", HTTP::Headers{"Accept" => "application/activity+json"}
+      expect(response.headers["Content-Type"]).to eq("application/activity+json")
+    end
+
+    it "sets the content type" do
+      get "/foo/bar/ok", HTTP::Headers{"Accept" => "application/json"}
+      expect(response.headers["Content-Type"]).to eq("application/json")
     end
   end
 end

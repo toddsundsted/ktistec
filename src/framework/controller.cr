@@ -205,18 +205,45 @@ module Ktistec
     # Define a simple response helper.
     #
     macro def_response_helper(name, message, code)
-      macro {{name.id}}(message = {{message}}, code = {{code}})
-        if accepts?("text/html")
-          _message = \{{message}}
-          env.response.content_type = "text/html"
-          halt env, status_code: \{{code}}, response: render "src/views/pages/generic.html.ecr", "src/views/layouts/default.html.ecr"
-        elsif accepts?("text/plain")
-          env.response.content_type = "text/plain"
-          halt env, status_code: \{{code}}, response: \{{message}}.downcase
-        else
-          env.response.content_type = "application/json"
-          halt env, status_code: \{{code}}, response: ({msg: \{{message}}.downcase}.to_json)
-        end
+      macro {{name.id}}(message = nil, code = nil, basedir = "src/views")
+        \{% if message.is_a?(StringLiteral) && message.includes?('/') %}
+          if accepts?("application/activity+json", "application/json")
+            \{% if read_file?("#{basedir.id}/#{message.id}.json.ecr") %}
+              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.json.ecr"}}
+            \{% end %}
+          end
+          if accepts?("text/html")
+            \{% if read_file?("#{basedir.id}/#{message.id}.html.ecr") %}
+              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.ecr"}}, "src/views/layouts/default.html.ecr"
+            \{% elsif read_file?("#{basedir.id}/#{message.id}.html.slang") %}
+              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.slang"}}, "src/views/layouts/default.html.ecr"
+            \{% end %}
+          end
+          if accepts?("text/plain")
+            \{% if read_file?("#{basedir.id}/#{message.id}.text.ecr") %}
+              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.text.ecr"}}
+            \{% end %}
+          end
+          \{% if read_file?("#{basedir.id}/#{message.id}.json.ecr") %}
+            halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.json.ecr"}}
+          \{% elsif read_file?("#{basedir.id}/#{message.id}.html.ecr") %}
+              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.ecr"}}, "src/views/layouts/default.html.ecr"
+          \{% elsif read_file?("#{basedir.id}/#{message.id}.html.slang") %}
+              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.slang"}}, "src/views/layouts/default.html.ecr"
+          \{% end %}
+        \{% else %}
+          if accepts?("application/activity+json", "application/json")
+            halt env, status_code: \{{code}} || {{code}}, response: ({msg: (\{{message}} || {{message}}).downcase}.to_json)
+          end
+          if accepts?("text/html")
+            _message = \{{message}} || {{message}}
+            halt env, status_code: \{{code}} || {{code}}, response: render "src/views/pages/generic.html.ecr", "src/views/layouts/default.html.ecr"
+          end
+          if accepts?("text/plain")
+            halt env, status_code: \{{code}} || {{code}}, response: (\{{message}} || {{message}}).downcase
+          end
+          halt env, status_code: \{{code}} || {{code}}, response: ({msg: (\{{message}} || {{message}}).downcase}.to_json)
+        \{% end %}
       end
     end
 

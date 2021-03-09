@@ -1,0 +1,49 @@
+{
+  "@context":"https://www.w3.org/ns/activitystreams",
+  <%- if (published = object.published) -%>
+  "published":<%= published.to_rfc3339(fraction_digits: 3).inspect %>,
+  <%- end -%>
+  <%- if (attributed_to_iri = object.attributed_to_iri) -%>
+  "attributedTo":<%= attributed_to_iri.inspect %>,
+  <%- end -%>
+  <%- if (in_reply_to_iri = object.in_reply_to_iri) -%>
+  "inReplyTo":<%= in_reply_to_iri.inspect %>,
+  <%- end -%>
+  <%- if (replies = object.replies) -%>
+  "replies":<%= replies.inspect %>,
+  <%- end -%>
+  <%- if (to = object.to) -%>
+  "to":<%= to.to_json %>,
+  <%- end -%>
+  <%- if (cc = object.cc) -%>
+  "cc":<%= cc.to_json %>,
+  <%- end -%>
+  <%- if (summary = object.summary) -%>
+  "summary":<%= summary.inspect %>,
+  <%- end -%>
+  <%- if (content = object.content) -%>
+  "content":<%= content.inspect %>,
+  <%- end -%>
+  <%- if (media_type = object.media_type) -%>
+  "mediaType":<%= media_type.inspect %>,
+  <%- end -%>
+  <%- if (attachments = object.attachments) -%>
+  "attachment":<%= attachments.to_json %>,
+  <%- end -%>
+  <%- unless (tags = object.tags).empty? -%>
+  "tag":[
+    <%- tags.each_with_index do |tag, i| -%>
+      <%- if tag.type == "Tag::Hashtag" -%>
+      {"type":"Hashtag","name":"#<%= tag.name %>","href":"<%= tag.href %>"}<%= i < tags.size - 1 ? "," : "" %>
+      <%- elsif tag.type == "Tag::Mention" -%>
+      {"type":"Mention","name":"@<%= tag.name %>","href":"<%= tag.href %>"}<%= i < tags.size - 1 ? "," : "" %>
+      <%- end -%>
+    <%- end -%>
+  ],
+  <%- end -%>
+  <%- if (urls = object.urls) -%>
+  "url":<%= urls.to_json %>,
+  <%- end -%>
+  "type":<%= object.type.split("::").last.inspect %>,
+  "id":<%= object.iri.inspect %>
+}

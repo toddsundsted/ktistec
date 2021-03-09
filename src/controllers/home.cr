@@ -12,34 +12,16 @@ class HomeController
       _host = _site = ""
       error = nil
 
-      if accepts?("text/html")
-        env.response.content_type = "text/html"
-        render "src/views/home/step_1.html.ecr", "src/views/layouts/default.html.ecr"
-      else
-        env.response.content_type = "application/json"
-        render "src/views/home/step_1.json.ecr"
-      end
+      ok "home/step_1"
     elsif (accounts = Account.all).empty?
       account = Account.new("", "")
       actor = ActivityPub::Actor.new
 
-      if accepts?("text/html")
-        env.response.content_type = "text/html"
-        render "src/views/home/step_2.html.ecr", "src/views/layouts/default.html.ecr"
-      else
-        env.response.content_type = "application/json"
-        render "src/views/home/step_2.json.ecr"
-      end
+      ok "home/step_2"
     elsif (account = env.account?).nil?
       activities = ActivityPub::Actor.local_timeline(*pagination_params(env))
 
-      if accepts?("text/html")
-        env.response.content_type = "text/html"
-        render "src/views/home/index.html.ecr", "src/views/layouts/default.html.ecr"
-      else
-        env.response.content_type = "application/json"
-        render "src/views/home/index.json.ecr"
-      end
+      ok "home/index"
     else
       env.redirect actor_path(account)
     end
@@ -59,13 +41,7 @@ class HomeController
         error = ex.message
         _host, _site = step_1_params(env)
 
-        if accepts?("text/html")
-          env.response.content_type = "text/html"
-          render "src/views/home/step_1.html.ecr", "src/views/layouts/default.html.ecr"
-        else
-          env.response.content_type = "application/json"
-          render "src/views/home/step_1.json.ecr"
-        end
+        ok "home/step_1"
       end
     elsif (accounts = Account.all).empty?
       account = Account.new(**step_2_params(env))
@@ -90,13 +66,7 @@ class HomeController
           {jwt: jwt}.to_json
         end
       else
-        if accepts?("text/html")
-          env.response.content_type = "text/html"
-          render "src/views/home/step_2.html.ecr", "src/views/layouts/default.html.ecr"
-        else
-          env.response.content_type = "application/json"
-          render "src/views/home/step_2.json.ecr"
-        end
+        ok "home/step_2"
       end
     else
       not_found

@@ -14,8 +14,7 @@ class ActivitiesController
 
     recursive = true
 
-    env.response.content_type = "application/activity+json"
-    render "src/views/activities/activity.json.ecr"
+    ok "activities/activity"
   end
 
   get "/remote/activities/:id" do |env|
@@ -27,8 +26,7 @@ class ActivitiesController
 
     recursive = true
 
-    env.response.content_type = "application/activity+json"
-    render "src/views/activities/activity.json.ecr"
+    ok "activities/activity"
   end
 
   private def self.get_activity(env, iri_or_id)

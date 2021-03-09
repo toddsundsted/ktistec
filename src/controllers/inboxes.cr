@@ -236,13 +236,7 @@ class RelationshipsController
     end
     activities = account.actor.in_inbox(*pagination_params(env), public: env.account? != account)
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/relationships/inbox.html.ecr", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/json"
-      render "src/views/relationships/inbox.json.ecr"
-    end
+    ok "relationships/inbox"
   end
 
   private def self.get_account(env)

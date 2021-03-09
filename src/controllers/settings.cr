@@ -7,13 +7,7 @@ class SettingsController
   get "/settings" do |env|
     actor = env.account.actor
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/settings/settings.html.slang", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/activity+json"
-      render "src/views/settings/settings.json.ecr"
-    end
+    ok "settings/settings"
   end
 
   post "/settings" do |env|

@@ -28,13 +28,7 @@ class ObjectsController
 
     drafts = account.actor.drafts(*pagination_params(env))
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/objects/index.html.slang", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/activity+json"
-      render "src/views/objects/index.json.ecr"
-    end
+    ok "objects/index"
   end
 
   post "/objects" do |env|
@@ -55,13 +49,7 @@ class ObjectsController
 
     env.redirect edit_object_path if object.draft?
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/objects/object.html.slang", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/activity+json"
-      render "src/views/objects/object.json.ecr"
-    end
+    ok "objects/object"
   end
 
   get "/objects/:id/edit" do |env|
@@ -69,13 +57,7 @@ class ObjectsController
       not_found
     end
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/objects/edit.html.slang", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/activity+json"
-      render "src/views/objects/object.json.ecr"
-    end
+    ok "objects/edit"
   end
 
   post "/objects/:id" do |env|
@@ -103,13 +85,7 @@ class ObjectsController
       not_found
     end
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/objects/object.html.slang", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/activity+json"
-      render "src/views/objects/object.json.ecr"
-    end
+    ok "objects/object"
   end
 
   get "/remote/objects/:id/thread" do |env|
@@ -119,13 +95,7 @@ class ObjectsController
 
     thread = object.thread
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/objects/thread.html.slang", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/activity+json"
-      render "src/views/objects/thread.json.ecr"
-    end
+    ok "objects/thread"
   end
 
   get "/remote/objects/:id/replies" do |env|
@@ -135,8 +105,7 @@ class ObjectsController
       not_found
     end
 
-    env.response.content_type = "text/html"
-    render "src/views/objects/reply.html.slang", "src/views/layouts/default.html.ecr"
+    ok "objects/reply"
   end
 
   private def self.params(env)

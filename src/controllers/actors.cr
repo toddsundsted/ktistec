@@ -12,13 +12,7 @@ class ActorsController
 
     actor = Account.find(username: username).actor
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/actors/actor.html.slang", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/activity+json"
-      render "src/views/actors/actor.json.ecr"
-    end
+    ok "actors/actor"
   rescue Ktistec::Model::NotFound
     not_found
   end
@@ -28,13 +22,7 @@ class ActorsController
 
     actor = ActivityPub::Actor.find(id)
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/actors/remote.html.slang", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/activity+json"
-      render "src/views/actors/remote.json.ecr"
-    end
+    ok "actors/remote"
   rescue Ktistec::Model::NotFound
     not_found
   end
@@ -47,6 +35,8 @@ class ActorsController
     unless Task::RefreshActor.exists?(actor.iri)
       Task::RefreshActor.new(source: env.account.actor, actor: actor).schedule
     end
+
+    ok
   rescue Ktistec::Model::NotFound
     not_found
   end

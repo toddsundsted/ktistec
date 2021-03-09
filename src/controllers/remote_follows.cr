@@ -14,13 +14,8 @@ class RemoteFollowsController
 
     error = nil
     account = ""
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/remote_follows/index.html.slang", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/json"
-      render "src/views/remote_follows/index.json.ecr"
-    end
+
+    ok "remote_follows/index"
   end
 
   post "/actors/:username/remote-follow" do |env|
@@ -30,13 +25,8 @@ class RemoteFollowsController
     account = account(env)
     if !account.presence
       error = "the address must not be blank"
-      if accepts?("text/html")
-        env.response.content_type = "text/html"
-        render "src/views/remote_follows/index.html.slang", "src/views/layouts/default.html.ecr"
-      else
-        env.response.content_type = "application/json"
-        render "src/views/remote_follows/index.json.ecr"
-      end
+
+      ok "remote_follows/index"
     else
       begin
         location = lookup(account).gsub("{uri}", URI.encode(actor.iri))
@@ -49,13 +39,8 @@ class RemoteFollowsController
       rescue ex : HostMeta::Error | WebFinger::Error | NilAssertionError | KeyError
         error = ex.message
         env.response.status_code = 400
-        if accepts?("text/html")
-          env.response.content_type = "text/html"
-          render "src/views/remote_follows/index.html.slang", "src/views/layouts/default.html.ecr"
-        else
-          env.response.content_type = "application/json"
-          render "src/views/remote_follows/index.json.ecr"
-        end
+
+        ok "remote_follows/index"
       end
     end
   end
@@ -68,13 +53,7 @@ class RemoteFollowsController
       bad_request("Can't Dereference URI")
     end
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/actors/remote.html.slang", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/activity+json"
-      render "src/views/actors/remote.json.ecr"
-    end
+    ok "actors/remote"
   end
 
   private def self.lookup(account)

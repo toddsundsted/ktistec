@@ -31,7 +31,7 @@ class RemoteFollowsController
       begin
         location = lookup(account).gsub("{uri}", URI.encode(actor.iri))
         if accepts?("text/html")
-          env.redirect location
+          redirect location
         else
           env.response.content_type = "application/json"
           {location: location}.to_json

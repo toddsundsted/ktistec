@@ -15,7 +15,7 @@ class SettingsController
 
     actor.assign(**params(env, actor)).save
 
-    env.redirect back_path
+    redirect back_path
   end
 
   private def self.params(env, actor)

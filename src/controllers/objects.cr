@@ -47,7 +47,7 @@ class ObjectsController
       not_found
     end
 
-    env.redirect edit_object_path if object.draft?
+    redirect edit_object_path if object.draft?
 
     ok "objects/object"
   end
@@ -67,7 +67,7 @@ class ObjectsController
 
     object.assign(params(env)).save
 
-    env.redirect object_path(object)
+    redirect object_path(object)
   end
 
   delete "/objects/:id" do |env|
@@ -77,7 +77,7 @@ class ObjectsController
 
     object.delete
 
-    env.redirect back_path
+    redirect back_path
   end
 
   get "/remote/objects/:id" do |env|

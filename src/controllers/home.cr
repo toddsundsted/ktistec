@@ -23,7 +23,7 @@ class HomeController
 
       ok "home/index"
     else
-      env.redirect actor_path(account)
+      redirect actor_path(account)
     end
   end
 
@@ -33,9 +33,9 @@ class HomeController
         Ktistec.host, Ktistec.site = step_1_params(env)
 
         if accepts?("text/html")
-          env.redirect home_path
+          redirect home_path
         else
-          env.redirect home_path
+          redirect home_path
         end
       rescue ex : Exception
         error = ex.message
@@ -60,7 +60,7 @@ class HomeController
 
         if accepts?("text/html")
           env.response.cookies["AuthToken"] = jwt
-          env.redirect actor_path(actor)
+          redirect actor_path(actor)
         else
           env.response.content_type = "application/json"
           {jwt: jwt}.to_json
@@ -72,7 +72,7 @@ class HomeController
       not_found
     end
   rescue KeyError
-    env.redirect home_path
+    redirect home_path
   end
 
   private def self.step_1_params(env)

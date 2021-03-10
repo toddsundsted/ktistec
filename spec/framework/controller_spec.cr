@@ -25,6 +25,7 @@ class FooBarController
     "/foo/bar/accept",
     "/foo/bar/xhr",
     "/foo/bar/created",
+    "/foo/bar/redirect",
     "/foo/bar/sanitize",
     "/foo/bar/comma",
     "/foo/bar/id",
@@ -146,6 +147,11 @@ class FooBarController
 
   get "/foo/bar/created" do |env|
     env.created "/foobar"
+  end
+
+  get "/foo/bar/redirect" do |env|
+    redirect "/foobar", 301, body: "Foo Bar"
+    ok # should never get here
   end
 
   get "/foo/bar/sanitize" do |env|
@@ -418,6 +424,23 @@ Spectator.describe Ktistec::Controller do
     it "redirects with 201" do
       get "/foo/bar/created", HTTP::Headers{"Accept" => "application/json"}
       expect(response.status_code).to eq(201)
+    end
+  end
+
+  describe "get /foo/bar/redirect" do
+    it "redirects with 301" do
+      get "/foo/bar/redirect"
+      expect(response.status_code).to eq(301)
+    end
+
+    it "sets the location header" do
+      get "/foo/bar/redirect"
+      expect(response.headers["Location"]).to eq("/foobar")
+    end
+
+    it "includes the body" do
+      get "/foo/bar/redirect"
+      expect(response.body).to eq("Foo Bar")
     end
   end
 

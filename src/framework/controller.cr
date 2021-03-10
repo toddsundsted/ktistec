@@ -204,6 +204,18 @@ module Ktistec
       env.xhr?
     end
 
+    # Redirect and end processing.
+    #
+    macro redirect(url, status_code = 302, body = nil)
+      env.response.headers.add("Location", {{url}})
+      env.response.status_code = {{status_code}}
+      {% if body %}
+        env.response.print({{body}})
+      {% end %}
+      env.response.close
+      next
+    end
+
     # Define a simple response helper.
     #
     macro def_response_helper(name, message, code)

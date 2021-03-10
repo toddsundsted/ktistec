@@ -4,7 +4,7 @@ require "kilt/slang"
 require "./ext/context"
 
 class HTTP::Server::Context
-  def accepts?(mime_type)
+  def accepts?(*mime_types)
     @accepts ||=
       if self.request.headers["Accept"]?
         self.request.headers["Accept"].split(",").map(&.split(";").first)
@@ -14,7 +14,9 @@ class HTTP::Server::Context
         [] of String
       end
     if accepts = @accepts
-      accepts.includes?(mime_type)
+      if (mime_type = mime_types.find(&.in?(accepts)))
+        self.response.content_type = mime_type
+      end
     end
   end
 
@@ -194,8 +196,8 @@ module Ktistec
       )
     end
 
-    macro accepts?(mime_type)
-      env.accepts?({{mime_type}})
+    macro accepts?(*mime_type)
+      env.accepts?({{*mime_type}})
     end
 
     macro xhr?

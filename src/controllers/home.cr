@@ -32,11 +32,7 @@ class HomeController
       begin
         Ktistec.host, Ktistec.site = step_1_params(env)
 
-        if accepts?("text/html")
-          redirect home_path
-        else
-          redirect home_path
-        end
+        redirect home_path
       rescue ex : Exception
         error = ex.message
         _host, _site = step_1_params(env)

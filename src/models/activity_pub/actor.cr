@@ -14,6 +14,7 @@ require "./activity"
 require "./activity/announce"
 require "./activity/create"
 require "./activity/delete"
+require "./activity/like"
 require "./activity/undo"
 require "./object"
 
@@ -354,6 +355,14 @@ module ActivityPub
 
     def in_outbox?(object : Object, inclusion = nil, exclusion = nil)
       find_in?(object, Relationship::Content::Outbox, inclusion, exclusion)
+    end
+
+    def find_announce_in_outbox(object : Object)
+      find_in?(object, Relationship::Content::Outbox, ActivityPub::Activity::Announce)
+    end
+
+    def find_like_in_outbox(object : Object)
+      find_in?(object, Relationship::Content::Outbox, ActivityPub::Activity::Like)
     end
 
     def in_inbox(page = 1, size = 10, public = true)

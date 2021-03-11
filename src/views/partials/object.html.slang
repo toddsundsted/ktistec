@@ -56,7 +56,7 @@
             | 1 Reply
           - else
             | #{c} Replies
-      - if (c = _object.likes_count) > 0 && (to_undo = __account.actor.in_outbox?(_object, ActivityPub::Activity::Like))
+      - if (c = _object.likes_count) > 0 && (to_undo = __account.actor.find_like_in_outbox(_object))
         form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
           input type="hidden" name="object" value=to_undo.iri
@@ -80,7 +80,7 @@
               | 1 Like
             - else
               | #{c} Likes
-      - if (c = _object.announces_count) > 0 && (to_undo = __account.actor.in_outbox?(_object, ActivityPub::Activity::Announce))
+      - if (c = _object.announces_count) > 0 && (to_undo = __account.actor.find_announce_in_outbox(_object))
         form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
           input type="hidden" name="object" value=to_undo.iri

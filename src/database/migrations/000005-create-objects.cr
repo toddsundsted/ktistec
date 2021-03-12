@@ -31,8 +31,12 @@ up do |db|
       ON objects (iri ASC)
   STR
   db.exec <<-STR
-    CREATE INDEX idx_objects_in_reply_to_iri_published
-      ON objects (in_reply_to_iri ASC, published ASC)
+    CREATE INDEX idx_objects_in_reply_to_iri
+      ON objects (in_reply_to_iri ASC)
+  STR
+  db.exec <<-STR
+    CREATE INDEX idx_objects_published
+      ON objects (published ASC)
   STR
 end
 

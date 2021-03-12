@@ -367,12 +367,12 @@ module Ktistec
         {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
         {% class_name = class_name || singular.camelcase.id %}
         @[Assignable]
-        @{{name}} : Enumerable({{class_name}})?
+        @{{name}} : Array({{class_name}})?
         def {{name}}=({{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
           self.{{name}}.each do |other|
             other.destroy unless other.in?({{name}})
           end
-          @{{name}} = {{name}}
+          @{{name}} = {{name}}.to_a
           {{name}}.each do |n|
             n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}}))
             {% if inverse_of %}

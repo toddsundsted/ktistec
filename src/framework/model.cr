@@ -313,11 +313,15 @@ module Ktistec
 
       # Returns true if all persistent properties are equal.
       #
-      def ==(other : self)
-        {% begin %}
-          {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
-          self.same?(other) || ({{vs.map { |v| "self.#{v} == other.#{v}" }.join(" && ").id}})
-        {% end %}
+      def ==(other)
+        if other.is_a?(self)
+          {% begin %}
+            {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
+            self.same?(other) || ({{vs.map { |v| "self.#{v} == other.#{v}" }.join(" && ").id}})
+          {% end %}
+        else
+          false
+        end
       end
 
       # Returns the table name.

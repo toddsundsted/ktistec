@@ -3,6 +3,12 @@ require "../../src/framework/util"
 require "../spec_helper/base"
 
 Spectator.describe Ktistec::Util do
+  describe ".id" do
+    it "generates a random identifier" do
+      expect(described_class.id).to match(/[a-zA-Z0-9_-]{8}/)
+    end
+  end
+
   describe ".sanitize" do
     it "ignores empty content" do
       expect(described_class.sanitize("")).to eq("")

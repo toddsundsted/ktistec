@@ -299,11 +299,8 @@ module Ktistec
 
     # Generates a random, URL-safe identifier.
     #
-    # 64 bits should ensure it takes about 5 billion attempts to
-    # generate a collision.
-    #
     macro id
-      Random::Secure.urlsafe_base64(8)
+      Ktistec::Util.id
     end
 
     macro included

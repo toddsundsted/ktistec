@@ -4,6 +4,15 @@ module Ktistec
   module Util
     extend self
 
+    # Generates a random, URL-safe identifier.
+    #
+    # 64 bits should ensure it takes about 5 billion attempts to
+    # generate a collision.
+    #
+    def id
+      Random::Secure.urlsafe_base64(8)
+    end
+
     # Cleans up the content we receive from others.
     #
     def sanitize(content)

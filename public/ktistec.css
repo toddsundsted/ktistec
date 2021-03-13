@@ -71,10 +71,14 @@ body { display: flex; flex-direction: column; }
 /* used in posts in the timeline */
 .ui.iconic.button { background: transparent none !important; padding: 0; margin: 0; }
 .ui.iconic.blue.button { color: #2185d0 !important; }
-.ui.dangerous.button:hover { color: #FF2733 !important; transition: 0.2s color ease; }
 /* used on social actions */
 .ui.accept.button { background: #21ba45 !important; color: #fff !important; }
 .ui.reject.button { background: #db2828 !important; color: #fff !important; }
+/* used on the timeline and elsewhere */
+.ui.dangerous.button { background-color: #FF2733 !important; color: #fff !important; }
+.ui.dangerous.button:hover { background-color: #F41824 !important; transition: 0.2s color ease; }
+.ui.dangerous.iconic.button { background-color: transparent !important; color: rgba(0,0,0,.6) !important; }
+.ui.dangerous.iconic.button:hover { color: #FF2733 !important; transition: 0.2s color ease; }
 
 /** small actor partial **/
 .actor-small.card > .content:first-child { position: relative; min-height: 8rem; background-position: center; background-repeat: no-repeat; background-size: cover; }

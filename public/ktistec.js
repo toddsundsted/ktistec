@@ -38,7 +38,7 @@ FilePond.setOptions({
       }
     })
   })
-  $(document).on('click', '.dangerous.button', function (e) {
+  $(document).on('click', '.dangerous.button[data-modal]', function (e) {
     e.preventDefault()
     let $this = $(this)
     let $form = $this.closest('form')

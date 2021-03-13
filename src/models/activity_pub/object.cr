@@ -295,5 +295,15 @@ module ActivityPub
         visible: [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
       }
     end
+
+    def make_delete_activity
+      ActivityPub::Activity::Delete.new(
+        iri: "#{Ktistec.host}/activities/#{Ktistec::Util.id}",
+        actor: attributed_to,
+        object: self,
+        to: to,
+        cc: cc
+      )
+    end
   end
 end

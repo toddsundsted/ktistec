@@ -185,6 +185,42 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#make_delete_activity" do
+    let(attributed_to) do
+      ActivityPub::Actor.new(
+        iri: "https://test.test/objects/actor"
+      )
+    end
+    subject do
+      described_class.new(
+        iri: "https://test.test/objects/object",
+        attributed_to: attributed_to,
+        to: ["to_iri"],
+        cc: ["cc_iri"]
+      )
+    end
+
+    it "instantiates a delete activity for the subject" do
+      expect(subject.make_delete_activity).to be_a(ActivityPub::Activity::Delete)
+    end
+
+    it "assigns the subject's attributed_to as the actor" do
+      expect(subject.make_delete_activity.actor).to eq(attributed_to)
+    end
+
+    it "assigns the subject as the object" do
+      expect(subject.make_delete_activity.object).to eq(subject)
+    end
+
+    it "copies the subject's to" do
+      expect(subject.make_delete_activity.to).to eq(["to_iri"])
+    end
+
+    it "copies the subject's cc" do
+      expect(subject.make_delete_activity.cc).to eq(["cc_iri"])
+    end
+  end
+
   describe ".federated_posts" do
     macro post(index)
       let!(post{{index}}) do

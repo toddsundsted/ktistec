@@ -218,13 +218,7 @@ class RelationshipsController
             bad_request
           end
           account.actor = object.attributed_to
-          activity = ActivityPub::Activity::Delete.new(
-            iri: "#{host}/activities/#{id}",
-            actor: account.actor,
-            object: object,
-            to: object.to,
-            cc: object.cc
-          )
+          activity = object.make_delete_activity
           object.delete
         elsif (object = ActivityPub::Actor.find?(iri))
           unless object.local?
@@ -234,13 +228,7 @@ class RelationshipsController
             bad_request
           end
           account.actor = object
-          activity = ActivityPub::Activity::Delete.new(
-            iri: "#{host}/activities/#{id}",
-            actor: account.actor,
-            object: object,
-            to: ["https://www.w3.org/ns/activitystreams#Public"],
-            cc: (_followers = object.followers) ? [_followers] : nil
-          )
+          activity = object.make_delete_activity
           object.delete
         else
           bad_request

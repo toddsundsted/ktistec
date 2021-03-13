@@ -213,6 +213,36 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#make_delete_activity" do
+    subject do
+      described_class.new(
+        iri: "https://test.test/actors/actor",
+        followers: "followers",
+        following: "following"
+      )
+    end
+
+    it "instantiates a delete activity for the subject" do
+      expect(subject.make_delete_activity).to be_a(ActivityPub::Activity::Delete)
+    end
+
+    it "assigns the subject as the actor" do
+      expect(subject.make_delete_activity.actor).to eq(subject)
+    end
+
+    it "assigns the subject as the object" do
+      expect(subject.make_delete_activity.object).to eq(subject)
+    end
+
+    it "addresses (to) the public collection" do
+      expect(subject.make_delete_activity.to).to eq(["https://www.w3.org/ns/activitystreams#Public"])
+    end
+
+    it "addresses (cc) the subject's followers and following" do
+      expect(subject.make_delete_activity.cc).to contain_exactly("followers", "following")
+    end
+  end
+
   describe "#follow" do
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 

@@ -462,5 +462,15 @@ module ActivityPub
         urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")
       }
     end
+
+    def make_delete_activity
+      ActivityPub::Activity::Delete.new(
+        iri: "#{Ktistec.host}/activities/#{Ktistec::Util.id}",
+        actor: self,
+        object: self,
+        to: ["https://www.w3.org/ns/activitystreams#Public"],
+        cc: [followers, following].compact
+      )
+    end
   end
 end

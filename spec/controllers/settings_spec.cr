@@ -5,13 +5,13 @@ require "../spec_helper/controller"
 Spectator.describe SettingsController do
   setup_spec
 
+  let(actor) { register.actor }
+
   describe "GET /settings" do
     it "returns 401 if not authorized" do
       get "/settings"
       expect(response.status_code).to eq(401)
     end
-
-    let(actor) { register.actor }
 
     context "when authorized" do
       sign_in(as: actor.username)
@@ -51,8 +51,6 @@ Spectator.describe SettingsController do
       post "/settings"
       expect(response.status_code).to eq(401)
     end
-
-    let(actor) { register.actor }
 
     context "when authorized" do
       sign_in(as: actor.username)
@@ -145,6 +143,35 @@ Spectator.describe SettingsController do
               not_to change{ActivityPub::Actor.find(actor.id).icon}
           end
         end
+      end
+    end
+  end
+
+  describe "POST /settings/terminate" do
+    it "returns 401 if not authorized" do
+      post "/settings/terminate"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "schedules a terminate task" do
+        expect{post "/settings/terminate"}.to change{Task::Terminate.count(subject_iri: actor.iri, source_iri: actor.iri)}.by(1)
+      end
+
+      it "destroys the account" do
+        expect{post "/settings/terminate"}.to change{Account.count}.by(-1)
+      end
+
+      it "ends the session" do
+        expect{post "/settings/terminate"}.to change{Session.count}.by(-1)
+      end
+
+      it "redirects" do
+        post "/settings/terminate"
+        expect(response.status_code).to eq(302)
+        expect(response.headers.to_a).to have({"Location", ["/"]})
       end
     end
   end

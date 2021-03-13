@@ -1,5 +1,6 @@
 require "../framework/controller"
 require "../models/activity_pub/activity/follow"
+require "../models/task/terminate"
 
 class SettingsController
   include Ktistec::Controller
@@ -16,6 +17,17 @@ class SettingsController
     actor.assign(**params(env, actor)).save
 
     redirect back_path
+  end
+
+  post "/settings/terminate" do |env|
+    actor = env.account.actor
+
+    Task::Terminate.new(source: actor, subject: actor).schedule
+
+    env.account.destroy
+    env.session.destroy
+
+    redirect home_path
   end
 
   private def self.params(env, actor)

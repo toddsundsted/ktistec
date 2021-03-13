@@ -75,6 +75,8 @@ module ActivityPub
     @[Persistent]
     property urls : Array(String)?
 
+    has_many objects, class_name: ActivityPub::Object, foreign_key: attributed_to_iri, primary_key: iri
+
     def before_validate
       if changed?(:username)
         if (username = self.username) && ((iri.blank? && new_record?) || local?)

@@ -62,7 +62,7 @@ class HTTP::Client
     @@objects.clear
   end
 
-  def self.get(url : String, headers : HTTP::Headers)
+  def self.get(url : String, headers : HTTP::Headers? = nil)
     @@requests << HTTP::Request.new("GET", url, headers)
     url = URI.parse(url)
     case url.path
@@ -115,7 +115,7 @@ class HTTP::Client
         body: object
       )
     else
-      raise "request not mocked: GET #{url}"
+      HTTP::Client::Response.new(404)
     end
   end
 

@@ -4,7 +4,7 @@
 It is intended for individual users, not farms of users, although
 support for additional users will be added in the future. It is
 designed to have few runtime dependencies -- for example, it uses
-SQLite As its database, instead of PostgreSQL + Redis + etc. It is
+SQLite as its database, instead of PostgreSQL + Redis + etc. It is
 licensed under the AGPLv3.
 
 Ktistec powers [Epiktistes](https://epiktistes.com/), my low-volume

@@ -68,3 +68,5 @@ end
 
 Ktistec.host = "https://test.test"
 Ktistec.site = "Test"
+
+Log.setup_from_env

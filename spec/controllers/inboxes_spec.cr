@@ -909,6 +909,25 @@ Spectator.describe RelationshipsController do
             expect(response.status_code).to eq(200)
           end
         end
+
+        context "signature is not valid but the remote object no longer exists" do
+          let(headers) { Ktistec::Signature.sign(other, "", "{}", "") }
+
+          it "checks for the existence of the object" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)
+            expect(HTTP::Client.requests).to have("GET #{note.iri}")
+          end
+
+          it "marks the object as deleted" do
+            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)}.
+              to change{DeletedObject.find(note.id).deleted_at}
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)
+            expect(response.status_code).to eq(200)
+          end
+        end
       end
 
       context "an actor" do
@@ -951,6 +970,25 @@ Spectator.describe RelationshipsController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "signature is not valid but the remote actor no longer exists" do
+          let(headers) { Ktistec::Signature.sign(other, "", "{}", "") }
+
+          it "checks for the existence of the actor" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(HTTP::Client.requests).to have("GET #{other.iri}")
+          end
+
+          it "marks the actor as deleted" do
+            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
+              to change{DeletedActor.find(other.id).deleted_at}
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
         end
       end
     end

@@ -74,8 +74,26 @@ class RelationshipsController
     # 3
 
     unless verified
-      if activity.iri.presence && (activity = ActivityPub::Activity.dereference?(activity.iri))
+      if activity.iri.presence && (temporary = ActivityPub::Activity.dereference?(activity.iri))
+        activity = temporary
         verified = true
+      end
+    end
+
+    # mastodon issues identifiers for delete activities that cannot be
+    # dereferenced (they are the identifier of the object or actor
+    # plus a URL fragment, but the object or actor has been deleted).
+    # so as a last resort, when dealing with a delete activity that
+    # can't otherwise be verified, check if the deleted object or
+    # actor exists, and if it does not (because it has been deleted),
+    # consider the activity valid.
+
+    unless verified
+      if activity.is_a?(ActivityPub::Activity::Delete) && (object_iri = activity.object_iri)
+        response = HTTP::Client.get(object_iri)
+        if response.status_code.in?([404, 410])
+          verified = true
+        end
       end
     end
 

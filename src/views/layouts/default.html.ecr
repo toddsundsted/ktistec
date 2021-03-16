@@ -11,25 +11,25 @@
         <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
         <link rel="manifest" href="/site.webmanifest">
         <title><%= Ktistec.site? || "Ktistec" %><%= (title = yield_content("title")) && " | #{title}" %></title>
-        <script src="/jquery.min.js"></script>
-        <link rel="stylesheet" href="/semantic/semantic.min.css">
-        <script src="/semantic/semantic.min.js"></script>
-        <link rel="stylesheet" href="/trix/trix.css">
-        <script src="/trix/trix.js"></script>
-        <link rel="stylesheet" href="/lightgallery/css/lightgallery.min.css">
-        <script src="/lightgallery/js/lightgallery.min.js"></script>
-        <link rel="stylesheet" href="/filepond/filepond.min.css">
-        <link rel="stylesheet" href="/filepond/filepond-plugin-image-preview.min.css">
-        <script src="/filepond/filepond.min.js"></script>
-        <script src="/filepond/filepond-plugin-file-validate-type.min.js"></script>
-        <script src="/filepond/filepond-plugin-image-resize.min.js"></script>
-        <script src="/filepond/filepond-plugin-image-transform.min.js"></script>
-        <script src="/filepond/filepond-plugin-image-preview.min.js"></script>
-        <script src="/turbolinks/turbolinks.min.js"></script>
+        <script
+            src="https://code.jquery.com/jquery-3.4.1.min.js"
+            integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+            crossorigin="anonymous"
+        ></script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"
+            integrity="sha512-dqw6X88iGgZlTsONxZK9ePmJEFrmHwpuMrsUChjAw1mRUhUITE5QU9pkcSox+ynfLhL15Sv2al5A0LVyDCmtUw=="
+            crossorigin="anonymous"
+        ></script>
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css"
+            integrity="sha512-8bHTC73gkZ7rZ7vpqUQThUDhqcNFyYi2xgDgPDHc+GXVGHXq+xPjynxIopALmOPqzo9JZj0k6OqqewdGO3EsrQ=="
+            crossorigin="anonymous"
+        />
         <style><%= render "src/views/pages/ktistec.css.ecr" %></style>
         <script><%= render "src/views/pages/ktistec.js.ecr" %></script>
-        <link rel="stylesheet" href="/ktistec.css">
-        <script src="/ktistec.js"></script>
+        <script src="/dist/ktistec.js"></script>
         <%= yield_content("head") %>
     </head>
     <body>

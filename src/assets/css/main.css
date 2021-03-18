@@ -12,6 +12,17 @@ body { display: flex; flex-direction: column; }
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 
 /** timeline **/
+/* threaded posts */
+.threaded.depth-1 { margin-left: 1rem !important; width: calc(100% - 1rem) !important; }
+.threaded.depth-2 { margin-left: 2rem !important; width: calc(100% - 2rem) !important; }
+.threaded.depth-3 { margin-left: 3rem !important; width: calc(100% - 3rem) !important; }
+.threaded.depth-4 { margin-left: 4rem !important; width: calc(100% - 4rem) !important; }
+.threaded.depth-5 { margin-left: 5rem !important; width: calc(100% - 5rem) !important; }
+.threaded.depth-6 { margin-left: 6rem !important; width: calc(100% - 6rem) !important; }
+.threaded.depth-7 { margin-left: 7rem !important; width: calc(100% - 7rem) !important; }
+.threaded.depth-8 { margin-left: 8rem !important; width: calc(100% - 8rem) !important; }
+.threaded.depth-9 { margin-left: 9rem !important; width: calc(100% - 9rem) !important; }
+
 /* overlapping profile icons */
 .ui.feed > .event > .label img + img { display: block; position: relative; margin: -1.85rem 0 0 0.95rem; width: 75%; }
 .ui.feed > .event > .label img + i { display: block; position: relative; margin: -2.15rem 0 0 0.95rem; width: 75%; }

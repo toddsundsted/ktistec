@@ -1,2 +1,2 @@
-import "./css/main.css"
+import "./css/main.less"
 import "./js/main.js"

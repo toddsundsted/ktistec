@@ -16,8 +16,9 @@ body { display: flex; flex-direction: column; }
 .ui.feed {
     > .event {
         > .label {
+            img { width: 2.5em; height: 2.5em; object-fit: cover; }
             /* overlapping profile icons */
-            .front { display: block; position: relative; width: 75%; }
+            .front { display: block; position: relative; width: 1.875em; height: 1.875em; }
             img + img { .front(); margin: -1.85rem 0 0 0.95rem; }
             img + i { .front(); margin: -2.15rem 0 0 0.95rem; }
             i + img { .front(); margin: -1.05rem 0 0 0.95rem; }

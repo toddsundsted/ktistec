@@ -1,5 +1,5 @@
 - actor = env.account.actor
-form.ui.form id="object-#{object.id}" method="POST"
+form.ui.form id="object-#{object.id}" data-controller="has-content multi-action" data-action="submit->multi-action#squelch" method="POST"
   input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
   input type="hidden" name="type" value="Publish"
   input type="hidden" name="object" value=object.iri
@@ -7,9 +7,9 @@ form.ui.form id="object-#{object.id}" method="POST"
   .field
     - content = object.source.try(&.content) || object.content || ""
     input#input-trix-editor type="hidden" name="content" value=content
-    trix-editor input="input-trix-editor"
+    trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-change@window->trix#change input->has-content#change" data-has-content-target="input" input="input-trix-editor"
   .ui.buttons
-    input.ui.disabled.primary.button type="submit" value="Post Note" action=outbox_path(actor)
-    input.ui.disabled.button type="submit" value="Save Draft" action=object_path(object)
+    input.ui.disabled.primary.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Post Note" action=outbox_path(actor)
+    input.ui.disabled.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Save Draft" action=object_path(object)
   a.ui.teal.right.floated.button href=actor_relationships_path(actor, "drafts")
     | Back to Drafts

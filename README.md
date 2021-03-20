@@ -8,7 +8,8 @@ SQLite as its database, instead of PostgreSQL + Redis + etc. It is
 licensed under the AGPLv3.
 
 Ktistec powers [Epiktistes](https://epiktistes.com/), my low-volume
-home in the Fediverse.
+home in the Fediverse. If you want to talk to me, I'm
+[@toddsundsted@epiktistes.com](https://epiktistes.com/actors/toddsundsted).
 
 ## Features
 

@@ -69,14 +69,19 @@ by (and content is addressed to) a hostname and a username.
 
 ## Installation
 
-At this point, leading up to Ktistec's first release, you must build
-the server from source code. You will need a recent release of the
-[Crystal programming language](https://crystal-lang.org/).
+You must build Ktistec from its source code. You will need a recent
+release of the [Crystal programming language](https://crystal-lang.org/).
+
+If you intend to do *development*, check out the **main** branch. In
+addition to Crystal, you'll also need Webpack to build the JavaScript
+and CSS assets from source.
+
+If you just want to try Ktistec out, check out the **dist** branch.
 
 Since the project is still in development, I don't bother with a
 separate build step. I just run the server:
 
-`$ LOG_LEVEL=DEBUG crystal run src/ktistec/server.cr`
+`$ LOG_LEVEL=INFO crystal run src/ktistec/server.cr`
 
 ## Usage
 

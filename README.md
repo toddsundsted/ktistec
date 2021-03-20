@@ -1,4 +1,15 @@
 # ![Mint](public/logo.png)
+  - [Features](#features)
+    - [Posting text and images](#posting-text-and-images)
+    - [Drafts](#drafts)
+    - [Threaded replies](#threaded-replies)
+    - [@-mention and #-hashtag autocomplete](#-mention-and--hashtag-autocomplete)
+    - [Followers/following](#followersfollowing)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Contributors](#contributors)
+  - [Copyright and License](#copyright-and-license)
 
 **Ktistec** is an ActivityPub (https://www.w3.org/TR/activitypub/) server.
 It is intended for individual users, not farms of users, although

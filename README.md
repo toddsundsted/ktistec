@@ -22,12 +22,12 @@ Text formatting options include *bold*, *italic*, *strikethrough*,
 *blockquotes* with nested indentation, and both *bullet* and *numeric*
 lists.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/tszn70.png" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/tszn70.png" width=460>
 
 Ktistec supports inline placement of images, with ActivityPub image
 attachments used for compatibility with non-Ktistec servers.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/aecz36.png" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/aecz36.png" width=460>
 
 ### Drafts
 
@@ -35,14 +35,14 @@ Meaningful writing is an iterative process so Ktistec supports draft
 posts. Draft posts aren't visible in your timeline until you publish
 them.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/683hld.png" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/683hld.png" width=460>
 
 ### Threaded replies
 
 Threaded replies make it easier to follow discussions with lots of
 posts.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/eaxx1q.png" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/eaxx1q.png" width=460>
 
 ### @-mention and #-hashtag autocomplete
 
@@ -50,7 +50,7 @@ Ktistec automatically converts @-mentions and #-hashtags into links,
 and to encourage hands-on-the-keyboard composition, Ktistec supports
 autocompletion.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/22aee8.gif" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/22aee8.gif" width=460>
 
 ### Followers/following
 
@@ -59,7 +59,7 @@ users on other servers from your timeline or by searching for them by
 name. Ktistec is also compatible with the "remote follow" protocol
 used by Mastodon and others.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/88hvqq.png" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/88hvqq.png" width=460>
 
 ## Prerequisites
 
@@ -100,7 +100,7 @@ send posts and other content to me there.
 
 Give the server a *site name*, too.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/kl3yf6.png" width=640>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/kl3yf6.png" width=640>
 
 After you name the server, you create the primary user. Ktistec
 currently supports only one user. This is intentional -- one of
@@ -114,11 +114,11 @@ symbols, for the password.
 
 *Display name* and *summary* are optional.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/mq4ntx.png" width=640>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/mq4ntx.png" width=640>
 
 Once these steps are done, you're running!
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/o0ton2.png" width=640>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/o0ton2.png" width=640>
 
 ## Contributors
 

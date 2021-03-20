@@ -1,9 +1,12 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/assets/src.js',
+  entry: {
+    site: './src/assets/site.js',
+    settings: './src/assets/settings.js',
+  },
   output: {
-    filename: 'ktistec.js',
+    filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'public', 'dist'),
   },
   module: {

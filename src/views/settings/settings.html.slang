@@ -1,3 +1,5 @@
+- content_for "head" do
+  script src="/dist/settings.bundle.js"
 == render "src/views/partials/actor-large.html.slang"
 h1 Settings
 form.ui.form method="POST" action="/settings"

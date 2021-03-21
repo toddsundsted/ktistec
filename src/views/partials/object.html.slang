@@ -50,12 +50,7 @@
       a href=replies_path(_object)
         button.ui.mini.iconic.button
           i.reply.icon
-          - if c == 0
-            | Reply
-          - elsif c == 1
-            | 1 Reply
-          - else
-            | #{c} Replies
+          = pluralize(c, "Reply")
       - if (c = _object.likes_count) > 0 && (to_undo = __account.actor.find_like_in_outbox(_object))
         form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
@@ -63,10 +58,7 @@
           input type="hidden" name="type" value="Undo"
           button.ui.mini.blue.iconic.button type="submit"
             i.star.icon
-            - if c == 1
-              | 1 Like
-            - else
-              | #{c} Likes
+            = pluralize(c, "Like")
       - else
         form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
@@ -74,12 +66,7 @@
           input type="hidden" name="type" value="Like"
           button.ui.mini.iconic.button type="submit"
             i.star.icon
-            - if c == 0
-              | Like
-            - elsif c == 1
-              | 1 Like
-            - else
-              | #{c} Likes
+            = pluralize(c, "Like")
       - if (c = _object.announces_count) > 0 && (to_undo = __account.actor.find_announce_in_outbox(_object))
         form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
@@ -87,10 +74,7 @@
           input type="hidden" name="type" value="Undo"
           button.ui.mini.blue.iconic.button type="submit"
             i.share.icon
-            - if c == 1
-              | 1 Share
-            - else
-              | #{c} Shares
+            = pluralize(c, "Share")
       - else
         form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
@@ -98,12 +82,7 @@
           input type="hidden" name="type" value="Announce"
           button.ui.mini.iconic.button type="submit"
             i.share.icon
-            - if c == 0
-              | Share
-            - elsif c == 1
-              | 1 Share
-            - else
-              | #{c} Shares
+            = pluralize(c, "Share")
       - if _author == __account.actor
         form.ui.form method="POST" action=outbox_path(__account)
           input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
@@ -116,8 +95,8 @@
       - if (c = _object.likes_count) > 0
         button.ui.mini.iconic.button
           i.star.icon
-          = c > 1 ? "#{c} Likes" : "1 Like"
+          = pluralize(c, "Like")
       - if (c = _object.announces_count) > 0
         button.ui.mini.iconic.button
           i.share.icon
-          = c > 1 ? "#{c} Shares" : "1 Share"
+          = pluralize(c, "Share")

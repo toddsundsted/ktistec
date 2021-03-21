@@ -27,6 +27,7 @@ class FooBarController
     "/foo/bar/created",
     "/foo/bar/redirect",
     "/foo/bar/sanitize",
+    "/foo/bar/pluralize",
     "/foo/bar/comma",
     "/foo/bar/id",
     "/foo/bar/ok"
@@ -156,6 +157,12 @@ class FooBarController
 
   get "/foo/bar/sanitize" do |env|
     s "<body>Foo Bar</body>"
+  end
+
+  get "/foo/bar/pluralize" do |env|
+    count = env.params.query["count"].to_i
+    noun = env.params.query["noun"]
+    pluralize(count, noun)
   end
 
   get "/foo/bar/comma" do |env|
@@ -448,6 +455,23 @@ Spectator.describe Ktistec::Controller do
     it "sanitizes HTML" do
       get "/foo/bar/sanitize"
       expect(response.body).to eq("Foo Bar")
+    end
+  end
+
+  describe "/foo/bar/pluralize" do
+    it "pluralizes the noun" do
+      get "/foo/bar/pluralize?count=0&noun=fox"
+      expect(response.body).to eq("fox")
+    end
+
+    it "pluralizes the noun" do
+      get "/foo/bar/pluralize?count=1&noun=fox"
+      expect(response.body).to eq("1 fox")
+    end
+
+    it "pluralizes the noun" do
+      get "/foo/bar/pluralize?count=2&noun=fox"
+      expect(response.body).to eq("2 foxes")
     end
   end
 

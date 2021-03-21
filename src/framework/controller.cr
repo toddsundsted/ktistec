@@ -290,6 +290,22 @@ module Ktistec
       Ktistec::Util.sanitize({{str}})
     end
 
+    # Pluralizes the noun.
+    #
+    # For use in views:
+    #     <%= pluralize(1, "fox") %>
+    #
+    macro pluralize(count, noun)
+      case {{count}}
+      when 0
+        {{noun}}
+      when 1
+        "1 #{{{noun}}}"
+      else
+        "#{{{count}}} #{Ktistec::Util.pluralize({{noun}})}"
+      end
+    end
+
     # Emits a comma when one would be necessary when iterating through
     # a collection.
     #

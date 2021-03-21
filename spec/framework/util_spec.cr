@@ -59,6 +59,26 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("&lt;foo&gt;")
     end
   end
+
+  describe "pluralize" do
+    sample ["fox", "fish", "dress", "bus", "inch", "fez"] do |noun|
+      it "pluralizes the noun" do
+        expect(described_class.pluralize(noun)).to eq("#{noun}es")
+      end
+    end
+
+    it "pluralizes the noun" do
+      expect(described_class.pluralize("lady")).to eq("ladies")
+    end
+
+    it "pluralizes the noun" do
+      expect(described_class.pluralize("boy")).to eq("boys")
+    end
+
+    it "pluralizes the noun" do
+      expect(described_class.pluralize("dog")).to eq("dogs")
+    end
+  end
 end
 
 Spectator.describe Ktistec::Util::PaginatedArray do

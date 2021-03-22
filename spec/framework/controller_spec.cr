@@ -98,9 +98,15 @@ class FooBarController
   end
 
   get "/foo/bar/helpers/tag" do |env|
-    form = tag :form, id: 1, class: "basic" do |html|
+    form1 = tag :form, id: 1, class: "basic" do |html|
       html << tag :input, type: "hidden", value: "secret"
       html << tag :input, type: "submit"
+    end
+    form2 = tag :form, id: 1, class: "basic" do
+      String.build do |io|
+        io << %q|<input type="hidden" value="secret">|
+        io << %q|<input type="submit">|
+      end
     end
     <<-HTML
     <div id="1">#{tag div}</div>
@@ -113,7 +119,8 @@ class FooBarController
     <div id="4">#{tag div, tag(span, id: 5, class: "quux"), style: "foobar"}</div>
     <div id="5.1">#{tag div do |h| h << tag span end}</div>
     <div id="5.2">#{tag div do |h| h << tag span, "foobar" end}</div>
-    <div id="6">#{form}</div>
+    <div id="6.1">#{form1}</div>
+    <div id="6.2">#{form2}</div>
     <div id="7">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_class: "foobar", button_class: "barfoo"}</div>
     <div id="8">#{activity_button "outbox url", "object iri", "FooBar" { |html| html << tag div, "Foo Bar" } }</div>
     HTML
@@ -324,7 +331,12 @@ Spectator.describe Ktistec::Controller do
 
     it "renders complex form" do
       get "/foo/bar/helpers/tag"
-      expect(tag(6)).to eq(%Q|<form id="1" class="basic"><input type="hidden" value="secret"><input type="submit"></form>|)
+      expect(tag(6.1)).to eq(%Q|<form id="1" class="basic"><input type="hidden" value="secret"><input type="submit"></form>|)
+    end
+
+    it "renders complex form" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(6.2)).to eq(%Q|<form id="1" class="basic"><input type="hidden" value="secret"><input type="submit"></form>|)
     end
 
     it "renders a submit button" do

@@ -149,8 +149,12 @@ module Ktistec
       {% end %}
       {% if block %}
         begin
-          {{*block.args}} = {{_io}}
-          {{block.body}}
+          {% if block.args.size < 1 %}
+            {{block.body}}.to_s({{_io}})
+          {% else %}
+            {{block.args[0]}} = {{_io}}
+            {{block.body}}
+          {% end %}
         end
       {% end %}
       {{_io}} << "</{{_name.id}}>"

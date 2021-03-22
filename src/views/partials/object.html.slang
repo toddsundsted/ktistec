@@ -52,45 +52,25 @@
           i.reply.icon
           = pluralize(c, "Reply")
       - if (c = _object.likes_count) > 0 && (to_undo = __account.actor.find_like_in_outbox(_object))
-        form.ui.form method="POST" action=outbox_path(__account)
-          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-          input type="hidden" name="object" value=to_undo.iri
-          input type="hidden" name="type" value="Undo"
-          button.ui.mini.blue.iconic.button type="submit"
-            i.star.icon
-            = pluralize(c, "Like")
+        == activity_button(outbox_path(__account), to_undo.iri, "Undo", button_class: "mini blue iconic") do
+          i.star.icon
+          = pluralize(c, "Like")
       - else
-        form.ui.form method="POST" action=outbox_path(__account)
-          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-          input type="hidden" name="object" value=_object.iri
-          input type="hidden" name="type" value="Like"
-          button.ui.mini.iconic.button type="submit"
-            i.star.icon
-            = pluralize(c, "Like")
+        == activity_button(outbox_path(__account), _object.iri, "Like", button_class: "mini iconic") do
+          i.star.icon
+          = pluralize(c, "Like")
       - if (c = _object.announces_count) > 0 && (to_undo = __account.actor.find_announce_in_outbox(_object))
-        form.ui.form method="POST" action=outbox_path(__account)
-          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-          input type="hidden" name="object" value=to_undo.iri
-          input type="hidden" name="type" value="Undo"
-          button.ui.mini.blue.iconic.button type="submit"
-            i.share.icon
-            = pluralize(c, "Share")
+        == activity_button(outbox_path(__account), to_undo.iri, "Undo", button_class: "mini blue iconic") do
+          i.share.icon
+          = pluralize(c, "Share")
       - else
-        form.ui.form method="POST" action=outbox_path(__account)
-          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-          input type="hidden" name="object" value=_object.iri
-          input type="hidden" name="type" value="Announce"
-          button.ui.mini.iconic.button type="submit"
-            i.share.icon
-            = pluralize(c, "Share")
+        == activity_button(outbox_path(__account), _object.iri, "Announce", button_class: "mini iconic") do
+          i.share.icon
+          = pluralize(c, "Share")
       - if _author == __account.actor
-        form.ui.form method="POST" action=outbox_path(__account)
-          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-          input type="hidden" name="object" value=_object.iri
-          input type="hidden" name="type" value="Delete"
-          button.ui.mini.dangerous.iconic.button type="submit" data-modal="delete"
-            i.trash.icon
-            | Delete
+        == activity_button(outbox_path(__account), _object.iri, "Delete", button_class: "mini dangerous iconic", button_attrs: {"data-modal": "delete"}) do
+          i.trash.icon
+          | Delete
     - else
       - if (c = _object.likes_count) > 0
         button.ui.mini.iconic.button

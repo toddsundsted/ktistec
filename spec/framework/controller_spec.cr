@@ -122,7 +122,8 @@ class FooBarController
     <div id="6.1">#{form1}</div>
     <div id="6.2">#{form2}</div>
     <div id="7">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_class: "foobar", button_class: "barfoo"}</div>
-    <div id="8">#{activity_button "outbox url", "object iri", "FooBar" { |html| html << tag div, "Foo Bar" } }</div>
+    <div id="8">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_attrs: {title: "the title"}, button_attrs: {title: "the title"}}</div>
+    <div id="9">#{activity_button "outbox url", "object iri", "FooBar" { |html| html << tag div, "Foo Bar" } }</div>
     HTML
   end
 
@@ -374,9 +375,19 @@ Spectator.describe Ktistec::Controller do
       expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/@class)")).to eq("ui form foobar")
     end
 
+    it "renders submit button with attributes" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form/button[@type='submit']/@title)")).to eq("the title")
+    end
+
+    it "renders form with attributes" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form/@title)")).to eq("the title")
+    end
+
     it "renders a form with nested content" do
       get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form//div/text())")).to eq("Foo Bar")
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='9']/form//div/text())")).to eq("Foo Bar")
     end
   end
 

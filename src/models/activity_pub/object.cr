@@ -1,10 +1,11 @@
 require "json"
 
+require "./actor"
+require "../activity_pub"
+require "../relationship/content/approved"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
-require "../activity_pub"
-require "../activity_pub/actor"
 require "../../utils/html"
 
 module ActivityPub
@@ -331,6 +332,11 @@ module ActivityPub
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})
+    end
+
+    def approved_by?(approved_by)
+      from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
+      Relationship::Content::Approved.count(from_iri: from_iri, to_iri: iri) > 0
     end
 
     def tags

@@ -1,7 +1,6 @@
 require "../../../src/models/activity_pub/object"
 require "../../../src/models/activity_pub/activity/announce"
 require "../../../src/models/activity_pub/activity/like"
-require "../../../src/models/relationship/content/approved"
 
 require "../../spec_helper/model"
 
@@ -493,6 +492,33 @@ Spectator.describe ActivityPub::Object do
             expect(object5.ancestors(actor)).to eq([object5, subject])
           end
         end
+      end
+    end
+
+    describe "#approved_by?" do
+      subject do
+        described_class.new(
+          iri: "https://test.test/objects/#{random_string}"
+        )
+      end
+      let(actor) do
+        ActivityPub::Actor.new(
+          iri: "https://test.test/#{random_string}"
+        )
+      end
+      let!(approved) do
+        Relationship::Content::Approved.new(
+          actor: actor,
+          object: subject
+        ).save
+      end
+
+      it "returns true if approved by actor" do
+        expect(subject.approved_by?(actor.iri)).to be_true
+      end
+
+      it "returns false if not approved by actor" do
+        expect(subject.approved_by?("https://other/")).to be_false
       end
     end
 

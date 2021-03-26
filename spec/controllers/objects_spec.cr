@@ -55,6 +55,17 @@ Spectator.describe ObjectsController do
     ).save
   end
 
+  macro put_in_outbox(object)
+    Relationship::Content::Outbox.new(
+      from_iri: actor.iri,
+      to_iri: ActivityPub::Activity.new(
+        iri: "https://test.test/activities/#{random_string}",
+        actor_iri: actor.iri,
+        object_iri: {{object}}.iri
+      ).save.iri
+    ).save
+  end
+
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
   FORM_DATA = HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"}
@@ -567,6 +578,144 @@ Spectator.describe ObjectsController do
 
       it "returns 404 if object does not exist" do
         get "/remote/objects/0/replies"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/:id/approve" do
+    it "returns 401" do
+      post "/remote/objects/0/approve"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      before_each { actor.unapprove(remote) }
+
+      it "returns 404" do
+        post "/remote/objects/#{remote.id}/approve"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "and it's in the actor's inbox" do
+        before_each { put_in_inbox(remote) }
+
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/approve"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "approves the object" do
+          expect{post "/remote/objects/#{remote.id}/approve"}.
+            to change{remote.approved_by?(actor)}
+        end
+
+        context "but it's already approved" do
+          before_each { actor.approve(remote) }
+
+          it "returns 400" do
+            post "/remote/objects/#{remote.id}/approve"
+            expect(response.status_code).to eq(400)
+          end
+        end
+      end
+
+      context "and it's in the actor's outbox" do
+        before_each { put_in_outbox(remote) }
+
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/approve"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "approves the object" do
+          expect{post "/remote/objects/#{remote.id}/approve"}.
+            to change{remote.approved_by?(actor)}
+        end
+
+        context "but it's already approved" do
+          before_each { actor.approve(remote) }
+
+          it "returns 400" do
+            post "/remote/objects/#{remote.id}/approve"
+            expect(response.status_code).to eq(400)
+          end
+        end
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/0/approve"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/:id/unapprove" do
+    it "returns 401" do
+      post "/remote/objects/0/unapprove"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      before_each { actor.approve(remote) }
+
+      it "returns 404" do
+        post "/remote/objects/#{remote.id}/unapprove"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "and it's in the actor's inbox" do
+        before_each { put_in_inbox(remote) }
+
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/unapprove"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "unapproves the object" do
+          expect{post "/remote/objects/#{remote.id}/unapprove"}.
+            to change{remote.approved_by?(actor)}
+        end
+
+        context "but it's already unapproved" do
+          before_each { actor.unapprove(remote) }
+
+          it "returns 400" do
+            post "/remote/objects/#{remote.id}/unapprove"
+            expect(response.status_code).to eq(400)
+          end
+        end
+      end
+
+      context "and it's in the actor's outbox" do
+        before_each { put_in_outbox(remote) }
+
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/unapprove"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "unapproves the object" do
+          expect{post "/remote/objects/#{remote.id}/unapprove"}.
+            to change{remote.approved_by?(actor)}
+        end
+
+        context "but it's already unapproved" do
+          before_each { actor.unapprove(remote) }
+
+          it "returns 400" do
+            post "/remote/objects/#{remote.id}/unapprove"
+            expect(response.status_code).to eq(400)
+          end
+        end
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/0/unapprove"
         expect(response.status_code).to eq(404)
       end
     end

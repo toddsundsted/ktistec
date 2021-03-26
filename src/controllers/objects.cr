@@ -108,6 +108,28 @@ class ObjectsController
     ok "objects/reply"
   end
 
+  post "/remote/objects/:id/approve" do |env|
+    actor = env.account.actor
+
+    not_found unless (object = ActivityPub::Object.find?(id_param))
+    not_found unless actor.in_inbox?(object) || actor.in_outbox?(object)
+
+    redirect back_path if actor.approve(object)
+
+    bad_request
+  end
+
+  post "/remote/objects/:id/unapprove" do |env|
+    actor = env.account.actor
+
+    not_found unless (object = ActivityPub::Object.find?(id_param))
+    not_found unless actor.in_inbox?(object) || actor.in_outbox?(object)
+
+    redirect back_path if actor.unapprove(object)
+
+    bad_request
+  end
+
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
     {

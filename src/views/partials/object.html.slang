@@ -10,6 +10,8 @@
     i.user.icon
 .content
   crystal:
+    _object.with_statistics!.with_replies_count!
+    __account = env.account?
     if (_attachments = _object.attachments) && (_content = _object.content)
       unless _content.empty?
         _urls = XML.parse_html(_content).xpath_nodes("//img/@src").map(&.text)
@@ -27,13 +29,6 @@
   .text class=(_attachment ? "extra" : nil)
     == s _object.content
   .meta
-    - if (__account = env.account?)
-      a href=remote_actor_path(_author) = _author.display_name
-      a href=remote_thread_path(_object) = _object.display_date
-    - else
-      a href=_author.display_link = _author.display_name
-      a href=_object.display_link = _object.display_date
-  .meta
     - if __account && _object.draft?
       a href=edit_object_path(_object)
         button.ui.mini.iconic.button
@@ -46,7 +41,7 @@
           i.trash.icon
           | Delete
     - elsif __account
-      - c = _object.with_statistics!.with_replies_count!.replies_count
+      - c = _object.replies_count
       a href=replies_path(_object)
         button.ui.mini.iconic.button
           i.reply.icon
@@ -80,3 +75,10 @@
         button.ui.mini.iconic.button
           i.share.icon
           = pluralize(c, "Share")
+  .meta
+    - if __account
+      a href=remote_actor_path(_author) = _author.display_name
+      a href=remote_thread_path(_object) = _object.display_date
+    - else
+      a href=_author.display_link = _author.display_name
+      a href=_object.display_link = _object.display_date

@@ -323,20 +323,65 @@ Spectator.describe "partials" do
       end
     end
 
-    context "if authenticated" do
-      let(account) { register }
+    let(account) { register }
 
+    let(_author) { account.actor }
+    let(_actor) { account.actor }
+    let!(_object) do
+      ActivityPub::Object.new(
+        iri: "https://test.test/objects/object"
+      ).save
+    end
+
+    context "if authenticated" do
       before_each { env.account = account }
 
-      context "and a draft" do
-        let(_author) { account.actor }
-        let(_actor) { account.actor }
-        let(_object) do
-          ActivityPub::Object.new(
-            iri: "https://test.test/objects/object"
-          ).save
-        end
+      context "for approvals" do
+        before_each { _object.assign(published: Time.utc).save }
 
+        context "on a page of threaded replies" do
+          let(env) do
+            HTTP::Server::Context.new(
+              HTTP::Request.new("GET", "/thread"),
+              HTTP::Server::Response.new(IO::Memory.new)
+            )
+          end
+
+          it "does not render a checkbox to approve" do
+            _actor.unapprove(_object)
+            expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
+          end
+
+          it "does not render a checkbox to unapprove" do
+            _actor.approve(_object)
+            expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
+          end
+
+          context "unless in reply to" do
+            let(reply) do
+              ActivityPub::Object.new(
+                iri: "https://test.test/objects/reply"
+              )
+            end
+
+            before_each do
+              _object.assign(in_reply_to: reply).save
+            end
+
+            it "renders a checkbox to approve" do
+              _actor.unapprove(_object)
+              expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']/@checked")).to be_empty
+            end
+
+            it "renders a checkbox to unapprove" do
+              _actor.approve(_object)
+              expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']/@checked")).not_to be_empty
+            end
+          end
+        end
+      end
+
+      context "and a draft" do
         pre_condition { expect(_object.draft?).to be_true }
 
         it "does not render a button to reply" do

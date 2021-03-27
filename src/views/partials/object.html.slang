@@ -62,6 +62,19 @@
         == activity_button(outbox_path(__account), _object.iri, "Announce", button_class: "mini iconic") do
           i.share.icon
           = pluralize(c, "Share")
+      - if env.request.path =~ /thread$/ && _object.in_reply_to_iri
+        - if _object.approved_by?(__account.actor)
+          form.ui.form method="POST" action=unapprove_path(_object)
+            input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+            .ui.mini.toggle.checkbox.checked
+              input type="checkbox" name="public" checked="checked"
+              label Public
+        - else
+          form.ui.form method="POST" action=approve_path(_object)
+            input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+            .ui.mini.toggle.checkbox
+              input type="checkbox" name="public"
+              label Public
       - if _author == __account.actor
         == activity_button(outbox_path(__account), _object.iri, "Delete", button_class: "mini dangerous iconic", button_attrs: {"data-modal": "delete"}) do
           i.trash.icon

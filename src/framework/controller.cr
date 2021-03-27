@@ -117,6 +117,14 @@ module Ktistec
       "/remote/objects/#{{{object}}.id}/replies"
     end
 
+    macro approve_path(object)
+      "/remote/objects/#{{{object}}.id}/approve"
+    end
+
+    macro unapprove_path(object)
+      "/remote/objects/#{{{object}}.id}/unapprove"
+    end
+
     macro _tag(_io, _name, *contents, **attributes, &block)
       {% if attributes.size > 0 %}
         {{_io}} << %q|<{{_name.id}}|

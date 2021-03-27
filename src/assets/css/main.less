@@ -119,6 +119,26 @@ body { display: flex; flex-direction: column; }
 .ui.dangerous.iconic.button { background-color: transparent !important; color: rgba(0,0,0,.6) !important; }
 .ui.dangerous.iconic.button:hover { color: #FF2733 !important; transition: 0.2s color ease; }
 
+/* mini toggle checkbox styling */
+.ui.mini.toggle.checkbox {
+    line-height: 12px;
+    min-height: 1rem;
+    input {
+        width: 2.05rem; height: 1.0rem;
+        &:checked {
+            ~ label {
+                color: #2185d0 !important;
+                &::after { left: 1.15rem; }
+            }
+        }
+    }
+    label {
+        font-size: 80%; font-weight: bold; color: rgba(0,0,0,.6); padding-left: 2.5rem; min-height: 1.0rem;
+        &::before { width: 2.0rem; height: 1.0rem; }
+        &::after { width: 1.0rem; height: 1.0rem; }
+    }
+}
+
 /** trix toolbar **/
 trix-toolbar {
     .trix-toolbar-container {

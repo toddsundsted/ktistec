@@ -1,6 +1,6 @@
 - _actor = activity.actor
 - _object = activity.object
-== render "src/views/partials/activities/label.html.slang"
+== render "src/views/partials/activity/label.html.slang"
 .content
   .summary
     ' You received a follow request from

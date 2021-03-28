@@ -1,8 +1,10 @@
 require "../framework/controller"
+require "../views/view_helper"
 require "../models/tag/hashtag"
 
 class TagsController
   include Ktistec::Controller
+  extend Ktistec::ViewHelper
 
   skip_auth ["/tags/:hashtag"], GET
 

@@ -1,8 +1,10 @@
 require "../framework/controller"
+require "../views/view_helper"
 require "../models/activity_pub/object/note"
 
 class ObjectsController
   include Ktistec::Controller
+  extend Ktistec::ViewHelper
 
   skip_auth ["/objects/:id"], GET
 

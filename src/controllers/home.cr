@@ -1,9 +1,11 @@
 require "../framework/controller"
+require "../views/view_helper"
 require "../models/activity_pub/activity/follow"
 require "../models/activity_pub/actor/person"
 
 class HomeController
   include Ktistec::Controller
+  extend Ktistec::ViewHelper
 
   skip_auth ["/"], GET, POST
 

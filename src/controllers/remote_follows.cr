@@ -1,10 +1,12 @@
 require "web_finger"
 
 require "../framework/controller"
+require "../views/view_helper"
 require "../models/activity_pub/activity/follow"
 
 class RemoteFollowsController
   include Ktistec::Controller
+  extend Ktistec::ViewHelper
 
   skip_auth ["/actors/:username/remote-follow"], GET, POST
 

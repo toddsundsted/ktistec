@@ -1,10 +1,12 @@
 require "web_finger"
 
 require "../framework/controller"
+require "../views/view_helper"
 require "../framework/open"
 
 class SearchesController
   include Ktistec::Controller
+  extend Ktistec::ViewHelper
   extend Ktistec::Open
 
   get "/search" do |env|

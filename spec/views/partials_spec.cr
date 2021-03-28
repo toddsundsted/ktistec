@@ -1,6 +1,7 @@
 require "../../src/models/activity_pub/activity/follow"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
+require "../../src/views/view_helper"
 
 require "../spec_helper/controller"
 
@@ -8,6 +9,7 @@ Spectator.describe "partials" do
   setup_spec
 
   include Ktistec::Controller
+  include Ktistec::ViewHelper
 
   describe "collection.json.ecr" do
     let(env) do
@@ -317,7 +319,7 @@ Spectator.describe "partials" do
 
     subject do
       begin
-        XML.parse_html(render "./src/views/partials/object.html.slang")
+        XML.parse_html(object_partial(env, object, actor, actor))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -325,9 +327,8 @@ Spectator.describe "partials" do
 
     let(account) { register }
 
-    let(_author) { account.actor }
-    let(_actor) { account.actor }
-    let!(_object) do
+    let(actor) { account.actor }
+    let!(object) do
       ActivityPub::Object.new(
         iri: "https://test.test/objects/object"
       ).save
@@ -337,7 +338,7 @@ Spectator.describe "partials" do
       before_each { env.account = account }
 
       context "for approvals" do
-        before_each { _object.assign(published: Time.utc).save }
+        before_each { object.assign(published: Time.utc).save }
 
         context "on a page of threaded replies" do
           let(env) do
@@ -348,12 +349,12 @@ Spectator.describe "partials" do
           end
 
           it "does not render a checkbox to approve" do
-            _actor.unapprove(_object)
+            actor.unapprove(object)
             expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
           end
 
           it "does not render a checkbox to unapprove" do
-            _actor.approve(_object)
+            actor.approve(object)
             expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
           end
 
@@ -365,16 +366,16 @@ Spectator.describe "partials" do
             end
 
             before_each do
-              _object.assign(in_reply_to: reply).save
+              object.assign(in_reply_to: reply).save
             end
 
             it "renders a checkbox to approve" do
-              _actor.unapprove(_object)
+              actor.unapprove(object)
               expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']/@checked")).to be_empty
             end
 
             it "renders a checkbox to unapprove" do
-              _actor.approve(_object)
+              actor.approve(object)
               expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']/@checked")).not_to be_empty
             end
           end
@@ -382,7 +383,7 @@ Spectator.describe "partials" do
       end
 
       context "and a draft" do
-        pre_condition { expect(_object.draft?).to be_true }
+        pre_condition { expect(object.draft?).to be_true }
 
         it "does not render a button to reply" do
           expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Reply")

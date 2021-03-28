@@ -1,4 +1,4 @@
-- _actor = activity.actor
-- _author = activity.object.attributed_to? || _actor
-- _object = activity.object
-== render "src/views/partials/object.html.slang"
+crystal:
+  actor = activity.actor
+  object = activity.object
+== object_partial(env, object, actor, object.attributed_to? || actor)

@@ -4,8 +4,5 @@ section.ui.feed
   - posts = actor.public_posts(*pagination_params(env))
   - posts.each do |post|
     article.event
-      - _actor = post.attributed_to
-      - _author = post.attributed_to
-      - _object = post
-      == render "src/views/partials/object.html.slang"
+      == object_partial(env, post)
 == paginate(posts, env)

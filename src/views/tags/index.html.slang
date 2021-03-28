@@ -1,8 +1,5 @@
 section.ui.feed
-  - collection.each do |_object|
-    crystal:
-      _actor = _object.attributed_to
-      _author = _object.attributed_to
-    article.event id=anchor(_object)
-      == render "src/views/partials/object.html.slang"
+  - collection.each do |object|
+    article.event id=anchor(object)
+      == object_partial(env, object)
 == paginate(collection, env)

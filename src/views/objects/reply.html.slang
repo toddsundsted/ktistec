@@ -1,10 +1,9 @@
 section.ui.feed
+  == object_partial(env, object)
+- if (actor = env.account?.try(&.actor))
   crystal:
     author = object.attributed_to
     ancestors = object.ancestors
-  article.event id=anchor(object)
-    == object_partial(env, object)
-- if (actor = env.account?.try(&.actor))
   form.ui.form data-controller="has-content multi-action" data-action="submit->multi-action#squelch" method="POST"
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Publish"

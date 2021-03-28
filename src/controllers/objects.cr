@@ -8,10 +8,6 @@ class ObjectsController
 
   skip_auth ["/objects/:id"], GET
 
-  macro depth(object)
-    "depth-#{Math.min({{object}}.depth, 9)}"
-  end
-
   macro iri_param
     "#{host}/objects/#{env.params.url["id"]}"
   end

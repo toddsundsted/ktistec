@@ -56,13 +56,13 @@
         - if object.approved_by?(account.actor)
           form.ui.form method="POST" action=unapprove_path(object)
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-            .ui.mini.toggle.checkbox.checked
+            .ui.mini.toggle.checkbox.checked data-action="click->partial-update#submit"
               input type="checkbox" name="public" checked="checked"
               label Public
         - else
           form.ui.form method="POST" action=approve_path(object)
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-            .ui.mini.toggle.checkbox
+            .ui.mini.toggle.checkbox data-action="click->partial-update#submit"
               input type="checkbox" name="public"
               label Public
       - if author == account.actor

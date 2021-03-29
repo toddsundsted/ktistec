@@ -52,7 +52,7 @@
         == activity_button(outbox_path(account), object.iri, "Announce", button_class: "mini iconic") do
           i.share.icon
           = pluralize(c, "Share")
-      - if env.request.path =~ /thread$/ && object.in_reply_to_iri
+      - if object.in_reply_to? && for_thread.try(&.first.attributed_to?) == account.actor
         - if object.approved_by?(account.actor)
           form.ui.form method="POST" action=unapprove_path(object)
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")

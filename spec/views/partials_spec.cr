@@ -317,9 +317,11 @@ Spectator.describe "partials" do
       )
     end
 
+    let(for_thread) { nil }
+
     subject do
       begin
-        XML.parse_html(object_partial(env, object, actor, actor))
+        XML.parse_html(object_partial(env, object, actor, actor, for_thread: for_thread))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -358,15 +360,18 @@ Spectator.describe "partials" do
             expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
           end
 
-          context "unless in reply to" do
-            let(reply) do
+          context "unless in reply to a post by the account's actor" do
+            let(original) do
               ActivityPub::Object.new(
-                iri: "https://test.test/objects/reply"
+                iri: "https://test.test/objects/reply",
+                attributed_to: account.actor
               )
             end
 
+            let(for_thread) { [original] }
+
             before_each do
-              object.assign(in_reply_to: reply).save
+              object.assign(in_reply_to: original).save
             end
 
             it "renders a checkbox to approve" do

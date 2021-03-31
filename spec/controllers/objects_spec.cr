@@ -624,6 +624,22 @@ Spectator.describe ObjectsController do
           end
         end
       end
+
+      context "with replies" do
+        before_each do
+          notvisible.assign(in_reply_to: visible).save
+        end
+
+        it "renders the collection" do
+          get "/remote/objects/#{visible.id}/thread", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
+        end
+
+        it "renders the collection" do
+          get "/remote/objects/#{visible.id}/thread", ACCEPT_JSON
+          expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri, notvisible.iri)
+        end
+      end
     end
   end
 

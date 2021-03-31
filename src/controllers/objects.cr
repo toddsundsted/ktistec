@@ -6,7 +6,7 @@ class ObjectsController
   include Ktistec::Controller
   extend Ktistec::ViewHelper
 
-  skip_auth ["/objects/:id"], GET
+  skip_auth ["/objects/:id", "/objects/:id/thread"], GET
 
   macro iri_param
     "#{host}/objects/#{env.params.url["id"]}"
@@ -48,6 +48,18 @@ class ObjectsController
     redirect edit_object_path if object.draft?
 
     ok "objects/object"
+  end
+
+  get "/objects/:id/thread" do |env|
+    unless (object = get_object(env, iri_param))
+      not_found
+    end
+
+    redirect edit_object_path if object.draft?
+
+    thread = object.thread(approved_by: object.attributed_to)
+
+    ok "objects/thread"
   end
 
   get "/objects/:id/edit" do |env|

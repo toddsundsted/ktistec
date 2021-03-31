@@ -223,6 +223,123 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "GET /objects/:id/thread" do
+    it "succeeds" do
+      get "/objects/#{visible.uid}/thread", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+    end
+
+    it "succeeds" do
+      get "/objects/#{visible.uid}/thread", ACCEPT_JSON
+      expect(response.status_code).to eq(200)
+    end
+
+    it "renders the collection" do
+      get "/objects/#{visible.uid}/thread", ACCEPT_HTML
+      expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{visible.id}")
+    end
+
+    it "renders the collection" do
+      get "/objects/#{visible.uid}/thread", ACCEPT_JSON
+      expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri)
+    end
+
+    it "returns 404 if object is a draft" do
+      get "/objects/#{draft.uid}/thread"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if object is not visible" do
+      get "/objects/#{notvisible.uid}/thread"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if object is remote" do
+      get "/objects/#{remote.uid}/thread"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if object does not exist" do
+      get "/objects/0/thread"
+      expect(response.status_code).to eq(404)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "redirects if draft" do
+        get "/objects/#{draft.uid}/thread"
+        expect(response.status_code).to eq(302)
+      end
+
+      context "but not the author" do
+        before_each { draft.assign(attributed_to: author).save }
+
+        it "returns 404" do
+          get "/objects/#{draft.uid}/thread"
+          expect(response.status_code).to eq(404)
+        end
+      end
+
+      context "and it's in the user's inbox" do
+        before_each do
+          [visible, notvisible, remote].each { |object| put_in_inbox(object) }
+        end
+
+        it "succeeds if local" do
+          [visible, notvisible].each do |object|
+            get "/objects/#{object.uid}/thread", ACCEPT_HTML
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        it "succeeds if local" do
+          [visible, notvisible].each do |object|
+            get "/objects/#{object.uid}/thread", ACCEPT_JSON
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        it "returns 404 if object is remote" do
+          get "/objects/#{remote.uid}/thread"
+          expect(response.status_code).to eq(404)
+        end
+      end
+    end
+
+    context "with replies" do
+      before_each do
+        notvisible.assign(in_reply_to: visible).save
+      end
+
+      it "renders the collection" do
+        get "/objects/#{visible.uid}/thread", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{visible.id}")
+      end
+
+      it "renders the collection" do
+        get "/objects/#{visible.uid}/thread", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri)
+      end
+
+      context "that are approved" do
+        before_each do
+          visible.attributed_to.approve(notvisible)
+        end
+
+        it "renders the collection" do
+          get "/objects/#{visible.uid}/thread", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
+        end
+
+        it "renders the collection" do
+          get "/objects/#{visible.uid}/thread", ACCEPT_JSON
+          expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri, notvisible.iri)
+        end
+      end
+    end
+  end
+
   describe "GET /objects/:id/edit" do
     it "returns 401 if not authorized" do
       get "/objects/0/edit"

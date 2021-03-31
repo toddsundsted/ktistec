@@ -140,37 +140,37 @@ Spectator.describe ObjectsController do
 
   describe "GET /objects/:id" do
     it "succeeds" do
-      get "/objects/#{visible.iri.split("/").last}", ACCEPT_HTML
+      get "/objects/#{visible.uid}", ACCEPT_HTML
       expect(response.status_code).to eq(200)
     end
 
     it "succeeds" do
-      get "/objects/#{visible.iri.split("/").last}", ACCEPT_JSON
+      get "/objects/#{visible.uid}", ACCEPT_JSON
       expect(response.status_code).to eq(200)
     end
 
     it "renders the object" do
-      get "/objects/#{visible.iri.split("/").last}", ACCEPT_HTML
+      get "/objects/#{visible.uid}", ACCEPT_HTML
       expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
     end
 
     it "renders the object" do
-      get "/objects/#{visible.iri.split("/").last}", ACCEPT_JSON
+      get "/objects/#{visible.uid}", ACCEPT_JSON
       expect(JSON.parse(response.body)["id"]).to eq(visible.iri)
     end
 
     it "returns 404 if object is a draft" do
-      get "/objects/#{draft.iri.split("/").last}"
+      get "/objects/#{draft.uid}"
       expect(response.status_code).to eq(404)
     end
 
     it "returns 404 if object is not visible" do
-      get "/objects/#{notvisible.iri.split("/").last}"
+      get "/objects/#{notvisible.uid}"
       expect(response.status_code).to eq(404)
     end
 
     it "returns 404 if object is remote" do
-      get "/objects/#{remote.iri.split("/").last}"
+      get "/objects/#{remote.uid}"
       expect(response.status_code).to eq(404)
     end
 
@@ -183,7 +183,7 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "redirects if draft" do
-        get "/objects/#{draft.iri.split("/").last}"
+        get "/objects/#{draft.uid}"
         expect(response.status_code).to eq(302)
       end
 
@@ -191,7 +191,7 @@ Spectator.describe ObjectsController do
         before_each { draft.assign(attributed_to: author).save }
 
         it "returns 404" do
-          get "/objects/#{draft.iri.split("/").last}"
+          get "/objects/#{draft.uid}"
           expect(response.status_code).to eq(404)
         end
       end
@@ -203,20 +203,20 @@ Spectator.describe ObjectsController do
 
         it "succeeds if local" do
           [visible, notvisible].each do |object|
-            get "/objects/#{object.iri.split("/").last}", ACCEPT_HTML
+            get "/objects/#{object.uid}", ACCEPT_HTML
             expect(response.status_code).to eq(200)
           end
         end
 
         it "succeeds if local" do
           [visible, notvisible].each do |object|
-            get "/objects/#{object.iri.split("/").last}", ACCEPT_JSON
+            get "/objects/#{object.uid}", ACCEPT_JSON
             expect(response.status_code).to eq(200)
           end
         end
 
         it "returns 404 if object is remote" do
-          get "/objects/#{remote.iri.split("/").last}"
+          get "/objects/#{remote.uid}"
           expect(response.status_code).to eq(404)
         end
       end
@@ -350,43 +350,43 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
+        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
         expect(response.status_code).to eq(200)
       end
 
       it "succeeds" do
-        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_JSON
+        get "/objects/#{draft.uid}/edit", ACCEPT_JSON
         expect(response.status_code).to eq(200)
       end
 
       it "renders a form with the object" do
-        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
+        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
       end
 
       it "renders a button that submits to the outbox path" do
-        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
+        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Post')]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
       end
 
       it "renders a button that submits to the object update path" do
-        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
+        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@action").first.text).to eq("/objects/#{draft.uid}")
       end
 
       it "renders an input with the draft content" do
-        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_HTML
+        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("this is a test")
       end
 
       it "renders the object" do
-        get "/objects/#{draft.iri.split("/").last}/edit", ACCEPT_JSON
+        get "/objects/#{draft.uid}/edit", ACCEPT_JSON
         expect(JSON.parse(response.body)["id"]).to eq(draft.iri)
       end
 
       it "returns 404 if not a draft" do
         [visible, notvisible, remote].each do |object|
-          get "/objects/#{object.iri.split("/").last}/edit"
+          get "/objects/#{object.uid}/edit"
           expect(response.status_code).to eq(404)
         end
       end
@@ -408,28 +408,28 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        post "/objects/#{draft.iri.split("/").last}", FORM_DATA, "content="
+        post "/objects/#{draft.uid}", FORM_DATA, "content="
         expect(response.status_code).to eq(302)
       end
 
       it "succeeds" do
-        post "/objects/#{draft.iri.split("/").last}", JSON_DATA, %Q|{"content":""}|
+        post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":""}|
         expect(response.status_code).to eq(302)
       end
 
       it "changes the content" do
-        expect{post "/objects/#{draft.iri.split("/").last}", FORM_DATA, "content=foo+bar"}.
+        expect{post "/objects/#{draft.uid}", FORM_DATA, "content=foo+bar"}.
           to change{ActivityPub::Object.find(draft.id).content}
       end
 
       it "changes the content" do
-        expect{post "/objects/#{draft.iri.split("/").last}", JSON_DATA, %Q|{"content":"foo bar"}|}.
+        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar"}|}.
           to change{ActivityPub::Object.find(draft.id).content}
       end
 
       it "returns 404 if not a draft" do
         [visible, notvisible, remote].each do |object|
-          post "/objects/#{object.iri.split("/").last}"
+          post "/objects/#{object.uid}"
           expect(response.status_code).to eq(404)
         end
       end
@@ -451,28 +451,28 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        delete "/objects/#{draft.iri.split("/").last}", FORM_DATA
+        delete "/objects/#{draft.uid}", FORM_DATA
         expect(response.status_code).to eq(302)
       end
 
       it "succeeds" do
-        delete "/objects/#{draft.iri.split("/").last}", JSON_DATA
+        delete "/objects/#{draft.uid}", JSON_DATA
         expect(response.status_code).to eq(302)
       end
 
       it "deletes the object" do
-        expect{delete "/objects/#{draft.iri.split("/").last}", FORM_DATA}.
+        expect{delete "/objects/#{draft.uid}", FORM_DATA}.
           to change{ActivityPub::Object.count(id: draft.id)}.by(-1)
       end
 
       it "deletes the object" do
-        expect{delete "/objects/#{draft.iri.split("/").last}", JSON_DATA}.
+        expect{delete "/objects/#{draft.uid}", JSON_DATA}.
           to change{ActivityPub::Object.count(id: draft.id)}.by(-1)
       end
 
       it "returns 404 if not a draft" do
         [visible, notvisible, remote].each do |object|
-          delete "/objects/#{object.iri.split("/").last}"
+          delete "/objects/#{object.uid}"
           expect(response.status_code).to eq(404)
         end
       end
@@ -483,7 +483,6 @@ Spectator.describe ObjectsController do
       end
     end
   end
-
 
   describe "GET /remote/objects/:id" do
     it "returns 401 if not authorized" do

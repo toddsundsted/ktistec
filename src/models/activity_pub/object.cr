@@ -248,50 +248,32 @@ module ActivityPub
       QUERY
     end
 
-    private def thread_query_subquery
-      query = <<-QUERY
-         SELECT a.id, a.object_iri, a.actor_iri, (a.type = "ActivityPub::Activity::Announce") AS announces, (a.type = "ActivityPub::Activity::Like") AS likes
-           FROM activities AS a
-      LEFT JOIN activities AS u
-             ON u.object_iri = a.iri
-            AND u.type = "ActivityPub::Activity::Undo"
-            AND u.actor_iri = a.actor_iri
-          WHERE u.iri IS NULL
-      QUERY
-    end
-
     def thread
       query = <<-QUERY
          #{thread_query_with_recursive}
-         SELECT #{Object.columns(prefix: "o")}, sum(c.announces), sum(c.likes), r.depth
+         SELECT #{Object.columns(prefix: "o")}, r.depth
            FROM objects AS o, replies_to AS r
-      LEFT JOIN (#{thread_query_subquery}) AS c
-             ON c.object_iri = o.iri
           WHERE o.iri IN (r.iri)
             AND o.deleted_at IS NULL
-          GROUP BY o.id
           ORDER BY r.position
       QUERY
-      Object.query_all(query, iri, additional_columns: {announces_count: Int64?, likes_count: Int64?, depth: Int32})
+      Object.query_all(query, iri, additional_columns: {depth: Int32})
     end
 
     def thread(approved_by)
       query = <<-QUERY
          #{thread_query_with_recursive}
-         SELECT #{Object.columns(prefix: "o")}, sum(c.announces), sum(c.likes), t.depth
+         SELECT #{Object.columns(prefix: "o")}, t.depth
            FROM objects AS o, replies_to AS t
       LEFT JOIN relationships AS r
              ON r.from_iri = ? AND r.to_iri = o.iri
-      LEFT JOIN (#{thread_query_subquery}) AS c
-             ON c.object_iri = o.iri
           WHERE o.iri IN (t.iri)
             AND ((o.in_reply_to_iri IS null) OR (r.type = "Relationship::Content::Approved"))
             AND o.deleted_at IS NULL
-          GROUP BY o.id
           ORDER BY t.position
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
-      Object.query_all(query, iri, from_iri, additional_columns: {announces_count: Int64?, likes_count: Int64?, depth: Int32})
+      Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})
     end
 
     private def ancestors_with_recursive

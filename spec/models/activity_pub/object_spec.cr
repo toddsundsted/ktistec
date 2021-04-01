@@ -402,16 +402,6 @@ Spectator.describe ActivityPub::Object do
         expect(object5.thread.map(&.depth)).to eq([0, 1, 2, 3, 1, 2])
       end
 
-      it "includes count of announcements" do
-        announce.save
-        expect(object5.thread.map(&.announces_count)).to eq([0, 0, 1, 0, 0, 0])
-      end
-
-      it "includes count of likes" do
-        like.save
-        expect(object5.thread.map(&.likes_count)).to eq([0, 0, 0, 0, 0, 1])
-      end
-
       context "given an actor" do
         let(actor) do
           ActivityPub::Actor.new(

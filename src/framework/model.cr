@@ -18,21 +18,6 @@ module Ktistec
     annotation Persistent
     end
 
-    # Model utilities.
-    #
-    module Utils
-      # Returns the table name, given a model.
-      #
-      def self.table_name(clazz)
-        (name = clazz.to_s.gsub("::", "").underscore) +
-          if name.ends_with?(/s|ss|sh|ch|x|z/)
-            "es"
-          else
-            "s"
-          end
-      end
-    end
-
     macro persistent_columns(prefix = nil)
       {
         {% prefix = prefix ? "#{prefix.id}." : "" %}
@@ -47,7 +32,7 @@ module Ktistec
       # Returns the table name.
       #
       def table_name
-        @@table_name ||= Utils.table_name(self)
+        @@table_name ||= Util.pluralize(self.to_s.gsub("::", "").underscore)
       end
 
       # Returns true if no instances exist.
@@ -327,7 +312,7 @@ module Ktistec
       # Returns the table name.
       #
       def table_name
-        @@table_name ||= Utils.table_name(self.class)
+        self.class.table_name
       end
 
       # Specifies a one-to-one association with another model.

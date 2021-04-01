@@ -117,6 +117,14 @@ module Ktistec
       "/remote/objects/#{{{object}}.id}/replies"
     end
 
+    macro approve_path(object)
+      "/remote/objects/#{{{object}}.id}/approve"
+    end
+
+    macro unapprove_path(object)
+      "/remote/objects/#{{{object}}.id}/unapprove"
+    end
+
     macro _tag(_io, _name, *contents, **attributes, &block)
       {% if attributes.size > 0 %}
         {{_io}} << %q|<{{_name.id}}|
@@ -149,8 +157,12 @@ module Ktistec
       {% end %}
       {% if block %}
         begin
-          {{*block.args}} = {{_io}}
-          {{block.body}}
+          {% if block.args.size < 1 %}
+            {{block.body}}.to_s({{_io}})
+          {% else %}
+            {{block.args[0]}} = {{_io}}
+            {{block.body}}
+          {% end %}
         end
       {% end %}
       {{_io}} << "</{{_name.id}}>"
@@ -172,7 +184,7 @@ module Ktistec
 
     # Posts an activity to an outbox.
     #
-    macro activity_button(arg1, arg2, arg3, type = nil, form_class = nil, button_class = nil, &block)
+    macro activity_button(arg1, arg2, arg3, type = nil, form_class = nil, button_class = nil, form_attrs = nil, button_attrs = nil, &block)
       {% if block %}
         {% outbox_url = arg1 ; object_iri = arg2 ; type = arg3 %}
       {% else %}
@@ -187,12 +199,22 @@ module Ktistec
         tag(:input, type: "hidden", name: "type", value: {{type || text}}),
         tag(:input, type: "hidden", name: "object", value: {{object_iri}}),
         {% if block %}
-          tag(:button, type: "submit", "class": {{button_class}}) {{block}},
+          tag(
+            :button, type: "submit", "class": {{button_class}} {% if button_attrs %} ,
+              {{**button_attrs}}
+            {% end %}
+          ) {{block}},
         {% else %}
-          tag(:button, {{text}}, type: "submit", "class": {{button_class}}),
+          tag(
+            :button, {{text}}, type: "submit", "class": {{button_class}} {% if button_attrs %} ,
+              {{**button_attrs}}
+            {% end %}
+          ),
         {% end %}
         method: "POST", action: {{outbox_url}},
-        "class": {{form_class}}
+        "class": {{form_class}} {% if form_attrs %} ,
+          {{**form_attrs}}
+        {% end %}
       )
     end
 
@@ -288,6 +310,22 @@ module Ktistec
     #
     macro s(str)
       Ktistec::Util.sanitize({{str}})
+    end
+
+    # Pluralizes the noun.
+    #
+    # For use in views:
+    #     <%= pluralize(1, "fox") %>
+    #
+    macro pluralize(count, noun)
+      case {{count}}
+      when 0
+        {{noun}}
+      when 1
+        "1 #{{{noun}}}"
+      else
+        "#{{{count}}} #{Ktistec::Util.pluralize({{noun}})}"
+      end
     end
 
     # Emits a comma when one would be necessary when iterating through

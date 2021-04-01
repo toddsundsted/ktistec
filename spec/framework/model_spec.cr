@@ -129,16 +129,6 @@ class QueryModel
   end
 end
 
-Spectator.describe Ktistec::Model::Utils do
-  describe ".table_name" do
-    it "returns the table name" do
-      expect(described_class.table_name(Time::Span)).to eq("time_spans")
-      expect(described_class.table_name(SemanticVersion)).to eq("semantic_versions")
-      expect(described_class.table_name(Process)).to eq("processes")
-    end
-  end
-end
-
 Spectator.describe Ktistec::Model do
   before_each do
     Ktistec.database.exec <<-SQL
@@ -165,6 +155,26 @@ Spectator.describe Ktistec::Model do
   after_each do
     Ktistec.database.exec "DROP TABLE foo_bar_models"
     Ktistec.database.exec "DROP TABLE not_nil_models"
+  end
+
+  describe ".table_name" do
+    it "returns the table name" do
+      expect(FooBarModel.table_name).to eq("foo_bar_models")
+    end
+
+    it "returns the table name" do
+      expect(DerivedModel.table_name).to eq("foo_bar_models")
+    end
+  end
+
+  describe "#table_name" do
+    it "returns the table name" do
+      expect(FooBarModel.new.table_name).to eq("foo_bar_models")
+    end
+
+    it "returns the table name" do
+      expect(DerivedModel.new.table_name).to eq("foo_bar_models")
+    end
   end
 
   describe ".query_and_paginate" do

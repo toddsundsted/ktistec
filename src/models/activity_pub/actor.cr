@@ -7,6 +7,7 @@ require "../../framework/ext/sqlite3"
 require "../../framework/model"
 require "../../framework/model/**"
 require "../activity_pub"
+require "../relationship/content/approved"
 require "../relationship/content/inbox"
 require "../relationship/content/outbox"
 require "../relationship/social/follow"
@@ -433,6 +434,20 @@ module ActivityPub
           LIMIT ?
       QUERY
       Object.query_and_paginate(query, iri, iri, page: page, size: size)
+    end
+
+    def approve(object)
+      to_iri = object.responds_to?(:iri) ? object.iri : object.to_s
+      unless Relationship::Content::Approved.count(from_iri: iri, to_iri: to_iri) > 0
+        Relationship::Content::Approved.new(from_iri: iri, to_iri: to_iri).save
+      end
+    end
+
+    def unapprove(object)
+      to_iri = object.responds_to?(:iri) ? object.iri : object.to_s
+      if (approved = Relationship::Content::Approved.find?(from_iri: iri, to_iri: to_iri))
+        approved.destroy
+      end
     end
 
     def to_json_ld(recursive = false)

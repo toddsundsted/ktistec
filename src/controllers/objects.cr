@@ -1,14 +1,12 @@
 require "../framework/controller"
+require "../views/view_helper"
 require "../models/activity_pub/object/note"
 
 class ObjectsController
   include Ktistec::Controller
+  extend Ktistec::ViewHelper
 
-  skip_auth ["/objects/:id"], GET
-
-  macro depth(object)
-    "depth-#{Math.min({{object}}.depth, 9)}"
-  end
+  skip_auth ["/objects/:id", "/objects/:id/thread"], GET
 
   macro iri_param
     "#{host}/objects/#{env.params.url["id"]}"
@@ -50,6 +48,18 @@ class ObjectsController
     redirect edit_object_path if object.draft?
 
     ok "objects/object"
+  end
+
+  get "/objects/:id/thread" do |env|
+    unless (object = get_object(env, iri_param))
+      not_found
+    end
+
+    redirect edit_object_path if object.draft?
+
+    thread = object.thread(approved_by: object.attributed_to)
+
+    ok "objects/thread"
   end
 
   get "/objects/:id/edit" do |env|
@@ -106,6 +116,28 @@ class ObjectsController
     end
 
     ok "objects/reply"
+  end
+
+  post "/remote/objects/:id/approve" do |env|
+    actor = env.account.actor
+
+    not_found unless (object = ActivityPub::Object.find?(id_param))
+    not_found unless actor.in_inbox?(object) || actor.in_outbox?(object)
+
+    redirect back_path if actor.approve(object)
+
+    bad_request
+  end
+
+  post "/remote/objects/:id/unapprove" do |env|
+    actor = env.account.actor
+
+    not_found unless (object = ActivityPub::Object.find?(id_param))
+    not_found unless actor.in_inbox?(object) || actor.in_outbox?(object)
+
+    redirect back_path if actor.unapprove(object)
+
+    bad_request
   end
 
   private def self.params(env)

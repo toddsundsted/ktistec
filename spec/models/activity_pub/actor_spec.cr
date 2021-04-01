@@ -823,6 +823,33 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  context "approvals" do
+    subject! do
+      described_class.new(
+        iri: "https://test.test/actors/actor"
+      ).save
+    end
+    let!(object) do
+      ActivityPub::Object.new(
+        iri: "https://remote/objects/object"
+      ).save
+    end
+
+    describe "#approve" do
+      it "approves the object" do
+        expect{subject.approve(object)}.to change{object.approved_by?(subject)}
+      end
+    end
+
+    describe "#unapprove" do
+      before_each { subject.approve(object) }
+
+      it "unapproves the object" do
+        expect{subject.unapprove(object)}.to change{object.approved_by?(subject)}
+      end
+    end
+  end
+
   describe "#account_uri" do
     it "returns the webfinger account uri" do
       expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar").account_uri).to eq("foobar@test.test")

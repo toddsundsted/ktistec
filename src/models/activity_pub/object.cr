@@ -1,10 +1,11 @@
 require "json"
 
+require "./actor"
+require "../activity_pub"
+require "../relationship/content/approved"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
-require "../activity_pub"
-require "../activity_pub/actor"
 require "../../utils/html"
 
 module ActivityPub
@@ -177,22 +178,46 @@ module ActivityPub
     @[Assignable]
     property replies_count : Int64 = 0
 
+    private def with_replies_count_query_with_recursive
+      <<-QUERY
+      WITH RECURSIVE
+       replies_to(iri) AS (
+         VALUES(?)
+            UNION
+           SELECT o.iri
+             FROM objects AS o, replies_to AS t
+            WHERE o.in_reply_to_iri = t.iri
+        )
+      QUERY
+    end
+
     def with_replies_count!
       query = <<-QUERY
-           WITH RECURSIVE
-            replies_to(iri) AS (
-               VALUES(?)
-                  UNION
-                 SELECT o.iri
-                   FROM objects AS o, replies_to AS r
-                  WHERE o.in_reply_to_iri = r.iri
-             )
-         SELECT count(o.iri) - 1
-           FROM objects AS o, replies_to AS r
-          WHERE o.iri IN (r.iri)
-           AND o.deleted_at IS NULL
+      #{with_replies_count_query_with_recursive}
+      SELECT count(o.iri) - 1
+        FROM objects AS o, replies_to AS r
+       WHERE o.iri IN (r.iri)
+         AND o.deleted_at IS NULL
       QUERY
       Ktistec.database.query_one(query, iri) do |rs|
+        rs.read(Int64?).try { |replies_count| self.replies_count = replies_count }
+      end
+      self
+    end
+
+    def with_replies_count!(approved_by)
+      query = <<-QUERY
+      #{with_replies_count_query_with_recursive}
+         SELECT count(o.iri) - 1
+           FROM objects AS o, replies_to AS t
+      LEFT JOIN relationships AS r
+             ON r.from_iri = ? AND r.to_iri = o.iri
+          WHERE o.iri IN (t.iri)
+            AND ((o.in_reply_to_iri IS null) OR (r.type = "Relationship::Content::Approved"))
+            AND o.deleted_at IS NULL
+      QUERY
+      from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
+      Ktistec.database.query_one(query, iri, from_iri) do |rs|
         rs.read(Int64?).try { |replies_count| self.replies_count = replies_count }
       end
       self
@@ -201,61 +226,117 @@ module ActivityPub
     @[Assignable]
     property depth : Int32 = 0
 
+    private def thread_query_with_recursive
+      query = <<-QUERY
+      WITH RECURSIVE
+       ancestors_of(iri, depth) AS (
+           VALUES(?, 0)
+            UNION
+           SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
+             FROM objects AS o, ancestors_of AS p
+            WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
+         ORDER BY depth DESC
+       ),
+       replies_to(iri, position, depth) AS (
+         SELECT * FROM (SELECT iri, "", 0 FROM ancestors_of ORDER BY depth DESC LIMIT 1)
+            UNION
+           SELECT o.iri, r.position || "." || o.id, r.depth + 1 AS depth
+             FROM objects AS o, replies_to AS r
+            WHERE o.in_reply_to_iri = r.iri
+         ORDER BY depth DESC
+        )
+      QUERY
+    end
+
+    private def thread_query_subquery
+      query = <<-QUERY
+         SELECT a.id, a.object_iri, a.actor_iri, (a.type = "ActivityPub::Activity::Announce") AS announces, (a.type = "ActivityPub::Activity::Like") AS likes
+           FROM activities AS a
+      LEFT JOIN activities AS u
+             ON u.object_iri = a.iri
+            AND u.type = "ActivityPub::Activity::Undo"
+            AND u.actor_iri = a.actor_iri
+          WHERE u.iri IS NULL
+      QUERY
+    end
+
     def thread
       query = <<-QUERY
-           WITH RECURSIVE
-            ancestors_of(iri, depth) AS (
-                 VALUES(?, 0)
-                  UNION
-                 SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
-                   FROM objects AS o, ancestors_of AS p
-                  WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
-               ORDER BY depth DESC
-            ),
-            replies_to(iri, position, depth) AS (
-               SELECT * FROM (SELECT iri, "", 0 FROM ancestors_of ORDER BY depth DESC LIMIT 1)
-                  UNION
-                 SELECT o.iri, r.position || "." || o.id, r.depth + 1 AS depth
-                   FROM objects AS o, replies_to AS r
-                  WHERE o.in_reply_to_iri = r.iri
-               ORDER BY depth DESC
-             )
+         #{thread_query_with_recursive}
          SELECT #{Object.columns(prefix: "o")}, sum(c.announces), sum(c.likes), r.depth
            FROM objects AS o, replies_to AS r
-      LEFT JOIN (   SELECT a.id, a.object_iri, a.actor_iri, (a.type = "ActivityPub::Activity::Announce") AS announces, (a.type = "ActivityPub::Activity::Like") AS likes
-                      FROM activities AS a
-                 LEFT JOIN activities AS u
-                        ON u.object_iri = a.iri
-                       AND u.type = "ActivityPub::Activity::Undo"
-                       AND u.actor_iri = a.actor_iri
-                     WHERE u.iri IS NULL
-                ) AS c
+      LEFT JOIN (#{thread_query_subquery}) AS c
              ON c.object_iri = o.iri
           WHERE o.iri IN (r.iri)
-           AND o.deleted_at IS NULL
-         GROUP BY o.id
-         ORDER BY r.position
+            AND o.deleted_at IS NULL
+          GROUP BY o.id
+          ORDER BY r.position
       QUERY
-      Object.query_all(query, self.iri, additional_columns: {announces_count: Int64?, likes_count: Int64?, depth: Int32})
+      Object.query_all(query, iri, additional_columns: {announces_count: Int64?, likes_count: Int64?, depth: Int32})
+    end
+
+    def thread(approved_by)
+      query = <<-QUERY
+         #{thread_query_with_recursive}
+         SELECT #{Object.columns(prefix: "o")}, sum(c.announces), sum(c.likes), t.depth
+           FROM objects AS o, replies_to AS t
+      LEFT JOIN relationships AS r
+             ON r.from_iri = ? AND r.to_iri = o.iri
+      LEFT JOIN (#{thread_query_subquery}) AS c
+             ON c.object_iri = o.iri
+          WHERE o.iri IN (t.iri)
+            AND ((o.in_reply_to_iri IS null) OR (r.type = "Relationship::Content::Approved"))
+            AND o.deleted_at IS NULL
+          GROUP BY o.id
+          ORDER BY t.position
+      QUERY
+      from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
+      Object.query_all(query, iri, from_iri, additional_columns: {announces_count: Int64?, likes_count: Int64?, depth: Int32})
+    end
+
+    private def ancestors_with_recursive
+      <<-QUERY
+      WITH RECURSIVE
+       ancestors_of(iri, depth) AS (
+          VALUES(?, 0)
+           UNION
+          SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
+            FROM objects AS o, ancestors_of AS p
+           WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
+        ORDER BY depth DESC
+      )
+      QUERY
     end
 
     def ancestors
       query = <<-QUERY
-        WITH RECURSIVE
-         ancestors_of(iri, depth) AS (
-              VALUES(?, 0)
-               UNION
-              SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
-                FROM objects AS o, ancestors_of AS p
-               WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
-            ORDER BY depth DESC
-         )
+      #{ancestors_with_recursive}
       SELECT #{Object.columns(prefix: "o")}, a.depth
         FROM objects AS o, ancestors_of AS a
        WHERE o.iri IN (a.iri)
          AND o.deleted_at IS NULL
       QUERY
-      Object.query_all(query, self.iri, additional_columns: {depth: Int32})
+      Object.query_all(query, iri, additional_columns: {depth: Int32})
+    end
+
+    def ancestors(approved_by)
+      query = <<-QUERY
+      #{ancestors_with_recursive}
+         SELECT #{Object.columns(prefix: "o")}, a.depth
+           FROM objects AS o, ancestors_of AS a
+      LEFT JOIN relationships AS r
+             ON r.from_iri = ? AND r.to_iri = o.iri
+          WHERE o.iri IN (a.iri)
+            AND ((o.in_reply_to_iri IS null) OR (r.type = "Relationship::Content::Approved"))
+            AND o.deleted_at IS NULL
+      QUERY
+      from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
+      Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})
+    end
+
+    def approved_by?(approved_by)
+      from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
+      Relationship::Content::Approved.count(from_iri: from_iri, to_iri: iri) > 0
     end
 
     def tags

@@ -1,9 +1,11 @@
 require "../framework/controller"
+require "../views/view_helper"
 require "../models/activity_pub/activity/follow"
 require "../models/task/terminate"
 
 class SettingsController
   include Ktistec::Controller
+  extend Ktistec::ViewHelper
 
   get "/settings" do |env|
     actor = env.account.actor

@@ -349,6 +349,36 @@ Spectator.describe ActivityPub::Object do
         object4.destroy
         expect(subject.with_replies_count!.replies_count).to eq(3)
       end
+
+      context "given an actor" do
+        let(actor) do
+          ActivityPub::Actor.new(
+            iri: "https://test.test/#{random_string}"
+          )
+        end
+
+        it "doesn't count any replies" do
+          expect(subject.with_replies_count!(actor).replies_count).to eq(0)
+        end
+
+        context "and an approved object" do
+          let!(approved) do
+            Relationship::Content::Approved.new(
+              actor: actor,
+              object: object5
+            ).save
+          end
+
+          it "omits unapproved replies but includes their approved children" do
+            expect(subject.with_replies_count!(actor).replies_count).to eq(1)
+          end
+
+          it "doesn't include the actor's unapproved replies" do
+            object4.assign(attributed_to: actor).save
+            expect(subject.with_replies_count!(actor).replies_count).to eq(1)
+          end
+        end
+      end
     end
 
     describe "#thread" do
@@ -381,6 +411,36 @@ Spectator.describe ActivityPub::Object do
         like.save
         expect(object5.thread.map(&.likes_count)).to eq([0, 0, 0, 0, 0, 1])
       end
+
+      context "given an actor" do
+        let(actor) do
+          ActivityPub::Actor.new(
+            iri: "https://test.test/#{random_string}"
+          )
+        end
+
+        it "only includes the subject" do
+          expect(subject.thread(actor)).to eq([subject])
+        end
+
+        context "and an approved object" do
+          let!(approved) do
+            Relationship::Content::Approved.new(
+              actor: actor,
+              object: object5
+            ).save
+          end
+
+          it "omits unapproved replies but includes their approved children" do
+            expect(subject.thread(actor)).to eq([subject, object5])
+          end
+
+          it "doesn't include the actor's unapproved replies" do
+            object4.assign(attributed_to: actor).save
+            expect(subject.thread(actor)).to eq([subject, object5])
+          end
+        end
+      end
     end
 
     describe "#ancestors" do
@@ -402,6 +462,63 @@ Spectator.describe ActivityPub::Object do
 
       it "returns the depths" do
         expect(object5.ancestors.map(&.depth)).to eq([0, 1, 2])
+      end
+
+      context "given an actor" do
+        let(actor) do
+          ActivityPub::Actor.new(
+            iri: "https://test.test/#{random_string}"
+          )
+        end
+
+        it "only includes the subject" do
+          expect(object5.ancestors(actor)).to eq([subject])
+        end
+
+        context "and an approved object" do
+          let!(approved) do
+            Relationship::Content::Approved.new(
+              actor: actor,
+              object: object5
+            ).save
+          end
+
+          it "omits unapproved replies but includes their approved parents" do
+            expect(object5.ancestors(actor)).to eq([object5, subject])
+          end
+
+          it "doesn't include the actor's unapproved replies" do
+            object4.assign(attributed_to: actor).save
+            expect(object5.ancestors(actor)).to eq([object5, subject])
+          end
+        end
+      end
+    end
+
+    describe "#approved_by?" do
+      subject do
+        described_class.new(
+          iri: "https://test.test/objects/#{random_string}"
+        )
+      end
+      let(actor) do
+        ActivityPub::Actor.new(
+          iri: "https://test.test/#{random_string}"
+        )
+      end
+      let!(approved) do
+        Relationship::Content::Approved.new(
+          actor: actor,
+          object: subject
+        ).save
+      end
+
+      it "returns true if approved by actor" do
+        expect(subject.approved_by?(actor.iri)).to be_true
+      end
+
+      it "returns false if not approved by actor" do
+        expect(subject.approved_by?("https://other/")).to be_false
       end
     end
 

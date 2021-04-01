@@ -1,4 +1,15 @@
 # ![Mint](public/logo.png)
+  - [Features](#features)
+    - [Posting text and images](#posting-text-and-images)
+    - [Drafts](#drafts)
+    - [Threaded replies](#threaded-replies)
+    - [@-mention and #-hashtag autocomplete](#-mention-and--hashtag-autocomplete)
+    - [Followers/following](#followersfollowing)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Contributors](#contributors)
+  - [Copyright and License](#copyright-and-license)
 
 **Ktistec** is an ActivityPub (https://www.w3.org/TR/activitypub/) server.
 It is intended for individual users, not farms of users, although
@@ -8,7 +19,8 @@ SQLite as its database, instead of PostgreSQL + Redis + etc. It is
 licensed under the AGPLv3.
 
 Ktistec powers [Epiktistes](https://epiktistes.com/), my low-volume
-home in the Fediverse.
+home in the Fediverse. If you want to talk to me, I'm
+[@toddsundsted@epiktistes.com](https://epiktistes.com/actors/toddsundsted).
 
 ## Features
 
@@ -22,12 +34,12 @@ Text formatting options include *bold*, *italic*, *strikethrough*,
 *blockquotes* with nested indentation, and both *bullet* and *numeric*
 lists.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/tszn70.png" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/tszn70.png" width=460>
 
 Ktistec supports inline placement of images, with ActivityPub image
 attachments used for compatibility with non-Ktistec servers.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/aecz36.png" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/aecz36.png" width=460>
 
 ### Drafts
 
@@ -35,14 +47,14 @@ Meaningful writing is an iterative process so Ktistec supports draft
 posts. Draft posts aren't visible in your timeline until you publish
 them.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/683hld.png" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/683hld.png" width=460>
 
 ### Threaded replies
 
 Threaded replies make it easier to follow discussions with lots of
 posts.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/eaxx1q.png" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/eaxx1q.png" width=460>
 
 ### @-mention and #-hashtag autocomplete
 
@@ -50,7 +62,7 @@ Ktistec automatically converts @-mentions and #-hashtags into links,
 and to encourage hands-on-the-keyboard composition, Ktistec supports
 autocompletion.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/22aee8.gif" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/22aee8.gif" width=460>
 
 ### Followers/following
 
@@ -59,7 +71,7 @@ users on other servers from your timeline or by searching for them by
 name. Ktistec is also compatible with the "remote follow" protocol
 used by Mastodon and others.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/88hvqq.png" width=460>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/88hvqq.png" width=460>
 
 ## Prerequisites
 
@@ -69,14 +81,19 @@ by (and content is addressed to) a hostname and a username.
 
 ## Installation
 
-At this point, leading up to Ktistec's first release, you must build
-the server from source code. You will need a recent release of the
-[Crystal programming language](https://crystal-lang.org/).
+You must build Ktistec from its source code. You will need a recent
+release of the [Crystal programming language](https://crystal-lang.org/).
+
+If you intend to do *development*, check out the **main** branch. In
+addition to Crystal, you'll also need Webpack to build the JavaScript
+and CSS assets from source.
+
+If you just want to try Ktistec out, check out the **dist** branch.
 
 Since the project is still in development, I don't bother with a
 separate build step. I just run the server:
 
-`$ LOG_LEVEL=DEBUG crystal run src/ktistec/server.cr`
+`$ LOG_LEVEL=INFO crystal run src/ktistec/server.cr`
 
 ## Usage
 
@@ -95,7 +112,7 @@ send posts and other content to me there.
 
 Give the server a *site name*, too.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/kl3yf6.png" width=640>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/kl3yf6.png" width=640>
 
 After you name the server, you create the primary user. Ktistec
 currently supports only one user. This is intentional -- one of
@@ -109,11 +126,11 @@ symbols, for the password.
 
 *Display name* and *summary* are optional.
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/mq4ntx.png" width=640>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/mq4ntx.png" width=640>
 
 Once these steps are done, you're running!
 
-<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/master/images/o0ton2.png" width=640>
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/o0ton2.png" width=640>
 
 ## Contributors
 

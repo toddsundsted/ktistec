@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../views/view_helper"
 require "../framework/open"
 require "../framework/signature"
 require "../models/activity_pub/activity/**"
@@ -6,6 +7,7 @@ require "../models/task/deliver"
 
 class RelationshipsController
   include Ktistec::Controller
+  extend Ktistec::ViewHelper
   extend Ktistec::Open
 
   skip_auth ["/actors/:username/inbox"], POST

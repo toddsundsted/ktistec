@@ -95,6 +95,18 @@ module Ktistec
       end
     end
 
+    # Pluralizes a singular noun.
+    #
+    def pluralize(noun)
+      if noun.ends_with?(/s|ss|sh|ch|x|z/)
+        "#{noun}es"
+      elsif noun.ends_with?(/[^aeiou]y/)
+        "#{noun.chomp('y')}ies"
+      else
+        "#{noun}s"
+      end
+    end
+
     class PaginatedArray(T)
       @array = [] of T
 

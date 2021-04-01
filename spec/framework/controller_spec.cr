@@ -27,6 +27,7 @@ class FooBarController
     "/foo/bar/created",
     "/foo/bar/redirect",
     "/foo/bar/sanitize",
+    "/foo/bar/pluralize",
     "/foo/bar/comma",
     "/foo/bar/id",
     "/foo/bar/ok"
@@ -97,9 +98,15 @@ class FooBarController
   end
 
   get "/foo/bar/helpers/tag" do |env|
-    form = tag :form, id: 1, class: "basic" do |html|
+    form1 = tag :form, id: 1, class: "basic" do |html|
       html << tag :input, type: "hidden", value: "secret"
       html << tag :input, type: "submit"
+    end
+    form2 = tag :form, id: 1, class: "basic" do
+      String.build do |io|
+        io << %q|<input type="hidden" value="secret">|
+        io << %q|<input type="submit">|
+      end
     end
     <<-HTML
     <div id="1">#{tag div}</div>
@@ -112,9 +119,11 @@ class FooBarController
     <div id="4">#{tag div, tag(span, id: 5, class: "quux"), style: "foobar"}</div>
     <div id="5.1">#{tag div do |h| h << tag span end}</div>
     <div id="5.2">#{tag div do |h| h << tag span, "foobar" end}</div>
-    <div id="6">#{form}</div>
+    <div id="6.1">#{form1}</div>
+    <div id="6.2">#{form2}</div>
     <div id="7">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_class: "foobar", button_class: "barfoo"}</div>
-    <div id="8">#{activity_button "outbox url", "object iri", "FooBar" { |html| html << tag div, "Foo Bar" } }</div>
+    <div id="8">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_attrs: {title: "the title"}, button_attrs: {title: "the title"}}</div>
+    <div id="9">#{activity_button "outbox url", "object iri", "FooBar" { |html| html << tag div, "Foo Bar" } }</div>
     HTML
   end
 
@@ -156,6 +165,12 @@ class FooBarController
 
   get "/foo/bar/sanitize" do |env|
     s "<body>Foo Bar</body>"
+  end
+
+  get "/foo/bar/pluralize" do |env|
+    count = env.params.query["count"].to_i
+    noun = env.params.query["noun"]
+    pluralize(count, noun)
   end
 
   get "/foo/bar/comma" do |env|
@@ -317,7 +332,12 @@ Spectator.describe Ktistec::Controller do
 
     it "renders complex form" do
       get "/foo/bar/helpers/tag"
-      expect(tag(6)).to eq(%Q|<form id="1" class="basic"><input type="hidden" value="secret"><input type="submit"></form>|)
+      expect(tag(6.1)).to eq(%Q|<form id="1" class="basic"><input type="hidden" value="secret"><input type="submit"></form>|)
+    end
+
+    it "renders complex form" do
+      get "/foo/bar/helpers/tag"
+      expect(tag(6.2)).to eq(%Q|<form id="1" class="basic"><input type="hidden" value="secret"><input type="submit"></form>|)
     end
 
     it "renders a submit button" do
@@ -355,9 +375,19 @@ Spectator.describe Ktistec::Controller do
       expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/@class)")).to eq("ui form foobar")
     end
 
+    it "renders submit button with attributes" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form/button[@type='submit']/@title)")).to eq("the title")
+    end
+
+    it "renders form with attributes" do
+      get "/foo/bar/helpers/tag"
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form/@title)")).to eq("the title")
+    end
+
     it "renders a form with nested content" do
       get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form//div/text())")).to eq("Foo Bar")
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='9']/form//div/text())")).to eq("Foo Bar")
     end
   end
 
@@ -448,6 +478,23 @@ Spectator.describe Ktistec::Controller do
     it "sanitizes HTML" do
       get "/foo/bar/sanitize"
       expect(response.body).to eq("Foo Bar")
+    end
+  end
+
+  describe "/foo/bar/pluralize" do
+    it "pluralizes the noun" do
+      get "/foo/bar/pluralize?count=0&noun=fox"
+      expect(response.body).to eq("fox")
+    end
+
+    it "pluralizes the noun" do
+      get "/foo/bar/pluralize?count=1&noun=fox"
+      expect(response.body).to eq("1 fox")
+    end
+
+    it "pluralizes the noun" do
+      get "/foo/bar/pluralize?count=2&noun=fox"
+      expect(response.body).to eq("2 foxes")
     end
   end
 

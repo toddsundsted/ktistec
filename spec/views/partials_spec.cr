@@ -1,6 +1,7 @@
 require "../../src/models/activity_pub/activity/follow"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
+require "../../src/views/view_helper"
 
 require "../spec_helper/controller"
 
@@ -8,6 +9,7 @@ Spectator.describe "partials" do
   setup_spec
 
   include Ktistec::Controller
+  include Ktistec::ViewHelper
 
   describe "collection.json.ecr" do
     let(env) do
@@ -315,29 +317,78 @@ Spectator.describe "partials" do
       )
     end
 
+    let(for_thread) { nil }
+
     subject do
       begin
-        XML.parse_html(render "./src/views/partials/object.html.slang")
+        XML.parse_html(object_partial(env, object, actor, actor, for_thread: for_thread))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
     end
 
-    context "if authenticated" do
-      let(account) { register }
+    let(account) { register }
 
+    let(actor) { account.actor }
+    let!(object) do
+      ActivityPub::Object.new(
+        iri: "https://test.test/objects/object"
+      ).save
+    end
+
+    context "if authenticated" do
       before_each { env.account = account }
 
-      context "and a draft" do
-        let(_author) { account.actor }
-        let(_actor) { account.actor }
-        let(_object) do
-          ActivityPub::Object.new(
-            iri: "https://test.test/objects/object"
-          ).save
-        end
+      context "for approvals" do
+        before_each { object.assign(published: Time.utc).save }
 
-        pre_condition { expect(_object.draft?).to be_true }
+        context "on a page of threaded replies" do
+          let(env) do
+            HTTP::Server::Context.new(
+              HTTP::Request.new("GET", "/thread"),
+              HTTP::Server::Response.new(IO::Memory.new)
+            )
+          end
+
+          it "does not render a checkbox to approve" do
+            actor.unapprove(object)
+            expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
+          end
+
+          it "does not render a checkbox to unapprove" do
+            actor.approve(object)
+            expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
+          end
+
+          context "unless in reply to a post by the account's actor" do
+            let(original) do
+              ActivityPub::Object.new(
+                iri: "https://test.test/objects/reply",
+                attributed_to: account.actor
+              )
+            end
+
+            let(for_thread) { [original] }
+
+            before_each do
+              object.assign(in_reply_to: original).save
+            end
+
+            it "renders a checkbox to approve" do
+              actor.unapprove(object)
+              expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']/@checked")).to be_empty
+            end
+
+            it "renders a checkbox to unapprove" do
+              actor.approve(object)
+              expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']/@checked")).not_to be_empty
+            end
+          end
+        end
+      end
+
+      context "and a draft" do
+        pre_condition { expect(object.draft?).to be_true }
 
         it "does not render a button to reply" do
           expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Reply")

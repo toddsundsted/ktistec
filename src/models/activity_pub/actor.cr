@@ -409,7 +409,8 @@ module ActivityPub
         nil,
         page,
         size,
-        true
+        true,
+        false
       )
     end
 

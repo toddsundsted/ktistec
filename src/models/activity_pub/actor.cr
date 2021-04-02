@@ -301,8 +301,7 @@ module ActivityPub
        ORDER BY r.created_at DESC
           LIMIT ?
       QUERY
-      object_columns = Object.persistent_columns(prefix: :object)
-      Activity.query_and_paginate(query, iri, iri, additional_columns: object_columns, page: page, size: size)
+      Activity.query_and_paginate(query, iri, iri, page: page, size: size)
     end
 
     private def find_in?(object, mailbox, inclusion = nil, exclusion = nil)

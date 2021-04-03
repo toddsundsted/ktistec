@@ -1,5 +1,6 @@
 <nav class='ui bottom forced inverted menu'>
     <div class='ui text container'>
-        <a class="link item" href='https://github.com/toddsundsted/ktistec' target='_blank'>Powered by <em>Ktistec</em>.</a>
+        <%- default = %q|<a href='https://github.com/toddsundsted/ktistec' target='_blank'>Powered by <em>Ktistec</em>.</a>| -%>
+        <span class="link item"><%= Ktistec.footer? || default %></span>
     </div>
 </nav>

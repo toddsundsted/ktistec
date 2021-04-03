@@ -81,6 +81,24 @@ module Ktistec
     false
   end
 
+  def self.footer=(footer)
+    raise "must be present" unless present?(footer)
+    @@footer = footer
+    query = "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)"
+    Ktistec.database.exec(query, "footer", @@footer)
+    @@footer
+  end
+
+  def self.footer
+    @@footer ||= Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "footer").as(String)
+  end
+
+  def self.footer?
+    footer
+  rescue DB::NoResultsError
+    false
+  end
+
   # An [ActivityPub](https://www.w3.org/TR/activitypub/) server.
   #
   #     Ktistec::Server.run do

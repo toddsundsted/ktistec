@@ -5,6 +5,8 @@ require "../../src/framework"
 require "../spec_helper/base"
 
 Spectator.describe Ktistec do
+  setup_spec
+
   describe "::VERSION" do
     it "should return the version" do
       version = YAML.parse(File.read(File.join(__DIR__, "..", "..", "shard.yml")))["version"].as_s
@@ -13,8 +15,6 @@ Spectator.describe Ktistec do
   end
 
   context "host" do
-    setup_spec
-
     it "raises an error when not set" do
       Ktistec.clear_host
       expect{Ktistec.host}.to raise_error
@@ -57,8 +57,6 @@ Spectator.describe Ktistec do
   end
 
   context "site" do
-    setup_spec
-
     it "raises an error when not set" do
       Ktistec.clear_site
       expect{Ktistec.site}.to raise_error
@@ -81,6 +79,32 @@ Spectator.describe Ktistec do
 
     it "returns the site" do
       expect(Ktistec.site).to eq("Test")
+    end
+  end
+
+  context "footer" do
+    it "raises an error when not set" do
+      Ktistec.clear_footer
+      expect{Ktistec.footer}.to raise_error
+    end
+
+    it "returns false when not set" do
+      Ktistec.clear_footer
+      expect{Ktistec.footer?}.to be_false
+    end
+
+    it "must be present" do
+      expect{Ktistec.footer = ""}.to raise_error("must be present")
+    end
+
+    it "updates the database" do
+      Ktistec.clear_footer
+      Ktistec.footer = "Copyright"
+      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "footer")).to eq("Copyright")
+    end
+
+    it "returns the footer" do
+      expect(Ktistec.footer).to eq("Copyright")
     end
   end
 end

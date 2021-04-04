@@ -296,12 +296,26 @@ Spectator.describe ActivityPub::Object do
   end
 
   context "when threaded" do
-    subject { described_class.new(iri: "https://test.test/objects/#{random_string}").save }
+    subject do
+      described_class.new(
+        iri: "https://test.test/objects/#{random_string}",
+        attributed_to: ActivityPub::Actor.new(
+          iri: "https://test.test/actors/#{random_string}",
+        )
+      ).save
+    end
 
     macro reply_to!(object, reply)
+      {% actor = reply.name.gsub(/object/, "actor") %}
+      let({{actor}}) do
+        ActivityPub::Actor.new(
+          iri: "https://test.test/actors/#{random_string}"
+        ).save
+      end
       let!({{reply}}) do
         described_class.new(
           iri: "https://test.test/objects/#{random_string}",
+          attributed_to: {{actor}},
           in_reply_to: {{object}}
         ).save
       end
@@ -340,13 +354,23 @@ Spectator.describe ActivityPub::Object do
         expect(object5.with_replies_count!.replies_count).to eq(0)
       end
 
-      it "omits deleted replies but includes their children" do
+      it "omits deleted replies and their children" do
         object4.delete
-        expect(subject.with_replies_count!.replies_count).to eq(4)
+        expect(subject.with_replies_count!.replies_count).to eq(3)
       end
 
       it "omits destroyed replies and their children" do
         object4.destroy
+        expect(subject.with_replies_count!.replies_count).to eq(3)
+      end
+
+      it "omits replies with deleted attributed to actors" do
+        actor4.delete
+        expect(subject.with_replies_count!.replies_count).to eq(3)
+      end
+
+      it "omits replies with destroyed attributed to actors" do
+        actor4.destroy
         expect(subject.with_replies_count!.replies_count).to eq(3)
       end
 
@@ -388,13 +412,23 @@ Spectator.describe ActivityPub::Object do
         expect(object5.thread).to eq([subject, object1, object2, object3, object4, object5])
       end
 
-      it "omits deleted replies but includes their children" do
+      it "omits deleted replies and their children" do
         object4.delete
-        expect(subject.thread).to eq([subject, object1, object2, object3, object5])
+        expect(subject.thread).to eq([subject, object1, object2, object3])
       end
 
       it "omits destroyed replies and their children" do
         object4.destroy
+        expect(subject.thread).to eq([subject, object1, object2, object3])
+      end
+
+      it "omits replies with deleted attributed to actors" do
+        actor4.delete
+        expect(subject.thread).to eq([subject, object1, object2, object3])
+      end
+
+      it "omits replies with destroyed attributed to actors" do
+        actor4.destroy
         expect(subject.thread).to eq([subject, object1, object2, object3])
       end
 
@@ -440,13 +474,23 @@ Spectator.describe ActivityPub::Object do
         expect(object5.ancestors).to eq([object5, object4, subject])
       end
 
-      it "omits deleted replies but includes their parents" do
+      it "omits deleted replies and their parents" do
         object1.delete
-        expect(object3.ancestors).to eq([object3, object2, subject])
+        expect(object3.ancestors).to eq([object3, object2])
       end
 
       it "omits destroyed replies and their parents" do
         object1.destroy
+        expect(object3.ancestors).to eq([object3, object2])
+      end
+
+      it "omits replies with deleted attributed to actors" do
+        actor1.delete
+        expect(object3.ancestors).to eq([object3, object2])
+      end
+
+      it "omits replies with destroyed attributed to actors" do
+        actor1.destroy
         expect(object3.ancestors).to eq([object3, object2])
       end
 

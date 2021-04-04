@@ -35,6 +35,11 @@ module Ktistec
     Ktistec.database.exec("DELETE FROM options WHERE key = ?", "site")
     @@site = nil
   end
+
+  def self.clear_footer
+    Ktistec.database.exec("DELETE FROM options WHERE key = ?", "footer")
+    @@footer = nil
+  end
 end
 
 class Account

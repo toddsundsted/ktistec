@@ -434,34 +434,45 @@ Spectator.describe "partials" do
 
       before_each { env.account = account }
 
-      let(actor) do
-        ActivityPub::Actor.new(
-          iri: "https://remote/actors/actor",
-          username: "actor"
-        ).save
-      end
-      let(object) do
+      let(original) do
         ActivityPub::Object.new(
-          iri: "https://remote/objects/object",
-          attributed_to: actor,
-          in_reply_to: ActivityPub::Object.new(
-            iri: "https://test.test/objects/object",
-            attributed_to: account.actor
-          )
-        ).save
+          iri: "https://test.test/objects/original",
+          attributed_to: account.actor,
+        )
       end
 
-      it "addresses (to) the author of the replied to post" do
-        expect(subject.xpath_nodes("//form//input[@name='to']/@value").first.text).to eq(actor.iri)
+      let(actor1) do
+        ActivityPub::Actor.new(
+          iri: "https://remote/actors/actor1",
+          username: "actor1"
+        )
+      end
+      let(object1) do
+        ActivityPub::Object.new(
+          iri: "https://remote/objects/object1",
+          attributed_to: actor1,
+          in_reply_to: original
+        )
+      end
+      let(actor2) do
+        ActivityPub::Actor.new(
+          iri: "https://remote/actors/actor2",
+          username: "actor2"
+        )
+      end
+      let(object2) do
+        ActivityPub::Object.new(
+          iri: "https://remote/objects/object2",
+          attributed_to: actor2,
+          in_reply_to: object1
+        )
       end
 
-      it "addresses (cc) the authors of the posts in the thread" do
-        expect(subject.xpath_nodes("//form//input[@name='cc']/@value").first.text).to eq(account.actor.iri)
-      end
+      let!(object) { object2.save }
 
       it "prepopulates editor with mentions" do
         expect(subject.xpath_nodes("//form//input[@name='content']/@value").first.text).
-          to eq("@#{actor.account_uri} @#{account.actor.account_uri} ")
+          to eq("@#{actor2.account_uri} @#{actor1.account_uri} ")
       end
     end
   end

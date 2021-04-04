@@ -88,6 +88,9 @@ class RelationshipsController
       now = Time.utc
       visible = !!activity["public"]?
       to = activity["to"]?.presence.try(&.split(",")) || [] of String
+      if (attributed_to = in_reply_to.try(&.attributed_to?))
+        to |= [attributed_to.iri]
+      end
       if visible
         to << "https://www.w3.org/ns/activitystreams#Public"
       end

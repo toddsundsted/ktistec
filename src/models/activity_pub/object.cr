@@ -186,7 +186,11 @@ module ActivityPub
             UNION
            SELECT o.iri
              FROM objects AS o, replies_to AS t
+             JOIN actors AS a
+               ON a.iri = o.attributed_to_iri
             WHERE o.in_reply_to_iri = t.iri
+              AND o.deleted_at IS NULL
+              AND a.deleted_at IS NULL
         )
       QUERY
     end
@@ -197,7 +201,6 @@ module ActivityPub
       SELECT count(o.iri) - 1
         FROM objects AS o, replies_to AS r
        WHERE o.iri IN (r.iri)
-         AND o.deleted_at IS NULL
       QUERY
       Ktistec.database.query_one(query, iri) do |rs|
         rs.read(Int64?).try { |replies_count| self.replies_count = replies_count }
@@ -214,7 +217,6 @@ module ActivityPub
              ON r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
             AND ((o.in_reply_to_iri IS null) OR (r.type = "Relationship::Content::Approved"))
-            AND o.deleted_at IS NULL
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Ktistec.database.query_one(query, iri, from_iri) do |rs|
@@ -234,7 +236,11 @@ module ActivityPub
             UNION
            SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
              FROM objects AS o, ancestors_of AS p
+             JOIN actors AS a
+               ON a.iri = o.attributed_to_iri
             WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
+              AND o.deleted_at IS NULL
+              AND a.deleted_at IS NULL
          ORDER BY depth DESC
        ),
        replies_to(iri, position, depth) AS (
@@ -242,7 +248,11 @@ module ActivityPub
             UNION
            SELECT o.iri, r.position || "." || o.id, r.depth + 1 AS depth
              FROM objects AS o, replies_to AS r
+             JOIN actors AS a
+               ON a.iri = o.attributed_to_iri
             WHERE o.in_reply_to_iri = r.iri
+              AND o.deleted_at IS NULL
+              AND a.deleted_at IS NULL
          ORDER BY depth DESC
         )
       QUERY
@@ -254,7 +264,6 @@ module ActivityPub
          SELECT #{Object.columns(prefix: "o")}, r.depth
            FROM objects AS o, replies_to AS r
           WHERE o.iri IN (r.iri)
-            AND o.deleted_at IS NULL
           ORDER BY r.position
       QUERY
       Object.query_all(query, iri, additional_columns: {depth: Int32})
@@ -269,7 +278,6 @@ module ActivityPub
              ON r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
             AND ((o.in_reply_to_iri IS null) OR (r.type = "Relationship::Content::Approved"))
-            AND o.deleted_at IS NULL
           ORDER BY t.position
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
@@ -284,7 +292,11 @@ module ActivityPub
            UNION
           SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
             FROM objects AS o, ancestors_of AS p
+            JOIN actors AS a
+              ON a.iri = o.attributed_to_iri
            WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
+             AND o.deleted_at IS NULL
+             AND a.deleted_at IS NULL
         ORDER BY depth DESC
       )
       QUERY
@@ -293,10 +305,13 @@ module ActivityPub
     def ancestors
       query = <<-QUERY
       #{ancestors_with_recursive}
-      SELECT #{Object.columns(prefix: "o")}, a.depth
-        FROM objects AS o, ancestors_of AS a
-       WHERE o.iri IN (a.iri)
+      SELECT #{Object.columns(prefix: "o")}, p.depth
+        FROM objects AS o, ancestors_of AS p
+        JOIN actors AS a
+          ON a.iri = o.attributed_to_iri
+       WHERE o.iri IN (p.iri)
          AND o.deleted_at IS NULL
+         AND a.deleted_at IS NULL
       QUERY
       Object.query_all(query, iri, additional_columns: {depth: Int32})
     end
@@ -304,13 +319,16 @@ module ActivityPub
     def ancestors(approved_by)
       query = <<-QUERY
       #{ancestors_with_recursive}
-         SELECT #{Object.columns(prefix: "o")}, a.depth
-           FROM objects AS o, ancestors_of AS a
+         SELECT #{Object.columns(prefix: "o")}, p.depth
+           FROM objects AS o, ancestors_of AS p
+           JOIN actors AS a
+             ON a.iri = o.attributed_to_iri
       LEFT JOIN relationships AS r
              ON r.from_iri = ? AND r.to_iri = o.iri
-          WHERE o.iri IN (a.iri)
+          WHERE o.iri IN (p.iri)
             AND ((o.in_reply_to_iri IS null) OR (r.type = "Relationship::Content::Approved"))
             AND o.deleted_at IS NULL
+            AND a.deleted_at IS NULL
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})

@@ -186,6 +186,7 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(302)
         end
 
+        # lazy shorthand to return the created object
         let(created) do
           ActivityPub::Object.find(attributed_to_iri: actor.iri)
         end
@@ -197,7 +198,10 @@ Spectator.describe RelationshipsController do
 
         let(topic) do
           ActivityPub::Object.new(
-            iri: "https://remote/objects/#{random_string}"
+            iri: "https://remote/objects/topic",
+            attributed_to: ActivityPub::Actor.new(
+              iri: "https://remote/actors/topic"
+            )
           ).save
         end
 
@@ -263,7 +267,7 @@ Spectator.describe RelationshipsController do
             ActivityPub::Object.new(
               iri: "https://test.test/objects/#{random_string}",
               attributed_to: actor,
-              published: Time.utc
+              published: 5.minutes.ago
             ).save
           end
 
@@ -341,14 +345,19 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
         end
 
-        it "addresses the public collection" do
+        it "addresses (to) the public collection" do
           post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&public=true"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
-        it "addresses the actor's followers collection" do
+        it "addresses (cc) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "addresses (to) the replied to object's attributed to actor" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&in-reply-to=#{URI.encode_www_form(topic.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(topic.attributed_to.iri)
         end
 
         it "enhances the content" do

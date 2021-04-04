@@ -9,7 +9,8 @@ Spectator.describe ObjectsController do
 
   let(author) do
     ActivityPub::Actor.new(
-      iri: "https://nowhere/#{random_string}"
+      iri: "https://nowhere/#{random_string}",
+      username: "author"
     ).save
   end
   let!(visible) do
@@ -668,7 +669,8 @@ Spectator.describe ObjectsController do
 
       let(other) do
         ActivityPub::Actor.new(
-          iri: "https://nowhere/#{random_string}"
+          iri: "https://nowhere/#{random_string}",
+          username: "other"
         ).save
       end
       let(parent) do
@@ -683,14 +685,9 @@ Spectator.describe ObjectsController do
         visible.assign(in_reply_to: parent).save
       end
 
-      it "addresses (to) the author of the object" do
+      it "prepopulates editor with mentions" do
         get "/remote/objects/#{visible.id}/replies"
-        expect(XML.parse_html(response.body).xpath_nodes("//form/input[@name='to']/@value").first.text).to eq(author.iri)
-      end
-
-      it "addresses (cc) the other authors in the thread" do
-        get "/remote/objects/#{visible.id}/replies"
-        expect(XML.parse_html(response.body).xpath_nodes("//form/input[@name='cc']/@value").first.text).to eq(other.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("@author@nowhere @other@nowhere ")
       end
 
       it "returns 404 if object is a draft" do

@@ -28,6 +28,11 @@ Spectator.describe SettingsController do
           get "/settings", headers
           expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='name']][.//input[@name='summary']][.//input[@name='image']][.//input[@name='icon']]")).not_to be_empty
         end
+
+        it "renders a form" do
+          get "/settings", headers
+          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='footer']][.//input[@name='site']]")).not_to be_empty
+        end
       end
 
       context "and accepting JSON" do
@@ -40,7 +45,7 @@ Spectator.describe SettingsController do
 
         it "renders a form" do
           get "/settings", headers
-          expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon")
+          expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon", "footer", "site")
         end
       end
     end
@@ -54,6 +59,11 @@ Spectator.describe SettingsController do
 
     context "when authorized" do
       sign_in(as: actor.username)
+
+      before_each do
+        Ktistec.clear_footer
+        Ktistec.clear_site
+      end
 
       context "and posting form data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
@@ -81,6 +91,16 @@ Spectator.describe SettingsController do
         it "updates the icon" do
           post "/settings", headers, "icon=%2Ffoo%2Fbar%2Fbaz"
           expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
+        end
+
+        it "changes the footer" do
+          expect {post "/settings", headers, "footer=Copyright Blah Blah"}.
+            to change{Ktistec.footer?}
+        end
+
+        it "changes the site" do
+          expect {post "/settings", headers, "site=Name"}.
+            to change{Ktistec.site?}
         end
 
         context "given existing image and icon" do
@@ -126,6 +146,16 @@ Spectator.describe SettingsController do
         it "updates the icon" do
           post "/settings", headers, %q|{"icon":"/foo/bar/baz"}|
           expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
+        end
+
+        it "changes the footer" do
+          expect {post "/settings", headers, %q|{"footer":"Copyright Blah Blah"}|}.
+            to change{Ktistec.footer?}
+        end
+
+        it "changes the site" do
+          expect {post "/settings", headers, %q|{"site":"Name"}|}.
+            to change{Ktistec.site?}
         end
 
         context "given existing image and icon" do

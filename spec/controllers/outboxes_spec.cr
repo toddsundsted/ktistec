@@ -267,7 +267,7 @@ Spectator.describe RelationshipsController do
             ActivityPub::Object.new(
               iri: "https://test.test/objects/#{random_string}",
               attributed_to: actor,
-              published: Time.utc
+              published: 5.minutes.ago
             ).save
           end
 

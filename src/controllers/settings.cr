@@ -16,7 +16,16 @@ class SettingsController
   post "/settings" do |env|
     actor = env.account.actor
 
-    actor.assign(**params(env, actor)).save
+    params = params(env, actor)
+
+    actor.assign(params).save
+
+    if (footer = params["footer"]?)
+      Ktistec.footer = footer
+    end
+    if (site = params["site"]?)
+      Ktistec.site = site
+    end
 
     redirect back_path
   end
@@ -35,10 +44,12 @@ class SettingsController
   private def self.params(env, actor)
     params = (env.params.body.presence || env.params.json.presence).not_nil!
     {
-      name: params["name"]?.try(&.to_s),
-      summary: params["summary"]?.try(&.to_s),
-      image: params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" } || actor.image,
-      icon: params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" } || actor.icon
+      "name" => params["name"]?.try(&.to_s),
+      "summary" => params["summary"]?.try(&.to_s),
+      "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" } || actor.image,
+      "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" } || actor.icon,
+      "footer" => params["footer"]?.try(&.to_s.presence),
+      "site" => params["site"]?.try(&.to_s.presence)
     }
   end
 end

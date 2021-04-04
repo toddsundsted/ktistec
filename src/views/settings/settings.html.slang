@@ -1,7 +1,7 @@
 - content_for "head" do
   script src="/dist/settings.bundle.js"
 == render "src/views/partials/actor-large.html.slang"
-h1 Settings
+h1 User Settings
 form.ui.form method="POST" action="/settings"
   .field
     label Display Name
@@ -37,3 +37,14 @@ form.ui.form method="POST" action="/settings/terminate"
     .ui.green.ok.inverted.button
       i.checkmark.icon
       | Yes
+h1 Site Settings
+form.ui.form method="POST" action="/settings"
+  .field
+    label Site Name
+    input type="text" name="site" value=Ktistec.site?
+  .field
+    label Footer
+    input type="text" name="footer" value=Ktistec.footer?
+  input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+  input.ui.primary.button type="submit" value="Update"
+br

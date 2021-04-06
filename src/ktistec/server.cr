@@ -1,6 +1,7 @@
 require "../framework/**"
 require "../models/**"
 require "../controllers/**"
+require "../handlers/**"
 require "../workers/**"
 
 Ktistec::Server.run do

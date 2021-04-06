@@ -8,15 +8,38 @@
         attachments.reject! { |a| a.url.in?(_urls) }
       end
     end
+  .summary
+    - if object.draft?
+      | draft created
+      a.date = object.display_date
+    - else
+      - if account
+        - if author != actor
+          a.user> title=actor.account_uri href=remote_actor_path(actor) = actor.display_name
+          | shared a post by
+          a.user< title=author.account_uri href=remote_actor_path(author) = author.display_name
+        - else
+          a.user> title=author.account_uri href=remote_actor_path(author) = author.display_name
+          | posted
+        a.date title=object.display_date href=remote_thread_path(object) = object.short_date
+      - else
+        - if author != actor
+          a.user> title=actor.account_uri href=actor.display_link = actor.display_name
+          | shared a post by
+          a.user< title=author.account_uri href=author.display_link = author.display_name
+        - else
+          a.user> title=author.account_uri href=author.display_link = author.display_name
+          | posted
+        a.date title=object.display_date href=object.display_link = object.short_date
   - if attachments && (attachment = attachments.shift?)
     - if attachment.image?
-      img.ui.image.attachment src=attachment.url
+      img.ui.extra.image.attachment src=attachment.url
     - unless attachments.empty?
       .extra.images
         - attachments.each do |attachment|
           - if attachment.image?
             img src=attachment.url
-  .text class=(attachment ? "extra" : nil)
+  .extra.text
     == s object.content
   .meta
     - if account && object.draft?
@@ -78,10 +101,3 @@
         button.ui.mini.iconic.button
           i.share.icon
           = pluralize(c, "Share")
-  .meta
-    - if account
-      a href=remote_actor_path(author) = author.display_name
-      a href=remote_thread_path(object) = object.display_date
-    - else
-      a href=author.display_link = author.display_name
-      a href=object.display_link = object.display_date

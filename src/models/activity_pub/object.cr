@@ -128,7 +128,15 @@ module ActivityPub
     end
 
     def display_date
-      (published || created_at).to_local.to_s("%l:%M%P · %b %-d, %Y").lstrip(' ')
+      date.to_s("%l:%M%p · %b %-d, %Y").lstrip(' ')
+    end
+
+    def short_date
+      date < 1.day.ago ? date.to_s("%b %-d, %Y").lstrip(' ') : date.to_s("%l:%M%p").lstrip(' ')
+    end
+
+    private def date
+      (published || created_at).to_local
     end
 
     def self.federated_posts(page = 1, size = 10)

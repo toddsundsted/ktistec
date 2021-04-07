@@ -350,42 +350,88 @@ Spectator.describe ObjectsController do
     context "when authorized" do
       sign_in(as: actor.username)
 
-      it "succeeds" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-        expect(response.status_code).to eq(200)
+      context "given a draft post" do
+        it "succeeds" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+        end
+
+        it "succeeds" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+          expect(response.status_code).to eq(200)
+        end
+
+        it "renders a form with the object" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
+        end
+
+        it "renders a button that submits to the outbox path" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Publish')]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
+        end
+
+        it "renders a button that submits to the object update path" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@action").first.text).to eq("/objects/#{draft.uid}")
+        end
+
+        it "renders an input with the draft content" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("this is a test")
+        end
+
+        it "renders the object" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+          expect(JSON.parse(response.body)["id"]).to eq(draft.iri)
+        end
       end
 
-      it "succeeds" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_JSON
-        expect(response.status_code).to eq(200)
+      context "given a published post" do
+        before_each do
+          visible.assign(
+            attributed_to: actor,
+            content: "foo bar baz"
+          ).save
+        end
+
+        it "succeeds" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+        end
+
+        it "succeeds" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+          expect(response.status_code).to eq(200)
+        end
+
+        it "renders a form with the object" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{visible.id}")
+        end
+
+        it "renders a button that submits to the outbox path" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Update')]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
+        end
+
+        it "does not render a button that submits to the object update path" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@action")).to be_empty
+        end
+
+        it "renders an input with the content" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("foo bar baz")
+        end
+
+        it "renders the object" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+          expect(JSON.parse(response.body)["id"]).to eq(visible.iri)
+        end
       end
 
-      it "renders a form with the object" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
-      end
-
-      it "renders a button that submits to the outbox path" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Post')]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
-      end
-
-      it "renders a button that submits to the object update path" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@action").first.text).to eq("/objects/#{draft.uid}")
-      end
-
-      it "renders an input with the draft content" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("this is a test")
-      end
-
-      it "renders the object" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_JSON
-        expect(JSON.parse(response.body)["id"]).to eq(draft.iri)
-      end
-
-      it "returns 404 if not a draft" do
+      it "returns 404 if not attributed to actor" do
         [visible, notvisible, remote].each do |object|
           get "/objects/#{object.uid}/edit"
           expect(response.status_code).to eq(404)

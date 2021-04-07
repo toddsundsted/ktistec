@@ -63,7 +63,7 @@ class ObjectsController
   end
 
   get "/objects/:id/edit" do |env|
-    unless (object = get_draft(env, iri_param))
+    unless (object = get_editable(env, iri_param))
       not_found
     end
 
@@ -71,7 +71,7 @@ class ObjectsController
   end
 
   post "/objects/:id" do |env|
-    unless (object = get_draft(env, iri_param))
+    unless (object = get_editable(env, iri_param)) && object.draft?
       not_found
     end
 
@@ -81,7 +81,7 @@ class ObjectsController
   end
 
   delete "/objects/:id" do |env|
-    unless (object = get_draft(env, iri_param))
+    unless (object = get_editable(env, iri_param)) && object.draft?
       not_found
     end
 
@@ -147,9 +147,9 @@ class ObjectsController
     }
   end
 
-  private def self.get_draft(env, iri_or_id)
+  private def self.get_editable(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id))
-      if env.account.actor == object.attributed_to? && object.draft?
+      if env.account.actor == object.attributed_to?
         object
       end
     end

@@ -89,6 +89,10 @@
               input type="checkbox" name="public"
               label Public
       - if author == account.actor
+        a href=edit_object_path(object)
+          button.ui.mini.iconic.button
+            i.edit.icon
+            | Edit
         == activity_button(outbox_path(account), object.iri, "Delete", button_class: "mini dangerous iconic", button_attrs: {"data-modal": "delete"}) do
           i.trash.icon
           | Delete

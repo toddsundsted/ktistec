@@ -8,8 +8,11 @@ form.ui.form id="object-#{object.id}" data-controller="has-content multi-action"
     - content = object.source.try(&.content) || object.content || ""
     input#input-trix-editor type="hidden" name="content" value=content
     trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-change@window->trix#change input->has-content#change" data-has-content-target="input" input="input-trix-editor"
-  .ui.buttons
-    input.ui.disabled.primary.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Post Note" action=outbox_path(actor)
-    input.ui.disabled.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Save Draft" action=object_path(object)
-  a.ui.teal.right.floated.button href=actor_relationships_path(actor, "drafts")
-    | Back to Drafts
+  - if object.draft?
+    .ui.buttons
+      input.ui.disabled.primary.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Publish Post" action=outbox_path(actor)
+      input.ui.disabled.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Save Draft" action=object_path(object)
+    a.ui.teal.right.floated.button href=actor_relationships_path(actor, "drafts")
+      | Back to Drafts
+  - else
+    input.ui.disabled.primary.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Update Post" action=outbox_path(actor)

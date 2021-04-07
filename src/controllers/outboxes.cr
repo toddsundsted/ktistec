@@ -260,7 +260,7 @@ class RelationshipsController
       task.schedule
     end
 
-    if activity.is_a?(ActivityPub::Activity::Create)
+    if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Update)
       if activity.object.in_reply_to?
         env.created remote_thread_path(activity.object.in_reply_to)
       else

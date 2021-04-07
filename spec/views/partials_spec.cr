@@ -413,6 +413,54 @@ Spectator.describe "partials" do
     end
   end
 
+  describe "edit.html.slang" do
+    let(env) do
+      HTTP::Server::Context.new(
+        HTTP::Request.new("GET", "/object"),
+        HTTP::Server::Response.new(IO::Memory.new)
+      )
+    end
+
+    subject do
+      begin
+        XML.parse_html(render "./src/views/objects/edit.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    context "if authenticated" do
+      let(account) { register }
+
+      before_each { env.account = account }
+
+      let(object) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/original"
+        )
+      end
+
+      it "includes a button to publish the post" do
+        expect(subject.xpath_nodes("//form//input[@value='Publish Post']")).
+          not_to be_empty
+      end
+
+      it "includes a button to save the draft" do
+        expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+          not_to be_empty
+      end
+
+      context "when published" do
+        before_each { object.assign(published: Time.utc) }
+
+        it "does not include a button to save the draft" do
+          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+            to be_empty
+        end
+      end
+    end
+  end
+
   describe "reply.html.slang" do
     let(env) do
       HTTP::Server::Context.new(
@@ -437,7 +485,7 @@ Spectator.describe "partials" do
       let(original) do
         ActivityPub::Object.new(
           iri: "https://test.test/objects/original",
-          attributed_to: account.actor,
+          attributed_to: account.actor
         )
       end
 

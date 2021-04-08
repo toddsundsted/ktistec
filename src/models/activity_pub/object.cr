@@ -3,6 +3,7 @@ require "json"
 require "./actor"
 require "../activity_pub"
 require "../relationship/content/approved"
+require "../relationship/content/canonical"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
@@ -345,6 +346,44 @@ module ActivityPub
     def approved_by?(approved_by)
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Relationship::Content::Approved.count(from_iri: from_iri, to_iri: iri) > 0
+    end
+
+    @[Assignable]
+    @canonical_path : String?
+
+    @canonical_path_changed : Bool = false
+
+    def canonical_path
+      @canonical_path ||= Relationship::Content::Canonical.find?(to_iri: path).try(&.from_iri)
+    end
+
+    def canonical_path=(@canonical_path)
+      @canonical_path_changed = true
+      @canonical_path
+    end
+
+    def before_save
+      if @canonical_path_changed
+        @canonical_path_changed = false
+        if (canonical = Relationship::Content::Canonical.find?(to_iri: path)) && canonical.from_iri != @canonical_path
+          if (urls = self.urls)
+            urls.delete("#{Ktistec.host}#{canonical.from_iri}")
+          end
+          canonical.destroy
+        end
+        if (canonical.nil? || canonical.from_iri != @canonical_path) && (canonical_path = @canonical_path)
+          canonical = Relationship::Content::Canonical.new(from_iri: canonical_path, to_iri: path).save
+          if (urls = self.urls)
+            urls << "#{Ktistec.host}#{canonical_path}"
+          else
+            self.urls = ["#{Ktistec.host}#{canonical_path}"]
+          end
+        end
+      end
+    end
+
+    private def path
+      URI.parse(iri).path
     end
 
     def tags

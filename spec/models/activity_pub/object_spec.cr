@@ -528,158 +528,158 @@ Spectator.describe ActivityPub::Object do
         end
       end
     end
+  end
 
-    describe "#approved_by?" do
-      subject do
-        described_class.new(
-          iri: "https://test.test/objects/#{random_string}"
-        )
-      end
-      let(actor) do
-        ActivityPub::Actor.new(
-          iri: "https://test.test/#{random_string}"
-        )
-      end
-      let!(approved) do
-        Relationship::Content::Approved.new(
-          actor: actor,
-          object: subject
-        ).save
-      end
-
-      it "returns true if approved by actor" do
-        expect(subject.approved_by?(actor.iri)).to be_true
-      end
-
-      it "returns false if not approved by actor" do
-        expect(subject.approved_by?("https://other/")).to be_false
-      end
+  describe "#approved_by?" do
+    subject do
+      described_class.new(
+        iri: "https://test.test/objects/#{random_string}"
+      )
+    end
+    let(actor) do
+      ActivityPub::Actor.new(
+        iri: "https://test.test/#{random_string}"
+      )
+    end
+    let!(approved) do
+      Relationship::Content::Approved.new(
+        actor: actor,
+        object: subject
+      ).save
     end
 
-    describe "#draft?" do
-      subject do
-        described_class.new(
-          iri: "https://test.test/objects/#{random_string}"
-        ).save
-      end
-
-      it "returns true if draft" do
-        expect(subject.draft?).to be_true
-      end
-
-      it "returns false if not local" do
-        expect(subject.assign(iri: "https://remote/object").draft?).to be_false
-      end
-
-      it "returns false if published" do
-        expect(subject.assign(published: Time.utc).draft?).to be_false
-      end
+    it "returns true if approved by actor" do
+      expect(subject.approved_by?(actor.iri)).to be_true
     end
 
-    context "canonical path" do
-      PATH = "/abc/xyz"
+    it "returns false if not approved by actor" do
+      expect(subject.approved_by?("https://other/")).to be_false
+    end
+  end
 
-      subject do
-        described_class.new(
-          iri: "https://test.test#{PATH}"
-        )
-      end
-      let(canonical) do
-        Relationship::Content::Canonical.new(
-          from_iri: "/foo/bar/baz",
-          to_iri: PATH
-        )
-      end
+  describe "#draft?" do
+    subject do
+      described_class.new(
+        iri: "https://test.test/objects/#{random_string}"
+      ).save
+    end
 
-      before_all do
-        Kemal::RouteHandler::INSTANCE.add_route("GET", PATH) { }
-      end
+    it "returns true if draft" do
+      expect(subject.draft?).to be_true
+    end
 
-      describe "#canonical_path" do
-        it "returns nil by default" do
-          expect(subject.canonical_path).to be_nil
-        end
+    it "returns false if not local" do
+      expect(subject.assign(iri: "https://remote/object").draft?).to be_false
+    end
 
-        context "given an existing canonical relationship" do
-          before_each { canonical.save }
+    it "returns false if published" do
+      expect(subject.assign(published: Time.utc).draft?).to be_false
+    end
+  end
 
-          it "returns the canonical path" do
-            expect(subject.canonical_path).to eq("/foo/bar/baz")
-          end
-        end
+  context "canonical path" do
+    PATH = "/abc/xyz"
+
+    subject do
+      described_class.new(
+        iri: "https://test.test#{PATH}"
+      )
+    end
+    let(canonical) do
+      Relationship::Content::Canonical.new(
+        from_iri: "/foo/bar/baz",
+        to_iri: PATH
+      )
+    end
+
+    before_all do
+      Kemal::RouteHandler::INSTANCE.add_route("GET", PATH) { }
+    end
+
+    describe "#canonical_path" do
+      it "returns nil by default" do
+        expect(subject.canonical_path).to be_nil
       end
 
       context "given an existing canonical relationship" do
         before_each { canonical.save }
 
-        describe "#save" do
-          it "doesn't destroy the canonical path" do
-            subject.save
-            expect(described_class.find(subject.id).canonical_path).not_to be_nil
-          end
-        end
-      end
-
-      describe "#canonical_path=" do
-        it "assigns a new canonical path" do
-          subject.assign(canonical_path: "/foo/bar/baz").save
-          expect(described_class.find(subject.id).canonical_path).to eq("/foo/bar/baz")
-        end
-
-        it "adds the canonical path to urls" do
-          subject.assign(canonical_path: "/foo/bar/baz").save
-          expect(described_class.find(subject.id).urls).to eq(["https://test.test/foo/bar/baz"])
-        end
-
-        context "given an existing canonical relationship" do
-          before_each { subject.assign(canonical_path: "/foo/bar/baz").save }
-
-          it "updates the canonical path" do
-            subject.assign(canonical_path: "/blarg/blarg").save
-            expect(described_class.find(subject.id).canonical_path).to eq("/blarg/blarg")
-          end
-
-          it "adds the canonical path to urls" do
-            subject.assign(canonical_path: "/blarg/blarg").save
-            expect(described_class.find(subject.id).urls).to eq(["https://test.test/blarg/blarg"])
-          end
-
-          it "removes the canonical path" do
-            subject.assign(canonical_path: nil).save
-            expect(described_class.find(subject.id).canonical_path).to be_nil
-          end
-
-          it "removes the canonical path from urls" do
-            subject.assign(canonical_path: nil).save
-            expect(described_class.find(subject.id).urls).to be_empty
-          end
-        end
-
-        context "given existing urls" do
-          before_each { subject.assign(urls: ["https://test.test/url"]).save }
-
-          it "adds the canonical URL to the urls" do
-            subject.assign(canonical_path: "/foo/bar/baz").save
-            expect(described_class.find(subject.id).urls).to eq(["https://test.test/url", "https://test.test/foo/bar/baz"])
-          end
+        it "returns the canonical path" do
+          expect(subject.canonical_path).to eq("/foo/bar/baz")
         end
       end
     end
 
-    describe "#tags" do
-      let(hashtag) { Tag::Hashtag.new(name: "foo", href: "https://test.test/tags/foo") }
-      let(mention) { Tag::Mention.new(name: "foo@test.test", href: "https://test.test/actors/foo") }
-      subject do
-        described_class.new(
-          iri: "https://test.test/object",
-          hashtags: [hashtag],
-          mentions: [mention]
-        ).save
+    context "given an existing canonical relationship" do
+      before_each { canonical.save }
+
+      describe "#save" do
+        it "doesn't destroy the canonical path" do
+          subject.save
+          expect(described_class.find(subject.id).canonical_path).not_to be_nil
+        end
+      end
+    end
+
+    describe "#canonical_path=" do
+      it "assigns a new canonical path" do
+        subject.assign(canonical_path: "/foo/bar/baz").save
+        expect(described_class.find(subject.id).canonical_path).to eq("/foo/bar/baz")
       end
 
-      it "returns tags" do
-        expect(subject.tags).to contain_exactly(hashtag, mention)
+      it "adds the canonical path to urls" do
+        subject.assign(canonical_path: "/foo/bar/baz").save
+        expect(described_class.find(subject.id).urls).to eq(["https://test.test/foo/bar/baz"])
       end
+
+      context "given an existing canonical relationship" do
+        before_each { subject.assign(canonical_path: "/foo/bar/baz").save }
+
+        it "updates the canonical path" do
+          subject.assign(canonical_path: "/blarg/blarg").save
+          expect(described_class.find(subject.id).canonical_path).to eq("/blarg/blarg")
+        end
+
+        it "adds the canonical path to urls" do
+          subject.assign(canonical_path: "/blarg/blarg").save
+          expect(described_class.find(subject.id).urls).to eq(["https://test.test/blarg/blarg"])
+        end
+
+        it "removes the canonical path" do
+          subject.assign(canonical_path: nil).save
+          expect(described_class.find(subject.id).canonical_path).to be_nil
+        end
+
+        it "removes the canonical path from urls" do
+          subject.assign(canonical_path: nil).save
+          expect(described_class.find(subject.id).urls).to be_empty
+        end
+      end
+
+      context "given existing urls" do
+        before_each { subject.assign(urls: ["https://test.test/url"]).save }
+
+        it "adds the canonical URL to the urls" do
+          subject.assign(canonical_path: "/foo/bar/baz").save
+          expect(described_class.find(subject.id).urls).to eq(["https://test.test/url", "https://test.test/foo/bar/baz"])
+        end
+      end
+    end
+  end
+
+  describe "#tags" do
+    let(hashtag) { Tag::Hashtag.new(name: "foo", href: "https://test.test/tags/foo") }
+    let(mention) { Tag::Mention.new(name: "foo@test.test", href: "https://test.test/actors/foo") }
+    subject do
+      described_class.new(
+        iri: "https://test.test/object",
+        hashtags: [hashtag],
+        mentions: [mention]
+      ).save
+    end
+
+    it "returns tags" do
+      expect(subject.tags).to contain_exactly(hashtag, mention)
     end
   end
 end

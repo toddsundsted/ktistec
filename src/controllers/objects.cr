@@ -143,7 +143,8 @@ class ObjectsController
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
     {
-      "source" => ActivityPub::Object::Source.new(params["content"].as(String), "text/html; editor=trix")
+      "source" => ActivityPub::Object::Source.new(params["content"].as(String), "text/html; editor=trix"),
+      "canonical_path" => params["canonical_path"]?.try(&.as(String).presence)
     }
   end
 

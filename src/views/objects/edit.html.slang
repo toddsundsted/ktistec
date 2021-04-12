@@ -8,6 +8,9 @@ form.ui.form id="object-#{object.id}" data-controller="has-content multi-action"
     - content = object.source.try(&.content) || object.content || ""
     input#input-trix-editor type="hidden" name="content" value=content
     trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-change@window->trix#change input->has-content#change" data-has-content-target="input" input="input-trix-editor"
+  .field
+    label Canonical Path
+    input type="text" name="canonical_path" value=object.canonical_path
   - if object.draft?
     .ui.buttons
       input.ui.disabled.primary.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Publish Post" action=outbox_path(actor)

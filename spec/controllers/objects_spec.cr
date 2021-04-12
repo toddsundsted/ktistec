@@ -381,9 +381,23 @@ Spectator.describe ObjectsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("this is a test")
         end
 
-        it "renders the object" do
+        it "renders the content" do
           get "/objects/#{draft.uid}/edit", ACCEPT_JSON
-          expect(JSON.parse(response.body)["id"]).to eq(draft.iri)
+          expect(JSON.parse(response.body)["content"]).to eq("this is a test")
+        end
+
+        context "with a canonical path" do
+          before_each { draft.assign(canonical_path: "/foo/bar/baz").save }
+
+          it "renders an input with the canonical path" do
+            get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first.text).to eq("/foo/bar/baz")
+          end
+
+          it "renders the canonical path as URL" do
+            get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["url"]).to eq(["#{Ktistec.host}/foo/bar/baz"])
+          end
         end
       end
 
@@ -425,9 +439,23 @@ Spectator.describe ObjectsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("foo bar baz")
         end
 
-        it "renders the object" do
+        it "renders the content" do
           get "/objects/#{visible.uid}/edit", ACCEPT_JSON
-          expect(JSON.parse(response.body)["id"]).to eq(visible.iri)
+          expect(JSON.parse(response.body)["content"]).to eq("foo bar baz")
+        end
+
+        context "with a canonical path" do
+          before_each { visible.assign(canonical_path: "/foo/bar/baz").save }
+
+          it "renders an input with the canonical path" do
+            get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first.text).to eq("/foo/bar/baz")
+          end
+
+          it "renders the canonical path as URL" do
+            get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["url"]).to eq(["#{Ktistec.host}/foo/bar/baz"])
+          end
         end
       end
 
@@ -472,6 +500,16 @@ Spectator.describe ObjectsController do
       it "changes the content" do
         expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar"}|}.
           to change{ActivityPub::Object.find(draft.id).content}
+      end
+
+      it "updates the canonical path" do
+        expect{post "/objects/#{draft.uid}", FORM_DATA, "content=foo+bar&canonical_path=%2Ffoo%2Fbar"}.
+          to change{ActivityPub::Object.find(draft.id).canonical_path}
+      end
+
+      it "updates the canonical path" do
+        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar","canonical_path":"/foo/bar"}|}.
+          to change{ActivityPub::Object.find(draft.id).canonical_path}
       end
 
       it "returns 404 if not a draft" do

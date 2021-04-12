@@ -98,12 +98,14 @@ class RelationshipsController
       if (followers = account.actor.followers)
         cc << followers
       end
+      canonical_path = activity["canonical_path"]?.try(&.presence)
       activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
       object ||= ActivityPub::Object::Note.new(iri: "#{host}/objects/#{id}")
       object.assign(
         source: ActivityPub::Object::Source.new(content, "text/html; editor=trix"),
         attributed_to_iri: account.iri,
         in_reply_to: in_reply_to,
+        canonical_path: canonical_path,
         published: now,
         visible: visible,
         to: to,

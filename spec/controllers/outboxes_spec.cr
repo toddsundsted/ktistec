@@ -220,6 +220,19 @@ Spectator.describe RelationshipsController do
             to change{ActivityPub::Object::Note.count(attributed_to_iri: actor.iri)}.by(1)
         end
 
+        context "given a canonical path" do
+          before_all do
+            unless Kemal::RouteHandler::INSTANCE.lookup_route("GET", "/objects/:id").found?
+              Kemal::RouteHandler::INSTANCE.add_route("GET", "/objects/:id") { }
+            end
+          end
+
+          it "sets the canonical path" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&canonical_path=%2Ffoo%2Fbar%2Fbaz"
+            expect(created.canonical_path).to eq("/foo/bar/baz")
+          end
+        end
+
         context "when a draft object is specified" do
           let(object) do
             ActivityPub::Object.new(

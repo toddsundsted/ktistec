@@ -382,6 +382,16 @@ module ActivityPub
       end
     end
 
+    def after_delete
+      Relationship::Content::Canonical.find?(to_iri: path).try(&.destroy)
+      @canonical_path = nil
+    end
+
+    def after_destroy
+      Relationship::Content::Canonical.find?(to_iri: path).try(&.destroy)
+      @canonical_path = nil
+    end
+
     private def path
       URI.parse(iri).path
     end

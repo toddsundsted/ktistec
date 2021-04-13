@@ -665,6 +665,22 @@ Spectator.describe ActivityPub::Object do
         end
       end
     end
+
+    describe "#delete" do
+      before_each { canonical.save }
+
+      it "destroys the associated canonical path" do
+        expect{subject.delete}.to change{subject.canonical_path}
+      end
+    end
+
+    describe "#destroy" do
+      before_each { canonical.save }
+
+      it "destroys the associated canonical path" do
+        expect{subject.destroy}.to change{subject.canonical_path}
+      end
+    end
   end
 
   describe "#tags" do

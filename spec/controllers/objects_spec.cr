@@ -503,12 +503,12 @@ Spectator.describe ObjectsController do
       end
 
       it "updates the canonical path" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "content=foo+bar&canonical_path=%2Ffoo%2Fbar"}.
+        expect{post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=%2Ffoo%2Fbar"}.
           to change{ActivityPub::Object.find(draft.id).canonical_path}
       end
 
       it "updates the canonical path" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar","canonical_path":"/foo/bar"}|}.
+        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"/foo/bar"}|}.
           to change{ActivityPub::Object.find(draft.id).canonical_path}
       end
 

@@ -362,6 +362,18 @@ module ActivityPub
       @canonical_path
     end
 
+    def validate_model
+      if @canonical_path_changed && (canonical_path = @canonical_path)
+        canonical = Relationship::Content::Canonical.find?(to_iri: path) || Relationship::Content::Canonical.new(to_iri: path)
+        canonical.assign(from_iri: canonical_path)
+        unless canonical.valid?
+          canonical.errors.each do |key, value|
+            errors["canonical_path.#{key}"] = value
+          end
+        end
+      end
+    end
+
     def before_save
       if @canonical_path_changed
         @canonical_path_changed = false

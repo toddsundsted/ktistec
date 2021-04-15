@@ -68,8 +68,14 @@ Spectator.describe ActivityPub::Object do
   end
 
   context "when validating" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}") }
+
+    it "returns false if the canonical path is not valid" do
+      expect(subject.assign(canonical_path: "foobar").valid?).to be_false
+    end
+
     it "is valid" do
-      expect(described_class.new(iri: "https://test.test/#{random_string}").valid?).to be_true
+      expect(subject.valid?).to be_true
     end
   end
 

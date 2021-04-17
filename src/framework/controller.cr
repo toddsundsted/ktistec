@@ -289,6 +289,7 @@ module Ktistec
     def_response_helper(forbidden, "Forbidden", 403)
     def_response_helper(not_found, "Not Found", 404)
     def_response_helper(conflict, "Conflict", 409)
+    def_response_helper(unprocessable_entity, "Unprocessable Entity", 422)
     def_response_helper(server_error, "Server Error", 500)
 
     # Don't authenticate specified handlers.

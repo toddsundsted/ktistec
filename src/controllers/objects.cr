@@ -75,7 +75,11 @@ class ObjectsController
       not_found
     end
 
-    object.assign(params(env)).save
+    unless object.assign(params(env)).valid?
+      unprocessable_entity "objects/edit"
+    end
+
+    object.save
 
     redirect object_path(object)
   end

@@ -512,6 +512,33 @@ Spectator.describe ObjectsController do
           to change{ActivityPub::Object.find(draft.id).canonical_path}
       end
 
+      context "when validation fails" do
+        it "returns 422 if validation fails" do
+          post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=foo%2Fbar"
+          expect(response.status_code).to eq(422)
+        end
+
+        it "returns 422 if validation fails" do
+          post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"foo/bar"}|
+          expect(response.status_code).to eq(422)
+        end
+
+        it "renders a form with the object" do
+          post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=foo%2Fbar"
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
+        end
+
+        it "renders the validation error" do
+          post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=foo%2Fbar"
+          expect(XML.parse_html(response.body).xpath_nodes("//form//div[contains(@class,'error')]//div[contains(@class,'header')]")).not_to be_empty
+        end
+
+        it "renders the content" do
+          post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"foo/bar"}|
+          expect(JSON.parse(response.body)["content"]).to eq("this is a test")
+        end
+      end
+
       it "returns 404 if not a draft" do
         [visible, notvisible, remote].each do |object|
           post "/objects/#{object.uid}"

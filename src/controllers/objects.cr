@@ -35,7 +35,11 @@ class ObjectsController
       attributed_to: env.account.actor
     )
 
-    object.assign(params(env)).save
+    unless object.assign(params(env)).valid?
+      unprocessable_entity "objects/new"
+    end
+
+    object.save
 
     env.created edit_object_path(object)
   end

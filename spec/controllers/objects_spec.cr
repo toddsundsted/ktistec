@@ -136,6 +136,28 @@ Spectator.describe ObjectsController do
         expect{post "/objects", JSON_DATA, %Q|{"content":"foo bar"}|}.
           to change{ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri)}.by(1)
       end
+
+      context "when validation fails" do
+        it "returns 422 if validation fails" do
+          post "/objects", FORM_DATA, "content=foo+bar&canonical_path=foo%2Fbar"
+          expect(response.status_code).to eq(422)
+        end
+
+        it "returns 422 if validation fails" do
+          post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical_path":"foo/bar"}|
+          expect(response.status_code).to eq(422)
+        end
+
+        it "renders a form with the object" do
+          post "/objects", FORM_DATA, "content=foo+bar&canonical_path=foo%2Fbar"
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-new")
+        end
+
+        it "renders the object" do
+          post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical_path":"foo/bar"}|
+          expect(JSON.parse(response.body)["id"]).to be_truthy
+        end
+      end
     end
   end
 

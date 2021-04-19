@@ -528,14 +528,9 @@ Spectator.describe ObjectsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
         end
 
-        it "renders the validation error" do
-          post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=foo%2Fbar"
-          expect(XML.parse_html(response.body).xpath_nodes("//form//div[contains(@class,'error')]//div[contains(@class,'header')]")).not_to be_empty
-        end
-
-        it "renders the content" do
+        it "renders the object" do
           post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"foo/bar"}|
-          expect(JSON.parse(response.body)["content"]).to eq("this is a test")
+          expect(JSON.parse(response.body)["id"]).to eq(draft.iri)
         end
       end
 

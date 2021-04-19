@@ -413,6 +413,117 @@ Spectator.describe "partials" do
     end
   end
 
+  describe "editor.html.slang" do
+    subject do
+      XML.parse_html(render "./src/views/partials/editor.html.slang")
+    end
+
+    let(env) do
+      HTTP::Server::Context.new(
+        HTTP::Request.new("GET", "/editor"),
+        HTTP::Server::Response.new(IO::Memory.new)
+      )
+    end
+
+    let(object) do
+      ActivityPub::Object.new(
+        iri: "https://test.test/objects/object"
+      )
+    end
+
+    context "if authenticated" do
+      before_each { env.account = register }
+
+      context "given a new object" do
+        pre_condition { expect(object.new_record?).to be_true }
+
+        it "renders an id" do
+          expect(subject.xpath_nodes("//form/@id").first.text).to eq("object-new")
+        end
+
+        it "does not render an input with the object iri" do
+          expect(subject.xpath_nodes("//form//input[@name='object']")).
+            to be_empty
+        end
+
+        it "includes a button to save draft" do
+          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+            not_to be_empty
+        end
+
+        it "does not include a button to return to drafts" do
+          expect(subject.xpath_nodes("//form//a[text()='Back to Drafts']")).
+            to be_empty
+        end
+      end
+
+      context "given a saved object" do
+        before_each { object.save }
+
+        pre_condition { expect(object.new_record?).to be_false }
+
+        it "renders an id" do
+          expect(subject.xpath_nodes("//form/@id").first.text).to eq("object-#{object.id}")
+        end
+
+        it "renders an input with the object iri" do
+          expect(subject.xpath_nodes("//form//input[@name='object']")).
+            not_to be_empty
+        end
+      end
+
+      context "given a draft object" do
+        before_each { object.save }
+
+        pre_condition { expect(object.draft?).to be_true }
+
+        it "includes a button to publish post" do
+          expect(subject.xpath_nodes("//form//input[@value='Publish Post']")).
+            not_to be_empty
+        end
+
+        it "includes a button to save draft" do
+          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+            not_to be_empty
+        end
+
+        it "includes a button to return to drafts" do
+          expect(subject.xpath_nodes("//form//a[text()='Back to Drafts']")).
+            not_to be_empty
+        end
+      end
+
+      context "given a published object" do
+        before_each { object.assign(published: Time.utc).save }
+
+        pre_condition { expect(object.draft?).to be_false }
+
+        it "includes a button to update post" do
+          expect(subject.xpath_nodes("//form//input[@value='Update Post']")).
+            not_to be_empty
+        end
+
+        it "does not include a button to save draft" do
+          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+            to be_empty
+        end
+
+        it "does not include a button to return to drafts" do
+          expect(subject.xpath_nodes("//form//a[text()='Back to Drafts']")).
+            to be_empty
+        end
+      end
+
+      context "an object with errors" do
+        before_each { object.errors["object"] = ["has errors"] }
+
+        it "renders the error class" do
+          expect(subject.xpath_nodes("//form/@class").first.text).to match(/\berror\b/)
+        end
+      end
+    end
+  end
+
   describe "edit.html.slang" do
     let(env) do
       HTTP::Server::Context.new(

@@ -181,6 +181,18 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(400)
         end
 
+        context "when validation fails" do
+          it "returns 422" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&canonical_path=foo%2Fbar"
+            expect(response.status_code).to eq(422)
+          end
+
+          it "renders a form with the object" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&canonical_path=foo%2Fbar"
+            expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-new")
+          end
+        end
+
         it "redirects when successful" do
           post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"
           expect(response.status_code).to eq(302)

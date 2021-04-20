@@ -21,8 +21,16 @@ export default class extends Controller {
       if (xhr.responseURL && (new URL(xhr.responseURL).pathname != action)) {
         Turbolinks.visit(xhr.responseURL)
       } else {
-        let dom = new DOMParser().parseFromString(xhr.response, "text/html")
-        let new_form = dom.getElementById(form.id)
+        // don't cache because the form will usually contain error messages
+        if (document.querySelectorAll("meta[name='turbolinks-cache-control']").length < 1) {
+          let head = document.querySelector("head")
+          let meta = document.createElement("meta")
+          meta.setAttribute("name", "turbolinks-cache-control")
+          meta.setAttribute("content", "no-cache")
+          head.appendChild(meta)
+        }
+        let new_dom = new DOMParser().parseFromString(xhr.response, "text/html")
+        let new_form = new_dom.getElementById(form.id)
         form.replaceWith(new_form)
         scrollTo(0, 0)
       }

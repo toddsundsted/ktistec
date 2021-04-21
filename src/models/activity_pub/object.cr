@@ -102,18 +102,25 @@ module ActivityPub
           media_type = source.media_type.split(";").map(&.strip).first?
           if media_type == "text/html"
             clear!(:source)
+
+            # remove old mentions
+            if (old_to = self.to)
+              self.to = old_to - self.mentions.map(&.href).compact
+            end
+
             enhancements = Ktistec::HTML.enhance(source.content)
             self.content = enhancements.content
             self.media_type = media_type
             self.attachments = enhancements.attachments
             self.hashtags = enhancements.hashtags
             self.mentions = enhancements.mentions
-            old = self.to
-            new = enhancements.mentions.map(&.href).compact
-            if draft? || old.nil?
-              self.to = new
+
+            # add new mentions
+            new_to = enhancements.mentions.map(&.href).compact
+            if (old_to = self.to)
+              self.to = old_to | new_to
             else
-              self.to = old | new
+              self.to = new_to
             end
           end
         end

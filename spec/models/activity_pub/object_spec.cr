@@ -48,20 +48,25 @@ Spectator.describe ActivityPub::Object do
 
     context "addressing (to)" do
       before_each do
-        ActivityPub::Actor.new(
+        foo = ActivityPub::Actor.new(
           iri: "https://bar.com/foo",
           urls: ["https://bar.com/@foo"],
           username: "foo"
         ).save
+        bar = ActivityPub::Actor.new(
+          iri: "https://foo.com/bar",
+          urls: ["https://foo.com/@bar"],
+          username: "bar"
+        ).save
+        Tag::Mention.new(
+          subject: subject,
+          href: "https://foo.com/bar",
+          name: "bar"
+        ).save
       end
 
-      it "replaces recipients if draft" do
-        subject.assign(to: ["https://test.test/actor"], source: source).save
-        expect(subject.to).to eq(["https://bar.com/foo"])
-      end
-
-      it "appends recipients if published" do
-        subject.assign(to: ["https://test.test/actor"], source: source, published: Time.utc).save
+      it "replaces mentions" do
+        subject.assign(to: ["https://test.test/actor", "https://foo.com/bar"], source: source).save
         expect(subject.to).to eq(["https://test.test/actor", "https://bar.com/foo"])
       end
     end

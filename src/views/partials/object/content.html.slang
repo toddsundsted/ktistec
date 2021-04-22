@@ -21,7 +21,7 @@
         - else
           a.user> title=author.account_uri href=remote_actor_path(author) = author.display_name
           | posted
-        a.date title=object.display_date href=remote_thread_path(object) = object.short_date
+        a.date title=object.display_date href=remote_object_path(object) = object.short_date
       - else
         - if author != actor
           a.user> title=actor.account_uri href=actor.display_link = actor.display_name
@@ -54,7 +54,11 @@
           i.trash.icon
           | Delete
     - elsif account
-      - c = object.replies_count
+      - if (c = object.replies_count) > 0 || object.in_reply_to?
+        a href=remote_thread_path(object)
+          button.ui.mini.iconic.button
+            i.comments.icon
+            | Thread
       a href=replies_path(object)
         button.ui.mini.iconic.button
           i.reply.icon

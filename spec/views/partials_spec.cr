@@ -387,6 +387,8 @@ Spectator.describe "partials" do
       end
 
       context "and given a draft" do
+        before_each { object.assign(published: nil).save }
+
         pre_condition { expect(object.draft?).to be_true }
 
         it "does not render a button to reply" do
@@ -407,6 +409,26 @@ Spectator.describe "partials" do
 
         it "renders a button to edit" do
           expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Edit")
+        end
+      end
+
+      context "and is published" do
+        before_each { object.assign(published: Time.utc).save }
+
+        pre_condition { expect(object.draft?).to be_false }
+
+        it "does not render a link to the threaded conversation" do
+          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Thread")
+        end
+
+        it "renders a link to the threaded conversation" do
+          object.assign(in_reply_to: original, attributed_to: account.actor).save
+          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Thread")
+        end
+
+        it "renders a link to the threaded conversation" do
+          original.assign(in_reply_to: object, attributed_to: account.actor).save
+          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Thread")
         end
       end
     end

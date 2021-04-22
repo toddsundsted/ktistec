@@ -335,6 +335,11 @@ Spectator.describe "partials" do
         iri: "https://test.test/objects/object"
       ).save
     end
+    let(original) do
+      ActivityPub::Object.new(
+        iri: "https://test.test/objects/original"
+      )
+    end
 
     context "if authenticated" do
       before_each { env.account = account }
@@ -361,16 +366,10 @@ Spectator.describe "partials" do
           end
 
           context "unless in reply to a post by the account's actor" do
-            let(original) do
-              ActivityPub::Object.new(
-                iri: "https://test.test/objects/reply",
-                attributed_to: account.actor
-              )
-            end
-
             let(for_thread) { [original] }
 
             before_each do
+              original.assign(attributed_to: account.actor).save
               object.assign(in_reply_to: original).save
             end
 
@@ -387,7 +386,7 @@ Spectator.describe "partials" do
         end
       end
 
-      context "and a draft" do
+      context "and given a draft" do
         pre_condition { expect(object.draft?).to be_true }
 
         it "does not render a button to reply" do

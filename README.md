@@ -1,9 +1,11 @@
 # ![Mint](public/logo.png)
   - [Features](#features)
-    - [Posting text and images](#posting-text-and-images)
-    - [Drafts](#drafts)
+    - [Text and images](#text-and-images)
+    - [Draft posts](#draft-posts)
     - [Threaded replies](#threaded-replies)
     - [@-mention and #-hashtag autocomplete](#-mention-and--hashtag-autocomplete)
+    - [Control over comment visibility](#control-over-comment-visibility)
+    - [Pretty URLs](#pretty-urls)
     - [Followers/following](#followersfollowing)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
@@ -24,7 +26,7 @@ home in the Fediverse. If you want to talk to me, I'm
 
 ## Features
 
-### Posting text and images
+### Text and images
 
 Ktistec is intended for writing and currently supports the minimum
 viable set of tools for that purpose.
@@ -41,7 +43,7 @@ attachments used for compatibility with non-Ktistec servers.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/aecz36.png" width=460>
 
-### Drafts
+### Drafts posts
 
 Meaningful writing is an iterative process so Ktistec supports draft
 posts. Draft posts aren't visible in your timeline until you publish
@@ -63,6 +65,19 @@ and to encourage hands-on-the-keyboard composition, Ktistec supports
 autocompletion.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/22aee8.gif" width=460>
+
+### Control over comment visibility
+
+Ktistec promotes healthy dialog. Ktistec allows you to control which
+replies to your posts are public, and visible to anonymous users, and
+which are private.
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/b70e69.png" width=460>
+
+### Pretty URLs
+
+Assign pretty (canonical) URLs to posts, both for SEO and as helpful
+mnemonics for users (and yourself).
 
 ### Followers/following
 

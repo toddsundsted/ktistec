@@ -3,6 +3,7 @@ require "json"
 require "./actor"
 require "../activity_pub"
 require "../relationship/content/approved"
+require "../relationship/content/canonical"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
@@ -101,18 +102,25 @@ module ActivityPub
           media_type = source.media_type.split(";").map(&.strip).first?
           if media_type == "text/html"
             clear!(:source)
+
+            # remove old mentions
+            if (old_to = self.to)
+              self.to = old_to - self.mentions.map(&.href).compact
+            end
+
             enhancements = Ktistec::HTML.enhance(source.content)
             self.content = enhancements.content
             self.media_type = media_type
             self.attachments = enhancements.attachments
             self.hashtags = enhancements.hashtags
             self.mentions = enhancements.mentions
-            old = self.to
-            new = enhancements.mentions.map(&.href).compact
-            if draft? || old.nil?
-              self.to = new
+
+            # add new mentions
+            new_to = enhancements.mentions.map(&.href).compact
+            if (old_to = self.to)
+              self.to = old_to | new_to
             else
-              self.to = old | new
+              self.to = new_to
             end
           end
         end
@@ -128,7 +136,15 @@ module ActivityPub
     end
 
     def display_date
-      (published || created_at).to_local.to_s("%l:%M%P · %b %-d, %Y").lstrip(' ')
+      date.to_s("%l:%M%p · %b %-d, %Y").lstrip(' ')
+    end
+
+    def short_date
+      date < 1.day.ago ? date.to_s("%b %-d, %Y").lstrip(' ') : date.to_s("%l:%M%p").lstrip(' ')
+    end
+
+    private def date
+      (published || created_at).to_local
     end
 
     def self.federated_posts(page = 1, size = 10)
@@ -337,6 +353,66 @@ module ActivityPub
     def approved_by?(approved_by)
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Relationship::Content::Approved.count(from_iri: from_iri, to_iri: iri) > 0
+    end
+
+    @[Assignable]
+    @canonical_path : String?
+
+    @canonical_path_changed : Bool = false
+
+    def canonical_path
+      @canonical_path ||= Relationship::Content::Canonical.find?(to_iri: path).try(&.from_iri)
+    end
+
+    def canonical_path=(@canonical_path)
+      @canonical_path_changed = true
+      @canonical_path
+    end
+
+    def validate_model
+      if @canonical_path_changed && (canonical_path = @canonical_path)
+        canonical = Relationship::Content::Canonical.find?(to_iri: path) || Relationship::Content::Canonical.new(to_iri: path)
+        canonical.assign(from_iri: canonical_path)
+        unless canonical.valid?
+          canonical.errors.each do |key, value|
+            errors["canonical_path.#{key}"] = value
+          end
+        end
+      end
+    end
+
+    def before_save
+      if @canonical_path_changed
+        @canonical_path_changed = false
+        if (canonical = Relationship::Content::Canonical.find?(to_iri: path)) && canonical.from_iri != @canonical_path
+          if (urls = self.urls)
+            urls.delete("#{Ktistec.host}#{canonical.from_iri}")
+          end
+          canonical.destroy
+        end
+        if (canonical.nil? || canonical.from_iri != @canonical_path) && (canonical_path = @canonical_path)
+          canonical = Relationship::Content::Canonical.new(from_iri: canonical_path, to_iri: path).save
+          if (urls = self.urls)
+            urls << "#{Ktistec.host}#{canonical_path}"
+          else
+            self.urls = ["#{Ktistec.host}#{canonical_path}"]
+          end
+        end
+      end
+    end
+
+    def after_delete
+      Relationship::Content::Canonical.find?(to_iri: path).try(&.destroy)
+      @canonical_path = nil
+    end
+
+    def after_destroy
+      Relationship::Content::Canonical.find?(to_iri: path).try(&.destroy)
+      @canonical_path = nil
+    end
+
+    private def path
+      URI.parse(iri).path
     end
 
     def tags

@@ -5,6 +5,7 @@ require "../../src/framework/rewrite"
 require "../../src/framework/ext/array"
 require "../../src/framework/ext/hash"
 require "../../src/framework/ext/params"
+require "../../src/handlers/**"
 
 require "./base"
 require "./model"
@@ -34,6 +35,10 @@ class DummyCSRF < Kemal::Handler
     env.session.string("csrf", "CSRF TOKEN")
     return call_next(env)
   end
+end
+
+error 404 do
+  render_404
 end
 
 {% for method in %w(get post put head delete patch) %}

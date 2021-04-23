@@ -335,6 +335,11 @@ Spectator.describe "partials" do
         iri: "https://test.test/objects/object"
       ).save
     end
+    let(original) do
+      ActivityPub::Object.new(
+        iri: "https://test.test/objects/original"
+      )
+    end
 
     context "if authenticated" do
       before_each { env.account = account }
@@ -361,16 +366,10 @@ Spectator.describe "partials" do
           end
 
           context "unless in reply to a post by the account's actor" do
-            let(original) do
-              ActivityPub::Object.new(
-                iri: "https://test.test/objects/reply",
-                attributed_to: account.actor
-              )
-            end
-
             let(for_thread) { [original] }
 
             before_each do
+              original.assign(attributed_to: account.actor).save
               object.assign(in_reply_to: original).save
             end
 
@@ -387,7 +386,9 @@ Spectator.describe "partials" do
         end
       end
 
-      context "and a draft" do
+      context "and given a draft" do
+        before_each { object.assign(published: nil).save }
+
         pre_condition { expect(object.draft?).to be_true }
 
         it "does not render a button to reply" do
@@ -408,6 +409,137 @@ Spectator.describe "partials" do
 
         it "renders a button to edit" do
           expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Edit")
+        end
+      end
+
+      context "and is published" do
+        before_each { object.assign(published: Time.utc).save }
+
+        pre_condition { expect(object.draft?).to be_false }
+
+        it "does not render a link to the threaded conversation" do
+          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Thread")
+        end
+
+        it "renders a link to the threaded conversation" do
+          object.assign(in_reply_to: original, attributed_to: account.actor).save
+          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Thread")
+        end
+
+        it "renders a link to the threaded conversation" do
+          original.assign(in_reply_to: object, attributed_to: account.actor).save
+          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Thread")
+        end
+      end
+    end
+  end
+
+  describe "editor.html.slang" do
+    subject do
+      XML.parse_html(render "./src/views/partials/editor.html.slang")
+    end
+
+    let(env) do
+      HTTP::Server::Context.new(
+        HTTP::Request.new("GET", "/editor"),
+        HTTP::Server::Response.new(IO::Memory.new)
+      )
+    end
+
+    let(object) do
+      ActivityPub::Object.new(
+        iri: "https://test.test/objects/object"
+      )
+    end
+
+    context "if authenticated" do
+      before_each { env.account = register }
+
+      context "given a new object" do
+        pre_condition { expect(object.new_record?).to be_true }
+
+        it "renders an id" do
+          expect(subject.xpath_nodes("//form/@id").first.text).to eq("object-new")
+        end
+
+        it "does not render an input with the object iri" do
+          expect(subject.xpath_nodes("//form//input[@name='object']")).
+            to be_empty
+        end
+
+        it "includes a button to save draft" do
+          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+            not_to be_empty
+        end
+
+        it "does not include a button to return to drafts" do
+          expect(subject.xpath_nodes("//form//a[text()='Back to Drafts']")).
+            to be_empty
+        end
+      end
+
+      context "given a saved object" do
+        before_each { object.save }
+
+        pre_condition { expect(object.new_record?).to be_false }
+
+        it "renders an id" do
+          expect(subject.xpath_nodes("//form/@id").first.text).to eq("object-#{object.id}")
+        end
+
+        it "renders an input with the object iri" do
+          expect(subject.xpath_nodes("//form//input[@name='object']")).
+            not_to be_empty
+        end
+      end
+
+      context "given a draft object" do
+        before_each { object.save }
+
+        pre_condition { expect(object.draft?).to be_true }
+
+        it "includes a button to publish post" do
+          expect(subject.xpath_nodes("//form//input[@value='Publish Post']")).
+            not_to be_empty
+        end
+
+        it "includes a button to save draft" do
+          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+            not_to be_empty
+        end
+
+        it "includes a button to return to drafts" do
+          expect(subject.xpath_nodes("//form//a[text()='Back to Drafts']")).
+            not_to be_empty
+        end
+      end
+
+      context "given a published object" do
+        before_each { object.assign(published: Time.utc).save }
+
+        pre_condition { expect(object.draft?).to be_false }
+
+        it "includes a button to update post" do
+          expect(subject.xpath_nodes("//form//input[@value='Update Post']")).
+            not_to be_empty
+        end
+
+        it "does not include a button to save draft" do
+          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+            to be_empty
+        end
+
+        it "does not include a button to return to drafts" do
+          expect(subject.xpath_nodes("//form//a[text()='Back to Drafts']")).
+            to be_empty
+        end
+      end
+
+      context "an object with errors" do
+        before_each { object.errors["object"] = ["has errors"] }
+
+        it "renders the error class" do
+          expect(subject.xpath_nodes("//form/@class").first.text).to match(/\berror\b/)
         end
       end
     end
@@ -437,7 +569,7 @@ Spectator.describe "partials" do
       let(original) do
         ActivityPub::Object.new(
           iri: "https://test.test/objects/original",
-          attributed_to: account.actor,
+          attributed_to: account.actor
         )
       end
 

@@ -85,7 +85,6 @@ class RelationshipsController
       if object && object.attributed_to != account.actor
         forbidden
       end
-      now = Time.utc
       visible = !!activity["public"]?
       to = activity["to"]?.presence.try(&.split(",")) || [] of String
       if (attributed_to = in_reply_to.try(&.attributed_to?))
@@ -98,20 +97,21 @@ class RelationshipsController
       if (followers = account.actor.followers)
         cc << followers
       end
+      canonical_path = activity["canonical_path"]?.try(&.presence)
       activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
       object ||= ActivityPub::Object::Note.new(iri: "#{host}/objects/#{id}")
       object.assign(
         source: ActivityPub::Object::Source.new(content, "text/html; editor=trix"),
         attributed_to_iri: account.iri,
         in_reply_to: in_reply_to,
-        published: now,
+        canonical_path: canonical_path,
         visible: visible,
         to: to,
         cc: cc
       )
       # validate ensures properties are populated from source
       unless object.valid?
-        bad_request
+        unprocessable_entity "partials/editor"
       end
       # hack to sidestep typing of unions as their nearest common ancestor
       if activity.responds_to?(:actor=) && activity.responds_to?(:object=)
@@ -119,7 +119,6 @@ class RelationshipsController
           iri: "#{host}/activities/#{id}",
           actor: account.actor,
           object: object,
-          published: object.published,
           visible: object.visible,
           to: object.to,
           cc: object.cc
@@ -128,6 +127,8 @@ class RelationshipsController
       unless activity.responds_to?(:valid_for_send?) && activity.valid_for_send?
         bad_request
       end
+      # after validating make published
+      object.published = activity.published = Time.utc
     when "Follow"
       unless (iri = activity["object"]?) && (object = ActivityPub::Actor.find?(iri))
         bad_request
@@ -260,7 +261,7 @@ class RelationshipsController
       task.schedule
     end
 
-    if activity.is_a?(ActivityPub::Activity::Create)
+    if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Update)
       if activity.object.in_reply_to?
         env.created remote_thread_path(activity.object.in_reply_to)
       else

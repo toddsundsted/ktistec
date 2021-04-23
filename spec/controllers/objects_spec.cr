@@ -136,6 +136,28 @@ Spectator.describe ObjectsController do
         expect{post "/objects", JSON_DATA, %Q|{"content":"foo bar"}|}.
           to change{ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri)}.by(1)
       end
+
+      context "when validation fails" do
+        it "returns 422 if validation fails" do
+          post "/objects", FORM_DATA, "content=foo+bar&canonical_path=foo%2Fbar"
+          expect(response.status_code).to eq(422)
+        end
+
+        it "returns 422 if validation fails" do
+          post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical_path":"foo/bar"}|
+          expect(response.status_code).to eq(422)
+        end
+
+        it "renders a form with the object" do
+          post "/objects", FORM_DATA, "content=foo+bar&canonical_path=foo%2Fbar"
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-new")
+        end
+
+        it "renders the object" do
+          post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical_path":"foo/bar"}|
+          expect(JSON.parse(response.body)["id"]).to be_truthy
+        end
+      end
     end
   end
 
@@ -350,42 +372,116 @@ Spectator.describe ObjectsController do
     context "when authorized" do
       sign_in(as: actor.username)
 
-      it "succeeds" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-        expect(response.status_code).to eq(200)
+      context "given a draft post" do
+        it "succeeds" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+        end
+
+        it "succeeds" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+          expect(response.status_code).to eq(200)
+        end
+
+        it "renders a form with the object" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
+        end
+
+        it "renders a button that submits to the outbox path" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Publish')]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
+        end
+
+        it "renders a button that submits to the object update path" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@action").first.text).to eq("/objects/#{draft.uid}")
+        end
+
+        it "renders an input with the draft content" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("this is a test")
+        end
+
+        it "renders the content" do
+          get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+          expect(JSON.parse(response.body)["content"]).to eq("this is a test")
+        end
+
+        context "with a canonical path" do
+          before_each { draft.assign(canonical_path: "/foo/bar/baz").save }
+
+          it "renders an input with the canonical path" do
+            get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first.text).to eq("/foo/bar/baz")
+          end
+
+          it "renders the canonical path as URL" do
+            get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["url"]).to eq(["#{Ktistec.host}/foo/bar/baz"])
+          end
+        end
       end
 
-      it "succeeds" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_JSON
-        expect(response.status_code).to eq(200)
+      context "given a published post" do
+        before_each do
+          visible.assign(
+            attributed_to: actor,
+            content: "foo bar baz"
+          ).save
+        end
+
+        it "succeeds" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+        end
+
+        it "succeeds" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+          expect(response.status_code).to eq(200)
+        end
+
+        it "renders a form with the object" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{visible.id}")
+        end
+
+        it "renders a button that submits to the outbox path" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Update')]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
+        end
+
+        it "does not render a button that submits to the object update path" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@action")).to be_empty
+        end
+
+        it "renders an input with the content" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("foo bar baz")
+        end
+
+        it "renders the content" do
+          get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+          expect(JSON.parse(response.body)["content"]).to eq("foo bar baz")
+        end
+
+        context "with a canonical path" do
+          before_each { visible.assign(canonical_path: "/foo/bar/baz").save }
+
+          it "renders an input with the canonical path" do
+            get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first.text).to eq("/foo/bar/baz")
+          end
+
+          it "renders the canonical path as URL" do
+            get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["url"]).to eq(["#{Ktistec.host}/foo/bar/baz"])
+          end
+        end
       end
 
-      it "renders a form with the object" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
-      end
-
-      it "renders a button that submits to the outbox path" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Post')]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
-      end
-
-      it "renders a button that submits to the object update path" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@action").first.text).to eq("/objects/#{draft.uid}")
-      end
-
-      it "renders an input with the draft content" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("this is a test")
-      end
-
-      it "renders the object" do
-        get "/objects/#{draft.uid}/edit", ACCEPT_JSON
-        expect(JSON.parse(response.body)["id"]).to eq(draft.iri)
-      end
-
-      it "returns 404 if not a draft" do
+      it "returns 404 if not attributed to actor" do
         [visible, notvisible, remote].each do |object|
           get "/objects/#{object.uid}/edit"
           expect(response.status_code).to eq(404)
@@ -426,6 +522,38 @@ Spectator.describe ObjectsController do
       it "changes the content" do
         expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar"}|}.
           to change{ActivityPub::Object.find(draft.id).content}
+      end
+
+      it "updates the canonical path" do
+        expect{post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=%2Ffoo%2Fbar"}.
+          to change{ActivityPub::Object.find(draft.id).canonical_path}
+      end
+
+      it "updates the canonical path" do
+        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"/foo/bar"}|}.
+          to change{ActivityPub::Object.find(draft.id).canonical_path}
+      end
+
+      context "when validation fails" do
+        it "returns 422 if validation fails" do
+          post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=foo%2Fbar"
+          expect(response.status_code).to eq(422)
+        end
+
+        it "returns 422 if validation fails" do
+          post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"foo/bar"}|
+          expect(response.status_code).to eq(422)
+        end
+
+        it "renders a form with the object" do
+          post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=foo%2Fbar"
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
+        end
+
+        it "renders the object" do
+          post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"foo/bar"}|
+          expect(JSON.parse(response.body)["id"]).to eq(draft.iri)
+        end
       end
 
       it "returns 404 if not a draft" do

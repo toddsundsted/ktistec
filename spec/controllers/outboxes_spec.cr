@@ -181,6 +181,18 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(400)
         end
 
+        context "when validation fails" do
+          it "returns 422" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&canonical_path=foo%2Fbar"
+            expect(response.status_code).to eq(422)
+          end
+
+          it "renders a form with the object" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&canonical_path=foo%2Fbar"
+            expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-new")
+          end
+        end
+
         it "redirects when successful" do
           post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"
           expect(response.status_code).to eq(302)
@@ -218,6 +230,19 @@ Spectator.describe RelationshipsController do
         it "creates a note object" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"}.
             to change{ActivityPub::Object::Note.count(attributed_to_iri: actor.iri)}.by(1)
+        end
+
+        context "given a canonical path" do
+          before_all do
+            unless Kemal::RouteHandler::INSTANCE.lookup_route("GET", "/objects/:id").found?
+              Kemal::RouteHandler::INSTANCE.add_route("GET", "/objects/:id") { }
+            end
+          end
+
+          it "sets the canonical path" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&canonical_path=%2Ffoo%2Fbar%2Fbaz"
+            expect(created.canonical_path).to eq("/foo/bar/baz")
+          end
         end
 
         context "when a draft object is specified" do

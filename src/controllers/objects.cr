@@ -35,7 +35,11 @@ class ObjectsController
       attributed_to: env.account.actor
     )
 
-    object.assign(params(env)).save
+    unless object.assign(params(env)).valid?
+      unprocessable_entity "objects/new"
+    end
+
+    object.save
 
     env.created edit_object_path(object)
   end
@@ -63,7 +67,7 @@ class ObjectsController
   end
 
   get "/objects/:id/edit" do |env|
-    unless (object = get_draft(env, iri_param))
+    unless (object = get_editable(env, iri_param))
       not_found
     end
 
@@ -71,17 +75,21 @@ class ObjectsController
   end
 
   post "/objects/:id" do |env|
-    unless (object = get_draft(env, iri_param))
+    unless (object = get_editable(env, iri_param)) && object.draft?
       not_found
     end
 
-    object.assign(params(env)).save
+    unless object.assign(params(env)).valid?
+      unprocessable_entity "objects/edit"
+    end
+
+    object.save
 
     redirect object_path(object)
   end
 
   delete "/objects/:id" do |env|
-    unless (object = get_draft(env, iri_param))
+    unless (object = get_editable(env, iri_param)) && object.draft?
       not_found
     end
 
@@ -143,13 +151,14 @@ class ObjectsController
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
     {
-      "source" => ActivityPub::Object::Source.new(params["content"].as(String), "text/html; editor=trix")
+      "source" => params["content"]?.try(&.as(String).presence).try { |content| ActivityPub::Object::Source.new(content, "text/html; editor=trix") },
+      "canonical_path" => params["canonical_path"]?.try(&.as(String).presence)
     }
   end
 
-  private def self.get_draft(env, iri_or_id)
+  private def self.get_editable(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id))
-      if env.account.actor == object.attributed_to? && object.draft?
+      if env.account.actor == object.attributed_to?
         object
       end
     end

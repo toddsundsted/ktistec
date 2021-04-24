@@ -1,7 +1,7 @@
 language: crystal
 
 crystal:
-  - 0.36.1
+  - latest
 
 script:
   - crystal spec

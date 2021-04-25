@@ -128,7 +128,8 @@ class RelationshipsController
         bad_request
       end
       # after validating make published
-      object.published = activity.published = Time.utc
+      time = object.published || Time.utc
+      object.published = activity.published = time
     when "Follow"
       unless (iri = activity["object"]?) && (object = ActivityPub::Actor.find?(iri))
         bad_request

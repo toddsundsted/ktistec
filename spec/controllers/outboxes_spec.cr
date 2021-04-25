@@ -313,9 +313,9 @@ Spectator.describe RelationshipsController do
               not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).iri}
           end
 
-          it "changes the published timestamp" do
+          it "does not change the published timestamp" do
             expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
-              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
+              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
           end
 
           it "returns 400 if object does not exist" do

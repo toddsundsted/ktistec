@@ -117,8 +117,8 @@ module Ktistec
       "/remote/objects/#{{{object}}.id}/thread#object-#{{{object}}.id}"
     end
 
-    macro replies_path(object)
-      "/remote/objects/#{{{object}}.id}/replies"
+    macro reply_path(object)
+      "/remote/objects/#{{{object}}.id}/reply"
     end
 
     macro approve_path(object)

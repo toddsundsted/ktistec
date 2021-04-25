@@ -59,7 +59,7 @@
           button.ui.mini.iconic.button
             i.comments.icon
             | Thread
-      a href=replies_path(object)
+      a href=reply_path(object)
         button.ui.mini.iconic.button
           i.reply.icon
           = pluralize(c, "Reply")

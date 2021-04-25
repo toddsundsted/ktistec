@@ -101,6 +101,11 @@
           i.trash.icon
           | Delete
     - else
+      - if (c = object.replies_count) > 0 || object.in_reply_to?
+        a href=thread_path(object)
+          button.ui.mini.iconic.button
+            i.comments.icon
+            | Thread
       - if (c = object.likes_count) > 0
         button.ui.mini.iconic.button
           i.star.icon

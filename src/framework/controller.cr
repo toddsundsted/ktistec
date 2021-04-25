@@ -109,6 +109,10 @@ module Ktistec
       "object-#{{{object}}.id}"
     end
 
+    macro thread_path(object)
+      "/objects/#{{{object}}.uid}/thread#object-#{{{object}}.id}"
+    end
+
     macro remote_thread_path(object)
       "/remote/objects/#{{{object}}.id}/thread#object-#{{{object}}.id}"
     end

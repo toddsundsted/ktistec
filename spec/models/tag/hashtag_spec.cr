@@ -75,6 +75,16 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.objects_with_tag("foo")).not_to have(object5)
     end
 
+    it "filters out objects with deleted attributed to actors" do
+      author.delete
+      expect(described_class.objects_with_tag("foo")).to be_empty
+    end
+
+    it "filters out objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.objects_with_tag("foo")).to be_empty
+    end
+
     it "paginates the results" do
       expect(described_class.objects_with_tag("foo", 1, 2)).to eq([object5, object4])
       expect(described_class.objects_with_tag("foo", 2, 2)).to eq([object3, object2])

@@ -10,28 +10,28 @@ class Tag
     def self.objects_with_tag(name, page = 1, size = 10)
       query = <<-QUERY
         SELECT #{ActivityPub::Object.columns(prefix: "o")}
-          FROM objects AS o
-         WHERE EXISTS (
-              SELECT 1
-                FROM tags AS t
-               WHERE t.type = "#{Tag::Hashtag}"
-                 AND t.subject_iri = o.iri
-                 AND t.name = ?)
+          FROM objects AS o, tags AS t
+          JOIN actors AS a
+            ON a.iri = o.attributed_to_iri
+         WHERE t.type = "#{Tag::Hashtag}"
+           AND t.subject_iri = o.iri
+           AND t.name = ?
+           AND o.visible = 1
            AND o.published IS NOT NULL
            AND o.deleted_at IS NULL
-           AND o.visible = 1
+           AND a.deleted_at IS NULL
            AND o.id NOT IN (
               SELECT o.id
-                FROM objects AS o
-               WHERE EXISTS (
-                    SELECT 1
-                      FROM tags AS t
-                     WHERE t.type = "#{Tag::Hashtag}"
-                       AND t.subject_iri = o.iri
-                       AND t.name = ?)
+                FROM objects AS o, tags AS t
+                JOIN actors AS a
+                  ON a.iri = o.attributed_to_iri
+               WHERE t.type = "#{Tag::Hashtag}"
+                 AND t.subject_iri = o.iri
+                 AND t.name = ?
+                 AND o.visible = 1
                  AND o.published IS NOT NULL
                  AND o.deleted_at IS NULL
-                 AND o.visible = 1
+                 AND a.deleted_at IS NULL
             ORDER BY o.published DESC
                LIMIT ?)
       ORDER BY o.published DESC

@@ -771,9 +771,9 @@ Spectator.describe ObjectsController do
     end
   end
 
-  describe "GET /remote/objects/:id/replies" do
+  describe "GET /remote/objects/:id/reply" do
     it "returns 401" do
-      get "/remote/objects/0/replies"
+      get "/remote/objects/0/reply"
       expect(response.status_code).to eq(401)
     end
 
@@ -781,17 +781,17 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        get "/remote/objects/#{visible.id}/replies"
+        get "/remote/objects/#{visible.id}/reply"
         expect(response.status_code).to eq(200)
       end
 
       it "renders the object" do
-        get "/remote/objects/#{visible.id}/replies"
+        get "/remote/objects/#{visible.id}/reply"
         expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
       end
 
       it "renders the form" do
-        get "/remote/objects/#{visible.id}/replies"
+        get "/remote/objects/#{visible.id}/reply"
         expect(XML.parse_html(response.body).xpath_nodes("//trix-editor")).not_to be_empty
       end
 
@@ -814,27 +814,27 @@ Spectator.describe ObjectsController do
       end
 
       it "prepopulates editor with mentions" do
-        get "/remote/objects/#{visible.id}/replies"
+        get "/remote/objects/#{visible.id}/reply"
         expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("@author@nowhere @other@nowhere ")
       end
 
       it "returns 404 if object is a draft" do
-        get "/remote/objects/#{draft.id}/replies"
+        get "/remote/objects/#{draft.id}/reply"
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if object is not visible" do
-        get "/remote/objects/#{notvisible.id}/replies"
+        get "/remote/objects/#{notvisible.id}/reply"
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if object is remote" do
-        get "/remote/objects/#{remote.id}/replies"
+        get "/remote/objects/#{remote.id}/reply"
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if object does not exist" do
-        get "/remote/objects/0/replies"
+        get "/remote/objects/0/reply"
         expect(response.status_code).to eq(404)
       end
     end

@@ -39,6 +39,7 @@ class FooBarController
       home_path: home_path,
       sessions_path: sessions_path,
       back_path: back_path,
+      thread_path: thread_path(OBJECT),
       remote_thread_path: remote_thread_path(OBJECT),
       anchor: anchor(OBJECT)
     }.to_json
@@ -214,6 +215,12 @@ Spectator.describe Ktistec::Controller do
     end
 
     let(oid) { FooBarController::OBJECT.id }
+    let(uid) { FooBarController::OBJECT.uid }
+
+    it "gets the thread path" do
+      get "/foo/bar/helpers"
+      expect(JSON.parse(response.body)["thread_path"]).to eq("/objects/#{uid}/thread#object-#{oid}")
+    end
 
     it "gets the remote thread path" do
       get "/foo/bar/helpers"

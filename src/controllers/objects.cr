@@ -116,7 +116,7 @@ class ObjectsController
     ok "objects/thread"
   end
 
-  get "/remote/objects/:id/replies" do |env|
+  get "/remote/objects/:id/reply" do |env|
     id = env.params.url["id"].to_i64
 
     unless (object = get_object(env, id))

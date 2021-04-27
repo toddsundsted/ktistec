@@ -27,7 +27,7 @@ class SearchesController
           ActivityPub::Object.find(url)
         else
           open(url) do |response|
-            ActivityPub.from_json_ld(response.body)
+            ActivityPub.from_json_ld(response.body, include_key: true)
           end
         end
     end

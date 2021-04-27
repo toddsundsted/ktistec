@@ -96,6 +96,17 @@ Spectator.describe SearchesController do
               expect(XML.parse_html(response.body).xpath_nodes("//form//button[./text()='Unfollow']")).not_to be_empty
             end
           end
+
+          context "with a public key" do
+            before_each do
+              HTTP::Client.actors << actor.assign(pem_public_key: "PEM PUBLIC KEY").save
+            end
+
+            it "doesn't nuke the public key" do
+              headers = HTTP::Headers{"Accept" => "text/html"}
+              expect{get "/search?query=foo_bar@remote", headers}.not_to change{ActivityPub::Actor.find(actor.iri).pem_public_key}
+            end
+          end
         end
 
         context "of a local actor" do
@@ -155,6 +166,17 @@ Spectator.describe SearchesController do
               headers = HTTP::Headers{"Accept" => "text/html"}
               get "/search?query=https://remote/actors/foo_bar", headers
               expect(XML.parse_html(response.body).xpath_nodes("//form//button[./text()='Unfollow']")).not_to be_empty
+            end
+          end
+
+          context "with a public key" do
+            before_each do
+              HTTP::Client.actors << actor.assign(pem_public_key: "PEM PUBLIC KEY").save
+            end
+
+            it "doesn't nuke the public key" do
+              headers = HTTP::Headers{"Accept" => "text/html"}
+              expect{get "/search?query=https://remote/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.find(actor.iri).pem_public_key}
             end
           end
         end

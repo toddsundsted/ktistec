@@ -20,9 +20,16 @@ class SearchesController
         else
           WebFinger.query("acct:#{query}").link("self").href.not_nil!
         end
-      open(url) do |response|
-        actor_or_object = ActivityPub.from_json_ld(response.body)
-      end
+      actor_or_object =
+        if url.starts_with?("#{host}/actors/")
+          ActivityPub::Actor.find(url)
+        elsif url.starts_with?("#{host}/objects/")
+          ActivityPub::Object.find(url)
+        else
+          open(url) do |response|
+            ActivityPub.from_json_ld(response.body, include_key: true)
+          end
+        end
     end
 
     case actor_or_object

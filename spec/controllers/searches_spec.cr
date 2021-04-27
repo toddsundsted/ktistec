@@ -63,7 +63,7 @@ Spectator.describe SearchesController do
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
 
-        context "to an existing actor" do
+        context "of an existing actor" do
           before_each { actor.assign(username: "bar_foo").save }
 
           it "updates the actor" do
@@ -96,6 +96,27 @@ Spectator.describe SearchesController do
               expect(XML.parse_html(response.body).xpath_nodes("//form//button[./text()='Unfollow']")).not_to be_empty
             end
           end
+
+          context "with a public key" do
+            before_each do
+              HTTP::Client.actors << actor.assign(pem_public_key: "PEM PUBLIC KEY").save
+            end
+
+            it "doesn't nuke the public key" do
+              headers = HTTP::Headers{"Accept" => "text/html"}
+              expect{get "/search?query=foo_bar@remote", headers}.not_to change{ActivityPub::Actor.find(actor.iri).pem_public_key}
+            end
+          end
+        end
+
+        context "of a local actor" do
+          before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
+
+          it "doesn't fetch the actor" do
+            headers = HTTP::Headers{"Accept" => "text/html"}
+            expect{get "/search?query=foo_bar@test.test", headers}.not_to change{ActivityPub::Actor.count}
+            expect(HTTP::Client.requests).not_to have("GET #{actor.iri}")
+          end
         end
       end
 
@@ -114,7 +135,7 @@ Spectator.describe SearchesController do
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
 
-        context "to an existing actor" do
+        context "of an existing actor" do
           before_each { actor.assign(username: "bar_foo").save }
 
           it "updates the actor" do
@@ -147,6 +168,27 @@ Spectator.describe SearchesController do
               expect(XML.parse_html(response.body).xpath_nodes("//form//button[./text()='Unfollow']")).not_to be_empty
             end
           end
+
+          context "with a public key" do
+            before_each do
+              HTTP::Client.actors << actor.assign(pem_public_key: "PEM PUBLIC KEY").save
+            end
+
+            it "doesn't nuke the public key" do
+              headers = HTTP::Headers{"Accept" => "text/html"}
+              expect{get "/search?query=https://remote/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.find(actor.iri).pem_public_key}
+            end
+          end
+        end
+
+        context "of a local actor" do
+          before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
+
+          it "doesn't fetch the actor" do
+            headers = HTTP::Headers{"Accept" => "text/html"}
+            expect{get "/search?query=https://test.test/actors/foo_bar", headers}.not_to change{ActivityPub::Actor.count}
+            expect(HTTP::Client.requests).not_to have("GET #{actor.iri}")
+          end
         end
       end
 
@@ -165,7 +207,7 @@ Spectator.describe SearchesController do
           expect(JSON.parse(response.body).as_h.dig("object", "content")).to eq("foo bar")
         end
 
-        context "to an existing object" do
+        context "of an existing object" do
           before_each { object.assign(content: "bar foo").save }
 
           it "updates the object" do
@@ -197,6 +239,16 @@ Spectator.describe SearchesController do
               get "/search?query=https://remote/objects/foo_bar", headers
               expect(XML.parse_html(response.body).xpath_nodes("//form//input[@value='Undo']")).not_to be_empty
             end
+          end
+        end
+
+        context "of a local object" do
+          before_each { object.assign(iri: "https://test.test/objects/foo_bar").save }
+
+          it "doesn't fetch the object" do
+            headers = HTTP::Headers{"Accept" => "text/html"}
+            expect{get "/search?query=https://test.test/objects/foo_bar", headers}.not_to change{ActivityPub::Object.count}
+            expect(HTTP::Client.requests).not_to have("GET #{object.iri}")
           end
         end
       end

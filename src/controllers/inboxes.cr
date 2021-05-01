@@ -3,7 +3,7 @@ require "../views/view_helper"
 require "../framework/open"
 require "../framework/signature"
 require "../models/activity_pub/activity/**"
-require "../models/task/deliver"
+require "../models/task/receive"
 
 class RelationshipsController
   include Ktistec::Controller
@@ -236,8 +236,8 @@ class RelationshipsController
 
     activity.save
 
-    task = Task::Deliver.new(
-      sender: account.actor,
+    task = Task::Receive.new(
+      receiver: account.actor,
       activity: activity,
       deliver_to: deliver_to
     )

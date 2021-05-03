@@ -1,41 +1,16 @@
 require "json"
 
+require "../activity_pub"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
 
 module ActivityPub
   class Collection
-    include Ktistec::Model(Common)
+    include Ktistec::Model(Common, Linked)
     include ActivityPub
 
     @@table_name = "collections"
-
-    def self.find(_iri iri : String?)
-      find(iri: iri)
-    end
-
-    def self.find?(_iri iri : String?)
-      find?(iri: iri)
-    end
-
-    @[Persistent]
-    property iri : String { "" }
-    validates(iri) { unique_absolute_uri?(iri) }
-
-    private def unique_absolute_uri?(iri)
-      if iri.blank?
-        "must be present"
-      elsif !URI.parse(iri).absolute?
-        "must be an absolute URI"
-      elsif (collection = Collection.find?(iri)) && collection.id != self.id
-        "must be unique"
-      end
-    end
-
-    def local
-      iri.starts_with?(Ktistec.host)
-    end
 
     @[Persistent]
     property items_json : String?
@@ -86,10 +61,6 @@ module ActivityPub
     def to_json_ld(recursive = false)
       collection = self
       render "src/views/collections/collection.json.ecr"
-    end
-
-    def self.from_json_ld(json)
-      new(**map(json))
     end
 
     def from_json_ld(json)

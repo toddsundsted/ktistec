@@ -7,6 +7,7 @@ require "../activity_pub/actor"
 require "../activity_pub/collection"
 require "../activity_pub/object"
 require "../relationship/content/inbox"
+require "../relationship/content/outbox"
 require "../relationship/social/follow"
 
 class Task
@@ -67,6 +68,11 @@ class Task
     end
 
     def perform
+      Relationship::Content::Outbox.new(
+        owner: sender,
+        activity: activity
+      ).save
+
       deliver to: recipients
     end
   end

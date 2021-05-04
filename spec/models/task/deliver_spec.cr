@@ -206,4 +206,18 @@ Spectator.describe Task::Deliver do
       expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
     end
   end
+
+  describe "#perform" do
+    subject do
+      described_class.new(
+        sender: sender,
+        activity: activity
+      )
+    end
+
+    it "puts the activity in the outbox of the sender" do
+      expect{subject.perform}.
+        to change{Relationship::Content::Outbox.count(from_iri: sender.iri)}.by(1)
+    end
+  end
 end

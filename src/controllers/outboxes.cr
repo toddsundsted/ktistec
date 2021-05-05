@@ -247,6 +247,8 @@ class RelationshipsController
       bad_request
     end
 
+    activity.save
+
     task = Task::Deliver.new(
       sender: account.actor,
       activity: activity

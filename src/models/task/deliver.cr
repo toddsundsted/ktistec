@@ -36,6 +36,10 @@ class Task
       end.compact.sort.uniq
     end
 
+    # if the activity is a delete, the object will already have been
+    # deleted so herein and throughout don't validate and save the
+    # associated models -- they shouldn't have changed anyway.
+
     def deliver(to recipients)
       recipients.each do |recipient|
         unless (actor = ActivityPub::Actor.dereference?(recipient))
@@ -49,7 +53,7 @@ class Task
             owner: actor,
             activity: activity,
             confirmed: true
-          ).save
+          ).save(skip_associated: true)
         elsif (inbox = actor.inbox)
           body = activity.to_json_ld
           headers = Ktistec::Signature.sign(sender, inbox, body)
@@ -71,7 +75,7 @@ class Task
       Relationship::Content::Outbox.new(
         owner: sender,
         activity: activity
-      ).save
+      ).save(skip_associated: true)
 
       deliver to: recipients
     end

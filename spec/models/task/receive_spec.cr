@@ -360,4 +360,28 @@ Spectator.describe Task::Receive do
       expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
     end
   end
+
+  describe "#perform" do
+    subject do
+      described_class.new(
+        receiver: receiver,
+        activity: activity
+      )
+    end
+
+    context "when the object has been deleted" do
+      let(activity) do
+        ActivityPub::Activity::Delete.new(
+          iri: "https://test.test/activities/delete",
+          actor_iri: receiver.iri,
+          object_iri: "https://deleted",
+          to: [receiver.iri]
+        )
+      end
+
+      it "does not fail" do
+        expect{subject.perform}.not_to change{subject.failures}
+      end
+    end
+  end
 end

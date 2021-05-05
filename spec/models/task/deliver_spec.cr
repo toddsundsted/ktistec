@@ -219,5 +219,25 @@ Spectator.describe Task::Deliver do
       expect{subject.perform}.
         to change{Relationship::Content::Outbox.count(from_iri: sender.iri)}.by(1)
     end
+
+    context "when the object has been deleted" do
+      let(activity) do
+        ActivityPub::Activity::Delete.new(
+          iri: "https://test.test/activities/delete",
+          actor_iri: sender.iri,
+          object_iri: "https://deleted",
+          to: [local_recipient.iri, remote_recipient.iri]
+        )
+      end
+
+      before_each do
+        local_recipient.save
+        remote_recipient.save
+      end
+
+      it "does not fail" do
+        expect{subject.perform}.not_to change{subject.failures}
+      end
+    end
   end
 end

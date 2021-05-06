@@ -247,10 +247,7 @@ class RelationshipsController
       bad_request
     end
 
-    Relationship::Content::Outbox.new(
-      owner: account.actor,
-      activity: activity
-    ).save
+    activity.save
 
     task = Task::Deliver.new(
       sender: account.actor,

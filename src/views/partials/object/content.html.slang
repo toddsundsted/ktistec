@@ -63,7 +63,7 @@
         button.ui.mini.iconic.button
           i.reply.icon
           = pluralize(c, "Reply")
-      - if (c = object.likes_count) > 0 && (to_undo = account.actor.find_like_in_outbox(object))
+      - if (c = object.likes_count) > 0 && (to_undo = account.actor.find_like_for(object))
         == activity_button(outbox_path(account), to_undo.iri, "Undo", button_class: "mini blue iconic") do
           i.star.icon
           = pluralize(c, "Like")
@@ -71,7 +71,7 @@
         == activity_button(outbox_path(account), object.iri, "Like", button_class: "mini iconic") do
           i.star.icon
           = pluralize(c, "Like")
-      - if (c = object.announces_count) > 0 && (to_undo = account.actor.find_announce_in_outbox(object))
+      - if (c = object.announces_count) > 0 && (to_undo = account.actor.find_announce_for(object))
         == activity_button(outbox_path(account), to_undo.iri, "Undo", button_class: "mini blue iconic") do
           i.share.icon
           = pluralize(c, "Share")

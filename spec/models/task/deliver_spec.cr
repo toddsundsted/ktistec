@@ -7,12 +7,16 @@ require "../../spec_helper/register"
 Spectator.describe Task::Deliver do
   setup_spec
 
+  let(sender) do
+    register(with_keys: true).actor
+  end
+  let(activity) do
+    ActivityPub::Activity.new(iri: "https://test.test/activities/activity")
+  end
+
   context "validation" do
-    let(options) do
-      {
-        source_iri: ActivityPub::Actor.new(iri: "https://test.test/#{random_string}").save.iri,
-        subject_iri: ActivityPub::Activity.new(iri: "https://test.test/#{random_string}").save.iri
-      }
+    let!(options) do
+      {source_iri: sender.save.iri, subject_iri: activity.save.iri}
     end
 
     it "rejects missing sender" do
@@ -33,634 +37,206 @@ Spectator.describe Task::Deliver do
     end
   end
 
-  describe "#deliver_to" do
-    subject do
-      described_class.new(
-        source_iri: "https://foo/bar/source",
-        subject_iri: "https://foo/bar/subject",
-        state: %Q|{"deliver_to":[]}|
-      )
-    end
-
-    it "returns an array of strings" do
-      expect(subject.deliver_to).to be_a(Array(String))
-    end
-
-    it "returns an empty array" do
-      expect(subject.deliver_to).to be_empty
-    end
+  let(local_recipient) do
+    username = random_string
+    ActivityPub::Actor.new(
+      iri: "https://test.test/actors/#{username}",
+      inbox: "https://test.test/actors/#{username}/inbox"
+    )
   end
 
-  describe "#deliver_to=" do
-    subject { described_class.new }
-
-    it "updates state" do
-      expect{subject.deliver_to = ["https://recipient"]}.to change{subject.state}
-    end
+  let(remote_recipient) do
+    username = random_string
+    ActivityPub::Actor.new(
+      iri: "https://remote/actors/#{username}",
+      inbox: "https://remote/actors/#{username}/inbox"
+    )
   end
 
-  describe "#perform" do
-    let!(actor) { register(with_keys: true).actor }
+  let(local_collection) do
+    ActivityPub::Collection.new(
+      iri: "https://test.test/actors/#{random_string}/followers"
+    )
+  end
 
-    let(remote_recipient) do
-      username = random_string
-      ActivityPub::Actor.new(
-        iri: "https://remote/actors/#{username}",
-        inbox: "https://remote/actors/#{username}/inbox",
-      )
-    end
+  let(remote_collection) do
+    ActivityPub::Collection.new(
+      iri: "https://remote/actors/#{random_string}/followers"
+    )
+  end
 
-    let(local_recipient) do
-      username = random_string
-      ActivityPub::Actor.new(
-        iri: "https://test.test/actors/#{username}",
-        inbox: "https://test.test/actors/#{username}/inbox",
-      )
-    end
-
-    let(remote_actor) do
-      username = random_string
-      ActivityPub::Actor.new(
-        iri: "https://remote/actors/#{username}",
-        followers: "https://remote/actors/#{username}/followers"
-      )
-    end
-
-    let(remote_collection) do
-      ActivityPub::Collection.new(
-        iri: "#{remote_actor.iri}/followers"
-      )
-    end
-
-    let(local_collection) do
-      Relationship::Social::Follow.new(
-        actor: local_recipient,
-        object: actor,
-        confirmed: true
-      ).save
-      Relationship::Social::Follow.new(
-        actor: remote_recipient,
-        object: actor,
-        confirmed: true
-      ).save
-      ActivityPub::Collection.new(
-        iri: "#{actor.iri}/followers"
-      )
-    end
-
-    let(reply) do
-      ActivityPub::Object.new(
-        iri: "https://remote/objects/#{random_string}",
-        in_reply_to_iri: "https://test.test/objects/#{random_string}"
-      )
-    end
-
+  describe "#recipients" do
     subject do
       described_class.new(
-        sender: actor,
+        sender: sender,
         activity: activity
       )
     end
 
-    context "given an activity" do
-      let(activity) do
-        ActivityPub::Activity.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor_iri: actor.iri
-        )
+    context "addressed to the sender" do
+      let(recipient) { sender }
+
+      before_each { activity.to = [recipient.iri] }
+
+      it "excludes the sender" do
+        expect(subject.recipients).not_to contain(recipient.iri)
+      end
+    end
+
+    context "addressed to a local recipient" do
+      let(recipient) { local_recipient.save }
+
+      before_each { activity.to = [recipient.iri] }
+
+      it "includes the recipient" do
+        expect(subject.recipients).to contain(recipient.iri)
+      end
+    end
+
+    context "addressed to a remote recipient" do
+      let(recipient) { remote_recipient }
+
+      before_each { activity.to = [recipient.iri] }
+
+      context "that is cached" do
+        before_each { recipient.save }
+
+        it "includes the recipient" do
+          expect(subject.recipients).to contain(recipient.iri)
+        end
       end
 
-      context "addressed to a deleted remote recipient" do
-        let(recipient) { remote_recipient }
-        before_each do
-          recipient.save.delete
-          activity.to = [recipient.iri]
-        end
+      context "that is not cached" do
+        before_each { HTTP::Client.actors << recipient }
 
-        it "does not send it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
-        end
-      end
-
-      context "addressed to a deleted local recipient" do
-        let(recipient) { local_recipient }
-        before_each do
-          recipient.save.delete
-          activity.to = [recipient.iri]
-        end
-
-        it "does not put it in an inbox" do
-          expect{subject.perform}.
-            not_to change{Relationship::Content::Inbox.count}
+        it "includes the recipient" do
+          expect(subject.recipients).to contain(recipient.iri)
         end
       end
     end
 
-    context "given an activity of remote origin" do
-      let(activity) do
-        ActivityPub::Activity.new(
-          iri: "https://remote/activities/#{random_string}",
-          actor_iri: remote_actor.iri
-        )
+    context "addressed to a local collection" do
+      let(recipient) { local_collection }
+
+      before_each { activity.to = [recipient.iri] }
+
+      it "does not include the collection" do
+        expect(subject.recipients).not_to contain(recipient.iri)
       end
 
-      context "addressed to a remote recipient" do
-        let(recipient) { remote_recipient }
+      context "of the sender's followers" do
+        let(recipient) { local_collection.assign(iri: "#{sender.iri}/followers") }
+
         before_each do
-          HTTP::Client.actors << recipient
-          activity.to = [recipient.iri]
+          Relationship::Social::Follow.new(
+            actor: local_recipient,
+            object: sender,
+            confirmed: true
+          ).save
+          Relationship::Social::Follow.new(
+            actor: remote_recipient,
+            object: sender,
+            confirmed: true
+          ).save
         end
 
-        it "does not put it in an inbox" do
-          expect{subject.perform}.
-            not_to change{Relationship::Content::Inbox.count}
+        it "does not include the collection" do
+          expect(subject.recipients).not_to contain(recipient.iri)
         end
 
-        it "does not forward it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
+        it "includes the followers" do
+          expect(subject.recipients).to contain(local_recipient.iri, remote_recipient.iri)
         end
 
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
-        end
-      end
-
-      context "addressed to a local recipient" do
-        let(recipient) { local_recipient }
-        before_each do
-          recipient.save
-          activity.to = [recipient.iri]
-        end
-
-        it "does not put it in an inbox" do
-          expect{subject.perform}.
-            not_to change{Relationship::Content::Inbox.count}
-        end
-
-        it "does not forward it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
-        end
-
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
-        end
-      end
-
-      context "addressed to the actor" do
-        let(recipient) { actor }
-        before_each do
-          recipient.save
-          activity.to = [recipient.iri]
-        end
-
-        it "puts it in the actors's inbox" do
-          expect{subject.perform}.
-            to change{Relationship::Content::Inbox.count(from_iri: actor.iri, to_iri: activity.iri)}.by(1)
-        end
-
-        it "does not forward it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
-        end
-
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
-        end
-      end
-
-      context "addressed to a remote collection" do
-        let(recipient) { remote_collection }
-        before_each do
-          HTTP::Client.collections << recipient
-          activity.to = [recipient.iri]
-        end
-
-        context "in which the actor is a follower" do
-          let!(follow) do
-            Relationship::Social::Follow.new(
-              actor: actor,
-              object: remote_actor,
-              confirmed: true
-            ).save
-          end
-
-          context "but the follow is not confirmed" do
-            before_each do
+        context "when follows are not confirmed" do
+          before_each do
+            Relationship::Social::Follow.where(to_iri: sender.iri).each do |follow|
               follow.assign(confirmed: false).save
             end
-
-            it "does not put it in an inbox" do
-              expect{subject.perform}.
-                not_to change{Relationship::Content::Inbox.count}
-            end
           end
 
-          it "puts it in the actors's inbox" do
-            expect{subject.perform}.
-              to change{Relationship::Content::Inbox.count(from_iri: actor.iri, to_iri: activity.iri)}.by(1)
+          it "does not include the followers" do
+            expect(subject.recipients).not_to contain(local_recipient.iri, remote_recipient.iri)
           end
-        end
-
-        it "does not put it in an inbox" do
-          expect{subject.perform}.
-            not_to change{Relationship::Content::Inbox.count}
-        end
-
-        it "does not forward it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
-        end
-
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
-        end
-      end
-
-      context "addressed to a local collection" do
-        let(recipient) { local_collection }
-        before_each do
-          recipient.save
-          activity.to = [recipient.iri]
-        end
-
-        context "in reply to a local object" do
-          before_each { activity.object_iri = reply.iri }
-
-          context "when cached" do
-            before_each { reply.save }
-
-            context "but the follow is not confirmed" do
-              before_each do
-                Relationship::Social::Follow.find(from_iri: local_recipient.iri).assign(confirmed: false).save
-              end
-
-              it "does not put it in an inbox" do
-                expect{subject.perform}.
-                  not_to change{Relationship::Content::Inbox.count}
-              end
-            end
-
-            context "but the follow is not confirmed" do
-              before_each do
-                Relationship::Social::Follow.find(from_iri: remote_recipient.iri).assign(confirmed: false).save
-              end
-
-              it "does not forward it" do
-                subject.perform
-                expect(HTTP::Client.requests).not_to have(/POST/)
-              end
-            end
-
-            it "puts the activity in the local recipient's inbox" do
-              expect{subject.perform}.
-                to change{Relationship::Content::Inbox.count(from_iri: local_recipient.iri, to_iri: activity.iri)}.by(1)
-            end
-
-            it "forwards the activity to the remote recipient's inbox" do
-              subject.perform
-              expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
-            end
-          end
-
-          context "when not cached" do
-            before_each { HTTP::Client.objects << reply }
-
-
-            context "and the follow is not confirmed" do
-              before_each do
-                Relationship::Social::Follow.find(from_iri: local_recipient.iri).assign(confirmed: false).save
-              end
-
-              it "does not put it in an inbox" do
-                expect{subject.perform}.
-                  not_to change{Relationship::Content::Inbox.count}
-              end
-            end
-
-            context "and the follow is not confirmed" do
-              before_each do
-                Relationship::Social::Follow.find(from_iri: remote_recipient.iri).assign(confirmed: false).save
-              end
-
-              it "does not forward it" do
-                subject.perform
-                expect(HTTP::Client.requests).not_to have(/POST/)
-              end
-            end
-
-            it "puts the activity in the local recipient's inbox" do
-              expect{subject.perform}.
-                to change{Relationship::Content::Inbox.count(from_iri: local_recipient.iri, to_iri: activity.iri)}.by(1)
-            end
-
-            it "forwards the activity to the remote recipient's inbox" do
-              subject.perform
-              expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
-            end
-          end
-
-          context "when object doesn't exist" do
-            it "does not put the activity in the local recipient's inbox" do
-              expect{subject.perform}.
-                not_to change{Relationship::Content::Inbox.count}
-            end
-
-            it "does not forward the activity to the remote recipient's inbox" do
-              subject.perform
-              expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.inbox}")
-            end
-          end
-        end
-
-        it "does not put it in an inbox" do
-          expect{subject.perform}.
-            not_to change{Relationship::Content::Inbox.count}
-        end
-
-        it "does not forward it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
-        end
-
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
-        end
-      end
-
-      context "addressed to the public collection" do
-        before_each { activity.to = ["https://www.w3.org/ns/activitystreams#Public"] }
-
-        context "and the actor is a follower" do
-          let!(follow) do
-            Relationship::Social::Follow.new(
-              actor: actor,
-              object: remote_actor,
-              confirmed: true
-            ).save
-          end
-
-          context "but the follow is not confirmed" do
-            before_each do
-              follow.assign(confirmed: false).save
-            end
-
-            it "does not put it in an inbox" do
-              expect{subject.perform}.
-                not_to change{Relationship::Content::Inbox.count}
-            end
-          end
-
-          it "puts it in the actors's inbox" do
-            expect{subject.perform}.
-              to change{Relationship::Content::Inbox.count(from_iri: actor.iri, to_iri: activity.iri)}.by(1)
-          end
-        end
-
-        it "does not put it in an inbox" do
-          expect{subject.perform}.
-            not_to change{Relationship::Content::Inbox.count}
-        end
-
-        it "does not forward it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
-        end
-
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
         end
       end
     end
 
-    context "given an activity of local origin" do
+    context "addressed to a remote collection" do
+      let(recipient) { remote_collection }
+
+      before_each { activity.to = [recipient.iri] }
+
+      it "does not include the collection" do
+        expect(subject.recipients).not_to contain(recipient.iri)
+      end
+    end
+
+    context "addressed to the public collection" do
+      PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
+      before_each { activity.to = [PUBLIC] }
+
+      it "does not include the collection" do
+        expect(subject.recipients).not_to contain(PUBLIC)
+      end
+    end
+  end
+
+  describe "#deliver" do
+    subject do
+      described_class.new(
+        sender: sender,
+        activity: activity
+      )
+    end
+
+    before_each do
+      local_recipient.save
+      remote_recipient.save
+    end
+
+    it "puts the activity in the inbox of a local recipient" do
+      subject.deliver([local_recipient.iri])
+      expect(Relationship::Content::Inbox.count(from_iri: local_recipient.iri)).to eq(1)
+    end
+
+    it "sends the activity to the inbox of a remote recipient" do
+      subject.deliver([remote_recipient.iri])
+      expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
+    end
+  end
+
+  describe "#perform" do
+    subject do
+      described_class.new(
+        sender: sender,
+        activity: activity
+      )
+    end
+
+    it "puts the activity in the outbox of the sender" do
+      expect{subject.perform}.
+        to change{Relationship::Content::Outbox.count(from_iri: sender.iri)}.by(1)
+    end
+
+    context "when the object has been deleted" do
       let(activity) do
-        ActivityPub::Activity.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor_iri: actor.iri
+        ActivityPub::Activity::Delete.new(
+          iri: "https://test.test/activities/delete",
+          actor_iri: sender.iri,
+          object_iri: "https://deleted",
+          to: [local_recipient.iri, remote_recipient.iri]
         )
       end
 
-      context "addressed to a remote recipient" do
-        let(recipient) { remote_recipient }
-        before_each do
-          activity.to = [recipient.iri]
-        end
-
-        context "when cached" do
-          before_each { recipient.save }
-
-          it "does not put it in an inbox" do
-            expect{subject.perform}.
-              not_to change{Relationship::Content::Inbox.count}
-          end
-
-          it "sends the activity to the recipient's inbox" do
-            subject.perform
-            expect(HTTP::Client.requests).to have("POST #{recipient.inbox}")
-          end
-
-          it "does not fail" do
-            subject.perform
-            expect(subject.failures).to be_empty
-          end
-        end
-
-        context "when not cached" do
-          before_each { HTTP::Client.actors << recipient }
-
-          it "does not put it in an inbox" do
-            expect{subject.perform}.
-              not_to change{Relationship::Content::Inbox.count}
-          end
-
-          it "sends the activity to the recipient's inbox" do
-            subject.perform
-            expect(HTTP::Client.requests).to have("POST #{recipient.inbox}")
-          end
-
-          it "does not fail" do
-            subject.perform
-            expect(subject.failures).to be_empty
-          end
-        end
+      before_each do
+        local_recipient.save
+        remote_recipient.save
       end
 
-      context "addressed to a local recipient" do
-        let(recipient) { local_recipient }
-        before_each do
-          recipient.save
-          activity.to = [recipient.iri]
-        end
-
-        it "puts the activity in the recipient's inbox" do
-          expect{subject.perform}.
-            to change{Relationship::Content::Inbox.count(from_iri: local_recipient.iri, to_iri: activity.iri)}.by(1)
-        end
-
-        it "does not send it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
-        end
-
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
-        end
-      end
-
-      context "addressed to the actor" do
-        let(recipient) { actor }
-        before_each do
-          recipient.save
-          activity.to = [recipient.iri]
-        end
-
-        it "does not put it in an inbox" do
-          expect{subject.perform}.
-            not_to change{Relationship::Content::Inbox.count}
-        end
-
-        it "does not send it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
-        end
-
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
-        end
-      end
-
-      context "addressed to a remote collection" do
-        let(recipient) { remote_collection }
-        before_each do
-          HTTP::Client.collections << recipient
-          activity.to = [recipient.iri]
-        end
-
-        it "does not put it in an inbox" do
-          expect{subject.perform}.
-            not_to change{Relationship::Content::Inbox.count}
-        end
-
-        it "does not send it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
-        end
-
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
-        end
-      end
-
-      context "addressed to a local collection" do
-        let(recipient) { local_collection }
-        before_each do
-          recipient.save
-          activity.to = [recipient.iri]
-        end
-
-        context "when the follow is not confirmed" do
-          before_each do
-            Relationship::Social::Follow.find(from_iri: local_recipient.iri).assign(confirmed: false).save
-          end
-
-          it "does not put it in an inbox" do
-            expect{subject.perform}.
-              not_to change{Relationship::Content::Inbox.count}
-          end
-        end
-
-        context "when the follow is not confirmed" do
-          before_each do
-            Relationship::Social::Follow.find(from_iri: remote_recipient.iri).assign(confirmed: false).save
-          end
-
-          it "does not send it" do
-            subject.perform
-            expect(HTTP::Client.requests).not_to have(/POST/)
-          end
-        end
-
-        it "puts the activity in the local recipient's inbox" do
-          expect{subject.perform}.
-            to change{Relationship::Content::Inbox.count(from_iri: local_recipient.iri, to_iri: activity.iri)}.by(1)
-        end
-
-        it "sends the activity to the remote recipient's inbox" do
-          subject.perform
-          expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
-        end
-
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
-        end
-      end
-
-      context "addressed to the public collection" do
-        before_each { activity.to = ["https://www.w3.org/ns/activitystreams#Public"] }
-
-        context "and the actor has followers" do
-          before_each { local_collection }
-
-          context "but the follow is not confirmed" do
-            before_each do
-              Relationship::Social::Follow.find(from_iri: local_recipient.iri).assign(confirmed: false).save
-            end
-
-            it "does not put it in an inbox" do
-              expect{subject.perform}.
-                not_to change{Relationship::Content::Inbox.count}
-            end
-          end
-
-          context "but the follow is not confirmed" do
-            before_each do
-              Relationship::Social::Follow.find(from_iri: remote_recipient.iri).assign(confirmed: false).save
-            end
-
-            it "does not send it" do
-              subject.perform
-              expect(HTTP::Client.requests).not_to have(/POST/)
-            end
-          end
-
-          it "puts the activity in the local follower's inbox" do
-            expect{subject.perform}.
-              to change{Relationship::Content::Inbox.count(from_iri: local_recipient.iri, to_iri: activity.iri)}.by(1)
-          end
-
-          it "sends the activity to the remote follower's inbox" do
-            subject.perform
-            expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
-          end
-        end
-
-        it "does not put it in an inbox" do
-          expect{subject.perform}.
-            not_to change{Relationship::Content::Inbox.count}
-        end
-
-        it "does not send it" do
-          subject.perform
-          expect(HTTP::Client.requests).not_to have(/POST/)
-        end
-
-        it "does not fail" do
-          subject.perform
-          expect(subject.failures).to be_empty
-        end
+      it "does not fail" do
+        expect{subject.perform}.not_to change{subject.failures}
       end
     end
   end

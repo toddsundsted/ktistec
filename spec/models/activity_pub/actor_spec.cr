@@ -582,6 +582,62 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#find_activity_for" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_activity(index)
+      let(note{{index}}) do
+        ActivityPub::Object::Note.new(
+          iri: "https://test.test/objects/#{random_string}"
+        )
+      end
+      let!(activity{{index}}) do
+        ActivityPub::Activity::Create.new(
+          iri: "https://test.test/activities/#{random_string}",
+          actor: subject,
+          object: note{{index}}
+        ).save
+      end
+    end
+
+    create_activity(1)
+
+    let(undo) do
+      ActivityPub::Activity::Undo.new(
+        iri: "https://test.test/undo",
+        actor: subject,
+        object: activity1
+      )
+    end
+
+    it "instantiates the correct subclass" do
+      expect(subject.find_activity_for(note1)).to be_a(ActivityPub::Activity::Create)
+    end
+
+    it "filters out deleted posts" do
+      note1.delete
+      expect(subject.find_activity_for(note1)).to be_nil
+    end
+
+    it "filters out posts by deleted actors" do
+      subject.delete
+      expect(subject.find_activity_for(note1)).to be_nil
+    end
+
+    it "filters out undone activities" do
+      undo.save
+      expect(subject.find_activity_for(note1)).to be_nil
+    end
+
+    it "filters for specific activities" do
+      expect(subject.find_activity_for(note1, inclusion: "ActivityPub::Activity::Delete")).to be_nil
+    end
+
+    it "filters out specific activities" do
+      expect(subject.find_activity_for(note1, exclusion: "ActivityPub::Activity::Create")).to be_nil
+    end
+  end
+
   describe ".local_timeline" do
     let(actor1) { register.actor }
     let(actor2) { register.actor }

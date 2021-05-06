@@ -359,14 +359,6 @@ module ActivityPub
       find_in?(object, Relationship::Content::Outbox, inclusion, exclusion)
     end
 
-    def find_announce_in_outbox(object : Object)
-      find_in?(object, Relationship::Content::Outbox, ActivityPub::Activity::Announce)
-    end
-
-    def find_like_in_outbox(object : Object)
-      find_in?(object, Relationship::Content::Outbox, ActivityPub::Activity::Like)
-    end
-
     def in_inbox(page = 1, size = 10, public = true)
       self.class.content(self. iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
@@ -412,6 +404,50 @@ module ActivityPub
         true,
         false
       )
+    end
+
+    def find_activity_for(object, inclusion = nil, exclusion = nil)
+      inclusion =
+        case inclusion
+        when Class, String
+          %Q|AND a.type = "#{inclusion}"|
+        when Array
+          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        end
+      exclusion =
+        case exclusion
+        when Class, String
+          %Q|AND a.type != "#{exclusion}"|
+        when Array
+          %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
+        end
+      query = <<-QUERY
+         SELECT #{Activity.columns(prefix: "a")}
+           FROM activities AS a
+           JOIN actors AS act
+             ON act.iri = a.actor_iri
+           JOIN objects AS obj
+             ON obj.iri = a.object_iri
+      LEFT JOIN activities AS u
+             ON u.object_iri = a.iri AND u.type = "#{ActivityPub::Activity::Undo}" AND u.actor_iri = a.actor_iri
+          WHERE a.actor_iri = ?
+            AND a.object_iri = ?
+            #{inclusion}
+            #{exclusion}
+            AND act.deleted_at is NULL
+            AND obj.deleted_at is NULL
+            AND u.iri IS NULL
+      QUERY
+      Activity.query_one(query, self.iri, object.iri)
+    rescue DB::NoResultsError
+    end
+
+    def find_announce_for(object : Object)
+      find_activity_for(object, ActivityPub::Activity::Announce)
+    end
+
+    def find_like_for(object : Object)
+      find_activity_for(object, ActivityPub::Activity::Like)
     end
 
     def public_posts(page = 1, size = 10)

@@ -71,7 +71,7 @@ class Task
                   Relationship::Social::Follow.where(
                     to_iri: receiver.iri,
                     confirmed: true
-                  ).map(&.from_iri)
+                  ).select(&.actor?).map(&.actor.iri)
                 end
               end
             end

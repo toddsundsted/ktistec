@@ -210,6 +210,17 @@ Spectator.describe Task::Receive do
               end
             end
 
+            context "when followers have been deleted" do
+              before_each do
+                local_recipient.delete
+                remote_recipient.delete
+              end
+
+              it "does not include the recipients" do
+                expect(subject.recipients).not_to contain(local_recipient.iri, remote_recipient.iri)
+              end
+            end
+
             context "when the original is not attributed to the receiver" do
               before_each do
                 original.assign(attributed_to: remote_recipient).save

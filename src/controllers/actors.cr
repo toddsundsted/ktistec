@@ -19,6 +19,23 @@ class ActorsController
     not_found
   end
 
+  get "/actors/:username/notifications" do |env|
+    username = env.params.url["username"]
+
+    unless (account = Account.find?(username: username))
+      not_found
+    end
+    unless account == env.account
+      forbidden
+    end
+
+    actor = account.actor
+
+    activities = actor.notifications(*pagination_params(env))
+
+    ok "actors/notifications"
+  end
+
   get "/remote/actors/:id" do |env|
     id = env.params.url["id"].to_i
 

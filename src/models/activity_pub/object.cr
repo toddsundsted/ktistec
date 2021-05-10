@@ -442,6 +442,18 @@ module ActivityPub
         summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
         content: dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
         media_type: dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
+        hashtags: dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
+          next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Hashtag"
+          name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").try(&.lstrip('#'))
+          href = dig?(tag, "https://www.w3.org/ns/activitystreams#href")
+          Tag::Hashtag.new(name: name, href: href)
+        end,
+        mentions: dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
+          next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Mention"
+          name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").try(&.lstrip('@'))
+          href = dig?(tag, "https://www.w3.org/ns/activitystreams#href")
+          Tag::Mention.new(name: name, href: href)
+        end,
         attachments: dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
           url = attachment.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s)
           media_type = attachment.dig?("https://www.w3.org/ns/activitystreams#mediaType").try(&.as_s)

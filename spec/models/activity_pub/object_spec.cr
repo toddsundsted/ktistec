@@ -702,7 +702,7 @@ Spectator.describe ActivityPub::Object do
         iri: "https://test.test/object",
         hashtags: [hashtag],
         mentions: [mention]
-      ).save
+      )
     end
 
     it "returns tags" do

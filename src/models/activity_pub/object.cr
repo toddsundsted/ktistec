@@ -416,7 +416,7 @@ module ActivityPub
     end
 
     def tags
-      Tag.where(subject_iri: iri)
+      hashtags + mentions
     end
 
     def to_json_ld(recursive = false)

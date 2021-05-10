@@ -88,7 +88,8 @@ Spectator.describe ActivityPub::Object do
     <<-JSON
       {
         "@context":[
-          "https://www.w3.org/ns/activitystreams"
+          "https://www.w3.org/ns/activitystreams",
+          {"Hashtag":"as:Hashtag"}
         ],
         "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",

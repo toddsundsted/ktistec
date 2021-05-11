@@ -124,6 +124,8 @@ class RelationshipsController
       unless object.attributed_to?(dereference: true)
         bad_request
       end
+      # compatibility with implementations that don't address likes
+      deliver_to = [account.iri]
     when ActivityPub::Activity::Create
       unless (object = activity.object?(dereference: true, ignore_cached: true))
         bad_request

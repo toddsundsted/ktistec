@@ -32,6 +32,80 @@ Spectator.describe ActorsController do
     end
   end
 
+  let(actor) { register.actor }
+
+  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
+  ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
+
+  describe "GET /actors/:username/notifications" do
+    it "returns 401 if not authorized" do
+      get "/actors/missing/notifications", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/actors/missing/notifications", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "returns 404 if not found" do
+        get "/actors/missing/notifications", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if not found" do
+        get "/actors/missing/notifications", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 403 if different account" do
+        get "/actors/#{register.actor.username}/notifications", ACCEPT_HTML
+        expect(response.status_code).to eq(403)
+      end
+
+      it "returns 403 if different account" do
+        get "/actors/#{register.actor.username}/notifications", ACCEPT_JSON
+        expect(response.status_code).to eq(403)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/notifications", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/notifications", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      let(activity) do
+        ActivityPub::Activity.new(
+          iri: "https://remote/activities/#{random_string}",
+          actor_iri: actor.iri
+        )
+      end
+      let!(notification) do
+        Relationship::Content::Notification.new(
+          owner: actor,
+          activity: activity
+        ).save
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/notifications", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//article//a/@href").map(&.text)).to contain_exactly(activity.iri)
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/notifications", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(activity.iri)
+      end
+    end
+  end
+
   describe "GET /remote/actors/:id" do
     let!(actor) do
       ActivityPub::Actor.new(

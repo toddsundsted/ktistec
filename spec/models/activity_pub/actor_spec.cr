@@ -879,6 +879,85 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#notifications" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro notification(index)
+      let(actor{{index}}) do
+        ActivityPub::Actor.new(
+          iri: "https://remote/actors/#{random_string}"
+        ).save
+      end
+      let(activity{{index}}) do
+        ActivityPub::Activity.new(
+          iri: "https://remote/activities/#{random_string}",
+          actor_iri: actor{{index}}.iri
+        ).save
+      end
+      let!(relationship{{index}}) do
+        Relationship::Content::Notification.new(
+          owner: subject,
+          activity: activity{{index}},
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
+        ).save
+      end
+    end
+
+    notification(1)
+    notification(2)
+    notification(3)
+    notification(4)
+    notification(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.notifications(1, 2).first).to be_a(ActivityPub::Activity)
+    end
+
+    let(undo) do
+      ActivityPub::Activity::Undo.new(
+        iri: "https://test.test/activities/#{random_string}",
+        actor: actor5,
+        object: activity5
+      )
+    end
+
+    it "filters out undone activities" do
+      undo.save
+      expect(subject.notifications(1, 2)).to eq([activity4, activity3])
+    end
+
+    context "given an associated object" do
+      let!(object) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/#{random_string}"
+        ).save
+      end
+
+      before_each { activity5.assign(object_iri: object.iri).save }
+
+      it "filters out activities with deleted objects" do
+        object.delete
+        expect(subject.notifications(1, 2)).to eq([activity4, activity3])
+      end
+    end
+
+    it "filters out activities from deleted actors" do
+      actor5.delete
+      expect(subject.notifications(1, 2)).to eq([activity4, activity3])
+    end
+
+    it "filters out activities from destroyed actors" do
+      actor5.destroy
+      expect(subject.notifications(1, 2)).to eq([activity4, activity3])
+    end
+
+    it "paginates the results" do
+      expect(subject.notifications(1, 2)).to eq([activity5, activity4])
+      expect(subject.notifications(3, 2)).to eq([activity1])
+      expect(subject.notifications(3, 2).more?).not_to be_true
+    end
+  end
+
   context "approvals" do
     subject! do
       described_class.new(

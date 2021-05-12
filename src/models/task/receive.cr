@@ -3,10 +3,14 @@ require "../task"
 require "../../framework/constants"
 require "../../framework/signature"
 require "../activity_pub/activity"
+require "../activity_pub/activity/follow"
+require "../activity_pub/activity/announce"
+require "../activity_pub/activity/like"
 require "../activity_pub/actor"
 require "../activity_pub/collection"
 require "../activity_pub/object"
 require "../relationship/content/inbox"
+require "../relationship/content/notification"
 require "../relationship/social/follow"
 
 class Task
@@ -71,7 +75,7 @@ class Task
                   Relationship::Social::Follow.where(
                     to_iri: receiver.iri,
                     confirmed: true
-                  ).map(&.from_iri)
+                  ).select(&.actor?).map(&.actor.iri)
                 end
               end
             end
@@ -116,6 +120,29 @@ class Task
             activity: activity,
             confirmed: true
           ).save(skip_associated: true)
+          # handle notifications
+          if (object = ActivityPub::Object.dereference?(activity.object_iri))
+            if object.attributed_to_iri == recipient
+              if activity.is_a?(ActivityPub::Activity::Announce) || activity.is_a?(ActivityPub::Activity::Like)
+                Relationship::Content::Notification.new(
+                  owner: actor,
+                  activity: activity
+                ).save(skip_associated: true)
+              end
+            elsif object.mentions.any? { |mention| mention.href == recipient }
+              Relationship::Content::Notification.new(
+                owner: actor,
+                activity: activity
+              ).save(skip_associated: true)
+            end
+          elsif activity.is_a?(ActivityPub::Activity::Follow)
+            if activity.object_iri == recipient
+              Relationship::Content::Notification.new(
+                owner: actor,
+                activity: activity
+              ).save(skip_associated: true)
+            end
+          end
         elsif (inbox = actor.inbox)
           body = activity.to_json_ld
           headers = Ktistec::Signature.sign(receiver, inbox, body)

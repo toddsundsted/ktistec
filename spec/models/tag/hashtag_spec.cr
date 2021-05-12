@@ -85,6 +85,38 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.objects_with_tag("foo")).to be_empty
     end
 
+    context "given a remote object" do
+      let!(remote) do
+        ActivityPub::Object.new(
+          iri: "https://remote/objects/remote",
+          attributed_to: ActivityPub::Actor.new(
+            iri: "https://remote/actors/remote"
+          ),
+          published: Time.utc(2016, 2, 15, 10, 20, 10),
+          visible: true
+        ).save
+      end
+
+      before_each do
+        described_class.new(
+          name: "foo",
+          subject: remote
+        ).save
+      end
+
+      it "filters out the object" do
+        expect(described_class.objects_with_tag("foo")).not_to have(remote)
+      end
+
+      context "that has been approved" do
+        before_each { author.approve(remote) }
+
+        it "includes the object" do
+          expect(described_class.objects_with_tag("foo")).to have(remote)
+        end
+      end
+    end
+
     it "paginates the results" do
       expect(described_class.objects_with_tag("foo", 1, 2)).to eq([object5, object4])
       expect(described_class.objects_with_tag("foo", 2, 2)).to eq([object3, object2])

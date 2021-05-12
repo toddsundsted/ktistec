@@ -17,6 +17,9 @@ class Tag
            AND t.subject_iri = o.iri
            AND t.name = ?
            AND o.visible = 1
+           AND (o.iri LIKE "#{Ktistec.host}%" OR
+                (SELECT id FROM relationships AS r
+                 WHERE type = "Relationship::Content::Approved" AND r.to_iri = o.iri))
            AND o.published IS NOT NULL
            AND o.deleted_at IS NULL
            AND a.deleted_at IS NULL
@@ -29,6 +32,9 @@ class Tag
                  AND t.subject_iri = o.iri
                  AND t.name = ?
                  AND o.visible = 1
+                 AND (o.iri LIKE "#{Ktistec.host}%" OR
+                      (SELECT id FROM relationships AS r
+                       WHERE type = "Relationship::Content::Approved" AND r.to_iri = o.iri))
                  AND o.published IS NOT NULL
                  AND o.deleted_at IS NULL
                  AND a.deleted_at IS NULL

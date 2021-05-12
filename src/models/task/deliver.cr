@@ -31,7 +31,7 @@ class Task
           Relationship::Social::Follow.where(
             to_iri: sender.iri,
             confirmed: true
-          ).map(&.from_iri)
+          ).select(&.actor?).map(&.actor.iri)
         end
       end.compact.sort.uniq
     end

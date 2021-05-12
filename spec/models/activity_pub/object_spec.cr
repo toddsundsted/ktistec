@@ -88,7 +88,8 @@ Spectator.describe ActivityPub::Object do
     <<-JSON
       {
         "@context":[
-          "https://www.w3.org/ns/activitystreams"
+          "https://www.w3.org/ns/activitystreams",
+          {"Hashtag":"as:Hashtag"}
         ],
         "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",
@@ -105,6 +106,10 @@ Spectator.describe ActivityPub::Object do
         "summary":"abc",
         "content":"abc",
         "mediaType":"xyz",
+        "tag":[
+          {"type":"Hashtag","href":"hashtag href","name":"#hashtag"},
+          {"type":"Mention","href":"mention href","name":"@mention"}
+        ],
         "attachment":[
           {
             "url":"attachment link",
@@ -114,6 +119,15 @@ Spectator.describe ActivityPub::Object do
         "url":"url link"
       }
     JSON
+  end
+
+  # matcher
+  class ::Tag
+    def ===(other : Tag)
+      self.type == other.type &&
+        self.name == other.name &&
+        self.href == other.href
+    end
   end
 
   describe ".from_json_ld" do
@@ -134,6 +148,8 @@ Spectator.describe ActivityPub::Object do
       expect(object.summary).to eq("abc")
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
+      expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
+      expect(object.mentions.first).to match(Tag::Mention.new(name: "mention", href: "mention href"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type")])
       expect(object.urls).to eq(["url link"])
     end
@@ -160,6 +176,8 @@ Spectator.describe ActivityPub::Object do
       expect(object.summary).to eq("abc")
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
+      expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
+      expect(object.mentions.first).to match(Tag::Mention.new(name: "mention", href: "mention href"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type")])
       expect(object.urls).to eq(["url link"])
     end
@@ -702,7 +720,7 @@ Spectator.describe ActivityPub::Object do
         iri: "https://test.test/object",
         hashtags: [hashtag],
         mentions: [mention]
-      ).save
+      )
     end
 
     it "returns tags" do

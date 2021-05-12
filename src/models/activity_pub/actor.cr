@@ -8,6 +8,7 @@ require "../../framework/model"
 require "../../framework/model/**"
 require "../activity_pub"
 require "../relationship/content/approved"
+require "../relationship/content/notification"
 require "../relationship/content/inbox"
 require "../relationship/content/outbox"
 require "../relationship/social/follow"
@@ -470,6 +471,60 @@ module ActivityPub
           LIMIT ?
       QUERY
       Object.query_and_paginate(query, iri, iri, page: page, size: size)
+    end
+
+    # note: filters out activities that have associated objects that
+    # have been deleted. does not filter out activities that are not
+    # associated with an object since some activities, like follows,
+    # are associated with actors. doesn't worry about actors that have
+    # been deleted since follows, the activities we care about in this
+    # case, are associated with the actor on which this method is
+    # called.
+
+    def notifications(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT #{Activity.columns(prefix: "a")}
+           FROM activities AS a
+           JOIN relationships AS rel
+             ON rel.to_iri = a.iri
+            AND rel.type = "#{Relationship::Content::Notification}"
+           JOIN actors AS act
+             ON act.iri = a.actor_iri
+      LEFT JOIN objects AS obj
+             ON obj.iri = a.object_iri
+      LEFT JOIN activities AS undo
+             ON undo.object_iri = a.iri
+            AND undo.type = "#{ActivityPub::Activity::Undo}"
+            AND undo.actor_iri = a.actor_iri
+          WHERE rel.from_iri = ?
+            AND act.deleted_at IS null
+            AND obj.deleted_at IS null
+            AND undo.iri IS null
+            AND a.id NOT IN (
+               SELECT a.id
+                 FROM activities AS a
+                 JOIN relationships AS rel
+                   ON rel.to_iri = a.iri
+                  AND rel.type = "#{Relationship::Content::Notification}"
+                 JOIN actors AS act
+                   ON act.iri = a.actor_iri
+            LEFT JOIN objects AS obj
+                   ON obj.iri = a.object_iri
+            LEFT JOIN activities AS undo
+                   ON undo.object_iri = a.iri
+                  AND undo.type = "#{ActivityPub::Activity::Undo}"
+                  AND undo.actor_iri = a.actor_iri
+                WHERE rel.from_iri = ?
+                  AND act.deleted_at IS null
+                  AND obj.deleted_at IS null
+                  AND undo.iri IS null
+             ORDER BY rel.created_at DESC
+                LIMIT ?
+            )
+       ORDER BY rel.created_at DESC
+          LIMIT ?
+      QUERY
+      Activity.query_and_paginate(query, iri, iri, page: page, size: size)
     end
 
     def approve(object)

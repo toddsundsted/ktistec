@@ -159,6 +159,17 @@ Spectator.describe Task::Deliver do
             expect(subject.recipients).not_to contain(local_recipient.iri, remote_recipient.iri)
           end
         end
+
+        context "when followers have been deleted" do
+          before_each do
+            local_recipient.delete
+            remote_recipient.delete
+          end
+
+          it "does not include the recipients" do
+            expect(subject.recipients).not_to contain(local_recipient.iri, remote_recipient.iri)
+          end
+        end
       end
     end
 

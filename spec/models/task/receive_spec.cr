@@ -361,6 +361,85 @@ Spectator.describe Task::Receive do
       remote_recipient.save
     end
 
+    # handle recipients, instead of only the receiver, since
+    # recipients can include the receiver's followers who are part of
+    # a threaded conversation.
+
+    alias Notification = Relationship::Content::Notification
+
+    context "when object mentions a local recipient" do
+      let(mention) do
+        ActivityPub::Object.new(
+          iri: "https://remote/objects/mention",
+          mentions: [Tag::Mention.new(name: "local recipient", href: local_recipient.iri)]
+        )
+      end
+
+      before_each do
+        activity.object_iri = mention.iri
+        HTTP::Client.objects << mention
+      end
+
+      it "puts the activity in the recipient's notifications" do
+        expect{subject.deliver([local_recipient.iri])}.
+          to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
+      end
+    end
+
+    context "when activity is an announce" do
+      let!(object) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/object",
+          attributed_to: local_recipient
+        ).save
+      end
+      let(activity) do
+        ActivityPub::Activity::Announce.new(
+          iri: "https://remote/activities/announce",
+          object: object
+        )
+      end
+
+      it "puts the activity in the recipient's notifications" do
+        expect{subject.deliver([local_recipient.iri])}.
+          to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
+      end
+    end
+
+    context "when activity is a like" do
+      let!(object) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/object",
+          attributed_to: local_recipient
+        ).save
+      end
+      let(activity) do
+        ActivityPub::Activity::Like.new(
+          iri: "https://remote/activities/like",
+          object: object
+        )
+      end
+
+      it "puts the activity in the recipient's notifications" do
+        expect{subject.deliver([local_recipient.iri])}.
+          to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
+      end
+    end
+
+    context "when activity is a follow" do
+      let(activity) do
+        ActivityPub::Activity::Follow.new(
+          iri: "https://remote/activities/follow",
+          object: local_recipient
+        )
+      end
+
+      it "puts the activity in the recipient's notifications" do
+        expect{subject.deliver([local_recipient.iri])}.
+          to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
+      end
+    end
+
     it "puts the activity in the inbox of a local recipient" do
       subject.deliver([local_recipient.iri])
       expect(Relationship::Content::Inbox.count(from_iri: local_recipient.iri)).to eq(1)

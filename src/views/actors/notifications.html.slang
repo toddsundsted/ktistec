@@ -12,9 +12,9 @@ section.ui.feed
             i.user.icon
         .content
           .summary
-            a> href=activity.actor.display_link = activity.actor.display_name
+            a> href=remote_actor_path(activity.actor) = activity.actor.display_name
             | shared
-            a< href=activity.object.display_link your post
+            a< href=remote_object_path(activity.object) your post
             | .
       - elsif activity.is_a?(ActivityPub::Activity::Like)
         .label
@@ -24,9 +24,9 @@ section.ui.feed
             i.user.icon
         .content
           .summary
-            a> href=activity.actor.display_link = activity.actor.display_name
+            a> href=remote_actor_path(activity.actor) = activity.actor.display_name
             | liked
-            a< href=activity.object.display_link your post
+            a< href=remote_object_path(activity.object) your post
             | .
       - elsif activity.is_a?(ActivityPub::Activity::Create)
         .label
@@ -36,9 +36,9 @@ section.ui.feed
             i.user.icon
         .content
           .summary
-            a> href=activity.actor.display_link = activity.actor.display_name
+            a> href=remote_actor_path(activity.actor) = activity.actor.display_name
             | mentioned you in
-            a< href=activity.object.display_link their post
+            a< href=remote_object_path(activity.object) their post
             | .
       - elsif activity.is_a?(ActivityPub::Activity::Follow)
         .label
@@ -48,7 +48,7 @@ section.ui.feed
             i.user.icon
         .content
           .summary
-            a> href=activity.actor.display_link = activity.actor.display_name
+            a> href=remote_actor_path(activity.actor) = activity.actor.display_name
             | followed you.
           - unless (response = activity.accepted_or_rejected?)
             .extra.text

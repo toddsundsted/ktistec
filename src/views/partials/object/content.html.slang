@@ -11,7 +11,7 @@
   .summary
     - if object.draft?
       | draft created
-      a.date = object.display_date
+      a.date = object.short_date
     - else
       - if account
         - if author != actor

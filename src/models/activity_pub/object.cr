@@ -350,6 +350,24 @@ module ActivityPub
       Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})
     end
 
+    def activities
+      query = <<-QUERY
+         SELECT #{Activity.columns(prefix: "a")}
+           FROM activities AS a
+           JOIN actors AS t
+             ON t.iri = a.actor_iri
+      LEFT JOIN activities AS u
+             ON u.object_iri = a.iri
+            AND u.type = "ActivityPub::Activity::Undo"
+            AND u.actor_iri = a.actor_iri
+          WHERE a.object_iri = ?
+            AND t.deleted_at IS NULL
+            AND u.iri IS NULL
+       ORDER BY a.created_at ASC
+      QUERY
+      Activity.query_all(query, iri)
+    end
+
     def approved_by?(approved_by)
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Relationship::Content::Approved.count(from_iri: from_iri, to_iri: iri) > 0

@@ -11,6 +11,7 @@ require "../activity_pub/collection"
 require "../activity_pub/object"
 require "../relationship/content/inbox"
 require "../relationship/content/notification"
+require "../relationship/content/timeline"
 require "../relationship/social/follow"
 
 class Task
@@ -141,6 +142,22 @@ class Task
                 owner: actor,
                 activity: activity
               ).save(skip_associated: true)
+            end
+          end
+          # handle timeline
+          if object
+            if Relationship::Content::Timeline.find?(to_iri: object.iri).nil?
+              if activity.is_a?(ActivityPub::Activity::Announce)
+                Relationship::Content::Timeline.new(
+                  owner: actor,
+                  object: object
+                ).save(skip_associated: true)
+              elsif activity.is_a?(ActivityPub::Activity::Create) && object.in_reply_to_iri.nil?
+                Relationship::Content::Timeline.new(
+                  owner: actor,
+                  object: object
+                ).save(skip_associated: true)
+              end
             end
           end
         elsif (inbox = actor.inbox)

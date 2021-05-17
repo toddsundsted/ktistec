@@ -8,6 +8,7 @@ require "../activity_pub/collection"
 require "../activity_pub/object"
 require "../relationship/content/inbox"
 require "../relationship/content/outbox"
+require "../relationship/content/timeline"
 require "../relationship/social/follow"
 
 class Task
@@ -22,9 +23,9 @@ class Task
     validates(activity) { "missing: #{subject_iri}" unless activity? }
 
     def recipients
-      [activity.to, activity.cc].flatten.flat_map do |recipient|
+      [activity.to, activity.cc, sender.iri].flatten.flat_map do |recipient|
         if recipient == sender.iri
-          next
+          sender.iri
         elsif recipient && (actor = ActivityPub::Actor.dereference?(recipient))
           actor.iri
         elsif recipient && recipient =~ /^#{sender.iri}\/followers$/
@@ -42,6 +43,31 @@ class Task
 
     def deliver(to recipients)
       recipients.each do |recipient|
+        # the sender special case
+        if recipient == sender.iri
+          Relationship::Content::Outbox.new(
+            owner: sender,
+            activity: activity
+          ).save(skip_associated: true)
+          # handle timeline
+          if (object = ActivityPub::Object.dereference?(activity.object_iri))
+            if Relationship::Content::Timeline.find?(to_iri: object.iri).nil?
+              if activity.is_a?(ActivityPub::Activity::Announce)
+                Relationship::Content::Timeline.new(
+                  owner: sender,
+                  object: object
+                ).save(skip_associated: true)
+              elsif activity.is_a?(ActivityPub::Activity::Create) && object.in_reply_to_iri.nil?
+                Relationship::Content::Timeline.new(
+                  owner: sender,
+                  object: object
+                ).save(skip_associated: true)
+              end
+            end
+          end
+          # bail out
+          next
+        end
         unless (actor = ActivityPub::Actor.dereference?(recipient))
           message = "recipient does not exist: #{recipient}"
           failures << Failure.new(message)
@@ -72,11 +98,6 @@ class Task
     end
 
     def perform
-      Relationship::Content::Outbox.new(
-        owner: sender,
-        activity: activity
-      ).save(skip_associated: true)
-
       deliver to: recipients
     end
   end

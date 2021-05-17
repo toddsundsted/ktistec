@@ -73,14 +73,8 @@ Spectator.describe Task::Deliver do
       )
     end
 
-    context "addressed to the sender" do
-      let(recipient) { sender }
-
-      before_each { activity.to = [recipient.iri] }
-
-      it "excludes the sender" do
-        expect(subject.recipients).not_to contain(recipient.iri)
-      end
+    it "includes the sender by default" do
+      expect(subject.recipients).to contain(sender.iri)
     end
 
     context "addressed to a local recipient" do
@@ -207,6 +201,116 @@ Spectator.describe Task::Deliver do
       remote_recipient.save
     end
 
+    alias Timeline = Relationship::Content::Timeline
+
+    context "when activity is a create" do
+      let!(object) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/object",
+          attributed_to: sender
+        ).save
+      end
+      let(activity) do
+        ActivityPub::Activity::Create.new(
+          iri: "https://test.test/activities/create",
+          object: object
+        )
+      end
+
+      it "puts the object in the sender's timeline" do
+        expect{subject.deliver([sender.iri])}.
+          to change{Timeline.count(from_iri: sender.iri)}.by(1)
+      end
+
+      context "and the object's already in the timeline" do
+        before_each do
+          Timeline.new(
+            owner: sender,
+            object: object
+          ).save
+        end
+
+        it "does not put the object in the sender's timeline" do
+          expect{subject.deliver([sender.iri])}.
+            not_to change{Timeline.count(from_iri: sender.iri)}
+        end
+      end
+
+      context "and the object is a reply" do
+        before_each do
+          object.assign(
+            in_reply_to: ActivityPub::Object.new(
+              iri: "https://remote/objects/reply"
+            )
+          ).save
+        end
+
+        it "does not put the object in the sender's timeline" do
+          expect{subject.deliver([sender.iri])}.
+            not_to change{Timeline.count(from_iri: sender.iri)}
+        end
+      end
+    end
+
+    context "when activity is an announce" do
+      let!(object) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/object",
+          attributed_to: sender
+        ).save
+      end
+      let(activity) do
+        ActivityPub::Activity::Announce.new(
+          iri: "https://remote/activities/announce",
+          object: object
+        )
+      end
+
+      it "puts the object in the sender's timeline" do
+        expect{subject.deliver([sender.iri])}.
+          to change{Timeline.count(from_iri: sender.iri)}.by(1)
+      end
+
+      context "and the object's already in the timeline" do
+        before_each do
+          Timeline.new(
+            owner: sender,
+            object: object
+          ).save
+        end
+
+        it "does not put the object in the sender's timeline" do
+          expect{subject.deliver([sender.iri])}.
+            not_to change{Timeline.count(from_iri: sender.iri)}
+        end
+      end
+
+      context "and the object is a reply" do
+        before_each do
+          object.assign(
+            in_reply_to: ActivityPub::Object.new(
+              iri: "https://remote/objects/reply"
+            )
+          ).save
+        end
+
+        it "puts the object in the sender's timeline" do
+          expect{subject.deliver([sender.iri])}.
+            to change{Timeline.count(from_iri: sender.iri)}.by(1)
+        end
+      end
+    end
+
+    it "puts the activity in the outbox of the sender" do
+      expect{subject.deliver([sender.iri])}.
+        to change{Relationship::Content::Outbox.count(from_iri: sender.iri)}.by(1)
+    end
+
+    it "does not put the object in the sender's timeline" do
+      expect{subject.deliver([sender.iri])}.
+        not_to change{Timeline.count(from_iri: sender.iri)}
+    end
+
     it "puts the activity in the inbox of a local recipient" do
       subject.deliver([local_recipient.iri])
       expect(Relationship::Content::Inbox.count(from_iri: local_recipient.iri)).to eq(1)
@@ -224,11 +328,6 @@ Spectator.describe Task::Deliver do
         sender: sender,
         activity: activity
       )
-    end
-
-    it "puts the activity in the outbox of the sender" do
-      expect{subject.perform}.
-        to change{Relationship::Content::Outbox.count(from_iri: sender.iri)}.by(1)
     end
 
     context "when the object has been deleted" do

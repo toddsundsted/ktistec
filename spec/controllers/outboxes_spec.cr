@@ -441,7 +441,7 @@ Spectator.describe RelationshipsController do
 
         it "sends the activity to the object's outbox" do
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"
-          expect(HTTP::Client.last?).to match("POST #{object.inbox}")
+          expect(HTTP::Client.requests).to have("POST #{object.inbox}")
         end
       end
 
@@ -801,7 +801,7 @@ Spectator.describe RelationshipsController do
 
         it "sends the activity to the object's inbox" do
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"
-          expect(HTTP::Client.last?).to match("POST #{object.inbox}")
+          expect(HTTP::Client.requests).to have("POST #{object.inbox}")
         end
       end
 

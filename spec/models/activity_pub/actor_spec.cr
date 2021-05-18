@@ -879,6 +879,57 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#timeline" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro post(index)
+      let(actor{{index}}) do
+        ActivityPub::Actor.new(
+          iri: "https://remote/actors/#{random_string}"
+        )
+      end
+      let(object{{index}}) do
+        ActivityPub::Object.new(
+          iri: "https://remote/objects/#{random_string}",
+          attributed_to: actor{{index}}
+        )
+      end
+      let!(relationship{{index}}) do
+        Relationship::Content::Timeline.new(
+          owner: subject,
+          object: object{{index}},
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
+        ).save
+      end
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.timeline(1, 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "filters out deleted posts" do
+      object5.delete
+      expect(subject.timeline(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete
+      expect(subject.timeline(1, 2)).to eq([object4, object3])
+    end
+
+    it "paginates the results" do
+      expect(subject.timeline(1, 2)).to eq([object5, object4])
+      expect(subject.timeline(3, 2)).to eq([object1])
+      expect(subject.timeline(3, 2).more?).not_to be_true
+    end
+  end
+
   describe "#notifications" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 

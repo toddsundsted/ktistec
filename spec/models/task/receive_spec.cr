@@ -366,6 +366,7 @@ Spectator.describe Task::Receive do
     # a threaded conversation.
 
     alias Notification = Relationship::Content::Notification
+    alias Timeline = Relationship::Content::Timeline
 
     context "when object mentions a local recipient" do
       let(mention) do
@@ -386,6 +387,55 @@ Spectator.describe Task::Receive do
       end
     end
 
+    context "when activity is a create" do
+      let!(object) do
+        ActivityPub::Object.new(
+          iri: "https://remote/objects/object",
+          attributed_to: local_recipient
+        ).save
+      end
+      let(activity) do
+        ActivityPub::Activity::Create.new(
+          iri: "https://remote/activities/create",
+          object: object
+        )
+      end
+
+      it "puts the object in the recipient's timeline" do
+        expect{subject.deliver([local_recipient.iri])}.
+          to change{Timeline.count(from_iri: local_recipient.iri)}.by(1)
+      end
+
+      context "and the object's already in the timeline" do
+        before_each do
+          Timeline.new(
+            owner: local_recipient,
+            object: object
+          ).save
+        end
+
+        it "does not put the object in the recipient's timeline" do
+          expect{subject.deliver([local_recipient.iri])}.
+            not_to change{Timeline.count(from_iri: local_recipient.iri)}
+        end
+      end
+
+      context "and the object is a reply" do
+        before_each do
+          object.assign(
+            in_reply_to: ActivityPub::Object.new(
+              iri: "https://remote/objects/reply"
+            )
+          ).save
+        end
+
+        it "does not put the object in the recipient's timeline" do
+          expect{subject.deliver([local_recipient.iri])}.
+            not_to change{Timeline.count(from_iri: local_recipient.iri)}
+        end
+      end
+    end
+
     context "when activity is an announce" do
       let!(object) do
         ActivityPub::Object.new(
@@ -403,6 +453,40 @@ Spectator.describe Task::Receive do
       it "puts the activity in the recipient's notifications" do
         expect{subject.deliver([local_recipient.iri])}.
           to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
+      end
+
+      it "puts the object in the recipient's timeline" do
+        expect{subject.deliver([local_recipient.iri])}.
+          to change{Timeline.count(from_iri: local_recipient.iri)}.by(1)
+      end
+
+      context "and the object's already in the timeline" do
+        before_each do
+          Timeline.new(
+            owner: local_recipient,
+            object: object
+          ).save
+        end
+
+        it "does not put the object in the recipient's timeline" do
+          expect{subject.deliver([local_recipient.iri])}.
+            not_to change{Timeline.count(from_iri: local_recipient.iri)}
+        end
+      end
+
+      context "and the object is a reply" do
+        before_each do
+          object.assign(
+            in_reply_to: ActivityPub::Object.new(
+              iri: "https://remote/objects/reply"
+            )
+          ).save
+        end
+
+        it "puts the object in the recipient's timeline" do
+          expect{subject.deliver([local_recipient.iri])}.
+            to change{Timeline.count(from_iri: local_recipient.iri)}.by(1)
+        end
       end
     end
 
@@ -438,6 +522,16 @@ Spectator.describe Task::Receive do
         expect{subject.deliver([local_recipient.iri])}.
           to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
       end
+    end
+
+    it "does not put the object in the recipient's notifications" do
+      expect{subject.deliver([local_recipient.iri])}.
+        not_to change{Notification.count(from_iri: local_recipient.iri)}
+    end
+
+    it "does not put the object in the recipient's timeline" do
+      expect{subject.deliver([local_recipient.iri])}.
+        not_to change{Timeline.count(from_iri: local_recipient.iri)}
     end
 
     it "puts the activity in the inbox of a local recipient" do

@@ -559,6 +559,56 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#activities" do
+    subject do
+      described_class.new(
+        iri: "https://test.test/objects/#{random_string}"
+      )
+    end
+
+    macro activity(index)
+      let(actor{{index}}) do
+        ActivityPub::Actor.new(
+          iri: "https://test.test/actors/#{random_string}"
+        ).save
+      end
+      let!(activity{{index}}) do
+        ActivityPub::Activity.new(
+          iri: "https://test.test/activities/#{random_string}",
+          actor_iri: actor{{index}}.iri,
+          object_iri: subject.iri,
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
+        ).save
+      end
+    end
+
+    activity(1)
+    activity(2)
+    activity(3)
+
+    let(undo) do
+      ActivityPub::Activity::Undo.new(
+        iri: "https://test.test/undo",
+        actor: actor1,
+        object: activity1
+      )
+    end
+
+    it "returns the associated activities" do
+      expect(subject.activities).to eq([activity1, activity2, activity3])
+    end
+
+    it "filters out undone activities" do
+      undo.save
+      expect(subject.activities).to eq([activity2, activity3])
+    end
+
+    it "filters out activities of deleted actors" do
+      actor1.delete
+      expect(subject.activities).to eq([activity2, activity3])
+    end
+  end
+
   describe "#approved_by?" do
     subject do
       described_class.new(

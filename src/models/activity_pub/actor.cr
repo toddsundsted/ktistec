@@ -9,6 +9,7 @@ require "../../framework/model/**"
 require "../activity_pub"
 require "../relationship/content/approved"
 require "../relationship/content/notification"
+require "../relationship/content/timeline"
 require "../relationship/content/inbox"
 require "../relationship/content/outbox"
 require "../relationship/social/follow"
@@ -471,6 +472,38 @@ module ActivityPub
           LIMIT ?
       QUERY
       Object.query_and_paginate(query, iri, iri, page: page, size: size)
+    end
+
+    def timeline(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS a
+             ON a.iri = o.attributed_to_iri
+           JOIN relationships AS r
+             ON r.to_iri = o.iri
+            AND r.type = "#{Relationship::Content::Timeline}"
+          WHERE r.from_iri = ?
+            AND o.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            AND o.id NOT IN (
+               SELECT o.id
+                 FROM objects AS o
+                 JOIN actors AS a
+                   ON a.iri = o.attributed_to_iri
+                 JOIN relationships AS r
+                   ON r.to_iri = o.iri
+                  AND r.type = "#{Relationship::Content::Timeline}"
+                WHERE r.from_iri = ?
+                  AND o.deleted_at IS NULL
+                  AND a.deleted_at IS NULL
+             ORDER BY r.created_at DESC
+                LIMIT ?
+       )
+       ORDER BY r.created_at DESC
+          LIMIT ?
+      QUERY
+      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
     # note: filters out activities that have associated objects that

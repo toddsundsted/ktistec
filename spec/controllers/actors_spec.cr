@@ -37,6 +37,75 @@ Spectator.describe ActorsController do
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
 
+  describe "GET /actors/:username/timeline" do
+    it "returns 401 if not authorized" do
+      get "/actors/missing/timeline", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/actors/missing/timeline", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "returns 404 if not found" do
+        get "/actors/missing/timeline", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if not found" do
+        get "/actors/missing/timeline", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 403 if different account" do
+        get "/actors/#{register.actor.username}/timeline", ACCEPT_HTML
+        expect(response.status_code).to eq(403)
+      end
+
+      it "returns 403 if different account" do
+        get "/actors/#{register.actor.username}/timeline", ACCEPT_JSON
+        expect(response.status_code).to eq(403)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/timeline", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      let(object) do
+        ActivityPub::Object.new(
+          iri: "https://remote/objects/#{random_string}",
+          attributed_to: actor
+        )
+      end
+      let!(timeline) do
+        Relationship::Content::Timeline.new(
+          owner: actor,
+          object: object
+        ).save
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{object.id}")
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/timeline", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a.map(&.as_s)).to contain_exactly(object.iri)
+      end
+    end
+  end
+
   describe "GET /actors/:username/notifications" do
     it "returns 401 if not authorized" do
       get "/actors/missing/notifications", ACCEPT_HTML

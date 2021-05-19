@@ -1,9 +1,8 @@
 - if env.account?
   h1= actor.username
-  .ui.secondary.five.item.menu
-    a.item href=actor_relationships_path(actor, "inbox") Inbox
-    a.item href=actor_relationships_path(actor, "outbox") Outbox
+  .ui.secondary.four.item.menu
     a.item href=actor_relationships_path(actor, "drafts") Drafts
+    a.item href=actor_relationships_path(actor, "notifications") Notifications
     a.item href=actor_relationships_path(actor, "followers") Followers
     a.item href=actor_relationships_path(actor, "following") Following
   - object = ActivityPub::Object.new(iri: "#{host}/objeccts/#{id}", attributed_to: actor)

@@ -382,19 +382,6 @@ module ActivityPub
       )
     end
 
-    def both_mailboxes(page = 1, size = 10)
-      self.class.content(
-        self.iri,
-        [Relationship::Content::Inbox, Relationship::Content::Outbox],
-        [ActivityPub::Activity::Create, ActivityPub::Activity::Announce],
-        nil,
-        page,
-        size,
-        false,
-        false
-      )
-    end
-
     def my_timeline(page = 1, size = 10)
       self.class.content(
         self.iri,

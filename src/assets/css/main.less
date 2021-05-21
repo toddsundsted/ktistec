@@ -41,6 +41,18 @@ body { display: flex; flex-direction: column; }
                 /* actions (e.g. reply and delete) */
                 > form { display: inline; }
             }
+            > .detail {
+                a {
+                    img { cursor: pointer !important; }
+                    .icon {
+                        color: lightblue;
+                        position: relative;
+                        left: -10px;
+                        bottom: -10px;
+                        width: 5px;
+                    }
+                }
+            }
 
             /* remove margin on figures */
             figure { margin: auto; }

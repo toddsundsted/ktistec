@@ -33,12 +33,12 @@
         a.date title=object.display_date href=object.display_link = object.short_date
   - if attachments && (attachment = attachments.shift?)
     - if attachment.image?
-      img.ui.extra.image.attachment src=attachment.url
+      img.ui.extra.image.attachment data-src=attachment.url src=attachment.url
     - unless attachments.empty?
       .extra.images
         - attachments.each do |attachment|
           - if attachment.image?
-            img src=attachment.url
+            img data-src=attachment.url src=attachment.url
   .extra.text
     == s object.content
   .meta

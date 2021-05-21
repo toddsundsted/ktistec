@@ -83,14 +83,14 @@ import "lightgallery/dist/css/lightgallery.css"
 
 $(document).on("turbolinks:load", function() {
   $(".ui.feed .event")
-    .find(".content img")
+    .find(".content .text img")
     .each(function () {
       let $this = $(this)
       $this.attr("data-src", $this.attr("src"))
     })
     .end()
     .lightGallery({
-      selector: ".content img",
+      selector: ".content img[data-src]",
       download: false
     })
 })

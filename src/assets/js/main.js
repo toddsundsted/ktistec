@@ -129,7 +129,7 @@ $(document).on("click", ".dangerous.button[data-modal]", function (e) {
 
 // refresh actors with missing icon images
 $(document).on("turbolinks:load", function () {
-  $(".ui.feed .event .label img").on("error", function() {
+  $(".ui.feed .event img[data-actor-id]").on("error", function() {
     let $this = $(this)
     $this.replaceWith('<i class="user icon"></i>')
     $.ajax({

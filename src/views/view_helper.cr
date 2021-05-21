@@ -5,7 +5,7 @@ module Ktistec::ViewHelper
     "depth-#{Math.min(object.depth, 9)}"
   end
 
-  def object_partial(env, object, actor = object.attributed_to, author = actor, *, for_thread = nil)
+  def object_partial(env, object, actor = object.attributed_to, author = actor, *, with_detail = false, for_thread = nil)
     if for_thread
       render "src/views/partials/thread.html.slang"
     else

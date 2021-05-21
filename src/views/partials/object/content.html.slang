@@ -41,20 +41,21 @@
             img.ui.image data-src=attachment.url src=attachment.url
   .extra.text
     == s object.content
-  - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
-    .extra.detail
-      - activities.each do |activity|
-        - if activity.responds_to?(:actor?) && activity.actor?
-          a href=remote_actor_path(activity.actor)
-            - if (icon = activity.actor.icon)
-              img.ui.avatar.image data-actor-id=activity.actor.id src=icon
-            - else
-              i.user.icon
-            - case activity
-            - when ActivityPub::Activity::Announce
-              i.share.icon
-            - when ActivityPub::Activity::Like
-              i.star.icon
+  - if with_detail && account
+    - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
+      .extra.detail
+        - activities.each do |activity|
+          - if activity.responds_to?(:actor?) && activity.actor?
+            a href=remote_actor_path(activity.actor)
+              - if (icon = activity.actor.icon)
+                img.ui.avatar.image data-actor-id=activity.actor.id src=icon
+              - else
+                i.user.icon
+              - case activity
+              - when ActivityPub::Activity::Announce
+                i.share.icon
+              - when ActivityPub::Activity::Like
+                i.star.icon
   .meta
     - if account && object.draft?
       a href=edit_object_path(object)

@@ -5,7 +5,7 @@
     a.item href=actor_relationships_path(actor, "notifications") Notifications
     a.item href=actor_relationships_path(actor, "followers") Followers
     a.item href=actor_relationships_path(actor, "following") Following
-  - object = ActivityPub::Object.new(iri: "#{host}/objeccts/#{id}", attributed_to: actor)
+  - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
   == render "src/views/partials/editor.html.slang"
   h2 Recent
   - objects = actor.timeline(*pagination_params(env))

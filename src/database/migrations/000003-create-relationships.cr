@@ -16,11 +16,11 @@ up do |db|
     )
   STR
   db.exec <<-STR
-    CREATE INDEX idx_relationships_from_iri
-      ON relationships (from_iri ASC, type ASC)
+    CREATE INDEX idx_relationships_from_iri_type_created_at
+      ON relationships (from_iri ASC, type ASC, created_at DESC)
   STR
   db.exec <<-STR
-    CREATE INDEX idx_relationships_to_iri
+    CREATE INDEX idx_relationships_to_iri_type
       ON relationships (to_iri ASC, type ASC)
   STR
 end

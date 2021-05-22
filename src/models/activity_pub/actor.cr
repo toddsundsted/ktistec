@@ -382,19 +382,6 @@ module ActivityPub
       )
     end
 
-    def both_mailboxes(page = 1, size = 10)
-      self.class.content(
-        self.iri,
-        [Relationship::Content::Inbox, Relationship::Content::Outbox],
-        [ActivityPub::Activity::Create, ActivityPub::Activity::Announce],
-        nil,
-        page,
-        size,
-        false,
-        false
-      )
-    end
-
     def my_timeline(page = 1, size = 10)
       self.class.content(
         self.iri,
@@ -583,7 +570,7 @@ module ActivityPub
       self.assign(**self.class.map(json, include_key: include_key))
     end
 
-    def self.map(json, *, include_key = false, **option)
+    def self.map(json, *, include_key = false, **options)
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
         iri: json.dig?("@id").try(&.as_s),

@@ -33,14 +33,29 @@
         a.date title=object.display_date href=object.display_link = object.short_date
   - if attachments && (attachment = attachments.shift?)
     - if attachment.image?
-      img.ui.extra.image.attachment src=attachment.url
+      img.ui.extra.image data-src=attachment.url src=attachment.url
     - unless attachments.empty?
       .extra.images
         - attachments.each do |attachment|
           - if attachment.image?
-            img src=attachment.url
+            img.ui.image data-src=attachment.url src=attachment.url
   .extra.text
     == s object.content
+  - if with_detail && account
+    - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
+      .extra.detail
+        - activities.each do |activity|
+          - if activity.responds_to?(:actor?) && activity.actor?
+            a href=remote_actor_path(activity.actor)
+              - if (icon = activity.actor.icon)
+                img.ui.avatar.image data-actor-id=activity.actor.id src=icon
+              - else
+                i.user.icon
+              - case activity
+              - when ActivityPub::Activity::Announce
+                i.share.icon
+              - when ActivityPub::Activity::Like
+                i.star.icon
   .meta
     - if account && object.draft?
       a href=edit_object_path(object)

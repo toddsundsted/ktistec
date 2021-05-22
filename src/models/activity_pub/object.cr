@@ -350,7 +350,21 @@ module ActivityPub
       Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})
     end
 
-    def activities
+    def activities(inclusion = nil, exclusion = nil)
+      inclusion =
+        case inclusion
+        when Class, String
+          %Q|AND a.type = "#{inclusion}"|
+        when Array
+          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        end
+      exclusion =
+        case exclusion
+        when Class, String
+          %Q|AND a.type != "#{exclusion}"|
+        when Array
+          %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
+        end
       query = <<-QUERY
          SELECT #{Activity.columns(prefix: "a")}
            FROM activities AS a
@@ -361,6 +375,8 @@ module ActivityPub
             AND u.type = "ActivityPub::Activity::Undo"
             AND u.actor_iri = a.actor_iri
           WHERE a.object_iri = ?
+            #{inclusion}
+            #{exclusion}
             AND t.deleted_at IS NULL
             AND u.iri IS NULL
        ORDER BY a.created_at ASC

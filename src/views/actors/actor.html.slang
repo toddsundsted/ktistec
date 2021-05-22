@@ -1,22 +1,21 @@
 - if env.account?
   h1= actor.username
-  .ui.secondary.five.item.menu
-    a.item href=actor_relationships_path(actor, "inbox") Inbox
-    a.item href=actor_relationships_path(actor, "outbox") Outbox
+  .ui.secondary.four.item.menu
     a.item href=actor_relationships_path(actor, "drafts") Drafts
+    a.item href=actor_relationships_path(actor, "notifications") Notifications
     a.item href=actor_relationships_path(actor, "followers") Followers
     a.item href=actor_relationships_path(actor, "following") Following
-  - object = ActivityPub::Object.new(iri: "#{host}/objeccts/#{id}", attributed_to: actor)
+  - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
   == render "src/views/partials/editor.html.slang"
+  h2 Recent
+  - objects = actor.timeline(*pagination_params(env))
+  == render "src/views/actors/timeline.html.slang"
 - else
   == render "src/views/partials/actor-medium.html.slang"
-crystal:
-  activities = env.account? ?
-    actor.both_mailboxes(*pagination_params(env)) :
-    actor.my_timeline(*pagination_params(env))
-h2 Recent
-section.ui.feed
-  - activities.each do |activity|
-    - if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Announce)
-      == render "src/views/partials/activity/create.html.slang"
-== paginate(activities, env)
+  h2 Recent
+  - activities = actor.my_timeline(*pagination_params(env))
+  section.ui.feed
+    - activities.each do |activity|
+      - if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Announce)
+        == render "src/views/partials/activity/create.html.slang"
+  == paginate(activities, env)

@@ -593,9 +593,28 @@ Spectator.describe ActivityPub::Object do
         object: activity1
       )
     end
+    let(like) do
+      ActivityPub::Activity::Like.new(
+        iri: "https://test.test/like",
+        actor: actor1,
+        object: subject
+      )
+    end
 
     it "returns the associated activities" do
       expect(subject.activities).to eq([activity1, activity2, activity3])
+    end
+
+    context "given a like" do
+      before_each { like.save }
+
+      it "includes only activities of the specified class" do
+        expect(subject.activities(inclusion: ActivityPub::Activity::Like)).to eq([like])
+      end
+
+      it "excludes all activities of the specified class" do
+        expect(subject.activities(exclusion: ActivityPub::Activity::Like)).to eq([activity1, activity2, activity3])
+      end
     end
 
     it "filters out undone activities" do

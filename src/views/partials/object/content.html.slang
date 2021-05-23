@@ -1,13 +1,14 @@
-.content
-  crystal:
-    object.with_statistics!.with_replies_count!
-    account = env.account?
-    if (attachments = object.attachments) && (content = object.content)
-      unless content.empty?
-        _urls = XML.parse_html(content).xpath_nodes("//img/@src").map(&.text)
-        attachments.reject! { |a| a.url.in?(_urls) }
-      end
+crystal:
+  account = env.account?
+  object.with_statistics!.with_replies_count!
+  if (attachments = object.attachments) && (content = object.content)
+    unless content.empty?
+      urls = XML.parse_html(content).xpath_nodes("//img/@src").map(&.text)
+      attachments.reject! { |a| a.url.in?(urls) }
     end
+  end
+  href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
+.content data-controller="clickable-background" data-action="click->clickable-background#click" data-clickable-background-href-value=href
   .summary
     - if object.draft?
       | draft created

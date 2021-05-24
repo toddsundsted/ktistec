@@ -211,9 +211,6 @@ class RelationshipsController
       unless activity.actor?(dereference: true)
         bad_request
       end
-      unless activity.object?(dereference: true)
-        bad_request
-      end
       # fetch the object from the database because we can't trust the
       # contents of the payload. also because the original object may
       # be replaced by a tombstone (per the spec).

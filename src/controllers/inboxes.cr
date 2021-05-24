@@ -47,8 +47,10 @@ class RelationshipsController
 
     # 1
 
+    signature = !!env.request.headers["Signature"]?
+
     if (actor_iri = activity.actor_iri)
-      unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!env.request.headers["Signature"]? || actor.pem_public_key)
+      unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!signature || actor.pem_public_key)
         open?(actor_iri) do |response|
           actor = ActivityPub::Actor.from_json_ld?(response.body, include_key: true).try(&.save)
         end
@@ -67,7 +69,7 @@ class RelationshipsController
 
     # 2
 
-    if env.request.headers["Signature"]?
+    if signature
       if actor && Ktistec::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers, body)
         verified = true
       end

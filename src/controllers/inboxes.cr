@@ -50,7 +50,7 @@ class RelationshipsController
     if (actor_iri = activity.actor_iri)
       unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!env.request.headers["Signature"]? || actor.pem_public_key)
         open?(actor_iri) do |response|
-          actor = ActivityPub::Actor.from_json_ld?(response.body, include_key: true)
+          actor = ActivityPub::Actor.from_json_ld?(response.body, include_key: true).try(&.save)
         end
       end
     end

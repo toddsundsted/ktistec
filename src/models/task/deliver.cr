@@ -78,7 +78,6 @@ class Task
           Relationship::Content::Inbox.new(
             owner: actor,
             activity: activity,
-            confirmed: true
           ).save(skip_associated: true)
         elsif (inbox = actor.inbox)
           body = activity.to_json_ld

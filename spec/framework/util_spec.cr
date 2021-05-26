@@ -34,9 +34,19 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("<span>some text</span>")
     end
 
-    it "preserves href on links, adds ugc attribute value" do
-      content = "<a href='https://test.test/index.html' rel='ugc'>a link</a>"
-      expect(described_class.sanitize(content)).to eq(content)
+    it "preserves href on links, adds target and ugc attribute values to remote links" do
+      content = "<a class='foo bar' href='https://remote/index.html'>a link</a>"
+      expect(described_class.sanitize(content)).to eq("<a href='https://remote/index.html' target='_blank' rel='ugc'>a link</a>")
+    end
+
+    it "preserves href on local links" do
+      content = "<a class='foo bar' href='https://test.test/index.html'>a link</a>"
+      expect(described_class.sanitize(content)).to eq("<a href='https://test.test/index.html'>a link</a>")
+    end
+
+    it "preserves href on paths" do
+      content = "<a class='foo bar' href='/index.html'>a link</a>"
+      expect(described_class.sanitize(content)).to eq("<a href='/index.html'>a link</a>")
     end
 
     it "preserves src and alt on images, adds compatibility classes" do

@@ -119,7 +119,6 @@ class Task
           Relationship::Content::Inbox.new(
             owner: actor,
             activity: activity,
-            confirmed: true
           ).save(skip_associated: true)
           # handle notifications
           if (object = ActivityPub::Object.dereference?(activity.object_iri))

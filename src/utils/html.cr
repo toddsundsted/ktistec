@@ -90,7 +90,9 @@ module Ktistec
             if node.name == "div"
               build << "<p>"
               node.children.each do |child|
-                if child.name == "br" && child.next.try(&.name) == "br"
+                if child.name == "br" && child.next.nil?
+                  # SKIP
+                elsif child.name == "br" && child.next.try(&.name) == "br"
                   # SKIP
                 elsif child.name == "br" && child.previous.try(&.name) == "br"
                   build << "</p><p>"

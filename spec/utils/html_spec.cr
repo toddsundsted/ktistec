@@ -35,6 +35,11 @@ Spectator.describe Ktistec::HTML do
       expect(described_class.enhance(content).content).to eq(%q|<p>one<br>two</p>|)
     end
 
+    it "removes trailing br" do
+      content = %q|<div><em>one</em><br></div><div>two</div>|
+      expect(described_class.enhance(content).content).to eq(%q|<p><em>one</em></p><p>two</p>|)
+    end
+
     it "replaces double br with p" do
       content = %q|<div>one<br><br>two</div>|
       expect(described_class.enhance(content).content).to eq(%q|<p>one</p><p>two</p>|)

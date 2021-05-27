@@ -230,9 +230,10 @@ module ActivityPub
          SELECT count(o.iri) - 1
            FROM objects AS o, replies_to AS t
       LEFT JOIN relationships AS r
-             ON r.from_iri = ? AND r.to_iri = o.iri
+             ON r.type = "#{Relationship::Content::Approved}"
+             AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
-            AND ((o.in_reply_to_iri IS null) OR (r.type = "Relationship::Content::Approved"))
+            AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Ktistec.database.query_one(query, iri, from_iri) do |rs|
@@ -291,9 +292,10 @@ module ActivityPub
          SELECT #{Object.columns(prefix: "o")}, t.depth
            FROM objects AS o, replies_to AS t
       LEFT JOIN relationships AS r
-             ON r.from_iri = ? AND r.to_iri = o.iri
+             ON r.type = "#{Relationship::Content::Approved}"
+            AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
-            AND ((o.in_reply_to_iri IS null) OR (r.type = "Relationship::Content::Approved"))
+            AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
           ORDER BY t.position
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
@@ -340,9 +342,10 @@ module ActivityPub
            JOIN actors AS a
              ON a.iri = o.attributed_to_iri
       LEFT JOIN relationships AS r
-             ON r.from_iri = ? AND r.to_iri = o.iri
+             ON r.type = "#{Relationship::Content::Approved}"
+            AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (p.iri)
-            AND ((o.in_reply_to_iri IS null) OR (r.type = "Relationship::Content::Approved"))
+            AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
             AND o.deleted_at IS NULL
             AND a.deleted_at IS NULL
       QUERY

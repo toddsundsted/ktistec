@@ -44,13 +44,15 @@ module Ktistec
     ]
 
     private ATTRIBUTES = {
-      "a" => ["href"],
-      "img" => ["src", "alt"]
-    }
-
-    private VALUES = {
-      "a" => {"rel", "ugc"},
-      "img" => {"class", "ui image"}
+      a: {
+        keep: ["href"],
+        remote: [{"target", "_blank"}, {"rel", "ugc"}],
+        key: "href"
+      },
+      img: {
+        keep: ["src", "alt"],
+        all: [{"class", "ui image"}]
+      }
     }
 
     private STRIP = [
@@ -71,11 +73,16 @@ module Ktistec
       elsif html.element? && name.in?(ELEMENTS)
         if (attributes = ATTRIBUTES[name]?)
           build << "<" << name
-          (attributes & html.attributes.map(&.name)).each do |attr|
-            build << " #{attr}='#{html[attr]}'"
+          (attributes[:keep] & html.attributes.map(&.name)).each do |attribute|
+            build << " #{attribute}='#{html[attribute]}'"
           end
-          if (values = VALUES[name]?)
-            build << " #{values[0]}='#{values[1]}'"
+          remote =
+            if (key = attributes[:key]?) && (value = html.attributes[key]?)
+              uri = URI.parse(value.text)
+              (uri.scheme || uri.host) && Ktistec.host != "#{uri.scheme}://#{uri.host}"
+            end
+          if (remote && (values = attributes[:remote]?)) || (values = attributes[:all]?)
+            build << values.not_nil!.map { |value| " #{value[0]}='#{value[1]}'" }.join
           end
           build << ">"
         else

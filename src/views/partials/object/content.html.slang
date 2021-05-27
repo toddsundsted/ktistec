@@ -1,6 +1,5 @@
 crystal:
   account = env.account?
-  object.with_statistics!.with_replies_count!
   if (attachments = object.attachments) && (content = object.content)
     unless content.empty?
       urls = XML.parse_html(content).xpath_nodes("//img/@src").map(&.text)
@@ -70,6 +69,7 @@ crystal:
           i.trash.icon
           | Delete
     - elsif account
+      - object.with_statistics!.with_replies_count!
       - if (c = object.replies_count) > 0 || object.in_reply_to?
         a href=remote_thread_path(object)
           button.ui.mini.iconic.button
@@ -117,7 +117,8 @@ crystal:
           i.trash.icon
           | Delete
     - else
-      - if (c = object.replies_count) > 0 || object.in_reply_to?
+      - object.with_statistics!.with_replies_count!(approved_by: object.attributed_to)
+      - if (c = object.replies_count) > 0 || object.in_reply_to?.try(&.approved_by?(object.attributed_to))
         a href=thread_path(object)
           button.ui.mini.iconic.button
             i.comments.icon

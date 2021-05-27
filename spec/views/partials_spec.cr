@@ -332,13 +332,40 @@ Spectator.describe "partials" do
     let(actor) { account.actor }
     let!(object) do
       ActivityPub::Object.new(
-        iri: "https://test.test/objects/object"
+        iri: "https://test.test/objects/object",
+        attributed_to: actor
       ).save
     end
     let(original) do
       ActivityPub::Object.new(
         iri: "https://test.test/objects/original"
       )
+    end
+
+    it "does not render a link to the threaded conversation" do
+      object.assign(in_reply_to: original, attributed_to: actor).save
+      expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Thread")
+    end
+
+    it "does not render a link to the threaded conversation" do
+      original.assign(in_reply_to: object, attributed_to: actor).save
+      expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Thread")
+    end
+
+    context "if approved" do
+      before_each do
+        actor.approve(original.save)
+      end
+
+      it "renders a link to the threaded conversation" do
+        object.assign(in_reply_to: original, attributed_to: actor).save
+        expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Thread")
+      end
+
+      it "renders a link to the threaded conversation" do
+        original.assign(in_reply_to: object, attributed_to: actor).save
+        expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Thread")
+      end
     end
 
     context "if authenticated" do

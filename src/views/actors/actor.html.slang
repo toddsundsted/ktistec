@@ -1,4 +1,4 @@
-- if env.account?
+- if env.account?.try(&.actor) == actor
   h1= actor.username
   .ui.secondary.four.item.menu
     a.item href=actor_relationships_path(actor, "drafts") Drafts

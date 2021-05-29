@@ -3,6 +3,7 @@ require "../../../src/models/activity_pub/activity/announce"
 require "../../../src/models/activity_pub/activity/like"
 
 require "../../spec_helper/model"
+require "../../spec_helper/register"
 
 class FooBarObject < ActivityPub::Object
 end
@@ -247,6 +248,88 @@ Spectator.describe ActivityPub::Object do
 
     it "copies the subject's cc" do
       expect(subject.make_delete_activity.cc).to eq(["cc_iri"])
+    end
+  end
+
+  describe ".timeline" do
+    let(actor) { register.actor }
+
+    macro post(index)
+      let(actor{{index}}) do
+        ActivityPub::Actor.new(
+          iri: "https://test.test/actors/#{random_string}"
+        )
+      end
+      let(post{{index}}) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/#{random_string}",
+          attributed_to: actor{{index}},
+          visible: true
+        ).save
+      end
+      let(activity{{index}}) do
+        ActivityPub::Activity::Announce.new(
+          iri: "https://test.test/activities/#{random_string}",
+          actor: actor,
+          object: post{{index}}
+        )
+      end
+      let!(relationship{{index}}) do
+        Relationship::Content::Outbox.new(
+          owner: actor,
+          activity: activity{{index}},
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
+        ).save
+      end
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(described_class.timeline(1, 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "filters out deleted posts" do
+      post5.delete
+      expect(described_class.timeline(1, 2)).to eq([post4, post3])
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete
+      expect(described_class.timeline(1, 2)).to eq([post4, post3])
+    end
+
+    it "filters out non-public posts" do
+      post5.assign(visible: false).save
+      expect(described_class.timeline(1, 2)).to eq([post4, post3])
+    end
+
+    it "filters out replies" do
+      post5.assign(in_reply_to: post3).save
+      expect(described_class.timeline(1, 2)).to eq([post4, post3])
+    end
+
+    let(undo) do
+      ActivityPub::Activity::Undo.new(
+        iri: "https://test.test/activities/#{random_string}",
+        actor: actor,
+        object: activity5
+      )
+    end
+
+    it "filters out objects belonging to undone activities" do
+      undo.save
+      expect(described_class.timeline(1, 2)).to eq([post4, post3])
+    end
+
+    it "paginates the results" do
+      expect(described_class.timeline(1, 2)).to eq([post5, post4])
+      expect(described_class.timeline(3, 2)).to eq([post1])
+      expect(described_class.timeline(3, 2).more?).not_to be_true
     end
   end
 

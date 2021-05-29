@@ -147,6 +147,62 @@ module ActivityPub
       (published || created_at).to_local
     end
 
+    # Returns objects in the site's timeline.
+    #
+    def self.timeline(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+            AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+            AND r.type = "#{Relationship::Content::Outbox}"
+           JOIN accounts AS c
+      LEFT JOIN activities AS u
+             ON u.object_iri = a.iri
+            AND u.type = "#{ActivityPub::Activity::Undo}"
+            AND u.actor_iri = a.actor_iri
+          WHERE r.from_iri = c.iri
+            AND o.visible = 1
+            AND o.in_reply_to_iri IS NULL
+            AND o.deleted_at IS NULL
+            AND t.deleted_at IS NULL
+            AND u.id IS NULL
+            AND o.id NOT IN (
+               SELECT o.id
+                 FROM objects AS o
+                 JOIN actors AS t
+                   ON t.iri = o.attributed_to_iri
+                 JOIN activities AS a
+                   ON a.object_iri = o.iri
+                  AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+                 JOIN relationships AS r
+                   ON r.to_iri = a.iri
+                  AND r.type = "#{Relationship::Content::Outbox}"
+                 JOIN accounts AS c
+            LEFT JOIN activities AS u
+                   ON u.object_iri = a.iri
+                  AND u.type = "#{ActivityPub::Activity::Undo}"
+                  AND u.actor_iri = a.actor_iri
+                WHERE r.from_iri = c.iri
+                  AND o.visible = 1
+                  AND o.in_reply_to_iri IS NULL
+                  AND o.deleted_at IS NULL
+                  AND t.deleted_at IS NULL
+                  AND u.id IS NULL
+             ORDER BY r.created_at DESC
+                LIMIT ?
+            )
+         ORDER BY r.created_at DESC
+            LIMIT ?
+      QUERY
+      Object.query_and_paginate(query, page: page, size: size)
+    end
+
     def self.federated_posts(page = 1, size = 10)
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}

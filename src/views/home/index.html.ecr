@@ -5,11 +5,4 @@
     <%- end -%>
 </section>
 <h1>Activity</h1>
-<section class='ui feed'>
-    <%- activities.each do |activity| -%>
-      <%- if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Announce) -%>
-      <%= render "src/views/partials/activity/create.html.slang" %>
-      <%- end -%>
-    <%- end -%>
-</section>
-<%= paginate(activities, env) %>
+<%= render "src/views/actors/timeline.html.slang" %>

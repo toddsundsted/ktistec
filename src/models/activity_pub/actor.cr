@@ -437,6 +437,8 @@ module ActivityPub
 
     # Returns the actor's posts.
     #
+    # Meant to be called on local (not cached) actors.
+    #
     # Does not include private (not visible) posts and replies.
     #
     # Note: the order of the left join in the query seems to have an
@@ -495,6 +497,10 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
+    # Returns objects in the actor's timeline.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
     def timeline(page = 1, size = 10)
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
@@ -527,14 +533,18 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
-    # note: filters out activities that have associated objects that
+    # Returns notification activities for the actor.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    # Note: filters out activities that have associated objects that
     # have been deleted. does not filter out activities that are not
     # associated with an object since some activities, like follows,
     # are associated with actors. doesn't worry about actors that have
     # been deleted since follows, the activities we care about in this
     # case, are associated with the actor on which this method is
     # called.
-
+    #
     def notifications(page = 1, size = 10)
       query = <<-QUERY
          SELECT #{Activity.columns(prefix: "a")}

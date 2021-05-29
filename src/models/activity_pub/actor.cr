@@ -382,19 +382,6 @@ module ActivityPub
       )
     end
 
-    def my_timeline(page = 1, size = 10)
-      self.class.content(
-        self.iri,
-        Relationship::Content::Outbox,
-        [ActivityPub::Activity::Create, ActivityPub::Activity::Announce],
-        nil,
-        page,
-        size,
-        true,
-        false
-      )
-    end
-
     def find_activity_for(object, inclusion = nil, exclusion = nil)
       inclusion =
         case inclusion
@@ -459,6 +446,66 @@ module ActivityPub
           LIMIT ?
       QUERY
       Object.query_and_paginate(query, iri, iri, page: page, size: size)
+    end
+
+    # Returns the actor's posts.
+    #
+    # Does not include private (not visible) posts and replies.
+    #
+    # Note: the order of the left join in the query seems to have an
+    # impact on whether or not the query planner uses an index or
+    # creates a b-tree to sort the final results.
+    #
+    def posts(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+            AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+            AND r.type = "#{Relationship::Content::Outbox}"
+      LEFT JOIN activities AS u
+             ON u.object_iri = a.iri
+            AND u.type = "#{ActivityPub::Activity::Undo}"
+            AND u.actor_iri = a.actor_iri
+          WHERE r.from_iri = ?
+            AND o.visible = 1
+            AND o.in_reply_to_iri IS NULL
+            AND o.deleted_at IS NULL
+            AND t.deleted_at IS NULL
+            AND u.id IS NULL
+            AND o.id NOT IN (
+               SELECT o.id
+                 FROM objects AS o
+                 JOIN actors AS t
+                   ON t.iri = o.attributed_to_iri
+                 JOIN activities AS a
+                   ON a.object_iri = o.iri
+                  AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+                 JOIN relationships AS r
+                   ON r.to_iri = a.iri
+                  AND r.type = "#{Relationship::Content::Outbox}"
+            LEFT JOIN activities AS u
+                   ON u.object_iri = a.iri
+                  AND u.type = "#{ActivityPub::Activity::Undo}"
+                  AND u.actor_iri = a.actor_iri
+                WHERE r.from_iri = ?
+                  AND o.visible = 1
+                  AND o.in_reply_to_iri IS NULL
+                  AND o.deleted_at IS NULL
+                  AND t.deleted_at IS NULL
+                  AND u.id IS NULL
+             ORDER BY r.created_at DESC
+                LIMIT ?
+       )
+       ORDER BY r.created_at DESC
+          LIMIT ?
+      QUERY
+      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
     def timeline(page = 1, size = 10)

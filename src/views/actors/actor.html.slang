@@ -13,9 +13,5 @@
 - else
   == render "src/views/partials/actor-medium.html.slang"
   h2 Recent
-  - activities = actor.my_timeline(*pagination_params(env))
-  section.ui.feed
-    - activities.each do |activity|
-      - if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Announce)
-        == render "src/views/partials/activity/create.html.slang"
-  == paginate(activities, env)
+  - objects = actor.posts(*pagination_params(env))
+  == render "src/views/actors/timeline.html.slang"

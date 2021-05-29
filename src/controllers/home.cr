@@ -21,7 +21,7 @@ class HomeController
 
       ok "home/step_2"
     elsif (account = env.account?).nil?
-      activities = ActivityPub::Actor.local_timeline(*pagination_params(env))
+      objects = ActivityPub::Object.timeline(*pagination_params(env))
 
       ok "home/index"
     else

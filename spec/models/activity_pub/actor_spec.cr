@@ -638,140 +638,6 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
-  describe ".local_timeline" do
-    let(actor1) { register.actor }
-    let(actor2) { register.actor }
-
-    macro add_to_outbox(index, actor)
-      let(note{{index}}) do
-        ActivityPub::Object::Note.new(
-          iri: "https://test.test/objects/#{random_string}"
-        )
-      end
-      let(activity{{index}}) do
-        ActivityPub::Activity::Create.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor: {{actor}},
-          object: note{{index}},
-          visible: true
-        )
-      end
-      let!(relationship{{index}}) do
-        Relationship::Content::Outbox.new(
-          owner: {{actor}},
-          activity: activity{{index}},
-          confirmed: true,
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
-    end
-
-    add_to_outbox(1, actor1)
-    add_to_outbox(2, actor2)
-    add_to_outbox(3, actor1)
-    add_to_outbox(4, actor2)
-    add_to_outbox(5, actor1)
-
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "https://test.test/undo",
-        actor: actor1,
-        object: activity5
-      )
-    end
-
-    it "instantiates the correct subclass" do
-      expect(described_class.local_timeline(1, 2).first).to be_a(ActivityPub::Activity::Create)
-    end
-
-    it "filters out replies" do
-      note5.assign(in_reply_to: note3).save
-      expect(described_class.local_timeline(1, 2)).to eq([activity4, activity3])
-    end
-
-    it "filters out deleted posts" do
-      note5.delete
-      expect(described_class.local_timeline(1, 2)).to eq([activity4, activity3])
-    end
-
-    it "filters out undone activities" do
-      undo.save
-      expect(described_class.local_timeline(1, 2)).to eq([activity4, activity3])
-    end
-
-    it "paginates the results" do
-      expect(described_class.local_timeline(1, 2)).to eq([activity5, activity4])
-      expect(described_class.local_timeline(2, 2)).to eq([activity3, activity2])
-      expect(described_class.local_timeline(2, 2).more?).to be_true
-    end
-  end
-
-  describe "#my_timeline" do
-    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
-
-    macro post(index)
-      let(activity{{index}}) do
-        ActivityPub::Activity::Create.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor: subject,
-          visible: {{index}}.odd?
-        ).save
-      end
-      let!(relationship{{index}}) do
-        Relationship::Content::Outbox.new(
-          owner: subject,
-          activity: activity{{index}},
-          confirmed: true,
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
-    end
-
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
-
-    let(note) do
-      ActivityPub::Object::Note.new(
-        iri: "https://test.test/note"
-      )
-    end
-
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "https://test.test/undo",
-        actor: subject,
-        object: activity5
-      )
-    end
-
-    it "instantiates the correct subclass" do
-      expect(subject.my_timeline(1, 2).first).to be_a(ActivityPub::Activity::Create)
-    end
-
-    it "filters out non-public posts" do
-      expect(subject.my_timeline(1, 2)).to eq([activity5, activity3])
-    end
-
-    it "filters out deleted posts" do
-      activity5.assign(object: note).save ; note.delete
-      expect(subject.my_timeline(1, 2)).to eq([activity3, activity1])
-    end
-
-    it "filters out undone activities" do
-      undo.save
-      expect(subject.my_timeline(1, 2)).to eq([activity3, activity1])
-    end
-
-    it "paginates the results" do
-      expect(subject.my_timeline(1, 2)).to eq([activity5, activity3])
-      expect(subject.my_timeline(2, 2)).to eq([activity1])
-      expect(subject.my_timeline(2, 2).more?).not_to be_true
-    end
-  end
-
   describe "#public_posts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
@@ -809,6 +675,88 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.public_posts(1, 2)).to eq([post5, post3])
       expect(subject.public_posts(2, 2)).to eq([post1])
       expect(subject.public_posts(2, 2).more?).not_to be_true
+    end
+  end
+
+  describe "#posts" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro post(index)
+      let(actor{{index}}) do
+        ActivityPub::Actor.new(
+          iri: "https://test.test/actors/#{random_string}"
+        )
+      end
+      let(object{{index}}) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/#{random_string}",
+          attributed_to: actor{{index}},
+          visible: true
+        )
+      end
+      let(activity{{index}}) do
+        ActivityPub::Activity::Announce.new(
+          iri: "https://test.test/activities/#{random_string}",
+          actor: subject,
+          object: object{{index}}
+        )
+      end
+      let!(relationship{{index}}) do
+        Relationship::Content::Outbox.new(
+          owner: subject,
+          activity: activity{{index}},
+          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
+        ).save
+      end
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.posts(1, 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "filters out deleted posts" do
+      object5.delete
+      expect(subject.posts(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete
+      expect(subject.posts(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out non-public posts" do
+      object5.assign(visible: false).save
+      expect(subject.posts(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out replies" do
+      object5.assign(in_reply_to: object3).save
+      expect(subject.posts(1, 2)).to eq([object4, object3])
+    end
+
+    let(undo) do
+      ActivityPub::Activity::Undo.new(
+        iri: "https://test.test/activities/#{random_string}",
+        actor: subject,
+        object: activity5
+      )
+    end
+
+    it "filters out objects belonging to undone activities" do
+      undo.save
+      expect(subject.posts(1, 2)).to eq([object4, object3])
+    end
+
+    it "paginates the results" do
+      expect(subject.posts(1, 2)).to eq([object5, object4])
+      expect(subject.posts(3, 2)).to eq([object1])
+      expect(subject.posts(3, 2).more?).not_to be_true
     end
   end
 

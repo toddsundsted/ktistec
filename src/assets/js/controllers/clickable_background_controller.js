@@ -6,7 +6,7 @@ export default class extends Controller {
   }
 
   click(event) {
-    if (!["A", "BUTTON", "IMG", "INPUT"].includes(event.target.tagName) && this.hrefValue) {
+    if (this.hrefValue && !event.target.closest("a, button, input, img")) {
       Turbolinks.visit(this.hrefValue)
     }
   }

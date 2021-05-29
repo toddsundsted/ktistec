@@ -432,7 +432,7 @@ module ActivityPub
        ORDER BY o.published DESC
           LIMIT ?
       QUERY
-      Object.query_and_paginate(query, iri, iri, page: page, size: size)
+      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
     # Returns the actor's posts.

@@ -1,6 +1,17 @@
 require "../models/task"
 
 class TaskWorker
+  def self.start
+    clean_up_running_tasks
+    self.new.tap do |worker|
+      loop do
+        unless worker.work
+          sleep 5.seconds
+        end
+      end
+    end
+  end
+
   def work(now = Time.utc)
     tasks = Task.scheduled(now)
     # TODO: fix possible race condition here

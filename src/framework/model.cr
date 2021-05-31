@@ -690,7 +690,9 @@ module Ktistec
       include InstanceMethods
 
       {% for type in T.type_vars %}
-        include ::Ktistec::Model::{{type}}
+        {% unless type == ::Nil %}
+          include ::Ktistec::Model::{{type}}
+        {% end %}
       {% end %}
     end
 

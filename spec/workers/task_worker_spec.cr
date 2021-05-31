@@ -113,6 +113,23 @@ Spectator.describe TaskWorker do
     end
   end
 
+  describe ".destroy_old_tasks" do
+    it "destroys old complete tasks" do
+      task5.assign(complete: true, created_at: now).save
+      expect{TaskWorker.destroy_old_tasks}.to change{Task.count}.by(-1)
+    end
+
+    it "destroys old failed tasks" do
+      task5.assign(backtrace: [""], created_at: now).save
+      expect{TaskWorker.destroy_old_tasks}.to change{Task.count}.by(-1)
+    end
+
+    it "ignores new tasks" do
+      task5.assign(complete: true, backtrace: [""]).save
+      expect{TaskWorker.destroy_old_tasks}.not_to change{Task.count}
+    end
+  end
+
   describe ".clean_up_running_tasks" do
     it "sets running tasks to not running" do
       task5.assign(running: true).save

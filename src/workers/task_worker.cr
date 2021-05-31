@@ -2,7 +2,9 @@ require "../models/task"
 
 class TaskWorker
   def self.start
+    destroy_old_tasks
     clean_up_running_tasks
+
     self.new.tap do |worker|
       loop do
         unless worker.work
@@ -33,6 +35,11 @@ class TaskWorker
       end
     end
     !tasks.empty?
+  end
+
+  def self.destroy_old_tasks
+    delete = "DELETE FROM tasks WHERE (complete = 1 OR backtrace IS NOT NULL) AND created_at < date('now', '-1 month')"
+    Ktistec.database.exec(delete)
   end
 
   def self.clean_up_running_tasks

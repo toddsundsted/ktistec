@@ -6,6 +6,11 @@ require "../framework/model/**"
 require "./activity_pub/actor"
 require "./session"
 
+private def check_timezone?(timezone)
+  Time::Location.load(timezone)
+rescue Time::Location::InvalidLocationNameError
+end
+
 # An ActivityPub account.
 #
 # Also an account.
@@ -29,6 +34,10 @@ class Account
       password: password
     }))
   end
+
+  @[Persistent]
+  property timezone : String { "" }
+  validates(timezone) { "is unsupported" unless check_timezone?(timezone) }
 
   @[Persistent]
   property username : String

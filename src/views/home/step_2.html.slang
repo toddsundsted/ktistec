@@ -9,4 +9,5 @@ p Passwords must be at least six characters long, and must consist of at least o
   == input_tag("Password", account, password, type: "password")
   == input_tag("Display Name", actor, name)
   == input_tag("Summary", actor, summary)
+  == input_tag("Timezone", account, timezone)
   input.ui.primary.button type="submit" value="Sign Up"

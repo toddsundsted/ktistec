@@ -78,6 +78,11 @@ Spectator.describe SettingsController do
           expect(ActivityPub::Actor.find(actor.id).summary).to eq("Foo Bar")
         end
 
+        it "updates the timezone" do
+          post "/settings/actor", headers, "name=&summary=&timezone=Etc/GMT"
+          expect(Account.find(Global.account.not_nil!.id).timezone).to eq("Etc/GMT")
+        end
+
         it "updates the image" do
           post "/settings/actor", headers, "image=%2Ffoo%2Fbar%2Fbaz"
           expect(ActivityPub::Actor.find(actor.id).image).to eq("https://test.test/foo/bar/baz")
@@ -100,6 +105,11 @@ Spectator.describe SettingsController do
         it "updates the name" do
           post "/settings/actor", headers, %q|{"name":"Foo Bar","summary":""}|
           expect(ActivityPub::Actor.find(actor.id).name).to eq("Foo Bar")
+        end
+
+        it "updates the timezone" do
+          post "/settings/actor", headers, %q|{"name":"","summary":"","timezone":"Etc/GMT"}|
+          expect(Account.find(Global.account.not_nil!.id).timezone).to eq("Etc/GMT")
         end
 
         it "updates the summary" do

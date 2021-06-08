@@ -7,7 +7,7 @@ h1 User Settings
   == error_messages(account)
   == input_tag("Display Name", actor, name)
   == input_tag("Summary", actor, summary)
-  == input_tag("Timezone", account, timezone)
+  == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone"})
   == input_tag("Background Image", actor, image, class: "filepond", type: "file")
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
   input.ui.primary.button type="submit" value="Update"

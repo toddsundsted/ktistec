@@ -401,8 +401,7 @@ module ActivityPub
             AND obj.deleted_at is NULL
             AND u.iri IS NULL
       QUERY
-      Activity.query_one(query, self.iri, object.iri)
-    rescue DB::NoResultsError
+      Activity.query_all(query, self.iri, object.iri).first?
     end
 
     def find_announce_for(object : Object)

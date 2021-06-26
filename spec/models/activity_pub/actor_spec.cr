@@ -636,6 +636,11 @@ Spectator.describe ActivityPub::Actor do
     it "filters out specific activities" do
       expect(subject.find_activity_for(note1, exclusion: "ActivityPub::Activity::Create")).to be_nil
     end
+
+    it "returns the first activity" do
+      activity1.dup.assign(id: nil, iri: "https://test.test/activities/#{random_string}").save
+      expect(subject.find_activity_for(note1)).to eq(activity1)
+    end
   end
 
   describe "#public_posts" do

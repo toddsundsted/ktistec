@@ -5,6 +5,8 @@ class TaskWorker
     destroy_old_tasks
     clean_up_running_tasks
 
+    yield
+
     self.new.tap do |worker|
       loop do
         unless worker.work

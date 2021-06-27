@@ -40,6 +40,12 @@ class Task
       super(*args, **opts)
     end
 
+    def self.schedule_unless_exists
+      if self.where("running = 0 AND complete = 0 AND backtrace IS NULL").empty?
+        self.new.schedule
+      end
+    end
+
     alias Key = Tuple(String, Time)
 
     private def accumulate(relationship_types)

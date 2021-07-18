@@ -1,8 +1,0 @@
-<h1>Community</h1>
-<section class='ui cards'>
-    <%- accounts.map(&.actor).each do |actor| -%>
-    <%= render "src/views/partials/actor-small.html.slang" %>
-    <%- end -%>
-</section>
-<h1>Activity</h1>
-<%= render "src/views/actors/timeline.html.slang" %>

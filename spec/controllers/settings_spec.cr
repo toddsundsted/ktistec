@@ -60,9 +60,9 @@ Spectator.describe SettingsController do
     context "when authorized" do
       sign_in(as: actor.username)
 
-      before_each do
-        Ktistec.clear_footer
-        Ktistec.clear_site
+      after_each do
+        Ktistec.settings.clear_footer
+        Ktistec.settings.site = "Test"
       end
 
       context "and posting form data" do
@@ -95,12 +95,12 @@ Spectator.describe SettingsController do
 
         it "changes the footer" do
           expect {post "/settings", headers, "footer=Copyright Blah Blah"}.
-            to change{Ktistec.footer?}
+            to change{Ktistec.settings.footer}
         end
 
         it "changes the site" do
           expect {post "/settings", headers, "site=Name"}.
-            to change{Ktistec.site?}
+            to change{Ktistec.settings.site}
         end
 
         context "given existing image and icon" do
@@ -150,12 +150,12 @@ Spectator.describe SettingsController do
 
         it "changes the footer" do
           expect {post "/settings", headers, %q|{"footer":"Copyright Blah Blah"}|}.
-            to change{Ktistec.footer?}
+            to change{Ktistec.settings.footer}
         end
 
         it "changes the site" do
           expect {post "/settings", headers, %q|{"site":"Name"}|}.
-            to change{Ktistec.site?}
+            to change{Ktistec.settings.site}
         end
 
         context "given existing image and icon" do

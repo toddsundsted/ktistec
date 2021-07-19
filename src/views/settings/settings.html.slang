@@ -41,10 +41,10 @@ h1 Site Settings
 form.ui.form method="POST" action="/settings"
   .field
     label Site Name
-    input type="text" name="site" value=Ktistec.site?
+    input type="text" name="site" value=settings.site
   .field
     label Footer
-    input type="text" name="footer" value=Ktistec.footer?
+    input type="text" name="footer" value=settings.footer
   input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
   input.ui.primary.button type="submit" value="Update"
 br

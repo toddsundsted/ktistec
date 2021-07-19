@@ -10,6 +10,8 @@ class SettingsController
   get "/settings" do |env|
     actor = env.account.actor
 
+    settings = Ktistec.settings
+
     ok "settings/settings"
   end
 
@@ -20,12 +22,15 @@ class SettingsController
 
     actor.assign(params).save
 
+    settings = Ktistec.settings
     if (footer = params["footer"]?)
-      Ktistec.footer = footer
+      settings.footer = footer
     end
     if (site = params["site"]?)
-      Ktistec.site = site
+      settings.site = site
     end
+
+    settings.save
 
     redirect back_path
   end

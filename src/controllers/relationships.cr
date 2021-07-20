@@ -4,7 +4,7 @@ require "../models/activity_pub/activity/follow"
 
 class RelationshipsController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   skip_auth ["/actors/:username/following"], GET
   skip_auth ["/actors/:username/followers"], GET

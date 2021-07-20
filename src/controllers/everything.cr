@@ -3,7 +3,7 @@ require "../views/view_helper"
 
 class EverythingController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   get "/everything" do |env|
     collection = ActivityPub::Object.federated_posts(*pagination_params(env))

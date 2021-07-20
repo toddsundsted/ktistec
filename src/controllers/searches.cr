@@ -6,7 +6,7 @@ require "../framework/open"
 
 class SearchesController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
   extend Ktistec::Open
 
   get "/search" do |env|

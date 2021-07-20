@@ -5,7 +5,7 @@ require "../models/task/terminate"
 
 class SettingsController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   get "/settings" do |env|
     actor = env.account.actor

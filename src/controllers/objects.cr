@@ -4,7 +4,7 @@ require "../models/activity_pub/object/note"
 
 class ObjectsController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   skip_auth ["/objects/:id", "/objects/:id/thread"], GET
 

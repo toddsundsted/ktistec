@@ -5,7 +5,7 @@ require "../models/activity_pub/actor/person"
 
 class HomeController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   skip_auth ["/"], GET, POST
 

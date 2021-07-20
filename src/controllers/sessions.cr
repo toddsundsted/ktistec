@@ -3,7 +3,7 @@ require "../views/view_helper"
 
 class SessionsController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   skip_auth ["/sessions"], GET, POST
 

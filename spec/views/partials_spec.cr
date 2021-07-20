@@ -9,7 +9,7 @@ Spectator.describe "partials" do
   setup_spec
 
   include Ktistec::Controller
-  include Ktistec::ViewHelper
+  include Ktistec::ViewHelper::ClassMethods
 
   describe "collection.json.ecr" do
     let(env) do

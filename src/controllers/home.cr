@@ -18,6 +18,8 @@ class HomeController
       account = Account.new("", "")
       actor = ActivityPub::Actor.new
 
+      account.actor = actor
+
       ok "home/step_2"
     elsif (account = env.account?).nil?
       objects = ActivityPub::Object.timeline(*pagination_params(env))
@@ -43,12 +45,14 @@ class HomeController
       account = Account.new(step_2_params(env))
       actor = ActivityPub::Actor::Person.new(step_2_params(env))
 
-      if account.valid? && actor.valid?
+      account.actor = actor
+
+      if account.valid?
         keypair = OpenSSL::RSA.generate(2048, 17)
         actor.pem_public_key = keypair.public_key.to_pem
         actor.pem_private_key = keypair.to_pem
 
-        account.assign(actor: actor).save
+        account.save
 
         session = Session.new(account).save
         payload = {jti: session.session_key, iat: Time.utc}

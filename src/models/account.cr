@@ -46,7 +46,11 @@ class Account
   end
 
   def password=(@password : String)
-    self.encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
+    if (password = @password.presence)
+      self.encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
+    else
+      self.encrypted_password = ""
+    end
   end
 
   def password

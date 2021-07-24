@@ -57,6 +57,16 @@ class Account
     @password.not_nil!
   end
 
+  def before_validate
+    if changed?(:username)
+      if (username = self.username)
+        clear!(:username)
+        host = Ktistec.host
+        self.iri = "#{host}/actors/#{username}"
+      end
+    end
+  end
+
   def validate_model
     if (username = @username)
       messages = [] of String
@@ -74,7 +84,7 @@ class Account
   end
 
   @[Persistent]
-  property iri : String { "#{Ktistec.host}/actors/#{username}" }
+  property iri : String { "" }
 
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri
 

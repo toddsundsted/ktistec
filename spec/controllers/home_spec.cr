@@ -53,18 +53,18 @@ Spectator.describe HomeController do
 
       it "rerenders if host is invalid" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
-        body = {host: "foo_bar", site: "Foo Bar"}.to_json
+        body = {host: "", site: ""}.to_json
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body)["msg"]).to match(/must have a scheme/)
+        expect(JSON.parse(response.body)["errors"].as_h).to have_value(["name must be present"])
       end
 
       it "rerenders if site is invalid" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
-        body = {host: "https://foo_bar", site: ""}.to_json
+        body = {host: "", site: ""}.to_json
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body)["msg"]).to match(/must be present/)
+        expect(JSON.parse(response.body)["errors"].as_h).to have_value(["name must be present"])
       end
 
       it "sets host and redirects" do
@@ -146,7 +146,7 @@ Spectator.describe HomeController do
         body = {username: "", password: "a1!", name: "", summary: ""}.to_json
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body)["msg"]).to match(/username is too short, password is too short/)
+        expect(JSON.parse(response.body)["errors"].as_h).to eq({"username" => ["is too short"], "password" => ["is too short"]})
       end
 
       it "creates account and redirects" do

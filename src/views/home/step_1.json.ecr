@@ -1,7 +1,5 @@
 {
-  <%- unless settings.errors.empty? -%>
-    "msg":<%= settings.errors.flat_map { |k, vs| vs.map { |v| "#{k} #{v}" } }.join(", ").inspect %>,
-  <%- end -%>
-  "host":<%= settings.host.try(&.inspect) || "null" %>,
-  "site":<%= settings.site.try(&.inspect) || "null" %>
+  <%= error_block(settings) %>
+  <%= field_pair(settings, host) %>
+  <%= field_pair(settings, site, false) %>
 }

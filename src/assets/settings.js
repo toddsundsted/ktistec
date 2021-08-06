@@ -35,13 +35,13 @@ FilePond.setOptions({
 
 function initialize() {
   FilePond.create(
-    document.querySelector("form[action='/settings'] input[type='file'][name='image']"), {
+    document.querySelector("form[action='/settings/actor'] input[type='file'][name='image']"), {
       acceptedFileTypes: ["image/png", "image/jpeg", "image/gif"],
       imageResizeTargetWidth: 1400,
       imageResizeTargetHeight: 700,
   })
   FilePond.create(
-    document.querySelector("form[action='/settings'] input[type='file'][name='icon']"), {
+    document.querySelector("form[action='/settings/actor'] input[type='file'][name='icon']"), {
       acceptedFileTypes: ["image/png", "image/jpeg", "image/gif"],
       imageResizeTargetWidth: 240,
       imageResizeTargetHeight: 240

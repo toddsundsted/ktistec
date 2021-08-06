@@ -15,24 +15,44 @@ class SettingsController
     ok "settings/settings"
   end
 
-  post "/settings" do |env|
+  get "/settings/actor" do |env|
+    redirect settings_path
+  end
+
+  get "/settings/service" do |env|
+    redirect settings_path
+  end
+
+  post "/settings/actor" do |env|
     actor = env.account.actor
 
-    params = params(env, actor)
+    settings = Ktistec.settings
 
-    actor.assign(params).save
+    actor.assign(params(env, actor))
+
+    if actor.valid?
+      actor.save
+
+      redirect settings_path
+    else
+      ok "settings/settings"
+    end
+  end
+
+  post "/settings/service" do |env|
+    actor = env.account.actor
 
     settings = Ktistec.settings
-    if (footer = params["footer"]?)
-      settings.footer = footer
-    end
-    if (site = params["site"]?)
-      settings.site = site
-    end
 
-    settings.save
+    settings.assign(params(env, actor))
 
-    redirect back_path
+    if settings.valid?
+      settings.save
+
+      redirect settings_path
+    else
+      ok "settings/settings"
+    end
   end
 
   post "/settings/terminate" do |env|

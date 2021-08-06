@@ -2,7 +2,7 @@
   script src="/dist/settings.bundle.js"
 == render "src/views/partials/actor-large.html.slang"
 h1 User Settings
-form.ui.form method="POST" action="/settings"
+form.ui.form method="POST" action="/settings/actor"
   .field
     label Display Name
     input type="text" name="name" value=actor.name
@@ -38,7 +38,7 @@ form.ui.form method="POST" action="/settings/terminate"
       i.checkmark.icon
       | Yes
 h1 Site Settings
-form.ui.form method="POST" action="/settings"
+form.ui.form method="POST" action="/settings/service"
   .field
     label Site Name
     input type="text" name="site" value=settings.site

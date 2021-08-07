@@ -42,8 +42,10 @@ class HomeController
         ok "home/step_1"
       end
     elsif (accounts = Account.all).empty?
-      account = Account.new(step_2_params(env))
-      actor = ActivityPub::Actor::Person.new(step_2_params(env))
+      params = step_2_params(env)
+
+      account = Account.new(params)
+      actor = ActivityPub::Actor::Person.new(params)
 
       account.actor = actor
 

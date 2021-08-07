@@ -26,26 +26,41 @@ FilePond.setOptions({
       url: "/uploads",
       headers: {"X-CSRF-Token": Ktistec.csrf}
     },
-    restore: null,
-    load: null,
+    restore: {
+      url: ""
+    },
+    load: {
+      url: ""
+    },
     fetch: null,
     patch: null
   }
 })
 
 function initialize() {
-  FilePond.create(
-    document.querySelector("form[action='/settings/actor'] input[type='file'][name='image']"), {
-      acceptedFileTypes: ["image/png", "image/jpeg", "image/gif"],
-      imageResizeTargetWidth: 1400,
-      imageResizeTargetHeight: 700,
-  })
-  FilePond.create(
-    document.querySelector("form[action='/settings/actor'] input[type='file'][name='icon']"), {
-      acceptedFileTypes: ["image/png", "image/jpeg", "image/gif"],
-      imageResizeTargetWidth: 240,
-      imageResizeTargetHeight: 240
-  })
+  function enable(selector, width, height) {
+    let input = document.querySelector(selector)
+    if (input) {
+      let files = []
+      let value = input.getAttribute("value")
+      if (value) {
+        files.push({
+          source: new URL(input.getAttribute("value")).pathname,
+          options: {
+            type: "local"
+          }
+        })
+      }
+      FilePond.create(input, {
+        acceptedFileTypes: ["image/png", "image/jpeg", "image/gif"],
+        imageResizeTargetWidth: width,
+        imageResizeTargetHeight: height,
+        files: files
+      })
+    }
+  }
+  enable("form[action='/settings/actor'] input[type='file'][name='image']", 1400, 700)
+  enable("form[action='/settings/actor'] input[type='file'][name='icon']", 240, 240)
 }
 
 document.addEventListener("turbolinks:load", initialize)

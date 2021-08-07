@@ -1,7 +1,6 @@
 require "../framework/controller"
-require "../views/view_helper"
-require "../models/activity_pub/activity/follow"
 require "../models/task/terminate"
+require "../views/view_helper"
 
 class SettingsController
   include Ktistec::Controller
@@ -28,7 +27,7 @@ class SettingsController
 
     settings = Ktistec.settings
 
-    actor.assign(params(env, actor))
+    actor.assign(params(env))
 
     if actor.valid?
       actor.save
@@ -44,7 +43,7 @@ class SettingsController
 
     settings = Ktistec.settings
 
-    settings.assign(params(env, actor))
+    settings.assign(params(env))
 
     if settings.valid?
       settings.save
@@ -66,13 +65,14 @@ class SettingsController
     redirect home_path
   end
 
-  private def self.params(env, actor)
+  private def self.params(env)
     params = (env.params.body.presence || env.params.json.presence).not_nil!
     {
       "name" => params["name"]?.try(&.to_s),
       "summary" => params["summary"]?.try(&.to_s),
-      "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" } || actor.image,
-      "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" } || actor.icon,
+      # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
+      "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
+      "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "footer" => params["footer"]?.try(&.to_s.presence),
       "site" => params["site"]?.try(&.to_s.presence)
     }

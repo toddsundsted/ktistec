@@ -87,22 +87,6 @@ Spectator.describe SettingsController do
           post "/settings/actor", headers, "icon=%2Ffoo%2Fbar%2Fbaz"
           expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
         end
-
-        context "given existing image and icon" do
-          before_each do
-            actor.assign(image: "image.png", icon: "icon.png").save
-          end
-
-          it "does not replace image with empty value" do
-            expect{post "/settings/actor", headers, "image="}.
-              not_to change{ActivityPub::Actor.find(actor.id).image}
-          end
-
-          it "does not replace icon with empty value" do
-            expect{post "/settings/actor", headers, "icon="}.
-              not_to change{ActivityPub::Actor.find(actor.id).icon}
-          end
-        end
       end
 
       context "and posting JSON data" do
@@ -131,22 +115,6 @@ Spectator.describe SettingsController do
         it "updates the icon" do
           post "/settings/actor", headers, %q|{"icon":"/foo/bar/baz"}|
           expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
-        end
-
-        context "given existing image and icon" do
-          before_each do
-            actor.assign(image: "image.png", icon: "icon.png").save
-          end
-
-          it "does not replace image with empty value" do
-            expect{post "/settings/actor", headers, %q|{"image":""}|}.
-              not_to change{ActivityPub::Actor.find(actor.id).image}
-          end
-
-          it "does not replace icon with empty value" do
-            expect{post "/settings/actor", headers, %q|{"icon":""}|}.
-              not_to change{ActivityPub::Actor.find(actor.id).icon}
-          end
         end
       end
     end

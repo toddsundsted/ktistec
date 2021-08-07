@@ -2,24 +2,18 @@
   script src="/dist/settings.bundle.js"
 == render "src/views/partials/actor-large.html.slang"
 h1 User Settings
-form.ui.form method="POST" action="/settings/actor"
-  .field
-    label Display Name
-    input type="text" name="name" value=actor.name
-  .field
-    label Summary
-    input type="text" name="summary" value=actor.summary
-  .field
-    label Background Image
-    input.filepond type="file" name="image"
-  .field
-    label Profile Image
-    input.filepond type="file" name="icon"
-  input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+== form_tag(actor, "/settings/actor") do
+  == authenticity_token(env)
+  == error_messages(actor)
+  == input_tag("Display Name", actor, name)
+  == input_tag("Summary", actor, summary)
+  == input_tag("Background Image", actor, image, class: "filepond", type: "file")
+  == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
   input.ui.primary.button type="submit" value="Update"
-h2 Dangerous
+h2 Delete Account!
 form.ui.form method="POST" action="/settings/terminate"
-  input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+== form_tag(nil, "/settings/terminate") do
+  == authenticity_token(env)
   input.ui.dangerous.button type="submit" value="Delete Account" data-modal="terminate"
 .ui.basic.tiny.terminate.modal
   .header: i.trash.icon
@@ -38,13 +32,10 @@ form.ui.form method="POST" action="/settings/terminate"
       i.checkmark.icon
       | Yes
 h1 Site Settings
-form.ui.form method="POST" action="/settings/service"
-  .field
-    label Site Name
-    input type="text" name="site" value=settings.site
-  .field
-    label Footer
-    input type="text" name="footer" value=settings.footer
-  input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+== form_tag(settings, "/settings/service") do
+  == authenticity_token(env)
+  == error_messages(settings)
+  == input_tag("Site Name", settings, site)
+  == input_tag("Footer", settings, footer)
   input.ui.primary.button type="submit" value="Update"
 br

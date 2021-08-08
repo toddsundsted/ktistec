@@ -7,7 +7,7 @@ require "../models/task/receive"
 
 class RelationshipsController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
   extend Ktistec::Open
 
   skip_auth ["/actors/:username/inbox"], POST

@@ -4,6 +4,98 @@ require "../../src/framework"
 
 require "../spec_helper/base"
 
+Spectator.describe Ktistec::Settings do
+  setup_spec
+
+  subject { Ktistec.settings }
+
+  it "initializes instance from the persisted values" do
+    Ktistec.clear_settings
+
+    Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", "host", "HOST")
+    Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", "site", "SITE")
+    Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", "footer", "FOOTER")
+
+    expect(subject.host).to eq("HOST")
+    expect(subject.site).to eq("SITE")
+    expect(subject.footer).to eq("FOOTER")
+  end
+
+  describe "#save" do
+    it "persists assigned values to the database" do
+      subject.assign({"host" => "https://test.test/", "site" => "Test", "footer" => "Copyright"}).save
+
+      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "host")).to eq("https://test.test")
+      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "site")).to eq("Test")
+      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "footer")).to eq("Copyright")
+    end
+  end
+
+  describe "#assign" do
+    it "sets the host" do
+      subject.clear_host
+      expect{subject.assign({"host" => "HOST"})}.to change{subject.host}
+    end
+
+    it "sets the site" do
+      subject.clear_site
+      expect{subject.assign({"site" => "SITE"})}.to change{subject.site}
+    end
+
+    it "sets the footer" do
+      subject.clear_footer
+      expect{subject.assign({"footer" => "FOOTER"})}.to change{subject.footer}
+    end
+  end
+
+  describe "#valid?" do
+    it "expects host to be present" do
+      expect(subject.assign({"host" => ""}).valid?).to be_false
+      expect(subject.errors["host"]).to contain("name must be present")
+    end
+
+    it "expects host to specify a scheme" do
+      expect(subject.assign({"host" => "test.test"}).valid?).to be_false
+      expect(subject.errors["host"]).to contain("must have a scheme")
+    end
+
+    it "expects host to specify a host name" do
+      expect(subject.assign({"host" => "test.test"}).valid?).to be_false
+      expect(subject.errors["host"]).not_to contain("must have a host name")
+    end
+
+    it "expects host to specify a host name" do
+      expect(subject.assign({"host" => "test.test"}).valid?).to be_false
+      expect(subject.errors["host"]).not_to contain("must not have a path")
+    end
+
+    it "expects host to specify a host name" do
+      expect(subject.assign({"host" => "https://"}).valid?).to be_false
+      expect(subject.errors["host"]).to contain("must have a host name")
+    end
+
+    it "expects host not to specify a fragment" do
+      expect(subject.assign({"host" => "https://test.test#fragment"}).valid?).to be_false
+      expect(subject.errors["host"]).to contain("must not have a fragment")
+    end
+
+    it "expects hosts not to specify a query" do
+      expect(subject.assign({"host" => "https://test.test?query"}).valid?).to be_false
+      expect(subject.errors["host"]).to contain("must not have a query")
+    end
+
+    it "expects host not to specify a path" do
+      expect(subject.assign({"host" => "https://test.test/path"}).valid?).to be_false
+      expect(subject.errors["host"]).to contain("must not have a path")
+    end
+
+    it "expects site to be present" do
+      expect(subject.assign({"site" => ""}).valid?).to be_false
+      expect(subject.errors["site"]).to contain("name must be present")
+    end
+  end
+end
+
 Spectator.describe Ktistec do
   setup_spec
 
@@ -14,97 +106,41 @@ Spectator.describe Ktistec do
     end
   end
 
-  context "host" do
-    it "raises an error when not set" do
-      Ktistec.clear_host
-      expect{Ktistec.host}.to raise_error
+  describe ".settings" do
+    it "returns the settings singleton" do
+      expect(Ktistec.settings).to be_a(Ktistec::Settings)
     end
 
-    it "returns false when not set" do
-      Ktistec.clear_host
-      expect{Ktistec.host?}.to be_false
-    end
+    context "give previous errors" do
+      before_each { Ktistec.settings.errors["settings"] = ["has an error"] }
 
-    it "must specify a scheme" do
-      expect{Ktistec.host = "test.test"}.to raise_error("scheme must be present")
-    end
-
-    it "must specify a host" do
-      expect{Ktistec.host = "https://"}.to raise_error("host must be present")
-    end
-
-    it "must not specify a fragment" do
-      expect{Ktistec.host = "https://test.test#fragment"}.to raise_error("fragment must not be present")
-    end
-
-    it "must not specify a query" do
-      expect{Ktistec.host = "https://test.test?query"}.to raise_error("query must not be present")
-    end
-
-    it "must not specify a path" do
-      expect{Ktistec.host = "https://test.test/path"}.to raise_error("path must not be present")
-    end
-
-    it "updates the database" do
-      Ktistec.clear_host
-      Ktistec.host = "https://test.test/"
-      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "host")).to eq("https://test.test")
-    end
-
-    it "returns the host" do
-      expect(Ktistec.host).to eq("https://test.test")
+      it "clears the errors when getting the settings singleton" do
+        expect(Ktistec.settings.errors).to be_empty
+      end
     end
   end
 
-  context "site" do
-    it "raises an error when not set" do
-      Ktistec.clear_site
-      expect{Ktistec.site}.to raise_error
+  context "given initialized settings" do
+    before_all do
+      Ktistec.settings.assign({"host" => "https://test.test/", "site" => "Test", "footer" => "Copyright"}).save
     end
 
-    it "returns false when not set" do
-      Ktistec.clear_site
-      expect{Ktistec.site?}.to be_false
+    describe ".host" do
+      it "returns the host" do
+        expect(Ktistec.host).to eq("https://test.test")
+      end
     end
 
-    it "must be present" do
-      expect{Ktistec.site = ""}.to raise_error("must be present")
+    describe ".site" do
+      it "returns the site" do
+        expect(Ktistec.site).to eq("Test")
+      end
     end
 
-    it "updates the database" do
-      Ktistec.clear_site
-      Ktistec.site = "Test"
-      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "site")).to eq("Test")
-    end
-
-    it "returns the site" do
-      expect(Ktistec.site).to eq("Test")
-    end
-  end
-
-  context "footer" do
-    it "raises an error when not set" do
-      Ktistec.clear_footer
-      expect{Ktistec.footer}.to raise_error
-    end
-
-    it "returns false when not set" do
-      Ktistec.clear_footer
-      expect{Ktistec.footer?}.to be_false
-    end
-
-    it "must be present" do
-      expect{Ktistec.footer = ""}.to raise_error("must be present")
-    end
-
-    it "updates the database" do
-      Ktistec.clear_footer
-      Ktistec.footer = "Copyright"
-      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "footer")).to eq("Copyright")
-    end
-
-    it "returns the footer" do
-      expect(Ktistec.footer).to eq("Copyright")
+    describe ".footer" do
+      it "returns the footer" do
+        expect(Ktistec.footer).to eq("Copyright")
+      end
     end
   end
 end

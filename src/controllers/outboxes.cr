@@ -5,7 +5,7 @@ require "../models/task/deliver"
 
 class RelationshipsController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   skip_auth ["/actors/:username/outbox"], GET
 

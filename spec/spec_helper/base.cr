@@ -26,19 +26,28 @@ module Ktistec
     @@db_file ||= "sqlite3://#{File.tempname("ktistec-test", ".db")}"
   end
 
-  def self.clear_host
-    Ktistec.database.exec("DELETE FROM options WHERE key = ?", "host")
-    @@host = nil
+  class Settings
+    def clear_host
+      Ktistec.database.exec("DELETE FROM options WHERE key = ?", "host")
+      @host = nil
+    end
+
+    def clear_site
+      Ktistec.database.exec("DELETE FROM options WHERE key = ?", "site")
+      @site = nil
+    end
+
+    def clear_footer
+      Ktistec.database.exec("DELETE FROM options WHERE key = ?", "footer")
+      @footer = nil
+    end
   end
 
-  def self.clear_site
-    Ktistec.database.exec("DELETE FROM options WHERE key = ?", "site")
-    @@site = nil
-  end
-
-  def self.clear_footer
-    Ktistec.database.exec("DELETE FROM options WHERE key = ?", "footer")
-    @@footer = nil
+  def self.clear_settings
+    settings.clear_host
+    settings.clear_site
+    settings.clear_footer
+    @@settings = nil
   end
 end
 
@@ -71,7 +80,7 @@ def self.random_password
   random_string + "1="
 end
 
-Ktistec.host = "https://test.test"
-Ktistec.site = "Test"
+Ktistec.settings.host = "https://test.test"
+Ktistec.settings.site = "Test"
 
 Log.setup_from_env

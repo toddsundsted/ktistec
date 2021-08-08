@@ -43,7 +43,7 @@ Spectator.describe SettingsController do
           expect(response.status_code).to eq(200)
         end
 
-        it "renders a form" do
+        it "renders an object" do
           get "/settings", headers
           expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon", "footer", "site")
         end
@@ -51,72 +51,41 @@ Spectator.describe SettingsController do
     end
   end
 
-  describe "POST /settings" do
+  describe "POST /settings/actor" do
     it "returns 401 if not authorized" do
-      post "/settings"
+      post "/settings/actor"
       expect(response.status_code).to eq(401)
     end
 
     context "when authorized" do
       sign_in(as: actor.username)
 
-      before_each do
-        Ktistec.clear_footer
-        Ktistec.clear_site
-      end
-
       context "and posting form data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
 
         it "succeeds" do
-          post "/settings", headers, "name=&summary="
+          post "/settings/actor", headers, "name=&summary="
           expect(response.status_code).to eq(302)
         end
 
         it "updates the name" do
-          post "/settings", headers, "name=Foo+Bar&summary="
+          post "/settings/actor", headers, "name=Foo+Bar&summary="
           expect(ActivityPub::Actor.find(actor.id).name).to eq("Foo Bar")
         end
 
         it "updates the summary" do
-          post "/settings", headers, "name=&summary=Foo+Bar"
+          post "/settings/actor", headers, "name=&summary=Foo+Bar"
           expect(ActivityPub::Actor.find(actor.id).summary).to eq("Foo Bar")
         end
 
         it "updates the image" do
-          post "/settings", headers, "image=%2Ffoo%2Fbar%2Fbaz"
+          post "/settings/actor", headers, "image=%2Ffoo%2Fbar%2Fbaz"
           expect(ActivityPub::Actor.find(actor.id).image).to eq("https://test.test/foo/bar/baz")
         end
 
         it "updates the icon" do
-          post "/settings", headers, "icon=%2Ffoo%2Fbar%2Fbaz"
+          post "/settings/actor", headers, "icon=%2Ffoo%2Fbar%2Fbaz"
           expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
-        end
-
-        it "changes the footer" do
-          expect {post "/settings", headers, "footer=Copyright Blah Blah"}.
-            to change{Ktistec.footer?}
-        end
-
-        it "changes the site" do
-          expect {post "/settings", headers, "site=Name"}.
-            to change{Ktistec.site?}
-        end
-
-        context "given existing image and icon" do
-          before_each do
-            actor.assign(image: "image.png", icon: "icon.png").save
-          end
-
-          it "does not replace image with empty value" do
-            expect{post "/settings", headers, "image="}.
-              not_to change{ActivityPub::Actor.find(actor.id).image}
-          end
-
-          it "does not replace icon with empty value" do
-            expect{post "/settings", headers, "icon="}.
-              not_to change{ActivityPub::Actor.find(actor.id).icon}
-          end
         end
       end
 
@@ -124,54 +93,82 @@ Spectator.describe SettingsController do
         let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 
         it "succeeds" do
-          post "/settings", headers, %q|{"name":"","summary":""}|
+          post "/settings/actor", headers, %q|{"name":"","summary":""}|
           expect(response.status_code).to eq(302)
         end
 
         it "updates the name" do
-          post "/settings", headers, %q|{"name":"Foo Bar","summary":""}|
+          post "/settings/actor", headers, %q|{"name":"Foo Bar","summary":""}|
           expect(ActivityPub::Actor.find(actor.id).name).to eq("Foo Bar")
         end
 
         it "updates the summary" do
-          post "/settings", headers, %q|{"name":"","summary":"Foo Bar"}|
+          post "/settings/actor", headers, %q|{"name":"","summary":"Foo Bar"}|
           expect(ActivityPub::Actor.find(actor.id).summary).to eq("Foo Bar")
         end
 
         it "updates the image" do
-          post "/settings", headers, %q|{"image":"/foo/bar/baz"}|
+          post "/settings/actor", headers, %q|{"image":"/foo/bar/baz"}|
           expect(ActivityPub::Actor.find(actor.id).image).to eq("https://test.test/foo/bar/baz")
         end
 
         it "updates the icon" do
-          post "/settings", headers, %q|{"icon":"/foo/bar/baz"}|
+          post "/settings/actor", headers, %q|{"icon":"/foo/bar/baz"}|
           expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
+        end
+      end
+    end
+  end
+
+  describe "POST /settings/service" do
+    it "returns 401 if not authorized" do
+      post "/settings/service"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      after_each do
+        Ktistec.settings.clear_footer
+        Ktistec.settings.site = "Test"
+      end
+
+      context "and posting form data" do
+        let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
+
+        it "succeeds" do
+          post "/settings/service", headers, "site=Name&footer="
+          expect(response.status_code).to eq(302)
         end
 
         it "changes the footer" do
-          expect {post "/settings", headers, %q|{"footer":"Copyright Blah Blah"}|}.
-            to change{Ktistec.footer?}
+          expect {post "/settings/service", headers, "site=Name&footer=Copyright Blah Blah"}.
+            to change{Ktistec.settings.footer}
         end
 
         it "changes the site" do
-          expect {post "/settings", headers, %q|{"site":"Name"}|}.
-            to change{Ktistec.site?}
+          expect {post "/settings/service", headers, "site=Name"}.
+            to change{Ktistec.settings.site}
+        end
+      end
+
+      context "and posting JSON data" do
+        let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
+
+        it "succeeds" do
+          post "/settings/service", headers, %q|{"site":"Name","footer":""}|
+          expect(response.status_code).to eq(302)
         end
 
-        context "given existing image and icon" do
-          before_each do
-            actor.assign(image: "image.png", icon: "icon.png").save
-          end
+        it "changes the footer" do
+          expect {post "/settings/service", headers, %q|{"site":"Name","footer":"Copyright Blah Blah"}|}.
+            to change{Ktistec.settings.footer}
+        end
 
-          it "does not replace image with empty value" do
-            expect{post "/settings", headers, %q|{"image":""}|}.
-              not_to change{ActivityPub::Actor.find(actor.id).image}
-          end
-
-          it "does not replace icon with empty value" do
-            expect{post "/settings", headers, %q|{"icon":""}|}.
-              not_to change{ActivityPub::Actor.find(actor.id).icon}
-          end
+        it "changes the site" do
+          expect {post "/settings/service", headers, %q|{"site":"Name"}|}.
+            to change{Ktistec.settings.site}
         end
       end
     end

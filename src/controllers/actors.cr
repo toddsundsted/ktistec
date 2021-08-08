@@ -5,7 +5,7 @@ require "../models/task/refresh_actor"
 
 class ActorsController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   skip_auth ["/actors/:username"]
 

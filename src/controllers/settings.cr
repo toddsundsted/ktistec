@@ -1,33 +1,57 @@
 require "../framework/controller"
-require "../views/view_helper"
-require "../models/activity_pub/activity/follow"
 require "../models/task/terminate"
+require "../views/view_helper"
 
 class SettingsController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   get "/settings" do |env|
     actor = env.account.actor
 
+    settings = Ktistec.settings
+
     ok "settings/settings"
   end
 
-  post "/settings" do |env|
+  get "/settings/actor" do |env|
+    redirect settings_path
+  end
+
+  get "/settings/service" do |env|
+    redirect settings_path
+  end
+
+  post "/settings/actor" do |env|
     actor = env.account.actor
 
-    params = params(env, actor)
+    settings = Ktistec.settings
 
-    actor.assign(params).save
+    actor.assign(params(env))
 
-    if (footer = params["footer"]?)
-      Ktistec.footer = footer
+    if actor.valid?
+      actor.save
+
+      redirect settings_path
+    else
+      ok "settings/settings"
     end
-    if (site = params["site"]?)
-      Ktistec.site = site
-    end
+  end
 
-    redirect back_path
+  post "/settings/service" do |env|
+    actor = env.account.actor
+
+    settings = Ktistec.settings
+
+    settings.assign(params(env))
+
+    if settings.valid?
+      settings.save
+
+      redirect settings_path
+    else
+      ok "settings/settings"
+    end
   end
 
   post "/settings/terminate" do |env|
@@ -41,13 +65,14 @@ class SettingsController
     redirect home_path
   end
 
-  private def self.params(env, actor)
+  private def self.params(env)
     params = (env.params.body.presence || env.params.json.presence).not_nil!
     {
       "name" => params["name"]?.try(&.to_s),
       "summary" => params["summary"]?.try(&.to_s),
-      "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" } || actor.image,
-      "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" } || actor.icon,
+      # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
+      "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
+      "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "footer" => params["footer"]?.try(&.to_s.presence),
       "site" => params["site"]?.try(&.to_s.presence)
     }

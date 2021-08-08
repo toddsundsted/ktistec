@@ -46,11 +46,25 @@ class Account
   end
 
   def password=(@password : String)
-    self.encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
+    if (password = @password.presence)
+      self.encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
+    else
+      self.encrypted_password = ""
+    end
   end
 
   def password
     @password.not_nil!
+  end
+
+  def before_validate
+    if changed?(:username)
+      if (username = self.username)
+        clear!(:username)
+        host = Ktistec.host
+        self.iri = "#{host}/actors/#{username}"
+      end
+    end
   end
 
   def validate_model
@@ -70,7 +84,7 @@ class Account
   end
 
   @[Persistent]
-  property iri : String { "#{Ktistec.host}/actors/#{username}" }
+  property iri : String { "" }
 
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri
 

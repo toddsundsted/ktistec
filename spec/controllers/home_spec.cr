@@ -10,12 +10,12 @@ Spectator.describe HomeController do
 
   context "on step 1 (set host and site names)" do
     before_each do
-      Ktistec.clear_host
-      Ktistec.clear_site
+      Ktistec.settings.clear_host
+      Ktistec.settings.clear_site
     end
     after_each do
-      Ktistec.host = "https://test.test"
-      Ktistec.site = "Test"
+      Ktistec.settings.host = "https://test.test"
+      Ktistec.settings.site = "Test"
     end
 
     describe "GET /" do
@@ -40,7 +40,7 @@ Spectator.describe HomeController do
         body = "host=foo_bar&site=Foo+Bar"
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first.text).to match(/scheme must be present/)
+        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first.text).to match(/must have a scheme/)
       end
 
       it "rerenders if site is invalid" do
@@ -53,24 +53,24 @@ Spectator.describe HomeController do
 
       it "rerenders if host is invalid" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
-        body = {host: "foo_bar", site: "Foo Bar"}.to_json
+        body = {host: "", site: ""}.to_json
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body)["msg"]).to match(/scheme must be present/)
+        expect(JSON.parse(response.body)["errors"].as_h).to have_value(["name must be present"])
       end
 
       it "rerenders if site is invalid" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
-        body = {host: "https://foo_bar", site: ""}.to_json
+        body = {host: "", site: ""}.to_json
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body)["msg"]).to match(/must be present/)
+        expect(JSON.parse(response.body)["errors"].as_h).to have_value(["name must be present"])
       end
 
       it "sets host and redirects" do
         headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
         body = "host=https://foo_bar&site=Foo+Bar"
-        expect{post "/", headers, body}.to change{Ktistec.host?}
+        expect{post "/", headers, body}.to change{Ktistec.settings.host}
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end
@@ -78,7 +78,7 @@ Spectator.describe HomeController do
       it "sets site and redirects" do
         headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
         body = "host=https://foo_bar&site=Foo+Bar"
-        expect{post "/", headers, body}.to change{Ktistec.site?}
+        expect{post "/", headers, body}.to change{Ktistec.settings.site}
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end
@@ -86,7 +86,7 @@ Spectator.describe HomeController do
       it "sets host and redirects" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
         body = {host: "https://foo_bar", site: "Foo Bar"}.to_json
-        expect{post "/", headers, body}.to change{Ktistec.host?}
+        expect{post "/", headers, body}.to change{Ktistec.settings.host}
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end
@@ -94,7 +94,7 @@ Spectator.describe HomeController do
       it "sets site and redirects" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
         body = {host: "https://foo_bar", site: "Foo Bar"}.to_json
-        expect{post "/", headers, body}.to change{Ktistec.site?}
+        expect{post "/", headers, body}.to change{Ktistec.settings.site}
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end
@@ -146,35 +146,61 @@ Spectator.describe HomeController do
         body = {username: "", password: "a1!", name: "", summary: ""}.to_json
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body)["msg"]).to match(/username is too short, password is too short/)
+        expect(JSON.parse(response.body)["errors"].as_h).to eq({"username" => ["is too short"], "password" => ["is too short"]})
       end
 
-      it "creates account and redirects" do
+      it "redirects and sets cookie" do
         headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
         body = "username=#{username}&password=#{password}&name=&summary="
-        expect{post "/", headers, body}.to change{Account.count}.by(1)
+        post "/", headers, body
         expect(response.status_code).to eq(302)
         expect(response.headers["Set-Cookie"]).to be_truthy
       end
 
-      it "also creates actor" do
+      it "creates account" do
+        headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+        body = "username=#{username}&password=#{password}&name=&summary="
+        expect{post "/", headers, body}.to change{Account.count}.by(1)
+      end
+
+      it "creates actor" do
         headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
         body = "username=#{username}&password=#{password}&name=&summary="
         expect{post "/", headers, body}.to change{ActivityPub::Actor.count}.by(1)
+      end
+
+      it "associates account and actor" do
+        headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+        body = "username=#{username}&password=#{password}&name=&summary="
+        post "/", headers, body
+        expect(Account.find(username: username).actor).not_to be_nil
+      end
+
+      it "returns token" do
+        headers = HTTP::Headers{"Content-Type" => "application/json"}
+        body = {username: username, password: password, name: "", summary: ""}.to_json
+        post "/", headers, body
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body)["jwt"]).to be_truthy
       end
 
       it "creates account" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
         body = {username: username, password: password, name: "", summary: ""}.to_json
         expect{post "/", headers, body}.to change{Account.count}.by(1)
-        expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body)["jwt"]).to be_truthy
       end
 
-      it "also creates actor" do
+      it "creates actor" do
         headers = HTTP::Headers{"Content-Type" => "application/json"}
         body = {username: username, password: password, name: "", summary: ""}.to_json
         expect{post "/", headers, body}.to change{ActivityPub::Actor.count}.by(1)
+      end
+
+      it "associates account and actor" do
+        headers = HTTP::Headers{"Content-Type" => "application/json"}
+        body = {username: username, password: password, name: "", summary: ""}.to_json
+        post "/", headers, body
+        expect(Account.find(username: username).actor).not_to be_nil
       end
     end
   end

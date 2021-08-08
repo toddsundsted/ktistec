@@ -13,8 +13,10 @@
                 </div>
             </form>
         </div>
-        <%- else -%>
+        <%- elsif Account.count > 0 -%>
         <a class='item' href='<%= sessions_path %>'>Sign In</a>
+        <%- else -%>
+        <a class='item'>Ktistec</a>
         <%- end -%>
     </div>
 </nav>

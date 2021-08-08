@@ -3,7 +3,7 @@ require "../views/view_helper"
 
 class ActivitiesController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   skip_auth ["/activities/:id"], GET
 

@@ -33,70 +33,94 @@ module Ktistec
     @@secret_key ||= Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "secret_key").as(String)
   end
 
-  private def self.present?(value)
-    !value.nil? && !value.empty? && value
+  # Model-like class for managing settings.
+  #
+  class Settings
+    property host : String?
+    property site : String?
+    property footer : String?
+
+    getter errors = Hash(String, Array(String)).new
+
+    def initialize
+      values =
+        Ktistec.database.query_all("SELECT key, value FROM options", as: {String, String?}).reduce(Hash(String, String?).new) do |values, (key, value)|
+          values[key] = value
+          values
+        end
+      assign(values)
+    end
+
+    def save
+      raise "invalid settings" unless valid?
+      {"host" => @host, "site" => @site, "footer" => @footer}.each do |key, value|
+        Ktistec.database.exec("INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)", key, value)
+      end
+      self
+    end
+
+    def assign(options)
+      @host = options["host"] if options.has_key?("host")
+      @site = options["site"] if options.has_key?("site")
+      @footer = options["footer"] if options.has_key?("footer")
+      self
+    end
+
+    def valid?
+      errors.clear
+      host_errors = [] of String
+      if (host = @host) && !host.empty?
+        uri = URI.parse(host)
+        # `URI.parse` treats something like "ktistec.com" as a path
+        # name and not a host name. users expectations differ.
+        if !present?(uri.host) && present?(uri.path)
+          parts = uri.path.split('/', 2)
+          unless parts.first.blank?
+            uri.host = parts.first
+            uri.path = parts.fetch(1, "")
+          end
+        end
+        host_errors << "must have a scheme" unless present?(uri.scheme)
+        host_errors << "must have a host name" unless present?(uri.host)
+        host_errors << "must not have a fragment" if present?(uri.fragment)
+        host_errors << "must not have a query" if present?(uri.query)
+        host_errors << "must not have a path" if present?(uri.path) && uri.path != "/"
+        if host_errors.empty? && uri.path == "/"
+          uri.path = ""
+          @host = uri.normalize.to_s
+        end
+      else
+        host_errors << "name must be present"
+      end
+      errors["host"] = host_errors unless host_errors.empty?
+      errors["site"] = ["name must be present"] unless present?(@site)
+      errors.empty?
+    end
+
+    private def present?(value)
+      !value.nil? && !value.empty?
+    end
   end
 
-  def self.host=(host)
-    uri = URI.parse(host)
-    raise "scheme must be present" unless present?(uri.scheme)
-    raise "host must be present" unless present?(uri.host)
-    raise "fragment must not be present" if present?(uri.fragment)
-    raise "query must not be present" if present?(uri.query)
-    if (path = present?(uri.path))
-      raise "path must not be present" unless path == "/"
-      uri.path = ""
-    end
-    @@host = uri.normalize.to_s
-    query = "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)"
-    Ktistec.database.exec(query, "host", @@host)
-    @@host
+  def self.settings
+    # return a new instance if the old instance had validation errors
+    @@settings =
+      begin
+        settings = @@settings
+        settings.nil? || !settings.errors.empty? ? Settings.new : settings
+      end
   end
 
   def self.host
-    @@host ||= Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "host").as(String)
-  end
-
-  def self.host?
-    host
-  rescue DB::NoResultsError
-    false
-  end
-
-  def self.site=(site)
-    raise "must be present" unless present?(site)
-    @@site = site
-    query = "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)"
-    Ktistec.database.exec(query, "site", @@site)
-    @@site
+    settings.host.not_nil!
   end
 
   def self.site
-    @@site ||= Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "site").as(String)
-  end
-
-  def self.site?
-    site
-  rescue DB::NoResultsError
-    false
-  end
-
-  def self.footer=(footer)
-    raise "must be present" unless present?(footer)
-    @@footer = footer
-    query = "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)"
-    Ktistec.database.exec(query, "footer", @@footer)
-    @@footer
+    settings.site.not_nil!
   end
 
   def self.footer
-    @@footer ||= Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "footer").as(String)
-  end
-
-  def self.footer?
-    footer
-  rescue DB::NoResultsError
-    false
+    settings.footer.not_nil!
   end
 
   # An [ActivityPub](https://www.w3.org/TR/activitypub/) server.

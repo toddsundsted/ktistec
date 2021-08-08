@@ -5,7 +5,7 @@ require "../views/view_helper"
 
 class UploadsController
   include Ktistec::Controller
-  extend Ktistec::ViewHelper
+  include Ktistec::ViewHelper
 
   post "/uploads" do |env|
     filename = nil

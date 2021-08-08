@@ -43,7 +43,7 @@ Spectator.describe SettingsController do
           expect(response.status_code).to eq(200)
         end
 
-        it "renders a form" do
+        it "renders an object" do
           get "/settings", headers
           expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon", "footer", "site")
         end

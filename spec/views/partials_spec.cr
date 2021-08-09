@@ -317,19 +317,21 @@ Spectator.describe "partials" do
       )
     end
 
+    let(activity) { nil }
+
     let(for_thread) { nil }
 
     subject do
       begin
-        XML.parse_html(object_partial(env, object, actor, actor, for_thread: for_thread))
+        XML.parse_html(object_partial(env, object, actor, actor, activity: activity, for_thread: for_thread))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
     end
 
     let(account) { register }
-
     let(actor) { account.actor }
+
     let!(object) do
       ActivityPub::Object.new(
         iri: "https://test.test/objects/object",
@@ -350,6 +352,28 @@ Spectator.describe "partials" do
     it "does not render a link to the threaded conversation" do
       original.assign(in_reply_to: object, attributed_to: actor).save
       expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Thread")
+    end
+
+    context "given an associated activity" do
+      let(activity) do
+        ActivityPub::Activity::Like.new(
+          iri: "https://test.test/activities/like",
+          actor: actor,
+          object: object
+        )
+      end
+
+      it "renders the activity type as a class" do
+        expect(subject.xpath_nodes("//article[contains(@class,'activity-like')]")).not_to be_empty
+      end
+
+      context "when a reply" do
+        let(for_thread) { [original] }
+
+        it "renders the activity type as a class" do
+          expect(subject.xpath_nodes("//article[contains(@class,'activity-like')]")).not_to be_empty
+        end
+      end
     end
 
     context "if approved" do

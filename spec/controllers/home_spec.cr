@@ -248,12 +248,14 @@ Spectator.describe HomeController do
 
     describe "POST /" do
       it "returns 404" do
-        post "/"
+        headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+        post "/", headers
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404" do
-        post "/"
+        headers = HTTP::Headers{"Content-Type" => "application/json"}
+        post "/", headers
         expect(response.status_code).to eq(404)
       end
     end

@@ -7,9 +7,9 @@ class HTTP::Server::Context
   def accepts?(*mime_types)
     @accepts ||=
       if self.request.headers["Accept"]?
-        self.request.headers["Accept"].split(",").map(&.split(";").first)
+        self.request.headers["Accept"].split(",").map(&.split(";").first.strip)
       elsif self.request.headers["Content-Type"]?
-        [self.request.headers["Content-Type"].split(";").first]
+        [self.request.headers["Content-Type"].split(";").first.strip]
       else
         [] of String
       end

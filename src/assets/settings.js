@@ -63,6 +63,6 @@ function initialize() {
   enable("form[action='/settings/actor'] input[type='file'][name='icon']", 240, 240)
 }
 
-document.addEventListener("turbolinks:load", initialize)
+document.addEventListener("turbo:load", initialize)
 
 initialize()

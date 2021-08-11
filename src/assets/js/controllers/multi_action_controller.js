@@ -19,13 +19,13 @@ export default class extends Controller {
       let status = xhr.status
       // detect redirect
       if (xhr.responseURL && (new URL(xhr.responseURL).pathname != action)) {
-        Turbolinks.visit(xhr.responseURL)
+        Turbo.visit(xhr.responseURL)
       } else {
         // don't cache because the form will usually contain error messages
-        if (document.querySelectorAll("meta[name='turbolinks-cache-control']").length < 1) {
+        if (document.querySelectorAll("meta[name='turbo-cache-control']").length < 1) {
           let head = document.querySelector("head")
           let meta = document.createElement("meta")
-          meta.setAttribute("name", "turbolinks-cache-control")
+          meta.setAttribute("name", "turbo-cache-control")
           meta.setAttribute("content", "no-cache")
           head.appendChild(meta)
         }

@@ -3,10 +3,9 @@
 import $ from "jquery"
 
 /**
- * TurboLinks
+ * Turbo
  */
-const Turbolinks = require("turbolinks")
-Turbolinks.start()
+import Turbo from "@hotwired/turbo"
 
 /**
  * Stimulus
@@ -81,7 +80,7 @@ Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
 import "lightgallery"
 import "lightgallery/dist/css/lightgallery.css"
 
-$(document).on("turbolinks:load", function() {
+$(document).on("turbo:load", function() {
   $(".ui.feed .event")
     .find(".content .text img")
     .each(function () {
@@ -128,7 +127,7 @@ $(document).on("click", ".dangerous.button[data-modal]", function (e) {
 })
 
 // refresh actors with missing icon images
-$(document).on("turbolinks:load", function () {
+$(document).on("turbo:load", function () {
   $(".ui.feed .event img[data-actor-id]").on("error", function() {
     let $this = $(this)
     $this.replaceWith('<i class="user icon"></i>')

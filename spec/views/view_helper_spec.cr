@@ -16,6 +16,43 @@ Spectator.describe "helper" do
 
   ## HTML helpers
 
+  describe "paginate" do
+    let(query) { "" }
+
+    let(env) do
+      HTTP::Server::Context.new(
+        HTTP::Request.new("GET", "/#{query}"),
+        HTTP::Server::Response.new(IO::Memory.new)
+      )
+    end
+
+    let(collection) { Ktistec::Util::PaginatedArray(Int32).new }
+
+    subject do
+      XML.parse_html(self.class.paginate(collection, env)).document
+    end
+
+    it "does not render pagination controls" do
+      expect(subject.xpath_nodes("//a")).to be_empty
+    end
+
+    context "with more pages" do
+      before_each { collection.more = true }
+
+      it "renders the next link" do
+        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("/?page=2")
+      end
+    end
+
+    context "on the second page" do
+      let(query) { "?page=2" }
+
+      it "renders the prev link" do
+        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("/?page=1")
+      end
+    end
+  end
+
   describe "authenticity_token" do
     let(env) do
       HTTP::Server::Context.new(

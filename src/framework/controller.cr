@@ -345,27 +345,5 @@ module Ktistec
     macro id
       Ktistec::Util.id
     end
-
-    macro included
-      def self.pagination_params(env)
-        {
-          Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
-          Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
-        }
-      end
-
-      def self.paginate(collection, env)
-        path = env.request.path
-        query = env.params.query
-        page = 1
-        begin
-          if (p = query["page"].to_i) > 0
-            page = p
-          end
-        rescue ArgumentError | KeyError
-        end
-        render "./src/views/partials/paginator.html.ecr"
-      end
-    end
   end
 end

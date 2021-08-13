@@ -17,6 +17,20 @@ module Ktistec::ViewHelper
         render "src/views/partials/object.html.slang"
       end
     end
+
+    def pagination_params(env)
+      {
+        Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
+        Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
+      }
+    end
+
+    def paginate(collection, env)
+      path = env.request.path
+      query = env.params.query
+      page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1
+      render "./src/views/partials/paginator.html.ecr"
+    end
   end
 
   macro included

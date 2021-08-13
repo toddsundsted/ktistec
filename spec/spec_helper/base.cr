@@ -1,5 +1,6 @@
 require "spectator"
 require "http/request"
+require "xml/node"
 
 require "../../src/framework"
 
@@ -7,11 +8,29 @@ class String
   def ===(other : HTTP::Request)
     "#{other.method} #{other.resource}" == self
   end
+
+  def ==(other : XML::Node)
+    other.content == self
+  end
 end
 
 class Regex
   def ===(other : HTTP::Request)
     "#{other.method} #{other.resource}" =~ self
+  end
+
+  def ==(other : XML::Node)
+    !!(other.content =~ self)
+  end
+end
+
+class XML::Node
+  def ==(other : String)
+    other == self.content
+  end
+
+  def ==(other : Regex)
+    !!(other =~ self.content)
   end
 end
 

@@ -643,7 +643,7 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
-  describe "#public_posts" do
+  describe "#known_posts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
@@ -664,22 +664,22 @@ Spectator.describe ActivityPub::Actor do
     post(5)
 
     it "instantiates the correct subclass" do
-      expect(subject.public_posts(1, 2).first).to be_a(ActivityPub::Object)
+      expect(subject.known_posts(1, 2).first).to be_a(ActivityPub::Object)
     end
 
     it "filters out non-public posts" do
-      expect(subject.public_posts(1, 2)).to eq([post5, post3])
+      expect(subject.known_posts(1, 2)).to eq([post5, post3])
     end
 
     it "filters out deleted posts" do
       post5.delete
-      expect(subject.public_posts(1, 2)).to eq([post3, post1])
+      expect(subject.known_posts(1, 2)).to eq([post3, post1])
     end
 
     it "paginates the results" do
-      expect(subject.public_posts(1, 2)).to eq([post5, post3])
-      expect(subject.public_posts(2, 2)).to eq([post1])
-      expect(subject.public_posts(2, 2).more?).not_to be_true
+      expect(subject.known_posts(1, 2)).to eq([post5, post3])
+      expect(subject.known_posts(2, 2)).to eq([post1])
+      expect(subject.known_posts(2, 2).more?).not_to be_true
     end
   end
 

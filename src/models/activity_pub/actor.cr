@@ -412,7 +412,13 @@ module ActivityPub
       find_activity_for(object, ActivityPub::Activity::Like)
     end
 
-    def public_posts(page = 1, size = 10)
+    # Returns the actor's known posts.
+    #
+    # Meant to be called on both local and cached actors.
+    #
+    # Does not include private (not visible) posts.
+    #
+    def known_posts(page = 1, size = 10)
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o

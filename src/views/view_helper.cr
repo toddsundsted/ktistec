@@ -25,7 +25,7 @@ module Ktistec::ViewHelper
       }
     end
 
-    def paginate(collection, env)
+    def paginate(env, collection)
       path = env.request.path
       query = env.params.query
       page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1

@@ -29,7 +29,7 @@ Spectator.describe "helper" do
     let(collection) { Ktistec::Util::PaginatedArray(Int32).new }
 
     subject do
-      XML.parse_html(self.class.paginate(collection, env)).document
+      XML.parse_html(self.class.paginate(env, collection)).document
     end
 
     it "does not render pagination controls" do

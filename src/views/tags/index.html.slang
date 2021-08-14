@@ -1,4 +1,4 @@
 section.ui.feed
   - collection.each do |object|
     == object_partial(env, object)
-== paginate(collection, env)
+== paginate(env, collection)

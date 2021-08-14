@@ -326,6 +326,26 @@ Spectator.describe ActivityPub::Object do
       expect(described_class.timeline(1, 2)).to eq([post4, post3])
     end
 
+    let(create) do
+      ActivityPub::Activity::Create.new(
+        iri: "https://test.test/activities/#{random_string}",
+        actor: actor,
+        object: post5
+      )
+    end
+    let(outbox) do
+      Relationship::Content::Outbox.new(
+        owner: actor,
+        activity: create,
+        created_at: Time.utc(2016, 2, 15, 10, 20, 5)
+      )
+    end
+
+    it "includes posts only once" do
+      outbox.save
+      expect(described_class.timeline(1, 2)).to eq([post5, post4])
+    end
+
     it "paginates the results" do
       expect(described_class.timeline(1, 2)).to eq([post5, post4])
       expect(described_class.timeline(3, 2)).to eq([post1])

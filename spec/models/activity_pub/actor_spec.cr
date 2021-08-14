@@ -758,6 +758,26 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.posts(1, 2)).to eq([object4, object3])
     end
 
+    let(create) do
+      ActivityPub::Activity::Create.new(
+        iri: "https://test.test/activities/#{random_string}",
+        actor: subject,
+        object: object5
+      )
+    end
+    let(outbox) do
+      Relationship::Content::Outbox.new(
+        owner: subject,
+        activity: create,
+        created_at: Time.utc(2016, 2, 15, 10, 20, 5)
+      )
+    end
+
+    it "includes objects only once" do
+      outbox.save
+      expect(subject.posts(1, 2)).to eq([object5, object4])
+    end
+
     it "paginates the results" do
       expect(subject.posts(1, 2)).to eq([object5, object4])
       expect(subject.posts(3, 2)).to eq([object1])

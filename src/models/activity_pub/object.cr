@@ -151,7 +151,7 @@ module ActivityPub
     #
     def self.timeline(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
+         SELECT DISTINCT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -173,7 +173,7 @@ module ActivityPub
             AND t.deleted_at IS NULL
             AND u.id IS NULL
             AND o.id NOT IN (
-               SELECT o.id
+               SELECT DISTINCT o.id
                  FROM objects AS o
                  JOIN actors AS t
                    ON t.iri = o.attributed_to_iri

@@ -440,7 +440,7 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
-    # Returns the actor's posts.
+    # Returns the actor's public posts.
     #
     # Meant to be called on local (not cached) actors.
     #
@@ -450,7 +450,7 @@ module ActivityPub
     # impact on whether or not the query planner uses an index or
     # creates a b-tree to sort the final results.
     #
-    def posts(page = 1, size = 10)
+    def public_posts(page = 1, size = 10)
       query = <<-QUERY
          SELECT DISTINCT #{Object.columns(prefix: "o")}
            FROM objects AS o

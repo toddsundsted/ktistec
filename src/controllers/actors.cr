@@ -7,7 +7,7 @@ class ActorsController
   include Ktistec::Controller
   include Ktistec::ViewHelper
 
-  skip_auth ["/actors/:username"]
+  skip_auth ["/actors/:username", "/actors/:username/public-posts"]
 
   get "/actors/:username" do |env|
     username = env.params.url["username"]
@@ -19,6 +19,20 @@ class ActorsController
     actor = account.actor
 
     ok "actors/actor"
+  end
+
+  get "/actors/:username/public-posts" do |env|
+    username = env.params.url["username"]
+
+    unless (account = Account.find?(username: username))
+      not_found
+    end
+
+    actor = account.actor
+
+    objects = actor.public_posts(*pagination_params(env))
+
+    ok "actors/public_posts"
   end
 
   get "/actors/:username/timeline" do |env|

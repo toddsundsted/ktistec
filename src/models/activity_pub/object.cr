@@ -189,12 +189,12 @@ module ActivityPub
              ON r.to_iri = a.iri
             AND r.type = "#{Relationship::Content::Outbox}"
            JOIN accounts AS c
+             ON c.iri = r.from_iri
       LEFT JOIN activities AS u
              ON u.object_iri = a.iri
             AND u.type = "#{ActivityPub::Activity::Undo}"
             AND u.actor_iri = a.actor_iri
-          WHERE r.from_iri = c.iri
-            AND o.visible = 1
+          WHERE o.visible = 1
             AND o.in_reply_to_iri IS NULL
             AND o.deleted_at IS NULL
             AND t.deleted_at IS NULL
@@ -211,12 +211,12 @@ module ActivityPub
                    ON r.to_iri = a.iri
                   AND r.type = "#{Relationship::Content::Outbox}"
                  JOIN accounts AS c
+                   ON c.iri = r.from_iri
             LEFT JOIN activities AS u
                    ON u.object_iri = a.iri
                   AND u.type = "#{ActivityPub::Activity::Undo}"
                   AND u.actor_iri = a.actor_iri
-                WHERE r.from_iri = c.iri
-                  AND o.visible = 1
+                WHERE o.visible = 1
                   AND o.in_reply_to_iri IS NULL
                   AND o.deleted_at IS NULL
                   AND t.deleted_at IS NULL

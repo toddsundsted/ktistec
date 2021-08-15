@@ -12,11 +12,13 @@ class ActorsController
   get "/actors/:username" do |env|
     username = env.params.url["username"]
 
-    actor = Account.find(username: username).actor
+    unless (account = Account.find?(username: username))
+      not_found
+    end
+
+    actor = account.actor
 
     ok "actors/actor"
-  rescue Ktistec::Model::NotFound
-    not_found
   end
 
   get "/actors/:username/timeline" do |env|
@@ -56,24 +58,24 @@ class ActorsController
   get "/remote/actors/:id" do |env|
     id = env.params.url["id"].to_i
 
-    actor = ActivityPub::Actor.find(id)
+    unless (actor = ActivityPub::Actor.find?(id))
+      not_found
+    end
 
     ok "actors/remote"
-  rescue Ktistec::Model::NotFound
-    not_found
   end
 
   post "/remote/actors/:id/refresh" do |env|
     id = env.params.url["id"].to_i
 
-    actor = ActivityPub::Actor.find(id)
+    unless (actor = ActivityPub::Actor.find?(id))
+      not_found
+    end
 
     unless Task::RefreshActor.exists?(actor.iri)
       Task::RefreshActor.new(source: env.account.actor, actor: actor).schedule
     end
 
     ok
-  rescue Ktistec::Model::NotFound
-    not_found
   end
 end

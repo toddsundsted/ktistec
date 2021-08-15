@@ -147,6 +147,31 @@ module ActivityPub
       (published || created_at).to_local
     end
 
+    # Returns federated posts.
+    #
+    # Includes local posts. Does not include private (not visible)
+    # posts.
+    #
+    def self.federated_posts(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+          WHERE o.visible = 1
+            AND o.deleted_at is NULL
+            AND o.id NOT IN (
+               SELECT o.id
+                 FROM objects AS o
+                WHERE o.visible = 1
+                  AND o.deleted_at is NULL
+             ORDER BY o.published DESC
+                LIMIT ?
+            )
+       ORDER BY o.published DESC
+          LIMIT ?
+      QUERY
+      Object.query_and_paginate(query, page: page, size: size)
+    end
+
     # Returns the site's public posts.
     #
     # Does not include private (not visible) posts and replies.
@@ -201,26 +226,6 @@ module ActivityPub
             )
          ORDER BY r.created_at DESC
             LIMIT ?
-      QUERY
-      Object.query_and_paginate(query, page: page, size: size)
-    end
-
-    def self.federated_posts(page = 1, size = 10)
-      query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-          WHERE o.visible = 1
-            AND o.deleted_at is NULL
-            AND o.id NOT IN (
-               SELECT o.id
-                 FROM objects AS o
-                WHERE o.visible = 1
-                  AND o.deleted_at is NULL
-             ORDER BY o.published DESC
-                LIMIT ?
-            )
-       ORDER BY o.published DESC
-          LIMIT ?
       QUERY
       Object.query_and_paginate(query, page: page, size: size)
     end

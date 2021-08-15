@@ -251,6 +251,43 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe ".federated_posts" do
+    macro post(index)
+      let!(post{{index}}) do
+        ActivityPub::Object.new(
+          iri: "https://test.test/objects/#{random_string}",
+          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+          visible: {{index}}.odd?
+        ).save
+      end
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(described_class.federated_posts(1, 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "filters out non-public posts" do
+      expect(described_class.federated_posts(1, 2)).to eq([post5, post3])
+    end
+
+    it "filters out deleted posts" do
+      post5.delete
+      expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
+    end
+
+    it "paginates the results" do
+      expect(described_class.federated_posts(1, 2)).to eq([post5, post3])
+      expect(described_class.federated_posts(2, 2)).to eq([post1])
+      expect(described_class.federated_posts(2, 2).more?).not_to be_true
+    end
+  end
+
   describe ".public_posts" do
     let(actor) { register.actor }
 
@@ -350,43 +387,6 @@ Spectator.describe ActivityPub::Object do
       expect(described_class.public_posts(1, 2)).to eq([post5, post4])
       expect(described_class.public_posts(3, 2)).to eq([post1])
       expect(described_class.public_posts(3, 2).more?).not_to be_true
-    end
-  end
-
-  describe ".federated_posts" do
-    macro post(index)
-      let!(post{{index}}) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/#{random_string}",
-          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-          visible: {{index}}.odd?
-        ).save
-      end
-    end
-
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
-
-    it "instantiates the correct subclass" do
-      expect(described_class.federated_posts(1, 2).first).to be_a(ActivityPub::Object)
-    end
-
-    it "filters out non-public posts" do
-      expect(described_class.federated_posts(1, 2)).to eq([post5, post3])
-    end
-
-    it "filters out deleted posts" do
-      post5.delete
-      expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
-    end
-
-    it "paginates the results" do
-      expect(described_class.federated_posts(1, 2)).to eq([post5, post3])
-      expect(described_class.federated_posts(2, 2)).to eq([post1])
-      expect(described_class.federated_posts(2, 2).more?).not_to be_true
     end
   end
 

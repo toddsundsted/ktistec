@@ -5,37 +5,42 @@ require "../spec_helper/controller"
 Spectator.describe ActorsController do
   setup_spec
 
-  describe "GET /actors/:username" do
-    let(username) { random_username }
-    let(password) { random_password }
+  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
+  ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
 
-    let!(account) { register(username, password) }
+  let(actor) { register.actor }
+
+  describe "GET /actors/:username" do
+    it "returns 404 if not found" do
+      get "/actors/missing", ACCEPT_HTML
+      expect(response.status_code).to eq(404)
+    end
 
     it "returns 404 if not found" do
-      get "/actors/missing"
+      get "/actors/missing", ACCEPT_JSON
       expect(response.status_code).to eq(404)
     end
 
     it "returns 200 if found" do
-      get "/actors/#{username}"
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns 200 if found" do
+      get "/actors/#{actor.username}", ACCEPT_JSON
       expect(response.status_code).to eq(200)
     end
 
     it "responds with HTML" do
-      get "/actors/#{username}", HTTP::Headers{"Accept" => "text/html"}
+      get "/actors/#{actor.username}", ACCEPT_HTML
       expect(XML.parse_html(response.body).xpath_nodes("/html")).not_to be_empty
     end
 
-    it "responds with JSON, by default" do
-      get "/actors/#{username}"
+    it "responds with JSON" do
+      get "/actors/#{actor.username}", ACCEPT_JSON
       expect(JSON.parse(response.body).dig("type")).to be_truthy
     end
   end
-
-  let(actor) { register.actor }
-
-  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
-  ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
 
   describe "GET /actors/:username/timeline" do
     it "returns 401 if not authorized" do

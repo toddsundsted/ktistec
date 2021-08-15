@@ -147,9 +147,11 @@ module ActivityPub
       (published || created_at).to_local
     end
 
-    # Returns objects in the site's timeline.
+    # Returns the site's public posts.
     #
-    def self.timeline(page = 1, size = 10)
+    # Does not include private (not visible) posts and replies.
+    #
+    def self.public_posts(page = 1, size = 10)
       query = <<-QUERY
          SELECT DISTINCT #{Object.columns(prefix: "o")}
            FROM objects AS o

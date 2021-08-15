@@ -22,7 +22,7 @@ class HomeController
 
       ok "home/step_2"
     elsif (account = env.account?).nil?
-      objects = ActivityPub::Object.timeline(*pagination_params(env))
+      objects = ActivityPub::Object.public_posts(*pagination_params(env))
 
       ok "home/index"
     else

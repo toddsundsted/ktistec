@@ -220,25 +220,197 @@ Spectator.describe ActorsController do
 
       let(object) do
         ActivityPub::Object.new(
-          iri: "https://remote/objects/#{random_string}",
-          attributed_to: actor
+          iri: "#{author.iri}/object",
+          attributed_to: author
         )
       end
-      let!(timeline) do
-        Relationship::Content::Timeline.new(
-          owner: actor,
+      let(create) do
+        ActivityPub::Activity::Create.new(
+          iri: "#{author.iri}/create",
+          actor: author,
           object: object
-        ).save
+        )
+      end
+      let(announce) do
+        ActivityPub::Activity::Announce.new(
+          iri: "#{author.iri}/announce",
+          actor: author,
+          object: object
+        )
       end
 
-      it "renders the collection" do
+      context "when author is the actor" do
+        let(author) { actor }
+
+        context "given a create" do
+          before_each do
+            Relationship::Content::Outbox.new(
+              owner: actor,
+              activity: create
+            ).save
+            Relationship::Content::Timeline.new(
+              owner: actor,
+              object: object
+            ).save
+          end
+
+          it "renders the object's create aspect" do
+            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//article/@class")).to contain_exactly("event activity-create")
+          end
+        end
+
+        context "given an announce" do
+          before_each do
+            Relationship::Content::Outbox.new(
+              owner: actor,
+              activity: announce
+            ).save
+            Relationship::Content::Timeline.new(
+              owner: actor,
+              object: object
+            ).save
+          end
+
+          it "renders the object's announce aspect" do
+            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//article/@class")).to contain_exactly("event activity-announce")
+          end
+        end
+      end
+
+      context "when author is not the actor" do
+        let(author) do
+          ActivityPub::Actor.new(
+            iri: "https://remote/actors/#{random_string}"
+          )
+        end
+
+        context "given a create" do
+          before_each do
+            Relationship::Content::Inbox.new(
+              owner: actor,
+              activity: create
+            ).save
+            Relationship::Content::Timeline.new(
+              owner: actor,
+              object: object
+            ).save
+          end
+
+          it "renders the object's create aspect" do
+            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//article/@class")).to contain_exactly("event activity-create")
+          end
+        end
+
+        context "given an announce" do
+          before_each do
+            Relationship::Content::Inbox.new(
+              owner: actor,
+              activity: announce
+            ).save
+            Relationship::Content::Timeline.new(
+              owner: actor,
+              object: object
+            ).save
+          end
+
+          it "renders the object's announce aspect" do
+            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//article/@class")).to contain_exactly("event activity-announce")
+          end
+        end
+
+        context "given both a create and an announce outside of actor's mailbox" do
+          before_each do
+            create.save
+            announce.save
+            Relationship::Content::Timeline.new(
+              owner: actor,
+              object: object
+            ).save
+          end
+
+          it "renders the object without aspect" do
+            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//article/@class")).to contain_exactly("event")
+          end
+        end
+
+        context "given a create, and an announce outside of actor's mailbox" do
+          before_each do
+            announce.save
+            Relationship::Content::Inbox.new(
+              owner: actor,
+              activity: create
+            ).save
+            Relationship::Content::Timeline.new(
+              owner: actor,
+              object: object
+            ).save
+          end
+
+          it "renders the object's create aspect" do
+            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//article/@class")).to contain_exactly("event activity-create")
+          end
+        end
+
+        context "given an announce, and a create outside of actor's mailbox" do
+          before_each do
+            create.save
+            Relationship::Content::Inbox.new(
+              owner: actor,
+              activity: announce
+            ).save
+            Relationship::Content::Timeline.new(
+              owner: actor,
+              object: object
+            ).save
+          end
+
+          it "renders the object's announce aspect" do
+            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//article/@class")).to contain_exactly("event activity-announce")
+          end
+        end
+
+        let(like) do
+          ActivityPub::Activity::Like.new(
+            iri: "#{author.iri}/announce",
+            actor: author,
+            object: object
+          )
+        end
+
+        context "given a like" do
+          before_each do
+            Relationship::Content::Inbox.new(
+              owner: actor,
+              activity: like
+            ).save
+            Relationship::Content::Timeline.new(
+              owner: actor,
+              object: object
+            ).save
+          end
+
+          it "renders the object's like aspect" do
+            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//article/@class")).to contain_exactly("event activity-like")
+          end
+        end
+      end
+
+      it "renders an empty collection" do
         get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{object.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//article")).to be_empty
       end
 
-      it "renders the collection" do
+      it "renders an empty collection" do
         get "/actors/#{actor.username}/timeline", ACCEPT_JSON
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a.map(&.as_s)).to contain_exactly(object.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
       end
     end
   end

@@ -189,7 +189,7 @@ Spectator.describe RelationshipsController do
 
           it "renders a form with the object" do
             post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&canonical_path=foo%2Fbar"
-            expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-new")
+            expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-new")
           end
         end
 

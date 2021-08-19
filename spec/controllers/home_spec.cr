@@ -40,7 +40,7 @@ Spectator.describe HomeController do
         body = "host=foo_bar&site=Foo+Bar"
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first.text).to match(/must have a scheme/)
+        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/must have a scheme/)
       end
 
       it "rerenders if site is invalid" do
@@ -48,7 +48,7 @@ Spectator.describe HomeController do
         body = "host=https://foo_bar&site="
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first.text).to match(/must be present/)
+        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/must be present/)
       end
 
       it "rerenders if host is invalid" do
@@ -138,7 +138,7 @@ Spectator.describe HomeController do
         body = "username=&password=a1!&name=&summary="
         post "/", headers, body
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first.text).to match(/username is too short, password is too short/)
+        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/username is too short, password is too short/)
       end
 
       it "rerenders if params are invalid" do
@@ -214,7 +214,7 @@ Spectator.describe HomeController do
           headers = HTTP::Headers{"Accept" => "text/html"}
           get "/", headers
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//a[contains(@href,'#{username}')]/@href").map(&.text)).to have(/\/actors\/#{username}/)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//a[contains(@href,'#{username}')]/@href")).to contain_exactly(/\/actors\/#{username}/)
         end
 
         it "renders a list of local actors" do

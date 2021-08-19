@@ -258,7 +258,7 @@ Spectator.describe SearchesController do
           headers = HTTP::Headers{"Accept" => "text/html"}
           get "/search?query=foo_bar@no-such-host", headers
           expect(response.status_code).to eq(400)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first.text).to match(/No such host/)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first).to match(/No such host/)
         end
 
         it "returns 400" do
@@ -274,7 +274,7 @@ Spectator.describe SearchesController do
           headers = HTTP::Headers{"Accept" => "text/html"}
           get "/search?query=bad-json@remote", headers
           expect(response.status_code).to eq(400)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first.text).to match(/Unexpected char/)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first).to match(/Unexpected char/)
         end
 
         it "returns 400" do

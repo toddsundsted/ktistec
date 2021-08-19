@@ -82,7 +82,7 @@ Spectator.describe SessionsController do
       headers = HTTP::Headers{"Accept" => "text/html"}
       delete "/sessions", headers
       expect(response.status_code).to eq(401)
-      expect(XML.parse_html(response.body).xpath_nodes("/html//title").first.text).to match(/Unauthorized/)
+      expect(XML.parse_html(response.body).xpath_nodes("/html//title").first).to match(/Unauthorized/)
     end
 
     it "fails to authenticate" do

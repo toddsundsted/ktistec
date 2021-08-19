@@ -474,7 +474,7 @@ Spectator.describe ActorsController do
 
       it "renders the collection" do
         get "/actors/#{actor.username}/notifications", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//article//a/@href").map(&.text)).to contain_exactly(activity.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//article//a/@href")).to contain_exactly(activity.iri)
       end
 
       it "renders the collection" do

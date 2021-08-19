@@ -48,12 +48,12 @@ Spectator.describe TagsController do
 
     it "renders the collection" do
       get "/tags/bar", ACCEPT_HTML
-      expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{object3.id}", "object-#{object1.id}")
+      expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{object3.id}", "object-#{object1.id}")
     end
 
     it "renders the collection" do
       get "/tags/bar", ACCEPT_JSON
-      expect(JSON.parse(response.body).dig("first", "orderedItems").as_a.map(&.as_s)).to contain_exactly(object3.iri, object1.iri)
+      expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(object3.iri, object1.iri)
     end
 
     it "returns 404 if no tagged objects exist" do

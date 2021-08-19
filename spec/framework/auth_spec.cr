@@ -29,7 +29,7 @@ Spectator.describe Ktistec::Auth do
       it "fails to authenticate" do
         get "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html", "Authorization" => "Bearer #{jwt}"}
         expect(response.status_code).to eq(401)
-        expect(XML.parse_html(response.body).xpath_nodes("/html//title").first.text).to match(/Unauthorized/)
+        expect(XML.parse_html(response.body).xpath_nodes("/html//title").first).to match(/Unauthorized/)
       end
 
       it "fails to authenticate" do

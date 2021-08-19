@@ -93,7 +93,7 @@ Spectator.describe ObjectsController do
 
       it "renders the collection" do
         get "/actors/#{actor.username}/drafts", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{draft.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{draft.id}")
       end
 
       it "renders the collection" do
@@ -150,7 +150,7 @@ Spectator.describe ObjectsController do
 
         it "renders a form with the object" do
           post "/objects", FORM_DATA, "content=foo+bar&canonical_path=foo%2Fbar"
-          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-new")
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-new")
         end
 
         it "renders the object" do
@@ -174,7 +174,7 @@ Spectator.describe ObjectsController do
 
     it "renders the object" do
       get "/objects/#{visible.uid}", ACCEPT_HTML
-      expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
+      expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first).to eq("object-#{visible.id}")
     end
 
     it "renders the object" do
@@ -259,7 +259,7 @@ Spectator.describe ObjectsController do
 
     it "renders the collection" do
       get "/objects/#{visible.uid}/thread", ACCEPT_HTML
-      expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{visible.id}")
+      expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{visible.id}")
     end
 
     it "renders the collection" do
@@ -337,7 +337,7 @@ Spectator.describe ObjectsController do
 
       it "renders the collection" do
         get "/objects/#{visible.uid}/thread", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{visible.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{visible.id}")
       end
 
       it "renders the collection" do
@@ -352,7 +352,7 @@ Spectator.describe ObjectsController do
 
         it "renders the collection" do
           get "/objects/#{visible.uid}/thread", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
         end
 
         it "renders the collection" do
@@ -385,22 +385,22 @@ Spectator.describe ObjectsController do
 
         it "renders a form with the object" do
           get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-#{draft.id}")
         end
 
         it "renders a button that submits to the outbox path" do
           get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Publish')]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Publish')]/@action").first).to eq("/actors/#{actor.username}/outbox")
         end
 
         it "renders a button that submits to the object update path" do
           get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@action").first.text).to eq("/objects/#{draft.uid}")
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@action").first).to eq("/objects/#{draft.uid}")
         end
 
         it "renders an input with the draft content" do
           get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("this is a test")
+          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first).to eq("this is a test")
         end
 
         it "renders the content" do
@@ -413,7 +413,7 @@ Spectator.describe ObjectsController do
 
           it "renders an input with the canonical path" do
             get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first.text).to eq("/foo/bar/baz")
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first).to eq("/foo/bar/baz")
           end
 
           it "renders the canonical path as URL" do
@@ -443,12 +443,12 @@ Spectator.describe ObjectsController do
 
         it "renders a form with the object" do
           get "/objects/#{visible.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{visible.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-#{visible.id}")
         end
 
         it "renders a button that submits to the outbox path" do
           get "/objects/#{visible.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Update')]/@action").first.text).to eq("/actors/#{actor.username}/outbox")
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Update')]/@action").first).to eq("/actors/#{actor.username}/outbox")
         end
 
         it "does not render a button that submits to the object update path" do
@@ -458,7 +458,7 @@ Spectator.describe ObjectsController do
 
         it "renders an input with the content" do
           get "/objects/#{visible.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("foo bar baz")
+          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first).to eq("foo bar baz")
         end
 
         it "renders the content" do
@@ -471,7 +471,7 @@ Spectator.describe ObjectsController do
 
           it "renders an input with the canonical path" do
             get "/objects/#{visible.uid}/edit", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first.text).to eq("/foo/bar/baz")
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first).to eq("/foo/bar/baz")
           end
 
           it "renders the canonical path as URL" do
@@ -547,7 +547,7 @@ Spectator.describe ObjectsController do
 
         it "renders a form with the object" do
           post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=foo%2Fbar"
-          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first.text).to eq("object-#{draft.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-#{draft.id}")
         end
 
         it "renders the object" do
@@ -634,7 +634,7 @@ Spectator.describe ObjectsController do
 
       it "renders the object" do
         get "/remote/objects/#{visible.id}", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first).to eq("object-#{visible.id}")
       end
 
       it "renders the object" do
@@ -705,7 +705,7 @@ Spectator.describe ObjectsController do
 
       it "renders the collection" do
         get "/remote/objects/#{visible.id}/thread", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{visible.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{visible.id}")
       end
 
       it "renders the collection" do
@@ -760,7 +760,7 @@ Spectator.describe ObjectsController do
 
         it "renders the collection" do
           get "/remote/objects/#{visible.id}/thread", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
         end
 
         it "renders the collection" do
@@ -787,7 +787,7 @@ Spectator.describe ObjectsController do
 
       it "renders the object" do
         get "/remote/objects/#{visible.id}/reply"
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first.text).to eq("object-#{visible.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first).to eq("object-#{visible.id}")
       end
 
       it "renders the form" do
@@ -815,7 +815,7 @@ Spectator.describe ObjectsController do
 
       it "prepopulates editor with mentions" do
         get "/remote/objects/#{visible.id}/reply"
-        expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first.text).to eq("@author@nowhere @other@nowhere ")
+        expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first).to eq("@author@nowhere @other@nowhere ")
       end
 
       it "returns 404 if object is a draft" do

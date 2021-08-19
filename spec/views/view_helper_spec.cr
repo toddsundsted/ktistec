@@ -68,7 +68,7 @@ Spectator.describe "helper" do
     before_each { env.session.string("csrf", "TOKEN") }
 
     it "emits input tag with the authenticity token" do
-      expect(subject.xpath_nodes("//input[@type='hidden'][@name='authenticity_token']/@value").map(&.text)).to have("TOKEN")
+      expect(subject.xpath_nodes("//input[@type='hidden'][@name='authenticity_token']/@value")).to have("TOKEN")
     end
   end
 
@@ -78,7 +78,7 @@ Spectator.describe "helper" do
     end
 
     it "emits nested div containing error message" do
-      expect(subject.xpath_nodes("//div/div/text()").map(&.text)).to eq(["field is wrong"])
+      expect(subject.xpath_nodes("//div/div/text()")).to contain_exactly("field is wrong")
     end
   end
 
@@ -92,15 +92,15 @@ Spectator.describe "helper" do
     end
 
     it "specifies the action" do
-      expect(subject.xpath_nodes("//form/@action").map(&.text)).to eq(["/foobar"])
+      expect(subject.xpath_nodes("//form/@action")).to contain_exactly("/foobar")
     end
 
     it "specifies the method" do
-      expect(subject.xpath_nodes("//form/@method").map(&.text)).to eq(["PUT"])
+      expect(subject.xpath_nodes("//form/@method")).to contain_exactly("PUT")
     end
 
     it "sets the error class" do
-      expect(subject.xpath_nodes("//form/@class").map(&.text)).to eq(["ui form error"])
+      expect(subject.xpath_nodes("//form/@class")).to contain_exactly("ui form error")
     end
 
     context "given a nil model" do
@@ -109,7 +109,7 @@ Spectator.describe "helper" do
       end
 
       it "does not set the error class" do
-        expect(subject.xpath_nodes("//form/@class").map(&.text)).to eq(["ui form"])
+        expect(subject.xpath_nodes("//form/@class")).to contain_exactly("ui form")
       end
     end
   end
@@ -124,31 +124,31 @@ Spectator.describe "helper" do
     end
 
     it "emits a label tag with the label text" do
-      expect(subject.xpath_nodes("//div/label/text()").map(&.text)).to eq(["Label"])
+      expect(subject.xpath_nodes("//div/label/text()")).to contain_exactly("Label")
     end
 
     it "emits an input tag with the specified name" do
-      expect(subject.xpath_nodes("//div/input/@name").map(&.text)).to eq(["field"])
+      expect(subject.xpath_nodes("//div/input/@name")).to contain_exactly("field")
     end
 
     it "emits an input tag with the associated value" do
-      expect(subject.xpath_nodes("//div/input/@value").map(&.text)).to eq(["Value"])
+      expect(subject.xpath_nodes("//div/input/@value")).to contain_exactly("Value")
     end
 
     it "specifies the class" do
-      expect(subject.xpath_nodes("//div/input/@class").map(&.text)).to eq(["blarg"])
+      expect(subject.xpath_nodes("//div/input/@class")).to contain_exactly("blarg")
     end
 
     it "overrides the default type" do
-      expect(subject.xpath_nodes("//div/input/@type").map(&.text)).to eq(["foobar"])
+      expect(subject.xpath_nodes("//div/input/@type")).to contain_exactly("foobar")
     end
 
     it "specifies the placeholder" do
-      expect(subject.xpath_nodes("//div/input/@placeholder").map(&.text)).to eq(["quoz"])
+      expect(subject.xpath_nodes("//div/input/@placeholder")).to contain_exactly("quoz")
     end
 
     it "sets the error class" do
-      expect(subject.xpath_nodes("//div/@class").map(&.text)).to eq(["field error"])
+      expect(subject.xpath_nodes("//div/@class")).to contain_exactly("field error")
     end
 
     context "given a nil model" do
@@ -157,11 +157,11 @@ Spectator.describe "helper" do
       end
 
       it "emits an input tag with the specified name" do
-        expect(subject.xpath_nodes("//div/input/@name").map(&.text)).to eq(["field"])
+        expect(subject.xpath_nodes("//div/input/@name")).to contain_exactly("field")
       end
 
       it "does not set the error class" do
-        expect(subject.xpath_nodes("//div/@class").map(&.text)).to eq(["field"])
+        expect(subject.xpath_nodes("//div/@class")).to contain_exactly("field")
       end
     end
 
@@ -171,7 +171,7 @@ Spectator.describe "helper" do
       end
 
       it "emits an input tag with the associated value" do
-        expect(subject.xpath_nodes("//div/input/@value").map(&.text)).to eq([%q|Value with ampersand & "quotes".|])
+        expect(subject.xpath_nodes("//div/input/@value")).to contain_exactly(%q|Value with ampersand & "quotes".|)
       end
     end
   end

@@ -495,7 +495,7 @@ Spectator.describe Ktistec::Controller do
   describe "/foo/bar/ok" do
     it "responds with html" do
       get "/foo/bar/ok", HTTP::Headers{"Accept" => "text/html"}
-      expect(XML.parse_html(response.body).xpath_nodes("//cite").first.text).to eq("html")
+      expect(XML.parse_html(response.body).xpath_nodes("//cite").first).to eq("html")
     end
 
     it "responds with text" do

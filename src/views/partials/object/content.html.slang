@@ -97,16 +97,16 @@ crystal:
           = pluralize(c, "Share")
       - if object.in_reply_to? && for_thread.try(&.first.attributed_to?) == account.actor
         - if object.approved_by?(account.actor)
-          form.ui.form method="POST" action=unapprove_path(object)
+          form.ui.form method="POST" action=unapprove_path(object) data-controller="checkbox-submit"
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-            .ui.mini.toggle.checkbox.checked data-action="click->partial-update#submit"
-              input type="checkbox" name="public" checked="checked"
+            .ui.mini.toggle.checkbox.checked
+              input type="checkbox" name="public" checked="checked" data-action="change->checkbox-submit#change"
               label Public
         - else
-          form.ui.form method="POST" action=approve_path(object)
+          form.ui.form method="POST" action=approve_path(object) data-controller="checkbox-submit"
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-            .ui.mini.toggle.checkbox data-action="click->partial-update#submit"
-              input type="checkbox" name="public"
+            .ui.mini.toggle.checkbox
+              input type="checkbox" name="public" data-action="change->checkbox-submit#change"
               label Public
       - if author == account.actor
         a data-turbo-frame="_top" href=edit_object_path(object)

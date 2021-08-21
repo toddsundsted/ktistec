@@ -364,14 +364,14 @@ Spectator.describe "partials" do
       end
 
       it "renders the activity type as a class" do
-        expect(subject.xpath_nodes("//article[contains(@class,'activity-like')]")).not_to be_empty
+        expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
       end
 
       context "when a reply" do
         let(for_thread) { [original] }
 
         it "renders the activity type as a class" do
-          expect(subject.xpath_nodes("//article[contains(@class,'activity-like')]")).not_to be_empty
+          expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
         end
       end
     end

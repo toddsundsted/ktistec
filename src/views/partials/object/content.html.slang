@@ -15,22 +15,22 @@ crystal:
     - else
       - if account
         - if author != actor
-          a.user> title=actor.account_uri href=remote_actor_path(actor) = actor.display_name
+          a.user> data-turbo-frame="_top" title=actor.account_uri href=remote_actor_path(actor) = actor.display_name
           | shared a post by
-          a.user< title=author.account_uri href=remote_actor_path(author) = author.display_name
+          a.user< data-turbo-frame="_top" title=author.account_uri href=remote_actor_path(author) = author.display_name
         - else
-          a.user> title=author.account_uri href=remote_actor_path(author) = author.display_name
+          a.user> data-turbo-frame="_top" title=author.account_uri href=remote_actor_path(author) = author.display_name
           | posted
-        a.date title=object.display_date href=remote_object_path(object) = object.short_date
+        a.date data-turbo-frame="_top" title=object.display_date href=remote_object_path(object) = object.short_date
       - else
         - if author != actor
-          a.user> title=actor.account_uri href=actor.display_link = actor.display_name
+          a.user> data-turbo-frame="_top" title=actor.account_uri href=actor.display_link = actor.display_name
           | shared a post by
-          a.user< title=author.account_uri href=author.display_link = author.display_name
+          a.user< data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name
         - else
-          a.user> title=author.account_uri href=author.display_link = author.display_name
+          a.user> data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name
           | posted
-        a.date title=object.display_date href=object.display_link = object.short_date
+        a.date data-turbo-frame="_top" title=object.display_date href=object.display_link = object.short_date
   - if attachments && (attachment = attachments.shift?)
     - if attachment.image?
       img.ui.extra.attachment.image src=attachment.url
@@ -46,7 +46,7 @@ crystal:
       .extra.detail
         - activities.each do |activity|
           - if activity.responds_to?(:actor?) && activity.actor?
-            a href=remote_actor_path(activity.actor)
+            a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
               - if (icon = activity.actor.icon)
                 img.ui.avatar.image data-actor-id=activity.actor.id src=icon
               - else
@@ -58,7 +58,7 @@ crystal:
                 i.star.icon
   .meta
     - if account && object.draft?
-      a href=edit_object_path(object)
+      a data-turbo-frame="_top" href=edit_object_path(object)
         button.ui.mini.iconic.button
           i.edit.icon
           | Edit
@@ -71,11 +71,11 @@ crystal:
     - elsif account
       - object.with_statistics!.with_replies_count!
       - if (c = object.replies_count) > 0 || object.in_reply_to?
-        a href=remote_thread_path(object)
+        a data-turbo-frame="_top" href=remote_thread_path(object)
           button.ui.mini.iconic.button
             i.comments.icon
             | Thread
-      a href=reply_path(object)
+      a data-turbo-frame="_top" href=reply_path(object)
         button.ui.mini.iconic.button
           i.reply.icon
           = pluralize(c, "Reply")
@@ -109,7 +109,7 @@ crystal:
               input type="checkbox" name="public"
               label Public
       - if author == account.actor
-        a href=edit_object_path(object)
+        a data-turbo-frame="_top" href=edit_object_path(object)
           button.ui.mini.iconic.button
             i.edit.icon
             | Edit
@@ -119,7 +119,7 @@ crystal:
     - else
       - object.with_statistics!.with_replies_count!(approved_by: object.attributed_to)
       - if (c = object.replies_count) > 0 || object.in_reply_to?.try(&.approved_by?(object.attributed_to))
-        a href=thread_path(object)
+        a data-turbo-frame="_top" href=thread_path(object)
           button.ui.mini.iconic.button
             i.comments.icon
             | Thread

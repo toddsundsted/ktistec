@@ -93,7 +93,7 @@ Spectator.describe ObjectsController do
 
       it "renders the collection" do
         get "/actors/#{actor.username}/drafts", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{draft.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{draft.id}")
       end
 
       it "renders the collection" do
@@ -174,7 +174,7 @@ Spectator.describe ObjectsController do
 
     it "renders the object" do
       get "/objects/#{visible.uid}", ACCEPT_HTML
-      expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first).to eq("object-#{visible.id}")
+      expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id").first).to eq("object-#{visible.id}")
     end
 
     it "renders the object" do
@@ -259,7 +259,7 @@ Spectator.describe ObjectsController do
 
     it "renders the collection" do
       get "/objects/#{visible.uid}/thread", ACCEPT_HTML
-      expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{visible.id}")
+      expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}")
     end
 
     it "renders the collection" do
@@ -337,7 +337,7 @@ Spectator.describe ObjectsController do
 
       it "renders the collection" do
         get "/objects/#{visible.uid}/thread", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{visible.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}")
       end
 
       it "renders the collection" do
@@ -352,7 +352,7 @@ Spectator.describe ObjectsController do
 
         it "renders the collection" do
           get "/objects/#{visible.uid}/thread", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
         end
 
         it "renders the collection" do
@@ -634,7 +634,7 @@ Spectator.describe ObjectsController do
 
       it "renders the object" do
         get "/remote/objects/#{visible.id}", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first).to eq("object-#{visible.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id").first).to eq("object-#{visible.id}")
       end
 
       it "renders the object" do
@@ -705,7 +705,7 @@ Spectator.describe ObjectsController do
 
       it "renders the collection" do
         get "/remote/objects/#{visible.id}/thread", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{visible.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}")
       end
 
       it "renders the collection" do
@@ -760,7 +760,7 @@ Spectator.describe ObjectsController do
 
         it "renders the collection" do
           get "/remote/objects/#{visible.id}/thread", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//article/@id")).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
         end
 
         it "renders the collection" do
@@ -787,7 +787,7 @@ Spectator.describe ObjectsController do
 
       it "renders the object" do
         get "/remote/objects/#{visible.id}/reply"
-        expect(XML.parse_html(response.body).xpath_nodes("//article/@id").first).to eq("object-#{visible.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id").first).to eq("object-#{visible.id}")
       end
 
       it "renders the form" do

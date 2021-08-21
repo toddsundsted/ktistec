@@ -74,23 +74,6 @@ Trix.config.textAttributes.code = { tagName: "code", inheritable: true }
 Trix.config.textAttributes.sub = { tagName: "sub", inheritable: true }
 Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
 
-// power share and like buttons
-$(document).on("submit", "section form:has(.iconic.button):has(.share.icon,.star.icon)", function (e) {
-  e.preventDefault()
-  let $form = $(this)
-  let $section = $("section")
-  $.ajax({
-    type: $form.attr("method"),
-    url: $form.attr("action"),
-    data: $form.serialize(),
-    dataType: "html",
-    success: function (data) {
-      let $data = $($.parseHTML(data)).find("section")
-      $section.replaceWith($data)
-    }
-  })
-})
-
 // modal popup for dangrous actions
 $(document).on("click", ".dangerous.button[data-modal]", function (e) {
   e.preventDefault()

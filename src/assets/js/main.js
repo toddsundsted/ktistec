@@ -74,26 +74,6 @@ Trix.config.textAttributes.code = { tagName: "code", inheritable: true }
 Trix.config.textAttributes.sub = { tagName: "sub", inheritable: true }
 Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
 
-/**
- * lightGallery
- */
-import "lightgallery"
-import "lightgallery/dist/css/lightgallery.css"
-
-$(document).on("turbo:load", function() {
-  $(".ui.feed .event")
-    .find(".content .text img")
-    .each(function () {
-      let $this = $(this)
-      $this.attr("data-src", $this.attr("src"))
-    })
-    .end()
-    .lightGallery({
-      selector: ".content img[data-src]",
-      download: false
-    })
-})
-
 // power share and like buttons
 $(document).on("submit", "section form:has(.iconic.button):has(.share.icon,.star.icon)", function (e) {
   e.preventDefault()

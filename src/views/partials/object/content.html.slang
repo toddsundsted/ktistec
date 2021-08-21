@@ -7,7 +7,7 @@ crystal:
     end
   end
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
-.content data-controller="clickable-background" data-action="click->clickable-background#click" data-clickable-background-href-value=href
+.content data-controller="image-gallery clickable-background" data-action="click->clickable-background#click" data-clickable-background-href-value=href
   .summary
     - if object.draft?
       | draft created
@@ -33,12 +33,12 @@ crystal:
         a.date title=object.display_date href=object.display_link = object.short_date
   - if attachments && (attachment = attachments.shift?)
     - if attachment.image?
-      img.ui.extra.image data-src=attachment.url src=attachment.url
+      img.ui.extra.attachment.image src=attachment.url
     - unless attachments.empty?
       .extra.images
         - attachments.each do |attachment|
           - if attachment.image?
-            img.ui.image data-src=attachment.url src=attachment.url
+            img.ui.attachment.image src=attachment.url
   .extra.text
     == s object.content
   - if with_detail && account

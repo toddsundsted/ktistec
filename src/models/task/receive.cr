@@ -145,7 +145,7 @@ class Task
           end
           # handle timeline
           if object
-            if Relationship::Content::Timeline.find?(to_iri: object.iri).nil?
+            unless Relationship::Content::Timeline.find?(from_iri: actor.iri, to_iri: object.iri)
               if activity.is_a?(ActivityPub::Activity::Announce)
                 Relationship::Content::Timeline.new(
                   owner: actor,

@@ -51,7 +51,7 @@ class Task
           ).save(skip_associated: true)
           # handle timeline
           if (object = ActivityPub::Object.dereference?(activity.object_iri))
-            if Relationship::Content::Timeline.find?(to_iri: object.iri).nil?
+            unless Relationship::Content::Timeline.find?(from_iri: sender.iri, to_iri: object.iri)
               if activity.is_a?(ActivityPub::Activity::Announce)
                 Relationship::Content::Timeline.new(
                   owner: sender,

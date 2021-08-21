@@ -329,7 +329,7 @@ module ActivityPub
           %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
-         SELECT #{Activity.columns(prefix: "a")}
+         SELECT count(a.id)
            FROM activities AS a
            JOIN relationships AS r
              ON r.to_iri = a.iri
@@ -349,8 +349,7 @@ module ActivityPub
             AND obj.deleted_at is NULL
             AND u.iri IS NULL
       QUERY
-      Activity.query_one(query, self.iri, object.iri)
-    rescue DB::NoResultsError
+      Ktistec.database.scalar(query, self.iri, object.iri).as(Int64) > 0
     end
 
     def in_outbox(page = 1, size = 10, public = true)

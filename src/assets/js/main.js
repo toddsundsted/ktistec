@@ -105,18 +105,3 @@ $(document).on("click", ".dangerous.button[data-modal]", function (e) {
     })
     .modal("show")
 })
-
-// refresh actors with missing icon images
-$(document).on("turbo:load", function () {
-  $(".ui.feed .event img[data-actor-id]").on("error", function() {
-    let $this = $(this)
-    $this.replaceWith('<i class="user icon"></i>')
-    $.ajax({
-      type: "POST",
-      url: `/remote/actors/${$this.data("actor-id")}/refresh`,
-      headers: {
-        "X-CSRF-Token": Ktistec.csrf
-      }
-    })
-  })
-})

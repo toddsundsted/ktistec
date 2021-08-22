@@ -65,101 +65,105 @@ Spectator.describe ActorsController do
 
     let(object) do
       ActivityPub::Object.new(
-        iri: "https://remote/objects/#{random_string}",
-        attributed_to: actor,
+        iri: "#{author.iri}/object",
+        attributed_to: author,
         visible: true
       )
     end
     let(create) do
       ActivityPub::Activity::Create.new(
-        iri: "https://remote/activities/#{random_string}",
-        actor: actor,
+        iri: "#{author.iri}/create",
+        actor: author,
         object: object,
         created_at: Time.utc(2016, 2, 15, 10, 20, 0)
       )
     end
     let(announce) do
       ActivityPub::Activity::Announce.new(
-        iri: "https://remote/activities/#{random_string}",
+        iri: "#{actor.iri}/announce",
         actor: actor,
         object: object,
         created_at: Time.utc(2016, 2, 15, 10, 20, 1)
       )
     end
 
-    context "given a create" do
-      before_each do
-        Relationship::Content::Outbox.new(
-          owner: actor,
-          activity: create
-        ).save
+    context "when author is local" do
+      let(author) { actor }
+
+      pre_condition { expect(object.local?).to be_true }
+
+      context "given a create" do
+        before_each do
+          Relationship::Content::Outbox.new(
+            owner: author,
+            activity: create
+          ).save
+        end
+
+        it "renders the object's create aspect" do
+          get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+        end
       end
 
-      it "renders the object's create aspect" do
-        get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
-      end
-    end
+      context "given an announce" do
+        before_each do
+          Relationship::Content::Outbox.new(
+            owner: author,
+            activity: announce
+          ).save
+        end
 
-    context "given an announce" do
-      before_each do
-        Relationship::Content::Outbox.new(
-          owner: actor,
-          activity: announce
-        ).save
-      end
-
-      it "renders the object's announce aspect" do
-        get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
-      end
-    end
-
-    context "given a create and an announce" do
-      before_each do
-        Relationship::Content::Outbox.new(
-          owner: actor,
-          activity: create
-        ).save
-        Relationship::Content::Outbox.new(
-          owner: actor,
-          activity: announce
-        ).save
+        it "renders the object's announce aspect" do
+          get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+        end
       end
 
-      it "renders the object's create aspect" do
-        get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
-      end
-    end
+      context "given a create and an announce" do
+        before_each do
+          Relationship::Content::Outbox.new(
+            owner: author,
+            activity: create
+          ).save
+          Relationship::Content::Outbox.new(
+            owner: author,
+            activity: announce
+          ).save
+        end
 
-    context "given a create, and an announce outside of actor's mailbox" do
-      before_each do
-        announce.save
-        Relationship::Content::Outbox.new(
-          owner: actor,
-          activity: create
-        ).save
-      end
-
-      it "renders the object's create aspect" do
-        get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+        it "renders the object's create aspect" do
+          get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+        end
       end
     end
 
-    context "given an announce, and a create outside of actor's mailbox" do
-      before_each do
-        create.save
-        Relationship::Content::Outbox.new(
-          owner: actor,
-          activity: announce
-        ).save
+    context "when author is remote" do
+      let(author) do
+        ActivityPub::Actor.new(
+          iri: "https://remote/actors/actor"
+        )
       end
 
-      it "renders the object's announce aspect" do
-        get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+      pre_condition { expect(object.local?).to be_false }
+
+      context "given a create and an announce" do
+        before_each do
+          Relationship::Content::Inbox.new(
+            owner: actor,
+            activity: create
+          ).save
+          Relationship::Content::Outbox.new(
+            owner: actor,
+            activity: announce
+          ).save
+        end
+
+        it "renders the object's announce aspect" do
+          get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+        end
       end
     end
 

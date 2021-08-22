@@ -496,14 +496,12 @@ Spectator.describe ActorsController do
     end
 
     it "returns 401 if not authorized" do
-      headers = HTTP::Headers{"Accept" => "text/html"}
-      get "/remote/actors/0", headers
+      get "/remote/actors/0", ACCEPT_HTML
       expect(response.status_code).to eq(401)
     end
 
     it "returns 401 if not authorized" do
-      headers = HTTP::Headers{"Accept" => "application/json"}
-      get "/remote/actors/0", headers
+      get "/remote/actors/0", ACCEPT_JSON
       expect(response.status_code).to eq(401)
     end
 
@@ -511,27 +509,23 @@ Spectator.describe ActorsController do
       sign_in
 
       it "returns 404 if not found" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/actors/999999", headers
+        get "/remote/actors/999999", ACCEPT_HTML
         expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if not found" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/actors/999999", headers
+        get "/remote/actors/999999", ACCEPT_JSON
         expect(response.status_code).to eq(404)
       end
 
       it "renders the actor" do
-        headers = HTTP::Headers{"Accept" => "text/html"}
-        get "/remote/actors/#{actor.id}", headers
+        get "/remote/actors/#{actor.id}", ACCEPT_HTML
         expect(response.status_code).to eq(200)
         expect(XML.parse_html(response.body).xpath_nodes("/html")).not_to be_empty
       end
 
       it "renders the actor" do
-        headers = HTTP::Headers{"Accept" => "application/json"}
-        get "/remote/actors/#{actor.id}", headers
+        get "/remote/actors/#{actor.id}", ACCEPT_JSON
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body).dig("id")).to be_truthy
       end

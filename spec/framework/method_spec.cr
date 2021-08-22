@@ -19,17 +19,17 @@ class FooBarController
 end
 
 Spectator.describe Ktistec::Method do
+  HTML_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+
   describe "post /foo/bar/delete/:id" do
     it "invokes the delete action" do
-      headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
-      post "/foo/bar/delete/11", headers, "_method=delete"
+      post "/foo/bar/delete/11", HTML_HEADERS, "_method=delete"
       expect(response.status_code).to eq(410)
       expect(response.body).to eq("11")
     end
 
     it "invokes the post action" do
-      headers = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
-      post "/foo/bar/delete/13", headers, ""
+      post "/foo/bar/delete/13", HTML_HEADERS, ""
       expect(response.status_code).to eq(202)
       expect(response.body).to eq("13")
     end

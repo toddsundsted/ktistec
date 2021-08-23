@@ -505,6 +505,8 @@ module ActivityPub
     #
     # Meant to be called on local (not cached) actors.
     #
+    # Includes private (not visible) posts and replies.
+    #
     def timeline(page = 1, size = 10)
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}

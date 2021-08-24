@@ -144,21 +144,7 @@ class Task
             end
           end
           # handle timeline
-          if object
-            unless Relationship::Content::Timeline.find?(from_iri: actor.iri, to_iri: object.iri)
-              if activity.is_a?(ActivityPub::Activity::Announce)
-                Relationship::Content::Timeline.new(
-                  owner: actor,
-                  object: object
-                ).save(skip_associated: true)
-              elsif activity.is_a?(ActivityPub::Activity::Create) && object.in_reply_to_iri.nil?
-                Relationship::Content::Timeline.new(
-                  owner: actor,
-                  object: object
-                ).save(skip_associated: true)
-              end
-            end
-          end
+          Relationship::Content::Timeline.update_timeline(actor, activity)
         elsif (inbox = actor.inbox)
           body = activity.to_json_ld
           headers = Ktistec::Signature.sign(receiver, inbox, body)

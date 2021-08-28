@@ -121,28 +121,7 @@ class Task
             activity: activity,
           ).save(skip_associated: true)
           # handle notifications
-          if (object = ActivityPub::Object.dereference?(activity.object_iri))
-            if object.attributed_to_iri == recipient
-              if activity.is_a?(ActivityPub::Activity::Announce) || activity.is_a?(ActivityPub::Activity::Like)
-                Relationship::Content::Notification.new(
-                  owner: actor,
-                  activity: activity
-                ).save(skip_associated: true)
-              end
-            elsif object.mentions.any? { |mention| mention.href == recipient }
-              Relationship::Content::Notification.new(
-                owner: actor,
-                activity: activity
-              ).save(skip_associated: true)
-            end
-          elsif activity.is_a?(ActivityPub::Activity::Follow)
-            if activity.object_iri == recipient
-              Relationship::Content::Notification.new(
-                owner: actor,
-                activity: activity
-              ).save(skip_associated: true)
-            end
-          end
+          Relationship::Content::Notification.update_notifications(actor, activity)
           # handle timeline
           Relationship::Content::Timeline.update_timeline(actor, activity)
         elsif (inbox = actor.inbox)

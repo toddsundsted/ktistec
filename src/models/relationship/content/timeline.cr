@@ -51,7 +51,7 @@ class Relationship
         end
       end
 
-      private def self.can_destroy?(actor_iri, object_iri)
+      def self.can_destroy?(actor_iri, object_iri)
         if (object = ActivityPub::Object.find?(object_iri))
           activities = object.activities
           counts = activities.reduce(Hash(String, Int64).new(0)) do |counts, activity|

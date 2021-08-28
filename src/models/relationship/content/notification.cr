@@ -54,7 +54,7 @@ class Relationship
         end
       end
 
-      private def self.can_destroy?(actor_iri, activity_iri)
+      def self.can_destroy?(actor_iri, activity_iri)
         if (notification = Notification.find?(from_iri: actor_iri, to_iri: activity_iri))
           case notification.activity
           when ActivityPub::Activity::Create

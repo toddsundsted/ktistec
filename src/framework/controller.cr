@@ -2,6 +2,7 @@ require "kemal"
 require "kilt/slang"
 
 require "./ext/context"
+require "../views/view_helper"
 
 class HTTP::Server::Context
   def accepts?(*mime_types)
@@ -33,6 +34,12 @@ end
 
 module Ktistec
   module Controller
+    macro included
+      # generally, controllers are going to want to use
+      # view helpers in their actions.
+      include Ktistec::ViewHelper
+    end
+
     macro host
       Ktistec.host
     end

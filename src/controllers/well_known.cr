@@ -1,9 +1,7 @@
 require "../framework/controller"
-require "../views/view_helper"
 
 class WellKnownController
   include Ktistec::Controller
-  include Ktistec::ViewHelper
 
   skip_auth ["/.well-known/*"]
 

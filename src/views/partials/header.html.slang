@@ -11,6 +11,8 @@ nav.ui.top.fixed.inverted.navigation.menu
           .ui.action.input
             input.link.item type="submit" value="Sign Out"
     - elsif Account.count > 0
-      a.item href=sessions_path Sign In
+      a.item href=home_path Home
+      .right.menu
+        a.item href=sessions_path Sign In
     - else
       a.item Ktistec

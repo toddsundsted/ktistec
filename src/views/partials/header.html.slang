@@ -5,9 +5,8 @@ nav.ui.top.fixed.inverted.navigation.menu
       a.item href=search_path Search
       a.item href=settings_path Settings
       .right.menu
-        form method="POST" action=sessions_path
-          input type="hidden" name="_method" value="delete"
-          input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+        == form_tag(nil, sessions_path, method: "DELETE") do
+          == authenticity_token(env)
           .ui.action.input
             input.link.item type="submit" value="Sign Out"
     - elsif Account.count > 0

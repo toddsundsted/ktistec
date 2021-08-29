@@ -12,7 +12,7 @@ class SessionsController
 
     if accepts?("text/html")
       env.response.content_type = "text/html"
-      render "src/views/pages/login.html.ecr", "src/views/layouts/default.html.ecr"
+      render "src/views/pages/login.html.slang", "src/views/layouts/default.html.ecr"
     else
       env.response.content_type = "application/json"
       {username: username, password: password}.to_json
@@ -40,7 +40,7 @@ class SessionsController
       env.response.status_code = 403
       if accepts?("text/html")
         env.response.content_type = "text/html"
-        render "src/views/pages/login.html.ecr", "src/views/layouts/default.html.ecr"
+        render "src/views/pages/login.html.slang", "src/views/layouts/default.html.ecr"
       else
         env.response.content_type = "application/json"
         {msg: message, username: username, password: password}.to_json

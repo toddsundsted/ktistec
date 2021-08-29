@@ -112,6 +112,20 @@ Spectator.describe "helper" do
         expect(subject.xpath_nodes("//form/@class")).to contain_exactly("ui form")
       end
     end
+
+    context "given a DELETE method" do
+      subject do
+        XML.parse_html(form_tag(model, "/foobar", method: "DELETE") { "<div/>" }).document
+      end
+
+      it "emits a hidden input" do
+        expect(subject.xpath_nodes("//form/input[@type='hidden'][@name='_method']/@value")).to contain_exactly("delete")
+      end
+
+      it "sets the method to POST" do
+        expect(subject.xpath_nodes("//form/@method")).to contain_exactly("POST")
+      end
+    end
   end
 
   describe "input_tag" do

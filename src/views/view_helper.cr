@@ -63,12 +63,19 @@ module Ktistec::ViewHelper
     {% else %}
       %classes = "ui form"
     {% end %}
+    {% if method == "DELETE" %}
+      {% method = "POST" %}
+      %input = %q|<input type="hidden" name="_method" value="delete">|
+    {% else %}
+      %input = ""
+    {% end %}
     %block =
       begin
         {{block.body}}
       end
     <<-HTML
     <form class="#{%classes}" action="#{{{action}}}" method="#{{{method}}}">\
+    #{%input}\
     #{%block}\
     </form>
     HTML

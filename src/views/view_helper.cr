@@ -54,7 +54,7 @@ module Ktistec::ViewHelper
     end
   end
 
-  macro form_tag(model, action, method = "POST", &block)
+  macro form_tag(model, action, method = "POST", data = nil, &block)
     {% if model %}
       %classes =
         {{model}}.errors.presence ?
@@ -73,15 +73,24 @@ module Ktistec::ViewHelper
       begin
         {{block.body}}
       end
+    %attributes = [
+      %Q|action="#{{{action}}}"|,
+      %Q|method="#{{{method}}}"|,
+      {% if data %}
+        {% for key, value in data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
     <<-HTML
-    <form class="#{%classes}" action="#{{{action}}}" method="#{{{method}}}">\
+    <form class="#{%classes}" #{%attributes.join(" ")}>\
     #{%input}\
     #{%block}\
     </form>
     HTML
   end
 
-  macro input_tag(label, model, field, class _class = "", type _type = "text", placeholder = "")
+  macro input_tag(label, model, field, class _class = "", type _type = "text", placeholder = nil, data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -94,10 +103,24 @@ module Ktistec::ViewHelper
       %name = {{field.id.stringify}}
       %value = nil
     {% end %}
+    %attributes = [
+      %Q|class="#{{{_class}}}"|,
+      %Q|type="#{{{_type}}}"|,
+      %Q|name="#{%name}"|,
+      %Q|value="#{%value}"|,
+      {% if placeholder %}
+        %Q|placeholder="#{{{placeholder}}}"|,
+      {% end %}
+      {% if data %}
+        {% for key, value in data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
     <<-HTML
     <div class="#{%classes}">\
     <label>#{{{label}}}</label>\
-    <input class="#{{{_class}}}" type="#{{{_type}}}" name="#{%name}" value="#{%value}" placeholder="#{{{placeholder}}}">\
+    <input #{%attributes.join(" ")}>\
     </div>
     HTML
   end

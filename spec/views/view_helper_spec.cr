@@ -103,6 +103,16 @@ Spectator.describe "helper" do
       expect(subject.xpath_nodes("//form/@class")).to contain_exactly("ui form error")
     end
 
+    context "given data attributes" do
+      subject do
+        XML.parse_html(form_tag(model, "/foobar", data: {"foo" => "bar", "abc" => "xyz"}) { "<div/>" }).document
+      end
+
+      it "emits data attributes" do
+        expect(subject.xpath_nodes("//form/@*[starts-with(name(),'data-')]")).to contain_exactly("bar", "xyz")
+      end
+    end
+
     context "given a nil model" do
       subject do
         XML.parse_html(form_tag(nil, "/foobar") { "<div/>" }).document
@@ -163,6 +173,16 @@ Spectator.describe "helper" do
 
     it "sets the error class" do
       expect(subject.xpath_nodes("//div/@class")).to contain_exactly("field error")
+    end
+
+    context "given data attributes" do
+      subject do
+        XML.parse_html(input_tag("Label", model, field, data: {"foo" => "bar", "abc" => "xyz"})).document
+      end
+
+      it "emits data attributes" do
+        expect(subject.xpath_nodes("//div/input/@*[starts-with(name(),'data-')]")).to contain_exactly("bar", "xyz")
+      end
     end
 
     context "given a nil model" do

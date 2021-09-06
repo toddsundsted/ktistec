@@ -23,10 +23,11 @@ class RemoteFollowsController
     actor = Account.find(username: username).actor
 
     account = account(env)
+
     if !account.presence
       error = "the address must not be blank"
 
-      ok "remote_follows/index"
+      unprocessable_entity "remote_follows/index"
     else
       begin
         location = lookup(account).gsub("{uri}", URI.encode(actor.iri))
@@ -38,9 +39,8 @@ class RemoteFollowsController
         end
       rescue ex : HostMeta::Error | WebFinger::Error | NilAssertionError | KeyError
         error = ex.message
-        env.response.status_code = 400
 
-        ok "remote_follows/index"
+        bad_request "remote_follows/index"
       end
     end
   end

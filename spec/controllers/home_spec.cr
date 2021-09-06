@@ -39,28 +39,28 @@ Spectator.describe HomeController do
       it "rerenders if host is invalid" do
         body = "host=foo_bar&site=Foo+Bar"
         post "/", HTML_HEADERS, body
-        expect(response.status_code).to eq(200)
+        expect(response.status_code).to eq(422)
         expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/must have a scheme/)
       end
 
       it "rerenders if site is invalid" do
         body = "host=https://foo_bar&site="
         post "/", HTML_HEADERS, body
-        expect(response.status_code).to eq(200)
+        expect(response.status_code).to eq(422)
         expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/must be present/)
       end
 
       it "rerenders if host is invalid" do
         body = {host: "", site: ""}.to_json
         post "/", JSON_HEADERS, body
-        expect(response.status_code).to eq(200)
+        expect(response.status_code).to eq(422)
         expect(JSON.parse(response.body)["errors"].as_h).to have_value(["name must be present"])
       end
 
       it "rerenders if site is invalid" do
         body = {host: "", site: ""}.to_json
         post "/", JSON_HEADERS, body
-        expect(response.status_code).to eq(200)
+        expect(response.status_code).to eq(422)
         expect(JSON.parse(response.body)["errors"].as_h).to have_value(["name must be present"])
       end
 
@@ -125,14 +125,14 @@ Spectator.describe HomeController do
       it "rerenders if params are invalid" do
         body = "username=&password=a1!&name=&summary="
         post "/", HTML_HEADERS, body
-        expect(response.status_code).to eq(200)
+        expect(response.status_code).to eq(422)
         expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/username is too short, password is too short/)
       end
 
       it "rerenders if params are invalid" do
         body = {username: "", password: "a1!", name: "", summary: ""}.to_json
         post "/", JSON_HEADERS, body
-        expect(response.status_code).to eq(200)
+        expect(response.status_code).to eq(422)
         expect(JSON.parse(response.body)["errors"].as_h).to eq({"username" => ["is too short"], "password" => ["is too short"]})
       end
 

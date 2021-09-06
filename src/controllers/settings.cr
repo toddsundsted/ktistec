@@ -32,7 +32,7 @@ class SettingsController
 
       redirect settings_path
     else
-      ok "settings/settings"
+      unprocessable_entity "settings/settings"
     end
   end
 
@@ -48,7 +48,7 @@ class SettingsController
 
       redirect settings_path
     else
-      ok "settings/settings"
+      unprocessable_entity "settings/settings"
     end
   end
 

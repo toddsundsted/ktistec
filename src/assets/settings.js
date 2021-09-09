@@ -64,5 +64,6 @@ function initialize() {
 }
 
 document.addEventListener("turbo:load", initialize)
+document.addEventListener("turbo:render", initialize)
 
 initialize()

@@ -117,7 +117,7 @@ module Ktistec
     class PaginatedArray(T)
       @array = [] of T
 
-      delegate :<<, :each, :each_with_index, :empty?, :first, :map, :pop, :size, :to_a, :to_s, :inspect, to: @array
+      delegate :<<, :each, :each_with_index, :empty?, :first, :map, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
 
       property? more : Bool = false
     end

@@ -329,7 +329,7 @@ module ActivityPub
           %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
-         SELECT #{Activity.columns(prefix: "a")}
+         SELECT count(a.id)
            FROM activities AS a
            JOIN relationships AS r
              ON r.to_iri = a.iri
@@ -349,8 +349,7 @@ module ActivityPub
             AND obj.deleted_at is NULL
             AND u.iri IS NULL
       QUERY
-      Activity.query_one(query, self.iri, object.iri)
-    rescue DB::NoResultsError
+      Ktistec.database.scalar(query, self.iri, object.iri).as(Int64) > 0
     end
 
     def in_outbox(page = 1, size = 10, public = true)
@@ -412,7 +411,13 @@ module ActivityPub
       find_activity_for(object, ActivityPub::Activity::Like)
     end
 
-    def public_posts(page = 1, size = 10)
+    # Returns the actor's known posts.
+    #
+    # Meant to be called on both local and cached actors.
+    #
+    # Does not include private (not visible) posts.
+    #
+    def known_posts(page = 1, size = 10)
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
@@ -434,7 +439,7 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
-    # Returns the actor's posts.
+    # Returns the actor's public posts.
     #
     # Meant to be called on local (not cached) actors.
     #
@@ -444,9 +449,9 @@ module ActivityPub
     # impact on whether or not the query planner uses an index or
     # creates a b-tree to sort the final results.
     #
-    def posts(page = 1, size = 10)
+    def public_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
+         SELECT DISTINCT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -467,7 +472,7 @@ module ActivityPub
             AND t.deleted_at IS NULL
             AND u.id IS NULL
             AND o.id NOT IN (
-               SELECT o.id
+               SELECT DISTINCT o.id
                  FROM objects AS o
                  JOIN actors AS t
                    ON t.iri = o.attributed_to_iri
@@ -499,6 +504,8 @@ module ActivityPub
     # Returns objects in the actor's timeline.
     #
     # Meant to be called on local (not cached) actors.
+    #
+    # Includes private (not visible) posts and replies.
     #
     def timeline(page = 1, size = 10)
       query = <<-QUERY

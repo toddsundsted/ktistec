@@ -1,11 +1,9 @@
 require "../framework/controller"
-require "../views/view_helper"
 require "../models/activity_pub/activity/follow"
 require "../models/activity_pub/actor/person"
 
 class HomeController
   include Ktistec::Controller
-  include Ktistec::ViewHelper
 
   skip_auth ["/"], GET, POST
 
@@ -22,7 +20,7 @@ class HomeController
 
       ok "home/step_2"
     elsif (account = env.account?).nil?
-      objects = ActivityPub::Object.timeline(*pagination_params(env))
+      objects = ActivityPub::Object.public_posts(*pagination_params(env))
 
       ok "home/index"
     else
@@ -39,7 +37,7 @@ class HomeController
 
         redirect home_path
       else
-        ok "home/step_1"
+        unprocessable_entity "home/step_1"
       end
     elsif (accounts = Account.all).empty?
       params = step_2_params(env)
@@ -68,7 +66,7 @@ class HomeController
           {jwt: jwt}.to_json
         end
       else
-        ok "home/step_2"
+        unprocessable_entity "home/step_2"
       end
     else
       not_found

@@ -1,10 +1,8 @@
 require "../framework/controller"
 require "../models/task/terminate"
-require "../views/view_helper"
 
 class SettingsController
   include Ktistec::Controller
-  include Ktistec::ViewHelper
 
   get "/settings" do |env|
     actor = env.account.actor
@@ -34,7 +32,7 @@ class SettingsController
 
       redirect settings_path
     else
-      ok "settings/settings"
+      unprocessable_entity "settings/settings"
     end
   end
 
@@ -50,7 +48,7 @@ class SettingsController
 
       redirect settings_path
     else
-      ok "settings/settings"
+      unprocessable_entity "settings/settings"
     end
   end
 

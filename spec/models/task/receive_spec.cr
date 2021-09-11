@@ -368,25 +368,6 @@ Spectator.describe Task::Receive do
     alias Notification = Relationship::Content::Notification
     alias Timeline = Relationship::Content::Timeline
 
-    context "when object mentions a local recipient" do
-      let(mention) do
-        ActivityPub::Object.new(
-          iri: "https://remote/objects/mention",
-          mentions: [Tag::Mention.new(name: "local recipient", href: local_recipient.iri)]
-        )
-      end
-
-      before_each do
-        activity.object_iri = mention.iri
-        HTTP::Client.objects << mention
-      end
-
-      it "puts the activity in the recipient's notifications" do
-        expect{subject.deliver([local_recipient.iri])}.
-          to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
-      end
-    end
-
     context "when activity is a create" do
       let!(object) do
         ActivityPub::Object.new(
@@ -432,6 +413,20 @@ Spectator.describe Task::Receive do
         it "does not put the object in the recipient's timeline" do
           expect{subject.deliver([local_recipient.iri])}.
             not_to change{Timeline.count(from_iri: local_recipient.iri)}
+        end
+      end
+
+      context "and object mentions a local recipient" do
+        let(object) do
+          ActivityPub::Object.new(
+            iri: "https://remote/objects/mention",
+            mentions: [Tag::Mention.new(name: "local recipient", href: local_recipient.iri)]
+          )
+        end
+
+        it "puts the activity in the recipient's notifications" do
+          expect{subject.deliver([local_recipient.iri])}.
+            to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
         end
       end
     end

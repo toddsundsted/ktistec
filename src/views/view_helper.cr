@@ -3,15 +3,33 @@ require "../framework/controller"
 module Ktistec::ViewHelper
   module ClassMethods
     def depth(object)
-      "depth-#{Math.min(object.depth, 9)}"
+      object ? "depth-#{Math.min(object.depth, 9)}" : ""
     end
 
-    def object_partial(env, object, actor = object.attributed_to, author = actor, *, with_detail = false, for_thread = nil)
+    def activity(activity)
+      activity ? "activity-#{activity.class.to_s.split("::").last.downcase}" : ""
+    end
+
+    def object_partial(env, object, actor = object.attributed_to, author = actor, *, activity = nil, with_detail = false, for_thread = nil)
       if for_thread
         render "src/views/partials/thread.html.slang"
       else
         render "src/views/partials/object.html.slang"
       end
+    end
+
+    def pagination_params(env)
+      {
+        Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
+        Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
+      }
+    end
+
+    def paginate(env, collection)
+      path = env.request.path
+      query = env.params.query
+      page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1
+      render "./src/views/partials/paginator.html.ecr"
     end
   end
 
@@ -36,7 +54,7 @@ module Ktistec::ViewHelper
     end
   end
 
-  macro form_tag(model, action, method = "POST", &block)
+  macro form_tag(model, action, method = "POST", data = nil, &block)
     {% if model %}
       %classes =
         {{model}}.errors.presence ?
@@ -45,18 +63,34 @@ module Ktistec::ViewHelper
     {% else %}
       %classes = "ui form"
     {% end %}
+    {% if method == "DELETE" %}
+      {% method = "POST" %}
+      %input = %q|<input type="hidden" name="_method" value="delete">|
+    {% else %}
+      %input = ""
+    {% end %}
     %block =
       begin
         {{block.body}}
       end
+    %attributes = [
+      %Q|action="#{{{action}}}"|,
+      %Q|method="#{{{method}}}"|,
+      {% if data %}
+        {% for key, value in data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
     <<-HTML
-    <form class="#{%classes}" action="#{{{action}}}" method="#{{{method}}}">\
+    <form class="#{%classes}" #{%attributes.join(" ")}>\
+    #{%input}\
     #{%block}\
     </form>
     HTML
   end
 
-  macro input_tag(label, model, field, class _class = "", type _type = "text", placeholder = "")
+  macro input_tag(label, model, field, class _class = "", type _type = "text", placeholder = nil, data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -69,10 +103,24 @@ module Ktistec::ViewHelper
       %name = {{field.id.stringify}}
       %value = nil
     {% end %}
+    %attributes = [
+      %Q|class="#{{{_class}}}"|,
+      %Q|type="#{{{_type}}}"|,
+      %Q|name="#{%name}"|,
+      %Q|value="#{%value}"|,
+      {% if placeholder %}
+        %Q|placeholder="#{{{placeholder}}}"|,
+      {% end %}
+      {% if data %}
+        {% for key, value in data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
     <<-HTML
     <div class="#{%classes}">\
     <label>#{{{label}}}</label>\
-    <input class="#{{{_class}}}" type="#{{{_type}}}" name="#{%name}" value="#{%value}" placeholder="#{{{placeholder}}}">\
+    <input #{%attributes.join(" ")}>\
     </div>
     HTML
   end

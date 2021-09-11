@@ -262,20 +262,20 @@ Spectator.describe "partials" do
           follow(account.actor, actor)
 
           it "renders a button to accept" do
-            expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).to have("Accept")
+            expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Accept")
           end
 
           it "renders a button to reject" do
-            expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).to have("Reject")
+            expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Reject")
           end
         end
 
         it "renders a button to accept" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).to have("Accept")
+          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Accept")
         end
 
         it "renders a button to reject" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).to have("Reject")
+          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Reject")
         end
       end
 
@@ -317,19 +317,21 @@ Spectator.describe "partials" do
       )
     end
 
+    let(activity) { nil }
+
     let(for_thread) { nil }
 
     subject do
       begin
-        XML.parse_html(object_partial(env, object, actor, actor, for_thread: for_thread))
+        XML.parse_html(object_partial(env, object, actor, actor, activity: activity, for_thread: for_thread))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
     end
 
     let(account) { register }
-
     let(actor) { account.actor }
+
     let!(object) do
       ActivityPub::Object.new(
         iri: "https://test.test/objects/object",
@@ -344,12 +346,34 @@ Spectator.describe "partials" do
 
     it "does not render a link to the threaded conversation" do
       object.assign(in_reply_to: original, attributed_to: actor).save
-      expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Thread")
+      expect(subject.xpath_nodes("//a/button/text()")).not_to have("Thread")
     end
 
     it "does not render a link to the threaded conversation" do
       original.assign(in_reply_to: object, attributed_to: actor).save
-      expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Thread")
+      expect(subject.xpath_nodes("//a/button/text()")).not_to have("Thread")
+    end
+
+    context "given an associated activity" do
+      let(activity) do
+        ActivityPub::Activity::Like.new(
+          iri: "https://test.test/activities/like",
+          actor: actor,
+          object: object
+        )
+      end
+
+      it "renders the activity type as a class" do
+        expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
+      end
+
+      context "when a reply" do
+        let(for_thread) { [original] }
+
+        it "renders the activity type as a class" do
+          expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
+        end
+      end
     end
 
     context "if approved" do
@@ -359,12 +383,12 @@ Spectator.describe "partials" do
 
       it "renders a link to the threaded conversation" do
         object.assign(in_reply_to: original, attributed_to: actor).save
-        expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Thread")
+        expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
       end
 
       it "renders a link to the threaded conversation" do
         original.assign(in_reply_to: object, attributed_to: actor).save
-        expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Thread")
+        expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
       end
     end
 
@@ -419,23 +443,23 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_true }
 
         it "does not render a button to reply" do
-          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Reply")
+          expect(subject.xpath_nodes("//a/button/text()")).not_to have("Reply")
         end
 
         it "does not render a button to like" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).not_to have("Like")
+          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).not_to have("Like")
         end
 
         it "does not render a button to share" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).not_to have("Share")
+          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).not_to have("Share")
         end
 
         it "renders a button to delete" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()").map(&.text)).to have("Delete")
+          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Delete")
         end
 
         it "renders a button to edit" do
-          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Edit")
+          expect(subject.xpath_nodes("//a/button/text()")).to have("Edit")
         end
       end
 
@@ -445,17 +469,17 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_false }
 
         it "does not render a link to the threaded conversation" do
-          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).not_to have("Thread")
+          expect(subject.xpath_nodes("//a/button/text()")).not_to have("Thread")
         end
 
         it "renders a link to the threaded conversation" do
           object.assign(in_reply_to: original, attributed_to: account.actor).save
-          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Thread")
+          expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
         end
 
         it "renders a link to the threaded conversation" do
           original.assign(in_reply_to: object, attributed_to: account.actor).save
-          expect(subject.xpath_nodes("//a/button/text()").map(&.text)).to have("Thread")
+          expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
         end
       end
     end
@@ -486,7 +510,7 @@ Spectator.describe "partials" do
         pre_condition { expect(object.new_record?).to be_true }
 
         it "renders an id" do
-          expect(subject.xpath_nodes("//form/@id").first.text).to eq("object-new")
+          expect(subject.xpath_nodes("//form/@id").first).to eq("object-new")
         end
 
         it "does not render an input with the object iri" do
@@ -511,7 +535,7 @@ Spectator.describe "partials" do
         pre_condition { expect(object.new_record?).to be_false }
 
         it "renders an id" do
-          expect(subject.xpath_nodes("//form/@id").first.text).to eq("object-#{object.id}")
+          expect(subject.xpath_nodes("//form/@id").first).to eq("object-#{object.id}")
         end
 
         it "renders an input with the object iri" do
@@ -566,7 +590,7 @@ Spectator.describe "partials" do
         before_each { object.errors["object"] = ["has errors"] }
 
         it "renders the error class" do
-          expect(subject.xpath_nodes("//form/@class").first.text).to match(/\berror\b/)
+          expect(subject.xpath_nodes("//form/@class").first).to match(/\berror\b/)
         end
       end
     end
@@ -630,7 +654,7 @@ Spectator.describe "partials" do
       let!(object) { object2.save }
 
       it "prepopulates editor with mentions" do
-        expect(subject.xpath_nodes("//form//input[@name='content']/@value").first.text).
+        expect(subject.xpath_nodes("//form//input[@name='content']/@value").first).
           to eq("@#{actor2.account_uri} @#{actor1.account_uri} ")
       end
     end

@@ -13,5 +13,5 @@
 - else
   == render "src/views/partials/actor-medium.html.slang"
   h2 Recent
-  - objects = actor.posts(*pagination_params(env))
-  == render "src/views/actors/timeline.html.slang"
+  - objects = actor.public_posts(*pagination_params(env))
+  == render "src/views/actors/public_posts.html.slang"

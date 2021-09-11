@@ -1,9 +1,7 @@
 require "../framework/controller"
-require "../views/view_helper"
 
 class ActivitiesController
   include Ktistec::Controller
-  include Ktistec::ViewHelper
 
   skip_auth ["/activities/:id"], GET
 

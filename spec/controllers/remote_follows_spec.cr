@@ -44,19 +44,19 @@ Spectator.describe RemoteFollowsController do
 
       it "renders an error if address is missing" do
         post "/actors/#{actor.username}/remote-follow", headers, ""
-        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first.text).
+        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).
           to match(/The address must not be blank/)
       end
 
       it "renders an error if address is blank" do
         post "/actors/#{actor.username}/remote-follow", headers, "account="
-        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first.text).
+        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).
           to match(/The address must not be blank/)
       end
 
       it "retains the address if address is invalid" do
         post "/actors/#{actor.username}/remote-follow", headers, "account=xyz"
-        expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='account']/@value").first.text).
+        expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='account']/@value").first).
           to eq("xyz")
       end
 

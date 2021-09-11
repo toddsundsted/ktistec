@@ -9,10 +9,6 @@ Spectator.describe "actor" do
   include Ktistec::Controller
   include Ktistec::ViewHelper::ClassMethods
 
-  def pagination_params(env) {0, 0} end
-
-  def paginate(collection, env) end
-
   describe "actor.html.slang" do
     let(env) do
       HTTP::Server::Context.new(

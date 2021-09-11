@@ -1,0 +1,7 @@
+{
+  <%- if message -%>
+  "errors":{"session":<%= message.inspect %>},
+  <%- end -%>
+  "username":<%= username.try(&.inspect) || "null" %>,
+  "password":<%= password.try(&.inspect) || "null" %>
+}

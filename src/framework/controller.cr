@@ -2,14 +2,15 @@ require "kemal"
 require "kilt/slang"
 
 require "./ext/context"
+require "../views/view_helper"
 
 class HTTP::Server::Context
   def accepts?(*mime_types)
     @accepts ||=
       if self.request.headers["Accept"]?
-        self.request.headers["Accept"].split(",").map(&.split(";").first)
+        self.request.headers["Accept"].split(",").map(&.split(";").first.strip)
       elsif self.request.headers["Content-Type"]?
-        [self.request.headers["Content-Type"].split(";").first]
+        [self.request.headers["Content-Type"].split(";").first.strip]
       else
         [] of String
       end
@@ -33,6 +34,12 @@ end
 
 module Ktistec
   module Controller
+    macro included
+      # generally, controllers are going to want to use
+      # view helpers in their actions.
+      include Ktistec::ViewHelper
+    end
+
     macro host
       Ktistec.host
     end
@@ -344,28 +351,6 @@ module Ktistec
     #
     macro id
       Ktistec::Util.id
-    end
-
-    macro included
-      def self.pagination_params(env)
-        {
-          Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
-          Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
-        }
-      end
-
-      def self.paginate(collection, env)
-        path = env.request.path
-        query = env.params.query
-        page = 1
-        begin
-          if (p = query["page"].to_i) > 0
-            page = p
-          end
-        rescue ArgumentError | KeyError
-        end
-        render "./src/views/partials/paginator.html.ecr"
-      end
     end
   end
 end

@@ -359,7 +359,7 @@ module Ktistec
         @{{name}} : Array({{class_name}})?
         def {{name}}=({{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
           self.{{name}}.each do |other|
-            other.destroy unless other.in?({{name}})
+            other.destroy unless {{name}}.includes?(other)
           end
           @{{name}} = {{name}}.to_a
           {{name}}.each do |n|

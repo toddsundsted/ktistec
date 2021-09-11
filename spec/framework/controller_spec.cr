@@ -21,7 +21,6 @@ class FooBarController
     "/foo/bar/helpers/actors/by-username/:username",
     "/foo/bar/helpers/:username/:relationship",
     "/foo/bar/helpers/tag",
-    "/foo/bar/paginate",
     "/foo/bar/accept",
     "/foo/bar/xhr",
     "/foo/bar/created",
@@ -126,15 +125,6 @@ class FooBarController
     <div id="8">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_attrs: {title: "the title"}, button_attrs: {title: "the title"}}</div>
     <div id="9">#{activity_button "outbox url", "object iri", "FooBar" { |html| html << tag div, "Foo Bar" } }</div>
     HTML
-  end
-
-  get "/foo/bar/paginate" do |env|
-    page = env.params.query["page"]?.try(&.to_i) || 1
-    size = env.params.query["size"]?.try(&.to_i) || 10
-    results = Ktistec::Util::PaginatedArray(Int32).new
-    (0..9).to_a[(page - 1) * size, size].each { |v| results << v }
-    results.more = (page) * size < 10
-    paginate(results, env)
   end
 
   get "/foo/bar/accept" do |env|
@@ -398,23 +388,6 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "get /foo/bar/paginate" do
-    it "does not display pagination controls" do
-      get "/foo/bar/paginate"
-      expect(XML.parse_html(response.body).xpath_nodes("//a")).to be_empty
-    end
-
-    it "displays the prev link" do
-      get "/foo/bar/paginate?page=2"
-      expect(XML.parse_html(response.body).xpath_nodes("//a[contains(@href,'page=1')]")).not_to be_empty
-    end
-
-    it "displays the next link" do
-      get "/foo/bar/paginate?size=9"
-      expect(XML.parse_html(response.body).xpath_nodes("//a[contains(@href,'page=2')]")).not_to be_empty
-    end
-  end
-
   describe "get /foo/bar/accept" do
     it "responds with html" do
       get "/foo/bar/accept", HTTP::Headers{"Accept" => "text/html"}
@@ -522,7 +495,7 @@ Spectator.describe Ktistec::Controller do
   describe "/foo/bar/ok" do
     it "responds with html" do
       get "/foo/bar/ok", HTTP::Headers{"Accept" => "text/html"}
-      expect(XML.parse_html(response.body).xpath_nodes("//cite").first.text).to eq("html")
+      expect(XML.parse_html(response.body).xpath_nodes("//cite").first).to eq("html")
     end
 
     it "responds with text" do

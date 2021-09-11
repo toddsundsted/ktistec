@@ -42,12 +42,12 @@ Spectator.describe EverythingController do
 
     it "renders the collection" do
       get "/everything?size=2", ACCEPT_HTML
-      expect(XML.parse_html(response.body).xpath_nodes("//article/@id").map(&.text)).to contain_exactly("object-#{post5.id}", "object-#{post4.id}")
+      expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{post5.id}", "object-#{post4.id}")
     end
 
     it "renders the collection" do
       get "/everything?size=2", ACCEPT_JSON
-      expect(JSON.parse(response.body).dig("first", "orderedItems").as_a.map(&.as_s)).to contain_exactly(post5.iri, post4.iri)
+      expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(post5.iri, post4.iri)
     end
   end
 end

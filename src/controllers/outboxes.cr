@@ -1,11 +1,9 @@
 require "../framework/controller"
-require "../views/view_helper"
 require "../models/activity_pub/activity/**"
 require "../models/task/deliver"
 
 class RelationshipsController
   include Ktistec::Controller
-  include Ktistec::ViewHelper
 
   skip_auth ["/actors/:username/outbox"], GET
 

@@ -1,22 +1,14 @@
 require "../framework/controller"
-require "../views/view_helper"
 
 class SessionsController
   include Ktistec::Controller
-  include Ktistec::ViewHelper
 
   skip_auth ["/sessions"], GET, POST
 
   get "/sessions" do |env|
     message = username = password = nil
 
-    if accepts?("text/html")
-      env.response.content_type = "text/html"
-      render "src/views/pages/login.html.ecr", "src/views/layouts/default.html.ecr"
-    else
-      env.response.content_type = "application/json"
-      {username: username, password: password}.to_json
-    end
+    ok "sessions/new"
   end
 
   post "/sessions" do |env|
@@ -37,14 +29,7 @@ class SessionsController
     else
       message = "invalid username or password"
 
-      env.response.status_code = 403
-      if accepts?("text/html")
-        env.response.content_type = "text/html"
-        render "src/views/pages/login.html.ecr", "src/views/layouts/default.html.ecr"
-      else
-        env.response.content_type = "application/json"
-        {msg: message, username: username, password: password}.to_json
-      end
+      forbidden "sessions/new"
     end
   rescue KeyError
     redirect sessions_path
@@ -63,11 +48,8 @@ class SessionsController
   end
 
   private def self.account?(username, password)
-    account = Account.find(username: username)
-    if account.valid_password?(password)
+    if (account = Account.find?(username: username)) && account.valid_password?(password)
       account
     end
-  rescue
-    nil
   end
 end

@@ -67,4 +67,4 @@ section.ui.feed
         .content
           .meta
             a href=activity.iri
-== paginate(activities, env)
+== paginate(env, activities)

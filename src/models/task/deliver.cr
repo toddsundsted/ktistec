@@ -50,22 +50,7 @@ class Task
             activity: activity
           ).save(skip_associated: true)
           # handle timeline
-          if (object = ActivityPub::Object.dereference?(activity.object_iri))
-            if Relationship::Content::Timeline.find?(to_iri: object.iri).nil?
-              if activity.is_a?(ActivityPub::Activity::Announce)
-                Relationship::Content::Timeline.new(
-                  owner: sender,
-                  object: object
-                ).save(skip_associated: true)
-              elsif activity.is_a?(ActivityPub::Activity::Create) && object.in_reply_to_iri.nil?
-                Relationship::Content::Timeline.new(
-                  owner: sender,
-                  object: object
-                ).save(skip_associated: true)
-              end
-            end
-          end
-          # bail out
+          Relationship::Content::Timeline.update_timeline(sender, activity)
           next
         end
         unless (actor = ActivityPub::Actor.dereference?(recipient))

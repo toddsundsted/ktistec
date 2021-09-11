@@ -643,7 +643,7 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
-  describe "#public_posts" do
+  describe "#known_posts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
@@ -664,26 +664,26 @@ Spectator.describe ActivityPub::Actor do
     post(5)
 
     it "instantiates the correct subclass" do
-      expect(subject.public_posts(1, 2).first).to be_a(ActivityPub::Object)
+      expect(subject.known_posts(1, 2).first).to be_a(ActivityPub::Object)
     end
 
     it "filters out non-public posts" do
-      expect(subject.public_posts(1, 2)).to eq([post5, post3])
+      expect(subject.known_posts(1, 2)).to eq([post5, post3])
     end
 
     it "filters out deleted posts" do
       post5.delete
-      expect(subject.public_posts(1, 2)).to eq([post3, post1])
+      expect(subject.known_posts(1, 2)).to eq([post3, post1])
     end
 
     it "paginates the results" do
-      expect(subject.public_posts(1, 2)).to eq([post5, post3])
-      expect(subject.public_posts(2, 2)).to eq([post1])
-      expect(subject.public_posts(2, 2).more?).not_to be_true
+      expect(subject.known_posts(1, 2)).to eq([post5, post3])
+      expect(subject.known_posts(2, 2)).to eq([post1])
+      expect(subject.known_posts(2, 2).more?).not_to be_true
     end
   end
 
-  describe "#posts" do
+  describe "#public_posts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
@@ -722,27 +722,27 @@ Spectator.describe ActivityPub::Actor do
     post(5)
 
     it "instantiates the correct subclass" do
-      expect(subject.posts(1, 2).first).to be_a(ActivityPub::Object)
+      expect(subject.public_posts(1, 2).first).to be_a(ActivityPub::Object)
     end
 
     it "filters out deleted posts" do
       object5.delete
-      expect(subject.posts(1, 2)).to eq([object4, object3])
+      expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
     it "filters out posts by deleted actors" do
       actor5.delete
-      expect(subject.posts(1, 2)).to eq([object4, object3])
+      expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
     it "filters out non-public posts" do
       object5.assign(visible: false).save
-      expect(subject.posts(1, 2)).to eq([object4, object3])
+      expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
     it "filters out replies" do
       object5.assign(in_reply_to: object3).save
-      expect(subject.posts(1, 2)).to eq([object4, object3])
+      expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
     let(undo) do
@@ -755,13 +755,33 @@ Spectator.describe ActivityPub::Actor do
 
     it "filters out objects belonging to undone activities" do
       undo.save
-      expect(subject.posts(1, 2)).to eq([object4, object3])
+      expect(subject.public_posts(1, 2)).to eq([object4, object3])
+    end
+
+    let(create) do
+      ActivityPub::Activity::Create.new(
+        iri: "https://test.test/activities/#{random_string}",
+        actor: subject,
+        object: object5
+      )
+    end
+    let(outbox) do
+      Relationship::Content::Outbox.new(
+        owner: subject,
+        activity: create,
+        created_at: Time.utc(2016, 2, 15, 10, 20, 5)
+      )
+    end
+
+    it "includes objects only once" do
+      outbox.save
+      expect(subject.public_posts(1, 2)).to eq([object5, object4])
     end
 
     it "paginates the results" do
-      expect(subject.posts(1, 2)).to eq([object5, object4])
-      expect(subject.posts(3, 2)).to eq([object1])
-      expect(subject.posts(3, 2).more?).not_to be_true
+      expect(subject.public_posts(1, 2)).to eq([object5, object4])
+      expect(subject.public_posts(3, 2)).to eq([object1])
+      expect(subject.public_posts(3, 2).more?).not_to be_true
     end
   end
 

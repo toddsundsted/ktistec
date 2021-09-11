@@ -11,10 +11,10 @@ targets:
 dependencies:
   kemal:
     github: kemalcr/kemal
-    branch: master
+    version: ~> 1.1.0
   slang:
     github: toddsundsted/slang
-    branch: master
+    branch: main
   sqlite3:
     github: crystal-lang/crystal-sqlite3
     version: ~> 0.17
@@ -31,6 +31,7 @@ dependencies:
 development_dependencies:
   spectator:
     gitlab: arctic-fox/spectator
+    version: ~> 0.9.40
 
 crystal: 0.36.1
 

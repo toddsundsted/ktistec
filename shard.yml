@@ -14,7 +14,7 @@ dependencies:
     version: ~> 1.1.0
   slang:
     github: toddsundsted/slang
-    branch: master
+    branch: main
   sqlite3:
     github: crystal-lang/crystal-sqlite3
     version: ~> 0.17

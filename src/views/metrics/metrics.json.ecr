@@ -1,0 +1,8 @@
+<%=
+charts.map do |chart|
+  {
+    label: chart.name,
+    data: chart.data(*range, granularity: granularity)
+  }
+end.to_json
+%>

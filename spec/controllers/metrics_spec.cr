@@ -75,3 +75,77 @@ Spectator.describe MetricsController::Chart do
     end
   end
 end
+
+Spectator.describe MetricsController do
+  setup_spec
+
+  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
+  ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
+
+  describe "/metrics" do
+    it "returns 401 if not authorized" do
+      get "/metrics", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/metrics", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "succeeds" do
+        get "/metrics", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/metrics", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      macro create_point!(index)
+        let!(point{{index}}) do
+          Point.new(
+            chart: "inbox-test-chart",
+            timestamp: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+            value: {{index}}
+          ).save
+        end
+      end
+
+      create_point!(1)
+      create_point!(2)
+      create_point!(3)
+      create_point!(4)
+      create_point!(5)
+
+      it "renders metrics chart" do
+        get "/metrics", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//canvas[@id='charts']")).not_to be_empty
+      end
+
+      it "renders metrics labels" do
+        get "/metrics", ACCEPT_HTML
+        labels = JSON.parse(XML.parse_html(response.body).xpath_nodes("//script[@id='chart-labels']").first.text).as_a
+        expect(labels).to contain_exactly("2016-02-15")
+      end
+
+      it "renders metrics datasets" do
+        get "/metrics", ACCEPT_HTML
+        datasets = JSON.parse(XML.parse_html(response.body).xpath_nodes("//script[@id='chart-datasets']").first.text).as_a
+        expect(datasets.map(&.dig("label"))).to contain_exactly("inbox-test-chart")
+        expect(datasets.map(&.dig("data"))).to contain_exactly({"2016-02-15" => 15})
+      end
+
+      it "renders metrics data" do
+        get "/metrics", ACCEPT_JSON
+        datasets = JSON.parse(response.body).as_a
+        expect(datasets.map(&.dig("label"))).to contain_exactly("inbox-test-chart")
+        expect(datasets.map(&.dig("data"))).to contain_exactly({"2016-02-15" => 15})
+      end
+    end
+  end
+end

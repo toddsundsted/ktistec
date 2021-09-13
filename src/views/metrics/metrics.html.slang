@@ -18,11 +18,31 @@ crystal:
       backgroundColor: "#{color}80"
     }
   end
-canvas#charts
+  timezone = Time::Location.load(env.account.timezone)
+  now = Time.utc.in(timezone)
+  ranges = {
+    "" => "",
+    now.at_beginning_of_week.to_s("%Y-%m-%d") => "This Week",
+    now.at_beginning_of_month.to_s("%Y-%m-%d") => "This Month",
+    now.at_beginning_of_year.to_s("%Y-%m-%d") => "This Year"
+  }
+  granularities = {
+    "" => "",
+    "daily" => "By Day",
+    "weekly" => "By Week",
+    "monthly" => "By Month"
+  }
 script#chart-labels type="application/json"
   == labels.to_json
 script#chart-datasets type="application/json"
   == datasets.to_json
+canvas#charts
+== form_tag(nil, "/metrics", "GET", class: "ui mini form", data: {turbo: "false"}) do
+  .two.fields
+    == select_tag("Range", nil, :begin, ranges, env.params.query["begin"]?)
+    == select_tag("Granularity", nil, :granularity, granularities, env.params.query["granularity"]?)
+  input.ui.mini.primary.button type="submit" value="Update"
+br
 script
   | let ctx = document.getElementById("charts").getContext("2d")
     let crt = new Chart(ctx, {

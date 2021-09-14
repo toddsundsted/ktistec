@@ -210,6 +210,82 @@ Spectator.describe "helper" do
     end
   end
 
+  describe "select_tag" do
+    subject do
+      XML.parse_html(select_tag("Label", model, field, {one: "One", two: "Two"}, class: "blarg")).document
+    end
+
+    it "emits div containing label and select tags" do
+      expect(subject.xpath_nodes("//div[label][select]")).not_to be_empty
+    end
+
+    it "emits a label tag with the label text" do
+      expect(subject.xpath_nodes("//div/label/text()")).to contain_exactly("Label")
+    end
+
+    it "emits a select tag with the specified name" do
+      expect(subject.xpath_nodes("//div/select/@name")).to contain_exactly("field")
+    end
+
+    it "emits option tags with the specified values" do
+      expect(subject.xpath_nodes("//div/select/option/@value")).to contain_exactly("one", "two")
+    end
+
+    it "emits option tags with the specified text" do
+      expect(subject.xpath_nodes("//div/select/option/text()")).to contain_exactly("One", "Two")
+    end
+
+    context "given a field value that matches an option" do
+      before_each { model.field = "one" }
+
+      it "emits an option tag with the option selected" do
+        expect(subject.xpath_nodes("//div/select/option[@selected]/text()")).to contain_exactly("One")
+      end
+    end
+
+    context "given a selected value that matches an option" do
+      subject do
+        XML.parse_html(select_tag("Label", nil, field, {one: "One", two: "Two"}, selected: :two)).document
+      end
+
+      it "emits an option tag with the option selected" do
+        expect(subject.xpath_nodes("//div/select/option[@selected]/text()")).to contain_exactly("Two")
+      end
+    end
+
+    it "specifies the class" do
+      expect(subject.xpath_nodes("//div/select/@class")).to contain_exactly("blarg")
+    end
+
+    it "sets the error class" do
+      expect(subject.xpath_nodes("//div/@class")).to contain_exactly("field error")
+    end
+
+    context "given data attributes" do
+      subject do
+        XML.parse_html(select_tag("Label", nil, field, {one: "One", two: "Two"}, data: {"foo" => "bar", "abc" => "xyz"})).document
+      end
+
+      it "emits data attributes" do
+        expect(subject.xpath_nodes("//div/select/@*[starts-with(name(),'data-')]")).to contain_exactly("bar", "xyz")
+      end
+    end
+
+    context "given a nil model" do
+      subject do
+        XML.parse_html(select_tag("Label", nil, field, {one: "One", two: "Two"})).document
+      end
+
+      it "emits a select tag with the specified name" do
+        expect(subject.xpath_nodes("//div/select/@name")).to contain_exactly("field")
+      end
+
+      it "does not set the error class" do
+        expect(subject.xpath_nodes("//div/@class")).to contain_exactly("field")
+      end
+    end
+  end
+
   ## JSON helpers
 
   describe "error_block" do

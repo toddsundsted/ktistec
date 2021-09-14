@@ -54,14 +54,14 @@ module Ktistec::ViewHelper
     end
   end
 
-  macro form_tag(model, action, method = "POST", data = nil, &block)
+  macro form_tag(model, action, method = "POST", class _class = "ui form", data = nil, &block)
     {% if model %}
       %classes =
         {{model}}.errors.presence ?
-          "ui form error" :
-          "ui form"
+          "#{{{_class}}} error" :
+          {{_class}}
     {% else %}
-      %classes = "ui form"
+      %classes = {{_class}}
     {% end %}
     {% if method == "DELETE" %}
       {% method = "POST" %}

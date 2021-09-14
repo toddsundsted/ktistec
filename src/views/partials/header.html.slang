@@ -4,6 +4,7 @@ nav.ui.top.fixed.inverted.navigation.menu
       a.item href=actor_path(_account) Home
       a.item href=search_path Search
       a.item href=settings_path Settings
+      a.item href=metrics_path Metrics
       .right.menu
         == form_tag(nil, sessions_path, method: "DELETE") do
           == authenticity_token(env)

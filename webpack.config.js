@@ -2,7 +2,6 @@ const path = require('path');
 
 module.exports = {
   entry: {
-    chart: './src/assets/chart.js',
     settings: './src/assets/settings.js',
     site: './src/assets/site.js',
   },

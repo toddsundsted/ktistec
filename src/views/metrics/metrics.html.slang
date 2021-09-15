@@ -1,5 +1,5 @@
 - content_for "head" do
-  script src="/dist/chart.bundle.js"
+  meta name="turbo-cache-control" content="no-cache"
 crystal:
   colors = [
     "#619ED6",
@@ -32,25 +32,14 @@ crystal:
     "weekly" => "By Week",
     "monthly" => "By Month"
   }
-script#chart-labels type="application/json"
-  == labels.to_json
-script#chart-datasets type="application/json"
-  == datasets.to_json
-canvas#charts
-== form_tag(nil, "/metrics", "GET", class: "ui mini form", data: {turbo: "false"}) do
+canvas#charts data-controller="chart"
+  script#chart-labels type="application/json" data-chart-target="labels"
+    == labels.to_json
+  script#chart-datasets type="application/json" data-chart-target="datasets"
+    == datasets.to_json
+== form_tag(nil, "/metrics", "GET", class: "ui mini form") do
   .two.fields
     == select_tag("Range", nil, :begin, ranges, env.params.query["begin"]?)
     == select_tag("Granularity", nil, :granularity, granularities, env.params.query["granularity"]?)
   input.ui.mini.primary.button type="submit" value="Update"
 br
-script
-  | let ctx = document.getElementById("charts").getContext("2d")
-    let crt = new Chart(ctx, {
-      data: {
-        labels: JSON.parse(document.getElementById("chart-labels").textContent),
-        datasets: JSON.parse(document.getElementById("chart-datasets").textContent)
-      },
-      type: "line",
-      tension: 0.1,
-      spanGaps: false
-    })

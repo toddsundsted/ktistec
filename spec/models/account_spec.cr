@@ -57,6 +57,11 @@ Spectator.describe Account do
       new_account = described_class.new(username: "", password: "abc123")
       expect(new_account.validate["password"]).to eq(["is weak"])
     end
+
+    it "rejects the timezone as unsupported" do
+      new_account = described_class.new(username: "", password: "", timezone: "Foo/Bar")
+      expect(new_account.validate["timezone"]).to eq(["is unsupported"])
+    end
   end
 
   context "given an actor to associate with" do

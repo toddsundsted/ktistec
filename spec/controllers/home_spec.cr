@@ -123,61 +123,61 @@ Spectator.describe HomeController do
       end
 
       it "rerenders if params are invalid" do
-        body = "username=&password=a1!&name=&summary="
+        body = "username=&password=a1!&name=&summary=&timezone="
         post "/", HTML_HEADERS, body
         expect(response.status_code).to eq(422)
         expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/username is too short, password is too short/)
       end
 
       it "rerenders if params are invalid" do
-        body = {username: "", password: "a1!", name: "", summary: ""}.to_json
+        body = {username: "", password: "a1!", name: "", summary: "", timezone: ""}.to_json
         post "/", JSON_HEADERS, body
         expect(response.status_code).to eq(422)
         expect(JSON.parse(response.body)["errors"].as_h).to eq({"username" => ["is too short"], "password" => ["is too short"]})
       end
 
       it "redirects and sets cookie" do
-        body = "username=#{username}&password=#{password}&name=&summary="
+        body = "username=#{username}&password=#{password}&name=&summary=&timezone="
         post "/", HTML_HEADERS, body
         expect(response.status_code).to eq(302)
         expect(response.headers["Set-Cookie"]).to be_truthy
       end
 
       it "creates account" do
-        body = "username=#{username}&password=#{password}&name=&summary="
+        body = "username=#{username}&password=#{password}&name=&summary=&timezone="
         expect{post "/", HTML_HEADERS, body}.to change{Account.count}.by(1)
       end
 
       it "creates actor" do
-        body = "username=#{username}&password=#{password}&name=&summary="
+        body = "username=#{username}&password=#{password}&name=&summary=&timezone="
         expect{post "/", HTML_HEADERS, body}.to change{ActivityPub::Actor.count}.by(1)
       end
 
       it "associates account and actor" do
-        body = "username=#{username}&password=#{password}&name=&summary="
+        body = "username=#{username}&password=#{password}&name=&summary=&timezone="
         post "/", HTML_HEADERS, body
         expect(Account.find(username: username).actor).not_to be_nil
       end
 
       it "returns token" do
-        body = {username: username, password: password, name: "", summary: ""}.to_json
+        body = {username: username, password: password, name: "", summary: "", timezone: ""}.to_json
         post "/", JSON_HEADERS, body
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body)["jwt"]).to be_truthy
       end
 
       it "creates account" do
-        body = {username: username, password: password, name: "", summary: ""}.to_json
+        body = {username: username, password: password, name: "", summary: "", timezone: ""}.to_json
         expect{post "/", JSON_HEADERS, body}.to change{Account.count}.by(1)
       end
 
       it "creates actor" do
-        body = {username: username, password: password, name: "", summary: ""}.to_json
+        body = {username: username, password: password, name: "", summary: "", timezone: ""}.to_json
         expect{post "/", JSON_HEADERS, body}.to change{ActivityPub::Actor.count}.by(1)
       end
 
       it "associates account and actor" do
-        body = {username: username, password: password, name: "", summary: ""}.to_json
+        body = {username: username, password: password, name: "", summary: "", timezone: ""}.to_json
         post "/", JSON_HEADERS, body
         expect(Account.find(username: username).actor).not_to be_nil
       end

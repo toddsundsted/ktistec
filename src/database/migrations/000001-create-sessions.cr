@@ -25,6 +25,6 @@ end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE sessions;
+    DROP TABLE sessions
   STR
 end

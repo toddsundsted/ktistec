@@ -26,6 +26,6 @@ end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE collections;
+    DROP TABLE collections
   STR
 end

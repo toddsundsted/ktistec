@@ -37,6 +37,6 @@ end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE actors;
+    DROP TABLE actors
   STR
 end

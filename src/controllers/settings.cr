@@ -5,7 +5,8 @@ class SettingsController
   include Ktistec::Controller
 
   get "/settings" do |env|
-    actor = env.account.actor
+    account = env.account
+    actor = account.actor
 
     settings = Ktistec.settings
 
@@ -21,14 +22,16 @@ class SettingsController
   end
 
   post "/settings/actor" do |env|
-    actor = env.account.actor
+    account = env.account
+    actor = account.actor
 
     settings = Ktistec.settings
 
+    account.assign(params(env))
     actor.assign(params(env))
 
-    if actor.valid?
-      actor.save
+    if account.valid?
+      account.save
 
       redirect settings_path
     else
@@ -37,7 +40,8 @@ class SettingsController
   end
 
   post "/settings/service" do |env|
-    actor = env.account.actor
+    account = env.account
+    actor = account.actor
 
     settings = Ktistec.settings
 
@@ -68,6 +72,7 @@ class SettingsController
     {
       "name" => params["name"]?.try(&.to_s),
       "summary" => params["summary"]?.try(&.to_s),
+      "timezone" => params["timezone"]?.try(&.to_s),
       # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
       "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },

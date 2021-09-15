@@ -2,8 +2,8 @@ const path = require('path');
 
 module.exports = {
   entry: {
-    site: './src/assets/site.js',
     settings: './src/assets/settings.js',
+    site: './src/assets/site.js',
   },
   output: {
     filename: '[name].bundle.js',

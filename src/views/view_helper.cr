@@ -54,14 +54,14 @@ module Ktistec::ViewHelper
     end
   end
 
-  macro form_tag(model, action, method = "POST", data = nil, &block)
+  macro form_tag(model, action, method = "POST", class _class = "ui form", data = nil, &block)
     {% if model %}
       %classes =
         {{model}}.errors.presence ?
-          "ui form error" :
-          "ui form"
+          "#{{{_class}}} error" :
+          {{_class}}
     {% else %}
-      %classes = "ui form"
+      %classes = {{_class}}
     {% end %}
     {% if method == "DELETE" %}
       {% method = "POST" %}
@@ -121,6 +121,43 @@ module Ktistec::ViewHelper
     <div class="#{%classes}">\
     <label>#{{{label}}}</label>\
     <input #{%attributes.join(" ")}>\
+    </div>
+    HTML
+  end
+
+  macro select_tag(label, model, field, options, selected = nil, class _class = "ui selection dropdown", data = nil)
+    {% if model %}
+      %classes =
+        {{model}}.errors.has_key?("{{field.id}}") ?
+          "field error" :
+          "field"
+      %name = {{field.id.stringify}}
+      %selected = {{model}}.{{field.id}}
+    {% else %}
+      %classes = "field"
+      %name = {{field.id.stringify}}
+      %selected = {{selected}}
+    {% end %}
+    %attributes = [
+      %Q|class="#{{{_class}}}"|,
+      %Q|name="#{%name}"|,
+      {% if data %}
+        {% for key, value in data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
+    %options = {{options}}.map do |key, value|
+      if %selected && %selected.to_s == key.to_s
+        %Q|<option value="#{key}" selected>#{value}</option>|
+      else
+        %Q|<option value="#{key}">#{value}</option>|
+      end
+    end
+    <<-HTML
+    <div class="#{%classes}">\
+    <label>#{{{label}}}</label>\
+    <select #{%attributes.join(" ")}>#{%options.join("")}</select>\
     </div>
     HTML
   end

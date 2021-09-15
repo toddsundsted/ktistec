@@ -89,18 +89,8 @@ class AnotherModel < NotNilModel
   @@table_name = "not_nil_models"
 end
 
-module None
-end
-
-module Ktistec
-  module Model
-    module None
-    end
-  end
-end
-
 class UnionAssociationModel
-  include Ktistec::Model(None)
+  include Ktistec::Model(Nil)
 
   @[Assignable]
   property model_id : Int64?
@@ -108,7 +98,7 @@ class UnionAssociationModel
 end
 
 class QueryModel
-  include Ktistec::Model(None)
+  include Ktistec::Model(Nil)
 
   @[Assignable]
   property foo : String?

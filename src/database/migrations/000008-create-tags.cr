@@ -26,6 +26,6 @@ end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE tags;
+    DROP TABLE tags
   STR
 end

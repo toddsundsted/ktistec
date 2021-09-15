@@ -9,12 +9,12 @@ up do |db|
       "name" varchar(99) NOT NULL COLLATE NOCASE,
       "count" integer,
       PRIMARY KEY("type", "name")
-    ) WITHOUT ROWID;
+    ) WITHOUT ROWID
   STR
 end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE tag_statistics;
+    DROP TABLE tag_statistics
   STR
 end

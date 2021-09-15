@@ -42,6 +42,6 @@ end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE objects;
+    DROP TABLE objects
   STR
 end

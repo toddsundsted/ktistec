@@ -89,7 +89,8 @@ class HomeController
       "username" => params["username"].as(String),
       "password" => params["password"].as(String),
       "name" => params["name"].as(String),
-      "summary" => params["summary"].as(String)
+      "summary" => params["summary"].as(String),
+      "timezone" => params["timezone"].as(String)
     }
   end
 end

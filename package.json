@@ -14,6 +14,7 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
+    "chart.js": "^3.3.2",
     "@hotwired/turbo": "^7.0.0-rc.1",
     "filepond": "^4.25.3",
     "filepond-plugin-file-validate-type": "^1.2.5",

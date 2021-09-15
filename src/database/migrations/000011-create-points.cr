@@ -19,6 +19,6 @@ end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE points;
+    DROP TABLE points
   STR
 end

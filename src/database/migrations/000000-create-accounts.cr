@@ -21,6 +21,6 @@ end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE accounts;
+    DROP TABLE accounts
   STR
 end

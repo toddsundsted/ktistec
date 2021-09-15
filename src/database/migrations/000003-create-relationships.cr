@@ -27,6 +27,6 @@ end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE relationships;
+    DROP TABLE relationships
   STR
 end

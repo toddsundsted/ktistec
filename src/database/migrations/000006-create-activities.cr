@@ -32,6 +32,6 @@ end
 
 down do |db|
   db.exec <<-STR
-    DROP TABLE activities;
+    DROP TABLE activities
   STR
 end

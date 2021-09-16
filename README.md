@@ -7,6 +7,7 @@
     - [Control over comment visibility](#control-over-comment-visibility)
     - [Pretty URLs](#pretty-urls)
     - [Followers/following](#followersfollowing)
+    - [Metrics](#metrics)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Usage](#usage)
@@ -88,6 +89,14 @@ used by Mastodon and others.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/88hvqq.png" width=460>
 
+### Metrics
+
+Ktistec tracks metrics about how the instance is performing. Right
+now, the only metric is inbox and outbox volume per account, but the
+machinery is in place to do much more.
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/vrxnmg.png" width=460>
+
 ## Prerequisites
 
 To run an instance of Ktistec, you'll need a server with a permanent
@@ -134,10 +143,11 @@ currently supports only one user. This is intentional -- one of
 Ktistec's design goals is to promote a more fully distributed
 Fediverse.
 
-At a minimum, you need to specify the user's *username* and
-*password*. You can use a single character for the username if you
+At a minimum, you need to specify the user's *username*, *password*
+and *timezone*. You can use a single character for the username if you
 want, but you'll need six characters, including letters, numbers and
-symbols, for the password.
+symbols, for the password. *timezone* is any valid IANA time zone
+database string (e.g. "America/New_York").
 
 *Display name* and *summary* are optional.
 

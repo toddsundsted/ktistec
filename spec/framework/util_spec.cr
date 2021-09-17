@@ -34,19 +34,19 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("<span>some text</span>")
     end
 
-    it "preserves href on links, adds target and ugc attribute values to remote links" do
+    it "preserves href on links, adds target and rel attributes to remote links" do
       content = "<a class='foo bar' href='https://remote/index.html'>a link</a>"
       expect(described_class.sanitize(content)).to eq("<a href='https://remote/index.html' target='_blank' rel='ugc'>a link</a>")
     end
 
-    it "preserves href on local links" do
+    it "preserves href on links, adds data-turbo-frame attribute to local links" do
       content = "<a class='foo bar' href='https://test.test/index.html'>a link</a>"
-      expect(described_class.sanitize(content)).to eq("<a href='https://test.test/index.html'>a link</a>")
+      expect(described_class.sanitize(content)).to eq("<a href='https://test.test/index.html' data-turbo-frame='_top'>a link</a>")
     end
 
-    it "preserves href on paths" do
+    it "preserves href on paths, adds data-turbo-frame attribute" do
       content = "<a class='foo bar' href='/index.html'>a link</a>"
-      expect(described_class.sanitize(content)).to eq("<a href='/index.html'>a link</a>")
+      expect(described_class.sanitize(content)).to eq("<a href='/index.html' data-turbo-frame='_top'>a link</a>")
     end
 
     it "preserves src and alt on images, adds compatibility classes" do

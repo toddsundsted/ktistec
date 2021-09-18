@@ -524,7 +524,7 @@ Spectator.describe "partials" do
         end
 
         it "does not include a button to return to drafts" do
-          expect(subject.xpath_nodes("//form//a[text()='Back to Drafts']")).
+          expect(subject.xpath_nodes("//form//a[text()='To Drafts']")).
             to be_empty
         end
       end
@@ -560,7 +560,7 @@ Spectator.describe "partials" do
         end
 
         it "includes a button to return to drafts" do
-          expect(subject.xpath_nodes("//form//a[text()='Back to Drafts']")).
+          expect(subject.xpath_nodes("//form//a[text()='To Drafts']")).
             not_to be_empty
         end
       end
@@ -581,7 +581,7 @@ Spectator.describe "partials" do
         end
 
         it "does not include a button to return to drafts" do
-          expect(subject.xpath_nodes("//form//a[text()='Back to Drafts']")).
+          expect(subject.xpath_nodes("//form//a[text()='To Drafts']")).
             to be_empty
         end
       end

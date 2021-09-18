@@ -815,18 +815,26 @@ Spectator.describe ActivityPub::Actor do
     post(4)
     post(5)
 
+    let(since) { Time.utc(2016, 2, 15, 10, 20, 0) }
+
     it "instantiates the correct subclass" do
       expect(subject.timeline(1, 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "returns the count" do
+      expect(subject.timeline(since: since)).to eq(5)
     end
 
     it "filters out deleted posts" do
       object5.delete
       expect(subject.timeline(1, 2)).to eq([object4, object3])
+      expect(subject.timeline(since: since)).to eq(4)
     end
 
     it "filters out posts by deleted actors" do
       actor5.delete
       expect(subject.timeline(1, 2)).to eq([object4, object3])
+      expect(subject.timeline(since: since)).to eq(4)
     end
 
     it "paginates the results" do
@@ -866,8 +874,16 @@ Spectator.describe ActivityPub::Actor do
     notification(4)
     notification(5)
 
+    let(since) { Time.utc(2016, 2, 15, 10, 20, 0) }
+
     it "instantiates the correct subclass" do
       expect(subject.notifications(1, 2).first).to be_a(ActivityPub::Activity)
+    end
+
+    let(since) { Time.utc(2016, 2, 15, 10, 20, 0) }
+
+    it "returns the count" do
+      expect(subject.notifications(since: since)).to eq(5)
     end
 
     let(undo) do
@@ -881,6 +897,7 @@ Spectator.describe ActivityPub::Actor do
     it "filters out undone activities" do
       undo.save
       expect(subject.notifications(1, 2)).to eq([activity4, activity3])
+      expect(subject.notifications(since: since)).to eq(4)
     end
 
     context "given an associated object" do
@@ -895,17 +912,20 @@ Spectator.describe ActivityPub::Actor do
       it "filters out activities with deleted objects" do
         object.delete
         expect(subject.notifications(1, 2)).to eq([activity4, activity3])
+        expect(subject.notifications(since: since)).to eq(4)
       end
     end
 
     it "filters out activities from deleted actors" do
       actor5.delete
       expect(subject.notifications(1, 2)).to eq([activity4, activity3])
+      expect(subject.notifications(since: since)).to eq(4)
     end
 
     it "filters out activities from destroyed actors" do
       actor5.destroy
       expect(subject.notifications(1, 2)).to eq([activity4, activity3])
+      expect(subject.notifications(since: since)).to eq(4)
     end
 
     it "paginates the results" do

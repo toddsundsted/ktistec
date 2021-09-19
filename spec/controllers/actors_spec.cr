@@ -222,6 +222,16 @@ Spectator.describe ActorsController do
         expect(response.status_code).to eq(200)
       end
 
+      it "updates the last checked timestamp" do
+        expect{get "/actors/#{actor.username}/timeline", ACCEPT_HTML}.
+          to change{Account.find(username: actor.username).last_timeline_checked_at}
+      end
+
+      it "updates the last checked timestamp" do
+        expect{get "/actors/#{actor.username}/timeline", ACCEPT_JSON}.
+          to change{Account.find(username: actor.username).last_timeline_checked_at}
+      end
+
       let(object) do
         ActivityPub::Object.new(
           iri: "#{author.iri}/object",
@@ -461,6 +471,16 @@ Spectator.describe ActorsController do
       it "succeeds" do
         get "/actors/#{actor.username}/notifications", ACCEPT_JSON
         expect(response.status_code).to eq(200)
+      end
+
+      it "updates the last checked timestamp" do
+        expect{get "/actors/#{actor.username}/notifications", ACCEPT_HTML}.
+          to change{Account.find(username: actor.username).last_notifications_checked_at}
+      end
+
+      it "updates the last checked timestamp" do
+        expect{get "/actors/#{actor.username}/notifications", ACCEPT_JSON}.
+          to change{Account.find(username: actor.username).last_notifications_checked_at}
       end
 
       let(activity) do

@@ -532,7 +532,7 @@ module ActivityPub
                   AND a.deleted_at IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
-       )
+            )
        ORDER BY r.created_at DESC
           LIMIT ?
       QUERY

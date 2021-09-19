@@ -104,4 +104,26 @@ class Account
   def uid
     username
   end
+
+  struct State
+    include JSON::Serializable
+
+    property last_timeline_checked_at : Time { Time::UNIX_EPOCH }
+    property last_notifications_checked_at : Time { Time::UNIX_EPOCH }
+  end
+
+  @[Persistent]
+  property state : State
+
+  delegate last_timeline_checked_at, last_notifications_checked_at, to: @state
+
+  def update_last_timeline_checked_at(time = Time.utc)
+    state.last_timeline_checked_at = time
+    self
+  end
+
+  def update_last_notifications_checked_at(time = Time.utc)
+    state.last_notifications_checked_at = time
+    self
+  end
 end

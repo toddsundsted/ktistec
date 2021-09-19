@@ -12,6 +12,16 @@ body { display: flex; flex-direction: column; }
 /* remove visible outlines on focused menu items */
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 
+/** menu **/
+.ui.secondary.menu {
+    .item {
+        > a { color: inherit; }
+        @media screen and (max-width: 599px) {
+            > .label { margin-left: 0.25em; }
+        }
+    }
+}
+
 /** timeline **/
 .ui.feed {
     > .event {

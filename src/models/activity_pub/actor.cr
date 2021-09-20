@@ -501,6 +501,60 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
+    # Returns an actor's own posts
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    # Includes private posts and replies!
+    #
+    def all_posts(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT DISTINCT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+            AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+            AND r.type = "#{Relationship::Content::Outbox}"
+      LEFT JOIN activities AS u
+             ON u.object_iri = a.iri
+            AND u.type = "#{ActivityPub::Activity::Undo}"
+            AND u.actor_iri = a.actor_iri
+          WHERE r.from_iri = ?
+            AND o.deleted_at IS NULL
+            AND t.deleted_at IS NULL
+            AND u.id IS NULL
+            AND o.id NOT IN (
+               SELECT DISTINCT o.id
+                 FROM objects AS o
+                 JOIN actors AS t
+                   ON t.iri = o.attributed_to_iri
+                 JOIN activities AS a
+                   ON a.object_iri = o.iri
+                  AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+                 JOIN relationships AS r
+                   ON r.to_iri = a.iri
+                  AND r.type = "#{Relationship::Content::Outbox}"
+            LEFT JOIN activities AS u
+                   ON u.object_iri = a.iri
+                  AND u.type = "#{ActivityPub::Activity::Undo}"
+                  AND u.actor_iri = a.actor_iri
+                WHERE r.from_iri = ?
+                  AND o.deleted_at IS NULL
+                  AND t.deleted_at IS NULL
+                  AND u.id IS NULL
+             ORDER BY r.created_at DESC
+                LIMIT ?
+            )
+       ORDER BY r.created_at DESC
+          LIMIT ?
+      QUERY
+      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+    end
+
     # Returns objects in the actor's timeline.
     #
     # Meant to be called on local (not cached) actors.

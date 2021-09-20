@@ -1,3 +1,4 @@
+require "uri"
 require "xml"
 
 module Ktistec
@@ -47,6 +48,7 @@ module Ktistec
       a: {
         keep: ["href"],
         remote: [{"target", "_blank"}, {"rel", "ugc"}],
+        local: [{"data-turbo-frame", "_top"}],
         key: "href"
       },
       img: {
@@ -76,13 +78,15 @@ module Ktistec
           (attributes[:keep] & html.attributes.map(&.name)).each do |attribute|
             build << " #{attribute}='#{html[attribute]}'"
           end
-          remote =
+          local =
             if (key = attributes[:key]?) && (value = html.attributes[key]?)
               uri = URI.parse(value.text)
-              (uri.scheme || uri.host) && Ktistec.host != "#{uri.scheme}://#{uri.host}"
+              (!uri.scheme && !uri.host) || Ktistec.host == "#{uri.scheme}://#{uri.host}"
             end
-          if (remote && (values = attributes[:remote]?)) || (values = attributes[:all]?)
-            build << values.not_nil!.map { |value| " #{value[0]}='#{value[1]}'" }.join
+          if (local && (values = attributes[:local]?)) ||
+             (!local && (values = attributes[:remote]?)) ||
+             (values = attributes[:all]?)
+            build << values.map { |value| " #{value[0]}='#{value[1]}'" }.join
           end
           build << ">"
         else

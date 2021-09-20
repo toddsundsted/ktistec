@@ -88,3 +88,12 @@ $(document).on("click", ".dangerous.button[data-modal]", function (e) {
     })
     .modal("show")
 })
+
+// transitions for transitional elements
+$(document).on("turbo:load", function() {
+  $(".transitional").transition("fade", "500ms")
+})
+
+$(document).on("turbo:before-cache", function() {
+  $(".transitional").removeClass("visible").addClass("hidden")
+})

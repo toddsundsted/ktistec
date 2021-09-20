@@ -37,6 +37,6 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
         input.ui.disabled.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Save Draft" action=object_path(object)
     - unless object.new_record?
       a.ui.teal.right.floated.button href=actor_relationships_path(actor, "drafts")
-        | Back to Drafts
+        | To Drafts
   - else
     input.ui.disabled.primary.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Update Post" action=outbox_path(actor)

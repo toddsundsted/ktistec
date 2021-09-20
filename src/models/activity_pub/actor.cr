@@ -532,11 +532,33 @@ module ActivityPub
                   AND a.deleted_at IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
-       )
+            )
        ORDER BY r.created_at DESC
           LIMIT ?
       QUERY
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+    end
+
+    # Returns the count of objects in the actor's timeline since the
+    # given date.
+    #
+    # See `#timeline(page, size)` for further details.
+    #
+    def timeline(since : Time)
+      query = <<-QUERY
+         SELECT count(*)
+           FROM objects AS o
+           JOIN actors AS a
+             ON a.iri = o.attributed_to_iri
+           JOIN relationships AS r
+             ON r.to_iri = o.iri
+            AND r.type = "#{Relationship::Content::Timeline}"
+          WHERE r.from_iri = ?
+            AND o.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            AND r.created_at > ?
+      QUERY
+      Ktistec.database.scalar(query, iri, since).as(Int64)
     end
 
     # Returns notification activities for the actor.
@@ -595,6 +617,35 @@ module ActivityPub
           LIMIT ?
       QUERY
       Activity.query_and_paginate(query, iri, iri, page: page, size: size)
+    end
+
+    # Returns the count of notification activities for the actor since
+    # the given date.
+    #
+    # See `#notifications(page, size)` for further details.
+    #
+    def notifications(since : Time)
+      query = <<-QUERY
+         SELECT count(*)
+           FROM activities AS a
+           JOIN relationships AS rel
+             ON rel.to_iri = a.iri
+            AND rel.type = "#{Relationship::Content::Notification}"
+           JOIN actors AS act
+             ON act.iri = a.actor_iri
+      LEFT JOIN objects AS obj
+             ON obj.iri = a.object_iri
+      LEFT JOIN activities AS undo
+             ON undo.object_iri = a.iri
+            AND undo.type = "#{ActivityPub::Activity::Undo}"
+            AND undo.actor_iri = a.actor_iri
+          WHERE rel.from_iri = ?
+            AND act.deleted_at IS null
+            AND obj.deleted_at IS null
+            AND undo.iri IS null
+            AND rel.created_at > ?
+      QUERY
+      Ktistec.database.scalar(query, iri, since).as(Int64)
     end
 
     def approve(object)

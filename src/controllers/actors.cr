@@ -47,6 +47,8 @@ class ActorsController
 
     objects = actor.timeline(*pagination_params(env))
 
+    account.update_last_timeline_checked_at.save
+
     ok "actors/timeline"
   end
 
@@ -63,6 +65,8 @@ class ActorsController
     actor = account.actor
 
     activities = actor.notifications(*pagination_params(env))
+
+    account.update_last_notifications_checked_at.save
 
     ok "actors/notifications"
   end

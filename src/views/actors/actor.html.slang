@@ -1,6 +1,7 @@
 - if env.account?.try(&.actor) == actor
   h1= actor.username
   .ui.compact.stackable.secondary.menu
+    a.item href=actor_relationships_path(actor, "posts") Posts
     a.item href=actor_relationships_path(actor, "drafts") Drafts
     .item
       a href=actor_relationships_path(actor, "notifications") Notifications

@@ -494,7 +494,7 @@ module ActivityPub
                   AND u.id IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
-       )
+            )
        ORDER BY r.created_at DESC
           LIMIT ?
       QUERY

@@ -95,7 +95,7 @@ Spectator.describe ActorsController do
       context "given a create" do
         before_each do
           Relationship::Content::Outbox.new(
-            owner: author,
+            owner: actor,
             activity: create
           ).save
         end
@@ -109,7 +109,7 @@ Spectator.describe ActorsController do
       context "given an announce" do
         before_each do
           Relationship::Content::Outbox.new(
-            owner: author,
+            owner: actor,
             activity: announce
           ).save
         end
@@ -123,11 +123,11 @@ Spectator.describe ActorsController do
       context "given a create and an announce" do
         before_each do
           Relationship::Content::Outbox.new(
-            owner: author,
+            owner: actor,
             activity: create
           ).save
           Relationship::Content::Outbox.new(
-            owner: author,
+            owner: actor,
             activity: announce
           ).save
         end
@@ -254,7 +254,7 @@ Spectator.describe ActorsController do
         context "given a create" do
           before_each do
             Relationship::Content::Outbox.new(
-              owner: author,
+              owner: actor,
               activity: create
             ).save
           end
@@ -268,7 +268,7 @@ Spectator.describe ActorsController do
         context "given an announce" do
           before_each do
             Relationship::Content::Outbox.new(
-              owner: author,
+              owner: actor,
               activity: announce
             ).save
           end
@@ -282,11 +282,11 @@ Spectator.describe ActorsController do
         context "given a create and an announce" do
           before_each do
             Relationship::Content::Outbox.new(
-              owner: author,
+              owner: actor,
               activity: create
             ).save
             Relationship::Content::Outbox.new(
-              owner: author,
+              owner: actor,
               activity: announce
             ).save
           end

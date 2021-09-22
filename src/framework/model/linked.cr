@@ -2,6 +2,7 @@ require "uri"
 
 require "../model"
 require "../open"
+require "../signature"
 
 module Ktistec
   module Model
@@ -24,8 +25,6 @@ module Ktistec
       end
 
       macro included
-        extend Ktistec::Open
-
         @[Persistent]
         property iri : String { "" }
         validates(iri) { unique_absolute_uri?(iri) }
@@ -48,11 +47,13 @@ module Ktistec
           find?(iri: iri)
         end
 
-        def self.dereference?(iri : String?, ignore_cached = false) : self?
+        def self.dereference?(key_pair, iri, ignore_cached = false) : self?
           if iri
             unless (instance = self.find?(iri)) && !ignore_cached
               unless iri.starts_with?(Ktistec.host)
-                self.open?(iri) do |response|
+                headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
+                headers["Accept"] = "application/activity+json"
+                Ktistec::Open.open?(iri, headers) do |response|
                   instance = self.from_json_ld?(response.body)
                 end
               end
@@ -67,13 +68,15 @@ module Ktistec
               {% for m in type.methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
                 {% name = m.name[12..-1] %}
                 class ::{{type}}
-                  def {{name}}?(*, dereference = false, ignore_cached = false)
+                  def {{name}}?(key_pair, *, dereference = false, ignore_cached = false)
                     {{name}} = self.{{name}}?
                     unless ({{name}} && !ignore_cached) || ({{name}} && {{name}}.changed?)
                       if ({{name}}_iri = self.{{name}}_iri) && dereference
                         unless {{name}}_iri.starts_with?(Ktistec.host)
                           {% for union_type in m.return_type.id.split(" | ").reject(&.==("::Nil")).map(&.id) %}
-                            {{union_type}}.open?({{name}}_iri) do |response|
+                            headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
+                            headers["Accept"] = "application/activity+json"
+                            Ktistec::Open.open?({{name}}_iri, headers) do |response|
                               if ({{name}} = {{union_type}}.from_json_ld?(response.body))
                                 return self.{{name}} = {{name}}
                               end

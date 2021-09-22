@@ -6,7 +6,6 @@ require "../models/task/receive"
 
 class RelationshipsController
   include Ktistec::Controller
-  extend Ktistec::Open
 
   skip_auth ["/actors/:username/inbox"], POST
 
@@ -49,7 +48,8 @@ class RelationshipsController
 
     if (actor_iri = activity.actor_iri)
       unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!signature || actor.pem_public_key)
-        open?(actor_iri) do |response|
+        headers = Ktistec::Signature.sign(account.actor, actor_iri, method: :get).merge!(HTTP::Headers{"Accept" => "application/activity+json"})
+        Ktistec::Open.open?(actor_iri, headers) do |response|
           actor = ActivityPub::Actor.from_json_ld?(response.body, include_key: true).try(&.save)
         end
       end

@@ -2,10 +2,10 @@ require "web_finger"
 
 require "../framework/controller"
 require "../framework/open"
+require "../framework/signature"
 
 class SearchesController
   include Ktistec::Controller
-  extend Ktistec::Open
 
   get "/search" do |env|
     actor_or_object = nil
@@ -24,7 +24,8 @@ class SearchesController
         elsif url.starts_with?("#{host}/objects/")
           ActivityPub::Object.find(url)
         else
-          open(url) do |response|
+          headers = Ktistec::Signature.sign(env.account.actor, url, method: :get).merge!(HTTP::Headers{"Accept" => "application/activity+json"})
+          Ktistec::Open.open(url, headers) do |response|
             ActivityPub.from_json_ld(response.body, include_key: true)
           end
         end

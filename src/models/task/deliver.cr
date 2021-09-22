@@ -14,7 +14,6 @@ require "../relationship/social/follow"
 class Task
   class Deliver < Task
     include Ktistec::Constants
-    include Ktistec::Open
 
     belongs_to sender, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri
     validates(sender) { "missing: #{source_iri}" unless sender? }

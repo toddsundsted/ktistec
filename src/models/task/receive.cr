@@ -17,7 +17,6 @@ require "../relationship/social/follow"
 class Task
   class Receive < Task
     include Ktistec::Constants
-    include Ktistec::Open
 
     belongs_to receiver, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri
     validates(receiver) { "missing: #{source_iri}" unless receiver? }
@@ -90,7 +89,8 @@ class Task
               receiver.iri
             elsif recipient
               unless (target = ActivityPub::Actor.find?(recipient))
-                open?(recipient) do |response|
+                headers = Ktistec::Signature.sign(receiver, recipient, method: :get).merge!(HTTP::Headers{"Accept" => "application/activity+json"})
+                Ktistec::Open.open?(recipient, headers) do |response|
                   target = ActivityPub.from_json_ld?(response.body)
                   if target.is_a?(ActivityPub::Collection) && target.iri == sender.followers
                     receiver.iri

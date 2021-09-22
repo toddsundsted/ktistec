@@ -25,7 +25,9 @@ Spectator.describe SearchesController do
     end
 
     context "when authorized" do
-      sign_in
+      let(account) { register(with_keys: true) }
+
+      sign_in(as: account.username)
 
       it "presents a search form" do
         get "/search", HTML_HEADERS

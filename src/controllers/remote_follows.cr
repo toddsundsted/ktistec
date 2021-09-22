@@ -49,7 +49,7 @@ class RemoteFollowsController
     unless (uri = env.params.query["uri"]?)
       bad_request("Missing URI")
     end
-    unless (actor = ActivityPub::Actor.dereference?(uri).try(&.save))
+    unless (actor = ActivityPub::Actor.dereference?(env.account.actor, uri).try(&.save))
       bad_request("Can't Dereference URI")
     end
 

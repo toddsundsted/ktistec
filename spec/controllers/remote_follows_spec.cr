@@ -6,7 +6,7 @@ require "../spec_helper/network"
 Spectator.describe RemoteFollowsController do
   setup_spec
 
-  let(actor) { register.actor }
+  let(actor) { register(with_keys: true).actor }
 
   describe "GET /actors/:username/remote-follow" do
     context "when accepting HTML" do

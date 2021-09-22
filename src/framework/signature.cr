@@ -1,4 +1,4 @@
-require "./framework"
+require "./key_pair"
 
 module Ktistec
   # HTTP Signature (https://tools.ietf.org/html/draft-cavage-http-signatures-10)
@@ -10,8 +10,8 @@ module Ktistec
     class Error < Exception
     end
 
-    def sign(actor, url, body = nil, content_type = nil, method = :post, time = Time.utc)
-      key = actor.private_key.not_nil!
+    def sign(key_pair, url, body = nil, content_type = nil, method = :post, time = Time.utc)
+      key = key_pair.private_key.not_nil!
       url = URI.parse(url)
       date = Time::Format::HTTP_DATE.format(time)
       headers_string = "(request-target) host date"
@@ -29,12 +29,12 @@ module Ktistec
         headers["Content-Type"] = content_type
       end
       signature = Base64.strict_encode(key.sign(OpenSSL::Digest.new("SHA256"), signature_string))
-      signature = %Q<keyId="#{actor.iri}",signature="#{signature}",headers="#{headers_string}">
+      signature = %Q<keyId="#{key_pair.iri}",signature="#{signature}",headers="#{headers_string}">
       headers["Signature"] = signature
       headers
     end
 
-    def verify(actor, url, headers, body = nil, method = :post)
+    def verify(key_pair, url, headers, body = nil, method = :post)
       unless (signature = headers["Signature"]?)
         raise Error.new("missing signature")
       end
@@ -76,7 +76,7 @@ module Ktistec
             "#{header}: #{headers["Digest"]}"
           end
         end.compact.join("\n")
-      key = actor.public_key
+      key = key_pair.public_key
       unless key.try(&.verify(OpenSSL::Digest.new("SHA256"), Base64.decode(parameters["signature"]), signature_string))
         raise Error.new("invalid signature: signed by keyId=#{parameters["keyId"]}")
       end
@@ -95,8 +95,8 @@ module Ktistec
       true
     end
 
-    def verify?(actor, url, headers, *args, **opts)
-      verify(actor, url, headers, *args, **opts)
+    def verify?(key_pair, url, headers, *args, **opts)
+      verify(key_pair, url, headers, *args, **opts)
     rescue ex : Error | OpenSSL::Error
       Log.info { "verification failed: #{ex.message}" }
       false

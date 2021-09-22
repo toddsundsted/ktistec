@@ -3,6 +3,7 @@ require "openssl_ext"
 
 require "../../framework/util"
 require "../../framework/json_ld"
+require "../../framework/key_pair"
 require "../../framework/ext/sqlite3"
 require "../../framework/model"
 require "../../framework/model/**"
@@ -22,7 +23,7 @@ require "./activity/undo"
 require "./object"
 
 module ActivityPub
-  class Actor
+  class Actor < Ktistec::KeyPair
     include Ktistec::Model(Common, Deletable, Polymorphic, Serialized, Linked)
     include ActivityPub
 

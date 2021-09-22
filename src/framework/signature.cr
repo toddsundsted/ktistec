@@ -5,10 +5,12 @@ module Ktistec
   # support.
   #
   module Signature
+    extend self
+
     class Error < Exception
     end
 
-    def self.sign(actor, url, body = nil, content_type = nil, method = :post, time = Time.utc)
+    def sign(actor, url, body = nil, content_type = nil, method = :post, time = Time.utc)
       key = actor.private_key.not_nil!
       url = URI.parse(url)
       date = Time::Format::HTTP_DATE.format(time)
@@ -32,7 +34,7 @@ module Ktistec
       headers
     end
 
-    def self.verify(actor, url, headers, body = nil, method = :post)
+    def verify(actor, url, headers, body = nil, method = :post)
       unless (signature = headers["Signature"]?)
         raise Error.new("missing signature")
       end
@@ -93,7 +95,7 @@ module Ktistec
       true
     end
 
-    def self.verify?(actor, url, headers, *args, **opts)
+    def verify?(actor, url, headers, *args, **opts)
       verify(actor, url, headers, *args, **opts)
     rescue ex : Error | OpenSSL::Error
       Log.info { "verification failed: #{ex.message}" }

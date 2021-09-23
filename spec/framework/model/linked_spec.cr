@@ -1,21 +1,8 @@
-require "openssl_ext"
-
 require "../../../src/framework/model/linked"
 
 require "../../spec_helper/base"
+require "../../spec_helper/key_pair"
 require "../../spec_helper/network"
-
-class FooBarKeyPair < Ktistec::KeyPair
-  def initialize(@iri : String)
-    keypair = OpenSSL::RSA.generate(2048, 17)
-    @public_key = keypair.public_key
-    @private_key = keypair
-  end
-
-  property iri : String
-  property public_key : OpenSSL::RSA
-  property private_key : OpenSSL::RSA
-end
 
 class LinkedModel
   include Ktistec::Model(Linked)
@@ -78,7 +65,7 @@ Spectator.describe Ktistec::Model::Linked do
       )
     end
     let(key_pair) do
-      FooBarKeyPair.new("https://key_pair")
+      KeyPair.new("https://key_pair")
     end
 
     context "when linked object is local" do
@@ -130,7 +117,7 @@ Spectator.describe Ktistec::Model::Linked do
       LinkedModel
     end
     let(key_pair) do
-      FooBarKeyPair.new("https://key_pair")
+      KeyPair.new("https://key_pair")
     end
 
     context "when linked object is local" do

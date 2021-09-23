@@ -1,25 +1,12 @@
-require "openssl_ext"
-
 require "../../src/framework/signature"
 
+require "../spec_helper/key_pair"
 require "../spec_helper/model"
-
-class FooBarKeyPair < Ktistec::KeyPair
-  def initialize(@iri : String)
-    keypair = OpenSSL::RSA.generate(2048, 17)
-    @public_key = keypair.public_key
-    @private_key = keypair
-  end
-
-  property iri : String
-  property public_key : OpenSSL::RSA
-  property private_key : OpenSSL::RSA
-end
 
 Spectator.describe Ktistec::Signature do
   setup_spec
 
-  let(key_pair) { FooBarKeyPair.new("https://key_pair") }
+  let(key_pair) { KeyPair.new("https://key_pair") }
 
   describe ".sign" do
     it "returns headers" do

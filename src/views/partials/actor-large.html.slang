@@ -15,4 +15,4 @@
         - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
           == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo"
         - else
-          == activity_button "Follow", outbox_path(_account), actor.iri, button_class: "primary"
+          == activity_button "Follow", outbox_path(_account), actor.iri, button_class: "ui button primary"

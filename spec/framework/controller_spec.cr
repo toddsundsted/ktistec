@@ -122,8 +122,8 @@ class FooBarController
     <div id="6.1">#{form1}</div>
     <div id="6.2">#{form2}</div>
     <div id="7">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_class: "foobar", button_class: "barfoo"}</div>
-    <div id="8">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_attrs: {title: "the title"}, button_attrs: {title: "the title"}}</div>
-    <div id="9">#{activity_button "outbox url", "object iri", "FooBar" { |html| html << tag div, "Foo Bar" } }</div>
+    <div id="8">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_data: {title: "the title"}, button_data: {title: "the title"}}</div>
+    <div id="9">#{activity_button "outbox url", "object iri", "FooBar" { tag div, "Foo Bar" } }</div>
     HTML
   end
 
@@ -364,22 +364,22 @@ Spectator.describe Ktistec::Controller do
 
     it "renders submit button with classes" do
       get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/button[@type='submit']/@class)")).to eq("ui button barfoo")
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/button[@type='submit']/@class)")).to eq("barfoo")
     end
 
     it "renders form with classes" do
       get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/@class)")).to eq("ui form foobar")
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/@class)")).to eq("foobar")
     end
 
-    it "renders submit button with attributes" do
+    it "renders submit button with data attributes" do
       get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form/button[@type='submit']/@title)")).to eq("the title")
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form/button[@type='submit']/@data-title)")).to eq("the title")
     end
 
-    it "renders form with attributes" do
+    it "renders form with data attributes" do
       get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form/@title)")).to eq("the title")
+      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form/@data-title)")).to eq("the title")
     end
 
     it "renders a form with nested content" do

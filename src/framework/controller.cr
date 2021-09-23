@@ -197,42 +197,6 @@ module Ktistec
       end
     end
 
-    # Posts an activity to an outbox.
-    #
-    macro activity_button(arg1, arg2, arg3, type = nil, form_class = nil, button_class = nil, form_attrs = nil, button_attrs = nil, &block)
-      {% if block %}
-        {% outbox_url = arg1 ; object_iri = arg2 ; type = arg3 %}
-      {% else %}
-        {% outbox_url = arg2 ; object_iri = arg3 ; text = arg1 %}
-      {% end %}
-      {% form_class = ["ui", "form", form_class].select{ |i| i }.join(" ") %}
-      {% button_class = ["ui", "button", button_class].select{ |i| i }.join(" ") %}
-      # see BUG: https://github.com/crystal-lang/crystal/issues/10236
-      tag(
-        :form,
-        tag(:input, type: "hidden", name: "authenticity_token", value: env.session.string?("csrf")),
-        tag(:input, type: "hidden", name: "type", value: {{type || text}}),
-        tag(:input, type: "hidden", name: "object", value: {{object_iri}}),
-        {% if block %}
-          tag(
-            :button, type: "submit", "class": {{button_class}} {% if button_attrs %} ,
-              {{**button_attrs}}
-            {% end %}
-          ) {{block}},
-        {% else %}
-          tag(
-            :button, {{text}}, type: "submit", "class": {{button_class}} {% if button_attrs %} ,
-              {{**button_attrs}}
-            {% end %}
-          ),
-        {% end %}
-        method: "POST", action: {{outbox_url}},
-        "class": {{form_class}} {% if form_attrs %} ,
-          {{**form_attrs}}
-        {% end %}
-      )
-    end
-
     macro accepts?(*mime_type)
       env.accepts?({{*mime_type}})
     end

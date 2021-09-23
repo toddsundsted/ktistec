@@ -39,6 +39,48 @@ module Ktistec::ViewHelper
 
   ## HTML helpers
 
+  # Posts an activity to an outbox.
+  #
+  macro activity_button(arg1, arg2, arg3, type = nil, method = "POST", public = true, form_class = "ui form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
+    {% if block %}
+      {% action = arg1 ; object = arg2 ; type = arg3 %}
+      %block =
+        begin
+          {{block.body}}
+        end
+    {% else %}
+      {% action = arg2 ; object = arg3 ; text = arg1 %}
+      %block = {{text}}
+    {% end %}
+    %form_attrs = [
+      %Q|action="#{{{action}}}"|,
+      %Q|method="#{{{method}}}"|,
+      {% if form_data %}
+        {% for key, value in form_data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ] of String
+    %button_attrs = [
+      {% if button_data %}
+        {% for key, value in button_data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ] of String
+    <<-HTML
+    <form class="#{{{form_class}}}" #{%form_attrs.join(" ")}>\
+    <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
+    <input type="hidden" name="object" value="#{{{object}}}">\
+    <input type="hidden" name="type" value="#{{{type || text}}}">\
+    <input type="hidden" name="public" value="#{{{public}} ? 1 : nil}">\
+    <button class="#{{{button_class}}}" #{%button_attrs.join(" ")} type="submit">\
+    #{%block}\
+    </button>\
+    </form>
+    HTML
+  end
+
   macro authenticity_token(env)
     %Q|<input type="hidden" name="authenticity_token" value="#{{{env}}.session.string?("csrf")}">|
   end

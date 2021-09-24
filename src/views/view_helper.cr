@@ -136,7 +136,7 @@ module Ktistec::ViewHelper
     HTML
   end
 
-  macro input_tag(label, model, field, class _class = "", type _type = "text", placeholder = nil, data = nil)
+  macro input_tag(label, model, field, class _class = "", type = "text", placeholder = nil, data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -151,7 +151,7 @@ module Ktistec::ViewHelper
     {% end %}
     %attributes = [
       %Q|class="#{{{_class}}}"|,
-      %Q|type="#{{{_type}}}"|,
+      %Q|type="#{{{type}}}"|,
       %Q|name="#{%name}"|,
       %Q|value="#{%value}"|,
       {% if placeholder %}

@@ -120,6 +120,16 @@ Spectator.describe RemoteFollowsController do
     context "when accepting HTML" do
       let(headers) { HTTP::Headers{"Accept" => "text/html"} }
 
+      it "returns 404 if not found" do
+        get "/actors/missing/authorize-follow", headers
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 403 if different account" do
+        get "/actors/#{register.actor.username}/authorize-follow", headers
+        expect(response.status_code).to eq(403)
+      end
+
       it "returns 400 if the uri is missing" do
         get "/actors/#{actor.username}/authorize-follow", headers
         expect(response.status_code).to eq(400)
@@ -144,6 +154,16 @@ Spectator.describe RemoteFollowsController do
 
     context "when accepting JSON" do
       let(headers) { HTTP::Headers{"Accept" => "application/json"} }
+
+      it "returns 404 if not found" do
+        get "/actors/missing/authorize-follow", headers
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 403 if different account" do
+        get "/actors/#{register.actor.username}/authorize-follow", headers
+        expect(response.status_code).to eq(403)
+      end
 
       it "returns 400 if the uri is missing" do
         get "/actors/#{actor.username}/authorize-follow", headers

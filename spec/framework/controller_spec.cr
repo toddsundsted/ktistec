@@ -20,7 +20,6 @@ class FooBarController
     "/foo/bar/helpers/actors/by-id/:id",
     "/foo/bar/helpers/actors/by-username/:username",
     "/foo/bar/helpers/:username/:relationship",
-    "/foo/bar/helpers/tag",
     "/foo/bar/accept",
     "/foo/bar/xhr",
     "/foo/bar/created",
@@ -95,36 +94,6 @@ class FooBarController
     {
       actor_relationships_path: actor_relationships_path
     }.to_json
-  end
-
-  get "/foo/bar/helpers/tag" do |env|
-    form1 = tag :form, id: 1, class: "basic" do |html|
-      html << tag :input, type: "hidden", value: "secret"
-      html << tag :input, type: "submit"
-    end
-    form2 = tag :form, id: 1, class: "basic" do
-      String.build do |io|
-        io << %q|<input type="hidden" value="secret">|
-        io << %q|<input type="submit">|
-      end
-    end
-    <<-HTML
-    <div id="1">#{tag div}</div>
-    <div id="2.1">#{tag div, "foobar"}</div>
-    <div id="2.2">#{tag div, "foo", "bar"}</div>
-    <div id="2.3">#{tag div, "foo" + "bar"}</div>
-    <div id="2.4">#{tag div, "f" + "oo", "b" + "ar"}</div>
-    <div id="3.1">#{tag div, tag span}</div>
-    <div id="3.2">#{tag div, tag(span, "foobar")}</div>
-    <div id="4">#{tag div, tag(span, id: 5, class: "quux"), style: "foobar"}</div>
-    <div id="5.1">#{tag div do |h| h << tag span end}</div>
-    <div id="5.2">#{tag div do |h| h << tag span, "foobar" end}</div>
-    <div id="6.1">#{form1}</div>
-    <div id="6.2">#{form2}</div>
-    <div id="7">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_class: "foobar", button_class: "barfoo"}</div>
-    <div id="8">#{activity_button "Foo Bar", "outbox url", "object iri", type: "FooBar", form_data: {title: "the title"}, button_data: {title: "the title"}}</div>
-    <div id="9">#{activity_button "outbox url", "object iri", "FooBar" { tag div, "Foo Bar" } }</div>
-    HTML
   end
 
   get "/foo/bar/accept" do |env|
@@ -267,124 +236,6 @@ Spectator.describe Ktistec::Controller do
     it "gets the actor relationships path" do
       get "/foo/bar/helpers/foo_bar/helping"
       expect(JSON.parse(response.body)["actor_relationships_path"]).to eq("/actors/foo_bar/helping")
-    end
-  end
-
-  describe "get /foo/bar/helpers/tag" do
-    let(options) { {options: XML::SaveOptions::AS_HTML} }
-
-    macro tag(id)
-      XML.parse_html(response.body).xpath_nodes("//div[@id='{{id}}']/node()").map(&.to_xml(**options)).join
-    end
-
-    it "renders a tag" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(1)).to eq(%Q|<div></div>|)
-    end
-
-    it "renders a tag with content" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(2.1)).to eq(%Q|<div>foobar</div>|)
-    end
-
-    it "renders a tag with content" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(2.2)).to eq(%Q|<div>foobar</div>|)
-    end
-
-    it "renders a tag with content" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(2.3)).to eq(%Q|<div>foobar</div>|)
-    end
-
-    it "renders a tag with content" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(2.4)).to eq(%Q|<div>foobar</div>|)
-    end
-
-    it "renders nested tags" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(3.1)).to eq(%Q|<div><span></span></div>|)
-    end
-
-    it "renders nested tags" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(3.2)).to eq(%Q|<div><span>foobar</span></div>|)
-    end
-
-    it "renders a tag with attributes" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(4)).to eq(%Q|<div style="foobar"><span id="5" class="quux"></span></div>|)
-    end
-
-    it "renders block as content" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(5.1)).to eq(%Q|<div><span></span></div>|)
-    end
-
-    it "renders block as content" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(5.2)).to eq(%Q|<div><span>foobar</span></div>|)
-    end
-
-    it "renders complex form" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(6.1)).to eq(%Q|<form id="1" class="basic"><input type="hidden" value="secret"><input type="submit"></form>|)
-    end
-
-    it "renders complex form" do
-      get "/foo/bar/helpers/tag"
-      expect(tag(6.2)).to eq(%Q|<form id="1" class="basic"><input type="hidden" value="secret"><input type="submit"></form>|)
-    end
-
-    it "renders a submit button" do
-      get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/button[@type='submit']/text())")).to eq("Foo Bar")
-    end
-
-    it "renders a hidden input with the authenticity token" do
-      get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/input[@name='authenticity_token']/@value)")).to eq("CSRF TOKEN")
-    end
-
-    it "renders a hidden input with the activity type" do
-      get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/input[@name='type']/@value)")).to eq("FooBar")
-    end
-
-    it "renders a hidden input with the object iri" do
-      get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/input[@name='object']/@value)")).to eq("object iri")
-    end
-
-    it "renders a form with the outbox url" do
-      get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/@action)")).to eq("outbox url")
-    end
-
-    it "renders submit button with classes" do
-      get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/button[@type='submit']/@class)")).to eq("barfoo")
-    end
-
-    it "renders form with classes" do
-      get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='7']/form/@class)")).to eq("foobar")
-    end
-
-    it "renders submit button with data attributes" do
-      get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form/button[@type='submit']/@data-title)")).to eq("the title")
-    end
-
-    it "renders form with data attributes" do
-      get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='8']/form/@data-title)")).to eq("the title")
-    end
-
-    it "renders a form with nested content" do
-      get "/foo/bar/helpers/tag"
-      expect(XML.parse_html(response.body).xpath_string("string(//div[@id='9']/form//div/text())")).to eq("Foo Bar")
     end
   end
 

@@ -140,63 +140,6 @@ module Ktistec
       "/remote/objects/#{{{object}}.id}/unapprove"
     end
 
-    macro _tag(_io, _name, *contents, **attributes, &block)
-      {% if attributes.size > 0 %}
-        {{_io}} << %q|<{{_name.id}}|
-        {% for k, v in attributes %}
-          {{_io}} << " "
-          {{_io}} << {{k.stringify}}
-          {{_io}} << "="
-          {{_io}} << {{v}}.inspect
-        {% end %}
-        {{_io}} << %q|>|
-      {% else %}
-        {{_io}} << %q|<{{_name.id}}>|
-      {% end %}
-      {% for c in contents %}
-        {% if c.is_a?(Call) && !c.receiver && c.name == "tag" %}
-          {% if c.args && c.named_args %}
-            _{{c.name}}({{_io}}, {{*c.args}}, {{*c.named_args}}) {{c.block}}
-          {% elsif c.args %}
-            _{{c.name}}({{_io}}, {{*c.args}}) {{c.block}}
-          {% elsif c.named_args %}
-            _{{c.name}}({{_io}}, {{*c.named_args}}) {{c.block}}
-          {% else %}
-            _{{c.name}}({{_io}}) {{c.block}}
-          {% end %}
-        {% elsif c.is_a?(Call) || c.is_a?(StringLiteral) %}
-          {{_io}} << {{c}}
-        {% else %}
-          {% raise "Unsupported tag content: #{c}" %}
-        {% end %}
-      {% end %}
-      {% if block %}
-        begin
-          {% if block.args.size < 1 %}
-            {{block.body}}.to_s({{_io}})
-          {% else %}
-            {{block.args[0]}} = {{_io}}
-            {{block.body}}
-          {% end %}
-        end
-      {% end %}
-      {{_io}} << "</{{_name.id}}>"
-    end
-
-    macro tag(_name, *contents, **attributes, &block)
-      String.build do |%io|
-        {% if contents.size > 0 && attributes.size > 0 %}
-          _tag(%io, {{_name}}, {{*contents}}, {{**attributes}}) {{block}}
-        {% elsif contents.size > 0 %}
-          _tag(%io, {{_name}}, {{*contents}}) {{block}}
-        {% elsif attributes.size > 0 %}
-          _tag(%io, {{_name}}, {{**attributes}}) {{block}}
-        {% else %}
-          _tag(%io, {{_name}}) {{block}}
-        {% end %}
-      end
-    end
-
     macro accepts?(*mime_type)
       env.accepts?({{*mime_type}})
     end

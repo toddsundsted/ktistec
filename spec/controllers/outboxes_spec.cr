@@ -68,6 +68,11 @@ Spectator.describe RelationshipsController do
             to change{ActivityPub::Activity::Announce.count(actor_iri: actor.iri)}.by(1)
         end
 
+        it "does not create a visible activity if not public" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}&public="
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
+        end
+
         it "creates a visible activity if public" do
           post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}&public=true"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
@@ -129,6 +134,11 @@ Spectator.describe RelationshipsController do
         it "creates a like activity" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"}.
             to change{ActivityPub::Activity::Like.count(actor_iri: actor.iri)}.by(1)
+        end
+
+        it "does not create a visible activity if not public" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}&public="
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "creates a visible activity if public" do
@@ -330,9 +340,19 @@ Spectator.describe RelationshipsController do
           end
         end
 
+        it "does not create a visible activity if not public" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&public="
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
+        end
+
         it "creates a visible activity if public" do
           post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&public=true"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+        end
+
+        it "does not create a visible object if not public" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&public="
+          expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_false
         end
 
         it "creates a visible object if public" do

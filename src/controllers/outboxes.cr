@@ -23,7 +23,7 @@ class RelationshipsController
         bad_request
       end
       now = Time.utc
-      visible = !!activity["public"]?
+      visible = !!activity["public"]?.presence
       to = [] of String
       if visible
         to << "https://www.w3.org/ns/activitystreams#Public"
@@ -49,7 +49,7 @@ class RelationshipsController
         bad_request
       end
       now = Time.utc
-      visible = !!activity["public"]?
+      visible = !!activity["public"]?.presence
       to = [] of String
       if visible
         to << "https://www.w3.org/ns/activitystreams#Public"
@@ -83,7 +83,7 @@ class RelationshipsController
       if object && object.attributed_to != account.actor
         forbidden
       end
-      visible = !!activity["public"]?
+      visible = !!activity["public"]?.presence
       to = activity["to"]?.presence.try(&.split(",")) || [] of String
       if (attributed_to = in_reply_to.try(&.attributed_to?))
         to |= [attributed_to.iri]

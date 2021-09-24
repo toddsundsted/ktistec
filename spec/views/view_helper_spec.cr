@@ -150,12 +150,17 @@ Spectator.describe "helper" do
 
   describe "form_tag" do
     subject do
-      XML.parse_html(form_tag(model, "/foobar", method: "PUT") { "<div/>" }).document
+      XML.parse_html(form_tag(model, "/foobar", method: "PUT", csrf: "CSRF") { "<div/>" }).document
     end
 
     it "emits a form with nested content" do
       expect(subject.xpath_nodes("//form/div")).not_to be_empty
     end
+
+    it "emits a form with a csrf token" do
+      expect(subject.xpath_nodes("//form/input[@name='authenticity_token']/@value")).to contain_exactly("CSRF")
+    end
+
 
     it "specifies the action" do
       expect(subject.xpath_nodes("//form/@action")).to contain_exactly("/foobar")
@@ -171,7 +176,7 @@ Spectator.describe "helper" do
 
     context "given data attributes" do
       subject do
-        XML.parse_html(form_tag(model, "/foobar", data: {"foo" => "bar", "abc" => "xyz"}) { "<div/>" }).document
+        XML.parse_html(form_tag(model, "/foobar", data: {"foo" => "bar", "abc" => "xyz"}, csrf: nil) { "<div/>" }).document
       end
 
       it "emits data attributes" do
@@ -181,7 +186,7 @@ Spectator.describe "helper" do
 
     context "given a nil model" do
       subject do
-        XML.parse_html(form_tag(nil, "/foobar") { "<div/>" }).document
+        XML.parse_html(form_tag(nil, "/foobar", csrf: nil) { "<div/>" }).document
       end
 
       it "does not set the error class" do
@@ -191,7 +196,7 @@ Spectator.describe "helper" do
 
     context "given a DELETE method" do
       subject do
-        XML.parse_html(form_tag(model, "/foobar", method: "DELETE") { "<div/>" }).document
+        XML.parse_html(form_tag(model, "/foobar", method: "DELETE", csrf: nil) { "<div/>" }).document
       end
 
       it "emits a hidden input" do

@@ -96,7 +96,7 @@ module Ktistec::ViewHelper
     end
   end
 
-  macro form_tag(model, action, method = "POST", class _class = "ui form", data = nil, &block)
+  macro form_tag(model, action, method = "POST", class _class = "ui form", data = nil, csrf = env.session.string?("csrf"), &block)
     {% if model %}
       %classes =
         {{model}}.errors.presence ?
@@ -126,6 +126,7 @@ module Ktistec::ViewHelper
     ]
     <<-HTML
     <form class="#{%classes}" #{%attributes.join(" ")}>\
+    <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
     #{%input}\
     #{%block}\
     </form>

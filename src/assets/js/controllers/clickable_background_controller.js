@@ -7,7 +7,11 @@ export default class extends Controller {
 
   click(event) {
     if (this.hrefValue && !event.target.closest("a, button, input, img")) {
-      Turbo.visit(this.hrefValue)
+      if (this.hrefValue[0] != "/" && new URL(this.hrefValue).host != window.location.host) {
+        window.open(this.hrefValue, "_blank")
+      } else {
+        Turbo.visit(this.hrefValue)
+      }
     }
   }
 }

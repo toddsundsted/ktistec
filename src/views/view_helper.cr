@@ -53,6 +53,7 @@ module Ktistec::ViewHelper
       %block = {{text}}
     {% end %}
     %form_attrs = [
+      %Q|class="#{{{form_class}}}"|,
       %Q|action="#{{{action}}}"|,
       %Q|method="#{{{method}}}"|,
       {% if form_data %}
@@ -60,21 +61,22 @@ module Ktistec::ViewHelper
           %Q|data-{{key.id}}="#{{{value}}}"|,
         {% end %}
       {% end %}
-    ] of String
+    ]
     %button_attrs = [
+      %Q|class="#{{{button_class}}}"|,
       {% if button_data %}
         {% for key, value in button_data %}
           %Q|data-{{key.id}}="#{{{value}}}"|,
         {% end %}
       {% end %}
-    ] of String
+    ]
     <<-HTML
-    <form class="#{{{form_class}}}" #{%form_attrs.join(" ")}>\
+    <form #{%form_attrs.join(" ")}>\
     <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
     <input type="hidden" name="object" value="#{{{object}}}">\
     <input type="hidden" name="type" value="#{{{type || text}}}">\
     <input type="hidden" name="public" value="#{{{public}} ? 1 : nil}">\
-    <button class="#{{{button_class}}}" #{%button_attrs.join(" ")} type="submit">\
+    <button #{%button_attrs.join(" ")} type="submit">\
     #{%block}\
     </button>\
     </form>
@@ -116,6 +118,7 @@ module Ktistec::ViewHelper
         {{block.body}}
       end
     %attributes = [
+      %Q|class="#{%classes}"|,
       %Q|action="#{{{action}}}"|,
       %Q|method="#{{{method}}}"|,
       {% if data %}
@@ -125,7 +128,7 @@ module Ktistec::ViewHelper
       {% end %}
     ]
     <<-HTML
-    <form class="#{%classes}" #{%attributes.join(" ")}>\
+    <form #{%attributes.join(" ")}>\
     <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
     #{%input}\
     #{%block}\

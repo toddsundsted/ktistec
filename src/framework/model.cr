@@ -343,8 +343,8 @@ module Ktistec
             raise NotFound.new("#{self.class} {{name}} {{primary_key}}=#{self.{{foreign_key}}}: not found")
           end
         end
-        def _belongs_to_{{name}} : {{class_name}}?
-          @{{name}}
+        def _association_{{name}}
+          {:belongs_to, {{class_name}}, @{{name}}}
         end
       end
 
@@ -377,8 +377,8 @@ module Ktistec
           end
           @{{name}}.not_nil!
         end
-        def _belongs_to_{{name}} : Enumerable({{class_name}})?
-          @{{name}}
+        def _association_{{name}}
+          {:has_many, Enumerable({{class_name}}), @{{name}}}
         end
       end
 
@@ -406,8 +406,8 @@ module Ktistec
         def {{name}} : {{class_name}}
           @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}})
         end
-        def _belongs_to_{{name}} : {{class_name}}?
-          @{{name}}
+        def _association_{{name}}
+          {:has_one, {{class_name}}, @{{name}}}
         end
       end
 
@@ -453,20 +453,20 @@ module Ktistec
         {% begin %}
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
-          {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
+          {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
           unless skip_associated
             options = {skip_associated: skip_associated}
-            {% for d in methods %}
-              if (%body = {{d.body}})
+            {% for method in methods %}
+              if (%body = {{method.body}}.last)
                 if %body.responds_to?(:each)
                   %body.each_with_index do |model, i|
                     unless result.any? { |node| model == node.model }
-                      model._serialize_graph(result, {{d.name[12..-1].stringify}}, i, **options)
+                      model._serialize_graph(result, {{method.name[13..-1].stringify}}, i, **options)
                     end
                   end
                 else
                   unless result.any? { |node| %body == node.model }
-                    %body._serialize_graph(result, {{d.name[12..-1].stringify}}, **options)
+                    %body._serialize_graph(result, {{method.name[13..-1].stringify}}, **options)
                   end
                 end
               end

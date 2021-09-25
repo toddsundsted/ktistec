@@ -224,8 +224,6 @@ module Ktistec
     end
 
     module InstanceMethods
-      @saved_record : self | Nil = nil
-
       # Initializes the new instance.
       #
       def initialize(options : Hash, prefix : String = "")
@@ -694,6 +692,8 @@ module Ktistec
           include ::Ktistec::Model::{{type}}
         {% end %}
       {% end %}
+
+      @saved_record : self | Nil = nil
     end
 
     @[Persistent]

@@ -66,28 +66,30 @@ module Ktistec
           {% verbatim do %}
             {% for type in @type.all_subclasses << @type %}
               {% for method in type.methods.select { |d| d.name.starts_with?("_association_") } %}
-                {% name = method.name[13..-1] %}
-                class ::{{type}}
-                  def {{name}}?(key_pair, *, dereference = false, ignore_cached = false)
-                    {{name}} = self.{{name}}?
-                    unless ({{name}} && !ignore_cached) || ({{name}} && {{name}}.changed?)
-                      if ({{name}}_iri = self.{{name}}_iri) && dereference
-                        unless {{name}}_iri.starts_with?(Ktistec.host)
-                          {% for union_type in method.body[1].id.split(" | ").map(&.id) %}
-                            headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
-                            headers["Accept"] = "application/activity+json"
-                            Ktistec::Open.open?({{name}}_iri, headers) do |response|
-                              if ({{name}} = {{union_type}}.from_json_ld?(response.body))
-                                return self.{{name}} = {{name}}
+                {% if method.body.first == :belongs_to %}
+                  {% name = method.name[13..-1] %}
+                  class ::{{type}}
+                    def {{name}}?(key_pair, *, dereference = false, ignore_cached = false)
+                      {{name}} = self.{{name}}?
+                      unless ({{name}} && !ignore_cached) || ({{name}} && {{name}}.changed?)
+                        if ({{name}}_iri = self.{{name}}_iri) && dereference
+                          unless {{name}}_iri.starts_with?(Ktistec.host)
+                            {% for union_type in method.body[1].id.split(" | ").map(&.id) %}
+                              headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
+                              headers["Accept"] = "application/activity+json"
+                              Ktistec::Open.open?({{name}}_iri, headers) do |response|
+                                if ({{name}} = {{union_type}}.from_json_ld?(response.body))
+                                  return self.{{name}} = {{name}}
+                                end
                               end
-                            end
-                          {% end %}
+                            {% end %}
+                          end
                         end
                       end
+                      {{name}}
                     end
-                    {{name}}
                   end
-                end
+                {% end %}
               {% end %}
             {% end %}
           {% end %}

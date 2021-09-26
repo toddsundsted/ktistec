@@ -363,9 +363,6 @@ module Ktistec
         @[Assignable]
         @{{name}} : Array({{class_name}})?
         def {{name}}=({{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
-          self.{{name}}.each do |other|
-            other.destroy unless {{name}}.includes?(other)
-          end
           @{{name}} = {{name}}.to_a
           changed!({{name.symbolize}})
           {{name}}.each do |n|
@@ -396,9 +393,6 @@ module Ktistec
         @[Assignable]
         @{{name}} : {{class_name}}?
         def {{name}}=({{name}} : {{class_name}}) : {{class_name}}
-          if (other = self.{{name}}?)
-            other.destroy unless other == {{name}}
-          end
           @{{name}} = {{name}}
           changed!({{name.symbolize}})
           {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
@@ -591,6 +585,32 @@ module Ktistec
             {% end %}
           ).last_insert_id
         {% end %}
+        # destroy unassociated instances
+        {% begin %}
+          {% ancestors = @type.ancestors << @type %}
+          {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+          {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+          if (saved_record = @saved_record)
+            {% for method in methods %}
+              {% name = method.name[13..-1] %}
+              {% if method.body.first == :has_one %}
+                if (self.changed?({{name.symbolize}}))
+                  if (model = saved_record.{{name}}?)
+                    model.destroy unless self.{{name}} == model
+                  end
+                end
+              {% elsif method.body.first == :has_many %}
+                if (self.changed?({{name.symbolize}}))
+                  saved_record.{{name}}.each do |model|
+                    model.destroy unless self.{{name}}.includes?(model)
+                  end
+                end
+              {% end %}
+            {% end %}
+          end
+        {% end %}
+        # dup but don't maintain a linked list of previously saved records
+        @saved_record = self.dup.clear_saved_record
         clear!
       end
 

@@ -239,6 +239,8 @@ module Ktistec
           {% end %}
         {% end %}
         super()
+        # dup but don't maintain a linked list of previously saved records
+        @saved_record = self.dup.clear_saved_record
         clear!
       end
 
@@ -257,6 +259,8 @@ module Ktistec
           {% end %}
         {% end %}
         super()
+        # dup but don't maintain a linked list of previously saved records
+        @saved_record = self.dup.clear_saved_record
         clear!
       end
 
@@ -269,6 +273,7 @@ module Ktistec
             key = prefix + {{v.stringify}}
             if options.has_key?(key)
               if (o = options[key]?).is_a?(typeof(self.{{v}}))
+                @changed << {{v.symbolize}}
                 self.{{v}} = o
               end
             end
@@ -286,6 +291,7 @@ module Ktistec
             key = {{v.stringify}}
             if options.has_key?(key)
               if (o = options[key]?).is_a?(typeof(self.{{v}}))
+                @changed << {{v.symbolize}}
                 self.{{v}} = o
               end
             end
@@ -322,6 +328,7 @@ module Ktistec
         @[Assignable]
         @{{name}} : {{class_name}}?
         def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
+          changed!({{name.symbolize}})
           self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
           {{name}}
         end
@@ -360,6 +367,7 @@ module Ktistec
             other.destroy unless {{name}}.includes?(other)
           end
           @{{name}} = {{name}}.to_a
+          changed!({{name.symbolize}})
           {{name}}.each do |n|
             n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}}))
             {% if inverse_of %}
@@ -392,6 +400,7 @@ module Ktistec
             other.destroy unless other == {{name}}
           end
           @{{name}} = {{name}}
+          changed!({{name.symbolize}})
           {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
           {% if inverse_of %}
             {{name}}.{{inverse_of}} = self
@@ -602,45 +611,18 @@ module Ktistec
         @id.nil?
       end
 
-      def changed?(property = nil)
-        new_record? || begin
-          @saved_record ||= self.class.find?(@id)
-          if property
-            {% begin %}
-              {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
-              case property
-              {% for v in vs %}
-                when .==({{v.symbolize}})
-                  self.{{v}} != @saved_record.try(&.as(typeof(self)).{{v}})
-              {% end %}
-              else
-                false
-              end
-            {% end %}
-          else
-            self != @saved_record
-          end
-        end
+      @changed = Set(Symbol).new
+
+      def changed!(property : Symbol)
+        @changed << property
       end
 
-      def clear!(property = nil)
-        if property
-          @saved_record ||= self.class.find?(@id)
-          @saved_record.try do |saved_record|
-            {% begin %}
-              {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
-              case property
-              {% for v in vs %}
-              when .==({{v.symbolize}})
-                saved_record.as(typeof(self)).{{v}} = self.{{v}}
-              {% end %}
-              end
-            {% end %}
-          end
-        else
-          # don't maintain a linked list of previously saved records
-          @saved_record = self.dup.clear_saved_record
-        end
+      def changed?(property : Symbol? = nil)
+        new_record? || (property ? @changed.includes?(property) : !@changed.empty?)
+      end
+
+      def clear!(property : Symbol? = nil)
+        property ? @changed.delete(property) : @changed.clear
       end
 
       protected def clear_saved_record

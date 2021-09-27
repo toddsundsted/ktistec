@@ -156,13 +156,19 @@ module ActivityPub
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
           WHERE o.visible = 1
             AND o.deleted_at is NULL
+            AND t.deleted_at IS NULL
             AND o.id NOT IN (
                SELECT o.id
                  FROM objects AS o
+                 JOIN actors AS t
+                   ON t.iri = o.attributed_to_iri
                 WHERE o.visible = 1
                   AND o.deleted_at is NULL
+                  AND t.deleted_at IS NULL
              ORDER BY o.published DESC
                 LIMIT ?
             )

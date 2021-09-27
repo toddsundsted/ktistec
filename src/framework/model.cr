@@ -224,8 +224,6 @@ module Ktistec
     end
 
     module InstanceMethods
-      @saved_record : self | Nil = nil
-
       # Initializes the new instance.
       #
       def initialize(options : Hash, prefix : String = "")
@@ -241,6 +239,8 @@ module Ktistec
           {% end %}
         {% end %}
         super()
+        # dup but don't maintain a linked list of previously saved records
+        @saved_record = self.dup.clear_saved_record
         clear!
       end
 
@@ -259,6 +259,8 @@ module Ktistec
           {% end %}
         {% end %}
         super()
+        # dup but don't maintain a linked list of previously saved records
+        @saved_record = self.dup.clear_saved_record
         clear!
       end
 
@@ -271,6 +273,7 @@ module Ktistec
             key = prefix + {{v.stringify}}
             if options.has_key?(key)
               if (o = options[key]?).is_a?(typeof(self.{{v}}))
+                @changed << {{v.symbolize}}
                 self.{{v}} = o
               end
             end
@@ -288,6 +291,7 @@ module Ktistec
             key = {{v.stringify}}
             if options.has_key?(key)
               if (o = options[key]?).is_a?(typeof(self.{{v}}))
+                @changed << {{v.symbolize}}
                 self.{{v}} = o
               end
             end
@@ -324,6 +328,7 @@ module Ktistec
         @[Assignable]
         @{{name}} : {{class_name}}?
         def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
+          changed!({{name.symbolize}})
           self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
           {{name}}
         end
@@ -343,8 +348,8 @@ module Ktistec
             raise NotFound.new("#{self.class} {{name}} {{primary_key}}=#{self.{{foreign_key}}}: not found")
           end
         end
-        def _belongs_to_{{name}} : {{class_name}}?
-          @{{name}}
+        def _association_{{name}}
+          {:belongs_to, {{class_name}}, @{{name}}}
         end
       end
 
@@ -358,10 +363,8 @@ module Ktistec
         @[Assignable]
         @{{name}} : Array({{class_name}})?
         def {{name}}=({{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
-          self.{{name}}.each do |other|
-            other.destroy unless {{name}}.includes?(other)
-          end
           @{{name}} = {{name}}.to_a
+          changed!({{name.symbolize}})
           {{name}}.each do |n|
             n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}}))
             {% if inverse_of %}
@@ -377,8 +380,8 @@ module Ktistec
           end
           @{{name}}.not_nil!
         end
-        def _belongs_to_{{name}} : Enumerable({{class_name}})?
-          @{{name}}
+        def _association_{{name}}
+          {:has_many, Enumerable({{class_name}}), @{{name}}}
         end
       end
 
@@ -390,10 +393,8 @@ module Ktistec
         @[Assignable]
         @{{name}} : {{class_name}}?
         def {{name}}=({{name}} : {{class_name}}) : {{class_name}}
-          if (other = self.{{name}}?)
-            other.destroy unless other == {{name}}
-          end
           @{{name}} = {{name}}
+          changed!({{name.symbolize}})
           {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
           {% if inverse_of %}
             {{name}}.{{inverse_of}} = self
@@ -406,8 +407,8 @@ module Ktistec
         def {{name}} : {{class_name}}
           @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}})
         end
-        def _belongs_to_{{name}} : {{class_name}}?
-          @{{name}}
+        def _association_{{name}}
+          {:has_one, {{class_name}}, @{{name}}}
         end
       end
 
@@ -453,20 +454,20 @@ module Ktistec
         {% begin %}
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
-          {% methods = methods.select { |d| d.name.starts_with?("_belongs_to_") } %}
+          {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
           unless skip_associated
             options = {skip_associated: skip_associated}
-            {% for d in methods %}
-              if (%body = {{d.body}})
+            {% for method in methods %}
+              if (%body = {{method.body}}.last)
                 if %body.responds_to?(:each)
                   %body.each_with_index do |model, i|
                     unless result.any? { |node| model == node.model }
-                      model._serialize_graph(result, {{d.name[12..-1].stringify}}, i, **options)
+                      model._serialize_graph(result, {{method.name[13..-1].stringify}}, i, **options)
                     end
                   end
                 else
                   unless result.any? { |node| %body == node.model }
-                    %body._serialize_graph(result, {{d.name[12..-1].stringify}}, **options)
+                    %body._serialize_graph(result, {{method.name[13..-1].stringify}}, **options)
                   end
                 end
               end
@@ -584,6 +585,32 @@ module Ktistec
             {% end %}
           ).last_insert_id
         {% end %}
+        # destroy unassociated instances
+        {% begin %}
+          {% ancestors = @type.ancestors << @type %}
+          {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+          {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+          if (saved_record = @saved_record)
+            {% for method in methods %}
+              {% name = method.name[13..-1] %}
+              {% if method.body.first == :has_one %}
+                if (self.changed?({{name.symbolize}}))
+                  if (model = saved_record.{{name}}?)
+                    model.destroy unless self.{{name}} == model
+                  end
+                end
+              {% elsif method.body.first == :has_many %}
+                if (self.changed?({{name.symbolize}}))
+                  saved_record.{{name}}.each do |model|
+                    model.destroy unless self.{{name}}.includes?(model)
+                  end
+                end
+              {% end %}
+            {% end %}
+          end
+        {% end %}
+        # dup but don't maintain a linked list of previously saved records
+        @saved_record = self.dup.clear_saved_record
         clear!
       end
 
@@ -604,45 +631,18 @@ module Ktistec
         @id.nil?
       end
 
-      def changed?(property = nil)
-        new_record? || begin
-          @saved_record ||= self.class.find?(@id)
-          if property
-            {% begin %}
-              {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
-              case property
-              {% for v in vs %}
-                when .==({{v.symbolize}})
-                  self.{{v}} != @saved_record.try(&.as(typeof(self)).{{v}})
-              {% end %}
-              else
-                false
-              end
-            {% end %}
-          else
-            self != @saved_record
-          end
-        end
+      @changed = Set(Symbol).new
+
+      def changed!(property : Symbol)
+        @changed << property
       end
 
-      def clear!(property = nil)
-        if property
-          @saved_record ||= self.class.find?(@id)
-          @saved_record.try do |saved_record|
-            {% begin %}
-              {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
-              case property
-              {% for v in vs %}
-              when .==({{v.symbolize}})
-                saved_record.as(typeof(self)).{{v}} = self.{{v}}
-              {% end %}
-              end
-            {% end %}
-          end
-        else
-          # don't maintain a linked list of previously saved records
-          @saved_record = self.dup.clear_saved_record
-        end
+      def changed?(property : Symbol? = nil)
+        new_record? || (property ? @changed.includes?(property) : !@changed.empty?)
+      end
+
+      def clear!(property : Symbol? = nil)
+        property ? @changed.delete(property) : @changed.clear
       end
 
       protected def clear_saved_record
@@ -694,6 +694,8 @@ module Ktistec
           include ::Ktistec::Model::{{type}}
         {% end %}
       {% end %}
+
+      @saved_record : self | Nil = nil
     end
 
     @[Persistent]

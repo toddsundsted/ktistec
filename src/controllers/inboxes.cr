@@ -6,7 +6,6 @@ require "../models/task/receive"
 
 class RelationshipsController
   include Ktistec::Controller
-  extend Ktistec::Open
 
   skip_auth ["/actors/:username/inbox"], POST
 
@@ -49,7 +48,8 @@ class RelationshipsController
 
     if (actor_iri = activity.actor_iri)
       unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!signature || actor.pem_public_key)
-        open?(actor_iri) do |response|
+        headers = Ktistec::Signature.sign(account.actor, actor_iri, method: :get).merge!(HTTP::Headers{"Accept" => "application/activity+json"})
+        Ktistec::Open.open?(actor_iri, headers) do |response|
           actor = ActivityPub::Actor.from_json_ld?(response.body, include_key: true).try(&.save)
         end
       end
@@ -76,7 +76,7 @@ class RelationshipsController
     # 3
 
     unless verified
-      if activity.iri.presence && (temporary = ActivityPub::Activity.dereference?(activity.iri))
+      if activity.iri.presence && (temporary = ActivityPub::Activity.dereference?(account.actor, activity.iri))
         activity = temporary
         verified = true
       end
@@ -111,34 +111,34 @@ class RelationshipsController
 
     case activity
     when ActivityPub::Activity::Announce
-      unless (object = activity.object?(dereference: true))
+      unless (object = activity.object?(account.actor, dereference: true))
         bad_request
       end
-      unless object.attributed_to?(dereference: true)
+      unless object.attributed_to?(account.actor, dereference: true)
         bad_request
       end
     when ActivityPub::Activity::Like
-      unless (object = activity.object?(dereference: true))
+      unless (object = activity.object?(account.actor, dereference: true))
         bad_request
       end
-      unless object.attributed_to?(dereference: true)
+      unless object.attributed_to?(account.actor, dereference: true)
         bad_request
       end
       # compatibility with implementations that don't address likes
       deliver_to = [account.iri]
     when ActivityPub::Activity::Create
-      unless (object = activity.object?(dereference: true, ignore_cached: true))
+      unless (object = activity.object?(account.actor, dereference: true, ignore_cached: true))
         bad_request
       end
-      unless activity.actor == object.attributed_to?(dereference: true)
+      unless activity.actor == object.attributed_to?(account.actor, dereference: true)
         bad_request
       end
       object.attributed_to = activity.actor
     when ActivityPub::Activity::Update
-      unless (object = activity.object?(dereference: true, ignore_cached: true))
+      unless (object = activity.object?(account.actor, dereference: true, ignore_cached: true))
         bad_request
       end
-      unless activity.actor == object.attributed_to?(dereference: true)
+      unless activity.actor == object.attributed_to?(account.actor, dereference: true)
         bad_request
       end
       object.attributed_to = activity.actor
@@ -146,7 +146,7 @@ class RelationshipsController
       unless actor
         bad_request
       end
-      unless (object = activity.object?(dereference: true))
+      unless (object = activity.object?(account.actor, dereference: true))
         bad_request
       end
       if account.actor == object
@@ -183,10 +183,10 @@ class RelationshipsController
       end
       follow.assign(confirmed: false).save
     when ActivityPub::Activity::Undo
-      unless activity.actor?(dereference: true)
+      unless activity.actor?(account.actor, dereference: true)
         bad_request
       end
-      case (object = activity.object?(dereference: true))
+      case (object = activity.object?(account.actor, dereference: true))
       when ActivityPub::Activity::Announce, ActivityPub::Activity::Like
         unless object.actor == activity.actor
           bad_request
@@ -208,7 +208,7 @@ class RelationshipsController
         bad_request
       end
     when ActivityPub::Activity::Delete
-      unless activity.actor?(dereference: true)
+      unless activity.actor?(account.actor, dereference: true)
         bad_request
       end
       # fetch the object from the database because we can't trust the

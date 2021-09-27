@@ -14,7 +14,6 @@ require "../relationship/social/follow"
 class Task
   class Deliver < Task
     include Ktistec::Constants
-    include Ktistec::Open
 
     belongs_to sender, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri
     validates(sender) { "missing: #{source_iri}" unless sender? }
@@ -26,7 +25,7 @@ class Task
       [activity.to, activity.cc, sender.iri].flatten.flat_map do |recipient|
         if recipient == sender.iri
           sender.iri
-        elsif recipient && (actor = ActivityPub::Actor.dereference?(recipient))
+        elsif recipient && (actor = ActivityPub::Actor.dereference?(sender, recipient))
           actor.iri
         elsif recipient && recipient =~ /^#{sender.iri}\/followers$/
           Relationship::Social::Follow.where(
@@ -53,7 +52,7 @@ class Task
           Relationship::Content::Timeline.update_timeline(sender, activity)
           next
         end
-        unless (actor = ActivityPub::Actor.dereference?(recipient))
+        unless (actor = ActivityPub::Actor.dereference?(sender, recipient))
           message = "recipient does not exist: #{recipient}"
           failures << Failure.new(message)
           Log.info { message }

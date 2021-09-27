@@ -3,7 +3,6 @@
 == render "src/views/partials/actor-large.html.slang"
 h1 User Settings
 == form_tag(account, "/settings/actor") do
-  == authenticity_token(env)
   == error_messages(account)
   == input_tag("Display Name", actor, name)
   == input_tag("Summary", actor, summary)
@@ -14,7 +13,6 @@ h1 User Settings
 h2 Delete Account!
 form.ui.form method="POST" action="/settings/terminate"
 == form_tag(nil, "/settings/terminate") do
-  == authenticity_token(env)
   input.ui.dangerous.button type="submit" value="Delete Account" data-modal="terminate"
 .ui.basic.tiny.terminate.modal
   .header: i.trash.icon
@@ -34,7 +32,6 @@ form.ui.form method="POST" action="/settings/terminate"
       | Yes
 h1 Site Settings
 == form_tag(settings, "/settings/service") do
-  == authenticity_token(env)
   == error_messages(settings)
   == input_tag("Site Name", settings, site)
   == input_tag("Footer", settings, footer)

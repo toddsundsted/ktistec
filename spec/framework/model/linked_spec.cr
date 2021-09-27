@@ -1,6 +1,7 @@
 require "../../../src/framework/model/linked"
 
 require "../../spec_helper/base"
+require "../../spec_helper/key_pair"
 require "../../spec_helper/network"
 
 class LinkedModel
@@ -63,31 +64,35 @@ Spectator.describe Ktistec::Model::Linked do
         iri: "https://test.test/objects/subject"
       )
     end
-    let(object) do
-      LinkedModel.new(
-        iri: "https://remote/objects/object"
-      )
+    let(key_pair) do
+      KeyPair.new("https://key_pair")
     end
 
     context "when linked object is local" do
       before_each { subject.linked_model_iri = "https://test.test/objects/object" }
 
       it "does not fetch the linked model instance" do
-        subject.linked_model?(dereference: true)
+        subject.linked_model?(key_pair, dereference: true)
         expect(HTTP::Client.last?).to be_nil
       end
     end
 
     context "when linked object is remote" do
+      let(object) do
+        LinkedModel.new(
+          iri: "https://remote/objects/object"
+        )
+      end
+
       before_each { subject.linked_model_iri = "https://remote/objects/object" }
 
       it "does not fetch the linked model instance" do
-        subject.linked_model?(dereference: false)
+        subject.linked_model?(key_pair, dereference: false)
         expect(HTTP::Client.last?).to be_nil
       end
 
       it "fetches the linked model instance" do
-        subject.linked_model?(dereference: true)
+        subject.linked_model?(key_pair, dereference: true)
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
 
@@ -95,12 +100,12 @@ Spectator.describe Ktistec::Model::Linked do
         before_each { object.save }
 
         it "does not fetch the linked model instance" do
-          subject.linked_model?(dereference: true)
+          subject.linked_model?(key_pair, dereference: true)
           expect(HTTP::Client.last?).to be_nil
         end
 
         it "fetches the linked model instance" do
-          subject.linked_model?(dereference: true, ignore_cached: true)
+          subject.linked_model?(key_pair, dereference: true, ignore_cached: true)
           expect(HTTP::Client.last?).to match("GET #{object.iri}")
         end
       end
@@ -111,26 +116,30 @@ Spectator.describe Ktistec::Model::Linked do
     let(subject) do
       LinkedModel
     end
-    let(object) do
-      LinkedModel.new(
-        iri: "https://remote/objects/object"
-      )
+    let(key_pair) do
+      KeyPair.new("https://key_pair")
     end
 
     context "when linked object is local" do
       let(object_iri) { "https://test.test/objects/object" }
 
       it "does not fetch the object" do
-        subject.dereference?(object_iri)
+        subject.dereference?(key_pair, object_iri)
         expect(HTTP::Client.last?).to be_nil
       end
     end
 
     context "when linked object is remote" do
+      let(object) do
+        LinkedModel.new(
+          iri: "https://remote/objects/object"
+        )
+      end
+
       let(object_iri) { "https://remote/objects/object" }
 
       it "fetches the object" do
-        subject.dereference?(object_iri)
+        subject.dereference?(key_pair, object_iri)
         expect(HTTP::Client.last?).to match("GET #{object_iri}")
       end
 
@@ -138,12 +147,12 @@ Spectator.describe Ktistec::Model::Linked do
         before_each { object.save }
 
         it "does not fetch the object" do
-          subject.dereference?(object_iri)
+          subject.dereference?(key_pair, object_iri)
           expect(HTTP::Client.last?).to be_nil
         end
 
         it "fetches the object" do
-          subject.dereference?(object_iri, ignore_cached: true)
+          subject.dereference?(key_pair, object_iri, ignore_cached: true)
           expect(HTTP::Client.last?).to match("GET #{object_iri}")
         end
       end

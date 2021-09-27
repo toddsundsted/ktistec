@@ -33,6 +33,23 @@ class ActorsController
     ok "actors/public_posts"
   end
 
+  get "/actors/:username/posts" do |env|
+    username = env.params.url["username"]
+
+    unless (account = Account.find?(username: username))
+      not_found
+    end
+    unless account == env.account
+      forbidden
+    end
+
+    actor = account.actor
+
+    objects = actor.all_posts(*pagination_params(env))
+
+    ok "actors/posts"
+  end
+
   get "/actors/:username/timeline" do |env|
     username = env.params.url["username"]
 

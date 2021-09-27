@@ -14,12 +14,12 @@
       .meta= actor.account_uri
     - if (_account = env.account?) && _account.actor != actor
       - if env.request.path !~ /following$/ && (_follow = ActivityPub::Activity::Follow.follows?(actor, _account.actor)) && actor.follows?(_account.actor).try { |r| !r.confirmed }
-        == activity_button "Accept", outbox_path(_account), _follow.iri, form_class: "right floated", button_class: "accept"
-        == activity_button "Reject", outbox_path(_account), _follow.iri, form_class: "right floated", button_class: "reject"
+        == activity_button "Accept", outbox_path(_account), _follow.iri, form_class: "ui form right floated", button_class: "ui button accept"
+        == activity_button "Reject", outbox_path(_account), _follow.iri, form_class: "ui form right floated", button_class: "ui button reject"
       - elsif (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
-        == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo", form_class: "right floated"
+        == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo", form_class: "ui form right floated"
       - else
-        == activity_button "Follow", outbox_path(_account), actor.iri, form_class: "right floated", button_class: "primary"
+        == activity_button "Follow", outbox_path(_account), actor.iri, form_class: "ui form right floated", button_class: "ui button primary"
     - elsif !_account && actor.local?
       form.right.floated method="GET" action=actor_remote_follow_path(actor)
         input.ui.primary.button type="submit" value="Follow"

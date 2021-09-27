@@ -95,7 +95,7 @@ Spectator.describe ActorsController do
       context "given a create" do
         before_each do
           Relationship::Content::Outbox.new(
-            owner: author,
+            owner: actor,
             activity: create
           ).save
         end
@@ -109,7 +109,7 @@ Spectator.describe ActorsController do
       context "given an announce" do
         before_each do
           Relationship::Content::Outbox.new(
-            owner: author,
+            owner: actor,
             activity: announce
           ).save
         end
@@ -123,11 +123,11 @@ Spectator.describe ActorsController do
       context "given a create and an announce" do
         before_each do
           Relationship::Content::Outbox.new(
-            owner: author,
+            owner: actor,
             activity: create
           ).save
           Relationship::Content::Outbox.new(
-            owner: author,
+            owner: actor,
             activity: announce
           ).save
         end
@@ -175,6 +175,166 @@ Spectator.describe ActorsController do
     it "renders the collection" do
       get "/actors/#{actor.username}/public-posts", ACCEPT_JSON
       expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
+    end
+  end
+
+  describe "GET /actors/:username/posts" do
+    it "returns 401 if not authorized" do
+      get "/actors/missing/posts", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/actors/missing/posts", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "returns 404 if not found" do
+        get "/actors/missing/posts", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if not found" do
+        get "/actors/missing/posts", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 403 if different account" do
+        get "/actors/#{register.actor.username}/posts", ACCEPT_HTML
+        expect(response.status_code).to eq(403)
+      end
+
+      it "returns 403 if different account" do
+        get "/actors/#{register.actor.username}/posts", ACCEPT_JSON
+        expect(response.status_code).to eq(403)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/posts", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/posts", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      let(object) do
+        ActivityPub::Object.new(
+          iri: "#{author.iri}/object",
+          attributed_to: author,
+          visible: true
+        )
+      end
+      let(create) do
+        ActivityPub::Activity::Create.new(
+          iri: "#{author.iri}/create",
+          actor: author,
+          object: object,
+          created_at: Time.utc(2016, 2, 15, 10, 20, 0)
+        )
+      end
+      let(announce) do
+        ActivityPub::Activity::Announce.new(
+          iri: "#{actor.iri}/announce",
+          actor: actor,
+          object: object,
+          created_at: Time.utc(2016, 2, 15, 10, 20, 1)
+        )
+      end
+
+      context "when author is local" do
+        let(author) { actor }
+
+        pre_condition { expect(object.local?).to be_true }
+
+        context "given a create" do
+          before_each do
+            Relationship::Content::Outbox.new(
+              owner: actor,
+              activity: create
+            ).save
+          end
+
+          it "renders the object's create aspect" do
+            get "/actors/#{actor.username}/posts", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+          end
+        end
+
+        context "given an announce" do
+          before_each do
+            Relationship::Content::Outbox.new(
+              owner: actor,
+              activity: announce
+            ).save
+          end
+
+          it "renders the object's announce aspect" do
+            get "/actors/#{actor.username}/posts", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+          end
+        end
+
+        context "given a create and an announce" do
+          before_each do
+            Relationship::Content::Outbox.new(
+              owner: actor,
+              activity: create
+            ).save
+            Relationship::Content::Outbox.new(
+              owner: actor,
+              activity: announce
+            ).save
+          end
+
+          it "renders the object's create aspect" do
+            get "/actors/#{actor.username}/posts", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+          end
+        end
+      end
+
+      context "when author is remote" do
+        let(author) do
+          ActivityPub::Actor.new(
+            iri: "https://remote/actors/actor"
+          )
+        end
+
+        pre_condition { expect(object.local?).to be_false }
+
+        context "given a create and an announce" do
+          before_each do
+            Relationship::Content::Inbox.new(
+              owner: actor,
+              activity: create
+            ).save
+            Relationship::Content::Outbox.new(
+              owner: actor,
+              activity: announce
+            ).save
+          end
+
+          it "renders the object's announce aspect" do
+            get "/actors/#{actor.username}/posts", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+          end
+        end
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/posts", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]")).to be_empty
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/posts", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
+      end
     end
   end
 

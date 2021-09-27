@@ -36,10 +36,6 @@ class Account
   end
 
   @[Persistent]
-  property timezone : String { "" }
-  validates(timezone) { "is unsupported" unless check_timezone?(timezone) }
-
-  @[Persistent]
   property username : String
 
   @[Persistent]
@@ -91,6 +87,10 @@ class Account
       errors["password"] = messages unless messages.empty?
     end
   end
+
+  @[Persistent]
+  property timezone : String { "" }
+  validates(timezone) { "is unsupported" unless check_timezone?(timezone) }
 
   @[Persistent]
   property iri : String { "" }

@@ -46,10 +46,19 @@ class RemoteFollowsController
   end
 
   get "/actors/:username/authorize-follow" do |env|
+    username = env.params.url["username"]
+
+    unless (account = Account.find?(username: username))
+      not_found
+    end
+    unless account == env.account
+      forbidden
+    end
+
     unless (uri = env.params.query["uri"]?)
       bad_request("Missing URI")
     end
-    unless (actor = ActivityPub::Actor.dereference?(uri).try(&.save))
+    unless (actor = ActivityPub::Actor.dereference?(env.account.actor, uri).try(&.save))
       bad_request("Can't Dereference URI")
     end
 

@@ -39,6 +39,50 @@ module Ktistec::ViewHelper
 
   ## HTML helpers
 
+  # Posts an activity to an outbox.
+  #
+  macro activity_button(arg1, arg2, arg3, type = nil, method = "POST", public = true, form_class = "ui form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
+    {% if block %}
+      {% action = arg1 ; object = arg2 ; type = arg3 %}
+      %block =
+        begin
+          {{block.body}}
+        end
+    {% else %}
+      {% action = arg2 ; object = arg3 ; text = arg1 %}
+      %block = {{text}}
+    {% end %}
+    %form_attrs = [
+      %Q|class="#{{{form_class}}}"|,
+      %Q|action="#{{{action}}}"|,
+      %Q|method="#{{{method}}}"|,
+      {% if form_data %}
+        {% for key, value in form_data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
+    %button_attrs = [
+      %Q|class="#{{{button_class}}}"|,
+      {% if button_data %}
+        {% for key, value in button_data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
+    <<-HTML
+    <form #{%form_attrs.join(" ")}>\
+    <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
+    <input type="hidden" name="object" value="#{{{object}}}">\
+    <input type="hidden" name="type" value="#{{{type || text}}}">\
+    <input type="hidden" name="public" value="#{{{public}} ? 1 : nil}">\
+    <button #{%button_attrs.join(" ")} type="submit">\
+    #{%block}\
+    </button>\
+    </form>
+    HTML
+  end
+
   macro authenticity_token(env)
     %Q|<input type="hidden" name="authenticity_token" value="#{{{env}}.session.string?("csrf")}">|
   end
@@ -54,7 +98,7 @@ module Ktistec::ViewHelper
     end
   end
 
-  macro form_tag(model, action, method = "POST", class _class = "ui form", data = nil, &block)
+  macro form_tag(model, action, method = "POST", class _class = "ui form", data = nil, csrf = env.session.string?("csrf"), &block)
     {% if model %}
       %classes =
         {{model}}.errors.presence ?
@@ -74,6 +118,7 @@ module Ktistec::ViewHelper
         {{block.body}}
       end
     %attributes = [
+      %Q|class="#{%classes}"|,
       %Q|action="#{{{action}}}"|,
       %Q|method="#{{{method}}}"|,
       {% if data %}
@@ -83,14 +128,15 @@ module Ktistec::ViewHelper
       {% end %}
     ]
     <<-HTML
-    <form class="#{%classes}" #{%attributes.join(" ")}>\
+    <form #{%attributes.join(" ")}>\
+    <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
     #{%input}\
     #{%block}\
     </form>
     HTML
   end
 
-  macro input_tag(label, model, field, class _class = "", type _type = "text", placeholder = nil, data = nil)
+  macro input_tag(label, model, field, class _class = "", type = "text", placeholder = nil, data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -105,7 +151,7 @@ module Ktistec::ViewHelper
     {% end %}
     %attributes = [
       %Q|class="#{{{_class}}}"|,
-      %Q|type="#{{{_type}}}"|,
+      %Q|type="#{{{type}}}"|,
       %Q|name="#{%name}"|,
       %Q|value="#{%value}"|,
       {% if placeholder %}

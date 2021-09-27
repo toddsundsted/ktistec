@@ -253,9 +253,15 @@ Spectator.describe ActivityPub::Object do
 
   describe ".federated_posts" do
     macro post(index)
+      let(actor{{index}}) do
+        ActivityPub::Actor.new(
+          iri: "https://test.test/actors/#{random_string}"
+        )
+      end
       let!(post{{index}}) do
         ActivityPub::Object.new(
           iri: "https://test.test/objects/#{random_string}",
+          attributed_to: actor{{index}},
           published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
           visible: {{index}}.odd?
         ).save
@@ -272,13 +278,18 @@ Spectator.describe ActivityPub::Object do
       expect(described_class.federated_posts(1, 2).first).to be_a(ActivityPub::Object)
     end
 
-    it "filters out non-public posts" do
-      expect(described_class.federated_posts(1, 2)).to eq([post5, post3])
-    end
-
     it "filters out deleted posts" do
       post5.delete
       expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete
+      expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
+    end
+
+    it "filters out non-public posts" do
+      expect(described_class.federated_posts(1, 2)).to eq([post5, post3])
     end
 
     it "paginates the results" do

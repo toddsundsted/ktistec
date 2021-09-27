@@ -6,8 +6,7 @@ nav.ui.top.fixed.inverted.navigation.menu
       a.item href=settings_path Settings
       a.item href=metrics_path Metrics
       .right.menu
-        == form_tag(nil, sessions_path, method: "DELETE") do
-          == authenticity_token(env)
+        == form_tag(nil, sessions_path, method: "DELETE", class: "form") do
           .ui.action.input
             input.link.item type="submit" value="Sign Out"
     - elsif Account.count > 0

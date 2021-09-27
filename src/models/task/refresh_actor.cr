@@ -24,7 +24,7 @@ class Task
     end
 
     def perform
-      if (instance = ActivityPub::Actor.dereference?(actor.iri, ignore_cached: true))
+      if (instance = ActivityPub::Actor.dereference?(source, actor.iri, ignore_cached: true))
         instance.save
       else
         message = "failed to dereference #{actor.iri}"

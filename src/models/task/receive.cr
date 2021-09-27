@@ -17,7 +17,6 @@ require "../relationship/social/follow"
 class Task
   class Receive < Task
     include Ktistec::Constants
-    include Ktistec::Open
 
     belongs_to receiver, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri
     validates(receiver) { "missing: #{source_iri}" unless receiver? }
@@ -53,7 +52,7 @@ class Task
 
     private def ancestors(object)
       ([] of typeof(object)).tap do |ancestors|
-        while object && (object = object.in_reply_to?(dereference: true))
+        while object && (object = object.in_reply_to?(receiver, dereference: true))
           ancestors << object
         end
       end
@@ -69,9 +68,9 @@ class Task
         # the receiver and the recipient is in all ancestor object's
         # recipients. replace with the followers.
         elsif recipient && recipient =~ /^#{receiver.iri}\/followers$/
-          if (reply = ActivityPub::Object.dereference?(activity.object_iri))
+          if (reply = ActivityPub::Object.dereference?(receiver, activity.object_iri))
             if (ancestors = ancestors(reply)) && (object = ancestors.last?)
-              if (actor = ActivityPub::Actor.dereference?(object.attributed_to_iri)) && actor == receiver
+              if (actor = ActivityPub::Actor.dereference?(receiver, object.attributed_to_iri)) && actor == receiver
                 if ancestors.all? { |ancestor| [ancestor.to, ancestor.cc].compact.flatten.includes?(recipient) }
                   Relationship::Social::Follow.where(
                     to_iri: receiver.iri,
@@ -84,13 +83,14 @@ class Task
         # 3. receiver is a follower and the recipinet is either the
         # public collection or the sender's followers collection.
         # replace with the receiver.
-        elsif (sender = ActivityPub::Actor.dereference?(activity.actor_iri))
+        elsif (sender = ActivityPub::Actor.dereference?(receiver, activity.actor_iri))
           if receiver.follows?(sender, confirmed: true)
             if recipient == PUBLIC
               receiver.iri
             elsif recipient
               unless (target = ActivityPub::Actor.find?(recipient))
-                open?(recipient) do |response|
+                headers = Ktistec::Signature.sign(receiver, recipient, method: :get).merge!(HTTP::Headers{"Accept" => "application/activity+json"})
+                Ktistec::Open.open?(recipient, headers) do |response|
                   target = ActivityPub.from_json_ld?(response.body)
                   if target.is_a?(ActivityPub::Collection) && target.iri == sender.followers
                     receiver.iri
@@ -109,7 +109,7 @@ class Task
 
     def deliver(to recipients)
       recipients.each do |recipient|
-        unless (actor = ActivityPub::Actor.dereference?(recipient))
+        unless (actor = ActivityPub::Actor.dereference?(receiver, recipient))
           message = "recipient does not exist: #{recipient}"
           failures << Failure.new(message)
           Log.info { message }

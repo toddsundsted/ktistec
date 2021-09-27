@@ -53,6 +53,72 @@ Spectator.describe "helper" do
     end
   end
 
+  describe "activity_button" do
+    subject do
+      XML.parse_html(activity_button("/foobar", "https://object", "Zap", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }).document
+    end
+
+    it "emits a form with nested content" do
+      expect(subject.xpath_nodes("//form/button/div")).not_to be_empty
+    end
+
+    it "emits a form with a csrf token" do
+      expect(subject.xpath_nodes("//form/input[@name='authenticity_token']/@value")).to contain_exactly("CSRF")
+    end
+
+    it "emits a form with a hidden input specifying the object" do
+      expect(subject.xpath_nodes("//form/input[@name='object']/@value")).to contain_exactly("https://object")
+    end
+
+    it "emits a form with a hidden input specifying the type" do
+      expect(subject.xpath_nodes("//form/input[@name='type']/@value")).to contain_exactly("Zap")
+    end
+
+    it "emits a form with a hidden input specifying the visibility" do
+      expect(subject.xpath_nodes("//form/input[@name='public']/@value")).to contain_exactly("1")
+    end
+
+    it "specifies the action" do
+      expect(subject.xpath_nodes("//form/@action")).to contain_exactly("/foobar")
+    end
+
+    it "specifies the method" do
+      expect(subject.xpath_nodes("//form/@method")).to contain_exactly("PUT")
+    end
+
+    it "specifies the form class" do
+      expect(subject.xpath_nodes("//form/@class")).to contain_exactly("blarg")
+    end
+
+    it "specifies the button class" do
+      expect(subject.xpath_nodes("//form/button/@class")).to contain_exactly("honk")
+    end
+
+    context "without a body" do
+      subject do
+        XML.parse_html(activity_button("Label", "/foobar", "https://object", csrf: nil)).document
+      end
+
+      it "emits a form with nested content" do
+        expect(subject.xpath_nodes("//form/button/text()")).to contain_exactly("Label")
+      end
+    end
+
+    context "given data attributes" do
+      subject do
+        XML.parse_html(activity_button("Label", "/foobar", "https://object", form_data: {"foo" => "bar", "abc" => "xyz"}, button_data: {"one" => "1", "two" => "2"}, csrf: nil)).document
+      end
+
+      it "emits form data attributes" do
+        expect(subject.xpath_nodes("//form/@*[starts-with(name(),'data-')]")).to contain_exactly("bar", "xyz")
+      end
+
+      it "emits button data attributes" do
+        expect(subject.xpath_nodes("//form/button/@*[starts-with(name(),'data-')]")).to contain_exactly("1", "2")
+      end
+    end
+  end
+
   describe "authenticity_token" do
     let(env) do
       HTTP::Server::Context.new(
@@ -84,12 +150,17 @@ Spectator.describe "helper" do
 
   describe "form_tag" do
     subject do
-      XML.parse_html(form_tag(model, "/foobar", method: "PUT") { "<div/>" }).document
+      XML.parse_html(form_tag(model, "/foobar", method: "PUT", csrf: "CSRF") { "<div/>" }).document
     end
 
     it "emits a form with nested content" do
       expect(subject.xpath_nodes("//form/div")).not_to be_empty
     end
+
+    it "emits a form with a csrf token" do
+      expect(subject.xpath_nodes("//form/input[@name='authenticity_token']/@value")).to contain_exactly("CSRF")
+    end
+
 
     it "specifies the action" do
       expect(subject.xpath_nodes("//form/@action")).to contain_exactly("/foobar")
@@ -105,7 +176,7 @@ Spectator.describe "helper" do
 
     context "given data attributes" do
       subject do
-        XML.parse_html(form_tag(model, "/foobar", data: {"foo" => "bar", "abc" => "xyz"}) { "<div/>" }).document
+        XML.parse_html(form_tag(model, "/foobar", data: {"foo" => "bar", "abc" => "xyz"}, csrf: nil) { "<div/>" }).document
       end
 
       it "emits data attributes" do
@@ -115,7 +186,7 @@ Spectator.describe "helper" do
 
     context "given a nil model" do
       subject do
-        XML.parse_html(form_tag(nil, "/foobar") { "<div/>" }).document
+        XML.parse_html(form_tag(nil, "/foobar", csrf: nil) { "<div/>" }).document
       end
 
       it "does not set the error class" do
@@ -125,7 +196,7 @@ Spectator.describe "helper" do
 
     context "given a DELETE method" do
       subject do
-        XML.parse_html(form_tag(model, "/foobar", method: "DELETE") { "<div/>" }).document
+        XML.parse_html(form_tag(model, "/foobar", method: "DELETE", csrf: nil) { "<div/>" }).document
       end
 
       it "emits a hidden input" do

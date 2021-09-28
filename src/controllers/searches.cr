@@ -8,6 +8,7 @@ class SearchesController
   include Ktistec::Controller
 
   get "/search" do |env|
+    message = nil
     actor_or_object = nil
 
     if (query = env.params.query["query"]?)
@@ -33,61 +34,24 @@ class SearchesController
 
     case actor_or_object
     when ActivityPub::Actor
-      actor_or_object.save
+      actor = actor_or_object.save
 
-      accepts?("text/html") ?
-        actor_html(env, actor_or_object, query) :
-        actor_json(env, actor_or_object, query)
+      ok "searches/actor"
     when ActivityPub::Object
       actor_or_object.attributed_to?(env.account.actor, dereference: true)
-      actor_or_object.save
+      object = actor_or_object.save
 
-      accepts?("text/html") ?
-        object_html(env, actor_or_object, query) :
-        object_json(env, actor_or_object, query)
+      ok "searches/object"
     else
-      accepts?("text/html") ?
-        form_html(env, query) :
-        form_json(env, query)
+      ok "searches/form"
     end
   rescue ex : Errors
-    env.response.status_code = 400
-    accepts?("text/html") ?
-      form_html(env, query, ex.message) :
-      form_json(env, query, ex.message)
+    message = ex.message
+
+    bad_request "searches/form"
   end
 
   private alias Errors = Socket::Addrinfo::Error | JSON::ParseException |
                          HostMeta::Error | WebFinger::Error | Ktistec::Open::Error |
                          NilAssertionError
-
-  private def self.actor_html(env, actor, query = nil, message = nil)
-    env.response.content_type = "text/html"
-    render "src/views/searches/actor.html.slang", "src/views/layouts/default.html.ecr"
-  end
-
-  private def self.actor_json(env, actor, query = nil, message = nil)
-    env.response.content_type = "application/json"
-    render "src/views/searches/actor.json.ecr"
-  end
-
-  private def self.object_html(env, object, query = nil, message = nil)
-    env.response.content_type = "text/html"
-    render "src/views/searches/object.html.slang", "src/views/layouts/default.html.ecr"
-  end
-
-  private def self.object_json(env, object, query = nil, message = nil)
-    env.response.content_type = "application/json"
-    render "src/views/searches/object.json.ecr"
-  end
-
-  private def self.form_html(env, query = nil, message = nil)
-    env.response.content_type = "text/html"
-    render "src/views/searches/form.html.slang", "src/views/layouts/default.html.ecr"
-  end
-
-  private def self.form_json(env, query = nil, message = nil)
-    env.response.content_type = "application/json"
-    render "src/views/searches/form.json.ecr"
-  end
 end

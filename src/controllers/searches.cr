@@ -63,7 +63,7 @@ class SearchesController
 
   private def self.actor_html(env, actor, query = nil, message = nil)
     env.response.content_type = "text/html"
-    render "src/views/searches/actor.html.ecr", "src/views/layouts/default.html.ecr"
+    render "src/views/searches/actor.html.slang", "src/views/layouts/default.html.ecr"
   end
 
   private def self.actor_json(env, actor, query = nil, message = nil)
@@ -79,7 +79,7 @@ class SearchesController
 
   private def self.object_html(env, object, query = nil, message = nil)
     env.response.content_type = "text/html"
-    render "src/views/searches/object.html.ecr", "src/views/layouts/default.html.ecr"
+    render "src/views/searches/object.html.slang", "src/views/layouts/default.html.ecr"
   end
 
   private def self.object_json(env, object, query = nil, message = nil)

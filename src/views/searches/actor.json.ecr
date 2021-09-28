@@ -1,0 +1,7 @@
+{
+  <%- if message -%>
+  "msg":"<%= message%>",
+  <%- end -%>
+  "actor":<%= actor.to_json %>,
+  "query":"<%= query %>"
+}

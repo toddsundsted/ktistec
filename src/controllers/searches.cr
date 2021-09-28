@@ -68,13 +68,7 @@ class SearchesController
 
   private def self.actor_json(env, actor, query = nil, message = nil)
     env.response.content_type = "application/json"
-    JSON.build do |json|
-      json.object do
-        json.field "msg", message if message
-        json.field "query", query || ""
-        json.field "actor", actor
-      end
-    end
+    render "src/views/searches/actor.json.ecr"
   end
 
   private def self.object_html(env, object, query = nil, message = nil)
@@ -84,13 +78,7 @@ class SearchesController
 
   private def self.object_json(env, object, query = nil, message = nil)
     env.response.content_type = "application/json"
-    JSON.build do |json|
-      json.object do
-        json.field "msg", message if message
-        json.field "query", query || ""
-        json.field "object", object
-      end
-    end
+    render "src/views/searches/object.json.ecr"
   end
 
   private def self.form_html(env, query = nil, message = nil)
@@ -100,11 +88,6 @@ class SearchesController
 
   private def self.form_json(env, query = nil, message = nil)
     env.response.content_type = "application/json"
-    JSON.build do |json|
-      json.object do
-        json.field "msg", message if message
-        json.field "query", query || ""
-      end
-    end
+    render "src/views/searches/form.json.ecr"
   end
 end

@@ -11,7 +11,7 @@ Spectator.describe Task::Receive do
     register(with_keys: true).actor
   end
   let(activity) do
-    ActivityPub::Activity.new(iri: "https://test.test/activities/activity")
+    ActivityPub::Activity.new(iri: "https://remote/activities/activity")
   end
 
   context "validation" do

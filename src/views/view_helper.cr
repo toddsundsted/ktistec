@@ -29,7 +29,7 @@ module Ktistec::ViewHelper
       path = env.request.path
       query = env.params.query
       page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1
-      render "./src/views/partials/paginator.html.ecr"
+      render "./src/views/partials/paginator.html.slang"
     end
   end
 

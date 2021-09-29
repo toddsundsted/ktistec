@@ -195,7 +195,7 @@ module Ktistec
           end
           if accepts?("text/html")
             _message = \{{message}} || {{message}}
-            halt env, status_code: \{{code}} || {{code}}, response: render "src/views/pages/generic.html.ecr", "src/views/layouts/default.html.ecr"
+            halt env, status_code: \{{code}} || {{code}}, response: render "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr"
           end
           if accepts?("text/plain")
             halt env, status_code: \{{code}} || {{code}}, response: (\{{message}} || {{message}}).downcase

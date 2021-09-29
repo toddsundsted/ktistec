@@ -786,12 +786,12 @@ Spectator.describe ObjectsController do
       end
 
       it "renders the object" do
-        get "/remote/objects/#{visible.id}/reply"
+        get "/remote/objects/#{visible.id}/reply", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id").first).to eq("object-#{visible.id}")
       end
 
       it "renders the form" do
-        get "/remote/objects/#{visible.id}/reply"
+        get "/remote/objects/#{visible.id}/reply", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//trix-editor")).not_to be_empty
       end
 
@@ -814,7 +814,7 @@ Spectator.describe ObjectsController do
       end
 
       it "prepopulates editor with mentions" do
-        get "/remote/objects/#{visible.id}/reply"
+        get "/remote/objects/#{visible.id}/reply", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first).to eq("@author@nowhere @other@nowhere ")
       end
 

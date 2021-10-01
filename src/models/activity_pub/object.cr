@@ -135,16 +135,17 @@ module ActivityPub
       urls.try(&.first?) || iri
     end
 
-    def display_date
-      date.to_s("%l:%M%p · %b %-d, %Y").lstrip(' ')
+    def display_date(timezone = nil)
+      date(timezone).to_s("%l:%M%p · %b %-d, %Y").lstrip(' ')
     end
 
-    def short_date
-      date < 1.day.ago ? date.to_s("%b %-d, %Y").lstrip(' ') : date.to_s("%l:%M%p").lstrip(' ')
+    def short_date(timezone = nil)
+      (date = self.date(timezone)) < 1.day.ago ? date.to_s("%b %-d, %Y").lstrip(' ') : date.to_s("%l:%M%p").lstrip(' ')
     end
 
-    private def date
-      (published || created_at).to_local
+    private def date(timezone)
+      timezone ||= Time::Location.local
+      (published || created_at).in(timezone)
     end
 
     # Returns federated posts.

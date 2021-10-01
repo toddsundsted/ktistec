@@ -1,44 +1,22 @@
 require "json"
 
-require "../activity_pub"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
+require "../activity_pub"
 
 module ActivityPub
   class Collection
-    include Ktistec::Model(Common, Linked)
+    include Ktistec::Model(Common, Linked, Serialized)
     include ActivityPub
 
     @@table_name = "collections"
 
     @[Persistent]
-    property items_json : String?
-    serializes items, class_name: Array(String)
+    property items_json : Array(String)?
 
     @[Assignable]
-    @items_cached : Array(JSON::Any)?
-
-    def items_cached=(@items_cached : Array(JSON::Any)) : Array(JSON::Any)
-      unless items_cached.empty?
-        if items_cached[0].as_s?
-          self.items = items_cached.map(&.as_s)
-        elsif items_cached[0].as_h?
-          self.items = items_cached.map(&.dig("@id").as_s)
-        end
-      end
-      items_cached
-    end
-
-    def items_cached
-      items_cached.map do |item|
-        yield item
-      end
-    end
-
-    def items_cached
-      @items_cached.not_nil!
-    end
+    property items : Array(JSON::Any)?
 
     @[Persistent]
     property total_items : Int64?
@@ -71,7 +49,8 @@ module ActivityPub
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
       {
         iri: json.dig?("@id").try(&.as_s),
-        items_cached: json.dig?("https://www.w3.org/ns/activitystreams#items").try(&.as_a),
+        items_json: dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
+        items: json.dig?("https://www.w3.org/ns/activitystreams#items").try(&.as_a),
         total_items: json.dig?("https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i64),
         first: json.dig?("https://www.w3.org/ns/activitystreams#first").try(&.as_s),
         last: json.dig?("https://www.w3.org/ns/activitystreams#last").try(&.as_s),

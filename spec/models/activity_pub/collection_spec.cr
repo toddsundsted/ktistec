@@ -65,7 +65,7 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items_json).to eq(["item link"])
+      expect(collection.items_iris).to eq(["item link"])
       expect(collection.items).to eq(["item link"])
     end
 
@@ -82,7 +82,7 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items_json).to eq(["item link"])
+      expect(collection.items_iris).to eq(["item link"])
       expect(collection.items).to eq([{"@id" => "item link"}])
     end
 
@@ -99,7 +99,7 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items_json).to eq(["item link"])
+      expect(collection.items_iris).to eq(["item link"])
       expect(collection.items).to eq([{"@id" => "item link"}])
     end
   end
@@ -127,7 +127,7 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items_json).to eq(["item link"])
+      expect(collection.items_iris).to eq(["item link"])
       expect(collection.items).to eq(["item link"])
     end
 
@@ -144,7 +144,7 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items_json).to eq(["item link"])
+      expect(collection.items_iris).to eq(["item link"])
       expect(collection.items).to eq([{"@id" => "item link"}])
     end
 
@@ -161,7 +161,7 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items_json).to eq(["item link"])
+      expect(collection.items_iris).to eq(["item link"])
       expect(collection.items).to eq([{"@id" => "item link"}])
     end
   end

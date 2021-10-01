@@ -13,7 +13,7 @@ module ActivityPub
     @@table_name = "collections"
 
     @[Persistent]
-    property items_json : Array(String)?
+    property items_iris : Array(String)?
 
     @[Assignable]
     property items : Array(JSON::Any)?
@@ -49,7 +49,7 @@ module ActivityPub
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
       {
         iri: json.dig?("@id").try(&.as_s),
-        items_json: dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
+        items_iris: dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
         items: json.dig?("https://www.w3.org/ns/activitystreams#items").try(&.as_a),
         total_items: json.dig?("https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i64),
         first: json.dig?("https://www.w3.org/ns/activitystreams#first").try(&.as_s),

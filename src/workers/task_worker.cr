@@ -1,6 +1,8 @@
 require "../models/task"
 
 class TaskWorker
+  @@channel = Channel(Task).new
+
   def self.start
     destroy_old_tasks
     clean_up_running_tasks
@@ -8,10 +10,24 @@ class TaskWorker
     self.new.tap do |worker|
       loop do
         unless worker.work
-          sleep 5.seconds
+          select
+          when @@channel.receive
+            # process work
+          when timeout(5.seconds)
+            # process work
+          end
         end
       end
     end
+  end
+
+  def self.schedule(task)
+    if Kemal.config.env != "test"
+      @@channel.send task.save
+    else
+      task.save
+    end
+    task
   end
 
   def work(now = Time.utc)

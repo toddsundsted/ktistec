@@ -149,15 +149,6 @@ class RelationshipsController
       unless (object = activity.object?(account.actor, dereference: true))
         bad_request
       end
-      if account.actor == object
-        unless Relationship::Social::Follow.find?(from_iri: actor.iri, to_iri: object.iri)
-          Relationship::Social::Follow.new(
-            actor: actor,
-            object: object,
-            visible: false
-          ).save
-        end
-      end
       # compatibility with implementations that don't address follows
       deliver_to = [account.iri]
     when ActivityPub::Activity::Accept
@@ -170,7 +161,8 @@ class RelationshipsController
       unless (follow = Relationship::Social::Follow.find?(from_iri: account.actor.iri, to_iri: activity.actor.iri))
         bad_request
       end
-      follow.assign(confirmed: true).save
+      # compatibility with implementations that don't address accepts
+      deliver_to = [account.iri]
     when ActivityPub::Activity::Reject
       unless activity.object?.try(&.local?)
         bad_request
@@ -181,7 +173,8 @@ class RelationshipsController
       unless (follow = Relationship::Social::Follow.find?(from_iri: account.actor.iri, to_iri: activity.actor.iri))
         bad_request
       end
-      follow.assign(confirmed: false).save
+      # compatibility with implementations that don't address rejects
+      deliver_to = [account.iri]
     when ActivityPub::Activity::Undo
       unless activity.actor?(account.actor, dereference: true)
         bad_request
@@ -202,7 +195,6 @@ class RelationshipsController
         unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
           bad_request
         end
-        follow.destroy
         deliver_to = [account.iri]
       else
         bad_request
@@ -219,13 +211,13 @@ class RelationshipsController
           bad_request
         end
         activity.object = object
-        object.delete
+        deliver_to = [account.iri]
       elsif (object = ActivityPub::Actor.find?(activity.object_iri))
         unless object == activity.actor
           bad_request
         end
         activity.actor = activity.object = object
-        object.delete
+        deliver_to = [account.iri]
       else
         bad_request
       end

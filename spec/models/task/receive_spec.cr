@@ -509,13 +509,199 @@ Spectator.describe Task::Receive do
       let(activity) do
         ActivityPub::Activity::Follow.new(
           iri: "https://remote/activities/follow",
+          actor: remote_recipient,
           object: local_recipient
         )
+      end
+
+      context "when object is the receiver" do
+        before_each { activity.assign(object: receiver) }
+
+        it "creates an unconfirmed follow relationship" do
+          expect{subject.deliver([receiver.iri])}.
+            to change{Relationship::Social::Follow.count(to_iri: receiver.iri, confirmed: false)}.by(1)
+        end
+      end
+
+      context "when object is not the receiver" do
+        pre_condition { expect(activity.object).not_to eq(receiver) }
+
+        it "does not create an unconfirmed follow relationship" do
+          expect{subject.deliver([local_recipient.iri])}.
+            not_to change{Relationship::Social::Follow.count(to_iri: receiver.iri, confirmed: false)}
+        end
       end
 
       it "puts the activity in the recipient's notifications" do
         expect{subject.deliver([local_recipient.iri])}.
           to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
+      end
+    end
+
+    context "when activity is an accept" do
+      let!(relationship) do
+        Relationship::Social::Follow.new(
+          actor: receiver,
+          object: remote_recipient,
+          confirmed: false
+        ).save
+      end
+      let(follow) do
+        ActivityPub::Activity::Follow.new(
+          iri: "https://test.test/activities/follow",
+          actor: receiver,
+          object: remote_recipient
+        )
+      end
+      let(activity) do
+        ActivityPub::Activity::Accept.new(
+          iri: "https://remote/activities/accept",
+          actor: remote_recipient,
+          object: follow
+        )
+      end
+
+      it "accepts the relationship" do
+        expect{subject.deliver([receiver.iri])}.
+          to change{Relationship.find(relationship.id).confirmed}
+      end
+
+      context "follow is not for the receiver" do
+        before_each do
+          relationship.assign(actor: local_recipient).save
+          follow.assign(actor: local_recipient)
+        end
+
+        it "does not accept the relationship" do
+          expect{subject.deliver([receiver.iri])}.
+            not_to change{Relationship.find(relationship.id).confirmed}
+        end
+      end
+    end
+
+    context "when activity is a reject" do
+      let!(relationship) do
+        Relationship::Social::Follow.new(
+          actor: receiver,
+          object: remote_recipient,
+          confirmed: true
+        ).save
+      end
+      let(follow) do
+        ActivityPub::Activity::Follow.new(
+          iri: "https://test.test/activities/follow",
+          actor: receiver,
+          object: remote_recipient
+        )
+      end
+      let(activity) do
+        ActivityPub::Activity::Reject.new(
+          iri: "https://remote/activities/accept",
+          actor: remote_recipient,
+          object: follow
+        )
+      end
+
+      it "rejects the relationship" do
+        expect{subject.deliver([receiver.iri])}.
+          to change{Relationship.find(relationship.id).confirmed}
+      end
+
+      context "follow is not for the receiver" do
+        before_each do
+          relationship.assign(actor: local_recipient).save
+          follow.assign(actor: local_recipient)
+        end
+
+        it "does not reject the relationship" do
+          expect{subject.deliver([receiver.iri])}.
+            not_to change{Relationship.find(relationship.id).confirmed}
+        end
+      end
+    end
+
+    context "when activity is an undo" do
+      context "undoing a follow" do
+        let!(relationship) do
+          Relationship::Social::Follow.new(
+            actor: remote_recipient,
+            object: receiver
+          ).save
+        end
+        let!(follow) do
+          ActivityPub::Activity::Follow.new(
+            iri: "https://remote/activities/follow",
+            actor: remote_recipient,
+            object: receiver
+          ).save
+        end
+        let(activity) do
+          ActivityPub::Activity::Undo.new(
+            iri: "https://remote/activities/undo",
+            actor: remote_recipient,
+            object: follow
+          )
+        end
+
+        it "destroys the relationship" do
+          expect{subject.deliver([receiver.iri])}.
+            to change{Relationship::Social::Follow.count(from_iri: remote_recipient.iri, to_iri: receiver.iri)}.by(-1)
+        end
+
+        context "follow is not for the receiver" do
+          before_each do
+            relationship.assign(object: local_recipient).save
+            follow.assign(object: local_recipient)
+          end
+
+          it "does not destroy the relationship" do
+            expect{subject.deliver([receiver.iri])}.
+              not_to change{Relationship.find?(relationship.id)}
+          end
+        end
+      end
+    end
+
+    context "when activity is a delete" do
+      context "deleting an object" do
+        let!(object) do
+          ActivityPub::Object.new(
+            iri: "https://remote/objects/note",
+            attributed_to: remote_recipient
+          ).save
+        end
+        let(activity) do
+          ActivityPub::Activity::Delete.new(
+            iri: "https://remote/activities/delete",
+            actor: remote_recipient,
+            object: object
+          )
+        end
+
+        it "deletes the object" do
+          expect{subject.deliver([receiver.iri])}.
+            to change{ActivityPub::Object.find?(object.id)}
+        end
+      end
+
+      context "deleting an actor" do
+        let!(object) do
+          ActivityPub::Actor.new(
+            iri: "https://remote/objects/actor"
+          ).save
+        end
+        let(activity) do
+          ActivityPub::Activity::Delete.new(
+            iri: "https://remote/activities/delete",
+            actor: object,
+            object: object
+          )
+        end
+
+        it "deletes the actor" do
+          expect{subject.deliver([receiver.iri])}.
+            to change{ActivityPub::Actor.find?(object.id)}
+        end
       end
     end
 

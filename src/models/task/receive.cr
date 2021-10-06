@@ -108,6 +108,7 @@ class Task
     # associated models -- they shouldn't have changed anyway.
 
     def deliver(to recipients)
+      activity = self.activity
       recipients.each do |recipient|
         unless (actor = ActivityPub::Actor.dereference?(receiver, recipient))
           message = "recipient does not exist: #{recipient}"
@@ -124,6 +125,51 @@ class Task
           Relationship::Content::Notification.update_notifications(actor, activity)
           # handle timeline
           Relationship::Content::Timeline.update_timeline(actor, activity)
+          # handle side-effects
+          case activity
+          when ActivityPub::Activity::Follow
+            if activity.object == receiver
+              unless Relationship::Social::Follow.find?(from_iri: activity.actor.iri, to_iri: activity.object.iri)
+                Relationship::Social::Follow.new(
+                  actor: activity.actor,
+                  object: activity.object,
+                  visible: false
+                ).save
+              end
+            end
+          when ActivityPub::Activity::Accept
+            if activity.object.actor == receiver
+              if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+                follow.assign(confirmed: true).save
+              end
+            end
+          when ActivityPub::Activity::Reject
+            if activity.object.actor == receiver
+              if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+                follow.assign(confirmed: false).save
+              end
+            end
+          when ActivityPub::Activity::Undo
+            case (object = activity.object)
+            when ActivityPub::Activity::Follow
+              if object.object == receiver
+                if (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+                  follow.destroy
+                end
+              end
+            end
+          when ActivityPub::Activity::Delete
+            case (object = activity.object?)
+            when ActivityPub::Object
+              if activity.actor == object.attributed_to
+                object.delete
+              end
+            when ActivityPub::Actor
+              if activity.actor == object
+                object.delete
+              end
+            end
+          end
         elsif (inbox = actor.inbox)
           body = activity.to_json_ld
           headers = Ktistec::Signature.sign(receiver, inbox, body)

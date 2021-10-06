@@ -19,15 +19,6 @@ class RelationshipsController
 
     activity = ActivityPub::Activity.from_json_ld(body)
 
-    if activity.id
-      # mastodon reissues identifiers for accept and reject
-      # activities. since these are implemented, here, as idempotent
-      # operations, don't respond with conflict.
-      unless activity.class.in?([ActivityPub::Activity::Accept, ActivityPub::Activity::Reject])
-        conflict
-      end
-    end
-
     if activity.local?
       forbidden
     end
@@ -223,6 +214,24 @@ class RelationshipsController
       end
     else
       bad_request("Activity Not Supported")
+    end
+
+    # check to see if the activity already exists and save it -- this
+    # should be atomic under fibers but is not thread-safe. this
+    # prevents duplicate activities being created if the server
+    # receives the same activity multiple times. this can happen in
+    # practice because the validation steps above take time and
+    # servers acting as relays forward activities they've received,
+    # and those activities can arrive while the original activity is
+    # being validated.
+
+    if ActivityPub::Activity.find?(activity.iri)
+      # mastodon reissues identifiers for accept and reject
+      # activities. since these are implemented, here, as idempotent
+      # operations, don't respond with conflict.
+      unless activity.class.in?([ActivityPub::Activity::Accept, ActivityPub::Activity::Reject])
+        conflict
+      end
     end
 
     activity.save

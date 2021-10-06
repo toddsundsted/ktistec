@@ -32,8 +32,19 @@ Spectator.describe RelationshipsController do
     end
 
     it "returns 409 if activity was already received and processed" do
-      activity.save
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      temp_actor = ActivityPub::Actor.new(
+        iri: "https://remote/actors/actor"
+      )
+      temp_object = ActivityPub::Object.new(
+        iri: "https://remote/objects/object",
+        attributed_to: temp_actor
+      )
+      activity = ActivityPub::Activity::Create.new(
+        iri: "https://remote/activities/create",
+        actor: temp_actor,
+        object: temp_object
+      ).save
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
       expect(response.status_code).to eq(409)
     end
 

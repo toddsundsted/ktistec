@@ -6,9 +6,6 @@ require "../activity_pub/activity"
 require "../activity_pub/actor"
 require "../activity_pub/collection"
 require "../activity_pub/object"
-require "../relationship/content/inbox"
-require "../relationship/content/outbox"
-require "../relationship/content/timeline"
 require "../relationship/social/follow"
 
 class Task
@@ -36,33 +33,16 @@ class Task
       end.compact.sort.uniq
     end
 
-    # if the activity is a delete, the object will already have been
-    # deleted so herein and throughout don't validate and save the
-    # associated models -- they shouldn't have changed anyway.
-
     def deliver(to recipients)
       recipients.each do |recipient|
-        # the sender special case
-        if recipient == sender.iri
-          Relationship::Content::Outbox.new(
-            owner: sender,
-            activity: activity
-          ).save(skip_associated: true)
-          # handle timeline
-          Relationship::Content::Timeline.update_timeline(sender, activity)
-          next
-        end
         unless (actor = ActivityPub::Actor.dereference?(sender, recipient))
           message = "recipient does not exist: #{recipient}"
           failures << Failure.new(message)
           Log.info { message }
           next
         end
-        if actor.local?
-          Relationship::Content::Inbox.new(
-            owner: actor,
-            activity: activity,
-          ).save(skip_associated: true)
+        if sender == actor
+          # no-op
         elsif (inbox = actor.inbox)
           body = activity.to_json_ld
           headers = Ktistec::Signature.sign(sender, inbox, body)

@@ -236,6 +236,55 @@ class RelationshipsController
 
     activity.save
 
+    # if the activity is a delete, the object will already have been
+    # deleted so herein and throughout don't validate and save the
+    # associated models -- they shouldn't have changed anyway.
+
+    Relationship::Content::Inbox.new(
+      owner: account.actor,
+      activity: activity,
+    ).save(skip_associated: true)
+
+    # handle notifications
+    Relationship::Content::Notification.update_notifications(account.actor, activity)
+    # handle timeline
+    Relationship::Content::Timeline.update_timeline(account.actor, activity)
+    # handle side-effects
+    case activity
+    when ActivityPub::Activity::Follow
+      if activity.object == account.actor
+        unless Relationship::Social::Follow.find?(from_iri: activity.actor.iri, to_iri: activity.object.iri)
+          Relationship::Social::Follow.new(
+            actor: activity.actor,
+            object: activity.object,
+            visible: false
+          ).save(skip_associated: true)
+        end
+      end
+    when ActivityPub::Activity::Accept
+      if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+        follow.assign(confirmed: true).save
+      end
+    when ActivityPub::Activity::Reject
+      if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+        follow.assign(confirmed: false).save
+      end
+    when ActivityPub::Activity::Undo
+      case (object = activity.object)
+      when ActivityPub::Activity::Follow
+        if (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+          follow.destroy
+        end
+      end
+    when ActivityPub::Activity::Delete
+      case (object = activity.object?)
+      when ActivityPub::Object
+        object.delete
+      when ActivityPub::Actor
+        object.delete
+      end
+    end
+
     task = Task::Receive.new(
       receiver: account.actor,
       activity: activity,

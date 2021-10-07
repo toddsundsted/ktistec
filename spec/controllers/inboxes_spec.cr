@@ -267,6 +267,9 @@ Spectator.describe RelationshipsController do
       end
     end
 
+    alias Notification = Relationship::Content::Notification
+    alias Timeline = Relationship::Content::Timeline
+
     context "on announce" do
       let(note) do
         ActivityPub::Object::Note.new(
@@ -320,6 +323,49 @@ Spectator.describe RelationshipsController do
         announce.object = note
         expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
           to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+      end
+
+      it "puts the activity in the actor's notifications" do
+        announce.object = note.assign(attributed_to: actor)
+        expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
+          to change{Notification.count(from_iri: actor.iri)}.by(1)
+      end
+
+      it "puts the object in the actor's timeline" do
+        announce.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
+          to change{Timeline.count(from_iri: actor.iri)}.by(1)
+      end
+
+      context "and the object's already in the timeline" do
+        before_each do
+          Timeline.new(
+            owner: actor,
+            object: note
+          ).save
+        end
+
+        it "does not put the object in the actor's timeline" do
+          announce.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
+            not_to change{Timeline.count(from_iri: actor.iri)}
+        end
+      end
+
+      context "and the object's a reply" do
+        before_each do
+          note.assign(
+            in_reply_to: ActivityPub::Object.new(
+              iri: "https://remote/objects/reply"
+            )
+          ).save
+        end
+
+        it "puts the object in the actor's timeline" do
+          announce.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
+            to change{Timeline.count(from_iri: actor.iri)}.by(1)
+        end
       end
     end
 
@@ -377,6 +423,18 @@ Spectator.describe RelationshipsController do
         expect{post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)}.
           to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
       end
+
+      it "puts the activity in the actor's notifications" do
+        like.object = note.assign(attributed_to: actor)
+        expect{post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)}.
+          to change{Notification.count(from_iri: actor.iri)}.by(1)
+      end
+
+      it "does not put the object in the actor's timeline" do
+        like.object = note.assign(attributed_to: actor)
+        expect{post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)}.
+          not_to change{Timeline.count(from_iri: actor.iri)}
+      end
     end
 
     context "on create" do
@@ -433,6 +491,65 @@ Spectator.describe RelationshipsController do
         create.object = note
         expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
           to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+      end
+
+      it "does not put the activity in the actor's notifications" do
+        create.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+          not_to change{Notification.count(from_iri: actor.iri)}
+      end
+
+      it "puts the object in the actor's timeline" do
+        create.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+          to change{Timeline.count(from_iri: actor.iri)}.by(1)
+      end
+
+      context "and the object's already in the timeline" do
+        before_each do
+          Timeline.new(
+            owner: actor,
+            object: note
+          ).save
+        end
+
+        it "does not put the object in the actor's timeline" do
+          create.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+            not_to change{Timeline.count(from_iri: actor.iri)}
+        end
+      end
+
+      context "and the object's a reply" do
+        before_each do
+          note.assign(
+            in_reply_to: ActivityPub::Object.new(
+              iri: "https://remote/objects/reply"
+            )
+          ).save
+        end
+
+        it "does not put the object in the actor's timeline" do
+          create.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+            not_to change{Timeline.count(from_iri: actor.iri)}
+        end
+      end
+
+      context "and object mentions the actor" do
+        let(note) do
+          ActivityPub::Object.new(
+            iri: "https://remote/objects/mention",
+            attributed_to: other,
+            mentions: [Tag::Mention.new(name: "local recipient", href: actor.iri)]
+          )
+        end
+
+        it "puts the activity in the actor's notifications" do
+          create.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+            to change{Notification.count(from_iri: actor.iri)}.by(1)
+        end
       end
 
       it "is successful" do
@@ -547,6 +664,16 @@ Spectator.describe RelationshipsController do
             to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
         end
 
+        it "puts the activity in the actor's notifications" do
+          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
+            to change{Notification.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "does not put the object in the actor's timeline" do
+          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
+            not_to change{Timeline.count(from_iri: actor.iri)}
+        end
+
         context "and activity isn't addressed" do
           before_each do
             follow.to.try(&.clear)
@@ -575,6 +702,16 @@ Spectator.describe RelationshipsController do
         it "puts the activity in the actor's inbox" do
           expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
             to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "does not put the activity in the actor's notifications" do
+          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
+            not_to change{Notification.count(from_iri: actor.iri)}
+        end
+
+        it "does not put the object in the actor's timeline" do
+          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
+            not_to change{Timeline.count(from_iri: actor.iri)}
         end
 
         context "and activity isn't addressed" do

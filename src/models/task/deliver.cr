@@ -1,7 +1,7 @@
 require "../task"
+require "../task/mixins/transfer"
 
 require "../../framework/constants"
-require "../../framework/signature"
 require "../activity_pub/activity"
 require "../activity_pub/actor"
 require "../activity_pub/collection"
@@ -11,6 +11,7 @@ require "../relationship/social/follow"
 class Task
   class Deliver < Task
     include Ktistec::Constants
+    include Task::Transfer
 
     belongs_to sender, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri
     validates(sender) { "missing: #{source_iri}" unless sender? }
@@ -33,35 +34,8 @@ class Task
       end.compact.sort.uniq
     end
 
-    def deliver(to recipients)
-      recipients.each do |recipient|
-        unless (actor = ActivityPub::Actor.dereference?(sender, recipient))
-          message = "recipient does not exist: #{recipient}"
-          failures << Failure.new(message)
-          Log.info { message }
-          next
-        end
-        if sender == actor
-          # no-op
-        elsif (inbox = actor.inbox)
-          body = activity.to_json_ld
-          headers = Ktistec::Signature.sign(sender, inbox, body)
-          response = HTTP::Client.post(inbox, headers, body)
-          unless response.success?
-            message = "failed to deliver to #{inbox}: [#{response.status_code}] #{response.body}"
-            failures << Failure.new(message)
-            Log.info { message }
-          end
-        else
-          message = "recipient doesn't have an inbox: #{recipient}"
-          failures << Failure.new(message)
-          Log.info { message }
-        end
-      end
-    end
-
     def perform
-      deliver to: recipients
+      transfer activity, from: sender, to: recipients
     end
   end
 end

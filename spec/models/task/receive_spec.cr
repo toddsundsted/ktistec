@@ -348,34 +348,6 @@ Spectator.describe Task::Receive do
     end
   end
 
-  describe "#deliver" do
-    subject do
-      described_class.new(
-        receiver: receiver,
-        activity: activity
-      )
-    end
-
-    before_each do
-      local_recipient.save
-      remote_recipient.save
-    end
-
-    # handle recipients, instead of only the receiver, since
-    # recipients can include the receiver's followers who are part of
-    # a threaded conversation.
-
-    it "sends the activity to the local recipient" do
-      subject.deliver([local_recipient.iri])
-      expect(HTTP::Client.requests).to have("POST #{local_recipient.inbox}")
-    end
-
-    it "sends the activity to the remote recipient" do
-      subject.deliver([remote_recipient.iri])
-      expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
-    end
-  end
-
   describe "#perform" do
     subject do
       described_class.new(

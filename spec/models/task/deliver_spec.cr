@@ -188,30 +188,6 @@ Spectator.describe Task::Deliver do
     end
   end
 
-  describe "#deliver" do
-    subject do
-      described_class.new(
-        sender: sender,
-        activity: activity
-      )
-    end
-
-    before_each do
-      local_recipient.save
-      remote_recipient.save
-    end
-
-    it "sends the activity to the local recipient" do
-      subject.deliver([local_recipient.iri])
-      expect(HTTP::Client.requests).to have("POST #{local_recipient.inbox}")
-    end
-
-    it "sends the activity to the remote recipient" do
-      subject.deliver([remote_recipient.iri])
-      expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
-    end
-  end
-
   describe "#perform" do
     subject do
       described_class.new(

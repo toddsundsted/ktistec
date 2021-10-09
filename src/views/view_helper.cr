@@ -113,6 +113,11 @@ module Ktistec::ViewHelper
     {% else %}
       %input = ""
     {% end %}
+    {% if csrf && method != "GET" %}
+     %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
+    {% else %}
+      %csrf = ""
+    {% end %}
     %block =
       begin
         {{block.body}}
@@ -129,7 +134,7 @@ module Ktistec::ViewHelper
     ]
     <<-HTML
     <form #{%attributes.join(" ")}>\
-    <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
+    #{%csrf}\
     #{%input}\
     #{%block}\
     </form>

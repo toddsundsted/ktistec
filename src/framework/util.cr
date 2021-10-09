@@ -53,7 +53,7 @@ module Ktistec
       },
       img: {
         keep: ["src", "alt"],
-        all: [{"class", "ui image"}]
+        all: [{"class", "ui image"}, {"loading", "lazy"}]
       }
     }
 

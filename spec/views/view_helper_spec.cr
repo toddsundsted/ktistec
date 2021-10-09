@@ -40,7 +40,7 @@ Spectator.describe "helper" do
       before_each { collection.more = true }
 
       it "renders the next link" do
-        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("/?page=2")
+        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("?page=2")
       end
     end
 
@@ -48,7 +48,7 @@ Spectator.describe "helper" do
       let(query) { "?page=2" }
 
       it "renders the prev link" do
-        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("/?page=1")
+        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("?page=1")
       end
     end
   end

@@ -26,7 +26,6 @@ module Ktistec::ViewHelper
     end
 
     def paginate(env, collection)
-      path = env.request.path
       query = env.params.query
       page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1
       render "./src/views/partials/paginator.html.slang"

@@ -11,7 +11,7 @@ Spectator.describe Task::Receive do
     register(with_keys: true).actor
   end
   let(activity) do
-    ActivityPub::Activity.new(iri: "https://test.test/activities/activity")
+    ActivityPub::Activity.new(iri: "https://remote/activities/activity")
   end
 
   context "validation" do
@@ -348,198 +348,6 @@ Spectator.describe Task::Receive do
     end
   end
 
-  describe "#deliver" do
-    subject do
-      described_class.new(
-        receiver: receiver,
-        activity: activity
-      )
-    end
-
-    before_each do
-      local_recipient.save
-      remote_recipient.save
-    end
-
-    # handle recipients, instead of only the receiver, since
-    # recipients can include the receiver's followers who are part of
-    # a threaded conversation.
-
-    alias Notification = Relationship::Content::Notification
-    alias Timeline = Relationship::Content::Timeline
-
-    context "when activity is a create" do
-      let!(object) do
-        ActivityPub::Object.new(
-          iri: "https://remote/objects/object",
-          attributed_to: local_recipient
-        ).save
-      end
-      let(activity) do
-        ActivityPub::Activity::Create.new(
-          iri: "https://remote/activities/create",
-          object: object
-        )
-      end
-
-      it "puts the object in the recipient's timeline" do
-        expect{subject.deliver([local_recipient.iri])}.
-          to change{Timeline.count(from_iri: local_recipient.iri)}.by(1)
-      end
-
-      context "and the object's already in the timeline" do
-        before_each do
-          Timeline.new(
-            owner: local_recipient,
-            object: object
-          ).save
-        end
-
-        it "does not put the object in the recipient's timeline" do
-          expect{subject.deliver([local_recipient.iri])}.
-            not_to change{Timeline.count(from_iri: local_recipient.iri)}
-        end
-      end
-
-      context "and the object is a reply" do
-        before_each do
-          object.assign(
-            in_reply_to: ActivityPub::Object.new(
-              iri: "https://remote/objects/reply"
-            )
-          ).save
-        end
-
-        it "does not put the object in the recipient's timeline" do
-          expect{subject.deliver([local_recipient.iri])}.
-            not_to change{Timeline.count(from_iri: local_recipient.iri)}
-        end
-      end
-
-      context "and object mentions a local recipient" do
-        let(object) do
-          ActivityPub::Object.new(
-            iri: "https://remote/objects/mention",
-            mentions: [Tag::Mention.new(name: "local recipient", href: local_recipient.iri)]
-          )
-        end
-
-        it "puts the activity in the recipient's notifications" do
-          expect{subject.deliver([local_recipient.iri])}.
-            to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
-        end
-      end
-    end
-
-    context "when activity is an announce" do
-      let!(object) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/object",
-          attributed_to: local_recipient
-        ).save
-      end
-      let(activity) do
-        ActivityPub::Activity::Announce.new(
-          iri: "https://remote/activities/announce",
-          object: object
-        )
-      end
-
-      it "puts the activity in the recipient's notifications" do
-        expect{subject.deliver([local_recipient.iri])}.
-          to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
-      end
-
-      it "puts the object in the recipient's timeline" do
-        expect{subject.deliver([local_recipient.iri])}.
-          to change{Timeline.count(from_iri: local_recipient.iri)}.by(1)
-      end
-
-      context "and the object's already in the timeline" do
-        before_each do
-          Timeline.new(
-            owner: local_recipient,
-            object: object
-          ).save
-        end
-
-        it "does not put the object in the recipient's timeline" do
-          expect{subject.deliver([local_recipient.iri])}.
-            not_to change{Timeline.count(from_iri: local_recipient.iri)}
-        end
-      end
-
-      context "and the object is a reply" do
-        before_each do
-          object.assign(
-            in_reply_to: ActivityPub::Object.new(
-              iri: "https://remote/objects/reply"
-            )
-          ).save
-        end
-
-        it "puts the object in the recipient's timeline" do
-          expect{subject.deliver([local_recipient.iri])}.
-            to change{Timeline.count(from_iri: local_recipient.iri)}.by(1)
-        end
-      end
-    end
-
-    context "when activity is a like" do
-      let!(object) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/object",
-          attributed_to: local_recipient
-        ).save
-      end
-      let(activity) do
-        ActivityPub::Activity::Like.new(
-          iri: "https://remote/activities/like",
-          object: object
-        )
-      end
-
-      it "puts the activity in the recipient's notifications" do
-        expect{subject.deliver([local_recipient.iri])}.
-          to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
-      end
-    end
-
-    context "when activity is a follow" do
-      let(activity) do
-        ActivityPub::Activity::Follow.new(
-          iri: "https://remote/activities/follow",
-          object: local_recipient
-        )
-      end
-
-      it "puts the activity in the recipient's notifications" do
-        expect{subject.deliver([local_recipient.iri])}.
-          to change{Notification.count(from_iri: local_recipient.iri)}.by(1)
-      end
-    end
-
-    it "does not put the object in the recipient's notifications" do
-      expect{subject.deliver([local_recipient.iri])}.
-        not_to change{Notification.count(from_iri: local_recipient.iri)}
-    end
-
-    it "does not put the object in the recipient's timeline" do
-      expect{subject.deliver([local_recipient.iri])}.
-        not_to change{Timeline.count(from_iri: local_recipient.iri)}
-    end
-
-    it "puts the activity in the inbox of a local recipient" do
-      subject.deliver([local_recipient.iri])
-      expect(Relationship::Content::Inbox.count(from_iri: local_recipient.iri)).to eq(1)
-    end
-
-    it "sends the activity to the inbox of a remote recipient" do
-      subject.deliver([remote_recipient.iri])
-      expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
-    end
-  end
-
   describe "#perform" do
     subject do
       described_class.new(
@@ -548,7 +356,7 @@ Spectator.describe Task::Receive do
       )
     end
 
-    context "when the object has been deleted" do
+    context "when the object has already been deleted" do
       let(activity) do
         ActivityPub::Activity::Delete.new(
           iri: "https://test.test/activities/delete",

@@ -9,7 +9,7 @@ up do |db|
       created_at datetime NOT NULL,
       updated_at datetime NOT NULL,
       iri varchar(255) NOT NULL COLLATE NOCASE,
-      items_json varchar(1023),
+      items_iris text,
       total_items integer,
       first varchar(255),
       last varchar(255),

@@ -49,9 +49,9 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("<a href='/index.html' data-turbo-frame='_top'>a link</a>")
     end
 
-    it "preserves src and alt on images, adds compatibility classes" do
+    it "preserves src and alt on images, adds loading attribute and compatibility classes" do
       content = "<img src='https://test.test/pic.jpg' alt='picture'>"
-      expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' alt='picture' class='ui image'>")
+      expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' alt='picture' class='ui image' loading='lazy'>")
     end
 
     it "doesn't corrupt element order" do

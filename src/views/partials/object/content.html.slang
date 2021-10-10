@@ -8,10 +8,11 @@ crystal:
   end
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
 .content data-controller="image-gallery clickable-background" data-action="click->clickable-background#click" data-clickable-background-href-value=href
+  - timezone = account.try { |account| Time::Location.load(account.timezone) }
   .summary
     - if object.draft?
       | draft created
-      a.date = object.short_date
+      a.date = object.short_date(timezone)
     - else
       - if account
         - if author != actor
@@ -21,7 +22,7 @@ crystal:
         - else
           a.user> data-turbo-frame="_top" title=author.account_uri href=remote_actor_path(author) = author.display_name
           | posted
-        a.date data-turbo-frame="_top" title=object.display_date href=remote_object_path(object) = object.short_date
+        a.date data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
       - else
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.account_uri href=actor.display_link = actor.display_name
@@ -30,7 +31,7 @@ crystal:
         - else
           a.user> data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name
           | posted
-        a.date data-turbo-frame="_top" title=object.display_date href=object.display_link = object.short_date
+        a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
   - if attachments && (attachment = attachments.shift?)
     - if attachment.image?
       img.ui.extra.attachment.image src=attachment.url

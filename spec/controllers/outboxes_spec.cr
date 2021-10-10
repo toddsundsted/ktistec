@@ -36,6 +36,8 @@ Spectator.describe RelationshipsController do
         expect(response.status_code).to eq(400)
       end
 
+      alias Timeline = Relationship::Content::Timeline
+
       context "on announce" do
         before_each do
           actor.assign(followers: "#{actor.iri}/followers").save
@@ -98,9 +100,43 @@ Spectator.describe RelationshipsController do
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
-        it "puts the activity in the other's inbox" do
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+
+        it "puts the object in the actor's timeline" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+            to change{Timeline.count(from_iri: actor.iri)}.by(1)
+        end
+
+        context "and the object's already in the timeline" do
+          before_each do
+            Timeline.new(
+              owner: actor,
+              object: object
+            ).save
+          end
+
+          it "does not put the object in the actor's timeline" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
+              not_to change{Timeline.count(from_iri: actor.iri)}
+          end
+        end
+
+        context "and the object is a reply" do
+          before_each do
+            object.assign(
+              in_reply_to: ActivityPub::Object.new(
+                iri: "https://remote/objects/reply"
+              )
+            ).save
+          end
+
+          it "puts the object in the actor's timeline" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
+              to change{Timeline.count(from_iri: actor.iri)}.by(1)
+          end
         end
       end
 
@@ -166,9 +202,14 @@ Spectator.describe RelationshipsController do
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
-        it "puts the activity in the other's inbox" do
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+
+        it "does not put the object in the actor's timeline" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+            not_to change{Timeline.count(from_iri: actor.iri)}
         end
       end
 
@@ -218,6 +259,13 @@ Spectator.describe RelationshipsController do
           expect(response.headers["Location"]).to eq("/remote/objects/#{created.id}")
         end
 
+        let(object) do
+          ActivityPub::Object.new(
+            iri: "https://test.test/objects/#{random_string}",
+            attributed_to: actor
+          )
+        end
+
         let(topic) do
           ActivityPub::Object.new(
             iri: "https://remote/objects/topic",
@@ -256,12 +304,7 @@ Spectator.describe RelationshipsController do
         end
 
         context "when a draft object is specified" do
-          let(object) do
-            ActivityPub::Object.new(
-              iri: "https://test.test/objects/#{random_string}",
-              attributed_to: actor
-            ).save
-          end
+          before_each { object.save }
 
           pre_condition { expect(object.draft?).to be_true }
 
@@ -298,13 +341,7 @@ Spectator.describe RelationshipsController do
         end
 
         context "when a published object is specified" do
-          let(object) do
-            ActivityPub::Object.new(
-              iri: "https://test.test/objects/#{random_string}",
-              attributed_to: actor,
-              published: 5.minutes.ago
-            ).save
-          end
+          before_each { object.assign(published: 5.minutes.ago).save }
 
           pre_condition { expect(object.draft?).to be_false }
 
@@ -420,9 +457,43 @@ Spectator.describe RelationshipsController do
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
-        it "puts the activity in the other's inbox" do
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+
+        it "puts the object in the actor's timeline" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"}.
-            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+            to change{Timeline.count(from_iri: actor.iri)}.by(1)
+        end
+
+        context "and the object's already in the timeline" do
+          before_each do
+            Timeline.new(
+              owner: actor,
+              object: object
+            ).save
+          end
+
+          it "does not put the object in the actor's timeline" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
+              not_to change{Timeline.count(from_iri: actor.iri)}
+          end
+        end
+
+        context "and the object is a reply" do
+          before_each do
+            object.assign(
+              in_reply_to: ActivityPub::Object.new(
+                iri: "https://remote/objects/reply"
+              )
+            ).save
+          end
+
+          it "does not put the object in the actor's timeline" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
+              not_to change{Timeline.count(from_iri: actor.iri)}
+          end
         end
       end
 
@@ -462,6 +533,11 @@ Spectator.describe RelationshipsController do
         it "sends the activity to the object's outbox" do
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"
           expect(HTTP::Client.requests).to have("POST #{object.inbox}")
+        end
+
+        it "does not put the object in the actor's timeline" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"}.
+            not_to change{Timeline.count(from_iri: actor.iri)}
         end
       end
 
@@ -513,9 +589,9 @@ Spectator.describe RelationshipsController do
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
-        it "puts the activity in the other's inbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"}.
-            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
         end
       end
 
@@ -567,9 +643,9 @@ Spectator.describe RelationshipsController do
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
-        it "puts the activity in the other's inbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
-            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
         end
       end
 
@@ -611,9 +687,9 @@ Spectator.describe RelationshipsController do
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
-        it "puts the activity in the other's inbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"}.
-            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
         end
       end
 
@@ -655,9 +731,9 @@ Spectator.describe RelationshipsController do
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
-        it "puts the activity in the other's inbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(like.iri)}"}.
-            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(like.iri)}"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
         end
       end
 
@@ -704,9 +780,9 @@ Spectator.describe RelationshipsController do
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
-        it "puts the activity in the other's inbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"}.
-            to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
         end
       end
 
@@ -762,9 +838,9 @@ Spectator.describe RelationshipsController do
               to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
           end
 
-          it "puts the activity in the other's inbox" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{object.iri}"}.
-              to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+          it "sends the activity to the other's inbox" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{object.iri}"
+            expect(HTTP::Client.requests).to have("POST #{other.inbox}")
           end
         end
 
@@ -804,9 +880,9 @@ Spectator.describe RelationshipsController do
               to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
           end
 
-          it "puts the activity in the other's inbox" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{actor.iri}"}.
-              to change{Relationship::Content::Inbox.count(from_iri: other.iri)}.by(1)
+          it "sends the activity to the other's inbox" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=#{actor.iri}"
+            expect(HTTP::Client.requests).to have("POST #{other.inbox}")
           end
         end
       end
@@ -834,9 +910,9 @@ Spectator.describe RelationshipsController do
           ).save
         end
 
-        it "puts the activity in the object's inbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"}.
-            to change{Relationship::Content::Inbox.count(from_iri: object.iri)}.by(1)
+        it "sends the activity to the object's inbox" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"
+          expect(HTTP::Client.requests).to have("POST #{object.inbox}")
         end
       end
     end

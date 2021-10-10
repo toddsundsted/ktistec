@@ -141,11 +141,6 @@ class RelationshipsController
       unless activity.valid_for_send?
         bad_request
       end
-      Relationship::Social::Follow.new(
-        actor: account.actor,
-        object: object,
-        visible: false
-      ).save
     when "Accept"
       unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))
         bad_request
@@ -162,7 +157,6 @@ class RelationshipsController
         object: object,
         to: [object.actor.iri]
       )
-      follow.assign(confirmed: true).save
     when "Reject"
       unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))
         bad_request
@@ -179,7 +173,6 @@ class RelationshipsController
         object: object,
         to: [object.actor.iri]
       )
-      follow.assign(confirmed: false).save
     when "Undo"
       unless (iri = activity["object"]?) && (object = ActivityPub::Activity.find?(iri))
         bad_request
@@ -202,7 +195,6 @@ class RelationshipsController
         unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
           bad_request
         end
-        follow.destroy
       else
         bad_request
       end
@@ -224,7 +216,6 @@ class RelationshipsController
           end
           account.actor = object.attributed_to
           activity = object.make_delete_activity
-          object.delete
         elsif (object = ActivityPub::Actor.find?(iri))
           unless object.local?
             bad_request
@@ -234,7 +225,6 @@ class RelationshipsController
           end
           account.actor = object
           activity = object.make_delete_activity
-          object.delete
         else
           bad_request
         end
@@ -246,6 +236,51 @@ class RelationshipsController
     end
 
     activity.save
+
+    # if the activity is a delete, the object will already have been
+    # deleted so herein and throughout don't validate and save the
+    # associated models -- they shouldn't have changed anyway.
+
+    Relationship::Content::Outbox.new(
+      owner: account.actor,
+      activity: activity
+    ).save(skip_associated: true)
+
+    # handle timeline
+    Relationship::Content::Timeline.update_timeline(account.actor, activity)
+    # handle side-effects
+    case activity
+    when ActivityPub::Activity::Follow
+      unless Relationship::Social::Follow.find?(from_iri: activity.actor.iri, to_iri: activity.object.iri, visible: false)
+        Relationship::Social::Follow.new(
+          actor: activity.actor,
+          object: activity.object,
+          visible: false
+        ).save(skip_associated: true)
+      end
+    when ActivityPub::Activity::Accept
+      if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+        follow.assign(confirmed: true).save
+      end
+    when ActivityPub::Activity::Reject
+      if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+        follow.assign(confirmed: false).save
+      end
+    when ActivityPub::Activity::Undo
+      case (object = activity.object)
+      when ActivityPub::Activity::Follow
+        if (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+          follow.destroy
+        end
+      end
+    when ActivityPub::Activity::Delete
+      case (object = activity.object?)
+      when ActivityPub::Object
+        object.delete
+      when ActivityPub::Actor
+        object.delete
+      end
+    end
 
     task = Task::Deliver.new(
       sender: account.actor,

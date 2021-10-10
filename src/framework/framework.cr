@@ -5,11 +5,12 @@ require "uri"
 module Ktistec
   def self.db_file
     @@db_file ||=
-      if Kemal.config.env == "production"
-        "sqlite3://#{File.expand_path("~/.ktistec.db", home: true)}"
-      else
-        "sqlite3://ktistec.db"
-      end
+      ENV["KTISTEC_DB"]?.try { |db| "sqlite3://#{db}" } ||
+        if Kemal.config.env == "production"
+          "sqlite3://#{File.expand_path("~/.ktistec.db", home: true)}"
+        else
+          "sqlite3://ktistec.db"
+        end
   end
 
   @@database : DB::Database?

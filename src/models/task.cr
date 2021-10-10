@@ -1,5 +1,6 @@
 require "../framework/model"
 require "../framework/model/**"
+require "../workers/task_worker"
 
 # Asynchronous task.
 #
@@ -62,7 +63,7 @@ class Task
 
   def schedule(@next_attempt_at = nil)
     raise "Not runnable" unless runnable?
-    save
+    TaskWorker.schedule(self)
   end
 
   def perform

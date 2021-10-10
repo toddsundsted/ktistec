@@ -1,3 +1,5 @@
+require "http"
+
 module Ktistec
   module Open
     extend self

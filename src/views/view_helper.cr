@@ -26,10 +26,9 @@ module Ktistec::ViewHelper
     end
 
     def paginate(env, collection)
-      path = env.request.path
       query = env.params.query
       page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1
-      render "./src/views/partials/paginator.html.ecr"
+      render "./src/views/partials/paginator.html.slang"
     end
   end
 
@@ -113,6 +112,11 @@ module Ktistec::ViewHelper
     {% else %}
       %input = ""
     {% end %}
+    {% if csrf && method != "GET" %}
+     %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
+    {% else %}
+      %csrf = ""
+    {% end %}
     %block =
       begin
         {{block.body}}
@@ -129,7 +133,7 @@ module Ktistec::ViewHelper
     ]
     <<-HTML
     <form #{%attributes.join(" ")}>\
-    <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
+    #{%csrf}\
     #{%input}\
     #{%block}\
     </form>

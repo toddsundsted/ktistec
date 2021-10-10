@@ -40,7 +40,7 @@ Spectator.describe "helper" do
       before_each { collection.more = true }
 
       it "renders the next link" do
-        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("/?page=2")
+        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("?page=2")
       end
     end
 
@@ -48,7 +48,7 @@ Spectator.describe "helper" do
       let(query) { "?page=2" }
 
       it "renders the prev link" do
-        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("/?page=1")
+        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("?page=1")
       end
     end
   end
@@ -161,7 +161,6 @@ Spectator.describe "helper" do
       expect(subject.xpath_nodes("//form/input[@name='authenticity_token']/@value")).to contain_exactly("CSRF")
     end
 
-
     it "specifies the action" do
       expect(subject.xpath_nodes("//form/@action")).to contain_exactly("/foobar")
     end
@@ -205,6 +204,20 @@ Spectator.describe "helper" do
 
       it "sets the method to POST" do
         expect(subject.xpath_nodes("//form/@method")).to contain_exactly("POST")
+      end
+    end
+
+    context "given a GET method" do
+      subject do
+        XML.parse_html(form_tag(model, "/foobar", method: "GET", csrf: "CSRF") { "<div/>" }).document
+      end
+
+      it "does not emit a csrf token" do
+        expect(subject.xpath_nodes("//form/input[@name='authenticity_token']")).to be_empty
+      end
+
+      it "sets the method to GET" do
+        expect(subject.xpath_nodes("//form/@method")).to contain_exactly("GET")
       end
     end
   end

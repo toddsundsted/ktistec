@@ -65,8 +65,8 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
+      expect(collection.items_iris).to eq(["item link"])
       expect(collection.items).to eq(["item link"])
-      expect(collection.items_cached).to eq(["item link"])
     end
 
     it "extracts items identifiers" do
@@ -82,8 +82,8 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items).to eq(["item link"])
-      expect(collection.items_cached).to eq([{"@id" => "item link"}])
+      expect(collection.items_iris).to eq(["item link"])
+      expect(collection.items).to eq([{"@id" => "item link"}])
     end
 
     it "handles ordered items" do
@@ -99,8 +99,8 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items).to eq(["item link"])
-      expect(collection.items_cached).to eq([{"@id" => "item link"}])
+      expect(collection.items_iris).to eq(["item link"])
+      expect(collection.items).to eq([{"@id" => "item link"}])
     end
   end
 
@@ -127,8 +127,8 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
+      expect(collection.items_iris).to eq(["item link"])
       expect(collection.items).to eq(["item link"])
-      expect(collection.items_cached).to eq(["item link"])
     end
 
     it "extracts items identifiers" do
@@ -144,8 +144,8 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items).to eq(["item link"])
-      expect(collection.items_cached).to eq([{"@id" => "item link"}])
+      expect(collection.items_iris).to eq(["item link"])
+      expect(collection.items).to eq([{"@id" => "item link"}])
     end
 
     it "handles ordered items" do
@@ -161,8 +161,8 @@ Spectator.describe ActivityPub::Collection do
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items).to eq(["item link"])
-      expect(collection.items_cached).to eq([{"@id" => "item link"}])
+      expect(collection.items_iris).to eq(["item link"])
+      expect(collection.items).to eq([{"@id" => "item link"}])
     end
   end
 

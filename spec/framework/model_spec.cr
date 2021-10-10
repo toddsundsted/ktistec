@@ -29,20 +29,6 @@ class FooBarModel
 
   belongs_to not_nil, class_name: NotNilModel, foreign_key: not_nil_model_id
   has_one not_nil_model, inverse_of: foo_bar
-
-  @[Persistent]
-  property body_json : String?
-
-  serializes body
-
-  class Body
-    include JSON::Serializable
-
-    property body : Float64
-
-    def initialize(@body)
-    end
-  end
 end
 
 class NotNilModel
@@ -65,20 +51,6 @@ class NotNilModel
 
   belongs_to foo_bar, class_name: FooBarModel, foreign_key: foo_bar_model_id
   has_many foo_bar_models, inverse_of: not_nil
-
-  @[Persistent]
-  property body_yaml : String?
-
-  serializes body, format: yaml
-
-  class Body
-    include YAML::Serializable
-
-    property body : Float64
-
-    def initialize(@body)
-    end
-  end
 end
 
 class DerivedModel < FooBarModel
@@ -126,7 +98,6 @@ Spectator.describe Ktistec::Model do
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime,
         not_nil_model_id integer,
-        body_json text,
         foo text,
         bar text
       )
@@ -136,7 +107,6 @@ Spectator.describe Ktistec::Model do
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime,
         foo_bar_model_id integer,
-        body_yaml text,
         key text NOT NULL,
         val text NOT NULL
       )
@@ -839,23 +809,6 @@ Spectator.describe Ktistec::Model do
     it "returns the correct instance" do
       foo_bar.save
       expect(union.assign(model_id: foo_bar.id).model).to eq(foo_bar)
-    end
-  end
-
-  context "serializations" do
-    let(foo_bar) { FooBarModel.new }
-    let(not_nil) { NotNilModel.new(val: "Val") }
-
-    it "serializes body as JSON" do
-      foo_bar.body = FooBarModel::Body.new(13.0)
-      expect(foo_bar.body_json).to eq("{\"body\":13.0}")
-      expect(foo_bar.body).to be_a(FooBarModel::Body)
-    end
-
-    it "serializes body as YAML" do
-      not_nil.body = NotNilModel::Body.new(17.0)
-      expect(not_nil.body_yaml).to eq("---\nbody: 17.0\n")
-      expect(not_nil.body).to be_a(NotNilModel::Body)
     end
   end
 end

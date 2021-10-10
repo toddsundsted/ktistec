@@ -19,15 +19,6 @@ class RelationshipsController
 
     activity = ActivityPub::Activity.from_json_ld(body)
 
-    if activity.id
-      # mastodon reissues identifiers for accept and reject
-      # activities. since these are implemented, here, as idempotent
-      # operations, don't respond with conflict.
-      unless activity.class.in?([ActivityPub::Activity::Accept, ActivityPub::Activity::Reject])
-        conflict
-      end
-    end
-
     if activity.local?
       forbidden
     end
@@ -149,15 +140,6 @@ class RelationshipsController
       unless (object = activity.object?(account.actor, dereference: true))
         bad_request
       end
-      if account.actor == object
-        unless Relationship::Social::Follow.find?(from_iri: actor.iri, to_iri: object.iri)
-          Relationship::Social::Follow.new(
-            actor: actor,
-            object: object,
-            visible: false
-          ).save
-        end
-      end
       # compatibility with implementations that don't address follows
       deliver_to = [account.iri]
     when ActivityPub::Activity::Accept
@@ -170,7 +152,8 @@ class RelationshipsController
       unless (follow = Relationship::Social::Follow.find?(from_iri: account.actor.iri, to_iri: activity.actor.iri))
         bad_request
       end
-      follow.assign(confirmed: true).save
+      # compatibility with implementations that don't address accepts
+      deliver_to = [account.iri]
     when ActivityPub::Activity::Reject
       unless activity.object?.try(&.local?)
         bad_request
@@ -181,7 +164,8 @@ class RelationshipsController
       unless (follow = Relationship::Social::Follow.find?(from_iri: account.actor.iri, to_iri: activity.actor.iri))
         bad_request
       end
-      follow.assign(confirmed: false).save
+      # compatibility with implementations that don't address rejects
+      deliver_to = [account.iri]
     when ActivityPub::Activity::Undo
       unless activity.actor?(account.actor, dereference: true)
         bad_request
@@ -202,7 +186,6 @@ class RelationshipsController
         unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
           bad_request
         end
-        follow.destroy
         deliver_to = [account.iri]
       else
         bad_request
@@ -219,13 +202,13 @@ class RelationshipsController
           bad_request
         end
         activity.object = object
-        object.delete
+        deliver_to = [account.iri]
       elsif (object = ActivityPub::Actor.find?(activity.object_iri))
         unless object == activity.actor
           bad_request
         end
         activity.actor = activity.object = object
-        object.delete
+        deliver_to = [account.iri]
       else
         bad_request
       end
@@ -233,7 +216,74 @@ class RelationshipsController
       bad_request("Activity Not Supported")
     end
 
+    # check to see if the activity already exists and save it -- this
+    # should be atomic under fibers but is not thread-safe. this
+    # prevents duplicate activities being created if the server
+    # receives the same activity multiple times. this can happen in
+    # practice because the validation steps above take time and
+    # servers acting as relays forward activities they've received,
+    # and those activities can arrive while the original activity is
+    # being validated.
+
+    if ActivityPub::Activity.find?(activity.iri)
+      # mastodon reissues identifiers for accept and reject
+      # activities. since these are implemented, here, as idempotent
+      # operations, don't respond with conflict.
+      unless activity.class.in?([ActivityPub::Activity::Accept, ActivityPub::Activity::Reject])
+        conflict
+      end
+    end
+
     activity.save
+
+    # if the activity is a delete, the object will already have been
+    # deleted so herein and throughout don't validate and save the
+    # associated models -- they shouldn't have changed anyway.
+
+    Relationship::Content::Inbox.new(
+      owner: account.actor,
+      activity: activity,
+    ).save(skip_associated: true)
+
+    # handle notifications
+    Relationship::Content::Notification.update_notifications(account.actor, activity)
+    # handle timeline
+    Relationship::Content::Timeline.update_timeline(account.actor, activity)
+    # handle side-effects
+    case activity
+    when ActivityPub::Activity::Follow
+      if activity.object == account.actor
+        unless Relationship::Social::Follow.find?(from_iri: activity.actor.iri, to_iri: activity.object.iri)
+          Relationship::Social::Follow.new(
+            actor: activity.actor,
+            object: activity.object,
+            visible: false
+          ).save(skip_associated: true)
+        end
+      end
+    when ActivityPub::Activity::Accept
+      if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+        follow.assign(confirmed: true).save
+      end
+    when ActivityPub::Activity::Reject
+      if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+        follow.assign(confirmed: false).save
+      end
+    when ActivityPub::Activity::Undo
+      case (object = activity.object)
+      when ActivityPub::Activity::Follow
+        if (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+          follow.destroy
+        end
+      end
+    when ActivityPub::Activity::Delete
+      case (object = activity.object?)
+      when ActivityPub::Object
+        object.delete
+      when ActivityPub::Actor
+        object.delete
+      end
+    end
 
     task = Task::Receive.new(
       receiver: account.actor,

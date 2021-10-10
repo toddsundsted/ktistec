@@ -6,10 +6,7 @@ require "../workers/**"
 
 Ktistec::Server.run do
   Log.setup_from_env
-  spawn do
-    Session.clean_up_stale_sessions
-    TaskWorker.start do
-      Task::UpdateMetrics.schedule_unless_exists
-    end
-  end
+  spawn { TaskWorker.start }
+  Task::UpdateMetrics.schedule_unless_exists
+  Session.clean_up_stale_sessions
 end

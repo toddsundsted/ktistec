@@ -8,6 +8,7 @@ require "../../framework/ext/sqlite3"
 require "../../framework/model"
 require "../../framework/model/**"
 require "../activity_pub"
+require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
 require "../relationship/content/notification"
 require "../relationship/content/timeline"
@@ -24,7 +25,7 @@ require "./object"
 
 module ActivityPub
   class Actor < Ktistec::KeyPair
-    include Ktistec::Model(Common, Deletable, Polymorphic, Serialized, Linked)
+    include Ktistec::Model(Common, Blockable, Deletable, Polymorphic, Serialized, Linked)
     include ActivityPub
 
     @@table_name = "actors"

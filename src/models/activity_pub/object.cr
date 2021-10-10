@@ -2,6 +2,7 @@ require "json"
 
 require "./actor"
 require "../activity_pub"
+require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
 require "../relationship/content/canonical"
 require "../../framework/json_ld"
@@ -11,7 +12,7 @@ require "../../utils/html"
 
 module ActivityPub
   class Object
-    include Ktistec::Model(Common, Deletable, Polymorphic, Serialized, Linked)
+    include Ktistec::Model(Common, Blockable, Deletable, Polymorphic, Serialized, Linked)
     include ActivityPub
 
     @@table_name = "objects"

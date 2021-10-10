@@ -86,6 +86,58 @@ module Ktistec
     # Common interface for all migrations.
     #
     module Migration
+      # Returns the table's columns.
+      #
+      def columns(table)
+        schema = Ktistec.database.scalar("SELECT sql FROM sqlite_master WHERE type = 'table' AND tbl_name = ?", table).as(String)
+        schema[/(?<=\().*(?=\))/m]?.try(&.split(",").map(&.strip)).not_nil!
+      end
+
+      # Returns the table's indexes.
+      #
+      def indexes(table)
+        Ktistec.database.query_all("SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = ?", table, as: String)
+      end
+
+      # Adds a column to the table.
+      #
+      def add_column(table, column, definition)
+        Ktistec.database.exec <<-STR
+          ALTER TABLE #{table} ADD COLUMN #{column} #{definition}
+        STR
+      end
+
+      # Removes a column from the table.
+      #
+      def remove_column(table, column)
+        indexes = indexes(table)
+
+        columns = columns(table).reduce(Hash(String, String).new) do |columns, column|
+          name = column.split(" ").first
+          columns[name] = column
+          columns
+        end
+        columns.delete(column)
+
+        Ktistec.database.exec <<-STR
+          CREATE TABLE #{table}__new__ (
+          #{columns.values.join(",")}
+          )
+        STR
+        Ktistec.database.exec <<-STR
+          INSERT INTO #{table}__new__ SELECT #{columns.keys.join(",")} FROM #{table}
+        STR
+        Ktistec.database.exec <<-STR
+          DROP TABLE #{table}
+        STR
+        Ktistec.database.exec <<-STR
+          ALTER TABLE #{table}__new__ RENAME TO #{table}
+        STR
+        indexes.each do |index|
+          Ktistec.database.exec index
+        end
+      end
+
       # Applies the migration.
       #
       def up(filename = __FILE__, &proc : Operation)

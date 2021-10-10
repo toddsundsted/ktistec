@@ -22,7 +22,9 @@ class Tag
                  WHERE type = "Relationship::Content::Approved" AND r.to_iri = o.iri))
            AND o.published IS NOT NULL
            AND o.deleted_at IS NULL
+           AND o.blocked_at IS NULL
            AND a.deleted_at IS NULL
+           AND a.blocked_at IS NULL
            AND o.id NOT IN (
               SELECT o.id
                 FROM objects AS o, tags AS t
@@ -37,7 +39,9 @@ class Tag
                        WHERE type = "Relationship::Content::Approved" AND r.to_iri = o.iri))
                  AND o.published IS NOT NULL
                  AND o.deleted_at IS NULL
+                 AND o.blocked_at IS NULL
                  AND a.deleted_at IS NULL
+                 AND a.blocked_at IS NULL
             ORDER BY o.published DESC
                LIMIT ?)
       ORDER BY o.published DESC

@@ -70,12 +70,22 @@ Spectator.describe Tag::Hashtag do
     end
 
     it "filters out deleted objects" do
-      ActivityPub::Object.find(object5.id).delete
+      object5.delete
+      expect(described_class.objects_with_tag("foo")).not_to have(object5)
+    end
+
+    it "filters out blocked objects" do
+      object5.block
       expect(described_class.objects_with_tag("foo")).not_to have(object5)
     end
 
     it "filters out objects with deleted attributed to actors" do
       author.delete
+      expect(described_class.objects_with_tag("foo")).to be_empty
+    end
+
+    it "filters out objects with blocked attributed to actors" do
+      author.block
       expect(described_class.objects_with_tag("foo")).to be_empty
     end
 

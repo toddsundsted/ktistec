@@ -161,7 +161,9 @@ module ActivityPub
              ON t.iri = o.attributed_to_iri
           WHERE o.visible = 1
             AND o.deleted_at is NULL
+            AND o.blocked_at is NULL
             AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND o.id NOT IN (
                SELECT o.id
                  FROM objects AS o
@@ -169,7 +171,9 @@ module ActivityPub
                    ON t.iri = o.attributed_to_iri
                 WHERE o.visible = 1
                   AND o.deleted_at is NULL
+                  AND o.blocked_at is NULL
                   AND t.deleted_at IS NULL
+                  AND t.blocked_at IS NULL
              ORDER BY o.published DESC
                 LIMIT ?
             )
@@ -204,7 +208,9 @@ module ActivityPub
           WHERE o.visible = 1
             AND o.in_reply_to_iri IS NULL
             AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
             AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND u.id IS NULL
             AND o.id NOT IN (
                SELECT DISTINCT o.id
@@ -226,7 +232,9 @@ module ActivityPub
                 WHERE o.visible = 1
                   AND o.in_reply_to_iri IS NULL
                   AND o.deleted_at IS NULL
+                  AND o.blocked_at IS NULL
                   AND t.deleted_at IS NULL
+                  AND t.blocked_at IS NULL
                   AND u.id IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
@@ -276,7 +284,9 @@ module ActivityPub
                ON a.iri = o.attributed_to_iri
             WHERE o.in_reply_to_iri = t.iri
               AND o.deleted_at IS NULL
+              AND o.blocked_at IS NULL
               AND a.deleted_at IS NULL
+              AND a.blocked_at IS NULL
         )
       QUERY
     end
@@ -327,7 +337,9 @@ module ActivityPub
                ON a.iri = o.attributed_to_iri
             WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
               AND o.deleted_at IS NULL
+              AND o.blocked_at IS NULL
               AND a.deleted_at IS NULL
+              AND a.blocked_at IS NULL
          ORDER BY depth DESC
        ),
        replies_to(iri, position, depth) AS (
@@ -339,7 +351,9 @@ module ActivityPub
                ON a.iri = o.attributed_to_iri
             WHERE o.in_reply_to_iri = r.iri
               AND o.deleted_at IS NULL
+              AND o.blocked_at IS NULL
               AND a.deleted_at IS NULL
+              AND a.blocked_at IS NULL
          ORDER BY depth DESC
         )
       QUERY
@@ -384,7 +398,9 @@ module ActivityPub
               ON a.iri = o.attributed_to_iri
            WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
              AND o.deleted_at IS NULL
+             AND o.blocked_at IS NULL
              AND a.deleted_at IS NULL
+             AND a.blocked_at IS NULL
         ORDER BY depth DESC
       )
       QUERY
@@ -399,7 +415,9 @@ module ActivityPub
           ON a.iri = o.attributed_to_iri
        WHERE o.iri IN (p.iri)
          AND o.deleted_at IS NULL
+         AND o.blocked_at IS NULL
          AND a.deleted_at IS NULL
+         AND a.blocked_at IS NULL
       QUERY
       Object.query_all(query, iri, additional_columns: {depth: Int32})
     end
@@ -417,7 +435,9 @@ module ActivityPub
           WHERE o.iri IN (p.iri)
             AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
             AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
             AND a.deleted_at IS NULL
+            AND a.blocked_at IS NULL
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})
@@ -451,6 +471,7 @@ module ActivityPub
             #{inclusion}
             #{exclusion}
             AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND u.iri IS NULL
        ORDER BY a.created_at ASC
       QUERY

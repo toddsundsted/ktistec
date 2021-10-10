@@ -128,7 +128,7 @@ module ActivityPub
     end
 
     def follows?(other : Actor, **options)
-      !other.deleted? ?
+      !other.deleted? && !other.blocked? ?
         Relationship::Social::Follow.find?(**options.merge({from_iri: self.iri, to_iri: other.iri})) :
         nil
     end
@@ -138,16 +138,18 @@ module ActivityPub
       query = <<-QUERY
         SELECT #{Actor.columns(prefix: "a")}
           FROM actors AS a, relationships AS r
-         WHERE a.deleted_at IS NULL
-           AND a.iri = r.#{orig}
+         WHERE a.iri = r.#{orig}
+           AND a.deleted_at IS NULL
+           AND a.blocked_at IS NULL
            AND r.type = "#{type}"
            AND r.#{dest} = ?
            #{public}
            AND a.id NOT IN (
               SELECT a.id
                 FROM actors AS a, relationships AS r
-               WHERE a.deleted_at IS NULL
-                 AND a.iri = r.#{orig}
+               WHERE a.iri = r.#{orig}
+                 AND a.deleted_at IS NULL
+                 AND a.blocked_at IS NULL
                  AND r.type = "#{type}"
                  AND r.#{dest} = ?
                  #{public}
@@ -216,12 +218,14 @@ module ActivityPub
           WHERE o.attributed_to_iri = ?
             AND o.published IS NULL
             AND o.deleted_at is NULL
+            AND o.blocked_at is NULL
             AND o.id NOT IN (
                SELECT o.id
                  FROM objects AS o
                 WHERE o.attributed_to_iri = ?
                   AND o.published IS NULL
                   AND o.deleted_at is NULL
+                  AND o.blocked_at is NULL
              ORDER BY o.created_at DESC
                 LIMIT ?
             )
@@ -272,7 +276,9 @@ module ActivityPub
             #{inclusion}
             #{exclusion}
             AND act.deleted_at is NULL
+            AND act.blocked_at is NULL
             AND obj.deleted_at is NULL
+            AND obj.blocked_at is NULL
             AND u.iri IS NULL
        #{public ? %Q|AND a.visible = 1| : nil}
        #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
@@ -295,7 +301,9 @@ module ActivityPub
                   #{inclusion}
                   #{exclusion}
                   AND act.deleted_at is NULL
+                  AND act.blocked_at is NULL
                   AND obj.deleted_at is NULL
+                  AND obj.blocked_at is NULL
                   AND u.iri IS NULL
              #{public ? %Q|AND a.visible = 1| : nil}
              #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
@@ -348,7 +356,9 @@ module ActivityPub
             #{inclusion}
             #{exclusion}
             AND act.deleted_at is NULL
+            AND act.blocked_at is NULL
             AND obj.deleted_at is NULL
+            AND obj.blocked_at is NULL
             AND u.iri IS NULL
       QUERY
       Ktistec.database.scalar(query, self.iri, object.iri).as(Int64) > 0
@@ -399,7 +409,9 @@ module ActivityPub
             #{inclusion}
             #{exclusion}
             AND act.deleted_at is NULL
+            AND act.blocked_at is NULL
             AND obj.deleted_at is NULL
+            AND obj.blocked_at is NULL
             AND u.iri IS NULL
       QUERY
       Activity.query_all(query, self.iri, object.iri).first?
@@ -426,12 +438,14 @@ module ActivityPub
           WHERE o.attributed_to_iri = ?
             AND o.visible = 1
             AND o.deleted_at is NULL
+            AND o.blocked_at is NULL
             AND o.id NOT IN (
                SELECT o.id
                  FROM objects AS o
                 WHERE o.attributed_to_iri = ?
                   AND o.visible = 1
                   AND o.deleted_at is NULL
+                  AND o.blocked_at is NULL
              ORDER BY o.published DESC
                 LIMIT ?
             )
@@ -471,7 +485,9 @@ module ActivityPub
             AND o.visible = 1
             AND o.in_reply_to_iri IS NULL
             AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
             AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND u.id IS NULL
             AND o.id NOT IN (
                SELECT DISTINCT o.id
@@ -492,7 +508,9 @@ module ActivityPub
                   AND o.visible = 1
                   AND o.in_reply_to_iri IS NULL
                   AND o.deleted_at IS NULL
+                  AND o.blocked_at IS NULL
                   AND t.deleted_at IS NULL
+                  AND t.blocked_at IS NULL
                   AND u.id IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
@@ -527,7 +545,9 @@ module ActivityPub
             AND u.actor_iri = a.actor_iri
           WHERE r.from_iri = ?
             AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
             AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND u.id IS NULL
             AND o.id NOT IN (
                SELECT DISTINCT o.id
@@ -546,7 +566,9 @@ module ActivityPub
                   AND u.actor_iri = a.actor_iri
                 WHERE r.from_iri = ?
                   AND o.deleted_at IS NULL
+                  AND o.blocked_at IS NULL
                   AND t.deleted_at IS NULL
+                  AND t.blocked_at IS NULL
                   AND u.id IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
@@ -574,7 +596,9 @@ module ActivityPub
             AND r.type = "#{Relationship::Content::Timeline}"
           WHERE r.from_iri = ?
             AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
             AND a.deleted_at IS NULL
+            AND a.blocked_at IS NULL
             AND o.id NOT IN (
                SELECT o.id
                  FROM objects AS o
@@ -585,7 +609,9 @@ module ActivityPub
                   AND r.type = "#{Relationship::Content::Timeline}"
                 WHERE r.from_iri = ?
                   AND o.deleted_at IS NULL
+                  AND o.blocked_at IS NULL
                   AND a.deleted_at IS NULL
+                  AND a.blocked_at IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
             )
@@ -611,7 +637,9 @@ module ActivityPub
             AND r.type = "#{Relationship::Content::Timeline}"
           WHERE r.from_iri = ?
             AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
             AND a.deleted_at IS NULL
+            AND a.blocked_at IS NULL
             AND r.created_at > ?
       QUERY
       Ktistec.database.scalar(query, iri, since).as(Int64)
@@ -646,7 +674,9 @@ module ActivityPub
             AND undo.actor_iri = a.actor_iri
           WHERE rel.from_iri = ?
             AND act.deleted_at IS null
+            AND act.blocked_at IS null
             AND obj.deleted_at IS null
+            AND obj.blocked_at IS null
             AND undo.iri IS null
             AND a.id NOT IN (
                SELECT a.id
@@ -664,7 +694,9 @@ module ActivityPub
                   AND undo.actor_iri = a.actor_iri
                 WHERE rel.from_iri = ?
                   AND act.deleted_at IS null
+                  AND act.blocked_at IS null
                   AND obj.deleted_at IS null
+                  AND obj.blocked_at IS null
                   AND undo.iri IS null
              ORDER BY rel.created_at DESC
                 LIMIT ?
@@ -697,7 +729,9 @@ module ActivityPub
             AND undo.actor_iri = a.actor_iri
           WHERE rel.from_iri = ?
             AND act.deleted_at IS null
+            AND act.blocked_at IS null
             AND obj.deleted_at IS null
+            AND obj.blocked_at IS null
             AND undo.iri IS null
             AND rel.created_at > ?
       QUERY

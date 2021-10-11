@@ -241,14 +241,15 @@ class RelationshipsController
     # deleted so herein and throughout don't validate and save the
     # associated models -- they shouldn't have changed anyway.
 
+    # handle side-effects
+
     Relationship::Content::Outbox.new(
       owner: account.actor,
       activity: activity
     ).save(skip_associated: true)
 
-    # handle timeline
     Relationship::Content::Timeline.update_timeline(account.actor, activity)
-    # handle side-effects
+
     case activity
     when ActivityPub::Activity::Follow
       unless Relationship::Social::Follow.find?(from_iri: activity.actor.iri, to_iri: activity.object.iri, visible: false)

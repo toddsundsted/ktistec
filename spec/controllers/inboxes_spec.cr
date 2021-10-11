@@ -367,6 +367,63 @@ Spectator.describe RelationshipsController do
             to change{Timeline.count(from_iri: actor.iri)}.by(1)
         end
       end
+
+      context "and the activity is addressed to the other's followers" do
+        before_each do
+          other.assign(followers: "#{other.iri}/followers").save
+          announce.assign(to: ["#{other.iri}/followers"])
+        end
+
+        it "does not put the activity in the actor's inbox" do
+          announce.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
+            not_to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}
+        end
+
+        context "and the actor follows other" do
+          before_each do
+            actor.follow(other).save
+          end
+
+          it "puts the activity in the actor's inbox" do
+            announce.object = note
+            expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
+              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          end
+        end
+      end
+
+      PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
+      context "and the activity is addressed to the public collection" do
+        before_each do
+          announce.assign(to: [PUBLIC])
+        end
+
+        it "does not put the activity in the actor's inbox" do
+          announce.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
+            not_to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}
+        end
+
+        context "and the actor follows other" do
+          before_each do
+            actor.follow(other).save
+          end
+
+          it "puts the activity in the actor's inbox" do
+            announce.object = note
+            expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
+              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          end
+        end
+      end
+
+      it "is successful" do
+        announce.object = note
+        post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+        expect(response.status_code).to eq(200)
+      end
     end
 
     context "on like" do
@@ -549,6 +606,57 @@ Spectator.describe RelationshipsController do
           create.object = note
           expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
             to change{Notification.count(from_iri: actor.iri)}.by(1)
+        end
+      end
+
+      context "and the activity is addressed to the other's followers" do
+        before_each do
+          other.assign(followers: "#{other.iri}/followers").save
+          create.assign(to: ["#{other.iri}/followers"])
+        end
+
+        it "does not put the activity in the actor's inbox" do
+          create.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+            not_to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}
+        end
+
+        context "and the actor follows other" do
+          before_each do
+            actor.follow(other).save
+          end
+
+          it "puts the activity in the actor's inbox" do
+            create.object = note
+            expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          end
+        end
+      end
+
+      PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
+      context "and the activity is addressed to the public collection" do
+        before_each do
+          create.assign(to: [PUBLIC])
+        end
+
+        it "does not put the activity in the actor's inbox" do
+          create.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+            not_to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}
+        end
+
+        context "and the actor follows other" do
+          before_each do
+            actor.follow(other).save
+          end
+
+          it "puts the activity in the actor's inbox" do
+            create.object = note
+            expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          end
         end
       end
 

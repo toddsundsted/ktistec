@@ -1,3 +1,4 @@
+require "../framework/constants"
 require "../framework/controller"
 require "../framework/open"
 require "../framework/signature"
@@ -240,16 +241,22 @@ class RelationshipsController
     # deleted so herein and throughout don't validate and save the
     # associated models -- they shouldn't have changed anyway.
 
-    Relationship::Content::Inbox.new(
-      owner: account.actor,
-      activity: activity,
-    ).save(skip_associated: true)
-
-    # handle notifications
-    Relationship::Content::Notification.update_notifications(account.actor, activity)
-    # handle timeline
-    Relationship::Content::Timeline.update_timeline(account.actor, activity)
     # handle side-effects
+
+    recipients = [activity.to, activity.cc, deliver_to].flatten.compact
+
+    if recipients.includes?(account.actor.iri) ||
+       recipients.includes?(actor.followers) && account.actor.follows?(actor) ||
+       recipients.includes?(Ktistec::Constants::PUBLIC) && account.actor.follows?(actor)
+      Relationship::Content::Inbox.new(
+        owner: account.actor,
+        activity: activity,
+      ).save(skip_associated: true)
+
+      Relationship::Content::Notification.update_notifications(account.actor, activity)
+      Relationship::Content::Timeline.update_timeline(account.actor, activity)
+    end
+
     case activity
     when ActivityPub::Activity::Follow
       if activity.object == account.actor

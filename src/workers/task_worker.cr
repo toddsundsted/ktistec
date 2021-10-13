@@ -23,7 +23,12 @@ class TaskWorker
 
   def self.schedule(task)
     if Kemal.config.env != "test"
-      @@channel.send task.save
+      select
+      when @@channel.send task.save
+        # no-op
+      when timeout(0.seconds)
+        # no-op
+      end
     else
       task.save
     end

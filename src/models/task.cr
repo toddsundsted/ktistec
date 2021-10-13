@@ -2,9 +2,16 @@ require "../framework/model"
 require "../framework/model/**"
 require "../workers/task_worker"
 
-# Asynchronous task.
+# Background task.
+#
+# By default, background tasks are processed sequentially.
 #
 class Task
+  # Marker for a task that may be processed concurrently.
+  #
+  module ConcurrentTask
+  end
+
   include Ktistec::Model(Common, Polymorphic)
 
   @@table_name = "tasks"

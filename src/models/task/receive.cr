@@ -11,6 +11,7 @@ require "../relationship/social/follow"
 class Task
   class Receive < Task
     include Ktistec::Constants
+    include Task::ConcurrentTask
     include Task::Transfer
 
     belongs_to receiver, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri

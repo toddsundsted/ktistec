@@ -3,6 +3,7 @@ require "../../src/models/activity_pub/object/note"
 require "../../src/models/activity_pub/object/tombstone"
 
 require "../spec_helper/controller"
+require "../spec_helper/factory"
 require "../spec_helper/network"
 
 Spectator.describe RelationshipsController do
@@ -11,12 +12,9 @@ Spectator.describe RelationshipsController do
   describe "POST /actors/:username/inbox" do
     let!(actor) { register(with_keys: true).actor }
     let(other) { register(base_uri: "https://remote/actors", with_keys: true).actor }
-    let(activity) do
-      ActivityPub::Activity.new(
-        iri: "https://remote/activities/foo_bar",
-        actor_iri: other.iri
-      )
-    end
+
+    # don't directly associate the activity with an actor, yet
+    let_build(:activity, actor_iri: other.iri)
 
     let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 
@@ -32,36 +30,21 @@ Spectator.describe RelationshipsController do
     end
 
     it "returns 409 if activity was already received and processed" do
-      temp_actor = ActivityPub::Actor.new(
-        iri: "https://remote/actors/actor"
-      )
-      temp_object = ActivityPub::Object.new(
-        iri: "https://remote/objects/object",
-        attributed_to: temp_actor
-      )
-      activity = ActivityPub::Activity::Create.new(
-        iri: "https://remote/activities/create",
-        actor: temp_actor,
-        object: temp_object
-      ).save
+      activity = Factory.create(:create)
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
       expect(response.status_code).to eq(409)
     end
 
     # mastodon compatibility
     it "does not return 409 if the activity is accept" do
-      activity = ActivityPub::Activity::Accept.new(
-        iri: "https://remote/activities/accept"
-      ).save
+      activity = Factory.create(:accept)
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(response.status_code).not_to eq(409)
     end
 
     # mastodon compatibility
     it "does not return 409 if the activity is reject" do
-      activity = ActivityPub::Activity::Reject.new(
-        iri: "https://remote/activities/reject"
-      ).save
+      activity = Factory.create(:reject)
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(response.status_code).not_to eq(409)
     end
@@ -100,19 +83,8 @@ Spectator.describe RelationshipsController do
     end
 
     context "when unsigned" do
-      let(note) do
-        ActivityPub::Object::Note.new(
-          iri: "https://remote/objects/note",
-          attributed_to: other
-        )
-      end
-      let(activity) do
-        ActivityPub::Activity::Create.new(
-          iri: "https://remote/activities/create",
-          actor: other,
-          object: note
-        )
-      end
+      let_build(:note, attributed_to: other)
+      let_build(:create, named: :activity, actor: other, object: note)
 
       before_each { HTTP::Client.activities << activity }
 
@@ -132,9 +104,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "and the actor is remote" do
-        let(other) do
-          build_actor(base_uri: "https://remote/actors", with_keys: true)
-        end
+        let_build(:actor, named: :other, with_keys: true)
 
         before_each { HTTP::Client.actors << other }
 
@@ -156,19 +126,8 @@ Spectator.describe RelationshipsController do
     end
 
     context "when signed" do
-      let(note) do
-        ActivityPub::Object::Note.new(
-          iri: "https://remote/objects/note",
-          attributed_to_iri: other.iri
-        )
-      end
-      let(activity) do
-        ActivityPub::Activity::Create.new(
-          iri: "https://remote/activities/create",
-          actor_iri: other.iri,
-          object_iri: note.iri
-        )
-      end
+      let_build(:note, attributed_to_iri: other.iri)
+      let_build(:create, named: :activity, actor_iri: other.iri, object_iri: note.iri)
 
       before_each { HTTP::Client.objects << note }
 
@@ -190,9 +149,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "by remote actor" do
-        let(other) do
-          build_actor(base_uri: "https://remote/actors", with_keys: true)
-        end
+        let_build(:actor, named: :other, with_keys: true)
 
         before_each { HTTP::Client.actors << other }
 
@@ -213,9 +170,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "by cached actor" do
-        let(other) do
-          build_actor(base_uri: "https://remote/actors", with_keys: true).save
-        end
+        let_create(:actor, named: :other, with_keys: true)
 
         before_each { HTTP::Client.actors << other }
 
@@ -271,19 +226,8 @@ Spectator.describe RelationshipsController do
     alias Timeline = Relationship::Content::Timeline
 
     context "on announce" do
-      let(note) do
-        ActivityPub::Object::Note.new(
-          iri: "https://remote/objects/#{random_string}",
-          attributed_to: other
-        )
-      end
-      let(announce) do
-        ActivityPub::Activity::Announce.new(
-          iri: "https://remote/activities/announce",
-          actor: other,
-          to: [actor.iri]
-        )
-      end
+      let_build(:note, attributed_to: other)
+      let_build(:announce, actor: other, object: nil, to: [actor.iri])
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", announce.to_json_ld(true), "application/json") }
 
@@ -338,12 +282,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "and the object's already in the timeline" do
-        before_each do
-          Timeline.new(
-            owner: actor,
-            object: note
-          ).save
-        end
+        let_create!(:timeline, owner: actor, object: note)
 
         it "does not put the object in the actor's timeline" do
           announce.object = note
@@ -355,9 +294,7 @@ Spectator.describe RelationshipsController do
       context "and the object's a reply" do
         before_each do
           note.assign(
-            in_reply_to: ActivityPub::Object.new(
-              iri: "https://remote/objects/reply"
-            )
+            in_reply_to: Factory.build(:object)
           ).save
         end
 
@@ -427,19 +364,8 @@ Spectator.describe RelationshipsController do
     end
 
     context "on like" do
-      let(note) do
-        ActivityPub::Object::Note.new(
-          iri: "https://remote/objects/#{random_string}",
-          attributed_to: other
-        )
-      end
-      let(like) do
-        ActivityPub::Activity::Like.new(
-          iri: "https://remote/activities/like",
-          actor: other,
-          to: [actor.iri]
-        )
-      end
+      let_build(:note, attributed_to: other)
+      let_build(:like, actor: other, object: nil, to: [actor.iri])
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", like.to_json_ld(true), "application/json") }
 
@@ -495,19 +421,8 @@ Spectator.describe RelationshipsController do
     end
 
     context "on create" do
-      let(note) do
-        ActivityPub::Object::Note.new(
-          iri: "https://remote/objects/#{random_string}",
-          attributed_to: other
-        )
-      end
-      let(create) do
-        ActivityPub::Activity::Create.new(
-          iri: "https://remote/activities/create",
-          actor: other,
-          to: [actor.iri]
-        )
-      end
+      let_build(:note, attributed_to: other)
+      let_build(:create, actor: other, object: nil, to: [actor.iri])
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", create.to_json_ld(true), "application/json") }
 
@@ -563,12 +478,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "and the object's already in the timeline" do
-        before_each do
-          Timeline.new(
-            owner: actor,
-            object: note
-          ).save
-        end
+        let_create!(:timeline, owner: actor, object: note)
 
         it "does not put the object in the actor's timeline" do
           create.object = note
@@ -580,9 +490,7 @@ Spectator.describe RelationshipsController do
       context "and the object's a reply" do
         before_each do
           note.assign(
-            in_reply_to: ActivityPub::Object.new(
-              iri: "https://remote/objects/reply"
-            )
+            in_reply_to: Factory.build(:object)
           ).save
         end
 
@@ -594,13 +502,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "and object mentions the actor" do
-        let(note) do
-          ActivityPub::Object.new(
-            iri: "https://remote/objects/mention",
-            attributed_to: other,
-            mentions: [Tag::Mention.new(name: "local recipient", href: actor.iri)]
-          )
-        end
+        let_build(:note, attributed_to: other, mentions: [Factory.build(:mention, name: "local recipient", href: actor.iri)])
 
         it "puts the activity in the actor's notifications" do
           create.object = note
@@ -668,19 +570,8 @@ Spectator.describe RelationshipsController do
     end
 
     context "on update" do
-      let(note) do
-        ActivityPub::Object::Note.new(
-          iri: "https://remote/objects/#{random_string}",
-          attributed_to: other
-        )
-      end
-      let(update) do
-        ActivityPub::Activity::Update.new(
-          iri: "https://remote/activities/update",
-          actor: other,
-          to: [actor.iri]
-        )
-      end
+      let_build(:note, attributed_to: other)
+      let_build(:update, actor: other, object: nil, to: [actor.iri])
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", update.to_json_ld(true), "application/json") }
 
@@ -731,12 +622,7 @@ Spectator.describe RelationshipsController do
     end
 
     context "on follow" do
-      let(follow) do
-        ActivityPub::Activity::Follow.new(
-          iri: "https://remote/activities/follow",
-          to: [actor.iri]
-        )
-      end
+      let_build(:follow, actor: nil, object: nil, to: [actor.iri])
 
       let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 
@@ -836,27 +722,9 @@ Spectator.describe RelationshipsController do
     end
 
     context "on accept" do
-      let!(relationship) do
-        Relationship::Social::Follow.new(
-          actor: actor,
-          object: other,
-          confirmed: false
-        ).save
-      end
-      let(follow) do
-        ActivityPub::Activity::Follow.new(
-          iri: "https://test.test/activities/follow",
-          actor: actor,
-          object: other
-        ).save
-      end
-      let(accept) do
-        ActivityPub::Activity::Accept.new(
-          iri: "https://remote/activities/accept",
-          actor: other,
-          object: follow
-        )
-      end
+      let_create!(:follow_relationship, named: :relationship, actor: actor, object: other, confirmed: false)
+      let_create(:follow, actor: actor, object: other)
+      let_build(:accept, actor: other, object: follow)
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", accept.to_json_ld, "application/json") }
 
@@ -893,27 +761,9 @@ Spectator.describe RelationshipsController do
     end
 
     context "on reject" do
-      let!(relationship) do
-        Relationship::Social::Follow.new(
-          actor: actor,
-          object: other,
-          confirmed: true
-        ).save
-      end
-      let(follow) do
-        ActivityPub::Activity::Follow.new(
-          iri: "https://test.test/activities/follow",
-          actor: actor,
-          object: other
-        ).save
-      end
-      let(reject) do
-        ActivityPub::Activity::Reject.new(
-          iri: "https://remote/activities/reject",
-          actor: other,
-          object: follow
-        )
-      end
+      let_create!(:follow_relationship, named: :relationship, actor: actor, object: other, confirmed: true)
+      let_create(:follow, actor: actor, object: other)
+      let_build(:reject, actor: other, object: follow)
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", reject.to_json_ld, "application/json") }
 
@@ -950,31 +800,13 @@ Spectator.describe RelationshipsController do
     end
 
     context "when undoing" do
-      let!(relationship) do
-        Relationship::Social::Follow.new(
-          actor: other,
-          object: actor
-        ).save
-      end
-      let(undo) do
-        ActivityPub::Activity::Undo.new(
-          iri: "https://remote/activities/undo",
-          actor: other
-        )
-      end
+      let_create!(:follow_relationship, named: :relationship, actor: other, object: actor)
+      let_build(:undo, actor: other, object: nil)
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", undo.to_json_ld, "application/json") }
 
       context "an announce" do
-        let(announce) do
-          ActivityPub::Activity::Announce.new(
-            iri: "https://test.test/activities/announce",
-            actor: other,
-            object: ActivityPub::Object.new(
-              iri: "https://test.test/objects/object",
-            )
-          ).save
-        end
+        let_create(:announce, actor: other)
 
         before_each do
           undo.assign(object: announce)
@@ -1004,15 +836,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "a like" do
-        let(like) do
-          ActivityPub::Activity::Like.new(
-            iri: "https://test.test/activities/like",
-            actor: other,
-            object: ActivityPub::Object.new(
-              iri: "https://test.test/objects/object",
-            )
-          ).save
-        end
+        let_create(:like, actor: other)
 
         before_each do
           undo.assign(object: like)
@@ -1042,13 +866,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "a follow" do
-        let(follow) do
-          ActivityPub::Activity::Follow.new(
-            iri: "https://test.test/activities/follow",
-            actor: other,
-            object: actor
-          ).save
-        end
+        let_create(:follow, actor: other, object: actor)
 
         before_each do
           undo.assign(object: follow)
@@ -1097,19 +915,8 @@ Spectator.describe RelationshipsController do
 
     context "when deleting" do
       context "an object" do
-        let(note) do
-          ActivityPub::Object::Note.new(
-            iri: "https://remote/objects/#{random_string}",
-            attributed_to: other
-          ).save
-        end
-        let(delete) do
-          ActivityPub::Activity::Delete.new(
-            iri: "https://remote/activities/delete",
-            actor: other,
-            object: note
-          )
-        end
+        let_create(:note, attributed_to: other)
+        let_build(:delete, actor: other, object: note)
 
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 
@@ -1145,11 +952,7 @@ Spectator.describe RelationshipsController do
         end
 
         context "using a tombstone" do
-          let(tombstone) do
-            ActivityPub::Object::Tombstone.new(
-              iri: note.iri
-            )
-          end
+          let_build(:tombstone, iri: note.iri)
 
           let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld(recursive: true), "application/json") }
 
@@ -1187,13 +990,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "an actor" do
-        let(delete) do
-          ActivityPub::Activity::Delete.new(
-            iri: "https://remote/activities/delete",
-            actor: other,
-            object: other
-          )
-        end
+        let_build(:delete, actor: other, object: other)
 
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 

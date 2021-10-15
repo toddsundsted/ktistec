@@ -2,6 +2,7 @@ require "../../src/controllers/outboxes"
 require "../../src/models/activity_pub/object/note"
 
 require "../spec_helper/controller"
+require "../spec_helper/factory"
 require "../spec_helper/network"
 
 Spectator.describe RelationshipsController do
@@ -53,12 +54,7 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(400)
         end
 
-        let(object) do
-          ActivityPub::Object.new(
-            iri: "https://remote/objects/#{random_string}",
-            attributed_to: other
-          ).save
-        end
+        let_create(:object, attributed_to: other)
 
         it "redirects when successful" do
           post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
@@ -111,12 +107,7 @@ Spectator.describe RelationshipsController do
         end
 
         context "and the object's already in the timeline" do
-          before_each do
-            Timeline.new(
-              owner: actor,
-              object: object
-            ).save
-          end
+          let_create!(:timeline, owner: actor, object: object)
 
           it "does not put the object in the actor's timeline" do
             expect{post "/actors/#{actor.username}/outbox", headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
@@ -127,9 +118,7 @@ Spectator.describe RelationshipsController do
         context "and the object is a reply" do
           before_each do
             object.assign(
-              in_reply_to: ActivityPub::Object.new(
-                iri: "https://remote/objects/reply"
-              )
+              in_reply_to: Factory.build(:object)
             ).save
           end
 
@@ -155,12 +144,7 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(400)
         end
 
-        let(object) do
-          ActivityPub::Object.new(
-            iri: "https://remote/objects/#{random_string}",
-            attributed_to: other
-          ).save
-        end
+        let_create(:object, attributed_to: other)
 
         it "redirects when successful" do
           post "/actors/#{actor.username}/outbox", headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"
@@ -214,17 +198,10 @@ Spectator.describe RelationshipsController do
       end
 
       context "on publish" do
-        let!(relationship) do
-          Relationship::Social::Follow.new(
-            actor: other,
-            object: actor,
-            confirmed: true
-          ).save
-        end
-
         before_each do
           actor.assign(followers: "#{actor.iri}/followers").save
           other.assign(urls: ["#{Ktistec.host}/@#{other.username}"]).save
+          do_follow(other, actor)
         end
 
         it "returns 400 if the content is missing" do
@@ -259,21 +236,8 @@ Spectator.describe RelationshipsController do
           expect(response.headers["Location"]).to eq("/remote/objects/#{created.id}")
         end
 
-        let(object) do
-          ActivityPub::Object.new(
-            iri: "https://test.test/objects/#{random_string}",
-            attributed_to: actor
-          )
-        end
-
-        let(topic) do
-          ActivityPub::Object.new(
-            iri: "https://remote/objects/topic",
-            attributed_to: ActivityPub::Actor.new(
-              iri: "https://remote/actors/topic"
-            )
-          ).save
-        end
+        let_build(:object, attributed_to: actor)
+        let_create(:object, named: :topic)
 
         it "redirects to the threaded view" do
           post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&in-reply-to=#{URI.encode_www_form(topic.iri)}"
@@ -468,12 +432,7 @@ Spectator.describe RelationshipsController do
         end
 
         context "and the object's already in the timeline" do
-          before_each do
-            Timeline.new(
-              owner: actor,
-              object: object
-            ).save
-          end
+          let_create!(:timeline, owner: actor, object: object)
 
           it "does not put the object in the actor's timeline" do
             expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
@@ -484,9 +443,7 @@ Spectator.describe RelationshipsController do
         context "and the object is a reply" do
           before_each do
             object.assign(
-              in_reply_to: ActivityPub::Object.new(
-                iri: "https://remote/objects/reply"
-              )
+              in_reply_to: Factory.build(:object)
             ).save
           end
 
@@ -498,12 +455,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "on follow" do
-        let(object) do
-          ActivityPub::Actor.new(
-            iri: "https://remote/actors/foo_bar",
-            inbox: "https://remote/actors/foo_bar/inbox"
-          ).save
-        end
+        let_create(:actor, named: :object)
 
         it "returns 400 if object does not exist" do
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=https://remote/actors/blah_blah"
@@ -542,20 +494,8 @@ Spectator.describe RelationshipsController do
       end
 
       context "on accept" do
-        let!(relationship) do
-          Relationship::Social::Follow.new(
-            actor: other,
-            object: actor,
-            confirmed: false
-          ).save
-        end
-        let!(follow) do
-          ActivityPub::Activity::Follow.new(
-            iri: "https://test.test/activities/follow",
-            actor: other,
-            object: actor
-          ).save
-        end
+        let_create!(:follow_relationship, named: :relationship, actor: other, object: actor, confirmed: false)
+        let_create!(:follow, actor: other, object: actor)
 
         it "returns 400 if a follow activity does not exist" do
           post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=https://remote/activities/follow"
@@ -596,20 +536,8 @@ Spectator.describe RelationshipsController do
       end
 
       context "on reject" do
-        let!(relationship) do
-          Relationship::Social::Follow.new(
-            actor: other,
-            object: actor,
-            confirmed: true
-          ).save
-        end
-        let!(follow) do
-          ActivityPub::Activity::Follow.new(
-            iri: "https://test.test/activities/follow",
-            actor: other,
-            object: actor
-          ).save
-        end
+        let_create!(:follow_relationship, named: :relationship, actor: other, object: actor, confirmed: true)
+        let_create!(:follow, actor: other, object: actor)
 
         it "returns 400 if a follow activity does not exist" do
           post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=https://remote/activities/follow"
@@ -650,16 +578,8 @@ Spectator.describe RelationshipsController do
       end
 
       context "when undoing an announce" do
-        let!(announce) do
-          ActivityPub::Activity::Announce.new(
-            iri: "https://test.test/activities/announce",
-            actor: actor,
-            object: ActivityPub::Object.new(
-              iri: "https://test.test/objects/announce",
-              attributed_to: other
-            )
-          ).save
-        end
+        let_build(:object, attributed_to: other)
+        let_create!(:announce, actor: actor, object: object)
 
         before_each do
           actor.assign(followers: "#{actor.iri}/followers").save
@@ -694,16 +614,8 @@ Spectator.describe RelationshipsController do
       end
 
       context "when undoing a like" do
-        let!(like) do
-          ActivityPub::Activity::Like.new(
-            iri: "https://test.test/activities/like",
-            actor: actor,
-            object: ActivityPub::Object.new(
-              iri: "https://test.test/objects/likw",
-              attributed_to: other
-            )
-          ).save
-        end
+        let_build(:object, attributed_to: other)
+        let_create!(:like, actor: actor, object: object)
 
         before_each do
           actor.assign(followers: "#{actor.iri}/followers").save
@@ -738,20 +650,8 @@ Spectator.describe RelationshipsController do
       end
 
       context "when undoing a follow" do
-        let!(relationship) do
-          Relationship::Social::Follow.new(
-            actor: actor,
-            object: other,
-            confirmed: true
-          ).save
-        end
-        let!(follow) do
-          ActivityPub::Activity::Follow.new(
-            iri: "https://test.test/activities/follow",
-            actor: actor,
-            object: other
-          ).save
-        end
+        let_create!(:follow_relationship, named: :relationship, actor: actor, object: other, confirmed: true)
+        let_create!(:follow, actor: actor, object: other)
 
         it "returns 400 if the follow activity does not exist" do
           post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://remote/activities/follow"
@@ -760,41 +660,35 @@ Spectator.describe RelationshipsController do
 
         it "returns 400 if the follow activity does not belong to the actor" do
           follow.assign(actor: other).save
-          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{follow.iri}"
           expect(response.status_code).to eq(400)
         end
 
         it "returns 400 if the relationship does not exist" do
           relationship.destroy
-          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{follow.iri}"
           expect(response.status_code).to eq(400)
         end
 
         it "destroys the relationship" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"}.
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{follow.iri}"}.
             to change{Relationship::Social::Follow.count(from_iri: actor.iri, to_iri: other.iri)}.by(-1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"}.
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{follow.iri}"}.
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
         end
 
         it "sends the activity to the other's inbox" do
-          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=https://test.test/activities/follow"
+          post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{follow.iri}"
           expect(HTTP::Client.requests).to have("POST #{other.inbox}")
         end
       end
 
       context "on delete" do
         context "given an object" do
-          let!(object) do
-            ActivityPub::Object.new(
-              iri: "https://test.test/objects/#{random_string}",
-              attributed_to: actor,
-              to: [other.iri]
-            ).save
-          end
+          let_create!(:object, attributed_to: actor, to: [other.iri])
 
           it "returns 400 if the object does not exist" do
             post "/actors/#{actor.username}/outbox", headers, "type=Delete&object=https://test.test/object"
@@ -847,11 +741,7 @@ Spectator.describe RelationshipsController do
         context "given an actor" do
           before_each do
             actor.assign(followers: "#{actor.iri}/followers").save
-            Relationship::Social::Follow.new(
-              actor: other,
-              object: actor,
-              confirmed: true
-            ).save
+            do_follow(other, actor)
           end
 
           it "returns 400 if the actor does not exist" do
@@ -888,12 +778,9 @@ Spectator.describe RelationshipsController do
       end
 
       context "given a remote object" do
-        let(object) do
-          ActivityPub::Actor.new(
-            iri: "https://remote/actors/foo_bar",
-            inbox: "https://remote/actors/foo_bar/inbox"
-          ).save
-        end
+        let_create(:actor, named: :object, local: false)
+
+        pre_condition { expect(object.local?).to be_false }
 
         it "sends the activity to the object's inbox" do
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"
@@ -902,13 +789,9 @@ Spectator.describe RelationshipsController do
       end
 
       context "given a local object" do
-        let(object) do
-          username = random_string
-          ActivityPub::Actor.new(
-            iri: "https://test.test/actors/#{username}",
-            inbox: "https://test.test/actors/#{username}/inbox"
-          ).save
-        end
+        let_create(:actor, named: :object, local: true)
+
+        pre_condition { expect(object.local?).to be_true }
 
         it "sends the activity to the object's inbox" do
           post "/actors/#{actor.username}/outbox", headers, "type=Follow&object=#{object.iri}"

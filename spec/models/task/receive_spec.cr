@@ -1,5 +1,6 @@
 require "../../../src/models/task/receive"
 
+require "../../spec_helper/factory"
 require "../../spec_helper/model"
 require "../../spec_helper/network"
 require "../../spec_helper/register"
@@ -10,9 +11,8 @@ Spectator.describe Task::Receive do
   let(receiver) do
     register(with_keys: true).actor
   end
-  let(activity) do
-    ActivityPub::Activity.new(iri: "https://remote/activities/activity")
-  end
+
+  let_build(:activity)
 
   context "validation" do
     let!(options) do
@@ -63,33 +63,11 @@ Spectator.describe Task::Receive do
     end
   end
 
-  let(local_recipient) do
-    username = random_string
-    ActivityPub::Actor.new(
-      iri: "https://test.test/actors/#{username}",
-      inbox: "https://test.test/actors/#{username}/inbox"
-    )
-  end
+  let_build(:actor, named: :local_recipient, iri: "https://test.test/actors/local")
+  let_build(:actor, named: :remote_recipient, iri: "https://remote/actors/remote")
 
-  let(remote_recipient) do
-    username = random_string
-    ActivityPub::Actor.new(
-      iri: "https://remote/actors/#{username}",
-      inbox: "https://remote/actors/#{username}/inbox"
-    )
-  end
-
-  let(local_collection) do
-    ActivityPub::Collection.new(
-      iri: "https://test.test/actors/#{random_string}/followers"
-    )
-  end
-
-  let(remote_collection) do
-    ActivityPub::Collection.new(
-      iri: "https://remote/actors/#{random_string}/followers"
-    )
-  end
+  let_build(:collection, named: :local_collection, iri: "https://test.test/collections/local")
+  let_build(:collection, named: :remote_collection, iri: "https://remote/collections/remote")
 
   describe "#recipients" do
     subject do
@@ -146,31 +124,13 @@ Spectator.describe Task::Receive do
         let(recipient) { local_collection.assign(iri: "#{receiver.iri}/followers") }
 
         before_each do
-          Relationship::Social::Follow.new(
-            actor: local_recipient,
-            object: receiver,
-            confirmed: true
-          ).save
-          Relationship::Social::Follow.new(
-            actor: remote_recipient,
-            object: receiver,
-            confirmed: true
-          ).save
+          do_follow(local_recipient, receiver)
+          do_follow(remote_recipient, receiver)
         end
 
         context "given a reply" do
-          let(original) do
-            ActivityPub::Object.new(
-              iri: "https://remote/objects/original",
-              attributed_to: receiver
-            )
-          end
-          let(reply) do
-            ActivityPub::Object.new(
-              iri: "https://remote/objects/reply",
-              in_reply_to: original
-            )
-          end
+          let_build(:object, named: :original, attributed_to: receiver)
+          let_build(:object, named: :reply, in_reply_to: original)
 
           before_each do
             activity.object_iri = reply.iri
@@ -231,13 +191,7 @@ Spectator.describe Task::Receive do
               end
 
               context "but it is itself a reply to another post by the receiver" do
-                let(another) do
-                  ActivityPub::Object.new(
-                    iri: "https://remote/objects/another",
-                    attributed_to: receiver,
-                    to: [recipient.iri]
-                  )
-                end
+                let_build(:object, named: :another, attributed_to: receiver, to: [recipient.iri])
 
                 before_each do
                   original.assign(in_reply_to: another).save
@@ -278,22 +232,14 @@ Spectator.describe Task::Receive do
       end
 
       context "of the senders's followers" do
-        let(sender) do
-          ActivityPub::Actor.new(iri: "https://remote/actors/sender", followers: "https://remote/actors/sender/followers")
-        end
+        let_build(:actor, named: :sender)
 
         let(recipient) { remote_collection.assign(iri: "#{sender.iri}/followers") }
 
         before_each do
           activity.actor_iri = sender.iri
-
           HTTP::Client.collections << recipient
-
-          Relationship::Social::Follow.new(
-            actor: receiver,
-            object: sender,
-            confirmed: true
-          ).save
+          do_follow(receiver, sender)
         end
 
         it "includes the receiver" do
@@ -328,17 +274,11 @@ Spectator.describe Task::Receive do
       end
 
       context "the receiver is a follower of the sender" do
-        let(sender) do
-          ActivityPub::Actor.new(iri: "https://remote/actors/sender")
-        end
+        let_build(:actor, named: :sender)
 
         before_each do
           activity.actor_iri = sender.iri
-          Relationship::Social::Follow.new(
-            actor: receiver,
-            object: sender,
-            confirmed: true
-          ).save
+          do_follow(receiver, sender)
         end
 
         it "includes the receiver" do
@@ -357,14 +297,7 @@ Spectator.describe Task::Receive do
     end
 
     context "when the object has already been deleted" do
-      let(activity) do
-        ActivityPub::Activity::Delete.new(
-          iri: "https://test.test/activities/delete",
-          actor_iri: receiver.iri,
-          object_iri: "https://deleted",
-          to: [receiver.iri]
-        )
-      end
+      let_build(:delete, named: :activity, actor_iri: receiver.iri, object_iri: "https://deleted", to: [receiver.iri])
 
       it "does not fail" do
         expect{subject.perform}.not_to change{subject.failures}

@@ -1,5 +1,6 @@
 require "../../../../src/models/relationship/content/timeline"
 
+require "../../../spec_helper/factory"
 require "../../../spec_helper/model"
 require "../../../spec_helper/register"
 
@@ -8,8 +9,8 @@ Spectator.describe Relationship::Content::Timeline do
 
   let(options) do
     {
-      from_iri: ActivityPub::Actor.new(iri: "https://test.test/#{random_string}").save.iri,
-      to_iri: ActivityPub::Object.new(iri: "https://test.test/#{random_string}").save.iri
+      from_iri: Factory.create(:actor).iri,
+      to_iri: Factory.create(:object).iri
     }
   end
 
@@ -43,48 +44,11 @@ Spectator.describe Relationship::Content::Timeline do
   describe ".update_timeline" do
     let(owner) { register.actor }
 
-    let(object) do
-      ActivityPub::Object.new(
-        iri: "#{owner.iri}/object",
-        attributed_to: owner
-      )
-    end
-    let(create) do
-      ActivityPub::Activity::Create.new(
-        iri: "#{owner.iri}/create",
-        actor: owner,
-        object: object
-      )
-    end
-    let(announce) do
-      ActivityPub::Activity::Announce.new(
-        iri: "#{owner.iri}/announce",
-        actor: owner,
-        object: object
-      )
-    end
-    let(delete) do
-      ActivityPub::Activity::Delete.new(
-        iri: "#{owner.iri}/delete",
-        actor: owner,
-        object: object
-      )
-    end
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "#{owner.iri}/undo",
-        actor: owner,
-        object: announce
-      )
-    end
-
-    macro put_in_outbox(owner, activity)
-      Relationship::Content::Outbox.new(owner: {{owner}}, activity: {{activity}}).save
-    end
-
-    macro put_in_timeline(owner, object)
-      described_class.new(owner: {{owner}}, object: {{object}}).save
-    end
+    let_build(:object, attributed_to: owner)
+    let_build(:create, actor: owner, object: object)
+    let_build(:announce, actor: owner, object: object)
+    let_build(:delete, actor: owner, object: object)
+    let_build(:undo, actor: owner, object: announce)
 
     context "given an empty timeline" do
       pre_condition { expect(owner.timeline).to be_empty }
@@ -102,12 +66,7 @@ Spectator.describe Relationship::Content::Timeline do
       end
 
       context "object is a reply" do
-        let(original) do
-          ActivityPub::Object.new(
-            iri: "#{owner.iri}/original",
-            attributed_to: owner
-          )
-        end
+        let_build(:object, named: :original, attributed_to: owner)
 
         before_each { object.in_reply_to = original }
 

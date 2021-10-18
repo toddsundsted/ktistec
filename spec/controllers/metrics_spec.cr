@@ -1,5 +1,6 @@
 require "../../src/controllers/metrics"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 Spectator.describe MetricsController::Chart do
@@ -39,13 +40,12 @@ Spectator.describe MetricsController::Chart do
     let(to) { Time.utc(2017, 1, 2) }
 
     macro create_point!(index)
-      let!(point{{index}}) do
-        Point.new(
-          chart: "test-chart",
-          timestamp: Time.utc(2016, 12, 30) + {{index}}.days,
-          value: {{index}}
-        ).save
-      end
+      let_create!(
+        :point, named: point{{index}},
+        chart: "test-chart",
+        timestamp: Time.utc(2016, 12, 30) + {{index}}.days,
+        value: {{index}}
+      )
     end
 
     create_point!(1)
@@ -107,13 +107,12 @@ Spectator.describe MetricsController do
       end
 
       macro create_point!(index)
-        let!(point{{index}}) do
-          Point.new(
-            chart: "inbox-test-chart",
-            timestamp: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-            value: {{index}}
-          ).save
-        end
+        let_create!(
+          :point, named: point{{index}},
+          chart: "inbox-test-chart",
+          timestamp: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+          value: {{index}}
+        )
       end
 
       create_point!(1)

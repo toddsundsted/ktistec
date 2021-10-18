@@ -1,5 +1,6 @@
 require "../../src/controllers/home"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 Spectator.describe HomeController do
@@ -203,29 +204,9 @@ Spectator.describe HomeController do
 
         let(actor) { account.actor }
 
-        let(object) do
-          ActivityPub::Object.new(
-            iri: "#{author.iri}/object",
-            attributed_to: author,
-            visible: true
-          )
-        end
-        let(create) do
-          ActivityPub::Activity::Create.new(
-            iri: "#{author.iri}/create",
-            actor: author,
-            object: object,
-            created_at: Time.utc(2016, 2, 15, 10, 20, 0)
-          )
-        end
-        let(announce) do
-          ActivityPub::Activity::Announce.new(
-            iri: "#{actor.iri}/announce",
-            actor: actor,
-            object: object,
-            created_at: Time.utc(2016, 2, 15, 10, 20, 1)
-          )
-        end
+        let_build(:object, attributed_to: author)
+        let_build(:create, actor: author, object: object)
+        let_build(:announce, actor: actor, object: object)
 
         context "when author is local" do
           let(author) { actor }
@@ -234,10 +215,7 @@ Spectator.describe HomeController do
 
           context "given a create" do
             before_each do
-              Relationship::Content::Outbox.new(
-                owner: author,
-                activity: create
-              ).save
+              put_in_outbox(author, create)
             end
 
             it "renders the object's create aspect" do
@@ -248,10 +226,7 @@ Spectator.describe HomeController do
 
           context "given an announce" do
             before_each do
-              Relationship::Content::Outbox.new(
-                owner: author,
-                activity: announce
-              ).save
+              put_in_outbox(author, announce)
             end
 
             it "renders the object's announce aspect" do
@@ -262,14 +237,8 @@ Spectator.describe HomeController do
 
           context "given a create and an announce" do
             before_each do
-              Relationship::Content::Outbox.new(
-                owner: author,
-                activity: create
-              ).save
-              Relationship::Content::Outbox.new(
-                owner: author,
-                activity: announce
-              ).save
+              put_in_outbox(author, create)
+              put_in_outbox(author, announce)
             end
 
             it "renders the object's create aspect" do
@@ -280,24 +249,14 @@ Spectator.describe HomeController do
         end
 
         context "when author is remote" do
-          let(author) do
-            ActivityPub::Actor.new(
-              iri: "https://remote/actors/actor"
-            )
-          end
+          let_build(:actor, named: :author)
 
           pre_condition { expect(object.local?).to be_false }
 
           context "given a create and an announce" do
             before_each do
-              Relationship::Content::Inbox.new(
-                owner: actor,
-                activity: create
-              ).save
-              Relationship::Content::Outbox.new(
-                owner: actor,
-                activity: announce
-              ).save
+              put_in_inbox(actor, create)
+              put_in_outbox(actor, announce)
             end
 
             it "renders the object's announce aspect" do

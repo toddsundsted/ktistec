@@ -1,6 +1,7 @@
 require "../../src/controllers/actors"
 
 require "../spec_helper/controller"
+require "../spec_helper/factory"
 
 Spectator.describe ActorsController do
   setup_spec
@@ -63,29 +64,9 @@ Spectator.describe ActorsController do
       expect(response.status_code).to eq(200)
     end
 
-    let(object) do
-      ActivityPub::Object.new(
-        iri: "#{author.iri}/object",
-        attributed_to: author,
-        visible: true
-      )
-    end
-    let(create) do
-      ActivityPub::Activity::Create.new(
-        iri: "#{author.iri}/create",
-        actor: author,
-        object: object,
-        created_at: Time.utc(2016, 2, 15, 10, 20, 0)
-      )
-    end
-    let(announce) do
-      ActivityPub::Activity::Announce.new(
-        iri: "#{actor.iri}/announce",
-        actor: actor,
-        object: object,
-        created_at: Time.utc(2016, 2, 15, 10, 20, 1)
-      )
-    end
+    let_build(:object, attributed_to: author, visible: true)
+    let_build(:create, actor: author, object: object)
+    let_build(:announce, actor: actor, object: object)
 
     context "when author is local" do
       let(author) { actor }
@@ -93,12 +74,7 @@ Spectator.describe ActorsController do
       pre_condition { expect(object.local?).to be_true }
 
       context "given a create" do
-        before_each do
-          Relationship::Content::Outbox.new(
-            owner: actor,
-            activity: create
-          ).save
-        end
+        before_each { put_in_outbox(owner: actor, activity: create) }
 
         it "renders the object's create aspect" do
           get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
@@ -107,12 +83,7 @@ Spectator.describe ActorsController do
       end
 
       context "given an announce" do
-        before_each do
-          Relationship::Content::Outbox.new(
-            owner: actor,
-            activity: announce
-          ).save
-        end
+        before_each { put_in_outbox(owner: actor, activity: announce) }
 
         it "renders the object's announce aspect" do
           get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
@@ -122,14 +93,8 @@ Spectator.describe ActorsController do
 
       context "given a create and an announce" do
         before_each do
-          Relationship::Content::Outbox.new(
-            owner: actor,
-            activity: create
-          ).save
-          Relationship::Content::Outbox.new(
-            owner: actor,
-            activity: announce
-          ).save
+          put_in_outbox(owner: actor, activity: create)
+          put_in_outbox(owner: actor, activity: announce)
         end
 
         it "renders the object's create aspect" do
@@ -140,24 +105,14 @@ Spectator.describe ActorsController do
     end
 
     context "when author is remote" do
-      let(author) do
-        ActivityPub::Actor.new(
-          iri: "https://remote/actors/actor"
-        )
-      end
+      let_build(:actor, named: :author)
 
       pre_condition { expect(object.local?).to be_false }
 
       context "given a create and an announce" do
         before_each do
-          Relationship::Content::Inbox.new(
-            owner: actor,
-            activity: create
-          ).save
-          Relationship::Content::Outbox.new(
-            owner: actor,
-            activity: announce
-          ).save
+          put_in_inbox(owner: actor, activity: create)
+          put_in_outbox(owner: actor, activity: announce)
         end
 
         it "renders the object's announce aspect" do
@@ -222,29 +177,9 @@ Spectator.describe ActorsController do
         expect(response.status_code).to eq(200)
       end
 
-      let(object) do
-        ActivityPub::Object.new(
-          iri: "#{author.iri}/object",
-          attributed_to: author,
-          visible: true
-        )
-      end
-      let(create) do
-        ActivityPub::Activity::Create.new(
-          iri: "#{author.iri}/create",
-          actor: author,
-          object: object,
-          created_at: Time.utc(2016, 2, 15, 10, 20, 0)
-        )
-      end
-      let(announce) do
-        ActivityPub::Activity::Announce.new(
-          iri: "#{actor.iri}/announce",
-          actor: actor,
-          object: object,
-          created_at: Time.utc(2016, 2, 15, 10, 20, 1)
-        )
-      end
+      let_build(:object, attributed_to: author, visible: true)
+      let_build(:create, actor: author, object: object)
+      let_build(:announce, actor: actor, object: object)
 
       context "when author is local" do
         let(author) { actor }
@@ -252,12 +187,7 @@ Spectator.describe ActorsController do
         pre_condition { expect(object.local?).to be_true }
 
         context "given a create" do
-          before_each do
-            Relationship::Content::Outbox.new(
-              owner: actor,
-              activity: create
-            ).save
-          end
+          before_each { put_in_outbox(owner: actor, activity: create) }
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
@@ -266,12 +196,7 @@ Spectator.describe ActorsController do
         end
 
         context "given an announce" do
-          before_each do
-            Relationship::Content::Outbox.new(
-              owner: actor,
-              activity: announce
-            ).save
-          end
+          before_each { put_in_outbox(owner: actor, activity: announce) }
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
@@ -281,14 +206,8 @@ Spectator.describe ActorsController do
 
         context "given a create and an announce" do
           before_each do
-            Relationship::Content::Outbox.new(
-              owner: actor,
-              activity: create
-            ).save
-            Relationship::Content::Outbox.new(
-              owner: actor,
-              activity: announce
-            ).save
+            put_in_outbox(owner: actor, activity: create)
+            put_in_outbox(owner: actor, activity: announce)
           end
 
           it "renders the object's create aspect" do
@@ -299,24 +218,14 @@ Spectator.describe ActorsController do
       end
 
       context "when author is remote" do
-        let(author) do
-          ActivityPub::Actor.new(
-            iri: "https://remote/actors/actor"
-          )
-        end
+        let_build(:actor, named: :author)
 
         pre_condition { expect(object.local?).to be_false }
 
         context "given a create and an announce" do
           before_each do
-            Relationship::Content::Inbox.new(
-              owner: actor,
-              activity: create
-            ).save
-            Relationship::Content::Outbox.new(
-              owner: actor,
-              activity: announce
-            ).save
+            put_in_inbox(actor, create)
+            put_in_outbox(actor, announce)
           end
 
           it "renders the object's announce aspect" do
@@ -392,40 +301,17 @@ Spectator.describe ActorsController do
           to change{Account.find(username: actor.username).last_timeline_checked_at}
       end
 
-      let(object) do
-        ActivityPub::Object.new(
-          iri: "#{author.iri}/object",
-          attributed_to: author
-        )
-      end
-      let(create) do
-        ActivityPub::Activity::Create.new(
-          iri: "#{author.iri}/create",
-          actor: author,
-          object: object
-        )
-      end
-      let(announce) do
-        ActivityPub::Activity::Announce.new(
-          iri: "#{author.iri}/announce",
-          actor: author,
-          object: object
-        )
-      end
+      let_build(:object, attributed_to: author)
+      let_build(:create, actor: author, object: object)
+      let_build(:announce, actor: author, object: object)
 
       context "when author is the actor" do
         let(author) { actor }
 
         context "given a create" do
           before_each do
-            Relationship::Content::Outbox.new(
-              owner: actor,
-              activity: create
-            ).save
-            Relationship::Content::Timeline.new(
-              owner: actor,
-              object: object
-            ).save
+            put_in_outbox(owner: actor, activity: create)
+            put_in_timeline(owner: actor, object: object)
           end
 
           it "renders the object's create aspect" do
@@ -436,14 +322,8 @@ Spectator.describe ActorsController do
 
         context "given an announce" do
           before_each do
-            Relationship::Content::Outbox.new(
-              owner: actor,
-              activity: announce
-            ).save
-            Relationship::Content::Timeline.new(
-              owner: actor,
-              object: object
-            ).save
+            put_in_outbox(owner: actor, activity: announce)
+            put_in_timeline(owner: actor, object: object)
           end
 
           it "renders the object's announce aspect" do
@@ -454,22 +334,12 @@ Spectator.describe ActorsController do
       end
 
       context "when author is not the actor" do
-        let(author) do
-          ActivityPub::Actor.new(
-            iri: "https://remote/actors/#{random_string}"
-          )
-        end
+        let_build(:actor, named: :author)
 
         context "given a create" do
           before_each do
-            Relationship::Content::Inbox.new(
-              owner: actor,
-              activity: create
-            ).save
-            Relationship::Content::Timeline.new(
-              owner: actor,
-              object: object
-            ).save
+            put_in_inbox(owner: actor, activity: create)
+            put_in_timeline(owner: actor, object: object)
           end
 
           it "renders the object's create aspect" do
@@ -480,14 +350,8 @@ Spectator.describe ActorsController do
 
         context "given an announce" do
           before_each do
-            Relationship::Content::Inbox.new(
-              owner: actor,
-              activity: announce
-            ).save
-            Relationship::Content::Timeline.new(
-              owner: actor,
-              object: object
-            ).save
+            put_in_inbox(owner: actor, activity: announce)
+            put_in_timeline(owner: actor, object: object)
           end
 
           it "renders the object's announce aspect" do
@@ -500,10 +364,7 @@ Spectator.describe ActorsController do
           before_each do
             create.save
             announce.save
-            Relationship::Content::Timeline.new(
-              owner: actor,
-              object: object
-            ).save
+            put_in_timeline(owner: actor, object: object)
           end
 
           it "renders the object without aspect" do
@@ -515,14 +376,8 @@ Spectator.describe ActorsController do
         context "given a create, and an announce outside of actor's mailbox" do
           before_each do
             announce.save
-            Relationship::Content::Inbox.new(
-              owner: actor,
-              activity: create
-            ).save
-            Relationship::Content::Timeline.new(
-              owner: actor,
-              object: object
-            ).save
+            put_in_inbox(owner: actor, activity: create)
+            put_in_timeline(owner: actor, object: object)
           end
 
           it "renders the object's create aspect" do
@@ -534,14 +389,8 @@ Spectator.describe ActorsController do
         context "given an announce, and a create outside of actor's mailbox" do
           before_each do
             create.save
-            Relationship::Content::Inbox.new(
-              owner: actor,
-              activity: announce
-            ).save
-            Relationship::Content::Timeline.new(
-              owner: actor,
-              object: object
-            ).save
+            put_in_inbox(owner: actor, activity: announce)
+            put_in_timeline(owner: actor, object: object)
           end
 
           it "renders the object's announce aspect" do
@@ -550,24 +399,12 @@ Spectator.describe ActorsController do
           end
         end
 
-        let(like) do
-          ActivityPub::Activity::Like.new(
-            iri: "#{author.iri}/announce",
-            actor: author,
-            object: object
-          )
-        end
+        let_build(:like, actor: author, object: object)
 
         context "given a like" do
           before_each do
-            Relationship::Content::Inbox.new(
-              owner: actor,
-              activity: like
-            ).save
-            Relationship::Content::Timeline.new(
-              owner: actor,
-              object: object
-            ).save
+            put_in_inbox(owner: actor, activity: like)
+            put_in_timeline(owner: actor, object: object)
           end
 
           it "renders the object's like aspect" do
@@ -643,18 +480,8 @@ Spectator.describe ActorsController do
           to change{Account.find(username: actor.username).last_notifications_checked_at}
       end
 
-      let(activity) do
-        ActivityPub::Activity.new(
-          iri: "https://remote/activities/#{random_string}",
-          actor_iri: actor.iri
-        )
-      end
-      let!(notification) do
-        Relationship::Content::Notification.new(
-          owner: actor,
-          activity: activity
-        ).save
-      end
+      let_build(:activity, actor_iri: actor.iri)
+      let_create!(:notification, named: :notification, owner: actor, activity: activity)
 
       it "renders the collection" do
         get "/actors/#{actor.username}/notifications", ACCEPT_HTML
@@ -669,11 +496,7 @@ Spectator.describe ActorsController do
   end
 
   describe "GET /remote/actors/:id" do
-    let!(actor) do
-      ActivityPub::Actor.new(
-        iri: "https://remote/#{random_string}"
-      ).save
-    end
+    let_create!(:actor)
 
     it "returns 401 if not authorized" do
       get "/remote/actors/0", ACCEPT_HTML
@@ -713,11 +536,7 @@ Spectator.describe ActorsController do
   end
 
   describe "POST /remote/actors/:id/refresh" do
-    let!(actor) do
-      ActivityPub::Actor.new(
-        iri: "https://remote/#{random_string}"
-      ).save
-    end
+    let_create!(:actor)
 
     it "returns 401 if not authorized" do
       post "/remote/actors/0/refresh"

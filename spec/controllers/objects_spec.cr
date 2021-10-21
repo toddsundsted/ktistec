@@ -1,5 +1,6 @@
 require "../../src/controllers/objects"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 Spectator.describe ObjectsController do
@@ -7,65 +8,36 @@ Spectator.describe ObjectsController do
 
   let(actor) { register.actor }
 
-  let(author) do
-    ActivityPub::Actor.new(
-      iri: "https://nowhere/#{random_string}",
-      username: "author"
-    ).save
-  end
-  let!(visible) do
-    ActivityPub::Object.new(
-      iri: "https://test.test/objects/#{random_string}",
-      attributed_to: author,
-      published: Time.utc,
-      visible: true
-    ).save
-  end
-  let!(notvisible) do
-    ActivityPub::Object.new(
-      iri: "https://test.test/objects/#{random_string}",
-      attributed_to: author,
-      published: Time.utc,
-      visible: false
-    ).save
-  end
-  let!(remote) do
-    ActivityPub::Object.new(
-      iri: "https://remote/#{random_string}",
-      attributed_to: author,
-      published: Time.utc
-    ).save
-  end
-  let!(draft) do
-    ActivityPub::Object.new(
-      iri: "https://test.test/objects/#{random_string}",
-      content: "this is a test",
-      attributed_to: actor,
-      visible: false
-    ).save
-  end
-
-  macro put_in_inbox(object)
-    Relationship::Content::Inbox.new(
-      from_iri: actor.iri,
-      to_iri: ActivityPub::Activity.new(
-        iri: "https://test.test/activities/#{random_string}",
-        actor_iri: actor.iri,
-        object_iri: {{object}}.iri
-      ).save.iri
-    ).save
-  end
-
-  macro put_in_outbox(object)
-    Relationship::Content::Outbox.new(
-      from_iri: actor.iri,
-      to_iri: ActivityPub::Activity.new(
-        iri: "https://test.test/activities/#{random_string}",
-        actor_iri: actor.iri,
-        object_iri: {{object}}.iri
-      ).save.iri
-    ).save
-  end
+  let_create(
+    :actor, named: :author,
+    iri: "https://nowhere/actor",
+    username: "author"
+  )
+  let_create(
+    :object, named: :visible,
+    attributed_to: author,
+    published: Time.utc,
+    visible: true,
+    local: true
+  )
+  let_create(
+    :object, named: :notvisible,
+    attributed_to: author,
+    published: Time.utc,
+    visible: false,
+    local: true
+  )
+  let_create(
+    :object, named: :remote,
+    attributed_to: author,
+    published: Time.utc
+  )
+  let_create(
+    :object, named: :draft,
+    content: "this is a test",
+    attributed_to: actor,
+    local: true
+  )
 
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
@@ -80,6 +52,8 @@ Spectator.describe ObjectsController do
 
     context "when authorized" do
       sign_in(as: actor.username)
+
+      before_each { draft.save }
 
       it "succeeds" do
         get "/actors/#{actor.username}/drafts", ACCEPT_HTML
@@ -221,7 +195,7 @@ Spectator.describe ObjectsController do
 
       context "and it's in the user's inbox" do
         before_each do
-          [visible, notvisible, remote].each { |object| put_in_inbox(object) }
+          [visible, notvisible, remote].each { |object| put_in_inbox(actor, object) }
         end
 
         it "succeeds if local" do
@@ -306,7 +280,7 @@ Spectator.describe ObjectsController do
 
       context "and it's in the user's inbox" do
         before_each do
-          [visible, notvisible, remote].each { |object| put_in_inbox(object) }
+          [visible, notvisible, remote].each { |object| put_in_inbox(actor, object) }
         end
 
         it "succeeds if local" do
@@ -664,7 +638,7 @@ Spectator.describe ObjectsController do
 
       context "and it's in the user's inbox" do
         before_each do
-          [visible, notvisible, remote].each { |object| put_in_inbox(object) }
+          [visible, notvisible, remote].each { |object| put_in_inbox(actor, object) }
         end
 
         it "succeeds" do
@@ -735,7 +709,7 @@ Spectator.describe ObjectsController do
 
       context "and it's in the user's inbox" do
         before_each do
-          [visible, notvisible, remote].each { |object| put_in_inbox(object) }
+          [visible, notvisible, remote].each { |object| put_in_inbox(actor, object) }
         end
 
         it "succeeds" do
@@ -795,19 +769,8 @@ Spectator.describe ObjectsController do
         expect(XML.parse_html(response.body).xpath_nodes("//trix-editor")).not_to be_empty
       end
 
-      let(other) do
-        ActivityPub::Actor.new(
-          iri: "https://nowhere/#{random_string}",
-          username: "other"
-        ).save
-      end
-      let(parent) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/#{random_string}",
-          attributed_to: other,
-          visible: true
-        ).save
-      end
+      let_build(:actor, named: :other, iri: "https://nowhere/", username: "other")
+      let_build(:object, named: :parent, attributed_to: other)
 
       before_each do
         visible.assign(in_reply_to: parent).save
@@ -857,7 +820,7 @@ Spectator.describe ObjectsController do
       end
 
       context "and it's in the actor's inbox" do
-        before_each { put_in_inbox(remote) }
+        before_each { put_in_inbox(actor, remote) }
 
         it "succeeds" do
           post "/remote/objects/#{remote.id}/approve"
@@ -880,7 +843,7 @@ Spectator.describe ObjectsController do
       end
 
       context "and it's in the actor's outbox" do
-        before_each { put_in_outbox(remote) }
+        before_each { put_in_outbox(actor, remote) }
 
         it "succeeds" do
           post "/remote/objects/#{remote.id}/approve"
@@ -926,7 +889,7 @@ Spectator.describe ObjectsController do
       end
 
       context "and it's in the actor's inbox" do
-        before_each { put_in_inbox(remote) }
+        before_each { put_in_inbox(actor, remote) }
 
         it "succeeds" do
           post "/remote/objects/#{remote.id}/unapprove"
@@ -949,7 +912,7 @@ Spectator.describe ObjectsController do
       end
 
       context "and it's in the actor's outbox" do
-        before_each { put_in_outbox(remote) }
+        before_each { put_in_outbox(actor, remote) }
 
         it "succeeds" do
           post "/remote/objects/#{remote.id}/unapprove"

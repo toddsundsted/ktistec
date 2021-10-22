@@ -1,5 +1,6 @@
 require "../../src/controllers/activities"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 Spectator.describe ActivitiesController do
@@ -7,15 +8,9 @@ Spectator.describe ActivitiesController do
 
   JSON_HEADERS = HTTP::Headers{"Accept" => "application/json"}
 
-  let!(visible) do
-    ActivityPub::Activity.new(iri: "https://test.test/activities/#{random_string}", visible: true).save
-  end
-  let!(notvisible) do
-    ActivityPub::Activity.new(iri: "https://test.test/activities/#{random_string}", visible: false).save
-  end
-  let!(remote) do
-    ActivityPub::Activity.new(iri: "https://remote/#{random_string}").save
-  end
+  let_create!(:activity, named: :visible, visible: true, local: true)
+  let_create!(:activity, named: :notvisible, visible: false, local: true)
+  let_create!(:activity, named: :remote)
 
   describe "GET /activities/:id" do
     it "renders the activity" do

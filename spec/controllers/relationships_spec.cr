@@ -1,5 +1,6 @@
 require "../../src/controllers/relationships"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 Spectator.describe RelationshipsController do
@@ -13,26 +14,23 @@ Spectator.describe RelationshipsController do
     let(other1) { register.actor }
     let(other2) { register.actor }
 
-    let!(relationship1) do
-      Relationship::Social::Follow.new(
-        from_iri: actor.iri,
-        to_iri: other1.iri,
-        confirmed: true,
-        visible: true
-      ).save
-    end
-    let!(relationship2) do
-      Relationship::Social::Follow.new(
-        from_iri: actor.iri,
-        to_iri: other2.iri
-      ).save
-    end
-    let!(relationship3) do
-      Relationship::Social::Follow.new(
-        from_iri: other1.iri,
-        to_iri: other2.iri
-      ).save
-    end
+    let_create!(
+      :follow_relationship, named: :relationship1,
+      actor: actor,
+      object: other1,
+      confirmed: true,
+      visible: true
+    )
+    let_create!(
+      :follow_relationship, named: :relationship2,
+      actor: actor,
+      object: other2
+    )
+    let_create!(
+      :follow_relationship, named: :relationship3,
+      actor: other1,
+      object: other2
+    )
 
     it "returns 404 if not found" do
       get "/actors/0/following", HTML_HEADERS

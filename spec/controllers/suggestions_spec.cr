@@ -1,5 +1,6 @@
 require "../../src/controllers/suggestions"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 Spectator.describe SuggestionsController do
@@ -14,19 +15,17 @@ Spectator.describe SuggestionsController do
     context "when authorized" do
       sign_in
 
-      let(object) { ActivityPub::Object.new(iri: "http://test.test/object/#{random_string}") }
+      let_build(:object)
 
       context "hashtag" do
         macro create_tag(name)
-          Tag::Hashtag.new(subject: object, name: {{name}}).save
+          let_create!(:hashtag, subject: object, name: {{name}})
         end
 
-        before_each do
-          create_tag("foobar")
-          create_tag("foobar")
-          create_tag("foo")
-          create_tag("quux")
-        end
+        create_tag("foobar")
+        create_tag("foobar")
+        create_tag("foo")
+        create_tag("quux")
 
         it "returns the best match" do
           get "/tags?hashtag=foo"
@@ -37,15 +36,13 @@ Spectator.describe SuggestionsController do
 
       context "mention" do
         macro create_tag(name)
-          Tag::Mention.new(subject: object, name: {{name}}).save
+          let_create!(:mention, subject: object, name: {{name}})
         end
 
-        before_each do
-          create_tag("gandalf")
-          create_tag("gandalf")
-          create_tag("frodo")
-          create_tag("galadriel")
-        end
+        create_tag("gandalf")
+        create_tag("gandalf")
+        create_tag("frodo")
+        create_tag("galadriel")
 
         it "returns the best match" do
           get "/tags?mention=gan"

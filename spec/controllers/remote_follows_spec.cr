@@ -1,5 +1,6 @@
 require "../../src/controllers/remote_follows"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 require "../spec_helper/network"
 
@@ -109,11 +110,7 @@ Spectator.describe RemoteFollowsController do
   describe "GET /actors/:username/authorize-follow" do
     sign_in(as: actor.username)
 
-    let(other) do
-      ActivityPub::Actor.new(
-        iri: "https://remote/actors/foobar"
-      )
-    end
+    let_build(:actor, named: :other, iri: "https://remote/actors/foobar")
 
     before_each { HTTP::Client.actors << other }
 

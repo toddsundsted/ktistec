@@ -4,6 +4,7 @@ require "../../src/models/activity_pub/activity/like"
 require "../../src/models/relationship/content/outbox"
 require "../../src/models/relationship/social/follow"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 require "../spec_helper/network"
 

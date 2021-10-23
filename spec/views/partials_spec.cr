@@ -3,6 +3,7 @@ require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
 require "../../src/views/view_helper"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 Spectator.describe "partials" do
@@ -21,8 +22,8 @@ Spectator.describe "partials" do
 
     let(collection) do
       Ktistec::Util::PaginatedArray{
-        ActivityPub::Object.new(iri: "foo"),
-        ActivityPub::Object.new(iri: "bar")
+        Factory.build(:object, iri: "foo"),
+        Factory.build(:object, iri: "bar")
       }
     end
 
@@ -108,18 +109,17 @@ Spectator.describe "partials" do
   end
 
   macro follow(from, to, confirmed = true)
-    before_each do
-      ActivityPub::Activity::Follow.new(
-        iri: "#{{{from}}.origin}/activities/follow",
-        actor: {{from}},
-        object: {{to}}
-      ).save
-      {{from}}.follow(
-        {{to}},
-        confirmed: {{confirmed}},
-        visible: true
-      ).save
-    end
+    let_create!(
+      :follow,
+      actor: {{from}},
+      object: {{to}}
+    )
+    let_create!(
+      :follow_relationship,
+      actor: {{from}},
+      object: {{to}},
+      confirmed: {{confirmed}}
+    )
   end
 
   describe "actor-large.html.slang" do
@@ -130,11 +130,7 @@ Spectator.describe "partials" do
       )
     end
 
-    let(actor) do
-      ActivityPub::Actor.new(
-        iri: "https://remote/actors/foo_bar"
-      ).save
-    end
+    let_create(:actor)
 
     subject do
       begin
@@ -185,11 +181,7 @@ Spectator.describe "partials" do
       )
     end
 
-    let(actor) do
-      ActivityPub::Actor.new(
-        iri: "https://remote/actors/foo_bar"
-      ).save
-    end
+    let_create(:actor)
 
     subject do
       begin
@@ -332,17 +324,8 @@ Spectator.describe "partials" do
     let(account) { register }
     let(actor) { account.actor }
 
-    let!(object) do
-      ActivityPub::Object.new(
-        iri: "https://test.test/objects/object",
-        attributed_to: actor
-      ).save
-    end
-    let(original) do
-      ActivityPub::Object.new(
-        iri: "https://test.test/objects/original"
-      )
-    end
+    let_create!(:object, attributed_to: actor)
+    let_build(:object, named: :original)
 
     it "does not render a link to the threaded conversation" do
       object.assign(in_reply_to: original, attributed_to: actor).save
@@ -355,13 +338,7 @@ Spectator.describe "partials" do
     end
 
     context "given an associated activity" do
-      let(activity) do
-        ActivityPub::Activity::Like.new(
-          iri: "https://test.test/activities/like",
-          actor: actor,
-          object: object
-        )
-      end
+      let_build(:like, named: :activity, actor: actor, object: object)
 
       it "renders the activity type as a class" do
         expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
@@ -497,11 +474,7 @@ Spectator.describe "partials" do
       )
     end
 
-    let(object) do
-      ActivityPub::Object.new(
-        iri: "https://test.test/objects/object"
-      )
-    end
+    let_build(:object, local: true)
 
     context "if authenticated" do
       before_each { env.account = register }
@@ -617,39 +590,11 @@ Spectator.describe "partials" do
 
       before_each { env.account = account }
 
-      let(original) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/original",
-          attributed_to: account.actor
-        )
-      end
-
-      let(actor1) do
-        ActivityPub::Actor.new(
-          iri: "https://remote/actors/actor1",
-          username: "actor1"
-        )
-      end
-      let(object1) do
-        ActivityPub::Object.new(
-          iri: "https://remote/objects/object1",
-          attributed_to: actor1,
-          in_reply_to: original
-        )
-      end
-      let(actor2) do
-        ActivityPub::Actor.new(
-          iri: "https://remote/actors/actor2",
-          username: "actor2"
-        )
-      end
-      let(object2) do
-        ActivityPub::Object.new(
-          iri: "https://remote/objects/object2",
-          attributed_to: actor2,
-          in_reply_to: object1
-        )
-      end
+      let_build(:actor, named: :actor1, username: "actor1")
+      let_build(:actor, named: :actor2, username: "actor2")
+      let_build(:object, named: :original, attributed_to: account.actor)
+      let_build(:object, named: :object1, attributed_to: actor1, in_reply_to: original)
+      let_build(:object, named: :object2, attributed_to: actor2, in_reply_to: object1)
 
       let!(object) { object2.save }
 

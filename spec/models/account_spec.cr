@@ -1,6 +1,7 @@
 require "../../src/models/account"
 
 require "../spec_helper/model"
+require "../spec_helper/factory"
 
 Spectator.describe Account do
   setup_spec
@@ -65,11 +66,7 @@ Spectator.describe Account do
   end
 
   context "given an actor to associate with" do
-    let(actor) do
-      ActivityPub::Actor.new(
-        iri: "https://test.test/#{random_string}"
-      ).save
-    end
+    let_create(:actor)
 
     describe "#actor=" do
       it "updates the iri" do

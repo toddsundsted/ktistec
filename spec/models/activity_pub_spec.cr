@@ -5,6 +5,7 @@ require "../../src/models/activity_pub/collection"
 require "../../src/models/activity_pub/object/note"
 
 require "../spec_helper/model"
+require "../spec_helper/factory"
 
 class ActivityPubModel
   include Ktistec::Model(Linked)
@@ -58,7 +59,7 @@ Spectator.describe ActivityPub do
       expect(described_class.from_json_ld(%q[{"@type":"Note"}])).to be_a(ActivityPub::Object::Note)
     end
 
-    subject { ActivityPub::Activity.new(iri: "https://test.test/foo_bar").save }
+    subject { Factory.create(:activity) }
 
     it "creates an instance if one doesn't exist" do
       json = %q[{"@id":"https://test.test/bar_foo","@type":"Activity"}]
@@ -66,7 +67,7 @@ Spectator.describe ActivityPub do
     end
 
     it "updates the instance if it already exists" do
-      json = %q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"https://test.test/foo_bar","@type":"Activity","summary":"foo bar baz"}]
+      json = %Q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"#{subject.iri}","@type":"Activity","summary":"foo bar baz"}]
       expect{described_class.from_json_ld(json).save}.to change{ActivityPub::Activity.find(subject.iri).summary}
     end
 

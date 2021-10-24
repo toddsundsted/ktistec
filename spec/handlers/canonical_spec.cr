@@ -1,5 +1,6 @@
 require "../../src/handlers/canonical"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 class FooBarController
@@ -34,12 +35,7 @@ Spectator.describe Ktistec::Handler::Canonical do
     end
 
     context "given a canonical mapping" do
-      before_each do
-        Relationship::Content::Canonical.new(
-          from_iri: "/does/not/exist",
-          to_iri: "/foo/bar/secret"
-        ).save
-      end
+      let_create!(:canonical_relationship, from_iri: "/does/not/exist", to_iri: "/foo/bar/secret")
 
       it "returns 200" do
         get "/does/not/exist", ACCEPT_HTML

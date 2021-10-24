@@ -2,6 +2,7 @@ require "../../../src/models/activity_pub/actor"
 require "../../../src/models/activity_pub/object/note"
 
 require "../../spec_helper/model"
+require "../../spec_helper/factory"
 require "../../spec_helper/register"
 
 class FooBarActor < ActivityPub::Actor
@@ -311,13 +312,7 @@ Spectator.describe ActivityPub::Actor do
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_draft(index)
-      let!(note{{index}}) do
-        ActivityPub::Object::Note.new(
-          iri: "https://test.test/objects/#{random_string}",
-          attributed_to: subject,
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
+      let_create!(:note, named: note{{index}}, attributed_to: subject)
     end
 
     create_draft(1)
@@ -358,27 +353,19 @@ Spectator.describe ActivityPub::Actor do
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_outbox(index)
-      let(note{{index}}) do
-        ActivityPub::Object::Note.new(
-          iri: "https://test.test/objects/#{random_string}"
-        )
-      end
-      let(activity{{index}}) do
-        ActivityPub::Activity::Create.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor: subject,
-          object: note{{index}},
-          visible: false
-        )
-      end
-      let!(relationship{{index}}) do
-        Relationship::Content::Outbox.new(
-          owner: subject,
-          activity: activity{{index}},
-          confirmed: true,
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
+      let_build(:note, named: note{{index}})
+      let_build(
+        :create, named: activity{{index}},
+        actor: subject,
+        object: note{{index}},
+        visible: false
+      )
+      let_create!(
+        :outbox_relationship, named: relationship{{index}},
+        owner: subject,
+        activity: activity{{index}},
+        confirmed: true
+      )
     end
 
     add_to_outbox(1)
@@ -387,18 +374,7 @@ Spectator.describe ActivityPub::Actor do
     add_to_outbox(4)
     add_to_outbox(5)
 
-    let(note) do
-      ActivityPub::Object::Note.new(
-        iri: "https://test.test/note"
-      )
-    end
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "https://test.test/undo",
-        actor: subject,
-        object: activity5
-      )
-    end
+    let_build(:undo, actor: subject, object: activity5)
 
     describe "#in_outbox" do
       it "instantiates the correct subclass" do
@@ -425,7 +401,7 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "excludes undo activities" do
-        Relationship::Content::Outbox.new(owner: subject, activity: undo).save
+        put_in_outbox(subject, undo)
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
@@ -440,6 +416,8 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_outbox(2, 2, public: false).more?).to be_true
       end
     end
+
+    let_build(:note)
 
     describe "#in_outbox?" do
       it "returns true if object is in outbox" do
@@ -473,27 +451,19 @@ Spectator.describe ActivityPub::Actor do
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_inbox(index)
-      let(note{{index}}) do
-        ActivityPub::Object::Note.new(
-          iri: "https://test.test/objects/#{random_string}"
-        )
-      end
-      let(activity{{index}}) do
-        ActivityPub::Activity::Create.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor: subject,
-          object: note{{index}},
-          visible: false
-        )
-      end
-      let!(relationship{{index}}) do
-        Relationship::Content::Inbox.new(
-          owner: subject,
-          activity: activity{{index}},
-          confirmed: true,
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
+      let_build(:note, named: note{{index}})
+      let_build(
+        :create, named: activity{{index}},
+        actor: subject,
+        object: note{{index}},
+        visible: false
+      )
+      let_create!(
+        :inbox_relationship, named: relationship{{index}},
+        owner: subject,
+        activity: activity{{index}},
+        confirmed: true
+      )
     end
 
     add_to_inbox(1)
@@ -502,18 +472,7 @@ Spectator.describe ActivityPub::Actor do
     add_to_inbox(4)
     add_to_inbox(5)
 
-    let(note) do
-      ActivityPub::Object::Note.new(
-        iri: "https://test.test/note"
-      )
-    end
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "https://test.test/undo",
-        actor: subject,
-        object: activity5
-      )
-    end
+    let_build(:undo, actor: subject, object: activity5)
 
     describe "#in_inbox" do
       it "instantiates the correct subclass" do
@@ -540,7 +499,7 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "excludes undo activities" do
-        Relationship::Content::Inbox.new(owner: subject, activity: undo).save
+        put_in_inbox(subject, undo)
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
@@ -555,6 +514,8 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_inbox(2, 2, public: false).more?).to be_true
       end
     end
+
+    let_build(:note)
 
     describe "#in_inbox?" do
       it "returns true if object is in inbox" do
@@ -586,29 +547,13 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_activity(index)
-      let(note{{index}}) do
-        ActivityPub::Object::Note.new(
-          iri: "https://test.test/objects/#{random_string}"
-        )
-      end
-      let!(activity{{index}}) do
-        ActivityPub::Activity::Create.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor: subject,
-          object: note{{index}}
-        ).save
-      end
+      let_build(:note, named: note{{index}})
+      let_create!(:create, named: activity{{index}}, actor: subject, object: note{{index}})
     end
 
     create_activity(1)
 
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "https://test.test/undo",
-        actor: subject,
-        object: activity1
-      )
-    end
+    let_build(:undo, actor: subject, object: activity1)
 
     it "instantiates the correct subclass" do
       expect(subject.find_activity_for(note1)).to be_a(ActivityPub::Activity::Create)
@@ -647,14 +592,12 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let!(post{{index}}) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/#{random_string}",
-          attributed_to: subject,
-          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-          visible: {{index}}.odd?
-        ).save
-      end
+      let_create!(
+        :object, named: post{{index}},
+        attributed_to: subject,
+        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+        visible: {{index}}.odd?
+      )
     end
 
     post(1)
@@ -687,32 +630,14 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let(actor{{index}}) do
-        ActivityPub::Actor.new(
-          iri: "https://test.test/actors/#{random_string}"
-        )
-      end
-      let(object{{index}}) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/#{random_string}",
-          attributed_to: actor{{index}},
-          visible: true
-        )
-      end
-      let(activity{{index}}) do
-        ActivityPub::Activity::Announce.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor: subject,
-          object: object{{index}}
-        )
-      end
-      let!(relationship{{index}}) do
-        Relationship::Content::Outbox.new(
-          owner: subject,
-          activity: activity{{index}},
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
+      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
+      let_create!(
+        :outbox_relationship, named: relationship{{index}},
+        owner: subject,
+        activity: activity{{index}}
+      )
     end
 
     post(1)
@@ -745,33 +670,15 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "https://test.test/activities/#{random_string}",
-        actor: subject,
-        object: activity5
-      )
-    end
+    let_build(:undo, actor: subject, object: activity5)
 
     it "filters out objects belonging to undone activities" do
       undo.save
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
-    let(create) do
-      ActivityPub::Activity::Create.new(
-        iri: "https://test.test/activities/#{random_string}",
-        actor: subject,
-        object: object5
-      )
-    end
-    let(outbox) do
-      Relationship::Content::Outbox.new(
-        owner: subject,
-        activity: create,
-        created_at: Time.utc(2016, 2, 15, 10, 20, 5)
-      )
-    end
+    let_build(:create, actor: subject, object: object5)
+    let_build(:outbox_relationship, named: :outbox, owner: subject, activity: create)
 
     it "includes objects only once" do
       outbox.save
@@ -789,32 +696,14 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let(actor{{index}}) do
-        ActivityPub::Actor.new(
-          iri: "https://test.test/actors/#{random_string}"
-        )
-      end
-      let(object{{index}}) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/#{random_string}",
-          attributed_to: actor{{index}},
-          visible: true
-        )
-      end
-      let(activity{{index}}) do
-        ActivityPub::Activity::Announce.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor: subject,
-          object: object{{index}}
-        )
-      end
-      let!(relationship{{index}}) do
-        Relationship::Content::Outbox.new(
-          owner: subject,
-          activity: activity{{index}},
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
+      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
+      let_create!(
+        :outbox_relationship, named: relationship{{index}},
+        owner: subject,
+        activity: activity{{index}}
+      )
     end
 
     post(1)
@@ -847,33 +736,15 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
     end
 
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "https://test.test/activities/#{random_string}",
-        actor: subject,
-        object: activity5
-      )
-    end
+    let_build(:undo, actor: subject, object: activity5)
 
     it "filters out objects belonging to undone activities" do
       undo.save
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
     end
 
-    let(create) do
-      ActivityPub::Activity::Create.new(
-        iri: "https://test.test/activities/#{random_string}",
-        actor: subject,
-        object: object5
-      )
-    end
-    let(outbox) do
-      Relationship::Content::Outbox.new(
-        owner: subject,
-        activity: create,
-        created_at: Time.utc(2016, 2, 15, 10, 20, 5)
-      )
-    end
+    let_build(:create, actor: subject, object: object5)
+    let_build(:outbox_relationship, named: :outbox, owner: subject, activity: create)
 
     it "includes objects only once" do
       outbox.save
@@ -891,24 +762,13 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let(actor{{index}}) do
-        ActivityPub::Actor.new(
-          iri: "https://remote/actors/#{random_string}"
-        )
-      end
-      let(object{{index}}) do
-        ActivityPub::Object.new(
-          iri: "https://remote/objects/#{random_string}",
-          attributed_to: actor{{index}}
-        )
-      end
-      let!(relationship{{index}}) do
-        Relationship::Content::Timeline.new(
-          owner: subject,
-          object: object{{index}},
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
+      let_create!(
+        :timeline, named: relationship{{index}},
+        owner: subject,
+        object: object{{index}}
+      )
     end
 
     post(1)
@@ -917,7 +777,7 @@ Spectator.describe ActivityPub::Actor do
     post(4)
     post(5)
 
-    let(since) { Time.utc(2016, 2, 15, 10, 20, 0) }
+    let(since) { KTISTEC_EPOCH }
 
     it "instantiates the correct subclass" do
       expect(subject.timeline(1, 2).first).to be_a(ActivityPub::Object)
@@ -950,24 +810,13 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro notification(index)
-      let(actor{{index}}) do
-        ActivityPub::Actor.new(
-          iri: "https://remote/actors/#{random_string}"
-        ).save
-      end
-      let(activity{{index}}) do
-        ActivityPub::Activity.new(
-          iri: "https://remote/activities/#{random_string}",
-          actor_iri: actor{{index}}.iri
-        ).save
-      end
-      let!(relationship{{index}}) do
-        Relationship::Content::Notification.new(
-          owner: subject,
-          activity: activity{{index}},
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
+      let_create(:actor, named: actor{{index}})
+      let_create(:activity, named: activity{{index}}, actor: actor{{index}})
+      let_create!(
+        :notification, named: relationship{{index}},
+        owner: subject,
+        activity: activity{{index}}
+      )
     end
 
     notification(1)
@@ -976,25 +825,17 @@ Spectator.describe ActivityPub::Actor do
     notification(4)
     notification(5)
 
-    let(since) { Time.utc(2016, 2, 15, 10, 20, 0) }
+    let(since) { KTISTEC_EPOCH }
 
     it "instantiates the correct subclass" do
       expect(subject.notifications(1, 2).first).to be_a(ActivityPub::Activity)
     end
 
-    let(since) { Time.utc(2016, 2, 15, 10, 20, 0) }
-
     it "returns the count" do
       expect(subject.notifications(since: since)).to eq(5)
     end
 
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "https://test.test/activities/#{random_string}",
-        actor: actor5,
-        object: activity5
-      )
-    end
+    let_build(:undo, actor: actor5, object: activity5)
 
     it "filters out undone activities" do
       undo.save
@@ -1003,11 +844,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     context "given an associated object" do
-      let!(object) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/#{random_string}"
-        ).save
-      end
+      let_create!(:object)
 
       before_each { activity5.assign(object_iri: object.iri).save }
 
@@ -1043,11 +880,8 @@ Spectator.describe ActivityPub::Actor do
         iri: "https://test.test/actors/actor"
       ).save
     end
-    let!(object) do
-      ActivityPub::Object.new(
-        iri: "https://remote/objects/object"
-      ).save
-    end
+
+    let_create!(:object)
 
     describe "#approve" do
       it "approves the object" do

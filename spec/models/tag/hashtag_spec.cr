@@ -1,13 +1,14 @@
 require "../../../src/models/tag/hashtag"
 
 require "../../spec_helper/model"
+require "../../spec_helper/factory"
 
 Spectator.describe Tag::Hashtag do
   setup_spec
 
   context "creation" do
-    let(actor) { ActivityPub::Actor.new(iri: "https://test.test/actors/foorbar") }
-    let(object) { ActivityPub::Object.new(iri: "https://test.test/objects/foorbar") }
+    let_build(:actor)
+    let_build(:object)
 
     it "associates with an actor" do
       expect{described_class.new(subject: actor, name: "actor").save}.to change{Tag::Hashtag.count}.by(1)
@@ -29,17 +30,15 @@ Spectator.describe Tag::Hashtag do
   end
 
   describe ".objects_with_tag" do
-    let(author) { ActivityPub::Actor.new(iri: "https://test.test/actors/author") }
+    let_build(:actor, named: :author)
 
     macro create_tagged_object(index, *tags)
-      let!(object{{index}}) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/object{{index}}",
-          attributed_to: author,
-          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-          visible: true
-        ).save
-      end
+      let_create!(
+        :object, named: object{{index}},
+        attributed_to: author,
+        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+        local: true
+      )
       before_each do
         {% for tag in tags %}
           described_class.new(
@@ -86,17 +85,10 @@ Spectator.describe Tag::Hashtag do
     end
 
     context "given a remote object" do
-      let!(remote) do
-        ActivityPub::Object.new(
-          iri: "https://remote/objects/remote",
-          attributed_to: ActivityPub::Actor.new(
-            iri: "https://remote/actors/remote"
-          ),
-          published: Time.utc(2016, 2, 15, 10, 20, 10),
-          visible: true
-        ).save
-      end
-
+      let_create!(
+        :object, named: :remote,
+        published: Time.utc(2016, 2, 15, 10, 20, 10),
+      )
       before_each do
         described_class.new(
           name: "foo",

@@ -2,6 +2,7 @@ require "../../../../src/models/activity_pub/activity/undo"
 require "../../../../src/models/activity_pub/activity/follow"
 
 require "../../../spec_helper/model"
+require "../../../spec_helper/factory"
 
 Spectator.describe ActivityPub::Activity::Undo do
   setup_spec
@@ -21,23 +22,9 @@ Spectator.describe ActivityPub::Activity::Undo do
   end
 
   context "validations" do
-    let(actor) do
-      ActivityPub::Actor.new(
-        iri: "https://test.test/#{random_string}"
-      )
-    end
-    let(other) do
-      ActivityPub::Actor.new(
-        iri: "https://test.test/#{random_string}"
-      )
-    end
-    let(object) do
-      ActivityPub::Activity::Follow.new(
-        iri: "https://test.test/#{random_string}",
-        actor: actor,
-        object: other
-      )
-    end
+    let_build(:actor)
+    let_build(:actor, named: :other)
+    let_build(:follow, named: :object, actor: actor, object: other)
 
     it "validates the actor is the object's actor" do
       activity = subject.assign(actor: other, object: object)

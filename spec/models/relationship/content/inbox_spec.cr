@@ -1,14 +1,15 @@
 require "../../../../src/models/relationship/content/inbox"
 
 require "../../../spec_helper/model"
+require "../../../spec_helper/factory"
 
 Spectator.describe Relationship::Content::Inbox do
   setup_spec
 
   let(options) do
     {
-      from_iri: ActivityPub::Actor.new(iri: "https://test.test/#{random_string}").save.iri,
-      to_iri: ActivityPub::Activity.new(iri: "https://test.test/#{random_string}").save.iri
+      from_iri: Factory.create(:actor).iri,
+      to_iri: Factory.create(:activity).iri
     }
   end
 

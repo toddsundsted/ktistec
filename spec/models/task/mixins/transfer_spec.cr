@@ -2,6 +2,7 @@ require "../../../../src/models/task"
 require "../../../../src/models/task/mixins/transfer"
 
 require "../../../spec_helper/model"
+require "../../../spec_helper/factory"
 require "../../../spec_helper/network"
 require "../../../spec_helper/register"
 
@@ -15,25 +16,11 @@ Spectator.describe Task::Transfer do
   let(transferer) do
     register(with_keys: true).actor
   end
-  let(activity) do
-    ActivityPub::Activity.new(iri: "https://test.test/activities/activity")
-  end
 
-  let!(local_recipient) do
-    username = random_string
-    ActivityPub::Actor.new(
-      iri: "https://test.test/actors/#{username}",
-      inbox: "https://test.test/actors/#{username}/inbox"
-    ).save
-  end
+  let_build(:activity)
 
-  let!(remote_recipient) do
-    username = random_string
-    ActivityPub::Actor.new(
-      iri: "https://remote/actors/#{username}",
-      inbox: "https://remote/actors/#{username}/inbox"
-    ).save
-  end
+  let_create!(:actor, named: :local_recipient, iri: "https://test.test/actors/local")
+  let_create!(:actor, named: :remote_recipient, iri: "https://remote/actors/remote")
 
   describe "#transfer" do
     subject { FooBarTransfer.new }

@@ -1,5 +1,6 @@
 require "../../../../src/models/relationship/content/notification"
 
+require "../../../spec_helper/factory"
 require "../../../spec_helper/model"
 require "../../../spec_helper/register"
 
@@ -8,8 +9,8 @@ Spectator.describe Relationship::Content::Notification do
 
   let(options) do
     {
-      from_iri: ActivityPub::Actor.new(iri: "https://test.test/#{random_string}").save.iri,
-      to_iri: ActivityPub::Activity.new(iri: "https://test.test/#{random_string}").save.iri
+      from_iri: Factory.create(:actor).iri,
+      to_iri: Factory.create(:activity).iri
     }
   end
 
@@ -43,65 +44,13 @@ Spectator.describe Relationship::Content::Notification do
   describe ".update_notifications" do
     let(owner) { register.actor }
 
-    let(object) do
-      ActivityPub::Object.new(
-        iri: "#{owner.iri}/object",
-        attributed_to: owner
-      )
-    end
-    let(create) do
-      ActivityPub::Activity::Create.new(
-        iri: "#{owner.iri}/create",
-        actor: owner,
-        object: object
-      )
-    end
-    let(announce) do
-      ActivityPub::Activity::Announce.new(
-        iri: "#{owner.iri}/announce",
-        actor: owner,
-        object: object
-      )
-    end
-    let(like) do
-      ActivityPub::Activity::Like.new(
-        iri: "#{owner.iri}/like",
-        actor: owner,
-        object: object
-      )
-    end
-    let(follow) do
-      ActivityPub::Activity::Follow.new(
-        iri: "#{owner.iri}/follow",
-        actor: owner,
-        object: owner
-      )
-    end
-    let(delete) do
-      ActivityPub::Activity::Delete.new(
-        iri: "#{owner.iri}/delete",
-        actor: owner,
-        object: object
-      )
-    end
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "#{owner.iri}/undo",
-        actor: owner,
-        object: ActivityPub::Activity.new(
-          iri: "#{owner.iri}/#{random_string}",
-          actor_iri: owner.iri
-        )
-      )
-    end
-
-    macro put_in_inbox(owner, activity)
-      Relationship::Content::Inbox.new(owner: {{owner}}, activity: {{activity}}).save
-    end
-
-    macro put_in_notifications(owner, activity)
-      described_class.new(owner: {{owner}}, activity: {{activity}}).save
-    end
+    let_build(:object, attributed_to: owner)
+    let_build(:create, actor: owner, object: object)
+    let_build(:announce, actor: owner, object: object)
+    let_build(:like, actor: owner, object: object)
+    let_build(:follow, actor: owner, object: owner)
+    let_build(:delete, actor: owner, object: object)
+    let_build(:undo, actor: owner)
 
     context "given empty notifications" do
       pre_condition { expect(owner.notifications).to be_empty }
@@ -133,7 +82,7 @@ Spectator.describe Relationship::Content::Notification do
       context "object mentions the owner" do
         before_each do
           object.assign(mentions: [
-            Tag::Mention.new(name: owner.iri, href: owner.iri)
+            Factory.build(:mention, name: owner.iri, href: owner.iri)
           ])
         end
 
@@ -145,11 +94,7 @@ Spectator.describe Relationship::Content::Notification do
       end
 
       context "object is not attributed to the owner" do
-        let(other) do
-          ActivityPub::Actor.new(
-            iri: "https://test.test/other"
-          )
-        end
+        let_build(:actor, named: :other)
 
         before_each { object.assign(attributed_to: other) }
 
@@ -167,11 +112,7 @@ Spectator.describe Relationship::Content::Notification do
       end
 
       context "follow does not follow the owner" do
-        let(other) do
-          ActivityPub::Actor.new(
-            iri: "https://test.test/other"
-          )
-        end
+        let_build(:actor, named: :other)
 
         before_each { follow.assign(object: other) }
 
@@ -184,7 +125,7 @@ Spectator.describe Relationship::Content::Notification do
     end
 
     context "given notifictions with create already present" do
-      let(mention) { Tag::Mention.new(name: owner.iri, href: owner.iri) }
+      let_build(:mention, name: owner.iri, href: owner.iri)
 
       before_each do
         object.assign(mentions: [mention])

@@ -1,14 +1,15 @@
 require "../../src/framework/controller"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 class FooBarController
   include Ktistec::Controller
 
-  ID = random_string
-  ACTIVITY = ActivityPub::Activity.new(iri: "https://remote/#{ID}").save
-  OBJECT = ActivityPub::Object.new(iri: "https://remote/#{ID}").save
-  ACTOR = ActivityPub::Actor.new(iri: "https://remote/#{ID}").save
+  # assigned in the specs, below
+  class_property! activity : ActivityPub::Activity
+  class_property! object : ActivityPub::Object
+  class_property! actor : ActivityPub::Actor
 
   skip_auth [
     "/foo/bar/helpers",
@@ -37,16 +38,16 @@ class FooBarController
       home_path: home_path,
       sessions_path: sessions_path,
       back_path: back_path,
-      thread_path: thread_path(OBJECT),
-      remote_thread_path: remote_thread_path(OBJECT),
-      anchor: anchor(OBJECT)
+      thread_path: thread_path(object),
+      remote_thread_path: remote_thread_path(object),
+      anchor: anchor(object)
     }.to_json
   end
 
   get "/foo/bar/helpers/activities" do |env|
     {
-      remote_activity_path: remote_activity_path(ACTIVITY),
-      activity_path: activity_path(ACTIVITY)
+      remote_activity_path: remote_activity_path(activity),
+      activity_path: activity_path(activity)
     }.to_json
   end
 
@@ -59,8 +60,8 @@ class FooBarController
 
   get "/foo/bar/helpers/objects" do |env|
     {
-      remote_object_path: remote_object_path(OBJECT),
-      object_path: object_path(OBJECT)
+      remote_object_path: remote_object_path(object),
+      object_path: object_path(object)
     }.to_json
   end
 
@@ -73,8 +74,8 @@ class FooBarController
 
   get "/foo/bar/helpers/actors" do |env|
     {
-      remote_actor_path: remote_actor_path(ACTOR),
-      actor_path: actor_path(ACTOR)
+      remote_actor_path: remote_actor_path(actor),
+      actor_path: actor_path(actor)
     }.to_json
   end
 
@@ -152,6 +153,17 @@ class FooBarController
 end
 
 Spectator.describe Ktistec::Controller do
+  before_all do
+    Ktistec.database.exec "SAVEPOINT __all__"
+    FooBarController.activity = Factory.create(:activity)
+    FooBarController.object = Factory.create(:object)
+    FooBarController.actor = Factory.create(:actor)
+  end
+
+  after_all do
+    Ktistec.database.exec "ROLLBACK"
+  end
+
   describe "get /foo/bar/helpers" do
     it "gets the host" do
       get "/foo/bar/helpers"
@@ -173,62 +185,66 @@ Spectator.describe Ktistec::Controller do
       expect(JSON.parse(response.body)["back_path"]).to eq("/back")
     end
 
-    let(oid) { FooBarController::OBJECT.id }
-    let(uid) { FooBarController::OBJECT.uid }
+    let(activity_id) { FooBarController.activity.id }
+    let(activity_uid) { FooBarController.activity.uid }
+    let(object_id) { FooBarController.object.id }
+    let(object_uid) { FooBarController.object.uid }
+    let(actor_id) { FooBarController.actor.id }
+    let(actor_uid) { FooBarController.actor.uid }
 
     it "gets the thread path" do
       get "/foo/bar/helpers"
-      expect(JSON.parse(response.body)["thread_path"]).to eq("/objects/#{uid}/thread#object-#{oid}")
+      expect(JSON.parse(response.body)["thread_path"]).to eq("/objects/#{object_uid}/thread#object-#{object_id}")
     end
 
     it "gets the remote thread path" do
       get "/foo/bar/helpers"
-      expect(JSON.parse(response.body)["remote_thread_path"]).to eq("/remote/objects/#{oid}/thread#object-#{oid}")
+      expect(JSON.parse(response.body)["remote_thread_path"]).to eq("/remote/objects/#{object_id}/thread#object-#{object_id}")
     end
 
     it "gets the anchor" do
       get "/foo/bar/helpers"
-      expect(JSON.parse(response.body)["anchor"]).to eq("object-#{oid}")
+      expect(JSON.parse(response.body)["anchor"]).to eq("object-#{object_id}")
     end
 
     it "gets the remote activity path" do
       get "/foo/bar/helpers/activities"
-      expect(JSON.parse(response.body)["remote_activity_path"]).to eq("/remote/activities/#{FooBarController::ACTIVITY.id}")
+      expect(JSON.parse(response.body)["remote_activity_path"]).to eq("/remote/activities/#{activity_id}")
       get "/foo/bar/helpers/activities/999999"
       expect(JSON.parse(response.body)["remote_activity_path"]).to eq("/remote/activities/999999")
     end
 
     it "gets the activity path" do
       get "/foo/bar/helpers/activities"
-      expect(JSON.parse(response.body)["activity_path"]).to eq("/activities/#{FooBarController::ID}")
+      expect(JSON.parse(response.body)["activity_path"]).to eq("/activities/#{activity_uid}")
       get "/foo/bar/helpers/activities/foo_bar"
       expect(JSON.parse(response.body)["activity_path"]).to eq("/activities/foo_bar")
     end
 
     it "gets the remote object path" do
       get "/foo/bar/helpers/objects"
-      expect(JSON.parse(response.body)["remote_object_path"]).to eq("/remote/objects/#{FooBarController::OBJECT.id}")
+      expect(JSON.parse(response.body)["remote_object_path"]).to eq("/remote/objects/#{object_id}")
       get "/foo/bar/helpers/objects/999999"
       expect(JSON.parse(response.body)["remote_object_path"]).to eq("/remote/objects/999999")
     end
 
     it "gets the object path" do
       get "/foo/bar/helpers/objects"
-      expect(JSON.parse(response.body)["object_path"]).to eq("/objects/#{FooBarController::ID}")
+      expect(JSON.parse(response.body)["object_path"]).to eq("/objects/#{object_uid}")
       get "/foo/bar/helpers/objects/foo_bar"
       expect(JSON.parse(response.body)["object_path"]).to eq("/objects/foo_bar")
     end
 
     it "gets the remote actor path" do
       get "/foo/bar/helpers/actors"
-      expect(JSON.parse(response.body)["remote_actor_path"]).to eq("/remote/actors/#{FooBarController::ACTOR.id}")
+      expect(JSON.parse(response.body)["remote_actor_path"]).to eq("/remote/actors/#{actor_id}")
       get "/foo/bar/helpers/actors/by-id/999999"
       expect(JSON.parse(response.body)["remote_actor_path"]).to eq("/remote/actors/999999")
     end
 
     it "gets the actor path" do
       get "/foo/bar/helpers/actors"
-      expect(JSON.parse(response.body)["actor_path"]).to eq("/actors/#{FooBarController::ID}")
+      expect(JSON.parse(response.body)["actor_path"]).to eq("/actors/#{actor_uid}")
       get "/foo/bar/helpers/actors/by-username/foo_bar"
       expect(JSON.parse(response.body)["actor_path"]).to eq("/actors/foo_bar")
     end

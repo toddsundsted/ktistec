@@ -1,33 +1,28 @@
 require "../../../src/models/task/refresh_actor"
 
 require "../../spec_helper/model"
+require "../../spec_helper/factory"
 require "../../spec_helper/network"
 
 Spectator.describe Task::RefreshActor do
   setup_spec
 
-  let(source) do
-    ActivityPub::Actor.new(
-      iri: "https://remote/actors/#{random_string}",
-      pem_private_key: <<-KEY
-        -----BEGIN PRIVATE KEY-----
-        MIIBUwIBADANBgkqhkiG9w0BAQEFAASCAT0wggE5AgEAAkEAwUthNowxsin6I4GS
-        6HF7T5KvpzB43yixhf6CHJJ/Atya0xXIxw3JpPbcMls2z5Mss/59uyxDG3kttbmC
-        wpovJQIBEQJAZlUVWR0LQDRXP/lNxloyOS+KK1Xlo1HHZQ5E4fM0LrAa857iJLKp
-        RFcGJXeCKpSOHjbFhL4EfeRi00r4fO1EnQIhAOd5ux8C/3Faw6bGbDLGKgu2+C/k
-        b45JiQ5rgthisuXrAiEA1cYSGwz1wzrkKc/UY4AXosP0LhTkAatAufP+YzsKqy8C
-        IQCVxzzX1MNndvcRj3Mv6aK8STcuDEgu5Emf6zaMA6DvHwIgfb/OakPb3EDCcvK5
-        K3iGX76PoqLgeXPLuK2kstdvr/0CIQC7ei8o6yboqQgbsVk+Qnf6z1YPaA6hEM7M
-        KvkMC2XHAw==
-        -----END PRIVATE KEY-----
-        KEY
-    ).save
-  end
-  let(actor) do
-    ActivityPub::Actor.new(
-      iri: "https://remote/actors/#{random_string}"
-    ).save
-  end
+  let_create(
+    :actor, named: :source,
+    pem_private_key: <<-KEY
+      -----BEGIN PRIVATE KEY-----
+      MIIBUwIBADANBgkqhkiG9w0BAQEFAASCAT0wggE5AgEAAkEAwUthNowxsin6I4GS
+      6HF7T5KvpzB43yixhf6CHJJ/Atya0xXIxw3JpPbcMls2z5Mss/59uyxDG3kttbmC
+      wpovJQIBEQJAZlUVWR0LQDRXP/lNxloyOS+KK1Xlo1HHZQ5E4fM0LrAa857iJLKp
+      RFcGJXeCKpSOHjbFhL4EfeRi00r4fO1EnQIhAOd5ux8C/3Faw6bGbDLGKgu2+C/k
+      b45JiQ5rgthisuXrAiEA1cYSGwz1wzrkKc/UY4AXosP0LhTkAatAufP+YzsKqy8C
+      IQCVxzzX1MNndvcRj3Mv6aK8STcuDEgu5Emf6zaMA6DvHwIgfb/OakPb3EDCcvK5
+      K3iGX76PoqLgeXPLuK2kstdvr/0CIQC7ei8o6yboqQgbsVk+Qnf6z1YPaA6hEM7M
+      KvkMC2XHAw==
+      -----END PRIVATE KEY-----
+      KEY
+  )
+  let_create(:actor)
 
   let(options) do
     {

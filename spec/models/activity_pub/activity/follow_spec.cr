@@ -1,6 +1,7 @@
 require "../../../../src/models/activity_pub/activity/follow"
 
 require "../../../spec_helper/model"
+require "../../../spec_helper/factory"
 
 Spectator.describe ActivityPub::Activity::Follow do
   setup_spec
@@ -20,23 +21,9 @@ Spectator.describe ActivityPub::Activity::Follow do
   end
 
   describe ".follows?" do
-    let(actor) do
-      ActivityPub::Actor.new(
-        iri: "https://test.test/#{random_string}"
-      )
-    end
-    let(other) do
-      ActivityPub::Actor.new(
-        iri: "https://test.test/#{random_string}"
-      )
-    end
-    let!(follow) do
-      Relationship::Social::Follow.new(
-        iri: "https://test.test/activities/follow",
-        actor: actor,
-        object: other
-      ).save
-    end
+    let_build(:actor)
+    let_build(:actor, named: :other)
+    let_create!(:follow_relationship, named: :follow, actor: actor, object: other)
 
     before_each do
       subject.assign(actor: actor, object: other).save
@@ -61,12 +48,7 @@ Spectator.describe ActivityPub::Activity::Follow do
     end
 
     context "when accepted" do
-      let!(accept) do
-        ActivityPub::Activity::Accept.new(
-          iri: "https://test.test/accept",
-          object: subject
-        ).save
-      end
+      let_create!(:accept, object: subject)
 
       it "returns the accept activity" do
         expect(subject.accepted_or_rejected?).to eq(accept)
@@ -74,12 +56,7 @@ Spectator.describe ActivityPub::Activity::Follow do
     end
 
     context "when rejected" do
-      let!(reject) do
-        ActivityPub::Activity::Reject.new(
-          iri: "https://test.test/reject",
-          object: subject
-        ).save
-      end
+      let_create!(:reject, object: subject)
 
       it "returns the reject activity" do
         expect(subject.accepted_or_rejected?).to eq(reject)
@@ -88,8 +65,8 @@ Spectator.describe ActivityPub::Activity::Follow do
   end
 
   context "validations" do
-    let(actor) { ActivityPub::Actor.new }
-    let(object) { ActivityPub::Actor.new }
+    let_build(:actor)
+    let_build(:actor, named: :object, inbox: nil)
 
     it "validates the actor is local" do
       activity = subject.assign(actor: actor, object: object)

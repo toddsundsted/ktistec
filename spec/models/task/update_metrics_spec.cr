@@ -1,6 +1,7 @@
 require "../../../src/models/task/update_metrics"
 
 require "../../spec_helper/model"
+require "../../spec_helper/factory"
 require "../../spec_helper/register"
 
 Spectator.describe Task::UpdateMetrics do
@@ -51,18 +52,11 @@ Spectator.describe Task::UpdateMetrics do
       let(owner) { account.actor }
 
       macro create_item(index)
-        let(activity{{index}}) do
-          ActivityPub::Activity.new(
-            iri: "https://remote/activities/#{random_string}"
-          )
-        end
-        let!(inbox{{index}}) do
-          Relationship::Content::Inbox.new(
-            owner: owner,
-            activity: activity{{index}},
-            created_at: Time.utc(2016, 2, {{index}}, 10, 20, 30)
-          ).save
-        end
+        let_create!(
+          :inbox_relationship, named: inbox{{index}},
+          owner: owner,
+          created_at: Time.utc(2016, 2, {{index}}, 10, 20, 30)
+        )
       end
 
       create_item(1)
@@ -97,10 +91,13 @@ Spectator.describe Task::UpdateMetrics do
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1])
       end
 
-      it "increments point values for points that already exist" do
-        Point.new(chart: inbox, timestamp: Time.utc(2016, 2, 5, 0, 0, 0), value: 2).save
-        expect{subject.perform}.to change{Point.count}.by(4)
-        expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 1, 3])
+      context "point already exists" do
+        let_create!(:point, chart: inbox, timestamp: Time.utc(2016, 2, 5, 0, 0, 0), value: 2)
+
+        it "increments point value" do
+          expect{subject.perform}.to change{Point.count}.by(4)
+          expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 1, 3])
+        end
       end
 
       it "sets the last_id" do

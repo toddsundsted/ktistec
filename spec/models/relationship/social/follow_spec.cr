@@ -1,14 +1,15 @@
 require "../../../../src/models/relationship/social/follow"
 
 require "../../../spec_helper/model"
+require "../../../spec_helper/factory"
 
 Spectator.describe Relationship::Social::Follow do
   setup_spec
 
   let(options) do
     {
-      from_iri: ActivityPub::Actor.new(iri: "https://test.test/#{random_string}").save.iri,
-      to_iri: ActivityPub::Actor.new(iri: "https://test.test/#{random_string}").save.iri
+      from_iri: Factory.create(:actor).iri,
+      to_iri: Factory.create(:actor).iri
     }
   end
 

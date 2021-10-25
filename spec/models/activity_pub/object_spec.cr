@@ -3,6 +3,7 @@ require "../../../src/models/activity_pub/activity/announce"
 require "../../../src/models/activity_pub/activity/like"
 
 require "../../spec_helper/model"
+require "../../spec_helper/factory"
 require "../../spec_helper/register"
 
 class FooBarObject < ActivityPub::Object
@@ -48,23 +49,9 @@ Spectator.describe ActivityPub::Object do
     end
 
     context "addressing (to)" do
-      before_each do
-        foo = ActivityPub::Actor.new(
-          iri: "https://bar.com/foo",
-          urls: ["https://bar.com/@foo"],
-          username: "foo"
-        ).save
-        bar = ActivityPub::Actor.new(
-          iri: "https://foo.com/bar",
-          urls: ["https://foo.com/@bar"],
-          username: "bar"
-        ).save
-        Tag::Mention.new(
-          subject: subject,
-          href: "https://foo.com/bar",
-          name: "bar"
-        ).save
-      end
+      let_create!(:actor, named: :foo, iri: "https://bar.com/foo", urls: ["https://bar.com/@foo"], username: "foo")
+      let_create!(:actor, named: :bar, iri: "https://foo.com/bar", urls: ["https://foo.com/@bar"], username: "bar")
+      let_create!(:mention, subject: subject, href: bar.iri, name: bar.username)
 
       it "replaces mentions" do
         subject.assign(to: ["https://test.test/actor", "https://foo.com/bar"], source: source).save
@@ -201,7 +188,7 @@ Spectator.describe ActivityPub::Object do
     it "renders hashtags" do
       object = described_class.new(
         iri: "https://test.test/object",
-        hashtags: [Tag::Hashtag.new(name: "foo", href: "https://test.test/tags/foo")]
+        hashtags: [Factory.build(:hashtag, name: "foo", href: "https://test.test/tags/foo")]
       ).save
       expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Hashtag", "name" => "#foo", "href" => "https://test.test/tags/foo"})
     end
@@ -209,18 +196,15 @@ Spectator.describe ActivityPub::Object do
     it "renders mentions" do
       object = described_class.new(
         iri: "https://test.test/object",
-        mentions: [Tag::Mention.new(name: "foo@test.test", href: "https://test.test/actors/foo")]
+        mentions: [Factory.build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo")]
       ).save
       expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Mention", "name" => "@foo@test.test", "href" => "https://test.test/actors/foo"})
     end
   end
 
   describe "#make_delete_activity" do
-    let(attributed_to) do
-      ActivityPub::Actor.new(
-        iri: "https://test.test/objects/actor"
-      )
-    end
+    let_build(:actor, named: :attributed_to)
+
     subject do
       described_class.new(
         iri: "https://test.test/objects/object",
@@ -253,19 +237,13 @@ Spectator.describe ActivityPub::Object do
 
   describe ".federated_posts" do
     macro post(index)
-      let(actor{{index}}) do
-        ActivityPub::Actor.new(
-          iri: "https://test.test/actors/#{random_string}"
-        )
-      end
-      let!(post{{index}}) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/#{random_string}",
-          attributed_to: actor{{index}},
-          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-          visible: {{index}}.odd?
-        ).save
-      end
+      let_build(:actor, named: actor{{index}})
+      let_create!(
+        :object, named: post{{index}},
+        attributed_to: actor{{index}},
+        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+        visible: {{index}}.odd?
+      )
     end
 
     post(1)
@@ -303,32 +281,14 @@ Spectator.describe ActivityPub::Object do
     let(actor) { register.actor }
 
     macro post(index)
-      let(actor{{index}}) do
-        ActivityPub::Actor.new(
-          iri: "https://test.test/actors/#{random_string}"
-        )
-      end
-      let(post{{index}}) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/#{random_string}",
-          attributed_to: actor{{index}},
-          visible: true
-        ).save
-      end
-      let(activity{{index}}) do
-        ActivityPub::Activity::Announce.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor: actor,
-          object: post{{index}}
-        )
-      end
-      let!(relationship{{index}}) do
-        Relationship::Content::Outbox.new(
-          owner: actor,
-          activity: activity{{index}},
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
+      let_build(:announce, named: activity{{index}}, actor: actor, object: post{{index}})
+      let_create!(
+        :outbox_relationship, named: relationship{{index}},
+        owner: actor,
+        activity: activity{{index}}
+      )
     end
 
     post(1)
@@ -361,33 +321,15 @@ Spectator.describe ActivityPub::Object do
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "https://test.test/activities/#{random_string}",
-        actor: actor,
-        object: activity5
-      )
-    end
+    let_build(:undo, actor: actor, object: activity5)
 
     it "filters out objects belonging to undone activities" do
       undo.save
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
-    let(create) do
-      ActivityPub::Activity::Create.new(
-        iri: "https://test.test/activities/#{random_string}",
-        actor: actor,
-        object: post5
-      )
-    end
-    let(outbox) do
-      Relationship::Content::Outbox.new(
-        owner: actor,
-        activity: create,
-        created_at: Time.utc(2016, 2, 15, 10, 20, 5)
-      )
-    end
+    let_build(:create, actor: actor, object: post5)
+    let_build(:outbox_relationship, named: :outbox, owner: actor, activity: create)
 
     it "includes posts only once" do
       outbox.save
@@ -407,18 +349,9 @@ Spectator.describe ActivityPub::Object do
         iri: "https://test.test/objects/#{random_string}"
       )
     end
-    let(announce) do
-      ActivityPub::Activity::Announce.new(
-        iri: "https://test.test/announce",
-        object: object
-      )
-    end
-    let(like) do
-      ActivityPub::Activity::Like.new(
-        iri: "https://test.test/like",
-        object: object
-      )
-    end
+
+    let_build(:announce, object: object)
+    let_build(:like, object: object)
 
     it "updates announces count" do
       announce.save
@@ -442,19 +375,13 @@ Spectator.describe ActivityPub::Object do
     subject do
       described_class.new(
         iri: "https://test.test/objects/#{random_string}",
-        attributed_to: ActivityPub::Actor.new(
-          iri: "https://test.test/actors/#{random_string}",
-        )
+        attributed_to: Factory.build(:actor)
       ).save
     end
 
     macro reply_to!(object, reply)
       {% actor = reply.name.gsub(/object/, "actor") %}
-      let({{actor}}) do
-        ActivityPub::Actor.new(
-          iri: "https://test.test/actors/#{random_string}"
-        ).save
-      end
+      let_create(:actor, named: {{actor}})
       let!({{reply}}) do
         described_class.new(
           iri: "https://test.test/objects/#{random_string}",
@@ -477,19 +404,6 @@ Spectator.describe ActivityPub::Object do
     reply_to!(object1, object2)
     reply_to!(object2, object3)
     reply_to!(object4, object5)
-
-    let(announce) do
-      ActivityPub::Activity::Announce.new(
-        iri: "https://test.test/announce",
-        object: object2
-      )
-    end
-    let(like) do
-      ActivityPub::Activity::Like.new(
-        iri: "https://test.test/like",
-        object: object5
-      )
-    end
 
     describe "#with_replies_count!" do
       it "returns the count of replies" do
@@ -518,23 +432,14 @@ Spectator.describe ActivityPub::Object do
       end
 
       context "given an actor" do
-        let(actor) do
-          ActivityPub::Actor.new(
-            iri: "https://test.test/#{random_string}"
-          )
-        end
+        let_build(:actor)
 
         it "doesn't count any replies" do
           expect(subject.with_replies_count!(actor).replies_count).to eq(0)
         end
 
         context "and an approved object" do
-          let!(approved) do
-            Relationship::Content::Approved.new(
-              actor: actor,
-              object: object5
-            ).save
-          end
+          let_create!(:approved_relationship, named: :approved, actor: actor, object: object5)
 
           it "omits unapproved replies but includes their approved children" do
             expect(subject.with_replies_count!(actor).replies_count).to eq(1)
@@ -580,23 +485,14 @@ Spectator.describe ActivityPub::Object do
       end
 
       context "given an actor" do
-        let(actor) do
-          ActivityPub::Actor.new(
-            iri: "https://test.test/#{random_string}"
-          )
-        end
+        let_build(:actor)
 
         it "only includes the subject" do
           expect(subject.thread(actor)).to eq([subject])
         end
 
         context "and an approved object" do
-          let!(approved) do
-            Relationship::Content::Approved.new(
-              actor: actor,
-              object: object5
-            ).save
-          end
+          let_create!(:approved_relationship, named: :approved, actor: actor, object: object5)
 
           it "omits unapproved replies but includes their approved children" do
             expect(subject.thread(actor)).to eq([subject, object5])
@@ -642,23 +538,14 @@ Spectator.describe ActivityPub::Object do
       end
 
       context "given an actor" do
-        let(actor) do
-          ActivityPub::Actor.new(
-            iri: "https://test.test/#{random_string}"
-          )
-        end
+        let_build(:actor)
 
         it "only includes the subject" do
           expect(object5.ancestors(actor)).to eq([subject])
         end
 
         context "and an approved object" do
-          let!(approved) do
-            Relationship::Content::Approved.new(
-              actor: actor,
-              object: object5
-            ).save
-          end
+          let_create!(:approved_relationship, named: :approved, actor: actor, object: object5)
 
           it "omits unapproved replies but includes their approved parents" do
             expect(object5.ancestors(actor)).to eq([object5, subject])
@@ -681,39 +568,20 @@ Spectator.describe ActivityPub::Object do
     end
 
     macro activity(index)
-      let(actor{{index}}) do
-        ActivityPub::Actor.new(
-          iri: "https://test.test/actors/#{random_string}"
-        ).save
-      end
-      let!(activity{{index}}) do
-        ActivityPub::Activity.new(
-          iri: "https://test.test/activities/#{random_string}",
-          actor_iri: actor{{index}}.iri,
-          object_iri: subject.iri,
-          created_at: Time.utc(2016, 2, 15, 10, 20, {{index}})
-        ).save
-      end
+      let_create(:actor, named: actor{{index}})
+      let_create!(
+        :activity, named: activity{{index}},
+        actor_iri: actor{{index}}.iri,
+        object_iri: subject.iri,
+      )
     end
 
     activity(1)
     activity(2)
     activity(3)
 
-    let(undo) do
-      ActivityPub::Activity::Undo.new(
-        iri: "https://test.test/undo",
-        actor: actor1,
-        object: activity1
-      )
-    end
-    let(like) do
-      ActivityPub::Activity::Like.new(
-        iri: "https://test.test/like",
-        actor: actor1,
-        object: subject
-      )
-    end
+    let_build(:undo, actor: actor1, object: activity1)
+    let_build(:like, actor: actor1, object: subject)
 
     it "returns the associated activities" do
       expect(subject.activities).to eq([activity1, activity2, activity3])
@@ -748,17 +616,9 @@ Spectator.describe ActivityPub::Object do
         iri: "https://test.test/objects/#{random_string}"
       )
     end
-    let(actor) do
-      ActivityPub::Actor.new(
-        iri: "https://test.test/#{random_string}"
-      )
-    end
-    let!(approved) do
-      Relationship::Content::Approved.new(
-        actor: actor,
-        object: subject
-      ).save
-    end
+
+    let_build(:actor)
+    let_create!(:approved_relationship, named: :approved, actor: actor, object: subject)
 
     it "returns true if approved by actor" do
       expect(subject.approved_by?(actor.iri)).to be_true
@@ -797,12 +657,8 @@ Spectator.describe ActivityPub::Object do
         iri: "https://test.test#{PATH}"
       )
     end
-    let(canonical) do
-      Relationship::Content::Canonical.new(
-        from_iri: "/foo/bar/baz",
-        to_iri: PATH
-      )
-    end
+
+    let_build(:canonical_relationship, named: :canonical, from_iri: "/foo/bar/baz", to_iri: PATH)
 
     before_all do
       Kemal::RouteHandler::INSTANCE.add_route("GET", PATH) { }
@@ -896,8 +752,8 @@ Spectator.describe ActivityPub::Object do
   end
 
   describe "#tags" do
-    let(hashtag) { Tag::Hashtag.new(name: "foo", href: "https://test.test/tags/foo") }
-    let(mention) { Tag::Mention.new(name: "foo@test.test", href: "https://test.test/actors/foo") }
+    let(hashtag) { Factory.build(:hashtag, name: "foo", href: "https://test.test/tags/foo") }
+    let(mention) { Factory.build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo") }
     subject do
       described_class.new(
         iri: "https://test.test/object",

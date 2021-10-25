@@ -1,6 +1,7 @@
 require "../../../../src/models/activity_pub/activity/create"
 
 require "../../../spec_helper/model"
+require "../../../spec_helper/factory"
 
 Spectator.describe ActivityPub::Activity::Create do
   setup_spec
@@ -20,8 +21,8 @@ Spectator.describe ActivityPub::Activity::Create do
   end
 
   context "validations" do
-    let(actor) { ActivityPub::Actor.new }
-    let(object) { ActivityPub::Object.new }
+    let_build(:actor)
+    let_build(:object)
 
     it "validates the actor is local" do
       activity = subject.assign(actor: actor, object: object)

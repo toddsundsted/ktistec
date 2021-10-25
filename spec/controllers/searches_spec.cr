@@ -4,6 +4,7 @@ require "../../src/models/activity_pub/activity/like"
 require "../../src/models/relationship/content/outbox"
 require "../../src/models/relationship/social/follow"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 require "../spec_helper/network"
 
@@ -25,9 +26,9 @@ Spectator.describe SearchesController do
     end
 
     context "when authorized" do
-      let(account) { register(with_keys: true) }
+      let(actor) { register(with_keys: true).actor }
 
-      sign_in(as: account.username)
+      sign_in(as: actor.username)
 
       it "presents a search form" do
         get "/search", HTML_HEADERS
@@ -41,11 +42,11 @@ Spectator.describe SearchesController do
         expect(JSON.parse(response.body).as_h.keys).to have("query")
       end
 
-      let(actor) { ActivityPub::Actor.new(iri: "https://remote/actors/foo_bar") }
+      let_build(:actor, named: :other, iri: "https://remote/actors/foo_bar")
 
-      before_each { HTTP::Client.actors << actor.assign(username: "foo_bar") }
+      before_each { HTTP::Client.actors << other.assign(username: "foo_bar") }
 
-      let(object) { ActivityPub::Object.new(iri: "https://remote/objects/foo_bar", attributed_to: actor) }
+      let_build(:object, iri: "https://remote/objects/foo_bar", attributed_to: other)
 
       before_each { HTTP::Client.objects << object.assign(content: "foo bar") }
 
@@ -63,7 +64,7 @@ Spectator.describe SearchesController do
         end
 
         context "of an existing actor" do
-          before_each { actor.assign(username: "bar_foo").save }
+          before_each { other.assign(username: "bar_foo").save }
 
           it "updates the actor" do
             expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
@@ -81,10 +82,8 @@ Spectator.describe SearchesController do
           end
 
           context "with an existing follow" do
-            before_each do
-              ActivityPub::Activity::Follow.new(iri: "https://remote/#{random_string}", actor: Global.account.try(&.actor), object: actor).save
-              Relationship::Social::Follow.new(actor: Global.account.try(&.actor), object: actor).save
-            end
+            let_create!(:follow, actor: actor, object: other)
+            let_create!(:follow_relationship, actor: actor, object: other)
 
             it "presents an unfollow button" do
               get "/search?query=foo_bar@remote", HTML_HEADERS
@@ -94,21 +93,21 @@ Spectator.describe SearchesController do
 
           context "with a public key" do
             before_each do
-              HTTP::Client.actors << actor.assign(pem_public_key: "PEM PUBLIC KEY").save
+              HTTP::Client.actors << other.assign(pem_public_key: "PEM PUBLIC KEY").save
             end
 
             it "doesn't nuke the public key" do
-              expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{ActivityPub::Actor.find(actor.iri).pem_public_key}
+              expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{ActivityPub::Actor.find(other.iri).pem_public_key}
             end
           end
         end
 
         context "of a local actor" do
-          before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
+          before_each { other.assign(iri: "https://test.test/actors/foo_bar").save }
 
           it "doesn't fetch the actor" do
             expect{get "/search?query=foo_bar@test.test", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
-            expect(HTTP::Client.requests).not_to have("GET #{actor.iri}")
+            expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
           end
         end
       end
@@ -127,7 +126,7 @@ Spectator.describe SearchesController do
         end
 
         context "of an existing actor" do
-          before_each { actor.assign(username: "bar_foo").save }
+          before_each { other.assign(username: "bar_foo").save }
 
           it "updates the actor" do
             expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
@@ -145,10 +144,8 @@ Spectator.describe SearchesController do
           end
 
           context "with an existing follow" do
-            before_each do
-              ActivityPub::Activity::Follow.new(iri: "https://remote/#{random_string}", actor: Global.account.try(&.actor), object: actor).save
-              Relationship::Social::Follow.new(actor: Global.account.try(&.actor), object: actor).save
-            end
+            let_create!(:follow, actor: actor, object: other)
+            let_create!(:follow_relationship, actor: actor, object: other)
 
             it "presents an unfollow button" do
               get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS
@@ -158,21 +155,21 @@ Spectator.describe SearchesController do
 
           context "with a public key" do
             before_each do
-              HTTP::Client.actors << actor.assign(pem_public_key: "PEM PUBLIC KEY").save
+              HTTP::Client.actors << other.assign(pem_public_key: "PEM PUBLIC KEY").save
             end
 
             it "doesn't nuke the public key" do
-              expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.find(actor.iri).pem_public_key}
+              expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.find(other.iri).pem_public_key}
             end
           end
         end
 
         context "of a local actor" do
-          before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
+          before_each { other.assign(iri: "https://test.test/actors/foo_bar").save }
 
           it "doesn't fetch the actor" do
             expect{get "/search?query=https://test.test/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
-            expect(HTTP::Client.requests).not_to have("GET #{actor.iri}")
+            expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
           end
         end
       end
@@ -210,8 +207,8 @@ Spectator.describe SearchesController do
 
           context "with an existing like" do
             before_each do
-              like = ActivityPub::Activity::Like.new(iri: "https://remote/#{random_string}", actor: Global.account.try(&.actor), object: object).save
-              Relationship::Content::Outbox.new(owner: Global.account.try(&.actor), activity: like).save
+              like = Factory.build(:like, actor: actor, object: object)
+              put_in_outbox(actor, like)
             end
 
             it "presents an undo button" do

@@ -1,6 +1,7 @@
 require "../../../../src/models/activity_pub/activity/delete"
 
 require "../../../spec_helper/model"
+require "../../../spec_helper/factory"
 
 Spectator.describe ActivityPub::Activity::Delete do
   setup_spec
@@ -20,22 +21,9 @@ Spectator.describe ActivityPub::Activity::Delete do
   end
 
   context "validations" do
-    let(actor) do
-      ActivityPub::Actor.new(
-        iri: "https://test.test/#{random_string}"
-      )
-    end
-    let(other) do
-      ActivityPub::Actor.new(
-        iri: "https://test.test/#{random_string}"
-      )
-    end
-    let(object) do
-      ActivityPub::Object.new(
-        iri: "https://test.test/#{random_string}",
-        attributed_to: other
-      )
-    end
+    let_build(:actor)
+    let_build(:actor, named: :other)
+    let_build(:object, attributed_to: other)
 
     context "when the object is an object" do
       let(activity) { subject.assign(actor: other, object: object) }

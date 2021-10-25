@@ -83,7 +83,7 @@ macro setup_spec
       clazz.reset
     end
   end
-  before_each { Ktistec.database.exec "SAVEPOINT __test__" }
+  before_each { Ktistec.database.exec "SAVEPOINT __each__" }
   after_each { Ktistec.database.exec "ROLLBACK" }
 end
 

@@ -1,5 +1,6 @@
 require "../../src/controllers/everything"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 Spectator.describe EverythingController do
@@ -11,17 +12,14 @@ Spectator.describe EverythingController do
   describe "/everything" do
     sign_in
 
-    let(author) { ActivityPub::Actor.new(iri: "https://test.test/actors/author") }
+    let_build(:actor, named: :author)
 
     macro create_post(index)
-      let!(post{{index}}) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/{{index}}",
-          attributed_to: author,
-          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-          visible: true
-        ).save
-      end
+      let_create!(
+        :object, named: post{{index}},
+        attributed_to: author,
+        published: Time.utc(2016, 2, 15, 10, 20, {{index}})
+      )
     end
 
     create_post(1)

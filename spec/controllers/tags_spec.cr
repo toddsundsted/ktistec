@@ -1,5 +1,6 @@
 require "../../src/controllers/tags"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 Spectator.describe TagsController do
@@ -9,23 +10,18 @@ Spectator.describe TagsController do
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
 
   describe "/tags/:hashtag" do
-    let(author) { ActivityPub::Actor.new(iri: "https://test.test/actors/author") }
+    let_build(:actor, named: :author)
 
     macro create_tagged_object(index, *tags)
-      let!(object{{index}}) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/{{index}}",
-          attributed_to: author,
-          published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-          visible: true
-        ).save
-      end
+      let_create!(
+        :object, named: object{{index}},
+        attributed_to: author,
+        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+        local: true
+      )
       before_each do
         {% for tag in tags %}
-          Tag::Hashtag.new(
-            name: {{tag}},
-            subject: object{{index}}
-          ).save
+          Factory.create(:hashtag, name: {{tag}}, subject: object{{index}})
         {% end %}
       end
     end

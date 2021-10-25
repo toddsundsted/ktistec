@@ -1,6 +1,7 @@
 require "../../src/models/activity_pub/activity/follow"
 require "../../src/views/view_helper"
 
+require "../spec_helper/factory"
 require "../spec_helper/controller"
 
 Spectator.describe "actor" do
@@ -17,11 +18,7 @@ Spectator.describe "actor" do
       )
     end
 
-    let(actor) do
-      ActivityPub::Actor.new(
-        iri: "https://remote.test/actors/foo_bar"
-      ).save
-    end
+    let_create(:actor)
 
     subject do
       begin

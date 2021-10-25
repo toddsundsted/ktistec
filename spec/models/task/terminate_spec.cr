@@ -1,15 +1,12 @@
 require "../../../src/models/task/terminate"
 
 require "../../spec_helper/model"
+require "../../spec_helper/factory"
 
 Spectator.describe Task::Terminate do
   setup_spec
 
-  let(actor) do
-    ActivityPub::Actor.new(
-      iri: "https://test.test/actors/actor"
-    ).save
-  end
+  let_create(:actor, local: true)
 
   let(options) do
     {
@@ -53,12 +50,7 @@ Spectator.describe Task::Terminate do
     end
 
     context "when an object exists" do
-      let!(object) do
-        ActivityPub::Object.new(
-          iri: "https://test.test/objects/object",
-          attributed_to: actor
-        ).save
-      end
+      let_create!(:object, attributed_to: actor)
 
       it "deletes the object" do
         expect{subject.perform}.

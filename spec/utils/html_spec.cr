@@ -1,6 +1,7 @@
 require "../../src/utils/html"
 
 require "../spec_helper/model"
+require "../spec_helper/factory"
 
 Spectator.describe Ktistec::HTML do
   setup_spec
@@ -159,13 +160,12 @@ Spectator.describe Ktistec::HTML do
     end
 
     context "mentions" do
-      let!(actor) do
-        ActivityPub::Actor.new(
-          iri: "https://bar.com/actors/foo",
-          username: "foo",
-          urls: ["https://bar.com/@foo"]
-        ).save
-      end
+      let_create!(
+        :actor,
+        iri: "https://bar.com/actors/foo",
+        username: "foo",
+        urls: ["https://bar.com/@foo"]
+      )
 
       it "replaces matched mentions with links" do
         content = %q|<div>@foo@bar.com</div>|

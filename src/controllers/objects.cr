@@ -97,7 +97,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id" do |env|
-    unless (object = get_object(env, id_param))
+    unless (object = get_remote_object(env, id_param))
       not_found
     end
 
@@ -105,7 +105,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id/thread" do |env|
-    unless (object = get_object(env, id_param))
+    unless (object = get_remote_object(env, id_param))
       not_found
     end
 
@@ -117,7 +117,7 @@ class ObjectsController
   get "/remote/objects/:id/reply" do |env|
     id = env.params.url["id"].to_i64
 
-    unless (object = get_object(env, id))
+    unless (object = get_remote_object(env, id))
       not_found
     end
 
@@ -164,10 +164,19 @@ class ObjectsController
 
   private def self.get_object(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id))
-      if object.visible ||
+      if (object.visible && (!object.cached? && !object.draft?)) ||
          ((account = env.account?) &&
-          ((account.actor == object.attributed_to? && (!env.request.path.starts_with?("/remote/") || !object.draft?)) ||
-           account.actor.in_inbox?(object)))
+          (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
+        object
+      end
+    end
+  end
+
+  private def self.get_remote_object(env, iri_or_id)
+    if (object = ActivityPub::Object.find?(iri_or_id))
+      if (object.visible && (!object.cached? && !object.draft?)) ||
+         ((account = env.account?) &&
+          ((account.actor == object.attributed_to? && !object.draft?) || account.actor.in_inbox?(object)))
         object
       end
     end

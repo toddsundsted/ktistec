@@ -98,11 +98,10 @@ module ActivityPub
 
     def before_validate
       if changed?(:source)
+        clear!(:source)
         if (source = self.source) && local?
           media_type = source.media_type.split(";").map(&.strip).first?
           if media_type == "text/html"
-            clear!(:source)
-
             # remove old mentions
             if (old_to = self.to)
               self.to = old_to - self.mentions.map(&.href).compact

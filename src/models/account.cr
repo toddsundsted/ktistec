@@ -64,8 +64,8 @@ class Account
 
   def before_validate
     if changed?(:username)
+      clear!(:username)
       if (username = self.username)
-        clear!(:username)
         host = Ktistec.host
         self.iri = "#{host}/actors/#{username}"
       end

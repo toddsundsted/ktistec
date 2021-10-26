@@ -62,6 +62,17 @@ class Account
     @password.not_nil!
   end
 
+  def before_save
+    if changed?(:actor)
+      clear!(:actor)
+      if (actor = self.actor?) && actor.pem_public_key.nil? && actor.pem_private_key.nil?
+        keypair = OpenSSL::RSA.generate(2048, 17)
+        actor.pem_public_key = keypair.public_key.to_pem
+        actor.pem_private_key = keypair.to_pem
+      end
+    end
+  end
+
   def before_validate
     if changed?(:username)
       clear!(:username)

@@ -9,7 +9,7 @@ Spectator.describe Task::Deliver do
   setup_spec
 
   let(sender) do
-    register(with_keys: true).actor
+    register.actor
   end
 
   let_build(:activity)

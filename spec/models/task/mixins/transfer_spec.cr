@@ -14,7 +14,7 @@ Spectator.describe Task::Transfer do
   setup_spec
 
   let(transferer) do
-    register(with_keys: true).actor
+    register.actor
   end
 
   let_build(:activity)

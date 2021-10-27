@@ -6,25 +6,12 @@ class Account
   end
 end
 
-def self.build_actor(username = random_username, *, base_uri = "https://test.test/actors", with_keys = false)
-  pem_public_key, pem_private_key =
-    if with_keys
-      keypair = OpenSSL::RSA.generate(2048, 17)
-      {keypair.public_key.to_pem, keypair.to_pem}
-    else
-      {nil, nil}
-    end
-  ActivityPub::Actor.new(
-    iri: "#{base_uri}/#{username}",
-    username: username,
-    pem_public_key: pem_public_key,
-    pem_private_key: pem_private_key
-  )
-end
-
-def self.register(username = random_username, password = random_password, *, base_uri = "https://test.test/actors", with_keys = false)
+def self.register(username = random_username, password = random_password, *, base_uri = "https://test.test/actors")
   Account.new(
-    actor: build_actor(username, base_uri: base_uri, with_keys: with_keys),
+    actor: ActivityPub::Actor.new(
+      iri: "#{base_uri}/#{username}",
+      username: username
+    ),
     username: username,
     password: password
   ).save

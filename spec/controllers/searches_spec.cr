@@ -26,7 +26,7 @@ Spectator.describe SearchesController do
     end
 
     context "when authorized" do
-      let(actor) { register(with_keys: true).actor }
+      let(actor) { register.actor }
 
       sign_in(as: actor.username)
 

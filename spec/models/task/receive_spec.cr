@@ -9,7 +9,7 @@ Spectator.describe Task::Receive do
   setup_spec
 
   let(receiver) do
-    register(with_keys: true).actor
+    register.actor
   end
 
   let_build(:activity)

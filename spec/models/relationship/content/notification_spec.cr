@@ -2,7 +2,6 @@ require "../../../../src/models/relationship/content/notification"
 
 require "../../../spec_helper/factory"
 require "../../../spec_helper/model"
-require "../../../spec_helper/register"
 
 Spectator.describe Relationship::Content::Notification do
   setup_spec

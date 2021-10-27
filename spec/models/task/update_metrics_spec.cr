@@ -2,7 +2,6 @@ require "../../../src/models/task/update_metrics"
 
 require "../../spec_helper/model"
 require "../../spec_helper/factory"
-require "../../spec_helper/register"
 
 Spectator.describe Task::UpdateMetrics do
   setup_spec

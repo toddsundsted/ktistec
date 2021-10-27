@@ -3,7 +3,6 @@ require "../../../src/models/activity_pub/object/note"
 
 require "../../spec_helper/model"
 require "../../spec_helper/factory"
-require "../../spec_helper/register"
 
 class FooBarActor < ActivityPub::Actor
 end

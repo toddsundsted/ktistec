@@ -4,7 +4,6 @@ require "../../../src/models/activity_pub/activity/like"
 
 require "../../spec_helper/model"
 require "../../spec_helper/factory"
-require "../../spec_helper/register"
 
 class FooBarObject < ActivityPub::Object
 end

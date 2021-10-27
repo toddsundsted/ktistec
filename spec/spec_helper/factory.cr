@@ -225,10 +225,25 @@ def mention_factory(**options)
   tag_factory(Tag::Mention, **options)
 end
 
-# point factories
+# point factory
 
 def point_factory(clazz = Point, **options)
   clazz.new(**options)
+end
+
+# account factory
+
+require "../../src/models/account"
+
+class Account
+  private def cost
+    4 # reduce the cost of computing a bcrypt hash
+  end
+end
+
+def account_factory(clazz = Account, actor_iri = nil, actor = false, username = random_username, password = random_password, **options)
+  actor = actor_factory(username: username, local: true) unless actor_iri || actor.nil? || actor
+  clazz.new(**{actor_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, actor: actor, username: username, password: password}.merge(options))
 end
 
 # other helpers
@@ -261,4 +276,8 @@ end
 
 def do_follow(actor : ActivityPub::Actor, object : ActivityPub::Actor)
   Factory.create(:follow_relationship, actor: actor, object: object)
+end
+
+def register(username = random_username, password = random_password)
+  Factory.create(:account, username: username, password: password)
 end

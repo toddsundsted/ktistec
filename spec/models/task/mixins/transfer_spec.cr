@@ -4,7 +4,6 @@ require "../../../../src/models/task/mixins/transfer"
 require "../../../spec_helper/model"
 require "../../../spec_helper/factory"
 require "../../../spec_helper/network"
-require "../../../spec_helper/register"
 
 class FooBarTransfer < Task
   include Task::Transfer

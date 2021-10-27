@@ -6,10 +6,10 @@ class Account
   end
 end
 
-def self.register(username = random_username, password = random_password, *, base_uri = "https://test.test/actors")
+def self.register(username = random_username, password = random_password)
   Account.new(
     actor: ActivityPub::Actor.new(
-      iri: "#{base_uri}/#{username}",
+      iri: "https://test.test/actors/#{username}",
       username: username
     ),
     username: username,

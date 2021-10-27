@@ -11,7 +11,7 @@ Spectator.describe RelationshipsController do
 
   describe "POST /actors/:username/inbox" do
     let!(actor) { register.actor }
-    let(other) { register(base_uri: "https://remote/actors").actor }
+    let_create(:actor, named: :other, with_keys: true)
 
     # don't directly associate the activity with an actor, yet
     let_build(:activity, actor_iri: other.iri)

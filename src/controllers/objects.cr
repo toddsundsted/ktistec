@@ -136,6 +136,22 @@ class ObjectsController
     bad_request
   end
 
+  post "/remote/objects/:id/block" do |env|
+    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
+
+    object.block
+
+    redirect back_path
+  end
+
+  post "/remote/objects/:id/unblock" do |env|
+    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
+
+    object.unblock
+
+    redirect back_path
+  end
+
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
     {

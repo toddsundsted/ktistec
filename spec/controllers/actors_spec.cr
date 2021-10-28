@@ -535,6 +535,66 @@ Spectator.describe ActorsController do
     end
   end
 
+  describe "POST /remote/actors/:id/block" do
+    let_create!(:actor)
+
+    pre_condition { expect(actor.blocked?).to be_false }
+
+    it "returns 401 if not authorized" do
+      post "/remote/actors/0/block"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if not found" do
+        post "/remote/actors/999999/block"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "succeeds" do
+        post "/remote/actors/#{actor.id}/block"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "blocks the actor" do
+        expect{post "/remote/actors/#{actor.id}/block"}.
+          to change{ActivityPub::Actor.find(actor.id).blocked?}
+      end
+    end
+  end
+
+  describe "POST /remote/actors/:id/unblock" do
+    let_create!(:actor, blocked_at: Time.utc)
+
+    pre_condition { expect(actor.blocked?).to be_true }
+
+    it "returns 401 if not authorized" do
+      post "/remote/actors/0/unblock"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if not found" do
+        post "/remote/actors/999999/unblock"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "succeeds" do
+        post "/remote/actors/#{actor.id}/unblock"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "unblocks the actor" do
+        expect{post "/remote/actors/#{actor.id}/unblock"}.
+          to change{ActivityPub::Actor.find(actor.id).blocked?}
+      end
+    end
+  end
+
   describe "POST /remote/actors/:id/refresh" do
     let_create!(:actor)
 

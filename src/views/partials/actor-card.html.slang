@@ -1,4 +1,4 @@
-.ui.actor-small.fluid.card
+.ui.fluid.actor.card
   - image = actor.image.presence && "background-image: url(#{actor.image});"
   .content class=(actor.image.presence || "placeholder") style=image
     - if actor.icon.presence

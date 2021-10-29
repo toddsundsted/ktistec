@@ -173,7 +173,7 @@ Spectator.describe "partials" do
     end
   end
 
-  describe "actor-small.html.slang" do
+  describe "actor-card.html.slang" do
     let(env) do
       HTTP::Server::Context.new(
         HTTP::Request.new("GET", "/actors/foo_bar"),
@@ -185,7 +185,7 @@ Spectator.describe "partials" do
 
     subject do
       begin
-        XML.parse_html(render "./src/views/partials/actor-small.html.slang")
+        XML.parse_html(render "./src/views/partials/actor-card.html.slang")
       rescue XML::Error
         XML.parse_html("<div/>").document
       end

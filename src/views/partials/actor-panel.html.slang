@@ -1,4 +1,4 @@
-.ui.actor-large.segments
+.ui.actor.segments
   - image = actor.image.presence && "background-image: url(#{actor.image});"
   .ui.segment class=(actor.image.presence || "placeholder") style=image
     - if actor.icon.presence

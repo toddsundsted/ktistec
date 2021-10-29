@@ -1,6 +1,6 @@
 - content_for "head" do
   script src="/dist/settings.bundle.js"
-== render "src/views/partials/actor-large.html.slang"
+== render "src/views/partials/actor-panel.html.slang"
 h1 User Settings
 == form_tag(account, "/settings/actor") do
   == error_messages(account)

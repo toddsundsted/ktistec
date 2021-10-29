@@ -13,6 +13,6 @@
   - objects = actor.timeline(*pagination_params(env))
   == render "src/views/actors/timeline.html.slang"
 - else
-  == render "src/views/partials/actor-medium.html.slang"
+  == render "src/views/partials/actor-panel.html.slang"
   - objects = actor.public_posts(*pagination_params(env))
   == render "src/views/actors/public_posts.html.slang"

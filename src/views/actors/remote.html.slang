@@ -1,4 +1,4 @@
-== render "src/views/partials/actor-medium.html.slang"
+== render "src/views/partials/actor-panel.html.slang"
 h2 Recent
 section.ui.feed
   - posts = actor.known_posts(*pagination_params(env))

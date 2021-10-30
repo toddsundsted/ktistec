@@ -13,19 +13,14 @@ Spectator.describe "partials" do
   include Ktistec::ViewHelper::ClassMethods
 
   describe "collection.json.ecr" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/collection#{query}"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
-
     let(collection) do
       Ktistec::Util::PaginatedArray{
         Factory.build(:object, iri: "foo"),
         Factory.build(:object, iri: "bar")
       }
     end
+
+    let(env) { env_factory("GET", "/collection#{query}") }
 
     subject { JSON.parse(render "./src/views/partials/collection.json.ecr") }
 
@@ -123,14 +118,9 @@ Spectator.describe "partials" do
   end
 
   describe "actor-panel.html.slang" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/actor"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
-
     let_create(:actor)
+
+    let(env) { env_factory("GET", "/actor") }
 
     subject do
       begin
@@ -174,14 +164,9 @@ Spectator.describe "partials" do
   end
 
   describe "actor-card.html.slang" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/actors/foo_bar"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
-
     let_create(:actor)
+
+    let(env) { env_factory("GET", "/actors/foo_bar") }
 
     subject do
       begin
@@ -223,12 +208,7 @@ Spectator.describe "partials" do
       # those actors, so don't present accept/reject actions.
 
       context "and on a page of actors the actor is following" do
-        let(env) do
-          HTTP::Server::Context.new(
-            HTTP::Request.new("GET", "/actors/foo_bar/following"),
-            HTTP::Server::Response.new(IO::Memory.new)
-          )
-        end
+        let(env) { env_factory("GET", "/actors/foo_bar/following") }
 
         follow(actor, account.actor, confirmed: false)
 
@@ -302,16 +282,11 @@ Spectator.describe "partials" do
   end
 
   describe "object.html.slang" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/object"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
-
     let(activity) { nil }
 
     let(for_thread) { nil }
+
+    let(env) { env_factory("GET", "/object") }
 
     subject do
       begin
@@ -376,12 +351,7 @@ Spectator.describe "partials" do
         before_each { object.assign(published: Time.utc).save }
 
         context "on a page of threaded replies" do
-          let(env) do
-            HTTP::Server::Context.new(
-              HTTP::Request.new("GET", "/thread"),
-              HTTP::Server::Response.new(IO::Memory.new)
-            )
-          end
+          let(env) { env_factory("GET", "/thread") }
 
           it "does not render a checkbox to approve" do
             actor.unapprove(object)
@@ -463,15 +433,10 @@ Spectator.describe "partials" do
   end
 
   describe "editor.html.slang" do
+    let(env) { env_factory("GET", "/editor") }
+
     subject do
       XML.parse_html(render "./src/views/partials/editor.html.slang")
-    end
-
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/editor"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
     end
 
     let_build(:object, local: true)
@@ -570,12 +535,7 @@ Spectator.describe "partials" do
   end
 
   describe "reply.html.slang" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/object"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
+    let(env) { env_factory("GET", "/object") }
 
     subject do
       begin

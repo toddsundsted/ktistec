@@ -19,12 +19,7 @@ Spectator.describe "helper" do
   describe "paginate" do
     let(query) { "" }
 
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/#{query}"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
+    let(env) { env_factory("GET", "/#{query}") }
 
     let(collection) { Ktistec::Util::PaginatedArray(Int32).new }
 
@@ -120,12 +115,7 @@ Spectator.describe "helper" do
   end
 
   describe "authenticity_token" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
+    let(env) { env_factory("GET", "/") }
 
     subject do
       XML.parse_html(authenticity_token(env)).document

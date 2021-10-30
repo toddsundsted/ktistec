@@ -94,6 +94,13 @@ macro sign_in(as username = nil)
   after_each { _sign_out }
 end
 
+def env_factory(method, path)
+  HTTP::Server::Context.new(
+    HTTP::Request.new(method, path),
+    HTTP::Server::Response.new(IO::Memory.new)
+  )
+end
+
 Ktistec::Server.run do
   Log.setup_from_env
   Kemal.config.port = Random.new.rand(49152..65535)

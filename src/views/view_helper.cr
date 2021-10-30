@@ -36,6 +36,26 @@ module Ktistec::ViewHelper
     extend ClassMethods
   end
 
+  ## Parameter coercion
+
+  macro id_param(env, type = :url, name = "id")
+    begin
+      env.params.{{type.id}}[{{name.id.stringify}}].to_i64
+    rescue ArgumentError
+      bad_request
+    end
+  end
+
+  macro iri_param(env, path = nil, type = :url, name = "id")
+    begin
+      Base64.decode(%id = env.params.{{type.id}}[{{name.id.stringify}}])
+      %path = {{path}} || {{env}}.request.path.split("/")[0..-2].join("/")
+      "#{host}#{%path}/#{%id}"
+    rescue Base64::Error
+      bad_request
+    end
+  end
+
   ## HTML helpers
 
   # Posts an activity to an outbox.

@@ -29,7 +29,7 @@ Spectator.describe ActivitiesController do
     end
 
     it "returns 404 if activity does not exist" do
-      get "/activities/0", JSON_HEADERS
+      get "/activities/000", JSON_HEADERS
       expect(response.status_code).to eq(404)
     end
 

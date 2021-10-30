@@ -89,9 +89,7 @@ class ActorsController
   end
 
   get "/remote/actors/:id" do |env|
-    id = env.params.url["id"].to_i
-
-    unless (actor = ActivityPub::Actor.find?(id))
+    unless (actor = ActivityPub::Actor.find?(id_param(env)))
       not_found
     end
 
@@ -99,9 +97,7 @@ class ActorsController
   end
 
   post "/remote/actors/:id/refresh" do |env|
-    id = env.params.url["id"].to_i
-
-    unless (actor = ActivityPub::Actor.find?(id))
+    unless (actor = ActivityPub::Actor.find?(id_param(env)))
       not_found
     end
 

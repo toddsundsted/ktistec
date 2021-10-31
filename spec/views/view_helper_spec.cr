@@ -166,6 +166,20 @@ Spectator.describe "helpers" do
       end
     end
 
+    context "given a DELETE method" do
+      subject do
+        XML.parse_html(activity_button("Label", "/foobar", "https://object", method: "DELETE", csrf: nil) { "<div/>" }).document
+      end
+
+      it "emits a hidden input" do
+        expect(subject.xpath_nodes("//form/input[@type='hidden'][@name='_method']/@value")).to contain_exactly("delete")
+      end
+
+      it "sets the method to POST" do
+        expect(subject.xpath_nodes("//form/@method")).to contain_exactly("POST")
+      end
+    end
+
     context "given a GET method" do
       subject do
         XML.parse_html(activity_button("Label", "/foobar", "https://object", method: "GET", csrf: "CSRF") { "<div/>" }).document
@@ -227,6 +241,20 @@ Spectator.describe "helpers" do
 
       it "emits button data attributes" do
         expect(subject.xpath_nodes("//form/button/@*[starts-with(name(),'data-')]")).to contain_exactly("1", "2")
+      end
+    end
+
+    context "given a DELETE method" do
+      subject do
+        XML.parse_html(form_button("/foobar", method: "DELETE", csrf: nil) { "<div/>" }).document
+      end
+
+      it "emits a hidden input" do
+        expect(subject.xpath_nodes("//form/input[@type='hidden'][@name='_method']/@value")).to contain_exactly("delete")
+      end
+
+      it "sets the method to POST" do
+        expect(subject.xpath_nodes("//form/@method")).to contain_exactly("POST")
       end
     end
 

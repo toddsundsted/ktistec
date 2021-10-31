@@ -71,6 +71,12 @@ module Ktistec::ViewHelper
       {% action = arg2 ; object = arg3 ; text = arg1 %}
       %block = {{text}}
     {% end %}
+    {% if method == "DELETE" %}
+      {% method = "POST" %}
+      %input = %q|<input type="hidden" name="_method" value="delete">|
+    {% else %}
+      %input = ""
+    {% end %}
     {% if csrf && method != "GET" %}
      %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
     {% else %}
@@ -97,6 +103,7 @@ module Ktistec::ViewHelper
     <<-HTML
     <form #{%form_attrs.join(" ")}>\
     #{%csrf}\
+    #{%input}\
     <input type="hidden" name="object" value="#{{{object}}}">\
     <input type="hidden" name="type" value="#{{{type || text}}}">\
     <input type="hidden" name="public" value="#{{{public}} ? 1 : nil}">\
@@ -119,6 +126,12 @@ module Ktistec::ViewHelper
     {% else %}
       %block = {{arg1}}
     {% end %}
+    {% if method == "DELETE" %}
+      {% method = "POST" %}
+      %input = %q|<input type="hidden" name="_method" value="delete">|
+    {% else %}
+      %input = ""
+    {% end %}
     {% if csrf && method != "GET" %}
      %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
     {% else %}
@@ -145,6 +158,7 @@ module Ktistec::ViewHelper
     <<-HTML
     <form #{%form_attrs.join(" ")}>\
     #{%csrf}\
+    #{%input}\
     <button #{%button_attrs.join(" ")} type="submit">\
     #{%block}\
     </button>\

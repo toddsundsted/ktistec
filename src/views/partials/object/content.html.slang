@@ -63,12 +63,9 @@ crystal:
         button.ui.mini.iconic.button
           i.edit.icon
           | Edit
-      form.ui.form method="POST" action=object_path(object)
-        input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-        input type="hidden" name="_method" value="delete"
-        button.ui.mini.dangerous.iconic.button type="submit" data-modal="delete"
-          i.trash.icon
-          | Delete
+      == form_button object_path(object), method: "DELETE", button_class: "ui mini dangerous iconic button", button_data: {"modal" => "delete"} do
+        i.trash.icon
+        | Delete
     - elsif account
       - object.with_statistics!.with_replies_count!
       - if (c = object.replies_count) > 0 || object.in_reply_to?

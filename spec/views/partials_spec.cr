@@ -185,7 +185,7 @@ Spectator.describe "partials" do
         before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
 
         it "renders a link to remote follow" do
-          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
+          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
         end
       end
     end

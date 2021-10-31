@@ -21,5 +21,4 @@
       - else
         == activity_button "Follow", outbox_path(_account), actor.iri, form_class: "ui form right floated", button_class: "ui button primary"
     - elsif !_account && actor.local?
-      form.right.floated method="GET" action=actor_remote_follow_path(actor)
-        input.ui.primary.button type="submit" value="Follow"
+      == form_button "Follow", actor_remote_follow_path(actor), method: "GET", form_class: "ui form right floated", button_class: "ui button primary"

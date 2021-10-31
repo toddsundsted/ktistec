@@ -165,6 +165,16 @@ Spectator.describe "helpers" do
         expect(subject.xpath_nodes("//form/button/@*[starts-with(name(),'data-')]")).to contain_exactly("1", "2")
       end
     end
+
+    context "given a GET method" do
+      subject do
+        XML.parse_html(activity_button("Label", "/foobar", "https://object", method: "GET", csrf: "CSRF") { "<div/>" }).document
+      end
+
+      it "does not emit a csrf token" do
+        expect(subject.xpath_nodes("//form/input[@name='authenticity_token']")).to be_empty
+      end
+    end
   end
 
   describe "form_button" do
@@ -217,6 +227,16 @@ Spectator.describe "helpers" do
 
       it "emits button data attributes" do
         expect(subject.xpath_nodes("//form/button/@*[starts-with(name(),'data-')]")).to contain_exactly("1", "2")
+      end
+    end
+
+    context "given a GET method" do
+      subject do
+        XML.parse_html(form_button("/foobar", method: "GET", csrf: "CSRF") { "<div/>" }).document
+      end
+
+      it "does not emit a csrf token" do
+        expect(subject.xpath_nodes("//form/input[@name='authenticity_token']")).to be_empty
       end
     end
   end

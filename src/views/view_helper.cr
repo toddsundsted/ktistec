@@ -71,6 +71,11 @@ module Ktistec::ViewHelper
       {% action = arg2 ; object = arg3 ; text = arg1 %}
       %block = {{text}}
     {% end %}
+    {% if csrf && method != "GET" %}
+     %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
+    {% else %}
+      %csrf = ""
+    {% end %}
     %form_attrs = [
       %Q|class="#{{{form_class}}}"|,
       %Q|action="#{{{action}}}"|,
@@ -91,7 +96,7 @@ module Ktistec::ViewHelper
     ]
     <<-HTML
     <form #{%form_attrs.join(" ")}>\
-    <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
+    #{%csrf}\
     <input type="hidden" name="object" value="#{{{object}}}">\
     <input type="hidden" name="type" value="#{{{type || text}}}">\
     <input type="hidden" name="public" value="#{{{public}} ? 1 : nil}">\
@@ -114,6 +119,11 @@ module Ktistec::ViewHelper
     {% else %}
       %block = {{arg1}}
     {% end %}
+    {% if csrf && method != "GET" %}
+     %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
+    {% else %}
+      %csrf = ""
+    {% end %}
     %form_attrs = [
       %Q|class="#{{{form_class}}}"|,
       %Q|action="#{{{action}}}"|,
@@ -134,7 +144,7 @@ module Ktistec::ViewHelper
     ]
     <<-HTML
     <form #{%form_attrs.join(" ")}>\
-    <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
+    #{%csrf}\
     <button #{%button_attrs.join(" ")} type="submit">\
     #{%block}\
     </button>\

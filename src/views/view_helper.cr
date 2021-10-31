@@ -102,6 +102,46 @@ module Ktistec::ViewHelper
     HTML
   end
 
+  # General purpose form-powered button.
+  #
+  macro form_button(arg1, action = nil, method = "POST", form_class = "ui inline form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
+    {% if block %}
+      {% action = arg1 %}
+      %block =
+        begin
+          {{block.body}}
+        end
+    {% else %}
+      %block = {{arg1}}
+    {% end %}
+    %form_attrs = [
+      %Q|class="#{{{form_class}}}"|,
+      %Q|action="#{{{action}}}"|,
+      %Q|method="#{{{method}}}"|,
+      {% if form_data %}
+        {% for key, value in form_data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
+    %button_attrs = [
+      %Q|class="#{{{button_class}}}"|,
+      {% if button_data %}
+        {% for key, value in button_data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
+    <<-HTML
+    <form #{%form_attrs.join(" ")}>\
+    <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
+    <button #{%button_attrs.join(" ")} type="submit">\
+    #{%block}\
+    </button>\
+    </form>
+    HTML
+  end
+
   macro authenticity_token(env)
     %Q|<input type="hidden" name="authenticity_token" value="#{{{env}}.session.string?("csrf")}">|
   end

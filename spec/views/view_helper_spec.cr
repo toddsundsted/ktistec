@@ -167,6 +167,60 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "form_button" do
+    subject do
+      XML.parse_html(form_button("/foobar", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }).document
+    end
+
+    it "emits a form with nested content" do
+      expect(subject.xpath_nodes("//form/button/div")).not_to be_empty
+    end
+
+    it "emits a form with a csrf token" do
+      expect(subject.xpath_nodes("//form/input[@name='authenticity_token']/@value")).to contain_exactly("CSRF")
+    end
+
+    it "specifies the action" do
+      expect(subject.xpath_nodes("//form/@action")).to contain_exactly("/foobar")
+    end
+
+    it "specifies the method" do
+      expect(subject.xpath_nodes("//form/@method")).to contain_exactly("PUT")
+    end
+
+    it "specifies the form class" do
+      expect(subject.xpath_nodes("//form/@class")).to contain_exactly("blarg")
+    end
+
+    it "specifies the button class" do
+      expect(subject.xpath_nodes("//form/button/@class")).to contain_exactly("honk")
+    end
+
+    context "without a body" do
+      subject do
+        XML.parse_html(form_button("Label", "/foobar", csrf: nil)).document
+      end
+
+      it "emits a form with nested content" do
+        expect(subject.xpath_nodes("//form/button/text()")).to contain_exactly("Label")
+      end
+    end
+
+    context "given data attributes" do
+      subject do
+        XML.parse_html(form_button("Label", "/foobar", form_data: {"foo" => "bar", "abc" => "xyz"}, button_data: {"one" => "1", "two" => "2"}, csrf: nil)).document
+      end
+
+      it "emits form data attributes" do
+        expect(subject.xpath_nodes("//form/@*[starts-with(name(),'data-')]")).to contain_exactly("bar", "xyz")
+      end
+
+      it "emits button data attributes" do
+        expect(subject.xpath_nodes("//form/button/@*[starts-with(name(),'data-')]")).to contain_exactly("1", "2")
+      end
+    end
+  end
+
   describe "authenticity_token" do
     let(env) { env_factory("GET", "/") }
 

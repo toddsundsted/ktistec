@@ -60,7 +60,7 @@ module Ktistec::ViewHelper
 
   # Posts an activity to an outbox.
   #
-  macro activity_button(arg1, arg2, arg3, type = nil, method = "POST", public = true, form_class = "ui form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
+  macro activity_button(arg1, arg2, arg3, type = nil, method = "POST", public = true, form_class = "ui inline form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
     {% if block %}
       {% action = arg1 ; object = arg2 ; type = arg3 %}
       %block =

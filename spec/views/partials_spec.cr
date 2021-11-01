@@ -163,10 +163,30 @@ Spectator.describe "partials" do
         it "renders a button to unfollow" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
         end
+
+        it "does not render a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Block")
+        end
       end
 
       it "renders a button to follow" do
         expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+      end
+
+      context "if actor is blocked" do
+        before_each { actor.block }
+
+        it "renders a button to unblock" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unblock")
+        end
+
+        it "does not render a button to follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Follow")
+        end
+      end
+
+      it "renders a button to block" do
+        expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
       end
     end
   end
@@ -246,6 +266,10 @@ Spectator.describe "partials" do
           it "renders a button to reject" do
             expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject")
           end
+
+          it "renders a button to block" do
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+          end
         end
 
         it "renders a button to accept" do
@@ -254,6 +278,10 @@ Spectator.describe "partials" do
 
         it "renders a button to reject" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject")
+        end
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
         end
       end
 
@@ -271,6 +299,10 @@ Spectator.describe "partials" do
         it "renders a button to follow" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
         end
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+        end
       end
 
       context "if already following" do
@@ -283,6 +315,10 @@ Spectator.describe "partials" do
 
       it "renders a button to follow" do
         expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+      end
+
+      it "renders a button to block" do
+        expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
       end
     end
   end

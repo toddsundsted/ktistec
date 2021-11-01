@@ -134,6 +134,14 @@ Spectator.describe "partials" do
       it "does not render a form" do
         expect(subject.xpath_nodes("//form")).to be_empty
       end
+
+      context "and actor is local" do
+        before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
+
+        it "renders a link to remote follow" do
+          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+        end
+      end
     end
 
     context "if authenticated" do

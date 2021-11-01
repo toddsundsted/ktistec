@@ -11,11 +11,10 @@
     br: == s actor.summary
   - if (_account = env.account?) && _account.actor != actor
     .ui.basic.segment
-      - if (_account = env.account?) && _account.actor != actor
-        - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
-          == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo"
-        - else
-          == activity_button "Follow", outbox_path(_account), actor.iri, button_class: "ui button primary"
+      - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
+        == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo"
+      - else
+        == activity_button "Follow", outbox_path(_account), actor.iri, button_class: "ui button primary"
   - elsif !_account && actor.local?
     .ui.basic.segment
       == form_button "Follow", actor_remote_follow_path(actor), method: "GET", button_class: "ui button primary"

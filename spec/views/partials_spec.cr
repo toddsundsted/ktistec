@@ -131,15 +131,15 @@ Spectator.describe "partials" do
     end
 
     context "if anonymous" do
-      it "does not render a form" do
-        expect(subject.xpath_nodes("//form")).to be_empty
+      it "does not render buttons" do
+        expect(subject.xpath_nodes("//button")).to be_empty
       end
 
       context "and actor is local" do
         before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
 
-        it "renders a link to remote follow" do
-          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+        it "renders a button to remote follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
         end
       end
     end
@@ -152,8 +152,8 @@ Spectator.describe "partials" do
       context "if account actor is actor" do
         let(actor) { account.actor }
 
-        it "does not render a form" do
-          expect(subject.xpath_nodes("//form")).to be_empty
+        it "does not render buttons" do
+          expect(subject.xpath_nodes("//button")).to be_empty
         end
       end
 
@@ -161,12 +161,12 @@ Spectator.describe "partials" do
         follow(account.actor, actor)
 
         it "renders a button to unfollow" do
-          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
         end
       end
 
       it "renders a button to follow" do
-        expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+        expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
       end
     end
   end
@@ -185,15 +185,15 @@ Spectator.describe "partials" do
     end
 
     context "if anonymous" do
-      it "does not render a form" do
-        expect(subject.xpath_nodes("//form")).to be_empty
+      it "does not render buttons" do
+        expect(subject.xpath_nodes("//buttons")).to be_empty
       end
 
       context "and actor is local" do
         before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
 
-        it "renders a link to remote follow" do
-          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+        it "renders a button to remote follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
         end
       end
     end
@@ -206,8 +206,8 @@ Spectator.describe "partials" do
       context "if account actor is actor" do
         let(actor) { account.actor }
 
-        it "does not render a form" do
-          expect(subject.xpath_nodes("//form")).to be_empty
+        it "does not render buttons" do
+          expect(subject.xpath_nodes("//button")).to be_empty
         end
       end
 
@@ -218,18 +218,16 @@ Spectator.describe "partials" do
       context "and on a page of actors the actor is following" do
         let(env) { env_factory("GET", "/actors/foo_bar/following") }
 
-        follow(actor, account.actor, confirmed: false)
-
         context "if already following" do
           follow(account.actor, actor)
 
           it "renders a button to unfollow" do
-            expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
           end
         end
 
         it "renders a button to follow" do
-          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
         end
       end
 
@@ -238,53 +236,53 @@ Spectator.describe "partials" do
       context "having not accepted or rejected a follow" do
         follow(actor, account.actor, confirmed: false)
 
-        context "but already following" do
+        context "if already following" do
           follow(account.actor, actor)
 
           it "renders a button to accept" do
-            expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Accept")
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Accept")
           end
 
           it "renders a button to reject" do
-            expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Reject")
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject")
           end
         end
 
         it "renders a button to accept" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Accept")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Accept")
         end
 
         it "renders a button to reject" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Reject")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject")
         end
       end
 
       context "having accepted or rejected a follow" do
         follow(actor, account.actor, confirmed: true)
 
-        context "and already following" do
+        context "if already following" do
           follow(account.actor, actor)
 
           it "renders a button to unfollow" do
-            expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
           end
         end
 
         it "renders a button to follow" do
-          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
         end
       end
 
-      context "when already following" do
+      context "if already following" do
         follow(account.actor, actor)
 
         it "renders a button to unfollow" do
-          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
         end
       end
 
       it "renders a button to follow" do
-        expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+        expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
       end
     end
   end

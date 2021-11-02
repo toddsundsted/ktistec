@@ -149,10 +149,13 @@ body { display: flex; flex-direction: column; }
 .ui.accept.button { background: #21ba45 !important; color: #fff !important; }
 .ui.reject.button { background: #db2828 !important; color: #fff !important; }
 /* used on the timeline and elsewhere */
-.ui.dangerous.button { background-color: #FF2733 !important; color: #fff !important; }
-.ui.dangerous.button:hover { background-color: #F41824 !important; transition: 0.2s color ease; }
+.ui.dangerous.button { color: #ff2733 !important; }
+.ui.dangerous.button:hover { background-color: #f41824 !important; color: #fff !important; transition: 0.2s color ease; }
 .ui.dangerous.iconic.button { background-color: transparent !important; color: rgba(0,0,0,.6) !important; }
-.ui.dangerous.iconic.button:hover { color: #FF2733 !important; transition: 0.2s color ease; }
+.ui.dangerous.iconic.button:hover { color: #ff2733 !important; transition: 0.2s color ease; }
+
+/* additional styling for modals */
+.ui.modal > .header > i { margin-right: 1.0rem; }
 
 /* mini toggle checkbox styling */
 .ui.mini.toggle.checkbox {

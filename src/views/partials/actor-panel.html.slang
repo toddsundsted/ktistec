@@ -18,7 +18,7 @@
       - if actor.blocked?
         == form_button "Unblock", unblock_actor_path(actor), button_class: "ui button"
       - elsif !_follow
-        == form_button "Block", block_actor_path(actor), button_class: "ui button dangerous"
+        == form_button "Block", block_actor_path(actor), button_class: "ui button dangerous", button_data: {"modal": "block.actor"}
   - elsif !_account && actor.local?
     .ui.basic.segment
       == form_button "Follow", actor_remote_follow_path(actor), method: "GET", button_class: "ui button primary"

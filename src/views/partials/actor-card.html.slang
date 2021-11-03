@@ -1,6 +1,7 @@
 .ui.fluid.actor.card
-  - image = actor.image.presence && "background-image: url(#{actor.image});"
-  .content class=(actor.image.presence || "placeholder") style=image
+  - image = actor.image.presence
+  - style = image ? "background-image: url(#{actor.image});" : nil
+  .content class=(!image ? "placeholder" : nil) style=style
     - if actor.icon.presence
       img src=actor.icon
     - else

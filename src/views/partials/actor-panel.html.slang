@@ -1,6 +1,7 @@
 .ui.actor.segments
-  - image = actor.image.presence && "background-image: url(#{actor.image});"
-  .ui.segment class=(actor.image.presence || "placeholder") style=image
+  - image = actor.image.presence
+  - style = image ? "background-image: url(#{actor.image});" : nil
+  .ui.segment class=(!image ? "placeholder" : nil) style=style
     - if actor.icon.presence
       img src=actor.icon
     - else

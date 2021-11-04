@@ -183,6 +183,14 @@ Spectator.describe "partials" do
         it "does not render a button to follow" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Follow")
         end
+
+        it "renders a blocked message segment" do
+          expect(subject.xpath_nodes("//div[contains(@class,'segment')][contains(@class,'blocked')]")).not_to be_empty
+        end
+      end
+
+      it "does not render a blocked message segment" do
+        expect(subject.xpath_nodes("//div[contains(@class,'segment')][contains(@class,'blocked')]")).to be_empty
       end
 
       it "renders a button to block" do

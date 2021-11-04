@@ -1,14 +1,18 @@
 .ui.fluid.actor.card
-  - image = actor.image.presence
-  - style = image ? "background-image: url(#{actor.image});" : nil
-  .content class=(!image ? "placeholder" : nil) style=style
-    - if actor.icon.presence
-      img src=actor.icon
-    - else
-      i.user.icon
-  - if (summary = actor.summary)
-    .extra.summary.content
-      p == s summary
+  - if actor.blocked?
+    .blocked.content
+      em This actor is blocked!
+  - else
+    - image = actor.image.presence
+    - style = image ? "background-image: url(#{actor.image});" : nil
+    .content class=(!image ? "placeholder" : nil) style=style
+      - if actor.icon.presence
+        img src=actor.icon
+      - else
+        i.user.icon
+    - if (summary = actor.summary)
+      .extra.summary.content
+        p == s summary
   .extra.content
     a.left.floated href=actor.iri
       .meta= actor.display_name

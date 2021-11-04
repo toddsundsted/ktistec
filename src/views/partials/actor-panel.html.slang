@@ -1,15 +1,21 @@
 .ui.actor.segments
-  - image = actor.image.presence
-  - style = image ? "background-image: url(#{actor.image});" : nil
-  .ui.segment class=(!image ? "placeholder" : nil) style=style
-    - if actor.icon.presence
-      img src=actor.icon
-    - else
-      i.user.icon
-  .ui.segment
-    = actor.display_name
-    br: a href=actor.display_link = actor.account_uri
-    br: == s actor.summary
+  - if actor.blocked?
+    .ui.blocked.segment
+      = actor.display_name
+      br: a href=actor.display_link = actor.account_uri
+      br: em This actor is blocked!
+  - else
+    - image = actor.image.presence
+    - style = image ? "background-image: url(#{actor.image});" : nil
+    .ui.segment class=(!image ? "placeholder" : nil) style=style
+      - if actor.icon.presence
+        img src=actor.icon
+      - else
+        i.user.icon
+    .ui.segment
+      = actor.display_name
+      br: a href=actor.display_link = actor.account_uri
+      br: == s actor.summary
   - if (_account = env.account?) && _account.actor != actor
     .ui.basic.segment
       - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))

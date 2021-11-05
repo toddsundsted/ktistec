@@ -352,14 +352,14 @@ Spectator.describe "partials" do
     let_create!(:object, attributed_to: actor)
     let_build(:object, named: :original)
 
-    it "does not render a link to the threaded conversation" do
+    it "does not render a button to the threaded conversation" do
       object.assign(in_reply_to: original, attributed_to: actor).save
-      expect(subject.xpath_nodes("//a/button/text()")).not_to have("Thread")
+      expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
     end
 
-    it "does not render a link to the threaded conversation" do
+    it "does not render a button to the threaded conversation" do
       original.assign(in_reply_to: object, attributed_to: actor).save
-      expect(subject.xpath_nodes("//a/button/text()")).not_to have("Thread")
+      expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
     end
 
     context "given an associated activity" do
@@ -383,14 +383,14 @@ Spectator.describe "partials" do
         actor.approve(original.save)
       end
 
-      it "renders a link to the threaded conversation" do
+      it "renders a button to the threaded conversation" do
         object.assign(in_reply_to: original, attributed_to: actor).save
-        expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
+        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
       end
 
-      it "renders a link to the threaded conversation" do
+      it "renders a button to the threaded conversation" do
         original.assign(in_reply_to: object, attributed_to: actor).save
-        expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
+        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
       end
     end
 
@@ -440,23 +440,23 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_true }
 
         it "does not render a button to reply" do
-          expect(subject.xpath_nodes("//a/button/text()")).not_to have("Reply")
+          expect(subject.xpath_nodes("//button/text()")).not_to have("Reply")
         end
 
         it "does not render a button to like" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).not_to have("Like")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Like")
         end
 
         it "does not render a button to share" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).not_to have("Share")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Share")
         end
 
         it "renders a button to delete" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Delete")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Delete")
         end
 
         it "renders a button to edit" do
-          expect(subject.xpath_nodes("//a/button/text()")).to have("Edit")
+          expect(subject.xpath_nodes("//button/text()")).to have("Edit")
         end
       end
 
@@ -465,18 +465,18 @@ Spectator.describe "partials" do
 
         pre_condition { expect(object.draft?).to be_false }
 
-        it "does not render a link to the threaded conversation" do
-          expect(subject.xpath_nodes("//a/button/text()")).not_to have("Thread")
+        it "does not render a button to the threaded conversation" do
+          expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
         end
 
-        it "renders a link to the threaded conversation" do
+        it "renders a button to the threaded conversation" do
           object.assign(in_reply_to: original, attributed_to: account.actor).save
-          expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
+          expect(subject.xpath_nodes("//button/text()")).to have("Thread")
         end
 
-        it "renders a link to the threaded conversation" do
+        it "renders a button to the threaded conversation" do
           original.assign(in_reply_to: object, attributed_to: account.actor).save
-          expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
+          expect(subject.xpath_nodes("//button/text()")).to have("Thread")
         end
       end
     end

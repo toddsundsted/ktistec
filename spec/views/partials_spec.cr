@@ -340,7 +340,7 @@ Spectator.describe "partials" do
 
     subject do
       begin
-        XML.parse_html(object_partial(env, object, actor, actor, activity: activity, for_thread: for_thread))
+        XML.parse_html(object_partial(env, object, activity: activity, for_thread: for_thread))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -349,7 +349,7 @@ Spectator.describe "partials" do
     let(account) { register }
     let(actor) { account.actor }
 
-    let_create!(:object, attributed_to: actor)
+    let_create!(:object, attributed_to: actor, published: Time.utc)
     let_build(:object, named: :original)
 
     it "does not render a button to the threaded conversation" do
@@ -397,9 +397,15 @@ Spectator.describe "partials" do
     context "if authenticated" do
       before_each { env.account = account }
 
-      context "for approvals" do
-        before_each { object.assign(published: Time.utc).save }
+      it "does not render a button to block" do
+        expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
+      end
 
+      it "does not render a button to unblock" do
+        expect(subject.xpath_nodes("//button/text()")).not_to have("Unblock")
+      end
+
+      context "for approvals" do
         context "on a page of threaded replies" do
           let(env) { env_factory("GET", "/thread") }
 
@@ -477,6 +483,48 @@ Spectator.describe "partials" do
         it "renders a button to the threaded conversation" do
           original.assign(in_reply_to: object, attributed_to: account.actor).save
           expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+        end
+      end
+
+      context "and is remote" do
+        let_create!(:object, published: Time.utc)
+
+        pre_condition { expect(object.local?).to be_false }
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button/text()")).to have("Block")
+        end
+
+        it "does not render a button to unblock" do
+          expect(subject.xpath_nodes("//button/text()")).not_to have("Unblock")
+        end
+
+        context "if object is blocked" do
+          before_each { object.block }
+
+          it "does not render a button to block" do
+            expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
+          end
+
+          it "renders a button to unblock" do
+            expect(subject.xpath_nodes("//button/text()")).to have("Unblock")
+          end
+        end
+
+        context "and object is announced" do
+          let_create!(:announce, actor: actor, object: object)
+
+          it "does not render a button to block" do
+            expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
+          end
+        end
+
+        context "and object is liked" do
+          let_create!(:like, actor: actor, object: object)
+
+          it "does not render a button to block" do
+            expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
+          end
         end
       end
     end

@@ -32,31 +32,35 @@ crystal:
           a.user> data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name
           | posted
         a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
-  - if attachments && (attachment = attachments.shift?)
-    - if attachment.image?
-      img.ui.extra.attachment.image src=attachment.url
-    - unless attachments.empty?
-      .extra.images
-        - attachments.each do |attachment|
-          - if attachment.image?
-            img.ui.attachment.image src=attachment.url
-  .extra.text
-    == s object.content
-  - if with_detail && account
-    - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
-      .extra.detail
-        - activities.each do |activity|
-          - if activity.responds_to?(:actor?) && activity.actor?
-            a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
-              - if (icon = activity.actor.icon)
-                img.ui.avatar.image data-actor-id=activity.actor.id src=icon
-              - else
-                i.user.icon
-              - case activity
-              - when ActivityPub::Activity::Announce
-                i.share.icon
-              - when ActivityPub::Activity::Like
-                i.star.icon
+  - if object.blocked?
+    .extra.text
+      em This object is blocked!
+  - else
+    - if attachments && (attachment = attachments.shift?)
+      - if attachment.image?
+        img.ui.extra.attachment.image src=attachment.url
+      - unless attachments.empty?
+        .extra.images
+          - attachments.each do |attachment|
+            - if attachment.image?
+              img.ui.attachment.image src=attachment.url
+    .extra.text
+      == s object.content
+    - if with_detail && account
+      - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
+        .extra.detail
+          - activities.each do |activity|
+            - if activity.responds_to?(:actor?) && activity.actor?
+              a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
+                - if (icon = activity.actor.icon)
+                  img.ui.avatar.image data-actor-id=activity.actor.id src=icon
+                - else
+                  i.user.icon
+                - case activity
+                - when ActivityPub::Activity::Announce
+                  i.share.icon
+                - when ActivityPub::Activity::Like
+                  i.star.icon
   .meta
     - if account && object.blocked?
       == form_button unblock_object_path(object), button_class: "ui button mini iconic" do

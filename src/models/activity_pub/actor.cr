@@ -373,7 +373,7 @@ module ActivityPub
     end
 
     def in_inbox(page = 1, size = 10, public = true)
-      self.class.content(self. iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
+      self.class.content(self.iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
     def in_inbox?(object : Object, inclusion = nil, exclusion = nil)

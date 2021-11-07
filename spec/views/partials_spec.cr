@@ -550,17 +550,17 @@ Spectator.describe "partials" do
         end
 
         it "does not render an input with the object iri" do
-          expect(subject.xpath_nodes("//form//input[@name='object']")).
+          expect(subject.xpath_nodes("//input[@name='object']")).
             to be_empty
         end
 
-        it "includes a button to save draft" do
-          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+        it "includes an input to save draft" do
+          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
             not_to be_empty
         end
 
-        it "does not include a button to return to drafts" do
-          expect(subject.xpath_nodes("//form//a[text()='To Drafts']")).
+        it "does not include a link to return to drafts" do
+          expect(subject.xpath_nodes("//a[text()='To Drafts']")).
             to be_empty
         end
       end
@@ -575,7 +575,7 @@ Spectator.describe "partials" do
         end
 
         it "renders an input with the object iri" do
-          expect(subject.xpath_nodes("//form//input[@name='object']")).
+          expect(subject.xpath_nodes("//input[@name='object']")).
             not_to be_empty
         end
       end
@@ -585,18 +585,18 @@ Spectator.describe "partials" do
 
         pre_condition { expect(object.draft?).to be_true }
 
-        it "includes a button to publish post" do
-          expect(subject.xpath_nodes("//form//input[@value='Publish Post']")).
+        it "includes an input to publish post" do
+          expect(subject.xpath_nodes("//input[@value='Publish Post']")).
             not_to be_empty
         end
 
-        it "includes a button to save draft" do
-          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+        it "includes an input to save draft" do
+          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
             not_to be_empty
         end
 
-        it "includes a button to return to drafts" do
-          expect(subject.xpath_nodes("//form//a[text()='To Drafts']")).
+        it "includes a link to return to drafts" do
+          expect(subject.xpath_nodes("//a[text()='To Drafts']")).
             not_to be_empty
         end
       end
@@ -606,18 +606,18 @@ Spectator.describe "partials" do
 
         pre_condition { expect(object.draft?).to be_false }
 
-        it "includes a button to update post" do
-          expect(subject.xpath_nodes("//form//input[@value='Update Post']")).
+        it "includes an input to update post" do
+          expect(subject.xpath_nodes("//input[@value='Update Post']")).
             not_to be_empty
         end
 
-        it "does not include a button to save draft" do
-          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+        it "does not include an input to save draft" do
+          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
             to be_empty
         end
 
-        it "does not include a button to return to drafts" do
-          expect(subject.xpath_nodes("//form//a[text()='To Drafts']")).
+        it "does not include a link to return to drafts" do
+          expect(subject.xpath_nodes("//a[text()='To Drafts']")).
             to be_empty
         end
       end
@@ -657,7 +657,7 @@ Spectator.describe "partials" do
       let!(object) { object2.save }
 
       it "prepopulates editor with mentions" do
-        expect(subject.xpath_nodes("//form//input[@name='content']/@value").first).
+        expect(subject.xpath_nodes("//input[@name='content']/@value").first).
           to eq("@#{actor2.account_uri} @#{actor1.account_uri} ")
       end
     end

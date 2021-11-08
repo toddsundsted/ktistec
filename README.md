@@ -7,6 +7,7 @@
     - [Control over comment visibility](#control-over-comment-visibility)
     - [Pretty URLs](#pretty-urls)
     - [Followers/following](#followersfollowing)
+    - [Blocking](#blocking)
     - [Metrics](#metrics)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
@@ -23,7 +24,7 @@ licensed under the AGPLv3.
 
 Ktistec powers [Epiktistes](https://epiktistes.com/), my low-volume
 home in the Fediverse. If you want to talk to me, I'm
-[@toddsundsted@epiktistes.com](https://epiktistes.com/actors/toddsundsted).
+[@toddsundsted@epiktistes.com](https://epiktistes.com/@toddsundsted).
 
 ## Features
 
@@ -88,6 +89,15 @@ name. Ktistec is also compatible with the "remote follow" protocol
 used by Mastodon and others.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/88hvqq.png" width=460>
+
+### Blocking
+
+Ktistec gives you control over what you see. Blocking authors and
+posts removes them and their content from your timeline.
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/42fwx6.png" width=460>
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/epdb39.png" width=460>
 
 ### Metrics
 

@@ -118,21 +118,81 @@ body { display: flex; flex-direction: column; }
 }
 
 /** large actor partial **/
-.actor-large.segments {
+.ui.actor.segments {
     margin-top: 1rem !important; margin-bottom: 1rem;
-    > .segment:first-child { min-height: 18rem; background-position: center; background-repeat: no-repeat; background-size: cover; }
-    > .segment img { position: absolute; bottom: 1rem; left: 1rem; width: 7rem; height: 7rem; object-fit: cover; background-color: #ffffffa0; border-radius: 3.5rem; border: 3px solid white; }
-    > .segment i { position: absolute; bottom: 1.5rem; left: 1.5rem; color: rgba(0,0,0,.6); line-height: 5rem; font-size: 5rem; }
+    > .segment:first-child {
+        min-height: 18rem;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+        &.blocked {
+            min-height: auto;
+        }
+    }
+    > .segment img {
+        position: absolute;
+        bottom: 1rem;
+        left: 1rem;
+        width: 7rem;
+        height: 7rem;
+        object-fit: cover;
+        background-color: #ffffffa0;
+        border-radius: 3.5rem;
+        border: 3px solid white;
+    }
+    > .segment i {
+        position: absolute;
+        bottom: 1.5rem;
+        left: 1.5rem;
+        color: rgba(0,0,0,.6);
+        line-height: 5rem;
+        font-size: 5rem;
+    }
 }
 
 /** small actor partial **/
-.actor-small.card {
-    > .content:first-child { position: relative; min-height: 8rem; background-position: center; background-repeat: no-repeat; background-size: cover; }
-    > .content:first-child img { position: absolute; bottom: 1rem; left: 1rem; width: 4rem; height: 4rem; object-fit: cover; background-color: #ffffffa0; border-radius: 2rem; border: 2px solid white; }
-    > .content:first-child i { position: absolute; bottom: 1.5rem; left: 1.5rem; color: rgba(0,0,0,.6); line-height: 3rem; font-size: 3rem; }
-    > .summary.content { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-    > .summary.content > * { display: inline; }
+.ui.actor.card {
+    > .content:first-child {
+        position: relative;
+        min-height: 8rem;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+        &.blocked {
+            min-height: auto;
+        }
+    }
+    > .content:first-child img {
+        position: absolute;
+        bottom: 1rem;
+        left: 1rem;
+        width: 4rem;
+        height: 4rem;
+        object-fit: cover;
+        background-color: #ffffffa0;
+        border-radius: 2rem;
+        border: 2px solid white;
+    }
+    > .content:first-child i {
+        position: absolute;
+        bottom: 1.5rem;
+        left: 1.5rem;
+        color: rgba(0,0,0,.6);
+        line-height: 3rem;
+        font-size: 3rem;
+    }
+    > .summary.content {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+    > .summary.content > * {
+        display: inline;
+    }
 }
+
+/* additional styling for forms */
+.ui.inline.form { display: inline-block; }
 
 /* missing styling for button elements (vs input elements) */
 /* used in sign out item in the menu */
@@ -146,10 +206,13 @@ body { display: flex; flex-direction: column; }
 .ui.accept.button { background: #21ba45 !important; color: #fff !important; }
 .ui.reject.button { background: #db2828 !important; color: #fff !important; }
 /* used on the timeline and elsewhere */
-.ui.dangerous.button { background-color: #FF2733 !important; color: #fff !important; }
-.ui.dangerous.button:hover { background-color: #F41824 !important; transition: 0.2s color ease; }
+.ui.dangerous.button { color: #ff2733 !important; }
+.ui.dangerous.button:hover { background-color: #f41824 !important; color: #fff !important; transition: 0.2s color ease; }
 .ui.dangerous.iconic.button { background-color: transparent !important; color: rgba(0,0,0,.6) !important; }
-.ui.dangerous.iconic.button:hover { color: #FF2733 !important; transition: 0.2s color ease; }
+.ui.dangerous.iconic.button:hover { color: #ff2733 !important; transition: 0.2s color ease; }
+
+/* additional styling for modals */
+.ui.modal > .header > i { margin-right: 1.0rem; }
 
 /* mini toggle checkbox styling */
 .ui.mini.toggle.checkbox {

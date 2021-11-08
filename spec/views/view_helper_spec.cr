@@ -2,7 +2,60 @@ require "../../src/views/view_helper"
 
 require "../spec_helper/controller"
 
-Spectator.describe "helper" do
+class FooBarController
+  include Ktistec::Controller
+
+  skip_auth [
+    "/foo/bar/id_param/:id",
+    "/foo/bar/iri_param/:id"
+  ]
+
+  get "/foo/bar/id_param/:id" do |env|
+    id_param(env).to_s
+  end
+
+  get "/foo/bar/iri_param/:id" do |env|
+    iri_param(env, "/foo/bar").to_s
+  end
+end
+
+Spectator.describe FooBarController do
+  describe "GET /foo/bar/id_param/:id" do
+    it "is not successful for non-numeric parameters" do
+      get "/foo/bar/id_param/five"
+      expect(response.status_code).to eq(400)
+    end
+
+    it "is successful for numeric parameters" do
+      get "/foo/bar/id_param/5"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "it returns the id of the resource" do
+      get "/foo/bar/id_param/5"
+      expect(response.body).to eq("5")
+    end
+  end
+
+  describe "GET /foo/bar/iri_param/:id" do
+    it "is not successful for invalid parameters" do
+      get "/foo/bar/iri_param/+"
+      expect(response.status_code).to eq(400)
+    end
+
+    it "is successful for valid parameters" do
+      get "/foo/bar/iri_param/000"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "it returns the IRI of the resource" do
+      get "/foo/bar/iri_param/000"
+      expect(response.body).to eq("https://test.test/foo/bar/000")
+    end
+  end
+end
+
+Spectator.describe "helpers" do
   setup_spec
 
   include Ktistec::ViewHelper
@@ -19,12 +72,7 @@ Spectator.describe "helper" do
   describe "paginate" do
     let(query) { "" }
 
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/#{query}"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
+    let(env) { env_factory("GET", "/#{query}") }
 
     let(collection) { Ktistec::Util::PaginatedArray(Int32).new }
 
@@ -117,15 +165,112 @@ Spectator.describe "helper" do
         expect(subject.xpath_nodes("//form/button/@*[starts-with(name(),'data-')]")).to contain_exactly("1", "2")
       end
     end
+
+    context "given a DELETE method" do
+      subject do
+        XML.parse_html(activity_button("Label", "/foobar", "https://object", method: "DELETE", csrf: nil) { "<div/>" }).document
+      end
+
+      it "emits a hidden input" do
+        expect(subject.xpath_nodes("//form/input[@type='hidden'][@name='_method']/@value")).to contain_exactly("delete")
+      end
+
+      it "sets the method to POST" do
+        expect(subject.xpath_nodes("//form/@method")).to contain_exactly("POST")
+      end
+    end
+
+    context "given a GET method" do
+      subject do
+        XML.parse_html(activity_button("Label", "/foobar", "https://object", method: "GET", csrf: "CSRF") { "<div/>" }).document
+      end
+
+      it "does not emit a csrf token" do
+        expect(subject.xpath_nodes("//form/input[@name='authenticity_token']")).to be_empty
+      end
+    end
+  end
+
+  describe "form_button" do
+    subject do
+      XML.parse_html(form_button("/foobar", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }).document
+    end
+
+    it "emits a form with nested content" do
+      expect(subject.xpath_nodes("//form/button/div")).not_to be_empty
+    end
+
+    it "emits a form with a csrf token" do
+      expect(subject.xpath_nodes("//form/input[@name='authenticity_token']/@value")).to contain_exactly("CSRF")
+    end
+
+    it "specifies the action" do
+      expect(subject.xpath_nodes("//form/@action")).to contain_exactly("/foobar")
+    end
+
+    it "specifies the method" do
+      expect(subject.xpath_nodes("//form/@method")).to contain_exactly("PUT")
+    end
+
+    it "specifies the form class" do
+      expect(subject.xpath_nodes("//form/@class")).to contain_exactly("blarg")
+    end
+
+    it "specifies the button class" do
+      expect(subject.xpath_nodes("//form/button/@class")).to contain_exactly("honk")
+    end
+
+    context "without a body" do
+      subject do
+        XML.parse_html(form_button("Label", "/foobar", csrf: nil)).document
+      end
+
+      it "emits a form with nested content" do
+        expect(subject.xpath_nodes("//form/button/text()")).to contain_exactly("Label")
+      end
+    end
+
+    context "given data attributes" do
+      subject do
+        XML.parse_html(form_button("Label", "/foobar", form_data: {"foo" => "bar", "abc" => "xyz"}, button_data: {"one" => "1", "two" => "2"}, csrf: nil)).document
+      end
+
+      it "emits form data attributes" do
+        expect(subject.xpath_nodes("//form/@*[starts-with(name(),'data-')]")).to contain_exactly("bar", "xyz")
+      end
+
+      it "emits button data attributes" do
+        expect(subject.xpath_nodes("//form/button/@*[starts-with(name(),'data-')]")).to contain_exactly("1", "2")
+      end
+    end
+
+    context "given a DELETE method" do
+      subject do
+        XML.parse_html(form_button("/foobar", method: "DELETE", csrf: nil) { "<div/>" }).document
+      end
+
+      it "emits a hidden input" do
+        expect(subject.xpath_nodes("//form/input[@type='hidden'][@name='_method']/@value")).to contain_exactly("delete")
+      end
+
+      it "sets the method to POST" do
+        expect(subject.xpath_nodes("//form/@method")).to contain_exactly("POST")
+      end
+    end
+
+    context "given a GET method" do
+      subject do
+        XML.parse_html(form_button("/foobar", method: "GET", csrf: "CSRF") { "<div/>" }).document
+      end
+
+      it "does not emit a csrf token" do
+        expect(subject.xpath_nodes("//form/input[@name='authenticity_token']")).to be_empty
+      end
+    end
   end
 
   describe "authenticity_token" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
+    let(env) { env_factory("GET", "/") }
 
     subject do
       XML.parse_html(authenticity_token(env)).document

@@ -140,6 +140,22 @@ module Ktistec
       "/remote/objects/#{{{object}}.id}/unapprove"
     end
 
+    macro block_actor_path(actor)
+      "/remote/actors/#{{{actor}}.id}/block"
+    end
+
+    macro unblock_actor_path(actor)
+      "/remote/actors/#{{{actor}}.id}/unblock"
+    end
+
+    macro block_object_path(object)
+      "/remote/objects/#{{{object}}.id}/block"
+    end
+
+    macro unblock_object_path(object)
+      "/remote/objects/#{{{object}}.id}/unblock"
+    end
+
     macro accepts?(*mime_type)
       env.accepts?({{*mime_type}})
     end

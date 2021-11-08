@@ -4,7 +4,6 @@ require "../../../../src/models/task/mixins/transfer"
 require "../../../spec_helper/model"
 require "../../../spec_helper/factory"
 require "../../../spec_helper/network"
-require "../../../spec_helper/register"
 
 class FooBarTransfer < Task
   include Task::Transfer
@@ -14,7 +13,7 @@ Spectator.describe Task::Transfer do
   setup_spec
 
   let(transferer) do
-    register(with_keys: true).actor
+    register.actor
   end
 
   let_build(:activity)

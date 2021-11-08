@@ -11,14 +11,9 @@ Spectator.describe "actor" do
   include Ktistec::ViewHelper::ClassMethods
 
   describe "actor.html.slang" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/actor/username"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
-
     let_create(:actor)
+
+    let(env) { env_factory("GET", "/actor/username") }
 
     subject do
       begin

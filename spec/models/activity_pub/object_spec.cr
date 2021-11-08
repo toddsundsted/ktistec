@@ -4,7 +4,6 @@ require "../../../src/models/activity_pub/activity/like"
 
 require "../../spec_helper/model"
 require "../../spec_helper/factory"
-require "../../spec_helper/register"
 
 class FooBarObject < ActivityPub::Object
 end
@@ -261,8 +260,18 @@ Spectator.describe ActivityPub::Object do
       expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
     end
 
+    it "filters out blocked posts" do
+      post5.block
+      expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
+    end
+
     it "filters out posts by deleted actors" do
       actor5.delete
+      expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block
       expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
     end
 
@@ -306,8 +315,18 @@ Spectator.describe ActivityPub::Object do
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
+    it "filters out blocked posts" do
+      post5.block
+      expect(described_class.public_posts(1, 2)).to eq([post4, post3])
+    end
+
     it "filters out posts by deleted actors" do
       actor5.delete
+      expect(described_class.public_posts(1, 2)).to eq([post4, post3])
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
@@ -416,6 +435,11 @@ Spectator.describe ActivityPub::Object do
         expect(subject.with_replies_count!.replies_count).to eq(3)
       end
 
+      it "omits blocked replies and their children" do
+        object4.block
+        expect(subject.with_replies_count!.replies_count).to eq(3)
+      end
+
       it "omits destroyed replies and their children" do
         object4.destroy
         expect(subject.with_replies_count!.replies_count).to eq(3)
@@ -423,6 +447,11 @@ Spectator.describe ActivityPub::Object do
 
       it "omits replies with deleted attributed to actors" do
         actor4.delete
+        expect(subject.with_replies_count!.replies_count).to eq(3)
+      end
+
+      it "omits replies with blocked attributed to actors" do
+        actor4.block
         expect(subject.with_replies_count!.replies_count).to eq(3)
       end
 
@@ -465,6 +494,11 @@ Spectator.describe ActivityPub::Object do
         expect(subject.thread).to eq([subject, object1, object2, object3])
       end
 
+      it "omits blocked replies and their children" do
+        object4.block
+        expect(subject.thread).to eq([subject, object1, object2, object3])
+      end
+
       it "omits destroyed replies and their children" do
         object4.destroy
         expect(subject.thread).to eq([subject, object1, object2, object3])
@@ -472,6 +506,11 @@ Spectator.describe ActivityPub::Object do
 
       it "omits replies with deleted attributed to actors" do
         actor4.delete
+        expect(subject.thread).to eq([subject, object1, object2, object3])
+      end
+
+      it "omits replies with blocked attributed to actors" do
+        actor4.block
         expect(subject.thread).to eq([subject, object1, object2, object3])
       end
 
@@ -518,6 +557,11 @@ Spectator.describe ActivityPub::Object do
         expect(object3.ancestors).to eq([object3, object2])
       end
 
+      it "omits blocked replies and their parents" do
+        object1.block
+        expect(object3.ancestors).to eq([object3, object2])
+      end
+
       it "omits destroyed replies and their parents" do
         object1.destroy
         expect(object3.ancestors).to eq([object3, object2])
@@ -525,6 +569,11 @@ Spectator.describe ActivityPub::Object do
 
       it "omits replies with deleted attributed to actors" do
         actor1.delete
+        expect(object3.ancestors).to eq([object3, object2])
+      end
+
+      it "omits replies with blocked attributed to actors" do
+        actor1.block
         expect(object3.ancestors).to eq([object3, object2])
       end
 
@@ -606,6 +655,11 @@ Spectator.describe ActivityPub::Object do
 
     it "filters out activities of deleted actors" do
       actor1.delete
+      expect(subject.activities).to eq([activity2, activity3])
+    end
+
+    it "filters out activities of blocked actors" do
+      actor1.block
       expect(subject.activities).to eq([activity2, activity3])
     end
   end

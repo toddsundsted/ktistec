@@ -9,7 +9,7 @@ require "../../src/handlers/**"
 
 require "./base"
 require "./model"
-require "./register"
+require "./factory"
 
 # from https://github.com/kemalcr/spec-kemal/blob/master/src/spec-kemal.cr
 # run specs with `KEMAL_ENV=test crystal spec`
@@ -92,6 +92,13 @@ end
 macro sign_in(as username = nil)
   before_each { _sign_in({{username}}) }
   after_each { _sign_out }
+end
+
+def env_factory(method, path)
+  HTTP::Server::Context.new(
+    HTTP::Request.new(method, path),
+    HTTP::Server::Response.new(IO::Memory.new)
+  )
 end
 
 Ktistec::Server.run do

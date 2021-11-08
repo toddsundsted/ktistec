@@ -3,13 +3,12 @@ require "../../../src/models/task/deliver"
 require "../../spec_helper/factory"
 require "../../spec_helper/model"
 require "../../spec_helper/network"
-require "../../spec_helper/register"
 
 Spectator.describe Task::Deliver do
   setup_spec
 
   let(sender) do
-    register(with_keys: true).actor
+    register.actor
   end
 
   let_build(:activity)

@@ -6,9 +6,7 @@ class ActivitiesController
   skip_auth ["/activities/:id"], GET
 
   get "/activities/:id" do |env|
-    iri = "#{host}/activities/#{env.params.url["id"]}"
-
-    unless (activity = get_activity(env, iri))
+    unless (activity = get_activity(env, iri_param(env)))
       not_found
     end
 
@@ -18,9 +16,7 @@ class ActivitiesController
   end
 
   get "/remote/activities/:id" do |env|
-    id = env.params.url["id"].to_i64
-
-    unless (activity = get_activity(env, id))
+    unless (activity = get_activity(env, id_param(env)))
       not_found
     end
 

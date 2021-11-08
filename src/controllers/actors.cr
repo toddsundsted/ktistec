@@ -89,19 +89,35 @@ class ActorsController
   end
 
   get "/remote/actors/:id" do |env|
-    id = env.params.url["id"].to_i
-
-    unless (actor = ActivityPub::Actor.find?(id))
+    unless (actor = ActivityPub::Actor.find?(id_param(env)))
       not_found
     end
 
     ok "actors/remote"
   end
 
-  post "/remote/actors/:id/refresh" do |env|
-    id = env.params.url["id"].to_i
+  post "/remote/actors/:id/block" do |env|
+    unless (actor = ActivityPub::Actor.find?(id_param(env)))
+      not_found
+    end
 
-    unless (actor = ActivityPub::Actor.find?(id))
+    actor.block
+
+    redirect back_path
+  end
+
+  post "/remote/actors/:id/unblock" do |env|
+    unless (actor = ActivityPub::Actor.find?(id_param(env)))
+      not_found
+    end
+
+    actor.unblock
+
+    redirect back_path
+  end
+
+  post "/remote/actors/:id/refresh" do |env|
+    unless (actor = ActivityPub::Actor.find?(id_param(env)))
       not_found
     end
 

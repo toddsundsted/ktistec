@@ -76,7 +76,19 @@ Spectator.describe Account do
 
     describe "#actor" do
       it "updates the actor" do
-        expect{subject.iri = actor.iri.not_nil!}.to change{subject.actor?}
+        expect{subject.iri = actor.iri}.to change{subject.actor?}
+      end
+    end
+
+    describe "#save" do
+      before_each { subject.actor = actor }
+
+      it "updates the associated actor's public key" do
+        expect{subject.save}.to change{actor.pem_public_key}
+      end
+
+      it "updates the associated actor's private key" do
+        expect{subject.save}.to change{actor.pem_private_key}
       end
     end
   end

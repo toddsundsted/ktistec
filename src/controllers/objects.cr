@@ -6,14 +6,6 @@ class ObjectsController
 
   skip_auth ["/objects/:id", "/objects/:id/thread"], GET
 
-  macro iri_param
-    "#{host}/objects/#{env.params.url["id"]}"
-  end
-
-  macro id_param
-    env.params.url["id"].to_i64
-  end
-
   get "/actors/:username/drafts" do |env|
     unless (account = get_account(env))
       not_found
@@ -43,7 +35,7 @@ class ObjectsController
   end
 
   get "/objects/:id" do |env|
-    unless (object = get_object(env, iri_param))
+    unless (object = get_object(env, iri_param(env)))
       not_found
     end
 
@@ -53,7 +45,7 @@ class ObjectsController
   end
 
   get "/objects/:id/thread" do |env|
-    unless (object = get_object(env, iri_param))
+    unless (object = get_object(env, iri_param(env, "/objects")))
       not_found
     end
 
@@ -65,7 +57,7 @@ class ObjectsController
   end
 
   get "/objects/:id/edit" do |env|
-    unless (object = get_editable(env, iri_param))
+    unless (object = get_editable(env, iri_param(env, "/objects")))
       not_found
     end
 
@@ -73,7 +65,7 @@ class ObjectsController
   end
 
   post "/objects/:id" do |env|
-    unless (object = get_editable(env, iri_param)) && object.draft?
+    unless (object = get_editable(env, iri_param(env))) && object.draft?
       not_found
     end
 
@@ -87,7 +79,7 @@ class ObjectsController
   end
 
   delete "/objects/:id" do |env|
-    unless (object = get_editable(env, iri_param)) && object.draft?
+    unless (object = get_editable(env, iri_param(env))) && object.draft?
       not_found
     end
 
@@ -97,7 +89,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id" do |env|
-    unless (object = get_object(env, id_param))
+    unless (object = get_remote_object(env, id_param(env)))
       not_found
     end
 
@@ -105,7 +97,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id/thread" do |env|
-    unless (object = get_object(env, id_param))
+    unless (object = get_remote_object(env, id_param(env)))
       not_found
     end
 
@@ -115,9 +107,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id/reply" do |env|
-    id = env.params.url["id"].to_i64
-
-    unless (object = get_object(env, id))
+    unless (object = get_remote_object(env, id_param(env)))
       not_found
     end
 
@@ -127,7 +117,7 @@ class ObjectsController
   post "/remote/objects/:id/approve" do |env|
     actor = env.account.actor
 
-    not_found unless (object = ActivityPub::Object.find?(id_param))
+    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
     not_found unless actor.in_inbox?(object) || actor.in_outbox?(object)
 
     redirect back_path if actor.approve(object)
@@ -138,12 +128,28 @@ class ObjectsController
   post "/remote/objects/:id/unapprove" do |env|
     actor = env.account.actor
 
-    not_found unless (object = ActivityPub::Object.find?(id_param))
+    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
     not_found unless actor.in_inbox?(object) || actor.in_outbox?(object)
 
     redirect back_path if actor.unapprove(object)
 
     bad_request
+  end
+
+  post "/remote/objects/:id/block" do |env|
+    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
+
+    object.block
+
+    redirect back_path
+  end
+
+  post "/remote/objects/:id/unblock" do |env|
+    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
+
+    object.unblock
+
+    redirect back_path
   end
 
   private def self.params(env)
@@ -164,10 +170,19 @@ class ObjectsController
 
   private def self.get_object(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id))
-      if object.visible ||
+      if (object.visible && (!object.cached? && !object.draft?)) ||
          ((account = env.account?) &&
-          ((account.actor == object.attributed_to? && (!env.request.path.starts_with?("/remote/") || !object.draft?)) ||
-           account.actor.in_inbox?(object)))
+          (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
+        object
+      end
+    end
+  end
+
+  private def self.get_remote_object(env, iri_or_id)
+    if (object = ActivityPub::Object.find?(iri_or_id))
+      if (object.visible && (!object.cached? && !object.draft?)) ||
+         ((account = env.account?) &&
+          ((account.actor == object.attributed_to? && !object.draft?) || account.actor.in_inbox?(object)))
         object
       end
     end

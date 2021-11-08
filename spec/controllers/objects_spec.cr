@@ -172,7 +172,7 @@ Spectator.describe ObjectsController do
     end
 
     it "returns 404 if object does not exist" do
-      get "/objects/0"
+      get "/objects/000"
       expect(response.status_code).to eq(404)
     end
 
@@ -257,7 +257,7 @@ Spectator.describe ObjectsController do
     end
 
     it "returns 404 if object does not exist" do
-      get "/objects/0/thread"
+      get "/objects/000/thread"
       expect(response.status_code).to eq(404)
     end
 
@@ -463,7 +463,7 @@ Spectator.describe ObjectsController do
       end
 
       it "returns 404 if object does not exist" do
-        get "/objects/0/edit"
+        get "/objects/000/edit"
         expect(response.status_code).to eq(404)
       end
     end
@@ -538,7 +538,7 @@ Spectator.describe ObjectsController do
       end
 
       it "returns 404 if object does not exist" do
-        post "/objects/0"
+        post "/objects/000"
         expect(response.status_code).to eq(404)
       end
     end
@@ -581,7 +581,7 @@ Spectator.describe ObjectsController do
       end
 
       it "returns 404 if object does not exist" do
-        delete "/objects/0"
+        delete "/objects/000"
         expect(response.status_code).to eq(404)
       end
     end
@@ -936,6 +936,62 @@ Spectator.describe ObjectsController do
 
       it "returns 404 if object does not exist" do
         post "/remote/objects/0/unapprove"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/:id/block" do
+    before_each { remote.assign(blocked_at: nil).save }
+
+    it "returns 401" do
+      post "/remote/objects/0/block"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/remote/objects/#{remote.id}/block"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "blocks the object" do
+        expect{post "/remote/objects/#{remote.id}/block"}.
+          to change{ActivityPub::Object.find(remote.id).blocked?}
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/block"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/:id/unblock" do
+    before_each { remote.assign(blocked_at: Time.utc).save }
+
+    it "returns 401" do
+      post "/remote/objects/0/unblock"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/remote/objects/#{remote.id}/unblock"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "unblocks the object" do
+        expect{post "/remote/objects/#{remote.id}/unblock"}.
+          to change{ActivityPub::Object.find(remote.id).blocked?}
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/unblock"
         expect(response.status_code).to eq(404)
       end
     end

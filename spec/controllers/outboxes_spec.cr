@@ -9,8 +9,8 @@ Spectator.describe RelationshipsController do
   setup_spec
 
   describe "POST /actors/:username/outbox" do
-    let(actor) { register(with_keys: true).actor }
-    let(other) { register(with_keys: true).actor }
+    let(actor) { register.actor }
+    let(other) { register.actor }
 
     let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"} }
 

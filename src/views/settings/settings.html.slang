@@ -1,6 +1,6 @@
 - content_for "head" do
   script src="/dist/settings.bundle.js"
-== render "src/views/partials/actor-large.html.slang"
+== render "src/views/partials/actor-panel.html.slang"
 h1 User Settings
 == form_tag(account, "/settings/actor") do
   == error_messages(account)
@@ -11,7 +11,6 @@ h1 User Settings
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
   input.ui.primary.button type="submit" value="Update"
 h2 Delete Account!
-form.ui.form method="POST" action="/settings/terminate"
 == form_tag(nil, "/settings/terminate") do
   input.ui.dangerous.button type="submit" value="Delete Account" data-modal="terminate"
 .ui.basic.tiny.terminate.modal

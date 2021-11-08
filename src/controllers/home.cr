@@ -48,10 +48,6 @@ class HomeController
       account.actor = actor
 
       if account.valid?
-        keypair = OpenSSL::RSA.generate(2048, 17)
-        actor.pem_public_key = keypair.public_key.to_pem
-        actor.pem_private_key = keypair.to_pem
-
         account.save
 
         session = Session.new(account).save

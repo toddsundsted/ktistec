@@ -36,11 +36,31 @@ module Ktistec::ViewHelper
     extend ClassMethods
   end
 
+  ## Parameter coercion
+
+  macro id_param(env, type = :url, name = "id")
+    begin
+      env.params.{{type.id}}[{{name.id.stringify}}].to_i64
+    rescue ArgumentError
+      bad_request
+    end
+  end
+
+  macro iri_param(env, path = nil, type = :url, name = "id")
+    begin
+      Base64.decode(%id = env.params.{{type.id}}[{{name.id.stringify}}])
+      %path = {{path}} || {{env}}.request.path.split("/")[0..-2].join("/")
+      "#{host}#{%path}/#{%id}"
+    rescue Base64::Error
+      bad_request
+    end
+  end
+
   ## HTML helpers
 
   # Posts an activity to an outbox.
   #
-  macro activity_button(arg1, arg2, arg3, type = nil, method = "POST", public = true, form_class = "ui form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
+  macro activity_button(arg1, arg2, arg3, type = nil, method = "POST", public = true, form_class = "ui inline form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
     {% if block %}
       {% action = arg1 ; object = arg2 ; type = arg3 %}
       %block =
@@ -50,6 +70,17 @@ module Ktistec::ViewHelper
     {% else %}
       {% action = arg2 ; object = arg3 ; text = arg1 %}
       %block = {{text}}
+    {% end %}
+    {% if method == "DELETE" %}
+      {% method = "POST" %}
+      %input = %q|<input type="hidden" name="_method" value="delete">|
+    {% else %}
+      %input = ""
+    {% end %}
+    {% if csrf && method != "GET" %}
+     %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
+    {% else %}
+      %csrf = ""
     {% end %}
     %form_attrs = [
       %Q|class="#{{{form_class}}}"|,
@@ -71,10 +102,63 @@ module Ktistec::ViewHelper
     ]
     <<-HTML
     <form #{%form_attrs.join(" ")}>\
-    <input type="hidden" name="authenticity_token" value="#{{{csrf}}}">\
+    #{%csrf}\
+    #{%input}\
     <input type="hidden" name="object" value="#{{{object}}}">\
     <input type="hidden" name="type" value="#{{{type || text}}}">\
     <input type="hidden" name="public" value="#{{{public}} ? 1 : nil}">\
+    <button #{%button_attrs.join(" ")} type="submit">\
+    #{%block}\
+    </button>\
+    </form>
+    HTML
+  end
+
+  # General purpose form-powered button.
+  #
+  macro form_button(arg1, action = nil, method = "POST", form_class = "ui inline form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
+    {% if block %}
+      {% action = arg1 %}
+      %block =
+        begin
+          {{block.body}}
+        end
+    {% else %}
+      %block = {{arg1}}
+    {% end %}
+    {% if method == "DELETE" %}
+      {% method = "POST" %}
+      %input = %q|<input type="hidden" name="_method" value="delete">|
+    {% else %}
+      %input = ""
+    {% end %}
+    {% if csrf && method != "GET" %}
+     %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
+    {% else %}
+      %csrf = ""
+    {% end %}
+    %form_attrs = [
+      %Q|class="#{{{form_class}}}"|,
+      %Q|action="#{{{action}}}"|,
+      %Q|method="#{{{method}}}"|,
+      {% if form_data %}
+        {% for key, value in form_data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
+    %button_attrs = [
+      %Q|class="#{{{button_class}}}"|,
+      {% if button_data %}
+        {% for key, value in button_data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
+    <<-HTML
+    <form #{%form_attrs.join(" ")}>\
+    #{%csrf}\
+    #{%input}\
     <button #{%button_attrs.join(" ")} type="submit">\
     #{%block}\
     </button>\

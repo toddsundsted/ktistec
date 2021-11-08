@@ -32,43 +32,48 @@ crystal:
           a.user> data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name
           | posted
         a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
-  - if attachments && (attachment = attachments.shift?)
-    - if attachment.image?
-      img.ui.extra.attachment.image src=attachment.url
-    - unless attachments.empty?
-      .extra.images
-        - attachments.each do |attachment|
-          - if attachment.image?
-            img.ui.attachment.image src=attachment.url
-  .extra.text
-    == s object.content
-  - if with_detail && account
-    - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
-      .extra.detail
-        - activities.each do |activity|
-          - if activity.responds_to?(:actor?) && activity.actor?
-            a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
-              - if (icon = activity.actor.icon)
-                img.ui.avatar.image data-actor-id=activity.actor.id src=icon
-              - else
-                i.user.icon
-              - case activity
-              - when ActivityPub::Activity::Announce
-                i.share.icon
-              - when ActivityPub::Activity::Like
-                i.star.icon
+  - if object.blocked?
+    .extra.text
+      em This object is blocked!
+  - else
+    - if attachments && (attachment = attachments.shift?)
+      - if attachment.image?
+        img.ui.extra.attachment.image src=attachment.url
+      - unless attachments.empty?
+        .extra.images
+          - attachments.each do |attachment|
+            - if attachment.image?
+              img.ui.attachment.image src=attachment.url
+    .extra.text
+      == s object.content
+    - if with_detail && account
+      - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
+        .extra.detail
+          - activities.each do |activity|
+            - if activity.responds_to?(:actor?) && activity.actor?
+              a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
+                - if (icon = activity.actor.icon)
+                  img.ui.avatar.image data-actor-id=activity.actor.id src=icon
+                - else
+                  i.user.icon
+                - case activity
+                - when ActivityPub::Activity::Announce
+                  i.share.icon
+                - when ActivityPub::Activity::Like
+                  i.star.icon
   .meta
-    - if account && object.draft?
+    - if account && object.blocked?
+      == form_button unblock_object_path(object), button_class: "ui button mini iconic" do
+        i.times.icon
+        | Unblock
+    - elsif account && object.draft?
       a data-turbo-frame="_top" href=edit_object_path(object)
         button.ui.mini.iconic.button
           i.edit.icon
           | Edit
-      form.ui.form method="POST" action=object_path(object)
-        input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
-        input type="hidden" name="_method" value="delete"
-        button.ui.mini.dangerous.iconic.button type="submit" data-modal="delete"
-          i.trash.icon
-          | Delete
+      == form_button object_path(object), method: "DELETE", button_class: "ui mini dangerous iconic button", button_data: {"modal" => "delete"} do
+        i.trash.icon
+        | Delete
     - elsif account
       - object.with_statistics!.with_replies_count!
       - if (c = object.replies_count) > 0 || object.in_reply_to?
@@ -80,16 +85,16 @@ crystal:
         button.ui.mini.iconic.button
           i.reply.icon
           = pluralize(c, "Reply")
-      - if (c = object.likes_count) > 0 && (to_undo = account.actor.find_like_for(object))
-        == activity_button(outbox_path(account), to_undo.iri, "Undo", button_class: "ui button mini blue iconic") do
+      - if (c = object.likes_count) > 0 && (like = account.actor.find_like_for(object))
+        == activity_button(outbox_path(account), like.iri, "Undo", button_class: "ui button mini blue iconic") do
           i.star.icon
           = pluralize(c, "Like")
       - else
         == activity_button(outbox_path(account), object.iri, "Like", button_class: "ui button mini iconic") do
           i.star.icon
           = pluralize(c, "Like")
-      - if (c = object.announces_count) > 0 && (to_undo = account.actor.find_announce_for(object))
-        == activity_button(outbox_path(account), to_undo.iri, "Undo", button_class: "ui button mini blue iconic") do
+      - if (c = object.announces_count) > 0 && (announce = account.actor.find_announce_for(object))
+        == activity_button(outbox_path(account), announce.iri, "Undo", button_class: "ui button mini blue iconic") do
           i.share.icon
           = pluralize(c, "Share")
       - else
@@ -117,6 +122,10 @@ crystal:
         == activity_button(outbox_path(account), object.iri, "Delete", button_class: "ui button mini dangerous iconic", button_data: {"modal": "delete"}) do
           i.trash.icon
           | Delete
+      - elsif announce.nil? && like.nil?
+        == form_button block_object_path(object), button_class: "ui button mini dangerous iconic", button_data: {"modal": "block.object"} do
+          i.times.icon
+          | Block
     - else
       - object.with_statistics!.with_replies_count!(approved_by: object.attributed_to)
       - if (c = object.replies_count) > 0 || object.in_reply_to?.try(&.approved_by?(object.attributed_to))

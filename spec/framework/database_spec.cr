@@ -1,9 +1,9 @@
 require "../../src/framework/database"
 
-require "../spec_helper/base"
+require "../spec_helper/model"
 
 class TestMigraton
-  include Ktistec::Database::Migration
+  extend Ktistec::Database::Migration
 
   def initialize(name)
     up(name) {}
@@ -57,6 +57,60 @@ Spectator.describe Ktistec::Database do
       expect(described_class.all_applied_versions).to have(999999)
       expect(described_class.do_operation(:revert, 999999)).to match(/reverted/)
       expect(described_class.all_pending_versions).to have(999999)
+    end
+  end
+end
+
+Spectator.describe Ktistec::Database::Migration do
+  setup_spec
+
+  subject { TestMigraton }
+
+  before_each do
+    Ktistec.database.exec <<-STR
+    CREATE TABLE foobars (
+    id integer PRIMARY KEY AUTOINCREMENT,
+    name varchar(244) NOT NULL DEFAULT "",
+    value integer
+    )
+    STR
+    Ktistec.database.exec <<-STR
+    CREATE UNIQUE INDEX idx_foobars_name
+    ON foobars (name ASC)
+    STR
+    Ktistec.database.exec %q|INSERT INTO foobars VALUES (1, "one", 1)|
+    Ktistec.database.exec %q|INSERT INTO foobars VALUES (2, "two", 2)|
+  end
+
+  describe ".columns" do
+    it "returns the table's columns" do
+      expect(subject.columns("foobars")).to contain_exactly(%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ""|, %q|value integer|)
+    end
+  end
+
+  describe ".indexes" do
+    it "returns the table's indexes" do
+      expect(subject.indexes("foobars")).to contain_exactly(%Q|CREATE UNIQUE INDEX idx_foobars_name\nON foobars (name ASC)|)
+    end
+  end
+
+  describe ".add_column" do
+    it "adds the column" do
+      expect{subject.add_column("foobars", "other", "text")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ""|, %q|value integer|, %q|other text|])
+    end
+  end
+
+  describe ".remove_column" do
+    it "removes the column" do
+      expect{subject.remove_column("foobars", "value")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ""|])
+    end
+
+    it "retains the data" do
+      expect{subject.remove_column("foobars", "value")}.not_to change{Ktistec.database.scalar("SELECT count(*) FROM foobars")}
+    end
+
+    it "retains the indexes" do
+      expect{subject.remove_column("foobars", "value")}.not_to change{subject.indexes("foobars")}
     end
   end
 end

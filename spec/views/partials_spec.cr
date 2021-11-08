@@ -13,19 +13,14 @@ Spectator.describe "partials" do
   include Ktistec::ViewHelper::ClassMethods
 
   describe "collection.json.ecr" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/collection#{query}"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
-
     let(collection) do
       Ktistec::Util::PaginatedArray{
         Factory.build(:object, iri: "foo"),
         Factory.build(:object, iri: "bar")
       }
     end
+
+    let(env) { env_factory("GET", "/collection#{query}") }
 
     subject { JSON.parse(render "./src/views/partials/collection.json.ecr") }
 
@@ -122,27 +117,30 @@ Spectator.describe "partials" do
     )
   end
 
-  describe "actor-large.html.slang" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/actor"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
-
+  describe "actor-panel.html.slang" do
     let_create(:actor)
+
+    let(env) { env_factory("GET", "/actor") }
 
     subject do
       begin
-        XML.parse_html(render "./src/views/partials/actor-large.html.slang")
+        XML.parse_html(render "./src/views/partials/actor-panel.html.slang")
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
     end
 
     context "if anonymous" do
-      it "does not render a form" do
-        expect(subject.xpath_nodes("//form")).to be_empty
+      it "does not render buttons" do
+        expect(subject.xpath_nodes("//button")).to be_empty
+      end
+
+      context "and actor is local" do
+        before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
+
+        it "renders a button to remote follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+        end
       end
     end
 
@@ -154,8 +152,8 @@ Spectator.describe "partials" do
       context "if account actor is actor" do
         let(actor) { account.actor }
 
-        it "does not render a form" do
-          expect(subject.xpath_nodes("//form")).to be_empty
+        it "does not render buttons" do
+          expect(subject.xpath_nodes("//button")).to be_empty
         end
       end
 
@@ -163,44 +161,67 @@ Spectator.describe "partials" do
         follow(account.actor, actor)
 
         it "renders a button to unfollow" do
-          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
+        end
+
+        it "does not render a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Block")
         end
       end
 
       it "renders a button to follow" do
-        expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+        expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+      end
+
+      context "if actor is blocked" do
+        before_each { actor.block }
+
+        it "renders a button to unblock" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unblock")
+        end
+
+        it "does not render a button to follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Follow")
+        end
+
+        it "renders a blocked message segment" do
+          expect(subject.xpath_nodes("//div[contains(@class,'segment')][contains(@class,'blocked')]")).not_to be_empty
+        end
+      end
+
+      it "does not render a blocked message segment" do
+        expect(subject.xpath_nodes("//div[contains(@class,'segment')][contains(@class,'blocked')]")).to be_empty
+      end
+
+      it "renders a button to block" do
+        expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
       end
     end
   end
 
-  describe "actor-small.html.slang" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/actors/foo_bar"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
-
+  describe "actor-card.html.slang" do
     let_create(:actor)
+
+    let(env) { env_factory("GET", "/actors/foo_bar") }
 
     subject do
       begin
-        XML.parse_html(render "./src/views/partials/actor-small.html.slang")
+        XML.parse_html(render "./src/views/partials/actor-card.html.slang")
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
     end
 
     context "if anonymous" do
-      it "does not render a form" do
-        expect(subject.xpath_nodes("//form")).to be_empty
+      it "does not render buttons" do
+        expect(subject.xpath_nodes("//buttons")).to be_empty
       end
 
       context "and actor is local" do
         before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
 
-        it "renders a link to remote follow" do
-          expect(subject.xpath_string("string(//form//input[@type='submit']/@value)")).to eq("Follow")
+        it "renders a button to remote follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
         end
       end
     end
@@ -213,8 +234,8 @@ Spectator.describe "partials" do
       context "if account actor is actor" do
         let(actor) { account.actor }
 
-        it "does not render a form" do
-          expect(subject.xpath_nodes("//form")).to be_empty
+        it "does not render buttons" do
+          expect(subject.xpath_nodes("//button")).to be_empty
         end
       end
 
@@ -223,25 +244,18 @@ Spectator.describe "partials" do
       # those actors, so don't present accept/reject actions.
 
       context "and on a page of actors the actor is following" do
-        let(env) do
-          HTTP::Server::Context.new(
-            HTTP::Request.new("GET", "/actors/foo_bar/following"),
-            HTTP::Server::Response.new(IO::Memory.new)
-          )
-        end
-
-        follow(actor, account.actor, confirmed: false)
+        let(env) { env_factory("GET", "/actors/foo_bar/following") }
 
         context "if already following" do
           follow(account.actor, actor)
 
           it "renders a button to unfollow" do
-            expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
           end
         end
 
         it "renders a button to follow" do
-          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
         end
       end
 
@@ -250,72 +264,83 @@ Spectator.describe "partials" do
       context "having not accepted or rejected a follow" do
         follow(actor, account.actor, confirmed: false)
 
-        context "but already following" do
+        context "if already following" do
           follow(account.actor, actor)
 
           it "renders a button to accept" do
-            expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Accept")
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Accept")
           end
 
           it "renders a button to reject" do
-            expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Reject")
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject")
+          end
+
+          it "renders a button to block" do
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
           end
         end
 
         it "renders a button to accept" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Accept")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Accept")
         end
 
         it "renders a button to reject" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Reject")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject")
+        end
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
         end
       end
 
       context "having accepted or rejected a follow" do
         follow(actor, account.actor, confirmed: true)
 
-        context "and already following" do
+        context "if already following" do
           follow(account.actor, actor)
 
           it "renders a button to unfollow" do
-            expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
           end
         end
 
         it "renders a button to follow" do
-          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+        end
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
         end
       end
 
-      context "when already following" do
+      context "if already following" do
         follow(account.actor, actor)
 
         it "renders a button to unfollow" do
-          expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Unfollow")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
         end
       end
 
       it "renders a button to follow" do
-        expect(subject.xpath_string("string(//form//button[@type='submit']/text())")).to eq("Follow")
+        expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+      end
+
+      it "renders a button to block" do
+        expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
       end
     end
   end
 
   describe "object.html.slang" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/object"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
-
     let(activity) { nil }
 
     let(for_thread) { nil }
 
+    let(env) { env_factory("GET", "/object") }
+
     subject do
       begin
-        XML.parse_html(object_partial(env, object, actor, actor, activity: activity, for_thread: for_thread))
+        XML.parse_html(object_partial(env, object, activity: activity, for_thread: for_thread))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -324,17 +349,17 @@ Spectator.describe "partials" do
     let(account) { register }
     let(actor) { account.actor }
 
-    let_create!(:object, attributed_to: actor)
+    let_create!(:object, attributed_to: actor, published: Time.utc)
     let_build(:object, named: :original)
 
-    it "does not render a link to the threaded conversation" do
+    it "does not render a button to the threaded conversation" do
       object.assign(in_reply_to: original, attributed_to: actor).save
-      expect(subject.xpath_nodes("//a/button/text()")).not_to have("Thread")
+      expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
     end
 
-    it "does not render a link to the threaded conversation" do
+    it "does not render a button to the threaded conversation" do
       original.assign(in_reply_to: object, attributed_to: actor).save
-      expect(subject.xpath_nodes("//a/button/text()")).not_to have("Thread")
+      expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
     end
 
     context "given an associated activity" do
@@ -358,30 +383,31 @@ Spectator.describe "partials" do
         actor.approve(original.save)
       end
 
-      it "renders a link to the threaded conversation" do
+      it "renders a button to the threaded conversation" do
         object.assign(in_reply_to: original, attributed_to: actor).save
-        expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
+        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
       end
 
-      it "renders a link to the threaded conversation" do
+      it "renders a button to the threaded conversation" do
         original.assign(in_reply_to: object, attributed_to: actor).save
-        expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
+        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
       end
     end
 
     context "if authenticated" do
       before_each { env.account = account }
 
-      context "for approvals" do
-        before_each { object.assign(published: Time.utc).save }
+      it "does not render a button to block" do
+        expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
+      end
 
+      it "does not render a button to unblock" do
+        expect(subject.xpath_nodes("//button/text()")).not_to have("Unblock")
+      end
+
+      context "for approvals" do
         context "on a page of threaded replies" do
-          let(env) do
-            HTTP::Server::Context.new(
-              HTTP::Request.new("GET", "/thread"),
-              HTTP::Server::Response.new(IO::Memory.new)
-            )
-          end
+          let(env) { env_factory("GET", "/thread") }
 
           it "does not render a checkbox to approve" do
             actor.unapprove(object)
@@ -420,23 +446,23 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_true }
 
         it "does not render a button to reply" do
-          expect(subject.xpath_nodes("//a/button/text()")).not_to have("Reply")
+          expect(subject.xpath_nodes("//button/text()")).not_to have("Reply")
         end
 
         it "does not render a button to like" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).not_to have("Like")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Like")
         end
 
         it "does not render a button to share" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).not_to have("Share")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Share")
         end
 
         it "renders a button to delete" do
-          expect(subject.xpath_nodes("//form//button[@type='submit']/text()")).to have("Delete")
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Delete")
         end
 
         it "renders a button to edit" do
-          expect(subject.xpath_nodes("//a/button/text()")).to have("Edit")
+          expect(subject.xpath_nodes("//button/text()")).to have("Edit")
         end
       end
 
@@ -445,33 +471,70 @@ Spectator.describe "partials" do
 
         pre_condition { expect(object.draft?).to be_false }
 
-        it "does not render a link to the threaded conversation" do
-          expect(subject.xpath_nodes("//a/button/text()")).not_to have("Thread")
+        it "does not render a button to the threaded conversation" do
+          expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
         end
 
-        it "renders a link to the threaded conversation" do
+        it "renders a button to the threaded conversation" do
           object.assign(in_reply_to: original, attributed_to: account.actor).save
-          expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
+          expect(subject.xpath_nodes("//button/text()")).to have("Thread")
         end
 
-        it "renders a link to the threaded conversation" do
+        it "renders a button to the threaded conversation" do
           original.assign(in_reply_to: object, attributed_to: account.actor).save
-          expect(subject.xpath_nodes("//a/button/text()")).to have("Thread")
+          expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+        end
+      end
+
+      context "and is remote" do
+        let_create!(:object, published: Time.utc)
+
+        pre_condition { expect(object.local?).to be_false }
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button/text()")).to have("Block")
+        end
+
+        it "does not render a button to unblock" do
+          expect(subject.xpath_nodes("//button/text()")).not_to have("Unblock")
+        end
+
+        context "if object is blocked" do
+          before_each { object.block }
+
+          it "does not render a button to block" do
+            expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
+          end
+
+          it "renders a button to unblock" do
+            expect(subject.xpath_nodes("//button/text()")).to have("Unblock")
+          end
+        end
+
+        context "and object is announced" do
+          let_create!(:announce, actor: actor, object: object)
+
+          it "does not render a button to block" do
+            expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
+          end
+        end
+
+        context "and object is liked" do
+          let_create!(:like, actor: actor, object: object)
+
+          it "does not render a button to block" do
+            expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
+          end
         end
       end
     end
   end
 
   describe "editor.html.slang" do
+    let(env) { env_factory("GET", "/editor") }
+
     subject do
       XML.parse_html(render "./src/views/partials/editor.html.slang")
-    end
-
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/editor"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
     end
 
     let_build(:object, local: true)
@@ -487,17 +550,17 @@ Spectator.describe "partials" do
         end
 
         it "does not render an input with the object iri" do
-          expect(subject.xpath_nodes("//form//input[@name='object']")).
+          expect(subject.xpath_nodes("//input[@name='object']")).
             to be_empty
         end
 
-        it "includes a button to save draft" do
-          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+        it "includes an input to save draft" do
+          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
             not_to be_empty
         end
 
-        it "does not include a button to return to drafts" do
-          expect(subject.xpath_nodes("//form//a[text()='To Drafts']")).
+        it "does not include a link to return to drafts" do
+          expect(subject.xpath_nodes("//a[text()='To Drafts']")).
             to be_empty
         end
       end
@@ -512,7 +575,7 @@ Spectator.describe "partials" do
         end
 
         it "renders an input with the object iri" do
-          expect(subject.xpath_nodes("//form//input[@name='object']")).
+          expect(subject.xpath_nodes("//input[@name='object']")).
             not_to be_empty
         end
       end
@@ -522,18 +585,18 @@ Spectator.describe "partials" do
 
         pre_condition { expect(object.draft?).to be_true }
 
-        it "includes a button to publish post" do
-          expect(subject.xpath_nodes("//form//input[@value='Publish Post']")).
+        it "includes an input to publish post" do
+          expect(subject.xpath_nodes("//input[@value='Publish Post']")).
             not_to be_empty
         end
 
-        it "includes a button to save draft" do
-          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+        it "includes an input to save draft" do
+          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
             not_to be_empty
         end
 
-        it "includes a button to return to drafts" do
-          expect(subject.xpath_nodes("//form//a[text()='To Drafts']")).
+        it "includes a link to return to drafts" do
+          expect(subject.xpath_nodes("//a[text()='To Drafts']")).
             not_to be_empty
         end
       end
@@ -543,18 +606,18 @@ Spectator.describe "partials" do
 
         pre_condition { expect(object.draft?).to be_false }
 
-        it "includes a button to update post" do
-          expect(subject.xpath_nodes("//form//input[@value='Update Post']")).
+        it "includes an input to update post" do
+          expect(subject.xpath_nodes("//input[@value='Update Post']")).
             not_to be_empty
         end
 
-        it "does not include a button to save draft" do
-          expect(subject.xpath_nodes("//form//input[@value='Save Draft']")).
+        it "does not include an input to save draft" do
+          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
             to be_empty
         end
 
-        it "does not include a button to return to drafts" do
-          expect(subject.xpath_nodes("//form//a[text()='To Drafts']")).
+        it "does not include a link to return to drafts" do
+          expect(subject.xpath_nodes("//a[text()='To Drafts']")).
             to be_empty
         end
       end
@@ -570,12 +633,7 @@ Spectator.describe "partials" do
   end
 
   describe "reply.html.slang" do
-    let(env) do
-      HTTP::Server::Context.new(
-        HTTP::Request.new("GET", "/object"),
-        HTTP::Server::Response.new(IO::Memory.new)
-      )
-    end
+    let(env) { env_factory("GET", "/object") }
 
     subject do
       begin
@@ -599,7 +657,7 @@ Spectator.describe "partials" do
       let!(object) { object2.save }
 
       it "prepopulates editor with mentions" do
-        expect(subject.xpath_nodes("//form//input[@name='content']/@value").first).
+        expect(subject.xpath_nodes("//input[@name='content']/@value").first).
           to eq("@#{actor2.account_uri} @#{actor1.account_uri} ")
       end
     end

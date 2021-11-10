@@ -30,7 +30,8 @@ Spectator.describe ObjectsController do
   let_create(
     :object, named: :remote,
     attributed_to: author,
-    published: Time.utc
+    published: Time.utc,
+    visible: false
   )
   let_create(
     :object, named: :draft,
@@ -631,6 +632,15 @@ Spectator.describe ObjectsController do
         expect(response.status_code).to eq(404)
       end
 
+      context "if remote object is visible" do
+        before_each { remote.assign(visible: true).save }
+
+        it "succeeds" do
+          get "/remote/objects/#{remote.id}"
+          expect(response.status_code).to eq(200)
+        end
+      end
+
       it "returns 404 if object does not exist" do
         get "/remote/objects/0"
         expect(response.status_code).to eq(404)
@@ -700,6 +710,15 @@ Spectator.describe ObjectsController do
       it "returns 404 if object is remote" do
         get "/remote/objects/#{remote.id}/thread"
         expect(response.status_code).to eq(404)
+      end
+
+      context "if remote object is visible" do
+        before_each { remote.assign(visible: true).save }
+
+        it "succeeds" do
+          get "/remote/objects/#{remote.id}"
+          expect(response.status_code).to eq(200)
+        end
       end
 
       it "returns 404 if object does not exist" do
@@ -794,6 +813,15 @@ Spectator.describe ObjectsController do
       it "returns 404 if object is remote" do
         get "/remote/objects/#{remote.id}/reply"
         expect(response.status_code).to eq(404)
+      end
+
+      context "if remote object is visible" do
+        before_each { remote.assign(visible: true).save }
+
+        it "succeeds" do
+          get "/remote/objects/#{remote.id}"
+          expect(response.status_code).to eq(200)
+        end
       end
 
       it "returns 404 if object does not exist" do

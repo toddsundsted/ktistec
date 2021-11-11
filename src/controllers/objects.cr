@@ -6,19 +6,6 @@ class ObjectsController
 
   skip_auth ["/objects/:id", "/objects/:id/thread"], GET
 
-  get "/actors/:username/drafts" do |env|
-    unless (account = get_account(env))
-      not_found
-    end
-    unless env.account == account
-      forbidden
-    end
-
-    drafts = account.actor.drafts(*pagination_params(env))
-
-    ok "objects/index"
-  end
-
   post "/objects" do |env|
     object = ActivityPub::Object::Note.new(
       iri: "#{host}/objects/#{id}",

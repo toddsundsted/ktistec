@@ -88,6 +88,21 @@ class ActorsController
     ok "actors/notifications"
   end
 
+  get "/actors/:username/drafts" do |env|
+    username = env.params.url["username"]
+
+    unless (account = Account.find?(username: username))
+      not_found
+    end
+    unless account == env.account
+      forbidden
+    end
+
+    drafts = account.actor.drafts(*pagination_params(env))
+
+    ok "objects/index"
+  end
+
   get "/remote/actors/:id" do |env|
     unless (actor = ActivityPub::Actor.find?(id_param(env)))
       not_found

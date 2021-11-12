@@ -241,10 +241,13 @@ Spectator.describe "partials" do
 
       # on a page of the actors the actor is following, the actor
       # expects to focus on actions regarding their decision to follow
-      # those actors, so don't present accept/reject actions.
+      # those actors, so don't present accept/reject actions, even if
+      # the other actor is a follower.
 
       context "and on a page of actors the actor is following" do
         let(env) { env_factory("GET", "/actors/foo_bar/following") }
+
+        follow(actor, account.actor, confirmed: false)
 
         context "if already following" do
           follow(account.actor, actor)
@@ -259,12 +262,14 @@ Spectator.describe "partials" do
         end
       end
 
-      # otherwise...
+      # otherwise, on a page of the actors who are followers of the actor...
 
       context "having not accepted or rejected a follow" do
+        let(env) { env_factory("GET", "/actors/foo_bar/followers") }
+
         follow(actor, account.actor, confirmed: false)
 
-        context "if already following" do
+        context "if following" do
           follow(account.actor, actor)
 
           it "renders a button to accept" do
@@ -294,13 +299,19 @@ Spectator.describe "partials" do
       end
 
       context "having accepted or rejected a follow" do
+        let(env) { env_factory("GET", "/actors/foo_bar/followers") }
+
         follow(actor, account.actor, confirmed: true)
 
-        context "if already following" do
+        context "if following" do
           follow(account.actor, actor)
 
           it "renders a button to unfollow" do
             expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
+          end
+
+          it "does not render a button to block" do
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Block")
           end
         end
 
@@ -313,11 +324,15 @@ Spectator.describe "partials" do
         end
       end
 
-      context "if already following" do
+      context "if following" do
         follow(account.actor, actor)
 
         it "renders a button to unfollow" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
+        end
+
+        it "does not render a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Block")
         end
       end
 

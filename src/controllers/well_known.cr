@@ -34,6 +34,7 @@ class WellKnownController
               }]
     }
     env.response.content_type = "application/jrd+json"
+    env.response.headers.add("Access-Control-Allow-Origin", "*")
     message.to_json
   rescue Ktistec::Model::NotFound
     not_found
@@ -47,6 +48,7 @@ class WellKnownController
               }]
     }
     env.response.content_type = "application/jrd+json"
+    env.response.headers.add("Access-Control-Allow-Origin", "*")
     message.to_json
   end
 
@@ -77,6 +79,7 @@ class WellKnownController
       }
     }
     env.response.content_type = "application/jrd+json"
+    env.response.headers.add("Access-Control-Allow-Origin", "*")
     message.to_json
   end
 end

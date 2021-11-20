@@ -44,7 +44,11 @@
   },
   <%- end -%>
   <%- if (urls = actor.urls) -%>
+  <%- if urls.size > 1 -%>
   "url":<%= urls.to_json %>,
+  <%- elsif urls.size > 0 -%>
+  "url":<%= urls.first.inspect %>,
+  <%- end -%>
   <%- end -%>
   "type":<%= actor.type.split("::").last.inspect %>,
   "id":<%= actor.iri.inspect %>

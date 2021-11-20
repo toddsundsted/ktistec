@@ -181,6 +181,15 @@ Spectator.describe ActivityPub::Actor do
       actor = described_class.from_json_ld(json, include_key: true).save
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
     end
+
+    context "given an array of URLs" do
+      let(json) { super.gsub(/"url":"url link"/, %q|"url":["url one","url two"]|) }
+
+      it "parses the array of URLs" do
+        actor = described_class.from_json_ld(json)
+        expect(actor.urls).to eq(["url one", "url two"])
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -204,12 +213,34 @@ Spectator.describe ActivityPub::Actor do
       actor = described_class.new.from_json_ld(json, include_key: true).save
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
     end
+
+    context "given an array of URLs" do
+      let(json) { super.gsub(/"url":"url link"/, %q|"url":["url one","url two"]|) }
+
+      it "parses the array of URLs" do
+        actor = described_class.new.from_json_ld(json)
+        expect(actor.urls).to eq(["url one", "url two"])
+      end
+    end
   end
 
   describe "#to_json_ld" do
+    let(actor) { described_class.from_json_ld(json) }
+
     it "renders an identical instance" do
-      actor = described_class.from_json_ld(json)
       expect(described_class.from_json_ld(actor.to_json_ld)).to eq(actor)
+    end
+
+    it "renders the URL" do
+      expect(actor.to_json_ld).to match(/"url":"url link"/)
+    end
+
+    context "given an array of URLs" do
+      before_each { actor.assign(urls: ["url one", "url two"]) }
+
+      it "renders the array of URLs" do
+        expect(actor.to_json_ld).to match(/"url":\["url one","url two"\]/)
+      end
     end
   end
 

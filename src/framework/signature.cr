@@ -12,10 +12,10 @@ module Ktistec
 
     def sign(key_pair, url, body = nil, content_type = nil, method = :post, time = Time.utc)
       key = key_pair.private_key.not_nil!
-      url = URI.parse(url)
+      url = URI.parse(url).normalize
       date = Time::Format::HTTP_DATE.format(time)
       headers_string = "(request-target) host date"
-      signature_string = "(request-target): #{method} #{url.path}\nhost: #{url.host}\ndate: #{date}"
+      signature_string = "(request-target): #{method} #{url.path}\nhost: #{url.authority}\ndate: #{date}"
       headers = HTTP::Headers{"Date" => date}
       if body
         digest = "SHA-256=" + Base64.strict_encode(OpenSSL::Digest.new("SHA256").update(body).final)
@@ -46,7 +46,7 @@ module Ktistec
       unless (parameters.keys.sort & ["signature", "headers"]).size == 2
         raise Error.new("malformed signature")
       end
-      url = URI.parse(url)
+      url = URI.parse(url).normalize
       time = headers["Date"]
       split_headers_string = parameters["headers"].split
       unless "(request-target)".in?(split_headers_string)
@@ -67,7 +67,7 @@ module Ktistec
           when "(request-target)"
             "#{header}: #{method} #{url.path}"
           when "host"
-            "#{header}: #{url.host}"
+            "#{header}: #{url.authority}"
           when "date"
             "#{header}: #{time}"
           when "content-type"

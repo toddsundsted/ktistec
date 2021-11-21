@@ -64,6 +64,24 @@ Spectator.describe Ktistec::Signature do
         to raise_error(Ktistec::Signature::Error, /invalid signature/)
     end
 
+    it "raises an error if the port doesn't match" do
+      expect{described_class.verify(key_pair, "https://remote:8443/inbox", headers, "body")}.
+        to raise_error(Ktistec::Signature::Error, /invalid signature/)
+    end
+
+    context "given a non-standard port" do
+      let(headers) { described_class.sign(key_pair, "https://remote:8443/inbox", body: "body") }
+
+      it "raises an error if the port doesn't match" do
+        expect{described_class.verify(key_pair, "https://remote/inbox", headers, "body")}.
+          to raise_error(Ktistec::Signature::Error, /invalid signature/)
+      end
+
+      it "verifies signature" do
+        expect(described_class.verify(key_pair, "https://remote:8443/inbox", headers, "body")).to be_true
+      end
+    end
+
     it "raises an error if the request target isn't signed" do
       headers["Signature"] = headers["Signature"].gsub("(request-target)", "")
       expect{described_class.verify(key_pair, "https://remote/inbox", headers)}.

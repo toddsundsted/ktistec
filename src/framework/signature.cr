@@ -29,7 +29,7 @@ module Ktistec
         headers["Content-Type"] = content_type
       end
       signature = Base64.strict_encode(key.sign(OpenSSL::Digest.new("SHA256"), signature_string))
-      signature = %Q<keyId="#{key_pair.iri}",signature="#{signature}",headers="#{headers_string}">
+      signature = %Q<keyId="#{key_pair.iri}",algorithm="rsa-sha256",signature="#{signature}",headers="#{headers_string}">
       headers["Signature"] = signature
       headers
     end

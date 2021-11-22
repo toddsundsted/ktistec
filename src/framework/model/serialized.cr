@@ -4,7 +4,7 @@ module Ktistec
   module Model
     module Serialized
       macro included
-        extend Ktistec::Model::Serialized::ClassMethods
+        extend ClassMethods
       end
 
       module ClassMethods
@@ -14,14 +14,18 @@ module Ktistec
 
         def dig_value?(json, *selector, &)
           if (value = json.dig?(*selector))
-            yield value
+            if (values = value.as_a?)
+              values.map { |v| yield v }.first
+            else
+              yield value
+            end
           end
         end
 
         def dig_values?(json, *selector, &)
           if (value = json.dig?(*selector))
-            if value.as_a?
-              value.as_a.map { |v| yield v }
+            if (values = value.as_a?)
+              values.map { |v| yield v }
             else
               [yield value]
             end.compact

@@ -1,4 +1,4 @@
-require "../model"
+require "../../../framework/model"
 
 module Ktistec
   module Model

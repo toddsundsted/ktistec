@@ -1,6 +1,6 @@
-require "../../../src/framework/model/serialized"
+require "../../../../src/models/activity_pub/mixins/serialized"
 
-require "../../spec_helper/base"
+require "../../../spec_helper/base"
 
 class SerializedModel
   include Ktistec::Model(Serialized)

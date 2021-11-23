@@ -1,8 +1,8 @@
 require "uri"
 
-require "../model"
-require "../open"
-require "../signature"
+require "../../../framework/model"
+require "../../../framework/open"
+require "../../../framework/signature"
 
 module Ktistec
   module Model

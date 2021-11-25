@@ -85,12 +85,8 @@ class Task
               receiver.iri
             elsif recipient
               unless (target = ActivityPub::Actor.find?(recipient))
-                headers = Ktistec::Signature.sign(receiver, recipient, method: :get).merge!(HTTP::Headers{"Accept" => "application/activity+json"})
-                Ktistec::Open.open?(recipient, headers) do |response|
-                  target = ActivityPub.from_json_ld?(response.body)
-                  if target.is_a?(ActivityPub::Collection) && target.iri == sender.followers
-                    receiver.iri
-                  end
+                if (target = ActivityPub::Collection.dereference?(receiver, recipient)) && target.iri == sender.followers
+                  receiver.iri
                 end
               end
             end

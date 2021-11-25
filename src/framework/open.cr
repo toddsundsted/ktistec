@@ -4,7 +4,7 @@ module Ktistec
   module Open
     extend self
 
-    def open(url, headers = HTTP::Headers{"Accept" => "application/activity+json"}, attempts = 10)
+    def open(url, headers = HTTP::Headers.new, attempts = 10, &)
       was = url
       attempts.times do
         response = HTTP::Client.get(url, headers)
@@ -30,18 +30,18 @@ module Ktistec
       raise Error.new(message)
     end
 
-    def open(url, headers = HTTP::Headers{"Accept" => "application/activity+json"}, attempts = 10)
+    def open(url, headers = HTTP::Headers.new, attempts = 10)
       open(url, headers, attempts) do |response|
         response
       end
     end
 
-    def open?(url, headers = HTTP::Headers{"Accept" => "application/activity+json"}, attempts = 10)
+    def open?(url, headers = HTTP::Headers.new, attempts = 10, &)
       yield open(url, headers, attempts)
     rescue Error
     end
 
-    def open?(url, headers = HTTP::Headers{"Accept" => "application/activity+json"}, attempts = 10)
+    def open?(url, headers = HTTP::Headers.new, attempts = 10)
       open?(url, headers, attempts) do |response|
         response
       end

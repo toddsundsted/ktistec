@@ -5,18 +5,26 @@ require "./ext/context"
 require "../views/view_helper"
 
 class HTTP::Server::Context
+  # Returns a true value if the request accepts, or otherwise
+  # indicates, any of the specified mime types.
+  #
+  # Sets the "Content-Type" header on the response to a compatible
+  # value as a side-effect.
+  #
   def accepts?(*mime_types)
     @accepts ||=
-      if self.request.headers["Accept"]?
-        self.request.headers["Accept"].split(",").map(&.split(";").first.strip)
-      elsif self.request.headers["Content-Type"]?
-        [self.request.headers["Content-Type"].split(";").first.strip]
+      if (accept = self.request.headers["Accept"]?)
+        accept.split(",").reduce(Hash(String, String).new) do |accepts, content_type|
+          accepts.merge({ content_type.split(";").first.strip => content_type })
+        end
+      elsif (content_type = self.request.headers["Content-Type"]?)
+        { content_type.split(";").first.strip => content_type }
       else
-        [] of String
+        {} of String => String
       end
     if accepts = @accepts
-      if (mime_type = mime_types.find(&.in?(accepts)))
-        self.response.content_type = mime_type
+      if (accept = accepts.find(&.first.in?(mime_types)))
+        self.response.content_type = accept.last
       end
     end
   end
@@ -192,7 +200,7 @@ module Ktistec
             end
           \{% end %}
           \{% if read_file?("#{basedir.id}/#{message.id}.json.ecr") %}
-            accepts?("application/activity+json", "application/json") # sets the content type as a side effect
+            accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
             halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.json.ecr"}}
           \{% end %}
         \{% else %}
@@ -203,7 +211,7 @@ module Ktistec
           if accepts?("text/plain")
             halt env, status_code: \{{code}} || {{code}}, response: (\{{message}} || {{message}}).downcase
           end
-          accepts?("application/activity+json", "application/json") # sets the content type as a side effect
+          accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
           halt env, status_code: \{{code}} || {{code}}, response: ({msg: (\{{message}} || {{message}}).downcase}.to_json)
         \{% end %}
       end

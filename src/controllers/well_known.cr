@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../framework/constants"
 
 class WellKnownController
   include Ktistec::Controller
@@ -23,7 +24,7 @@ class WellKnownController
       links: [{
                 rel: "self",
                 href: "#{host}/actors/#{$1}",
-                type: "application/activity+json"
+                type: Ktistec::Constants::ACTIVITY_STREAMS_CONTENT_TYPE
               }, {
                 rel: "http://webfinger.net/rel/profile-page",
                 href: "#{host}/@#{$1}",

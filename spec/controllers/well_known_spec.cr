@@ -43,7 +43,7 @@ Spectator.describe WellKnownController do
 
     it "returns reference to the actor document" do
       get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
-      message = {"rel" => "self", "href" => "https://test.test/actors/#{username}", "type" => "application/activity+json"}
+      message = {"rel" => "self", "href" => "https://test.test/actors/#{username}", "type" => %q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|}
       expect(JSON.parse(response.body)["links"].as_a).to contain(message)
     end
 

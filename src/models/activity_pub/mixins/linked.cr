@@ -3,6 +3,7 @@ require "uri"
 require "../../../framework/model"
 require "../../../framework/open"
 require "../../../framework/signature"
+require "../../../framework/constants"
 
 module Ktistec
   module Model
@@ -52,7 +53,7 @@ module Ktistec
             unless (instance = self.find?(iri)) && !ignore_cached
               unless iri.starts_with?(Ktistec.host)
                 headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
-                headers["Accept"] = "application/activity+json"
+                headers["Accept"] = Ktistec::Constants::ACTIVITY_STREAMS_CONTENT_TYPE
                 Ktistec::Open.open?(iri, headers) do |response|
                   instance = self.from_json_ld?(response.body)
                 end
@@ -76,7 +77,7 @@ module Ktistec
                           unless {{name}}_iri.starts_with?(Ktistec.host)
                             {% for union_type in method.body[1].id.split(" | ").map(&.id) %}
                               headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
-                              headers["Accept"] = "application/activity+json"
+                              headers["Accept"] = Ktistec::Constants::ACTIVITY_STREAMS_CONTENT_TYPE
                               Ktistec::Open.open?({{name}}_iri, headers) do |response|
                                 if ({{name}} = {{union_type}}.from_json_ld?(response.body))
                                   return self.{{name}} = {{name}}

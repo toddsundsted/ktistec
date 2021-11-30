@@ -752,7 +752,7 @@ module ActivityPub
       end
     end
 
-    def to_json_ld(recursive = false)
+    def to_json_ld(recursive = true)
       actor = self
       render "src/views/actors/actor.json.ecr"
     end

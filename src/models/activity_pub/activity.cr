@@ -49,7 +49,9 @@ module ActivityPub
       (published || created_at).in(timezone)
     end
 
-    def to_json_ld(recursive = false)
+    @@recursive = true
+
+    def to_json_ld(recursive = @@recursive)
       activity = self
       render "src/views/activities/activity.json.ecr"
     end

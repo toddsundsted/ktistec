@@ -547,7 +547,7 @@ module ActivityPub
       hashtags + mentions
     end
 
-    def to_json_ld(recursive = false)
+    def to_json_ld(recursive = true)
       object = self
       render "src/views/objects/object.json.ecr"
     end

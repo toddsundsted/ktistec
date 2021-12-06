@@ -172,11 +172,6 @@ Spectator.describe Ktistec::HTML do
         expect(described_class.enhance(content).content).to eq(%Q|<p><a href="https://bar.com/actors/foo" class="mention" rel="tag">@foo</a></p>|)
       end
 
-      it "replaces unmatched mentions with spans" do
-        content = %q|<div>@bar@foo.com</div>|
-        expect(described_class.enhance(content).content).to eq(%Q|<p><span class="mention">@bar@foo.com</span></p>|)
-      end
-
       it "preserves adjacent text" do
         content = %q|<div> @foo@bar.com </div>|
         expect(described_class.enhance(content).content).to eq(%Q|<p> <a href="https://bar.com/actors/foo" class="mention" rel="tag">@foo</a> </p>|)
@@ -191,6 +186,19 @@ Spectator.describe Ktistec::HTML do
         content = %q|<div>@foo@bar.com</div>|
         expect(described_class.enhance(content).mentions).
           to eq([Ktistec::HTML::Mention.new(name: "foo@bar.com", href: "https://bar.com/actors/foo")])
+      end
+
+      context "given a mention that doesn't match any actor" do
+        it "replaces unmatched mentions with spans" do
+          content = %q|<div>@bar@foo.com</div>|
+          expect(described_class.enhance(content).content).to eq(%Q|<p><span class="mention">@bar@foo.com</span></p>|)
+        end
+
+        it "doesn't return mentions" do
+          content = %q|<div>@bar@foo.com</div>|
+          expect(described_class.enhance(content).mentions).
+            to be_empty
+        end
       end
     end
 

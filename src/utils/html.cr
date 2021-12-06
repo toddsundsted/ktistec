@@ -73,11 +73,14 @@ module Ktistec
                   enhancements.hashtags << Hashtag.new(name: hashtag, href: "#{Ktistec.host}/tags/#{hashtag}")
                 else
                   mention = tag[1..]
-                  node = (actor = ActivityPub::Actor.match?(mention)) ?
-                    %Q|<a href="#{actor.iri}" class="mention" rel="tag">@#{actor.username}</a>| :
-                    %Q|<span class="mention">@#{mention}</span>|
-                  cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
-                  enhancements.mentions << Mention.new(name: mention, href: actor.try(&.iri))
+                  if (actor = ActivityPub::Actor.match?(mention))
+                    node = %Q|<a href="#{actor.iri}" class="mention" rel="tag">@#{actor.username}</a>|
+                    cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
+                    enhancements.mentions << Mention.new(name: mention, href: actor.iri)
+                  else
+                    node = %Q|<span class="mention">@#{mention}</span>|
+                    cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
+                  end
                 end
               end
             end

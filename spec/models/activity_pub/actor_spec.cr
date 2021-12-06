@@ -48,7 +48,7 @@ Spectator.describe ActivityPub::Actor do
   describe ".match?" do
     let!(actor) do
       described_class.new(
-        iri: "https://bar.com/actors/foo",
+        iri: "https://bar.com/actor",
         username: "foo",
         urls: ["https://bar.com/@foo"]
       ).save
@@ -60,6 +60,22 @@ Spectator.describe ActivityPub::Actor do
 
     it "returns nil on failed match" do
       expect(described_class.match?("")).to be_nil
+    end
+
+    context "given empty urls" do
+      before_each { actor.assign(iri: "https://bar.com/actors/foo", urls: [] of String).save }
+
+      it "matches on the iri" do
+        expect(described_class.match?("foo@bar.com")).to eq(actor)
+      end
+    end
+
+    context "given nil urls" do
+      before_each { actor.assign(iri: "https://bar.com/actors/foo", urls: nil).save }
+
+      it "matches on the iri" do
+        expect(described_class.match?("foo@bar.com")).to eq(actor)
+      end
     end
   end
 

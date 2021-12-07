@@ -13,6 +13,8 @@ Spectator.describe ActivityPub::Object do
 
   describe "#source=" do
     subject { described_class.new(iri: "https://test.test/objects/#{random_string}") }
+    let_create!(:actor, named: :foo, iri: "https://bar.com/foo", urls: ["https://bar.com/@foo"], username: "foo")
+    let_create!(:actor, named: :bar, iri: "https://foo.com/bar", urls: ["https://foo.com/@bar"], username: "bar")
     let(source) { ActivityPub::Object::Source.new("foobar #foobar @foo@bar.com", "text/html") }
 
     it "assigns content" do
@@ -48,8 +50,6 @@ Spectator.describe ActivityPub::Object do
     end
 
     context "addressing (to)" do
-      let_create!(:actor, named: :foo, iri: "https://bar.com/foo", urls: ["https://bar.com/@foo"], username: "foo")
-      let_create!(:actor, named: :bar, iri: "https://foo.com/bar", urls: ["https://foo.com/@bar"], username: "bar")
       let_create!(:mention, subject: subject, href: bar.iri, name: bar.username)
 
       it "replaces mentions" do

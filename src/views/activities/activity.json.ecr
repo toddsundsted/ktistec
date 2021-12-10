@@ -1,5 +1,5 @@
 {
-  "@context":"https://www.w3.org/ns/activitystreams",
+  "@context":["https://www.w3.org/ns/activitystreams"],
   <%- if (published = activity.published) -%>
   "published":<%= published.to_rfc3339(fraction_digits: 3).inspect %>,
   <%- end -%>

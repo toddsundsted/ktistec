@@ -47,7 +47,6 @@ module Ktistec
         raise Error.new("malformed signature")
       end
       url = URI.parse(url).normalize
-      time = headers["Date"]
       split_headers_string = parameters["headers"].split
       unless "(request-target)".in?(split_headers_string)
         raise Error.new("request target must be signed")
@@ -69,7 +68,7 @@ module Ktistec
           when "host"
             "#{header}: #{url.authority}"
           when "date"
-            "#{header}: #{time}"
+            "#{header}: #{headers["Date"]}"
           when "content-type"
             "#{header}: #{headers["Content-Type"]}"
           when "digest"
@@ -81,7 +80,7 @@ module Ktistec
         raise Error.new("invalid signature: signed by keyId=#{parameters["keyId"]}")
       end
       if "date".in?(split_headers_string)
-        time = Time::Format::HTTP_DATE.parse(time)
+        time = Time::Format::HTTP_DATE.parse(headers["Date"])
         unless time > 5.minutes.ago && time < 5.minutes.from_now
           raise Error.new("date out of range")
         end

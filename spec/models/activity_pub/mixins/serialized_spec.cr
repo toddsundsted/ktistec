@@ -82,6 +82,14 @@ Spectator.describe Ktistec::Model::Serialized do
       end
     end
 
+    context "given a link" do
+      let(json) { JSON.parse(%<{"foo":{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}}>) }
+
+      it "returns the identifier" do
+        expect(subject.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      end
+    end
+
     context "given an identifier" do
       let(json) { JSON.parse(%<{"foo":"https://test.test/bar"}>) }
 
@@ -92,6 +100,14 @@ Spectator.describe Ktistec::Model::Serialized do
 
     context "given an array of nested objects" do
       let(json) { JSON.parse(%<{"foo":[{"@id":"https://test.test/bar"}]}>) }
+
+      it "returns the first identifier" do
+        expect(subject.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      end
+    end
+
+    context "given an array of links" do
+      let(json) { JSON.parse(%<{"foo":[{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}]}>) }
 
       it "returns the first identifier" do
         expect(subject.dig_id?(json, "foo")).to eq("https://test.test/bar")
@@ -116,6 +132,14 @@ Spectator.describe Ktistec::Model::Serialized do
       end
     end
 
+    context "given a link" do
+      let(json) { JSON.parse(%<{"foo":{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}}>) }
+
+      it "returns the identifier as an array" do
+        expect(subject.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      end
+    end
+
     context "given an identifier" do
       let(json) { JSON.parse(%<{"foo":"https://test.test/bar"}>) }
 
@@ -126,6 +150,14 @@ Spectator.describe Ktistec::Model::Serialized do
 
     context "given an array of nested objects" do
       let(json) { JSON.parse(%<{"foo":[{"@id":"https://test.test/bar"}]}>) }
+
+      it "returns all the identifiers" do
+        expect(subject.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      end
+    end
+
+    context "given an array of links" do
+      let(json) { JSON.parse(%<{"foo":[{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}]}>) }
 
       it "returns all the identifiers" do
         expect(subject.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])

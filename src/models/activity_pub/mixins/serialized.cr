@@ -34,13 +34,25 @@ module Ktistec
 
         def dig_id?(json, *selector)
           dig_value?(json, *selector) do |value|
-            (value.dig?("@id") || value).try(&.as_s?)
+            dig_identifier(value).try(&.as_s?)
           end
         end
 
         def dig_ids?(json, *selector)
           dig_values?(json, *selector) do |value|
-            (value.dig?("@id") || value).try(&.as_s?)
+            dig_identifier(value).try(&.as_s?)
+          end
+        end
+
+        private def dig_identifier(json)
+          if (hash = json.as_h?)
+            if hash.dig?("@type") == "https://www.w3.org/ns/activitystreams#Link"
+              hash.dig?("https://www.w3.org/ns/activitystreams#href")
+            else
+              hash.dig?("@id")
+            end
+          else
+            json
           end
         end
       end

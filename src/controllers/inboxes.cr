@@ -41,7 +41,7 @@ class RelationshipsController
     if (actor_iri = activity.actor_iri)
       unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!signature || actor.pem_public_key)
         headers = Ktistec::Signature.sign(account.actor, actor_iri, method: :get)
-        headers["Accept"] = Ktistec::Constants::ACTIVITY_STREAMS_CONTENT_TYPE
+        headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
         Ktistec::Open.open?(actor_iri, headers) do |response|
           actor = ActivityPub::Actor.from_json_ld?(response.body, include_key: true).try(&.save)
         end

@@ -24,7 +24,7 @@ class WellKnownController
       links: [{
                 rel: "self",
                 href: "#{host}/actors/#{$1}",
-                type: Ktistec::Constants::ACTIVITY_STREAMS_CONTENT_TYPE
+                type: Ktistec::Constants::CONTENT_TYPE_HEADER
               }, {
                 rel: "http://webfinger.net/rel/profile-page",
                 href: "#{host}/@#{$1}",

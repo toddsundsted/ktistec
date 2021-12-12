@@ -26,7 +26,7 @@ class SearchesController
           ActivityPub::Object.find(url)
         else
           headers = Ktistec::Signature.sign(env.account.actor, url, method: :get)
-          headers["Accept"] = Ktistec::Constants::ACTIVITY_STREAMS_CONTENT_TYPE
+          headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
           Ktistec::Open.open(url, headers) do |response|
             ActivityPub.from_json_ld(response.body, include_key: true)
           end

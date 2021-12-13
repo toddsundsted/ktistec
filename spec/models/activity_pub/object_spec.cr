@@ -90,6 +90,7 @@ Spectator.describe ActivityPub::Object do
         },
         "to":"to link",
         "cc":["cc link"],
+        "name":"123",
         "summary":"abc",
         "content":"abc",
         "mediaType":"xyz",
@@ -132,6 +133,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.replies).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
@@ -160,6 +162,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.replies).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")

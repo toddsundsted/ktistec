@@ -686,6 +686,18 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#external?" do
+    subject do
+      described_class.new(
+        iri: "https://test.test/objects/#{random_string}"
+      ).save
+    end
+
+    it "returns true" do
+      expect(subject.external?).to be_true
+    end
+  end
+
   describe "#draft?" do
     subject do
       described_class.new(

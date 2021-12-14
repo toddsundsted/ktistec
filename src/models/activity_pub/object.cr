@@ -130,6 +130,12 @@ module ActivityPub
       end
     end
 
+    @@external : Bool = true
+
+    def external?
+      @@external
+    end
+
     def draft?
       published.nil? && local?
     end

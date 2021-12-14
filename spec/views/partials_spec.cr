@@ -377,22 +377,6 @@ Spectator.describe "partials" do
       expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
     end
 
-    context "given an associated activity" do
-      let_build(:like, named: :activity, actor: actor, object: object)
-
-      it "renders the activity type as a class" do
-        expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
-      end
-
-      context "when a reply" do
-        let(for_thread) { [original] }
-
-        it "renders the activity type as a class" do
-          expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
-        end
-      end
-    end
-
     context "if approved" do
       before_each do
         actor.approve(original.save)
@@ -406,6 +390,22 @@ Spectator.describe "partials" do
       it "renders a button to the threaded conversation" do
         original.assign(in_reply_to: object, attributed_to: actor).save
         expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+      end
+    end
+
+    context "given an associated activity" do
+      let_build(:like, named: :activity, actor: actor, object: object)
+
+      it "renders the activity type as a class" do
+        expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
+      end
+
+      context "when a reply" do
+        let(for_thread) { [original] }
+
+        it "renders the activity type as a class" do
+          expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
+        end
       end
     end
 

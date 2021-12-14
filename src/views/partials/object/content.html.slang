@@ -44,6 +44,12 @@ crystal:
           - attachments.each do |attachment|
             - if attachment.image?
               img.ui.attachment.image src=attachment.url
+    - if (name = object.name)
+      .extra.text
+        - if object.external?
+          a href=object.display_link target="_blank" : strong = name
+        - else
+          strong = name
     .extra.text
       == s object.content
     - if with_detail && account

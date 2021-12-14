@@ -1,3 +1,5 @@
+require "../../src/models/activity_pub/object/note"
+require "../../src/models/activity_pub/object/video"
 require "../../src/models/activity_pub/activity/follow"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
@@ -406,6 +408,26 @@ Spectator.describe "partials" do
         it "renders the activity type as a class" do
           expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
         end
+      end
+    end
+
+    context "if external" do
+      let_create!(:video, named: :object, name: "Foo Bar Baz")
+
+      pre_condition { expect(object.external?).to be_true }
+
+      it "renders a link to the external object" do
+        expect(subject.xpath_nodes("//a/strong/text()")).to have("Foo Bar Baz")
+      end
+    end
+
+    context "if not external" do
+      let_create!(:note, named: :object, name: "Foo Bar Baz")
+
+      pre_condition { expect(object.external?).to be_false }
+
+      it "renders the name of the object" do
+        expect(subject.xpath_nodes("//strong/text()")).to have("Foo Bar Baz")
       end
     end
 

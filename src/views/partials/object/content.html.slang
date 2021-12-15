@@ -7,6 +7,7 @@ crystal:
     end
   end
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
+  type = object.type.split("::").last.downcase
 .content data-controller="image-gallery clickable-background" data-action="click->clickable-background#click" data-clickable-background-href-value=href
   - timezone = account.try { |account| Time::Location.load(account.timezone) }
   .summary
@@ -17,7 +18,7 @@ crystal:
       - if account
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.account_uri href=remote_actor_path(actor) = actor.display_name
-          | shared a post by
+          | shared a #{type} by
           a.user< data-turbo-frame="_top" title=author.account_uri href=remote_actor_path(author) = author.display_name
         - else
           a.user> data-turbo-frame="_top" title=author.account_uri href=remote_actor_path(author) = author.display_name
@@ -26,7 +27,7 @@ crystal:
       - else
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.account_uri href=actor.display_link = actor.display_name
-          | shared a post by
+          | shared a #{type} by
           a.user< data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name
         - else
           a.user> data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name

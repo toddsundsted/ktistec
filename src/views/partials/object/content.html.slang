@@ -67,7 +67,7 @@ crystal:
                 - when ActivityPub::Activity::Announce
                   i.share.icon
                 - when ActivityPub::Activity::Like
-                  i.star.icon
+                  i.thumbs.up.icon
   .meta
     - if account && object.blocked?
       == form_button unblock_object_path(object), button_class: "ui button mini iconic" do
@@ -94,11 +94,11 @@ crystal:
           = pluralize(c, "Reply")
       - if (c = object.likes_count) > 0 && (like = account.actor.find_like_for(object))
         == activity_button(outbox_path(account), like.iri, "Undo", button_class: "ui button mini blue iconic") do
-          i.star.icon
+          i.thumbs.up.icon
           = pluralize(c, "Like")
       - else
         == activity_button(outbox_path(account), object.iri, "Like", button_class: "ui button mini iconic") do
-          i.star.icon
+          i.thumbs.up.icon
           = pluralize(c, "Like")
       - if (c = object.announces_count) > 0 && (announce = account.actor.find_announce_for(object))
         == activity_button(outbox_path(account), announce.iri, "Undo", button_class: "ui button mini blue iconic") do
@@ -142,7 +142,7 @@ crystal:
             | Thread
       - if (c = object.likes_count) > 0
         button.ui.mini.iconic.button
-          i.star.icon
+          i.thumbs.up.icon
           = pluralize(c, "Like")
       - if (c = object.announces_count) > 0
         button.ui.mini.iconic.button

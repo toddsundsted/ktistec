@@ -252,6 +252,7 @@ Spectator.describe Ktistec::JSON_LD do
                 }
               }
             ],
+            "id": "https://id",
             "type": "Lock"
           }
         JSON
@@ -260,7 +261,8 @@ Spectator.describe Ktistec::JSON_LD do
 
     describe "#[]" do
       it "returns mapped terms" do
-        expect(json.as_h.keys).to match_array(["@context", "@type"]).in_any_order
+        expect(json.as_h.keys).to match_array(["@context", "@id", "@type"]).in_any_order
+        expect(json["@id"]).to eq("https://id")
         expect(json["@type"]).to eq("https://lock")
       end
     end

@@ -370,4 +370,27 @@ Spectator.describe Ktistec::JSON_LD do
       end
     end
   end
+
+  context "given a context term without an id" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": [
+              {
+                "page": {
+                  "@type": "@id"
+                }
+              }
+            ]
+          }
+        JSON
+      ), double(loader))
+    end
+
+    describe "#[]" do
+      it "ignores the invalid term" do
+        expect(json.as_h.keys).to match_array(["@context"]).in_any_order
+      end
+    end
+  end
 end

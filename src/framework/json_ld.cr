@@ -79,9 +79,8 @@ module Ktistec
         if iri = defn.as_s?
           result[term] = expand_iri(iri, context)
         elsif map = defn.as_h?
-          id = ((_id = result.key_for?("@id")) && (map[_id]?.try(&.as_s))) ||
-               (map["@id"].as_s)
-          result[term] = expand_iri(id, context)
+          id = ((_id = result.key_for?("@id")) && (map[_id]?.try(&.as_s))) || (map["@id"]?.try(&.as_s))
+          result[term] = expand_iri(id, context) if id
         end
       end
 

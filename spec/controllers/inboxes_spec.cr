@@ -23,6 +23,12 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(404)
     end
 
+    it "returns 400 if activity is blank" do
+      post "/actors/#{actor.username}/inbox", headers, ""
+      expect(JSON.parse(response.body)["msg"]).to eq("body is blank")
+      expect(response.status_code).to eq(400)
+    end
+
     it "returns 400 if activity can't be verified" do
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")

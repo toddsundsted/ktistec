@@ -14,8 +14,8 @@ class RelationshipsController
     unless (account = get_account(env))
       not_found
     end
-    unless (body = env.request.body.try(&.gets_to_end))
-      bad_request
+    unless (body = env.request.body.try(&.gets_to_end).presence)
+      bad_request("Body Is Blank")
     end
 
     activity = ActivityPub::Activity.from_json_ld(body)

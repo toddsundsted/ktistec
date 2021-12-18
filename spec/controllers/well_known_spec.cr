@@ -31,6 +31,11 @@ Spectator.describe WellKnownController do
       expect(response.status_code).to eq(200)
     end
 
+    it "returns 200 if 'acct' URI scheme is missing" do
+      get "/.well-known/webfinger?resource=#{username}%40test.test"
+      expect(response.status_code).to eq(200)
+    end
+
     it "returns the subject" do
       get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
       expect(JSON.parse(response.body)["subject"]).to eq("acct:#{username}@test.test")

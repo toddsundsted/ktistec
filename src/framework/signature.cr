@@ -10,7 +10,7 @@ module Ktistec
     class Error < Exception
     end
 
-    def sign(key_pair, url, body = nil, content_type = nil, method = :post, time = Time.utc)
+    def sign(key_pair, url, body = nil, content_type = nil, accept = nil, method = :post, time = Time.utc)
       key = key_pair.private_key.not_nil!
       url = URI.parse(url).normalize
       date = Time::Format::HTTP_DATE.format(time)
@@ -22,6 +22,11 @@ module Ktistec
         headers_string += " digest"
         signature_string += "\ndigest: #{digest}"
         headers["Digest"] = digest
+      end
+      if accept
+        headers_string += " accept"
+        signature_string += "\naccept: #{accept}"
+        headers["Accept"] = accept
       end
       if content_type
         headers_string += " content-type"
@@ -69,6 +74,8 @@ module Ktistec
             "#{header}: #{url.authority}"
           when "date"
             "#{header}: #{headers["Date"]}"
+          when "accept"
+            "#{header}: #{headers["Accept"]}"
           when "content-type"
             "#{header}: #{headers["Content-Type"]}"
           when "digest"

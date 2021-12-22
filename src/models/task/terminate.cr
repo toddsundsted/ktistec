@@ -17,23 +17,32 @@ class Task
       end
     end
 
+    # See: TaskWorker#perform
+    private def perform_once_now(task)
+      task.perform
+    rescue ex
+      message = ex.message ? "#{ex.class}: #{ex.message}" : ex.class.to_s
+      task.backtrace = [message] + ex.backtrace
+    ensure
+      task.running = false
+      task.complete = true
+      task.last_attempt_at = Time.utc
+      task.save(skip_validation: true, skip_associated: true)
+    end
+
     def perform
       if (object = subject.objects.first?)
         Log.info { "Task::Terminate: deleting #{object.iri} published=#{!!object.published}" }
         self.next_attempt_at = 30.seconds.from_now
         if object.published
-          Task::Deliver.new(
-            sender: subject,
-            activity: object.make_delete_activity
-          ).schedule
+          task = Task::Deliver.new(sender: subject, activity: object.make_delete_activity, running: true).save
+          perform_once_now(task)
         end
         object.delete
       else
         Log.info { "Task::Terminate: deleting #{subject.iri}" }
-        Task::Deliver.new(
-          sender: subject,
-          activity: subject.make_delete_activity
-        ).schedule
+        task = Task::Deliver.new(sender: subject, activity: subject.make_delete_activity, running: true).save
+        perform_once_now(task)
         subject.delete
       end
     end

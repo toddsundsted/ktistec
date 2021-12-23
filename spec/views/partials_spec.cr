@@ -108,11 +108,13 @@ Spectator.describe "partials" do
   macro follow(from, to, confirmed = true)
     let_create!(
       :follow,
+      named: nil,
       actor: {{from}},
       object: {{to}}
     )
     let_create!(
       :follow_relationship,
+      named: nil,
       actor: {{from}},
       object: {{to}},
       confirmed: {{confirmed}}

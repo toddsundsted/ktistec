@@ -136,6 +136,7 @@ module Ktistec
         puts Ktistec::Database.do_operation(:apply, version)
       end
       with new yield
+      Kemal.config.app_name = "Ktistec"
       Kemal.run
     end
   end

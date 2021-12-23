@@ -71,8 +71,8 @@ Spectator.describe Ktistec::Util do
   end
 
   describe ".pluralize" do
-    sample ["fox", "fish", "dress", "bus", "inch", "fez"] do |noun|
-      it "pluralizes the noun" do
+    it "pluralizes the noun" do
+      ["fox", "fish", "dress", "bus", "inch", "fez"].each do |noun|
         expect(described_class.pluralize(noun)).to eq("#{noun}es")
       end
     end

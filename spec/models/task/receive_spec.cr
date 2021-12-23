@@ -245,6 +245,14 @@ Spectator.describe Task::Receive do
           expect(subject.recipients).to contain(receiver.iri)
         end
 
+        context "when collection isn't the followers collection" do
+          let(recipient) { remote_collection.assign(iri: "#{sender.iri}/collection") }
+
+          it "does not include the receiver" do
+            expect(subject.recipients).not_to contain(receiver.iri)
+          end
+        end
+
         context "when follows are not confirmed" do
           before_each do
             Relationship::Social::Follow.where(from_iri: receiver.iri).each do |follow|

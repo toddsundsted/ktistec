@@ -1,3 +1,5 @@
+require "../../src/models/activity_pub/object/note"
+require "../../src/models/activity_pub/object/video"
 require "../../src/models/activity_pub/activity/follow"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
@@ -106,11 +108,13 @@ Spectator.describe "partials" do
   macro follow(from, to, confirmed = true)
     let_create!(
       :follow,
+      named: nil,
       actor: {{from}},
       object: {{to}}
     )
     let_create!(
       :follow_relationship,
+      named: nil,
       actor: {{from}},
       object: {{to}},
       confirmed: {{confirmed}}
@@ -241,10 +245,13 @@ Spectator.describe "partials" do
 
       # on a page of the actors the actor is following, the actor
       # expects to focus on actions regarding their decision to follow
-      # those actors, so don't present accept/reject actions.
+      # those actors, so don't present accept/reject actions, even if
+      # the other actor is a follower.
 
       context "and on a page of actors the actor is following" do
         let(env) { env_factory("GET", "/actors/foo_bar/following") }
+
+        follow(actor, account.actor, confirmed: false)
 
         context "if already following" do
           follow(account.actor, actor)
@@ -259,12 +266,14 @@ Spectator.describe "partials" do
         end
       end
 
-      # otherwise...
+      # otherwise, on a page of the actors who are followers of the actor...
 
       context "having not accepted or rejected a follow" do
+        let(env) { env_factory("GET", "/actors/foo_bar/followers") }
+
         follow(actor, account.actor, confirmed: false)
 
-        context "if already following" do
+        context "if following" do
           follow(account.actor, actor)
 
           it "renders a button to accept" do
@@ -294,13 +303,19 @@ Spectator.describe "partials" do
       end
 
       context "having accepted or rejected a follow" do
+        let(env) { env_factory("GET", "/actors/foo_bar/followers") }
+
         follow(actor, account.actor, confirmed: true)
 
-        context "if already following" do
+        context "if following" do
           follow(account.actor, actor)
 
           it "renders a button to unfollow" do
             expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
+          end
+
+          it "does not render a button to block" do
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Block")
           end
         end
 
@@ -313,11 +328,15 @@ Spectator.describe "partials" do
         end
       end
 
-      context "if already following" do
+      context "if following" do
         follow(account.actor, actor)
 
         it "renders a button to unfollow" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
+        end
+
+        it "does not render a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Block")
         end
       end
 
@@ -362,6 +381,22 @@ Spectator.describe "partials" do
       expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
     end
 
+    context "if approved" do
+      before_each do
+        actor.approve(original.save)
+      end
+
+      it "renders a button to the threaded conversation" do
+        object.assign(in_reply_to: original, attributed_to: actor).save
+        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+      end
+
+      it "renders a button to the threaded conversation" do
+        original.assign(in_reply_to: object, attributed_to: actor).save
+        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+      end
+    end
+
     context "given an associated activity" do
       let_build(:like, named: :activity, actor: actor, object: object)
 
@@ -378,19 +413,23 @@ Spectator.describe "partials" do
       end
     end
 
-    context "if approved" do
-      before_each do
-        actor.approve(original.save)
-      end
+    context "if external" do
+      let_create!(:video, named: :object, name: "Foo Bar Baz")
 
-      it "renders a button to the threaded conversation" do
-        object.assign(in_reply_to: original, attributed_to: actor).save
-        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
-      end
+      pre_condition { expect(object.external?).to be_true }
 
-      it "renders a button to the threaded conversation" do
-        original.assign(in_reply_to: object, attributed_to: actor).save
-        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+      it "renders a link to the external object" do
+        expect(subject.xpath_nodes("//a/strong/text()")).to have("Foo Bar Baz")
+      end
+    end
+
+    context "if not external" do
+      let_create!(:note, named: :object, name: "Foo Bar Baz")
+
+      pre_condition { expect(object.external?).to be_false }
+
+      it "renders the name of the object" do
+        expect(subject.xpath_nodes("//strong/text()")).to have("Foo Bar Baz")
       end
     end
 

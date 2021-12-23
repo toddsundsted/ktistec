@@ -2,6 +2,7 @@ require "json"
 
 require "../framework/json_ld"
 require "../framework/model"
+require "./activity_pub/mixins/*"
 
 module ActivityPub
   def self.from_json_ld(json, **options)

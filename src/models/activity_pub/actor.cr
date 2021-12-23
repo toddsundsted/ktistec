@@ -112,12 +112,11 @@ module ActivityPub
     def self.match?(account)
       if account =~ /^@?([^@]+)@([^@]+)$/
         where(username: $1).find do |actor|
-          if (urls = actor.urls)
-            urls.any? do |url|
-              uri = URI.parse(url)
-              uri.host.try(&.downcase) == $2.downcase && uri.path[2..].downcase == $1.downcase
-            rescue URI::Error
-            end
+          urls = (actor.urls || [] of String) | [actor.iri]
+          urls.any? do |url|
+            uri = URI.parse(url)
+            uri.host.try(&.downcase) == $2.downcase && uri.path.split(%r|[@/]|).last.downcase == $1.downcase
+          rescue URI::Error
           end
         end
       end
@@ -752,7 +751,7 @@ module ActivityPub
       end
     end
 
-    def to_json_ld(recursive = false)
+    def to_json_ld(recursive = true)
       actor = self
       render "src/views/actors/actor.json.ecr"
     end

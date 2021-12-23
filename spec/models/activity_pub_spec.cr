@@ -1,4 +1,3 @@
-require "../../src/framework/model/linked"
 require "../../src/models/activity_pub"
 require "../../src/models/activity_pub/actor/person"
 require "../../src/models/activity_pub/collection"

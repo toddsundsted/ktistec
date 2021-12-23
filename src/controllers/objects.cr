@@ -6,19 +6,6 @@ class ObjectsController
 
   skip_auth ["/objects/:id", "/objects/:id/thread"], GET
 
-  get "/actors/:username/drafts" do |env|
-    unless (account = get_account(env))
-      not_found
-    end
-    unless env.account == account
-      forbidden
-    end
-
-    drafts = account.actor.drafts(*pagination_params(env))
-
-    ok "objects/index"
-  end
-
   post "/objects" do |env|
     object = ActivityPub::Object::Note.new(
       iri: "#{host}/objects/#{id}",
@@ -170,7 +157,7 @@ class ObjectsController
 
   private def self.get_object(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id))
-      if (object.visible && (!object.cached? && !object.draft?)) ||
+      if (object.visible && !object.draft?) ||
          ((account = env.account?) &&
           (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
         object
@@ -180,7 +167,7 @@ class ObjectsController
 
   private def self.get_remote_object(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id))
-      if (object.visible && (!object.cached? && !object.draft?)) ||
+      if (object.visible && !object.draft?) ||
          ((account = env.account?) &&
           ((account.actor == object.attributed_to? && !object.draft?) || account.actor.in_inbox?(object)))
         object

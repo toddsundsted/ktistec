@@ -22,7 +22,9 @@ class Task
 
     def recipients
       [activity.to, activity.cc, sender.iri].flatten.flat_map do |recipient|
-        if recipient == sender.iri
+        if recipient == PUBLIC
+          # no-op
+        elsif recipient == sender.iri
           sender.iri
         elsif recipient && (actor = ActivityPub::Actor.dereference?(sender, recipient))
           actor.iri

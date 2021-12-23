@@ -21,7 +21,7 @@ class FooBarController
     "/foo/bar/helpers/actors/by-id/:id",
     "/foo/bar/helpers/actors/by-username/:username",
     "/foo/bar/helpers/:username/:relationship",
-    "/foo/bar/accept",
+    "/foo/bar/accepts",
     "/foo/bar/xhr",
     "/foo/bar/created",
     "/foo/bar/redirect",
@@ -97,12 +97,12 @@ class FooBarController
     }.to_json
   end
 
-  get "/foo/bar/accept" do |env|
+  get "/foo/bar/accepts" do |env|
     if accepts?("text/html")
       ok "html"
     elsif accepts?("text/plain")
       ok "text"
-    elsif accepts?("application/json")
+    elsif accepts?("application/ld+json", "application/activity+json", "application/json")
       ok "json"
     end
   end
@@ -255,21 +255,33 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "get /foo/bar/accept" do
+  describe "get /foo/bar/accepts" do
     it "responds with html" do
-      get "/foo/bar/accept", HTTP::Headers{"Accept" => "text/html"}
+      get "/foo/bar/accepts", HTTP::Headers{"Accept" => "text/html"}
       expect(response.headers["Content-Type"]).to eq("text/html")
       expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).to eq("html")
     end
 
     it "responds with text" do
-      get "/foo/bar/accept", HTTP::Headers{"Accept" => "text/plain"}
+      get "/foo/bar/accepts", HTTP::Headers{"Accept" => "text/plain"}
       expect(response.headers["Content-Type"]).to eq("text/plain")
       expect(response.body).to eq("text")
     end
 
     it "responds with json" do
-      get "/foo/bar/accept", HTTP::Headers{"Accept" => "application/json"}
+      get "/foo/bar/accepts", HTTP::Headers{"Accept" => %q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|}
+      expect(response.headers["Content-Type"]).to eq(%q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|)
+      expect(JSON.parse(response.body)["msg"]).to eq("json")
+    end
+
+    it "responds with json" do
+      get "/foo/bar/accepts", HTTP::Headers{"Accept" => "application/activity+json"}
+      expect(response.headers["Content-Type"]).to eq("application/activity+json")
+      expect(JSON.parse(response.body)["msg"]).to eq("json")
+    end
+
+    it "responds with json" do
+      get "/foo/bar/accepts", HTTP::Headers{"Accept" => "application/json"}
       expect(response.headers["Content-Type"]).to eq("application/json")
       expect(JSON.parse(response.body)["msg"]).to eq("json")
     end
@@ -373,6 +385,11 @@ Spectator.describe Ktistec::Controller do
     it "responds with json" do
       get "/foo/bar/ok"
       expect(JSON.parse(response.body)).to eq("json")
+    end
+
+    it "sets the content type" do
+      get "/foo/bar/ok", HTTP::Headers{"Accept" => %q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|}
+      expect(response.headers["Content-Type"]).to eq(%q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|)
     end
 
     it "sets the content type" do

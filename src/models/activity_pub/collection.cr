@@ -36,7 +36,7 @@ module ActivityPub
     @[Persistent]
     property current : String?
 
-    def to_json_ld(recursive = false)
+    def to_json_ld(recursive = true)
       collection = self
       render "src/views/collections/collection.json.ecr"
     end

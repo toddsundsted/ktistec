@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../framework/constants"
 
 class WellKnownController
   include Ktistec::Controller
@@ -10,29 +11,31 @@ class WellKnownController
 
     server_error unless $1
     bad_request unless resource = env.params.query["resource"]?
-    bad_request unless resource =~ /^acct:([^@]+)@(#{domain})$/
+    bad_request unless resource =~ /^(acct:)?([^@]+)@(#{domain})$/
 
-    Account.find(username: $1).actor
+    Account.find(username: $2).actor
 
     message = {
       subject: resource,
       aliases: [
-        "#{host}/actors/#{$1}"
+        "#{host}/@#{$2}",
+        "#{host}/actors/#{$2}"
       ],
       links: [{
                 rel: "self",
-                href: "#{host}/actors/#{$1}",
-                type: "application/activity+json"
+                href: "#{host}/actors/#{$2}",
+                type: Ktistec::Constants::CONTENT_TYPE_HEADER
               }, {
                 rel: "http://webfinger.net/rel/profile-page",
-                href: "#{host}/@#{$1}",
+                href: "#{host}/@#{$2}",
                 type: "text/html"
               }, {
                 rel: "http://ostatus.org/schema/1.0/subscribe",
-                template: "#{host}/actors/#{$1}/authorize-follow?uri={uri}"
+                template: "#{host}/actors/#{$2}/authorize-follow?uri={uri}"
               }]
     }
     env.response.content_type = "application/jrd+json"
+    env.response.headers.add("Access-Control-Allow-Origin", "*")
     message.to_json
   rescue Ktistec::Model::NotFound
     not_found
@@ -46,6 +49,7 @@ class WellKnownController
               }]
     }
     env.response.content_type = "application/jrd+json"
+    env.response.headers.add("Access-Control-Allow-Origin", "*")
     message.to_json
   end
 
@@ -76,6 +80,7 @@ class WellKnownController
       }
     }
     env.response.content_type = "application/jrd+json"
+    env.response.headers.add("Access-Control-Allow-Origin", "*")
     message.to_json
   end
 end

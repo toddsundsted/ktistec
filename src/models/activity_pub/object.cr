@@ -41,6 +41,9 @@ module ActivityPub
     property cc : Array(String)?
 
     @[Persistent]
+    property name : String?
+
+    @[Persistent]
     property summary : String?
 
     @[Persistent]
@@ -125,6 +128,12 @@ module ActivityPub
           end
         end
       end
+    end
+
+    @@external : Bool = true
+
+    def external?
+      @@external
     end
 
     def draft?
@@ -547,7 +556,7 @@ module ActivityPub
       hashtags + mentions
     end
 
-    def to_json_ld(recursive = false)
+    def to_json_ld(recursive = true)
       object = self
       render "src/views/objects/object.json.ecr"
     end
@@ -567,6 +576,7 @@ module ActivityPub
         replies: dig_id?(json, "https://www.w3.org/ns/activitystreams#replies"),
         to: to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
         cc: cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+        name: dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
         summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
         content: dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
         media_type: dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),

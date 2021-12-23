@@ -13,6 +13,8 @@ Spectator.describe ActivityPub::Object do
 
   describe "#source=" do
     subject { described_class.new(iri: "https://test.test/objects/#{random_string}") }
+    let_create!(:actor, named: :foo, iri: "https://bar.com/foo", urls: ["https://bar.com/@foo"], username: "foo")
+    let_create!(:actor, named: :bar, iri: "https://foo.com/bar", urls: ["https://foo.com/@bar"], username: "bar")
     let(source) { ActivityPub::Object::Source.new("foobar #foobar @foo@bar.com", "text/html") }
 
     it "assigns content" do
@@ -48,8 +50,6 @@ Spectator.describe ActivityPub::Object do
     end
 
     context "addressing (to)" do
-      let_create!(:actor, named: :foo, iri: "https://bar.com/foo", urls: ["https://bar.com/@foo"], username: "foo")
-      let_create!(:actor, named: :bar, iri: "https://foo.com/bar", urls: ["https://foo.com/@bar"], username: "bar")
       let_create!(:mention, subject: subject, href: bar.iri, name: bar.username)
 
       it "replaces mentions" do
@@ -90,6 +90,7 @@ Spectator.describe ActivityPub::Object do
         },
         "to":"to link",
         "cc":["cc link"],
+        "name":"123",
         "summary":"abc",
         "content":"abc",
         "mediaType":"xyz",
@@ -132,6 +133,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.replies).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
@@ -160,6 +162,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.replies).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
@@ -680,6 +683,18 @@ Spectator.describe ActivityPub::Object do
 
     it "returns false if not approved by actor" do
       expect(subject.approved_by?("https://other/")).to be_false
+    end
+  end
+
+  describe "#external?" do
+    subject do
+      described_class.new(
+        iri: "https://test.test/objects/#{random_string}"
+      ).save
+    end
+
+    it "returns true" do
+      expect(subject.external?).to be_true
     end
   end
 

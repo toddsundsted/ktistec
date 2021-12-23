@@ -19,7 +19,7 @@ Spectator.describe SuggestionsController do
 
       context "hashtag" do
         macro create_tag(name)
-          let_create!(:hashtag, subject: object, name: {{name}})
+          let_create!(:hashtag, named: nil, subject: object, name: {{name}})
         end
 
         create_tag("foobar")
@@ -36,7 +36,7 @@ Spectator.describe SuggestionsController do
 
       context "mention" do
         macro create_tag(name)
-          let_create!(:mention, subject: object, name: {{name}})
+          let_create!(:mention, named: nil, subject: object, name: {{name}})
         end
 
         create_tag("gandalf")

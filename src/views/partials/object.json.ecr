@@ -21,6 +21,9 @@
   <%- if (cc = object.cc) -%>
   "cc":<%= cc.to_json %>,
   <%- end -%>
+  <%- if (name = object.name) -%>
+  "name":<%= name.inspect %>,
+  <%- end -%>
   <%- if (summary = object.summary) -%>
   "summary":<%= summary.inspect %>,
   <%- end -%>

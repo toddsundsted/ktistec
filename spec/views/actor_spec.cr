@@ -45,4 +45,30 @@ Spectator.describe "actor" do
       end
     end
   end
+
+  describe "actor.json.ecr" do
+    let_create(:actor)
+
+    let(env) { env_factory("GET", "/actor/username") }
+
+    subject do
+      begin
+        JSON.parse(render "./src/views/actors/actor.json.ecr")
+      rescue JSON::ParseException
+        JSON.parse("{}")
+      end
+    end
+
+    it "does not render a shared inbox endpoint" do
+      expect(subject.dig?("endpoints", "sharedInbox")).to be_nil
+    end
+
+    context "if local" do
+      before_each { actor.assign(iri: "https://test.test/actor") }
+
+      it "renders a shared inbox endpoint" do
+        expect(subject.dig?("endpoints", "sharedInbox")).not_to be_nil
+      end
+    end
+  end
 end

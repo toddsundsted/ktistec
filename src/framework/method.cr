@@ -12,11 +12,13 @@ module Ktistec
   #
   class Method < Kemal::Handler
     def call(env)
-      # don't run this handler for image uploads. the use of
-      # `env.params.body` below breaks the form data processing in the
-      # uploads controller.
-      return call_next env if env.request.path == "/uploads"
+      # don't run this handler for image uploads and inboxes. the use
+      # of `env.params.body` below breaks the form data processing in
+      # the uploads controller. (note: pixelfed incorrectly specifies
+      # "application/x-www-form-urlencoded" on activities. see:
+      # https://github.com/pixelfed/pixelfed/issues/3049
       return call_next env unless env.request.method == "POST"
+      return call_next env if env.request.path == "/uploads" || env.request.path.ends_with?("/inbox")
       return call_next env unless env.params.body["_method"]? == "delete"
 
       # switch method and fix URL params

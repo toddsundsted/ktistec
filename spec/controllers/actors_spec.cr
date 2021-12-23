@@ -495,6 +495,69 @@ Spectator.describe ActorsController do
     end
   end
 
+
+  describe "GET /actors/:username/drafts" do
+    it "returns 401 if not authorized" do
+      get "/actors/missing/drafts", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/actors/missing/drafts", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "returns 404 if not found" do
+        get "/actors/missing/drafts", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if not found" do
+        get "/actors/missing/drafts", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 403 if different account" do
+        get "/actors/#{register.actor.username}/drafts", ACCEPT_HTML
+        expect(response.status_code).to eq(403)
+      end
+
+      it "returns 403 if different account" do
+        get "/actors/#{register.actor.username}/drafts", ACCEPT_JSON
+        expect(response.status_code).to eq(403)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/drafts", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/drafts", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      let_create!(
+        :object, named: :draft,
+        attributed_to: actor,
+        local: true
+      )
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/drafts", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{draft.id}")
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/drafts", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(draft.iri)
+      end
+    end
+  end
+
   describe "GET /remote/actors/:id" do
     let_create!(:actor)
 

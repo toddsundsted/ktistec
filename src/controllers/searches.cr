@@ -25,7 +25,8 @@ class SearchesController
         elsif url.starts_with?("#{host}/objects/")
           ActivityPub::Object.find(url)
         else
-          headers = Ktistec::Signature.sign(env.account.actor, url, method: :get).merge!(HTTP::Headers{"Accept" => "application/activity+json"})
+          headers = Ktistec::Signature.sign(env.account.actor, url, method: :get)
+          headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
           Ktistec::Open.open(url, headers) do |response|
             ActivityPub.from_json_ld(response.body, include_key: true)
           end

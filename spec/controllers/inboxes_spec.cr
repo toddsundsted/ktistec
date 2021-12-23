@@ -23,6 +23,12 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(404)
     end
 
+    it "returns 400 if activity is blank" do
+      post "/actors/#{actor.username}/inbox", headers, ""
+      expect(JSON.parse(response.body)["msg"]).to eq("body is blank")
+      expect(response.status_code).to eq(400)
+    end
+
     it "returns 400 if activity can't be verified" do
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
@@ -736,7 +742,7 @@ Spectator.describe RelationshipsController do
 
       it "returns 400 if related activity does not exist" do
         follow.destroy
-        post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
+        post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld(recursive: false)
         expect(response.status_code).to eq(400)
       end
 
@@ -775,7 +781,7 @@ Spectator.describe RelationshipsController do
 
       it "returns 400 if related activity does not exist" do
         follow.destroy
-        post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
+        post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld(recursive: false)
         expect(response.status_code).to eq(400)
       end
 
@@ -814,7 +820,7 @@ Spectator.describe RelationshipsController do
 
         it "returns 400 if related activity does not exist" do
           announce.destroy
-          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld(recursive: false)
           expect(response.status_code).to eq(400)
         end
 
@@ -844,7 +850,7 @@ Spectator.describe RelationshipsController do
 
         it "returns 400 if related activity does not exist" do
           like.destroy
-          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld(recursive: false)
           expect(response.status_code).to eq(400)
         end
 
@@ -880,7 +886,7 @@ Spectator.describe RelationshipsController do
 
         it "returns 400 if related activity does not exist" do
           follow.destroy
-          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld(recursive: false)
           expect(response.status_code).to eq(400)
         end
 

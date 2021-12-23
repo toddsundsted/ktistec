@@ -62,18 +62,18 @@ Spectator.describe Ktistec::Handler::Canonical do
       end
 
       context "and a request with a segment suffix" do
-        sample ["thread"] do |segment|
-          it "returns 200" do
-            get "/does/not/exist/#{segment}", ACCEPT_HTML
-            expect(response.status_code).to eq(200)
-            expect(response.body).to eq(segment)
-          end
+        let(segment) { "thread" }
 
-          it "returns 301" do
-            get "/foo/bar/secret/#{segment}", ACCEPT_HTML
-            expect(response.status_code).to eq(301)
-            expect(response.headers["Location"]).to eq("/does/not/exist/#{segment}")
-          end
+        it "returns 200" do
+          get "/does/not/exist/#{segment}", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).to eq(segment)
+        end
+
+        it "returns 301" do
+          get "/foo/bar/secret/#{segment}", ACCEPT_HTML
+          expect(response.status_code).to eq(301)
+          expect(response.headers["Location"]).to eq("/does/not/exist/#{segment}")
         end
       end
     end

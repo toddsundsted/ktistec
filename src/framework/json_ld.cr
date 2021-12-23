@@ -60,11 +60,11 @@ module Ktistec
     private def self.context(context, loader)
       result = Hash(String, JSON::Any).new
 
-      if url = context.as_s?
+      if (url = context.as_s?)
         context = loader.load(url)
-      elsif array = context.as_a?
+      elsif (array = context.as_a?)
         context = array.reduce(empty) do |a, c|
-          if u = c.as_s?
+          if (u = c.as_s?)
             c = loader.load(u)
           end
           wrap(a.as_h.merge(c.as_h))
@@ -76,12 +76,11 @@ module Ktistec
           prefix, suffix = term.split(":")
           term = "#{context[prefix]}#{suffix}"
         end
-        if iri = defn.as_s?
+        if (iri = defn.as_s?)
           result[term] = expand_iri(iri, context)
-        elsif map = defn.as_h?
-          id = ((_id = result.key_for?("@id")) && (map[_id]?.try(&.as_s))) ||
-               (map["@id"].as_s)
-          result[term] = expand_iri(id, context)
+        elsif (map = defn.as_h?)
+          id = ((_id = result.key_for?("@id")) && (map[_id]?.try(&.as_s))) || (map["@id"]?.try(&.as_s))
+          result[term] = expand_iri(id, context) if id
         end
       end
 

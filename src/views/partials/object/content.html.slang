@@ -7,6 +7,7 @@ crystal:
     end
   end
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
+  type = object.type.split("::").last.downcase
 .content data-controller="image-gallery clickable-background" data-action="click->clickable-background#click" data-clickable-background-href-value=href
   - timezone = account.try { |account| Time::Location.load(account.timezone) }
   .summary
@@ -17,7 +18,7 @@ crystal:
       - if account
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.account_uri href=remote_actor_path(actor) = actor.display_name
-          | shared a post by
+          | shared a #{type} by
           a.user< data-turbo-frame="_top" title=author.account_uri href=remote_actor_path(author) = author.display_name
         - else
           a.user> data-turbo-frame="_top" title=author.account_uri href=remote_actor_path(author) = author.display_name
@@ -26,7 +27,7 @@ crystal:
       - else
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.account_uri href=actor.display_link = actor.display_name
-          | shared a post by
+          | shared a #{type} by
           a.user< data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name
         - else
           a.user> data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name
@@ -44,6 +45,12 @@ crystal:
           - attachments.each do |attachment|
             - if attachment.image?
               img.ui.attachment.image src=attachment.url
+    - if (name = object.name)
+      .extra.text
+        - if object.external?
+          a href=object.display_link target="_blank" : strong = name
+        - else
+          strong = name
     .extra.text
       == s object.content
     - if with_detail && account
@@ -60,7 +67,7 @@ crystal:
                 - when ActivityPub::Activity::Announce
                   i.share.icon
                 - when ActivityPub::Activity::Like
-                  i.star.icon
+                  i.thumbs.up.icon
   .meta
     - if account && object.blocked?
       == form_button unblock_object_path(object), button_class: "ui button mini iconic" do
@@ -87,11 +94,11 @@ crystal:
           = pluralize(c, "Reply")
       - if (c = object.likes_count) > 0 && (like = account.actor.find_like_for(object))
         == activity_button(outbox_path(account), like.iri, "Undo", button_class: "ui button mini blue iconic") do
-          i.star.icon
+          i.thumbs.up.icon
           = pluralize(c, "Like")
       - else
         == activity_button(outbox_path(account), object.iri, "Like", button_class: "ui button mini iconic") do
-          i.star.icon
+          i.thumbs.up.icon
           = pluralize(c, "Like")
       - if (c = object.announces_count) > 0 && (announce = account.actor.find_announce_for(object))
         == activity_button(outbox_path(account), announce.iri, "Undo", button_class: "ui button mini blue iconic") do
@@ -135,7 +142,7 @@ crystal:
             | Thread
       - if (c = object.likes_count) > 0
         button.ui.mini.iconic.button
-          i.star.icon
+          i.thumbs.up.icon
           = pluralize(c, "Like")
       - if (c = object.announces_count) > 0
         button.ui.mini.iconic.button

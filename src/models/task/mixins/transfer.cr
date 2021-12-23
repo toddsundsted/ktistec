@@ -1,3 +1,4 @@
+require "../../../framework/constants"
 require "../../../framework/signature"
 
 class Task
@@ -14,7 +15,7 @@ class Task
           # no-op
         elsif (inbox = actor.inbox)
           body = activity.to_json_ld
-          headers = Ktistec::Signature.sign(transferer, inbox, body)
+          headers = Ktistec::Signature.sign(transferer, inbox, body, Ktistec::Constants::CONTENT_TYPE_HEADER)
           response = HTTP::Client.post(inbox, headers, body)
           unless response.success?
             message = "failed to deliver to #{inbox}: [#{response.status_code}] #{response.body}"

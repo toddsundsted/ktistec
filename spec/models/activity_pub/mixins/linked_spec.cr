@@ -1,8 +1,8 @@
-require "../../../src/framework/model/linked"
+require "../../../../src/models/activity_pub/mixins/linked"
 
-require "../../spec_helper/base"
-require "../../spec_helper/key_pair"
-require "../../spec_helper/network"
+require "../../../spec_helper/base"
+require "../../../spec_helper/key_pair"
+require "../../../spec_helper/network"
 
 class LinkedModel
   include Ktistec::Model(Linked)

@@ -123,6 +123,10 @@ class HTTP::Client
     @@requests << HTTP::Request.new("POST", url, headers, body)
     url = URI.parse(url)
     case url.path
+    when /openssl-error/
+      raise OpenSSL::Error.new
+    when /socket-error/
+      raise Socket::Error.new
     when /([^\/]+)\/inbox/
       HTTP::Client::Response.new(
         200,

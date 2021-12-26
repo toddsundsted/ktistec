@@ -10,7 +10,10 @@ class RemoteFollowsController
 
   get "/actors/:username/remote-follow" do |env|
     username = env.params.url["username"]
-    actor = Account.find(username: username).actor
+
+    unless (actor = Account.find?(username: username).try(&.actor))
+      not_found
+    end
 
     error = nil
     account = ""
@@ -20,7 +23,10 @@ class RemoteFollowsController
 
   post "/actors/:username/remote-follow" do |env|
     username = env.params.url["username"]
-    actor = Account.find(username: username).actor
+
+    unless (actor = Account.find?(username: username).try(&.actor))
+      not_found
+    end
 
     account = account(env)
 

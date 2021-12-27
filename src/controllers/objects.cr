@@ -105,7 +105,6 @@ class ObjectsController
     actor = env.account.actor
 
     not_found unless (object = ActivityPub::Object.find?(id_param(env)))
-    not_found unless actor.in_inbox?(object) || actor.in_outbox?(object)
 
     redirect back_path if actor.approve(object)
 
@@ -116,7 +115,6 @@ class ObjectsController
     actor = env.account.actor
 
     not_found unless (object = ActivityPub::Object.find?(id_param(env)))
-    not_found unless actor.in_inbox?(object) || actor.in_outbox?(object)
 
     redirect back_path if actor.unapprove(object)
 

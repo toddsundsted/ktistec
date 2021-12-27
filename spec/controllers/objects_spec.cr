@@ -804,54 +804,22 @@ Spectator.describe ObjectsController do
 
       before_each { actor.unapprove(remote) }
 
-      it "returns 404" do
+      it "succeeds" do
         post "/remote/objects/#{remote.id}/approve"
-        expect(response.status_code).to eq(404)
+        expect(response.status_code).to eq(302)
       end
 
-      context "and it's in the actor's inbox" do
-        before_each { put_in_inbox(actor, remote) }
-
-        it "succeeds" do
-          post "/remote/objects/#{remote.id}/approve"
-          expect(response.status_code).to eq(302)
-        end
-
-        it "approves the object" do
-          expect{post "/remote/objects/#{remote.id}/approve"}.
-            to change{remote.approved_by?(actor)}
-        end
-
-        context "but it's already approved" do
-          before_each { actor.approve(remote) }
-
-          it "returns 400" do
-            post "/remote/objects/#{remote.id}/approve"
-            expect(response.status_code).to eq(400)
-          end
-        end
+      it "approves the object" do
+        expect{post "/remote/objects/#{remote.id}/approve"}.
+          to change{remote.approved_by?(actor)}
       end
 
-      context "and it's in the actor's outbox" do
-        before_each { put_in_outbox(actor, remote) }
+      context "but it's already approved" do
+        before_each { actor.approve(remote) }
 
-        it "succeeds" do
+        it "returns 400" do
           post "/remote/objects/#{remote.id}/approve"
-          expect(response.status_code).to eq(302)
-        end
-
-        it "approves the object" do
-          expect{post "/remote/objects/#{remote.id}/approve"}.
-            to change{remote.approved_by?(actor)}
-        end
-
-        context "but it's already approved" do
-          before_each { actor.approve(remote) }
-
-          it "returns 400" do
-            post "/remote/objects/#{remote.id}/approve"
-            expect(response.status_code).to eq(400)
-          end
+          expect(response.status_code).to eq(400)
         end
       end
 
@@ -873,54 +841,22 @@ Spectator.describe ObjectsController do
 
       before_each { actor.approve(remote) }
 
-      it "returns 404" do
+      it "succeeds" do
         post "/remote/objects/#{remote.id}/unapprove"
-        expect(response.status_code).to eq(404)
+        expect(response.status_code).to eq(302)
       end
 
-      context "and it's in the actor's inbox" do
-        before_each { put_in_inbox(actor, remote) }
-
-        it "succeeds" do
-          post "/remote/objects/#{remote.id}/unapprove"
-          expect(response.status_code).to eq(302)
-        end
-
-        it "unapproves the object" do
-          expect{post "/remote/objects/#{remote.id}/unapprove"}.
-            to change{remote.approved_by?(actor)}
-        end
-
-        context "but it's already unapproved" do
-          before_each { actor.unapprove(remote) }
-
-          it "returns 400" do
-            post "/remote/objects/#{remote.id}/unapprove"
-            expect(response.status_code).to eq(400)
-          end
-        end
+      it "unapproves the object" do
+        expect{post "/remote/objects/#{remote.id}/unapprove"}.
+          to change{remote.approved_by?(actor)}
       end
 
-      context "and it's in the actor's outbox" do
-        before_each { put_in_outbox(actor, remote) }
+      context "but it's already unapproved" do
+        before_each { actor.unapprove(remote) }
 
-        it "succeeds" do
+        it "returns 400" do
           post "/remote/objects/#{remote.id}/unapprove"
-          expect(response.status_code).to eq(302)
-        end
-
-        it "unapproves the object" do
-          expect{post "/remote/objects/#{remote.id}/unapprove"}.
-            to change{remote.approved_by?(actor)}
-        end
-
-        context "but it's already unapproved" do
-          before_each { actor.unapprove(remote) }
-
-          it "returns 400" do
-            post "/remote/objects/#{remote.id}/unapprove"
-            expect(response.status_code).to eq(400)
-          end
+          expect(response.status_code).to eq(400)
         end
       end
 

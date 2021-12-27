@@ -24,8 +24,6 @@ class RelationshipsController
       forbidden
     end
 
-    # important: never use credentials in an embedded actor!
-
     # if the activity is signed but we don't have the actor's public
     # key, 1) fetch the actor, including their public key. 2) verify
     # the activity against the actor's public key (this will fail for
@@ -37,6 +35,8 @@ class RelationshipsController
     # 1
 
     signature = !!env.request.headers["Signature"]?
+
+    # important: never use credentials from an embedded actor!
 
     if (actor_iri = activity.actor_iri)
       unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!signature || actor.pem_public_key)
@@ -85,7 +85,9 @@ class RelationshipsController
 
     unless verified
       if activity.is_a?(ActivityPub::Activity::Delete) && (object_iri = activity.object_iri)
-        response = HTTP::Client.get(object_iri)
+        headers = Ktistec::Signature.sign(account.actor, object_iri, method: :get)
+        headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
+        response = HTTP::Client.get(object_iri, headers)
         if response.status_code.in?([404, 410])
           verified = true
         end

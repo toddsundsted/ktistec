@@ -13,6 +13,11 @@ Spectator.describe RemoteFollowsController do
     context "when accepting HTML" do
       let(headers) { HTTP::Headers{"Accept" => "text/html"} }
 
+      it "returns 404 if not found" do
+        get "/actors/missing/remote-follow", headers
+        expect(response.status_code).to eq(404)
+      end
+
       it "succeeds" do
         get "/actors/#{actor.username}/remote-follow", headers
         expect(response.status_code).to eq(200)
@@ -26,6 +31,11 @@ Spectator.describe RemoteFollowsController do
 
     context "when accepting JSON" do
       let(headers) { HTTP::Headers{"Accept" => "application/json"} }
+
+      it "returns 404 if not found" do
+        get "/actors/missing/remote-follow", headers
+        expect(response.status_code).to eq(404)
+      end
 
       it "succeeds" do
         get "/actors/#{actor.username}/remote-follow", headers
@@ -42,6 +52,11 @@ Spectator.describe RemoteFollowsController do
   describe "POST /actors/:username/remote-follow" do
     context "when posting form data" do
       let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"} }
+
+      it "returns 404 if not found" do
+        post "/actors/missing/remote-follow", headers, ""
+        expect(response.status_code).to eq(404)
+      end
 
       it "renders an error if address is missing" do
         post "/actors/#{actor.username}/remote-follow", headers, ""
@@ -75,6 +90,11 @@ Spectator.describe RemoteFollowsController do
 
     context "when posting JSON data" do
       let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
+
+      it "returns 404 if not found" do
+        post "/actors/missing/remote-follow", headers, "{}"
+        expect(response.status_code).to eq(404)
+      end
 
       it "returns an error message if address is missing" do
         post "/actors/#{actor.username}/remote-follow", headers, "{}"

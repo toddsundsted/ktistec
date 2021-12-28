@@ -11,27 +11,29 @@ class WellKnownController
 
     server_error unless $1
     bad_request unless resource = env.params.query["resource"]?
-    bad_request unless resource =~ /^(acct:)?([^@]+)@(#{domain})$/
+    bad_request unless resource =~ /^(acct:)?(?<username>[^@]+)@(#{domain})$/
 
-    Account.find(username: $2).actor
+    username = $~["username"]
+
+    Account.find(username: username).actor
 
     message = {
       subject: resource,
       aliases: [
-        "#{host}/@#{$2}",
-        "#{host}/actors/#{$2}"
+        "#{host}/@#{username}",
+        "#{host}/actors/#{username}"
       ],
       links: [{
                 rel: "self",
-                href: "#{host}/actors/#{$2}",
+                href: "#{host}/actors/#{username}",
                 type: Ktistec::Constants::CONTENT_TYPE_HEADER
               }, {
                 rel: "http://webfinger.net/rel/profile-page",
-                href: "#{host}/@#{$2}",
+                href: "#{host}/@#{username}",
                 type: "text/html"
               }, {
                 rel: "http://ostatus.org/schema/1.0/subscribe",
-                template: "#{host}/actors/#{$2}/authorize-follow?uri={uri}"
+                template: "#{host}/actors/#{username}/authorize-follow?uri={uri}"
               }]
     }
     env.response.content_type = "application/jrd+json"

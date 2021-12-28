@@ -21,6 +21,11 @@ Spectator.describe WellKnownController do
       expect(response.status_code).to eq(400)
     end
 
+    it "returns 400 if bad host" do
+      get "/.well-known/webfinger?resource=acct%3A#{username}%40remote"
+      expect(response.status_code).to eq(400)
+    end
+
     it "returns 404 if not found" do
       get "/.well-known/webfinger?resource=acct%3Amissing%40test.test"
       expect(response.status_code).to eq(404)
@@ -33,6 +38,16 @@ Spectator.describe WellKnownController do
 
     it "returns 200 if 'acct' URI scheme is missing" do
       get "/.well-known/webfinger?resource=#{username}%40test.test"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns 200 if 'https' URI scheme is used" do
+      get "/.well-known/webfinger?resource=https%3A%2F%2Ftest.test%2Factors%2F#{username}"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns 200 if 'https' URI scheme is used" do
+      get "/.well-known/webfinger?resource=https%3A%2F%2Ftest.test%2F%40#{username}"
       expect(response.status_code).to eq(200)
     end
 

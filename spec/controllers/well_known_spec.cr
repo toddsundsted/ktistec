@@ -21,6 +21,11 @@ Spectator.describe WellKnownController do
       expect(response.status_code).to eq(400)
     end
 
+    it "returns 400 if bad host" do
+      get "/.well-known/webfinger?resource=acct%3A#{username}%40remote"
+      expect(response.status_code).to eq(400)
+    end
+
     it "returns 404 if not found" do
       get "/.well-known/webfinger?resource=acct%3Amissing%40test.test"
       expect(response.status_code).to eq(404)

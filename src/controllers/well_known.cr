@@ -11,7 +11,7 @@ class WellKnownController
 
     server_error unless $1
     bad_request unless resource = env.params.query["resource"]?
-    bad_request unless resource =~ /^(acct:)?(?<username>[^@]+)@(#{domain})$/
+    bad_request unless resource =~ %r<^https://(#{domain})/(actors/|@)(?<username>.+)$|^(acct:)?(?<username>[^@]+)@(#{domain})$>
 
     username = $~["username"]
 

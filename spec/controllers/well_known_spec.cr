@@ -36,6 +36,16 @@ Spectator.describe WellKnownController do
       expect(response.status_code).to eq(200)
     end
 
+    it "returns 200 if 'https' URI scheme is used" do
+      get "/.well-known/webfinger?resource=https%3A%2F%2Ftest.test%2Factors%2F#{username}"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns 200 if 'https' URI scheme is used" do
+      get "/.well-known/webfinger?resource=https%3A%2F%2Ftest.test%2F%40#{username}"
+      expect(response.status_code).to eq(200)
+    end
+
     it "returns the subject" do
       get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
       expect(JSON.parse(response.body)["subject"]).to eq("acct:#{username}@test.test")

@@ -11,7 +11,7 @@
       - else
         i.user.icon
     - if (summary = actor.summary)
-      .extra.summary.content
+      .extra.content
         p == s summary
   .extra.content
     a.left.floated href=actor.iri

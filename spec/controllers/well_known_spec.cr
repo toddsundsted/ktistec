@@ -58,7 +58,7 @@ Spectator.describe WellKnownController do
 
     it "returns aliases" do
       get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
-      expect(JSON.parse(response.body)["aliases"]).to match(["https://test.test/@#{username}", "https://test.test/actors/#{username}"])
+      expect(JSON.parse(response.body)["aliases"]).to match(["https://test.test/actors/#{username}"])
     end
 
     it "returns reference to the actor document" do

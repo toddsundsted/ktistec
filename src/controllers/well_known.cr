@@ -19,7 +19,6 @@ class WellKnownController
     message = {
       subject: resource,
       aliases: [
-        "#{host}/@#{username}",
         "#{host}/actors/#{username}"
       ],
       links: [{

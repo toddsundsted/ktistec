@@ -49,14 +49,12 @@ module Ktistec
         end
 
         def self.dereference?(key_pair, iri, ignore_cached = false) : self?
-          if iri
-            unless (instance = self.find?(iri)) && !ignore_cached
-              unless iri.starts_with?(Ktistec.host)
-                headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
-                headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-                Ktistec::Open.open?(iri, headers) do |response|
-                  instance = self.from_json_ld?(response.body)
-                end
+          unless (instance = self.find?(iri)) && !ignore_cached
+            unless iri.starts_with?(Ktistec.host)
+              headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
+              headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
+              Ktistec::Open.open?(iri, headers) do |response|
+                instance = self.from_json_ld?(response.body)
               end
             end
           end

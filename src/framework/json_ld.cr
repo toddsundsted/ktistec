@@ -19,7 +19,7 @@ module Ktistec
       Log.info { body }
       expand(
         body,
-        context(body["@context"]? || empty, loader),
+        context(body["@context"]?, loader),
         loader
       )
     end
@@ -57,10 +57,12 @@ module Ktistec
       wrap(result)
     end
 
-    private def self.context(context, loader)
+    private def self.context(context, loader, url = "https://www.w3.org/ns/activitystreams")
       result = Hash(String, JSON::Any).new
 
-      if (url = context.as_s?)
+      if context.nil?
+        context = loader.load(url)
+      elsif (url = context.as_s?)
         context = loader.load(url)
       elsif (array = context.as_a?)
         context = array.reduce(empty) do |a, c|

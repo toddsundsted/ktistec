@@ -119,6 +119,10 @@ module Ktistec
     class Loader
       def load(url)
         uri = URI.parse(url)
+        if uri.path.ends_with?("litepub-0.1.jsonld")
+          uri.host = "litepub.social"
+          uri.path = ""
+        end
         CONTEXTS.dig("#{uri.host}#{uri.path}/context.jsonld", "@context")
       rescue KeyError
         Log.info { "uncached external context not loaded: #{url}" }

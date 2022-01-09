@@ -1,0 +1,23 @@
+{
+    "@context": [
+        "https://www.w3.org/ns/activitystreams",
+        "https://w3id.org/security/v1",
+        {
+            "Emoji": "toot:Emoji",
+            "Hashtag": "as:Hashtag",
+            "PropertyValue": "schema:PropertyValue",
+            "atomUri": "ostatus:atomUri",
+            "conversation": {
+                "@id": "ostatus:conversation",
+                "@type": "@id"
+            },
+            "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+            "ostatus": "http://ostatus.org#",
+            "schema": "http://schema.org",
+            "toot": "http://joinmastodon.org/ns#",
+            "totalItems": "as:totalItems",
+            "value": "schema:value",
+            "sensitive": "as:sensitive"
+        }
+    ]
+}

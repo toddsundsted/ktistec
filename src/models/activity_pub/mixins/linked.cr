@@ -49,14 +49,12 @@ module Ktistec
         end
 
         def self.dereference?(key_pair, iri, ignore_cached = false) : self?
-          if iri
-            unless (instance = self.find?(iri)) && !ignore_cached
-              unless iri.starts_with?(Ktistec.host)
-                headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
-                headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-                Ktistec::Open.open?(iri, headers) do |response|
-                  instance = self.from_json_ld?(response.body)
-                end
+          unless !ignore_cached && (instance = self.find?(iri))
+            unless iri.starts_with?(Ktistec.host)
+              headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
+              headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
+              Ktistec::Open.open?(iri, headers) do |response|
+                instance = self.from_json_ld?(response.body)
               end
             end
           end
@@ -72,7 +70,7 @@ module Ktistec
                   class ::{{type}}
                     def {{name}}?(key_pair, *, dereference = false, ignore_cached = false)
                       {{name}} = self.{{name}}?
-                      unless ({{name}} && !ignore_cached) || ({{name}} && {{name}}.changed?)
+                      unless (!ignore_cached && {{name}}) || ({{name}} && {{name}}.changed?)
                         if ({{name}}_iri = self.{{name}}_iri) && dereference
                           unless {{name}}_iri.starts_with?(Ktistec.host)
                             {% for union_type in method.body[1].id.split(" | ").map(&.id) %}

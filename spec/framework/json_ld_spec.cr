@@ -17,24 +17,6 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
-  context "given plain JSON document" do
-    let(json) do
-      described_class.expand(JSON.parse(<<-JSON
-          {
-            "name": "Foo Bar Baz",
-            "page": "https://test/"
-          }
-        JSON
-      ))
-    end
-
-    describe "#[]" do
-      it "finds no terms" do
-        expect(json.as_h.keys).to be_empty
-      end
-    end
-  end
-
   context "given JSON document with vocabulary" do
     let(json) do
       described_class.expand(JSON.parse(<<-JSON
@@ -390,6 +372,43 @@ Spectator.describe Ktistec::JSON_LD do
     describe "#[]" do
       it "ignores the invalid term" do
         expect(json.as_h.keys).to match_array(["@context"]).in_any_order
+      end
+    end
+  end
+
+  context "given no context" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "type": "Object",
+            "id": "https://object/"
+          }
+        JSON
+      ))
+    end
+
+    describe "#[]" do
+      it "assumes an activitystreams context applies" do
+        expect(json.as_h.keys).to match_array(["@type", "@id"]).in_any_order
+      end
+    end
+  end
+
+  context "given a URL to a locally hosted litepub schema" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": "https://foo.bar.baz/litepub-0.1.jsonld",
+            "type": "Object",
+            "id": "https://object/"
+          }
+        JSON
+      ))
+    end
+
+    describe "#[]" do
+      it "assumes a canonical litepub context applies" do
+        expect(json.as_h.keys).to match_array(["@context", "@type", "@id"]).in_any_order
       end
     end
   end

@@ -19,7 +19,7 @@ module Ktistec
       Log.info { body }
       expand(
         body,
-        context(body["@context"]? || empty, loader),
+        context(body["@context"]?, loader),
         loader
       )
     end
@@ -57,19 +57,22 @@ module Ktistec
       wrap(result)
     end
 
-    private def self.context(context, loader)
-      result = Hash(String, JSON::Any).new
-
-      if (url = context.as_s?)
+    private def self.context(context, loader, url = "https://www.w3.org/ns/activitystreams")
+      if context.nil?
         context = loader.load(url)
-      elsif (array = context.as_a?)
-        context = array.reduce(empty) do |a, c|
+      elsif (url = context.as_s?)
+        context = loader.load(url)
+      end
+      if (contexts = context.as_a?)
+        context = contexts.reduce(empty) do |a, c|
           if (u = c.as_s?)
-            c = loader.load(u)
+            c = self.context(c, loader)
           end
           wrap(a.as_h.merge(c.as_h))
         end
       end
+
+      result = Hash(String, JSON::Any).new
 
       context.as_h.each do |term, defn|
         if term.includes?(":")
@@ -117,6 +120,10 @@ module Ktistec
     class Loader
       def load(url)
         uri = URI.parse(url)
+        if uri.path.ends_with?("litepub-0.1.jsonld")
+          uri.host = "litepub.social"
+          uri.path = ""
+        end
         CONTEXTS.dig("#{uri.host}#{uri.path}/context.jsonld", "@context")
       rescue KeyError
         Log.info { "uncached external context not loaded: #{url}" }

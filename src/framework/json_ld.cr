@@ -58,20 +58,21 @@ module Ktistec
     end
 
     private def self.context(context, loader, url = "https://www.w3.org/ns/activitystreams")
-      result = Hash(String, JSON::Any).new
-
       if context.nil?
         context = loader.load(url)
       elsif (url = context.as_s?)
         context = loader.load(url)
-      elsif (array = context.as_a?)
-        context = array.reduce(empty) do |a, c|
+      end
+      if (contexts = context.as_a?)
+        context = contexts.reduce(empty) do |a, c|
           if (u = c.as_s?)
-            c = loader.load(u)
+            c = self.context(c, loader)
           end
           wrap(a.as_h.merge(c.as_h))
         end
       end
+
+      result = Hash(String, JSON::Any).new
 
       context.as_h.each do |term, defn|
         if term.includes?(":")

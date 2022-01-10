@@ -10,7 +10,7 @@ module Ktistec
     class Error < Exception
     end
 
-    def sign(key_pair, url, body = nil, content_type = nil, accept = nil, method = :post, time = Time.utc, algorithm = "rsa-sha256")
+    def sign(key_pair, url, body = nil, content_type = nil, content_length = nil, accept = nil, method = :post, time = Time.utc, algorithm = "rsa-sha256")
       key = key_pair.private_key.not_nil!
       url = URI.parse(url).normalize
       date = Time::Format::HTTP_DATE.format(time)
@@ -43,6 +43,11 @@ module Ktistec
         headers_string += " content-type"
         signature_string += "\ncontent-type: #{content_type}"
         headers["Content-Type"] = content_type
+      end
+      if content_length
+        headers_string += " content-length"
+        signature_string += "\ncontent-length: #{content_length}"
+        headers["Content-Length"] = content_length.to_s
       end
       signature = Base64.strict_encode(key.sign(OpenSSL::Digest.new("SHA256"), signature_string))
       headers["Signature"] = signature_params + %Q<,signature="#{signature}",headers="#{headers_string}">
@@ -101,6 +106,8 @@ module Ktistec
             "#{header}: #{headers["Accept"]}"
           when "content-type"
             "#{header}: #{headers["Content-Type"]}"
+          when "content-length"
+            "#{header}: #{headers["Content-Length"]}"
           when "digest"
             "#{header}: #{headers["Digest"]}"
           end

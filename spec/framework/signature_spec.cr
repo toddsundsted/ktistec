@@ -33,6 +33,14 @@ Spectator.describe Ktistec::Signature do
       expect(described_class.sign(key_pair, "https://remote/inbox")["Content-Type"]?).to be_nil
     end
 
+    it "includes content length header if content length is supplied" do
+      expect(described_class.sign(key_pair, "https://remote/inbox", content_length: 100)["Content-Length"]?).not_to be_nil
+    end
+
+    it "does not include content length header if content length is not supplied" do
+      expect(described_class.sign(key_pair, "https://remote/inbox")["Content-Length"]?).to be_nil
+    end
+
     it "includes accept header if accept is supplied" do
       expect(described_class.sign(key_pair, "https://remote/inbox", accept: "type")["Accept"]?).not_to be_nil
     end
@@ -82,7 +90,7 @@ Spectator.describe Ktistec::Signature do
   end
 
   describe ".verify" do
-    let(headers) { described_class.sign(key_pair, "https://remote/inbox", body: "body", content_type: "type", accept: "type") }
+    let(headers) { described_class.sign(key_pair, "https://remote/inbox", body: "body", content_type: "type", content_length: 4, accept: "type") }
 
     it "raises an error if the signature header is not present" do
       expect{described_class.verify(key_pair, "https://remote/inbox", HTTP::Headers.new)}.
@@ -234,6 +242,12 @@ Spectator.describe Ktistec::Signature do
 
     it "raises an error if the content type header doesn't match" do
       headers["Content-Type"] = "FOO/BAR"
+      expect{described_class.verify(key_pair, "https://remote/inbox", headers)}.
+        to raise_error(Ktistec::Signature::Error, /invalid signature/)
+    end
+
+    it "raises an error if the content length header doesn't match" do
+      headers["Content-Length"] = "100"
       expect{described_class.verify(key_pair, "https://remote/inbox", headers)}.
         to raise_error(Ktistec::Signature::Error, /invalid signature/)
     end

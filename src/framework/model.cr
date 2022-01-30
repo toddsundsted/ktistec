@@ -54,19 +54,18 @@ module Ktistec
         {% end %}
       end
 
-      def conditions(*terms, prefix = nil, **options)
+      def conditions(*terms, prefix = nil, include_deleted = false, **options)
         prefix = prefix ? "\"#{prefix}\"." : ""
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          conditions =
-            [
-              {% if @type < Deletable %}
-                "#{prefix}\"deleted_at\" IS NULL",
-              {% end %}
-              {% if @type < Polymorphic %}
-                "#{prefix}\"type\" IN (%s)" % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
-              {% end %}
-            ] of String +
+          conditions = [] of String
+          {% if @type < Deletable %}
+            conditions << "#{prefix}\"deleted_at\" IS NULL" unless include_deleted
+          {% end %}
+          {% if @type < Polymorphic %}
+            conditions << "#{prefix}\"type\" IN (%s)" % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}}
+          {% end %}
+          conditions +=
             options.keys.select { |o| o.in?({{vs.map(&.symbolize)}}) }.map { |v| "#{prefix}\"#{v}\" = ?" } +
             terms.to_a
           conditions.size > 0 ?
@@ -77,9 +76,9 @@ module Ktistec
 
       # Returns the count of saved instances.
       #
-      def count(**options)
+      def count(include_deleted = false, **options)
         Ktistec.database.scalar(
-          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options)}", *options.values
+          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted)}", *options.values
         ).as(Int)
       end
 
@@ -168,16 +167,16 @@ module Ktistec
 
       # Returns all instances.
       #
-      def all
-        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions}")
+      def all(include_deleted = false)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(include_deleted: include_deleted)}")
       end
 
       # Finds the saved instance.
       #
       # Raises `NotFound` if no such saved instance exists.
       #
-      def find(_id id : Int?)
-        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id)}", id)
+      def find(_id id : Int?, include_deleted = false)
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id, include_deleted: include_deleted)}", id)
       rescue DB::NoResultsError
         raise NotFound.new("#{self} id=#{id}: not found")
       end
@@ -186,8 +185,8 @@ module Ktistec
       #
       # Returns `nil` if no such saved instance exists.
       #
-      def find?(_id id : Int?)
-        find(id)
+      def find?(_id id : Int?, include_deleted = false)
+        find(id, include_deleted: include_deleted)
       rescue NotFound
       end
 
@@ -195,8 +194,8 @@ module Ktistec
       #
       # Raises `NotFound` if no such saved instance exists.
       #
-      def find(**options)
-        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options)}", *options.values)
+      def find(include_deleted = false, **options)
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted)}", *options.values)
       rescue DB::NoResultsError
         raise NotFound.new("#{self} options=#{options}: not found")
       end
@@ -205,21 +204,21 @@ module Ktistec
       #
       # Returns `nil` if no such saved instance exists.
       #
-      def find?(**options)
-        find(**options)
+      def find?(include_deleted = false, **options)
+        find(**options, include_deleted: include_deleted)
       rescue NotFound
       end
 
       # Returns saved instances.
       #
-      def where(**options)
-        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options)}", *options.values)
+      def where(include_deleted = false, **options)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted)}", *options.values)
       end
 
       # Returns saved instances.
       #
-      def where(where : String, *arguments)
-        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(where)}", *arguments)
+      def where(where : String, *arguments, include_deleted = false)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(where, include_deleted: include_deleted)}", *arguments)
       end
     end
 

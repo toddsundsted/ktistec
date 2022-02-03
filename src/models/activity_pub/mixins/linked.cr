@@ -40,12 +40,12 @@ module Ktistec
           end
         end
 
-        def self.find(_iri iri : String?)
-          find(iri: iri)
+        def self.find(_iri iri : String?, include_deleted = false)
+          find(iri: iri, include_deleted: include_deleted)
         end
 
-        def self.find?(_iri iri : String?)
-          find?(iri: iri)
+        def self.find?(_iri iri : String?, include_deleted = false)
+          find?(iri: iri, include_deleted: include_deleted)
         end
 
         def self.dereference?(key_pair, iri, ignore_cached = false) : self?

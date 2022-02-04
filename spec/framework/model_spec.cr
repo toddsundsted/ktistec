@@ -695,6 +695,18 @@ Spectator.describe Ktistec::Model do
         expect(not_nil.foo_bar).to eq(foo_bar)
         expect(foo_bar.not_nil_model).to eq(not_nil)
       end
+
+      it "finds a deleted instance if explicitly specified" do
+        not_nil.assign(foo_bar: foo_bar).save
+        foo_bar.dup.delete
+        expect(NotNilModel.find(not_nil.id).foo_bar?(include_deleted: true)).to eq(foo_bar)
+      end
+
+      it "finds a deleted instance if explicitly specified" do
+        not_nil.assign(foo_bar: foo_bar).save
+        foo_bar.dup.delete
+        expect(NotNilModel.find(not_nil.id).foo_bar(include_deleted: true)).to eq(foo_bar)
+      end
     end
 
     context "has_many" do
@@ -741,6 +753,12 @@ Spectator.describe Ktistec::Model do
         foo_bar.foo = "Changed"
         expect{new_foo_bar_model.save}.not_to change{FooBarModel.count(foo: "Changed")}
       end
+
+      it "includes a deleted instance if explicitly specified" do
+        not_nil.assign(foo_bar_models: [foo_bar]).save
+        foo_bar.dup.delete
+        expect(NotNilModel.find(not_nil.id).foo_bar_models(include_deleted: true)).to eq([foo_bar])
+      end
     end
 
     context "has_one" do
@@ -786,6 +804,18 @@ Spectator.describe Ktistec::Model do
         foo_bar.delete
         not_nil.key = "Changed"
         expect{new_not_nil_model.save}.not_to change{NotNilModel.count(key: "Changed")}
+      end
+
+      it "finds a deleted instance if explicitly specified" do
+        foo_bar.assign(not_nil_model: not_nil).save
+        not_nil.dup.delete
+        expect(FooBarModel.find(foo_bar.id).not_nil_model?(include_deleted: true)).to eq(not_nil)
+      end
+
+      it "finds a deleted instance if explicitly specified" do
+        foo_bar.assign(not_nil_model: not_nil).save
+        not_nil.dup.delete
+        expect(FooBarModel.find(foo_bar.id).not_nil_model(include_deleted: true)).to eq(not_nil)
       end
     end
 

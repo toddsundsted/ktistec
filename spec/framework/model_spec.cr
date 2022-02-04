@@ -711,7 +711,7 @@ Spectator.describe Ktistec::Model do
 
     context "has_many" do
       it "assigns the reciprocal instance" do
-        (not_nil.foo_bar_models = [foo_bar])
+        not_nil.foo_bar_models = [foo_bar]
         expect(foo_bar.not_nil).to eq(not_nil)
         expect(not_nil.foo_bar_models).to eq([foo_bar])
       end
@@ -763,7 +763,7 @@ Spectator.describe Ktistec::Model do
 
     context "has_one" do
       it "assigns the reciprocal instance" do
-        (foo_bar.not_nil_model = not_nil)
+        foo_bar.not_nil_model = not_nil
         expect(not_nil.foo_bar).to eq(foo_bar)
         expect(foo_bar.not_nil_model).to eq(not_nil)
       end

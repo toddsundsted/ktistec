@@ -220,6 +220,12 @@ module Ktistec
       def where(where : String, *arguments, include_deleted = false)
         query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(where, include_deleted: include_deleted)}", *arguments)
       end
+
+      # Runs the query.
+      #
+      def sql(query : String, *arguments)
+        query_all(query, *arguments)
+      end
     end
 
     module InstanceMethods

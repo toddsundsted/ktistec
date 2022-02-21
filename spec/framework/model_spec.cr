@@ -355,6 +355,14 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe ".sql" do
+    it "runs the query" do
+      saved_model = NotNilModel.new(val: "Val").save
+      expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", "Val")).to eq([saved_model])
+      expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", "")).to be_empty
+    end
+  end
+
   describe "#serialize_graph" do
     let(foo_bar) { FooBarModel.new }
     let(not_nil) { NotNilModel.new(val: "Val") }

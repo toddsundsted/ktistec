@@ -73,7 +73,7 @@ module Ktistec
                       unless (!ignore_cached && {{name}}) || ({{name}} && {{name}}.changed?)
                         if ({{name}}_iri = self.{{name}}_iri) && dereference
                           unless {{name}}_iri.starts_with?(Ktistec.host)
-                            {% for union_type in method.body[1].id.split(" | ").map(&.id) %}
+                            {% for union_type in method.body[3].id.split(" | ").map(&.id) %}
                               headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
                               headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
                               Ktistec::Open.open?({{name}}_iri, headers) do |response|

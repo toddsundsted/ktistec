@@ -357,7 +357,7 @@ module Ktistec
           end
         end
         def _association_{{name}}
-          {:belongs_to, {{class_name}}, @{{name}}}
+          {:belongs_to, {{primary_key.symbolize}}, {{foreign_key.symbolize}}, {{class_name}}, @{{name}}}
         end
       end
 
@@ -389,7 +389,7 @@ module Ktistec
           @{{name}}.not_nil!
         end
         def _association_{{name}}
-          {:has_many, Enumerable({{class_name}}), @{{name}}}
+          {:has_many, {{primary_key.symbolize}}, {{foreign_key.symbolize}}, Enumerable({{class_name}}), @{{name}}}
         end
       end
 
@@ -416,7 +416,7 @@ module Ktistec
           @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
         end
         def _association_{{name}}
-          {:has_one, {{class_name}}, @{{name}}}
+          {:has_one, {{primary_key.symbolize}}, {{foreign_key.symbolize}}, {{class_name}}, @{{name}}}
         end
       end
 

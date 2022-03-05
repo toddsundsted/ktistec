@@ -7,7 +7,7 @@ require "../activity_pub"
 
 module ActivityPub
   class Activity
-    include Ktistec::Model(Common, Polymorphic, Serialized, Linked)
+    include Ktistec::Model(Common, Undoable, Polymorphic, Serialized, Linked)
     include ActivityPub
 
     @@table_name = "activities"

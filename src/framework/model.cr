@@ -54,13 +54,16 @@ module Ktistec
         {% end %}
       end
 
-      def conditions(*terms, prefix = nil, include_deleted = false, **options)
+      def conditions(*terms, prefix = nil, include_deleted = false, include_undone = false, **options)
         prefix = prefix ? "\"#{prefix}\"." : ""
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           conditions = [] of String
           {% if @type < Deletable %}
             conditions << "#{prefix}\"deleted_at\" IS NULL" unless include_deleted
+          {% end %}
+          {% if @type < Undoable %}
+            conditions << "#{prefix}\"undone_at\" IS NULL" unless include_undone
           {% end %}
           {% if @type < Polymorphic %}
             conditions << "#{prefix}\"type\" IN (%s)" % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}}
@@ -76,9 +79,9 @@ module Ktistec
 
       # Returns the count of saved instances.
       #
-      def count(include_deleted = false, **options)
+      def count(include_deleted = false, include_undone = false, **options)
         Ktistec.database.scalar(
-          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted)}", *options.values
+          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", *options.values
         ).as(Int)
       end
 
@@ -167,16 +170,16 @@ module Ktistec
 
       # Returns all instances.
       #
-      def all(include_deleted = false)
-        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(include_deleted: include_deleted)}")
+      def all(include_deleted = false, include_undone = false)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(include_deleted: include_deleted, include_undone: include_undone)}")
       end
 
       # Finds the saved instance.
       #
       # Raises `NotFound` if no such saved instance exists.
       #
-      def find(_id id : Int?, include_deleted = false)
-        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id, include_deleted: include_deleted)}", id)
+      def find(_id id : Int?, include_deleted = false, include_undone = false)
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id, include_deleted: include_deleted, include_undone: include_undone)}", id)
       rescue DB::NoResultsError
         raise NotFound.new("#{self} id=#{id}: not found")
       end
@@ -185,8 +188,8 @@ module Ktistec
       #
       # Returns `nil` if no such saved instance exists.
       #
-      def find?(_id id : Int?, include_deleted = false)
-        find(id, include_deleted: include_deleted)
+      def find?(_id id : Int?, include_deleted = false, include_undone = false)
+        find(id, include_deleted: include_deleted, include_undone: include_undone)
       rescue NotFound
       end
 
@@ -194,8 +197,8 @@ module Ktistec
       #
       # Raises `NotFound` if no such saved instance exists.
       #
-      def find(include_deleted = false, **options)
-        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted)}", *options.values)
+      def find(include_deleted = false, include_undone = false, **options)
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", *options.values)
       rescue DB::NoResultsError
         raise NotFound.new("#{self} options=#{options}: not found")
       end
@@ -204,21 +207,21 @@ module Ktistec
       #
       # Returns `nil` if no such saved instance exists.
       #
-      def find?(include_deleted = false, **options)
-        find(**options, include_deleted: include_deleted)
+      def find?(include_deleted = false, include_undone = false, **options)
+        find(**options, include_deleted: include_deleted, include_undone: include_undone)
       rescue NotFound
       end
 
       # Returns saved instances.
       #
-      def where(include_deleted = false, **options)
-        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted)}", *options.values)
+      def where(include_deleted = false, include_undone = false, **options)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", *options.values)
       end
 
       # Returns saved instances.
       #
-      def where(where : String, *arguments, include_deleted = false)
-        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(where, include_deleted: include_deleted)}", *arguments)
+      def where(where : String, *arguments, include_deleted = false, include_undone = false)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(where, include_deleted: include_deleted, include_undone: include_undone)}", *arguments)
       end
 
       # Runs the query.
@@ -434,6 +437,9 @@ module Ktistec
         return if self.destroyed?
         {% if @type < Deletable %}
           return if self.deleted?
+        {% end %}
+        {% if @type < Undoable %}
+          return if self.undone?
         {% end %}
         result << Node.new(self, association, index)
         {% begin %}
@@ -704,4 +710,5 @@ module Ktistec
 end
 
 require "./model/deletable"
+require "./model/undoable"
 require "./model/polymorphic"

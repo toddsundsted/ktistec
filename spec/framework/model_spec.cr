@@ -6,7 +6,7 @@ require "../../src/framework/model"
 require "../spec_helper/base"
 
 class FooBarModel
-  include Ktistec::Model(Deletable)
+  include Ktistec::Model(Deletable, Undoable)
 
   @[Persistent]
   property foo : String? = "Foo"
@@ -32,7 +32,7 @@ class FooBarModel
 end
 
 class NotNilModel
-  include Ktistec::Model(Deletable)
+  include Ktistec::Model(Deletable, Undoable)
 
   @[Persistent]
   property key : String = "Key"
@@ -97,6 +97,7 @@ Spectator.describe Ktistec::Model do
       CREATE TABLE foo_bar_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime,
+        undone_at datetime,
         not_nil_model_id integer,
         foo text,
         bar text
@@ -106,6 +107,7 @@ Spectator.describe Ktistec::Model do
       CREATE TABLE not_nil_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime,
+        undone_at datetime,
         foo_bar_model_id integer,
         key text NOT NULL,
         val text NOT NULL
@@ -715,6 +717,18 @@ Spectator.describe Ktistec::Model do
         foo_bar.dup.delete
         expect(NotNilModel.find(not_nil.id).foo_bar(include_deleted: true)).to eq(foo_bar)
       end
+
+      it "finds an undone instance if explicitly specified" do
+        not_nil.assign(foo_bar: foo_bar).save
+        foo_bar.dup.undo
+        expect(NotNilModel.find(not_nil.id).foo_bar?(include_undone: true)).to eq(foo_bar)
+      end
+
+      it "finds an undone instance if explicitly specified" do
+        not_nil.assign(foo_bar: foo_bar).save
+        foo_bar.dup.undo
+        expect(NotNilModel.find(not_nil.id).foo_bar(include_undone: true)).to eq(foo_bar)
+      end
     end
 
     context "has_many" do
@@ -766,6 +780,12 @@ Spectator.describe Ktistec::Model do
         not_nil.assign(foo_bar_models: [foo_bar]).save
         foo_bar.dup.delete
         expect(NotNilModel.find(not_nil.id).foo_bar_models(include_deleted: true)).to eq([foo_bar])
+      end
+
+      it "includes an undone instance if explicitly specified" do
+        not_nil.assign(foo_bar_models: [foo_bar]).save
+        foo_bar.dup.undo
+        expect(NotNilModel.find(not_nil.id).foo_bar_models(include_undone: true)).to eq([foo_bar])
       end
     end
 
@@ -824,6 +844,18 @@ Spectator.describe Ktistec::Model do
         foo_bar.assign(not_nil_model: not_nil).save
         not_nil.dup.delete
         expect(FooBarModel.find(foo_bar.id).not_nil_model(include_deleted: true)).to eq(not_nil)
+      end
+
+      it "finds an undone instance if explicitly specified" do
+        foo_bar.assign(not_nil_model: not_nil).save
+        not_nil.dup.undo
+        expect(FooBarModel.find(foo_bar.id).not_nil_model?(include_undone: true)).to eq(not_nil)
+      end
+
+      it "finds an undone instance if explicitly specified" do
+        foo_bar.assign(not_nil_model: not_nil).save
+        not_nil.dup.undo
+        expect(FooBarModel.find(foo_bar.id).not_nil_model(include_undone: true)).to eq(not_nil)
       end
     end
 

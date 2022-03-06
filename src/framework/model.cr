@@ -340,18 +340,18 @@ module Ktistec
           self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
           {{name}}
         end
-        def {{name}}?(include_deleted = false) : {{class_name}}?
+        def {{name}}?(include_deleted = false, include_undone = false) : {{class_name}}?
           @{{name}} ||= begin
             {% for union_type in union_types %}
-              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}, include_deleted: include_deleted) ||
+              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}, include_deleted: include_deleted, include_undone: include_undone) ||
             {% end %}
             nil
           end
         end
-        def {{name}}(include_deleted = false) : {{class_name}}
+        def {{name}}(include_deleted = false, include_undone = false) : {{class_name}}
           @{{name}} ||= begin
             {% for union_type in union_types %}
-              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}, include_deleted: include_deleted) ||
+              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}, include_deleted: include_deleted, include_undone: include_undone) ||
             {% end %}
             raise NotFound.new("#{self.class} {{name}} {{primary_key}}=#{self.{{foreign_key}}}: not found")
           end
@@ -381,10 +381,10 @@ module Ktistec
           end
           {{name}}
         end
-        def {{name}}(include_deleted = false) : Enumerable({{class_name}})
+        def {{name}}(include_deleted = false, include_undone = false) : Enumerable({{class_name}})
           {{name}} = @{{name}}
           if {{name}}.nil? || {{name}}.empty?
-            @{{name}} = {{class_name}}.where({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted)
+            @{{name}} = {{class_name}}.where({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
           end
           @{{name}}.not_nil!
         end
@@ -409,11 +409,11 @@ module Ktistec
           {% end %}
           {{name}}
         end
-        def {{name}}?(include_deleted = false) : {{class_name}}?
-          @{{name}} ||= {{class_name}}.find?({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted)
+        def {{name}}?(include_deleted = false, include_undone = false) : {{class_name}}?
+          @{{name}} ||= {{class_name}}.find?({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
         end
-        def {{name}}(include_deleted = false) : {{class_name}}
-          @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted)
+        def {{name}}(include_deleted = false, include_undone = false) : {{class_name}}
+          @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
         end
         def _association_{{name}}
           {:has_one, {{class_name}}, @{{name}}}

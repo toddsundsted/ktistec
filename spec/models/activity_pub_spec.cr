@@ -14,7 +14,7 @@ class ActivityPubModel
     self
   end
 
-  def self.find?(iri, include_deleted = false)
+  def self.find?(iri, include_deleted = false, include_undone = false)
     nil
   end
 

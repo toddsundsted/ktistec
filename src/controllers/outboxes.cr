@@ -274,6 +274,7 @@ class RelationshipsController
           follow.destroy
         end
       end
+      activity.object.undo
     when ActivityPub::Activity::Delete
       case (object = activity.object?)
       when ActivityPub::Object

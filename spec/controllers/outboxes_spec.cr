@@ -602,6 +602,11 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
         end
 
+        it "undoes the announce" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"}.
+            to change{ActivityPub::Activity.count(iri: announce.iri)}.by(-1)
+        end
+
         it "puts the activity in the actor's outbox" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"}.
             to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
@@ -636,6 +641,11 @@ Spectator.describe RelationshipsController do
         it "addresses (cc) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(like.iri)}"
           expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "undoes the like" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{URI.encode_www_form(like.iri)}"}.
+            to change{ActivityPub::Activity.count(iri: like.iri)}.by(-1)
         end
 
         it "puts the activity in the actor's outbox" do
@@ -673,6 +683,11 @@ Spectator.describe RelationshipsController do
         it "destroys the relationship" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{follow.iri}"}.
             to change{Relationship::Social::Follow.count(from_iri: actor.iri, to_iri: other.iri)}.by(-1)
+        end
+
+        it "undoes the follow" do
+          expect{post "/actors/#{actor.username}/outbox", headers, "type=Undo&object=#{follow.iri}"}.
+            to change{ActivityPub::Activity.count(iri: follow.iri)}.by(-1)
         end
 
         it "puts the activity in the actor's outbox" do

@@ -265,10 +265,6 @@ module ActivityPub
              ON act.iri = a.actor_iri
       LEFT JOIN objects AS obj
              ON obj.iri = a.object_iri
-      LEFT JOIN activities AS u
-             ON u.object_iri = a.iri
-            AND u.type = "#{ActivityPub::Activity::Undo}"
-            AND u.actor_iri = a.actor_iri
           WHERE r.from_iri LIKE ?
             #{mailbox}
             AND r.confirmed = 1
@@ -278,7 +274,7 @@ module ActivityPub
             AND act.blocked_at is NULL
             AND obj.deleted_at is NULL
             AND obj.blocked_at is NULL
-            AND u.iri IS NULL
+            AND a.undone_at IS NULL
        #{public ? %Q|AND a.visible = 1| : nil}
        #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
             AND a.id NOT IN (
@@ -290,10 +286,6 @@ module ActivityPub
                    ON act.iri = a.actor_iri
             LEFT JOIN objects AS obj
                    ON obj.iri = a.object_iri
-            LEFT JOIN activities AS u
-                   ON u.object_iri = a.iri
-                  AND u.type = "#{ActivityPub::Activity::Undo}"
-                  AND u.actor_iri = a.actor_iri
                 WHERE r.from_iri LIKE ?
                   #{mailbox}
                   AND r.confirmed = 1
@@ -303,7 +295,7 @@ module ActivityPub
                   AND act.blocked_at is NULL
                   AND obj.deleted_at is NULL
                   AND obj.blocked_at is NULL
-                  AND u.iri IS NULL
+                  AND a.undone_at IS NULL
              #{public ? %Q|AND a.visible = 1| : nil}
              #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
              ORDER BY r.created_at DESC
@@ -346,8 +338,6 @@ module ActivityPub
              ON act.iri = a.actor_iri
            JOIN objects AS obj
              ON obj.iri = a.object_iri
-      LEFT JOIN activities AS u
-             ON u.object_iri = a.iri AND u.type = "#{ActivityPub::Activity::Undo}" AND u.actor_iri = a.actor_iri
           WHERE r.from_iri = ?
             AND obj.iri = ?
             #{mailbox}
@@ -358,7 +348,7 @@ module ActivityPub
             AND act.blocked_at is NULL
             AND obj.deleted_at is NULL
             AND obj.blocked_at is NULL
-            AND u.iri IS NULL
+            AND a.undone_at IS NULL
       QUERY
       Ktistec.database.scalar(query, self.iri, object.iri).as(Int64) > 0
     end
@@ -401,8 +391,6 @@ module ActivityPub
              ON act.iri = a.actor_iri
            JOIN objects AS obj
              ON obj.iri = a.object_iri
-      LEFT JOIN activities AS u
-             ON u.object_iri = a.iri AND u.type = "#{ActivityPub::Activity::Undo}" AND u.actor_iri = a.actor_iri
           WHERE a.actor_iri = ?
             AND a.object_iri = ?
             #{inclusion}
@@ -411,7 +399,7 @@ module ActivityPub
             AND act.blocked_at is NULL
             AND obj.deleted_at is NULL
             AND obj.blocked_at is NULL
-            AND u.iri IS NULL
+            AND a.undone_at IS NULL
       QUERY
       Activity.query_all(query, self.iri, object.iri).first?
     end
@@ -460,10 +448,6 @@ module ActivityPub
     #
     # Does not include private (not visible) posts and replies.
     #
-    # Note: the order of the left join in the query seems to have an
-    # impact on whether or not the query planner uses an index or
-    # creates a b-tree to sort the final results.
-    #
     def public_posts(page = 1, size = 10)
       query = <<-QUERY
          SELECT DISTINCT #{Object.columns(prefix: "o")}
@@ -476,10 +460,6 @@ module ActivityPub
            JOIN relationships AS r
              ON r.to_iri = a.iri
             AND r.type = "#{Relationship::Content::Outbox}"
-      LEFT JOIN activities AS u
-             ON u.object_iri = a.iri
-            AND u.type = "#{ActivityPub::Activity::Undo}"
-            AND u.actor_iri = a.actor_iri
           WHERE r.from_iri = ?
             AND o.visible = 1
             AND o.in_reply_to_iri IS NULL
@@ -487,7 +467,7 @@ module ActivityPub
             AND o.blocked_at IS NULL
             AND t.deleted_at IS NULL
             AND t.blocked_at IS NULL
-            AND u.id IS NULL
+            AND a.undone_at IS NULL
             AND o.id NOT IN (
                SELECT DISTINCT o.id
                  FROM objects AS o
@@ -499,10 +479,6 @@ module ActivityPub
                  JOIN relationships AS r
                    ON r.to_iri = a.iri
                   AND r.type = "#{Relationship::Content::Outbox}"
-            LEFT JOIN activities AS u
-                   ON u.object_iri = a.iri
-                  AND u.type = "#{ActivityPub::Activity::Undo}"
-                  AND u.actor_iri = a.actor_iri
                 WHERE r.from_iri = ?
                   AND o.visible = 1
                   AND o.in_reply_to_iri IS NULL
@@ -510,7 +486,7 @@ module ActivityPub
                   AND o.blocked_at IS NULL
                   AND t.deleted_at IS NULL
                   AND t.blocked_at IS NULL
-                  AND u.id IS NULL
+                  AND a.undone_at IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
             )
@@ -538,16 +514,12 @@ module ActivityPub
            JOIN relationships AS r
              ON r.to_iri = a.iri
             AND r.type = "#{Relationship::Content::Outbox}"
-      LEFT JOIN activities AS u
-             ON u.object_iri = a.iri
-            AND u.type = "#{ActivityPub::Activity::Undo}"
-            AND u.actor_iri = a.actor_iri
           WHERE r.from_iri = ?
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
             AND t.deleted_at IS NULL
             AND t.blocked_at IS NULL
-            AND u.id IS NULL
+            AND a.undone_at IS NULL
             AND o.id NOT IN (
                SELECT DISTINCT o.id
                  FROM objects AS o
@@ -559,16 +531,12 @@ module ActivityPub
                  JOIN relationships AS r
                    ON r.to_iri = a.iri
                   AND r.type = "#{Relationship::Content::Outbox}"
-            LEFT JOIN activities AS u
-                   ON u.object_iri = a.iri
-                  AND u.type = "#{ActivityPub::Activity::Undo}"
-                  AND u.actor_iri = a.actor_iri
                 WHERE r.from_iri = ?
                   AND o.deleted_at IS NULL
                   AND o.blocked_at IS NULL
                   AND t.deleted_at IS NULL
                   AND t.blocked_at IS NULL
-                  AND u.id IS NULL
+                  AND a.undone_at IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
             )
@@ -667,16 +635,12 @@ module ActivityPub
              ON act.iri = a.actor_iri
       LEFT JOIN objects AS obj
              ON obj.iri = a.object_iri
-      LEFT JOIN activities AS undo
-             ON undo.object_iri = a.iri
-            AND undo.type = "#{ActivityPub::Activity::Undo}"
-            AND undo.actor_iri = a.actor_iri
           WHERE rel.from_iri = ?
             AND act.deleted_at IS null
             AND act.blocked_at IS null
             AND obj.deleted_at IS null
             AND obj.blocked_at IS null
-            AND undo.iri IS null
+            AND a.undone_at IS null
             AND a.id NOT IN (
                SELECT a.id
                  FROM activities AS a
@@ -687,16 +651,12 @@ module ActivityPub
                    ON act.iri = a.actor_iri
             LEFT JOIN objects AS obj
                    ON obj.iri = a.object_iri
-            LEFT JOIN activities AS undo
-                   ON undo.object_iri = a.iri
-                  AND undo.type = "#{ActivityPub::Activity::Undo}"
-                  AND undo.actor_iri = a.actor_iri
                 WHERE rel.from_iri = ?
                   AND act.deleted_at IS null
                   AND act.blocked_at IS null
                   AND obj.deleted_at IS null
                   AND obj.blocked_at IS null
-                  AND undo.iri IS null
+                  AND a.undone_at IS null
              ORDER BY rel.created_at DESC
                 LIMIT ?
             )
@@ -722,16 +682,12 @@ module ActivityPub
              ON act.iri = a.actor_iri
       LEFT JOIN objects AS obj
              ON obj.iri = a.object_iri
-      LEFT JOIN activities AS undo
-             ON undo.object_iri = a.iri
-            AND undo.type = "#{ActivityPub::Activity::Undo}"
-            AND undo.actor_iri = a.actor_iri
           WHERE rel.from_iri = ?
             AND act.deleted_at IS null
             AND act.blocked_at IS null
             AND obj.deleted_at IS null
             AND obj.blocked_at IS null
-            AND undo.iri IS null
+            AND a.undone_at IS null
             AND rel.created_at > ?
       QUERY
       Ktistec.database.scalar(query, iri, since).as(Int64)

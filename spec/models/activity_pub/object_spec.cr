@@ -343,10 +343,8 @@ Spectator.describe ActivityPub::Object do
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
-    let_build(:undo, actor: actor, object: activity5)
-
     it "filters out objects belonging to undone activities" do
-      undo.save
+      activity5.undo
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
@@ -389,6 +387,16 @@ Spectator.describe ActivityPub::Object do
 
     it "doesn't fail when the object hasn't been saved" do
       expect(object.with_statistics!.announces_count).to eq(0)
+      expect(object.with_statistics!.likes_count).to eq(0)
+    end
+
+    it "filters out undone announces" do
+      announce.save.undo
+      expect(object.with_statistics!.announces_count).to eq(0)
+    end
+
+    it "filters out undone likes" do
+      like.save.undo
       expect(object.with_statistics!.likes_count).to eq(0)
     end
   end
@@ -632,7 +640,6 @@ Spectator.describe ActivityPub::Object do
     activity(2)
     activity(3)
 
-    let_build(:undo, actor: actor1, object: activity1)
     let_build(:like, actor: actor1, object: subject)
 
     it "returns the associated activities" do
@@ -652,7 +659,7 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "filters out undone activities" do
-      undo.save
+      activity1.undo
       expect(subject.activities).to eq([activity2, activity3])
     end
 

@@ -438,8 +438,6 @@ Spectator.describe ActivityPub::Actor do
     add_to_outbox(4)
     add_to_outbox(5)
 
-    let_build(:undo, actor: subject, object: activity5)
-
     describe "#in_outbox" do
       it "instantiates the correct subclass" do
         expect(subject.in_outbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
@@ -470,12 +468,7 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "filters out undone activities" do
-        undo.save
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "excludes undo activities" do
-        put_in_outbox(subject, undo)
+        activity5.undo
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
@@ -519,7 +512,7 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "returns false if activity has been undone" do
-        undo.save
+        activity5.undo
         expect(subject.in_outbox?(note5)).to be_falsey
       end
 
@@ -557,8 +550,6 @@ Spectator.describe ActivityPub::Actor do
     add_to_inbox(4)
     add_to_inbox(5)
 
-    let_build(:undo, actor: subject, object: activity5)
-
     describe "#in_inbox" do
       it "instantiates the correct subclass" do
         expect(subject.in_inbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
@@ -589,12 +580,7 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "filters out undone activities" do
-        undo.save
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "excludes undo activities" do
-        put_in_inbox(subject, undo)
+        activity5.undo
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
@@ -638,7 +624,7 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "returns false if activity has been undone" do
-        undo.save
+        activity5.undo
         expect(subject.in_inbox?(note5)).to be_falsey
       end
 
@@ -657,8 +643,6 @@ Spectator.describe ActivityPub::Actor do
     end
 
     create_activity(1)
-
-    let_build(:undo, actor: subject, object: activity1)
 
     it "instantiates the correct subclass" do
       expect(subject.find_activity_for(note1)).to be_a(ActivityPub::Activity::Create)
@@ -685,7 +669,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out undone activities" do
-      undo.save
+      activity1.undo
       expect(subject.find_activity_for(note1)).to be_nil
     end
 
@@ -800,10 +784,8 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
-    let_build(:undo, actor: subject, object: activity5)
-
     it "filters out objects belonging to undone activities" do
-      undo.save
+      activity5.undo
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
@@ -876,10 +858,8 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
     end
 
-    let_build(:undo, actor: subject, object: activity5)
-
     it "filters out objects belonging to undone activities" do
-      undo.save
+      activity5.undo
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
     end
 
@@ -987,10 +967,8 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.notifications(since: since)).to eq(5)
     end
 
-    let_build(:undo, actor: actor5, object: activity5)
-
     it "filters out undone activities" do
-      undo.save
+      activity5.undo
       expect(subject.notifications(1, 2)).to eq([activity4, activity3])
       expect(subject.notifications(since: since)).to eq(4)
     end

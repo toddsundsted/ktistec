@@ -210,17 +210,13 @@ module ActivityPub
             AND r.type = "#{Relationship::Content::Outbox}"
            JOIN accounts AS c
              ON c.iri = r.from_iri
-      LEFT JOIN activities AS u
-             ON u.object_iri = a.iri
-            AND u.type = "#{ActivityPub::Activity::Undo}"
-            AND u.actor_iri = a.actor_iri
           WHERE o.visible = 1
             AND o.in_reply_to_iri IS NULL
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
             AND t.deleted_at IS NULL
             AND t.blocked_at IS NULL
-            AND u.id IS NULL
+            AND a.undone_at IS NULL
             AND o.id NOT IN (
                SELECT DISTINCT o.id
                  FROM objects AS o
@@ -234,17 +230,13 @@ module ActivityPub
                   AND r.type = "#{Relationship::Content::Outbox}"
                  JOIN accounts AS c
                    ON c.iri = r.from_iri
-            LEFT JOIN activities AS u
-                   ON u.object_iri = a.iri
-                  AND u.type = "#{ActivityPub::Activity::Undo}"
-                  AND u.actor_iri = a.actor_iri
                 WHERE o.visible = 1
                   AND o.in_reply_to_iri IS NULL
                   AND o.deleted_at IS NULL
                   AND o.blocked_at IS NULL
                   AND t.deleted_at IS NULL
                   AND t.blocked_at IS NULL
-                  AND u.id IS NULL
+                  AND a.undone_at IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
             )
@@ -264,11 +256,7 @@ module ActivityPub
       query = <<-QUERY
          SELECT sum(a.type = "ActivityPub::Activity::Announce") AS announces, sum(a.type = "ActivityPub::Activity::Like") AS likes
            FROM activities AS a
-      LEFT JOIN activities AS u
-             ON u.object_iri = a.iri
-            AND u.type = "ActivityPub::Activity::Undo"
-            AND u.actor_iri = a.actor_iri
-          WHERE u.iri IS NULL
+          WHERE a.undone_at IS NULL
             AND a.object_iri = ?
       QUERY
       Ktistec.database.query_one(query, iri) do |rs|
@@ -472,16 +460,12 @@ module ActivityPub
            FROM activities AS a
            JOIN actors AS t
              ON t.iri = a.actor_iri
-      LEFT JOIN activities AS u
-             ON u.object_iri = a.iri
-            AND u.type = "ActivityPub::Activity::Undo"
-            AND u.actor_iri = a.actor_iri
           WHERE a.object_iri = ?
             #{inclusion}
             #{exclusion}
             AND t.deleted_at IS NULL
             AND t.blocked_at IS NULL
-            AND u.iri IS NULL
+            AND a.undone_at IS NULL
        ORDER BY a.created_at ASC
       QUERY
       Activity.query_all(query, iri)

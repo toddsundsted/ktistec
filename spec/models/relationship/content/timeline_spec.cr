@@ -99,12 +99,14 @@ Spectator.describe Relationship::Content::Timeline do
 
       it "deletes the object from the timeline" do
         put_in_outbox(owner, delete)
+        object.delete
         described_class.update_timeline(owner, delete)
         expect(described_class.where(from_iri: owner.iri)).to be_empty
       end
 
       it "does not delete the object from the timeline" do
         put_in_outbox(owner, undo)
+        announce.undo
         described_class.update_timeline(owner, undo)
         expect(described_class.where(from_iri: owner.iri)).not_to be_empty
       end
@@ -125,15 +127,17 @@ Spectator.describe Relationship::Content::Timeline do
       end
 
       it "deletes the object from the timeline" do
-        put_in_outbox(owner, undo)
-        described_class.update_timeline(owner, undo)
+        put_in_outbox(owner, delete)
+        object.delete
+        described_class.update_timeline(owner, delete)
         expect(described_class.where(from_iri: owner.iri)).to be_empty
       end
 
-      it "does not delete the object from the timeline" do
-        put_in_outbox(owner, delete)
-        described_class.update_timeline(owner, delete)
-        expect(described_class.where(from_iri: owner.iri)).not_to be_empty
+      it "deletes the object from the timeline" do
+        put_in_outbox(owner, undo)
+        announce.undo
+        described_class.update_timeline(owner, undo)
+        expect(described_class.where(from_iri: owner.iri)).to be_empty
       end
     end
 

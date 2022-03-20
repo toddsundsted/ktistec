@@ -169,12 +169,18 @@ Spectator.describe Ktistec::Model do
       expect(NotNilModel.new(val: "Val").val).to eq("Val")
     end
 
-    it "ignores supplied prefix" do
+    it "incorporates supplied prefix" do
       expect(FooBarModel.new({"prefix.foo" => "Foo"}, prefix: "prefix.").foo).to eq("Foo")
     end
 
     it "supports assignment of nil" do
       expect(FooBarModel.new(foo: nil).foo).to be_nil
+    end
+
+    let(foo_bar) { FooBarModel.new.save }
+
+    it "assigns belongs_to associations" do
+      expect(NotNilModel.new(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
     end
   end
 
@@ -187,12 +193,28 @@ Spectator.describe Ktistec::Model do
       expect(NotNilModel.new(val: "").assign(val: "Val").val).to eq("Val")
     end
 
-    it "ignores supplied prefix" do
+    it "incorporates supplied prefix" do
       expect(FooBarModel.new(foo: "").assign({"prefix.foo" => "Foo"}, prefix: "prefix.").foo).to eq("Foo")
     end
 
     it "supports assignment of nil" do
       expect(FooBarModel.new(foo: "Foo").assign(foo: nil).foo).to be_nil
+    end
+
+    let(foo_bar) { FooBarModel.new.save }
+
+    it "assigns belongs_to associations" do
+      expect(NotNilModel.new.assign(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
+    end
+
+    let(not_nil) { NotNilModel.new(val: "Val").save }
+
+    it "assigns has_one associations" do
+      expect{foo_bar.assign(not_nil_model: not_nil)}.to change{not_nil.foo_bar_model_id}
+    end
+
+    it "assigns has_many associations" do
+      expect{not_nil.assign(foo_bar_models: [foo_bar])}.to change{foo_bar.not_nil_model_id}
     end
   end
 

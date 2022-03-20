@@ -259,19 +259,16 @@ Spectator.describe Ktistec::Model do
     context "given the id" do
       it "finds the saved instance" do
         saved_model = FooBarModel.new.save
-        expect(FooBarModel.find(saved_model.id)).not_to be(saved_model)
         expect(FooBarModel.find(saved_model.id)).to eq(saved_model)
       end
 
       it "finds the updated instance" do
         updated_model = FooBarModel.new.save.save
-        expect(FooBarModel.find(updated_model.id)).not_to be(updated_model)
         expect(FooBarModel.find(updated_model.id)).to eq(updated_model)
       end
 
       it "finds the saved instance" do
         saved_model = NotNilModel.new(val: "Val").save
-        expect(NotNilModel.find(saved_model.id)).not_to be(saved_model)
         expect(NotNilModel.find(saved_model.id)).to eq(saved_model)
       end
 
@@ -283,38 +280,21 @@ Spectator.describe Ktistec::Model do
     context "given properties" do
       it "finds the saved instance" do
         saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
-        expect(FooBarModel.find(foo: "Foo", bar: "Bar")).not_to be(saved_model)
         expect(FooBarModel.find(foo: "Foo", bar: "Bar")).to eq(saved_model)
       end
 
       it "finds the updated instance" do
         updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
-        expect(FooBarModel.find(foo: "Bar", bar: "Bar")).not_to be(updated_model)
         expect(FooBarModel.find(foo: "Bar", bar: "Bar")).to eq(updated_model)
       end
 
       it "finds the saved instance" do
         saved_model = NotNilModel.new(val: "Val").save
-        expect(NotNilModel.find(val: "Val")).not_to be(saved_model)
         expect(NotNilModel.find(val: "Val")).to eq(saved_model)
       end
 
       it "raises an exception" do
         expect{NotNilModel.find(val: "Baz")}.to raise_error(Ktistec::Model::NotFound)
-      end
-    end
-  end
-
-  describe ".find?" do
-    context "given the id" do
-      it "returns nil" do
-        expect{NotNilModel.find?(999999)}.to be_nil
-      end
-    end
-
-    context "given properties" do
-      it "returns nil" do
-        expect{NotNilModel.find?(val: "Baz")}.to be_nil
       end
     end
 
@@ -332,41 +312,63 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe ".find?" do
+    it "returns nil" do
+      expect{NotNilModel.find?(999999)}.to be_nil
+    end
+
+    it "returns nil" do
+      expect{NotNilModel.find?(val: "Baz")}.to be_nil
+    end
+  end
+
   describe ".where" do
-    it "returns the saved instances" do
-      saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
-      expect(FooBarModel.where(foo: "Foo", bar: "Bar")).to eq([saved_model])
-      expect(FooBarModel.where(foo: "Bar", bar: "Bar")).to be_empty
-    end
+    context "given properties" do
+      it "returns the saved instances" do
+        saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
+        expect(FooBarModel.where(foo: "Foo", bar: "Bar")).to eq([saved_model])
+      end
 
-    it "returns the saved instances" do
-      saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
-      expect(FooBarModel.where("foo = ? and bar = ?", "Foo", "Bar")).to eq([saved_model])
-      expect(FooBarModel.where("foo = ? and bar = ?", "Bar", "Bar")).to be_empty
-    end
+      it "returns the saved instances" do
+        saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
+        expect(FooBarModel.where("foo = ? and bar = ?", "Foo", "Bar")).to eq([saved_model])
+      end
 
-    it "returns the updated instances" do
-      updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
-      expect(FooBarModel.where(foo: "Bar")).to eq([updated_model])
-      expect(FooBarModel.where(foo: "Foo")).to be_empty
-    end
+      it "returns the updated instances" do
+        updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
+        expect(FooBarModel.where(foo: "Bar")).to eq([updated_model])
+      end
 
-    it "returns the updated instances" do
-      updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
-      expect(FooBarModel.where("foo = ?", "Bar")).to eq([updated_model])
-      expect(FooBarModel.where("foo = ?", "Foo")).to be_empty
-    end
+      it "returns the updated instances" do
+        updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
+        expect(FooBarModel.where("foo = ?", "Bar")).to eq([updated_model])
+      end
 
-    it "returns the saved instances" do
-      saved_model = NotNilModel.new(val: "Val").save
-      expect(NotNilModel.where(val: "Val")).to eq([saved_model])
-      expect(NotNilModel.where(val: "")).to be_empty
-    end
+      it "returns the saved instances" do
+        saved_model = NotNilModel.new(val: "Val").save
+        expect(NotNilModel.where(val: "Val")).to eq([saved_model])
+      end
 
-    it "returns the saved instances" do
-      saved_model = NotNilModel.new(val: "Val").save
-      expect(NotNilModel.where("val = ?", "Val")).to eq([saved_model])
-      expect(NotNilModel.where("val = ?", "")).to be_empty
+      it "returns the saved instances" do
+        saved_model = NotNilModel.new(val: "Val").save
+        expect(NotNilModel.where("val = ?", "Val")).to eq([saved_model])
+      end
+
+      it "returns an empty collection" do
+        expect(FooBarModel.where(foo: "Foo", bar: "Bar")).to be_empty
+      end
+
+      it "returns an empty collection" do
+        expect(FooBarModel.where("foo = ? and bar = ?", "Foo", "Bar")).to be_empty
+      end
+
+      it "returns an empty collection" do
+        expect(NotNilModel.where(val: "Val")).to be_empty
+      end
+
+      it "returns an empty collection" do
+        expect(NotNilModel.where("val = ?", "Val")).to be_empty
+      end
     end
 
     context "given associations" do
@@ -384,10 +386,13 @@ Spectator.describe Ktistec::Model do
   end
 
   describe ".sql" do
-    it "runs the query" do
+    it "returns the saved instances" do
       saved_model = NotNilModel.new(val: "Val").save
       expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", "Val")).to eq([saved_model])
-      expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", "")).to be_empty
+    end
+
+    it "returns an empty collection" do
+      expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", "Val")).to be_empty
     end
   end
 

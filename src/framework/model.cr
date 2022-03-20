@@ -725,9 +725,6 @@ module Ktistec
     @[Persistent]
     property id : Int64? = nil
 
-    class Error < Exception
-    end
-
     class NotFound < Exception
     end
 

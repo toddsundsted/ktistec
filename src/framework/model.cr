@@ -54,11 +54,42 @@ module Ktistec
         {% end %}
       end
 
+      def values(**options)
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          options.map do |o, v|
+            if o.in?({{vs.map(&.symbolize)}})
+              v
+            {% ancestors = @type.ancestors << @type %}
+            {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+            {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+            {% for method in methods %}
+              elsif "_association_#{o}" == {{method.name.stringify}} && v.responds_to?({{method.body[1]}})
+                v.{{method.body[1].id}}
+            {% end %}
+            end
+          end
+        {% end %}
+      end
+
       def conditions(*terms, prefix = nil, include_deleted = false, include_undone = false, **options)
         prefix = prefix ? "\"#{prefix}\"." : ""
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          conditions = [] of String
+          conditions =
+            options.keys.reduce([] of String) do |c, o|
+              if o.in?({{vs.map(&.symbolize)}})
+                c << "#{prefix}\"#{o}\" = ?"
+              {% ancestors = @type.ancestors << @type %}
+              {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+              {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+              {% for method in methods %}
+                elsif "_association_#{o}" == {{method.name.stringify}}
+                  c << "#{prefix}\"#{  {{method.body[2]}}  }\" = ?"
+              {% end %}
+              end
+              c
+            end
           {% if @type < Deletable %}
             conditions << "#{prefix}\"deleted_at\" IS NULL" unless include_deleted
           {% end %}
@@ -68,9 +99,7 @@ module Ktistec
           {% if @type < Polymorphic %}
             conditions << "#{prefix}\"type\" IN (%s)" % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}}
           {% end %}
-          conditions +=
-            options.keys.select { |o| o.in?({{vs.map(&.symbolize)}}) }.map { |v| "#{prefix}\"#{v}\" = ?" } +
-            terms.to_a
+          conditions += terms.to_a
           conditions.size > 0 ?
             conditions.join(" AND ") :
             "1"
@@ -81,7 +110,7 @@ module Ktistec
       #
       def count(include_deleted = false, include_undone = false, **options)
         Ktistec.database.scalar(
-          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", *options.values
+          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options)
         ).as(Int)
       end
 
@@ -148,9 +177,9 @@ module Ktistec
         end
       end
 
-      protected def query_all(query, *args, additional_columns = NamedTuple.new)
+      protected def query_all(query, *args_, args = nil, additional_columns = NamedTuple.new)
         Ktistec.database.query_all(
-          query, *args
+          query, *args_, args: args,
         ) do |rs|
           read(rs, **persistent_columns.merge(additional_columns))
         end.map do |options|
@@ -158,9 +187,9 @@ module Ktistec
         end
       end
 
-      protected def query_one(query, *args, additional_columns = NamedTuple.new)
+      protected def query_one(query, *args_, args = nil, additional_columns = NamedTuple.new)
         Ktistec.database.query_one(
-          query, *args
+          query, *args_, args: args,
         ) do |rs|
           read(rs, **persistent_columns.merge(additional_columns))
         end.try do |options|
@@ -198,7 +227,7 @@ module Ktistec
       # Raises `NotFound` if no such saved instance exists.
       #
       def find(include_deleted = false, include_undone = false, **options)
-        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", *options.values)
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options))
       rescue DB::NoResultsError
         raise NotFound.new("#{self} options=#{options}: not found")
       end
@@ -215,7 +244,7 @@ module Ktistec
       # Returns saved instances.
       #
       def where(include_deleted = false, include_undone = false, **options)
-        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", *options.values)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options))
       end
 
       # Returns saved instances.

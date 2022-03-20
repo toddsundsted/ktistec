@@ -67,6 +67,8 @@ module Ktistec
               elsif "_association_#{o}" == {{method.name.stringify}} && v.responds_to?({{method.body[1]}})
                 v.{{method.body[1].id}}
             {% end %}
+            else
+              raise ColumnError.new("no such column: #{o}")
             end
           end
         {% end %}
@@ -87,6 +89,8 @@ module Ktistec
                 elsif "_association_#{o}" == {{method.name.stringify}}
                   c << "#{prefix}\"#{  {{method.body[2]}}  }\" = ?"
               {% end %}
+              else
+                raise ColumnError.new("no such column: #{o}")
               end
               c
             end
@@ -725,6 +729,9 @@ module Ktistec
     end
 
     class NotFound < Exception
+    end
+
+    class ColumnError < Exception
     end
 
     class Invalid < Exception

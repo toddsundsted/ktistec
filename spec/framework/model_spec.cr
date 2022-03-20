@@ -139,6 +139,18 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe ".values" do
+    it "raises an error if column doesn't exist" do
+      expect{QueryModel.values(xyz: 123)}.to raise_error(Ktistec::Model::ColumnError)
+    end
+  end
+
+  describe ".conditions" do
+    it "raises an error if column doesn't exist" do
+      expect{QueryModel.conditions(xyz: 123)}.to raise_error(Ktistec::Model::ColumnError)
+    end
+  end
+
   describe ".query_and_paginate" do
     it "includes the additional columns" do
       query = %Q|SELECT 0, "foo", "bar", ?, ?|

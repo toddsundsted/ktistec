@@ -181,9 +181,12 @@ module Ktistec
         end
       end
 
-      protected def query_all(query, *args_, args = nil, additional_columns = NamedTuple.new)
+      # specialize the following to avoid a compile bug?
+      # see: https://github.com/crystal-lang/crystal/issues/7164
+
+      protected def query_all(query, *args_, additional_columns = NamedTuple.new)
         Ktistec.database.query_all(
-          query, *args_, args: args,
+          query, *args_,
         ) do |rs|
           read(rs, **persistent_columns.merge(additional_columns))
         end.map do |options|
@@ -191,9 +194,29 @@ module Ktistec
         end
       end
 
-      protected def query_one(query, *args_, args = nil, additional_columns = NamedTuple.new)
+      protected def query_all(query, args : Array? = nil, additional_columns = NamedTuple.new)
+        Ktistec.database.query_all(
+          query, args: args,
+        ) do |rs|
+          read(rs, **persistent_columns.merge(additional_columns))
+        end.map do |options|
+          compose(**options)
+        end
+      end
+
+      protected def query_one(query, *args_, additional_columns = NamedTuple.new)
         Ktistec.database.query_one(
-          query, *args_, args: args,
+          query, *args_,
+        ) do |rs|
+          read(rs, **persistent_columns.merge(additional_columns))
+        end.try do |options|
+          compose(**options)
+        end
+      end
+
+      protected def query_one(query, args : Array? = nil, additional_columns = NamedTuple.new)
+        Ktistec.database.query_one(
+          query, args: args,
         ) do |rs|
           read(rs, **persistent_columns.merge(additional_columns))
         end.try do |options|

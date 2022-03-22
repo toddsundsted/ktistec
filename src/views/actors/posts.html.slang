@@ -14,7 +14,7 @@
     - objects.each do |object|
       crystal:
         activity = object.activities.find do |activity|
-          Relationship::Content::Outbox.find?(from_iri: actor.iri, to_iri: activity.iri)
+          Relationship::Content::Outbox.find?(owner: actor, activity: activity)
         end
         _actor = activity && activity.responds_to?(:actor) ? activity.actor : object.attributed_to
         _author = object.attributed_to

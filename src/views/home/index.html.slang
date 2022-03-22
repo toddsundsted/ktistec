@@ -8,7 +8,7 @@ section.ui.feed
     crystal:
       activity = object.activities.first?
       activity = object.activities.find do |activity|
-        Relationship::Content::Outbox.find?(to_iri: activity.iri)
+        Relationship::Content::Outbox.find?(activity: activity)
       end
       _actor = activity && activity.responds_to?(:actor) ? activity.actor : object.attributed_to
       _author = object.attributed_to

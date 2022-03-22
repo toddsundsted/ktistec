@@ -69,7 +69,7 @@ class Task
               if (attributed_to_iri = object.attributed_to_iri) && (actor = ActivityPub::Actor.dereference?(receiver, attributed_to_iri)) && actor == receiver
                 if ancestors.all? { |ancestor| [ancestor.to, ancestor.cc].compact.flatten.includes?(recipient) }
                   Relationship::Social::Follow.where(
-                    to_iri: receiver.iri,
+                    object: receiver,
                     confirmed: true
                   ).select(&.actor?).map(&.actor.iri)
                 end

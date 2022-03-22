@@ -148,7 +148,7 @@ class RelationshipsController
       unless object.object == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+      unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
         bad_request
       end
       activity = ActivityPub::Activity::Accept.new(
@@ -164,7 +164,7 @@ class RelationshipsController
       unless object.object == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+      unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
         bad_request
       end
       activity = ActivityPub::Activity::Reject.new(
@@ -192,7 +192,7 @@ class RelationshipsController
         end
       when ActivityPub::Activity::Follow
         to << object.object.iri
-        unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+        unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
           bad_request
         end
       else
@@ -252,7 +252,7 @@ class RelationshipsController
 
     case activity
     when ActivityPub::Activity::Follow
-      unless Relationship::Social::Follow.find?(from_iri: activity.actor.iri, to_iri: activity.object.iri, visible: false)
+      unless Relationship::Social::Follow.find?(actor: activity.actor, object: activity.object, visible: false)
         Relationship::Social::Follow.new(
           actor: activity.actor,
           object: activity.object,
@@ -260,17 +260,17 @@ class RelationshipsController
         ).save(skip_associated: true)
       end
     when ActivityPub::Activity::Accept
-      if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
         follow.assign(confirmed: true).save
       end
     when ActivityPub::Activity::Reject
-      if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
         follow.assign(confirmed: false).save
       end
     when ActivityPub::Activity::Undo
       case (object = activity.object)
       when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+        if (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
           follow.destroy
         end
       end

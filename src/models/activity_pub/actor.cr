@@ -123,12 +123,12 @@ module ActivityPub
     end
 
     def follow(other : Actor, **options)
-      Relationship::Social::Follow.new(**options.merge({from_iri: self.iri, to_iri: other.iri}))
+      Relationship::Social::Follow.new(**options.merge({actor: self, object: other}))
     end
 
     def follows?(other : Actor, **options)
       !other.deleted? && !other.blocked? ?
-        Relationship::Social::Follow.find?(**options.merge({from_iri: self.iri, to_iri: other.iri})) :
+        Relationship::Social::Follow.find?(**options.merge({actor: self, object: other})) :
         nil
     end
 

@@ -181,8 +181,8 @@ Spectator.describe Ktistec::Model do
       expect(NotNilModel.new(val: "Val").val).to eq("Val")
     end
 
-    it "incorporates supplied prefix" do
-      expect(FooBarModel.new({"prefix.foo" => "Foo"}, prefix: "prefix.").foo).to eq("Foo")
+    it "bulk assigns properties" do
+      expect(FooBarModel.new({"foo" => "Foo"}).foo).to eq("Foo")
     end
 
     it "supports assignment of nil" do
@@ -205,8 +205,8 @@ Spectator.describe Ktistec::Model do
       expect(NotNilModel.new(val: "").assign(val: "Val").val).to eq("Val")
     end
 
-    it "incorporates supplied prefix" do
-      expect(FooBarModel.new(foo: "").assign({"prefix.foo" => "Foo"}, prefix: "prefix.").foo).to eq("Foo")
+    it "bulk assigns properties" do
+      expect(FooBarModel.new(foo: "").assign({"foo" => "Foo"}).foo).to eq("Foo")
     end
 
     it "supports assignment of nil" do

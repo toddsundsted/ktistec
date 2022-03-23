@@ -296,7 +296,7 @@ module Ktistec
           {% for v in vs %}
             key = prefix + {{v.stringify}}
             if options.has_key?(key)
-              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+              if (o = options[key]).is_a?(typeof(self.{{v}}))
                 self.{{v}} = o
               end
             end
@@ -316,7 +316,7 @@ module Ktistec
           {% for v in vs %}
             key = {{v.stringify}}
             if options.has_key?(key)
-              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+              if (o = options[key]).is_a?(typeof(self.{{v}}))
                 self.{{v}} = o
               end
             end
@@ -336,7 +336,7 @@ module Ktistec
           {% for v in vs %}
             key = prefix + {{v.stringify}}
             if options.has_key?(key)
-              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+              if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 self.{{v}} = o
               end
@@ -354,7 +354,7 @@ module Ktistec
           {% for v in vs %}
             key = {{v.stringify}}
             if options.has_key?(key)
-              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+              if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 self.{{v}} = o
               end

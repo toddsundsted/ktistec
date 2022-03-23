@@ -40,11 +40,11 @@ module Ktistec
           end
         end
 
-        def self.find(_iri iri : String?, include_deleted = false, include_undone = false)
+        def self.find(_iri iri : String?, include_deleted : Bool = false, include_undone : Bool = false)
           find(iri: iri, include_deleted: include_deleted, include_undone: include_undone)
         end
 
-        def self.find?(_iri iri : String?, include_deleted = false, include_undone = false)
+        def self.find?(_iri iri : String?, include_deleted : Bool = false, include_undone : Bool = false)
           find?(iri: iri, include_deleted: include_deleted, include_undone: include_undone)
         end
 

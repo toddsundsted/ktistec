@@ -74,7 +74,7 @@ module Ktistec
         {% end %}
       end
 
-      def conditions(*terms, prefix = nil, include_deleted = false, include_undone = false, **options)
+      def conditions(*terms, prefix = nil, include_deleted : Bool = false, include_undone : Bool = false, **options)
         prefix = prefix ? "\"#{prefix}\"." : ""
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
@@ -112,7 +112,7 @@ module Ktistec
 
       # Returns the count of saved instances.
       #
-      def count(include_deleted = false, include_undone = false, **options)
+      def count(include_deleted : Bool = false, include_undone : Bool = false, **options)
         Ktistec.database.scalar(
           "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options)
         ).as(Int)
@@ -226,7 +226,7 @@ module Ktistec
 
       # Returns all instances.
       #
-      def all(include_deleted = false, include_undone = false)
+      def all(include_deleted : Bool = false, include_undone : Bool = false)
         query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(include_deleted: include_deleted, include_undone: include_undone)}")
       end
 
@@ -234,7 +234,7 @@ module Ktistec
       #
       # Raises `NotFound` if no such saved instance exists.
       #
-      def find(_id id : Int?, include_deleted = false, include_undone = false)
+      def find(_id id : Int?, include_deleted : Bool = false, include_undone : Bool = false)
         query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id, include_deleted: include_deleted, include_undone: include_undone)}", id)
       rescue DB::NoResultsError
         raise NotFound.new("#{self} id=#{id}: not found")
@@ -244,7 +244,7 @@ module Ktistec
       #
       # Returns `nil` if no such saved instance exists.
       #
-      def find?(_id id : Int?, include_deleted = false, include_undone = false)
+      def find?(_id id : Int?, include_deleted : Bool = false, include_undone : Bool = false)
         find(id, include_deleted: include_deleted, include_undone: include_undone)
       rescue NotFound
       end
@@ -253,7 +253,7 @@ module Ktistec
       #
       # Raises `NotFound` if no such saved instance exists.
       #
-      def find(include_deleted = false, include_undone = false, **options)
+      def find(include_deleted : Bool = false, include_undone : Bool = false, **options)
         query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options))
       rescue DB::NoResultsError
         raise NotFound.new("#{self} options=#{options}: not found")
@@ -263,20 +263,20 @@ module Ktistec
       #
       # Returns `nil` if no such saved instance exists.
       #
-      def find?(include_deleted = false, include_undone = false, **options)
+      def find?(include_deleted : Bool = false, include_undone : Bool = false, **options)
         find(**options, include_deleted: include_deleted, include_undone: include_undone)
       rescue NotFound
       end
 
       # Returns saved instances.
       #
-      def where(include_deleted = false, include_undone = false, **options)
+      def where(include_deleted : Bool = false, include_undone : Bool = false, **options)
         query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options))
       end
 
       # Returns saved instances.
       #
-      def where(where : String, *arguments, include_deleted = false, include_undone = false)
+      def where(where : String, *arguments, include_deleted : Bool = false, include_undone : Bool = false)
         query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(where, include_deleted: include_deleted, include_undone: include_undone)}", *arguments)
       end
 
@@ -396,7 +396,7 @@ module Ktistec
           self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
           {{name}}
         end
-        def {{name}}?(include_deleted = false, include_undone = false) : {{class_name}}?
+        def {{name}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
           @{{name}} ||= begin
             {% for union_type in union_types %}
               {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}, include_deleted: include_deleted, include_undone: include_undone) ||
@@ -404,7 +404,7 @@ module Ktistec
             nil
           end
         end
-        def {{name}}(include_deleted = false, include_undone = false) : {{class_name}}
+        def {{name}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
           @{{name}} ||= begin
             {% for union_type in union_types %}
               {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}, include_deleted: include_deleted, include_undone: include_undone) ||
@@ -437,7 +437,7 @@ module Ktistec
           end
           {{name}}
         end
-        def {{name}}(include_deleted = false, include_undone = false) : Enumerable({{class_name}})
+        def {{name}}(include_deleted : Bool = false, include_undone : Bool = false) : Enumerable({{class_name}})
           {{name}} = @{{name}}
           if {{name}}.nil? || {{name}}.empty?
             @{{name}} = {{class_name}}.where({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
@@ -465,10 +465,10 @@ module Ktistec
           {% end %}
           {{name}}
         end
-        def {{name}}?(include_deleted = false, include_undone = false) : {{class_name}}?
+        def {{name}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
           @{{name}} ||= {{class_name}}.find?({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
         end
-        def {{name}}(include_deleted = false, include_undone = false) : {{class_name}}
+        def {{name}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
           @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
         end
         def _association_{{name}}

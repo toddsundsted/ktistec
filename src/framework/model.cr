@@ -18,12 +18,11 @@ module Ktistec
     annotation Persistent
     end
 
-    macro persistent_columns(prefix = nil)
+    macro persistent_columns
       {
-        {% prefix = prefix ? "#{prefix.id}." : "" %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
         {% for v in vs %}
-          "{{prefix.id}}{{v.id}}": {{v.type}},
+          {{v.id}}: {{v.type}},
         {% end %}
       }
     end
@@ -74,20 +73,19 @@ module Ktistec
         {% end %}
       end
 
-      def conditions(*terms, prefix = nil, include_deleted : Bool = false, include_undone : Bool = false, **options)
-        prefix = prefix ? "\"#{prefix}\"." : ""
+      def conditions(*terms, include_deleted : Bool = false, include_undone : Bool = false, **options)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           conditions =
             options.keys.reduce([] of String) do |c, o|
               if o.in?({{vs.map(&.symbolize)}})
-                c << "#{prefix}\"#{o}\" = ?"
+                c << %Q|"#{o}" = ?|
               {% ancestors = @type.ancestors << @type %}
               {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
               {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
               {% for method in methods %}
                 elsif "_association_#{o}" == {{method.name.stringify}}
-                  c << "#{prefix}\"#{  {{method.body[2]}}  }\" = ?"
+                  c << %Q|"#{{{method.body[2]}}}" = ?|
               {% end %}
               else
                 raise ColumnError.new("no such column: #{o}")
@@ -95,13 +93,13 @@ module Ktistec
               c
             end
           {% if @type < Deletable %}
-            conditions << "#{prefix}\"deleted_at\" IS NULL" unless include_deleted
+            conditions << %Q|"deleted_at" IS NULL| unless include_deleted
           {% end %}
           {% if @type < Undoable %}
-            conditions << "#{prefix}\"undone_at\" IS NULL" unless include_undone
+            conditions << %Q|"undone_at" IS NULL| unless include_undone
           {% end %}
           {% if @type < Polymorphic %}
-            conditions << "#{prefix}\"type\" IN (%s)" % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}}
+            conditions << %Q|"type" IN (%s)| % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}}
           {% end %}
           conditions += terms.to_a
           conditions.size > 0 ?

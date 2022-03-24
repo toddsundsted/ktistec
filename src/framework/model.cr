@@ -290,7 +290,7 @@ module Ktistec
     module InstanceMethods
       # Initializes the new instance.
       #
-      def initialize(options : Hash)
+      def initialize(options : Hash(String, Any)) forall Any
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
@@ -330,7 +330,7 @@ module Ktistec
 
       # Bulk assigns properties.
       #
-      def assign(options : Hash)
+      def assign(options : Hash(String, Any)) forall Any
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}

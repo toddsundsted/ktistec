@@ -53,11 +53,11 @@ module Ktistec
         {% end %}
       end
 
-      def values(**options)
+      def values(options : Hash(String, Any)? = nil, **options_) forall Any
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          options.map do |o, v|
-            if o.in?({{vs.map(&.symbolize)}})
+          (options || options_).map do |o, v|
+            if o.to_s.in?({{vs.map(&.stringify)}})
               v
             {% ancestors = @type.ancestors << @type %}
             {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
@@ -73,12 +73,12 @@ module Ktistec
         {% end %}
       end
 
-      def conditions(*terms, include_deleted : Bool = false, include_undone : Bool = false, **options)
+      def conditions(*terms, include_deleted : Bool = false, include_undone : Bool = false, options : Hash(String, Any)? = nil, **options_) forall Any
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           conditions =
-            options.keys.reduce([] of String) do |c, o|
-              if o.in?({{vs.map(&.symbolize)}})
+            (options || options_).keys.reduce([] of String) do |c, o|
+              if o.to_s.in?({{vs.map(&.stringify)}})
                 c << %Q|"#{o}" = ?|
               {% ancestors = @type.ancestors << @type %}
               {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}

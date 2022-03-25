@@ -116,6 +116,14 @@ module Ktistec
         ).as(Int)
       end
 
+      # Returns the count of saved instances.
+      #
+      def count(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
+        Ktistec.database.scalar(
+          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(options: options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(options: options)
+        ).as(Int)
+      end
+
       def persistent_columns
         {% begin %}
           {
@@ -266,10 +274,35 @@ module Ktistec
       rescue NotFound
       end
 
+      # Finds the saved instance.
+      #
+      # Raises `NotFound` if no such saved instance exists.
+      #
+      def find(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(options: options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(options: options))
+      rescue DB::NoResultsError
+        raise NotFound.new("#{self} options=#{options}: not found")
+      end
+
+      # Finds the saved instance.
+      #
+      # Returns `nil` if no such saved instance exists.
+      #
+      def find?(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
+        find(options, include_deleted: include_deleted, include_undone: include_undone)
+      rescue NotFound
+      end
+
       # Returns saved instances.
       #
       def where(include_deleted : Bool = false, include_undone : Bool = false, **options)
         query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options))
+      end
+
+      # Returns saved instances.
+      #
+      def where(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(options: options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(options: options))
       end
 
       # Returns saved instances.

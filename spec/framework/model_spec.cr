@@ -268,12 +268,20 @@ Spectator.describe Ktistec::Model do
       expect(FooBarModel.count(foo: "", bar: "")).to eq(0)
     end
 
+    it "returns the count of matching instances" do
+      expect(FooBarModel.count({"foo" => "", "bar" => ""})).to eq(0)
+    end
+
     it "returns the count of persisted instances" do
       expect(NotNilModel.count).to eq(1)
     end
 
     it "returns the count of matching instances" do
       expect(NotNilModel.count(val: "")).to eq(0)
+    end
+
+    it "returns the count of matching instances" do
+      expect(NotNilModel.count({"val" => ""})).to eq(0)
     end
   end
 
@@ -317,14 +325,29 @@ Spectator.describe Ktistec::Model do
         expect(FooBarModel.find(foo: "Foo", bar: "Bar")).to eq(saved_model)
       end
 
+      it "finds the saved instance" do
+        saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
+        expect(FooBarModel.find({"foo" => "Foo", "bar" => "Bar"})).to eq(saved_model)
+      end
+
       it "finds the updated instance" do
         updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
         expect(FooBarModel.find(foo: "Bar", bar: "Bar")).to eq(updated_model)
       end
 
+      it "finds the updated instance" do
+        updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
+        expect(FooBarModel.find({"foo" => "Bar", "bar" => "Bar"})).to eq(updated_model)
+      end
+
       it "finds the saved instance" do
         saved_model = NotNilModel.new(val: "Val").save
         expect(NotNilModel.find(val: "Val")).to eq(saved_model)
+      end
+
+      it "finds the saved instance" do
+        saved_model = NotNilModel.new({"val" => "Val"}).save
+        expect(NotNilModel.find({"val" => "Val"})).to eq(saved_model)
       end
 
       it "raises an exception" do
@@ -340,8 +363,16 @@ Spectator.describe Ktistec::Model do
         expect(FooBarModel.find(not_nil_model_id: not_nil_model.id)).to eq(foo_bar_model)
       end
 
+      it "finds the saved instance using the foreign key" do
+        expect(FooBarModel.find({"not_nil_model_id" => not_nil_model.id})).to eq(foo_bar_model)
+      end
+
       it "finds the saved instance using the association" do
         expect(FooBarModel.find(not_nil: not_nil_model)).to eq(foo_bar_model)
+      end
+
+      it "finds the saved instance using the association" do
+        expect(FooBarModel.find({"not_nil" => not_nil_model})).to eq(foo_bar_model)
       end
     end
   end
@@ -354,6 +385,10 @@ Spectator.describe Ktistec::Model do
     it "returns nil" do
       expect{NotNilModel.find?(val: "Baz")}.to be_nil
     end
+
+    it "returns nil" do
+      expect{NotNilModel.find?({"val" => "Baz"})}.to be_nil
+    end
   end
 
   describe ".where" do
@@ -361,6 +396,11 @@ Spectator.describe Ktistec::Model do
       it "returns the saved instances" do
         saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
         expect(FooBarModel.where(foo: "Foo", bar: "Bar")).to eq([saved_model])
+      end
+
+      it "returns the saved instances" do
+        saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
+        expect(FooBarModel.where({"foo" => "Foo", "bar" => "Bar"})).to eq([saved_model])
       end
 
       it "returns the saved instances" do
@@ -375,12 +415,22 @@ Spectator.describe Ktistec::Model do
 
       it "returns the updated instances" do
         updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
+        expect(FooBarModel.where({"foo" => "Bar"})).to eq([updated_model])
+      end
+
+      it "returns the updated instances" do
+        updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
         expect(FooBarModel.where("foo = ?", "Bar")).to eq([updated_model])
       end
 
       it "returns the saved instances" do
         saved_model = NotNilModel.new(val: "Val").save
         expect(NotNilModel.where(val: "Val")).to eq([saved_model])
+      end
+
+      it "returns the saved instances" do
+        saved_model = NotNilModel.new(val: "Val").save
+        expect(NotNilModel.where({"val" => "Val"})).to eq([saved_model])
       end
 
       it "returns the saved instances" do
@@ -413,8 +463,16 @@ Spectator.describe Ktistec::Model do
         expect(FooBarModel.where(not_nil_model_id: not_nil_model.id)).to eq([foo_bar_model])
       end
 
+      it "returns the saved instances using the foreign key" do
+        expect(FooBarModel.where({"not_nil_model_id" => not_nil_model.id})).to eq([foo_bar_model])
+      end
+
       it "returns the saved instances using the association" do
         expect(FooBarModel.where(not_nil: not_nil_model)).to eq([foo_bar_model])
+      end
+
+      it "returns the saved instances using the association" do
+        expect(FooBarModel.where({"not_nil" => not_nil_model})).to eq([foo_bar_model])
       end
     end
   end

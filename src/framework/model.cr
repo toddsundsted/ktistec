@@ -336,7 +336,6 @@ module Ktistec
         super()
         # dup but don't maintain a linked list of previously saved records
         @saved_record = self.dup.clear_saved_record
-        clear!
       end
 
       # Initializes the new instance.
@@ -356,7 +355,6 @@ module Ktistec
         super()
         # dup but don't maintain a linked list of previously saved records
         @saved_record = self.dup.clear_saved_record
-        clear!
       end
 
       # Bulk assigns properties.

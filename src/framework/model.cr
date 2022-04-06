@@ -328,6 +328,7 @@ module Ktistec
             key = {{v.stringify}}
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
+                @changed << {{v.symbolize}}
                 self.{{v}} = o
               end
             end
@@ -347,6 +348,7 @@ module Ktistec
             key = {{v.stringify}}
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
+                @changed << {{v.symbolize}}
                 self.{{v}} = o
               end
             end

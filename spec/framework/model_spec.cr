@@ -566,7 +566,8 @@ Spectator.describe Ktistec::Model do
   describe "#save" do
     context "new instance" do
       it "saves a new instance" do
-        expect{FooBarModel.new.save}.to change{FooBarModel.count}.by(1)
+        new_model = FooBarModel.new
+        expect{new_model.save}.to change{FooBarModel.count}.by(1)
       end
 
       it "assigns an id" do
@@ -620,7 +621,8 @@ Spectator.describe Ktistec::Model do
 
     context "existing instance" do
       it "does not save a new instance" do
-        expect{FooBarModel.new.save.save}.to change{FooBarModel.count}.by(1)
+        saved_model = FooBarModel.new.save
+        expect{saved_model.save}.not_to change{FooBarModel.count}
       end
 
       it "does not assign an id" do

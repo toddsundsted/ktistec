@@ -151,13 +151,13 @@ module Ktistec
             case options["type"]
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
-                {{subclass}}.new(options)
+                {{subclass}}.new(options).tap(&.clear!)
             {% end %}
             else
-              self.new(options)
+              self.new(options).tap(&.clear!)
             end
           {% else %}
-            self.new(options)
+            self.new(options).tap(&.clear!)
           {% end %}
         {% end %}
       end

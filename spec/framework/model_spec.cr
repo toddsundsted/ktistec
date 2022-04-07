@@ -754,6 +754,38 @@ Spectator.describe Ktistec::Model do
       expect(NotNilModel.new(val: "Val").tap(&.clear!).changed?).to be_true
     end
 
+    context "given a saved record" do
+      let!(not_nil_model) { NotNilModel.new(val: "Val").save }
+
+      it "returns false if queried" do
+        expect(NotNilModel.all.any?(&.changed?)).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.find(not_nil_model.id).changed?).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.find(val: not_nil_model.val).changed?).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.find({"val" => not_nil_model.val}).changed?).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.where(val: not_nil_model.val).any?(&.changed?)).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.where({"val" => not_nil_model.val}).any?(&.changed?)).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.where("val = ?", not_nil_model.val).any?(&.changed?)).to be_false
+      end
+    end
+
     it "returns false if the property has not been changed" do
       expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").changed?(:val)).to be_false
     end

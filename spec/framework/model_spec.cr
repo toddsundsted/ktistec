@@ -786,6 +786,24 @@ Spectator.describe Ktistec::Model do
       end
     end
 
+    context "with inverse associations" do
+      let(not_nil_model) { NotNilModel.new(val: "Val").save }
+
+      pre_condition { expect(not_nil_model.changed?).to be_false }
+
+      it "does not mark inverse record as changed" do
+        expect{FooBarModel.new(not_nil_model: not_nil_model)}.not_to change{not_nil_model.changed?}
+      end
+
+      let(foo_bar_model) { FooBarModel.new.save }
+
+      pre_condition { expect(foo_bar_model.changed?).to be_false }
+
+      it "does not mark inverse record as changed" do
+        expect{NotNilModel.new(foo_bar_models: [foo_bar_model])}.not_to change{foo_bar_model.changed?}
+      end
+    end
+
     it "returns false if the property has not been changed" do
       expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").changed?(:val)).to be_false
     end

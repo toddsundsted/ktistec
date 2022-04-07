@@ -468,6 +468,7 @@ module Ktistec
             n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}}))
             {% if inverse_of %}
               n.{{inverse_of}} = self
+              n.clear!({{inverse_of.symbolize}})
             {% end %}
           end
           {{name}}
@@ -497,6 +498,7 @@ module Ktistec
           {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
           {% if inverse_of %}
             {{name}}.{{inverse_of}} = self
+            {{name}}.clear!({{inverse_of.symbolize}})
           {% end %}
           {{name}}
         end

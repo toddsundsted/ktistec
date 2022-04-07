@@ -319,9 +319,12 @@ module Ktistec
     end
 
     module InstanceMethods
+      @changed : Set(Symbol)
+
       # Initializes the new instance.
       #
       def initialize(options : Hash(String, Any)) forall Any
+        @changed = Set(Symbol).new
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
@@ -342,6 +345,7 @@ module Ktistec
       # Initializes the new instance.
       #
       def initialize(**options)
+        @changed = Set(Symbol).new
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
@@ -708,8 +712,6 @@ module Ktistec
       def new_record?
         @id.nil?
       end
-
-      @changed = Set(Symbol).new
 
       def changed!(property : Symbol)
         @changed << property

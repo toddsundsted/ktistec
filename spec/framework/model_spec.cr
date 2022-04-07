@@ -577,7 +577,7 @@ Spectator.describe Ktistec::Model do
 
       it "saves a new instance with an assigned id" do
         new_model = FooBarModel.new(id: 9999_i64)
-        expect{new_model.save}.to change{FooBarModel.count(id: 9999_i64)}.by(1)
+        expect{new_model.save}.to change{FooBarModel.count}.by(1)
       end
 
       it "raises a validation exception" do
@@ -586,7 +586,7 @@ Spectator.describe Ktistec::Model do
         expect(new_model.errors).to have_key("val")
       end
 
-      it "doesn't raise an exception" do
+      it "doesn't raise a validation exception" do
         new_model = NotNilModel.new(val: "")
         expect{new_model.save(skip_validation: true)}.not_to raise_error
         expect(new_model.errors).to be_empty
@@ -631,8 +631,8 @@ Spectator.describe Ktistec::Model do
       end
 
       it "does not save a new instance with an assigned id" do
-        new_model = FooBarModel.new(id: 9999_i64).save
-        expect{new_model.save}.not_to change{FooBarModel.count}
+        saved_model = FooBarModel.new(id: 9999_i64).save
+        expect{saved_model.save}.not_to change{FooBarModel.count}
       end
 
       it "raises a validation exception" do
@@ -641,7 +641,7 @@ Spectator.describe Ktistec::Model do
         expect(new_model.errors).to have_key("val")
       end
 
-      it "doesn't raise an exception" do
+      it "doesn't raise a validation exception" do
         new_model = NotNilModel.new(val: "Val").save
         expect{new_model.assign(val: "").save(skip_validation: true)}.not_to raise_error
         expect(new_model.errors).to be_empty

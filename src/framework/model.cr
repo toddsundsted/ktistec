@@ -559,23 +559,34 @@ module Ktistec
         {% end %}
       end
 
-      private macro run_callback(callback, skip_associated = false, nodes = nil)
+      private macro with_callbacks(before, after, skip_associated = false, &block)
         %nodes = [] of Node
         # iteratively run lifecycle callbacks, which can add new
-        # associated models, which must be processed in turn
+        # associated models, which must be processed and added to
+        # nodes, in turn
         loop do
           %new = serialize_graph(skip_associated: skip_associated)
           %delta = %new - %nodes
           %nodes = %new
           break if %delta.empty?
           %delta.each do |%node|
-            if (%model = %node.model) && %model.responds_to?({{callback.symbolize}})
-              %model.{{callback}}
+            %model = %node.model
+            if %model.responds_to?({{before.symbolize}})
+              %model.{{before.id}}
             end
           end
         end
-        # return the serialize graph
-        {{nodes}} = %nodes if {{nodes}}
+        %nodes.each do |%node|
+          {% (param = block.args.first) || raise "with_callbacks block must have one parameter" %}
+          {{param.id}} = %node
+          {{block.body}}
+        end
+        %nodes.each do |%node|
+          %model = %node.model
+          if %model.responds_to?({{after.symbolize}})
+            %model.{{after.id}}
+          end
+        end
       end
 
       getter errors = Errors.new
@@ -590,9 +601,7 @@ module Ktistec
       #
       def validate(skip_associated = false)
         @errors.clear
-        nodes = [] of Node
-        run_callback(before_validate, skip_associated: skip_associated, nodes: nodes)
-        nodes.each do |node|
+        with_callbacks(before_validate, after_validate, skip_associated: skip_associated) do |node|
           next unless node.model == self || node.model.changed?
           if (errors = node.model._run_validations)
             if (association = node.association)
@@ -605,7 +614,6 @@ module Ktistec
             @errors.merge!(errors)
           end
         end
-        run_callback(after_validate, skip_associated: skip_associated, nodes: nodes)
         @errors
       end
 
@@ -645,13 +653,10 @@ module Ktistec
       #
       def save(skip_validation = false, skip_associated = false)
         raise Invalid.new(errors) unless skip_validation || valid?(skip_associated: skip_associated)
-        nodes = [] of Node
-        run_callback(before_save, skip_associated: skip_associated, nodes: nodes)
-        nodes.each do |node|
+        with_callbacks(before_save, after_save, skip_associated: skip_associated) do |node|
           next unless node.model == self || node.model.changed?
           node.model._save_model(skip_validation: skip_validation)
         end
-        run_callback(after_save, skip_associated: skip_associated, nodes: nodes)
         self
       end
 

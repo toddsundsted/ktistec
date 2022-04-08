@@ -572,18 +572,22 @@ module Ktistec
           break if %delta.empty?
           %delta.each do |%node|
             %model = %node.model
+            next unless %model == self || %model.changed?
             if %model.responds_to?({{before.symbolize}})
               %model.{{before.id}}
             end
           end
         end
         %nodes.each do |%node|
+          %model = %node.model
+          next unless %model == self || %model.changed?
           {% (param = block.args.first) || raise "with_callbacks block must have one parameter" %}
           {{param.id}} = %node
           {{block.body}}
         end
         %nodes.each do |%node|
           %model = %node.model
+          next unless %model == self || %model.changed?
           if %model.responds_to?({{after.symbolize}})
             %model.{{after.id}}
           end
@@ -603,7 +607,6 @@ module Ktistec
       def validate(skip_associated = false)
         @errors.clear
         with_callbacks(before_validate, after_validate, skip_associated: skip_associated) do |node|
-          next unless node.model == self || node.model.changed?
           if (errors = node.model._run_validations)
             if (association = node.association)
               if (index = node.index)
@@ -655,7 +658,6 @@ module Ktistec
       def save(skip_validation = false, skip_associated = false)
         raise Invalid.new(errors) unless skip_validation || valid?(skip_associated: skip_associated)
         with_callbacks(before_save, after_save, skip_associated: skip_associated) do |node|
-          next unless node.model == self || node.model.changed?
           node.model._save_model(skip_validation: skip_validation)
         end
         self

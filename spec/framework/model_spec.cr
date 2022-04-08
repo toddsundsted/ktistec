@@ -573,10 +573,23 @@ Spectator.describe Ktistec::Model do
         end
       end
 
-      it "converts properties to all capitals" do
+      it "runs the callback" do
         all_caps_model = AllCapsModel.new(key: "key", val: "val").tap(&.valid?)
         expect(all_caps_model.key).to eq("KEY")
         expect(all_caps_model.val).to eq("VAL")
+      end
+
+      it "runs the callbacks even if unchanged if called directly" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!).tap(&.valid?)
+        expect(all_caps_model.key).to eq("KEY")
+        expect(all_caps_model.val).to eq("VAL")
+      end
+
+      it "does not run the callbacks on associated instance if it's unchanged" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+        FooBarModel.new(not_nil_model: all_caps_model).valid?
+        expect(all_caps_model.key).to eq("key")
+        expect(all_caps_model.val).to eq("val")
       end
     end
   end
@@ -726,10 +739,23 @@ Spectator.describe Ktistec::Model do
         end
       end
 
-      it "converts properties to all capitals" do
+      it "runs the callback" do
         all_caps_model = AllCapsModel.new(key: "Key", val: "Val").save
         expect(all_caps_model.key).to eq("KEY")
         expect(all_caps_model.val).to eq("VAL")
+      end
+
+      it "runs the callbacks even if unchanged if called directly" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!).save
+        expect(all_caps_model.key).to eq("KEY")
+        expect(all_caps_model.val).to eq("VAL")
+      end
+
+      it "does not run the callbacks on associated instance if it's unchanged" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!)
+        FooBarModel.new(not_nil_model: all_caps_model).save
+        expect(all_caps_model.key).to eq("Key")
+        expect(all_caps_model.val).to eq("Val")
       end
     end
   end
@@ -752,7 +778,7 @@ Spectator.describe Ktistec::Model do
         end
       end
 
-      it "timestamps the model" do
+      it "runs the callback" do
         destroyed_at_model = DestroyedAtModel.new.save
         expect{destroyed_at_model.destroy}.to change{destroyed_at_model.destroyed_at}
       end

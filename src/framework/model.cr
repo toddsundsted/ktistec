@@ -515,6 +515,7 @@ module Ktistec
 
       record(
         Node,
+        # use InstanceMethods because Model is parameterized
         model : Model::InstanceMethods,
         association : String?,
         index : Int32?

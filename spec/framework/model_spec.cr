@@ -515,6 +515,12 @@ Spectator.describe Ktistec::Model do
       expect(new_model.errors).to eq({"key" => ["is not capitalized"], "val" => ["is not capitalized"]})
     end
 
+    it "performs the validations even if unchanged if called directly" do
+      new_model = NotNilModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+      expect(new_model.valid?).to be_false
+      expect(new_model.errors).to eq({"key" => ["is not capitalized"], "val" => ["is not capitalized"]})
+    end
+
     it "passes the validations" do
       new_model = NotNilModel.new(key: "Key", val: "Val")
       expect(new_model.valid?).to be_true
@@ -541,6 +547,14 @@ Spectator.describe Ktistec::Model do
       not_nil_model = NotNilModel.new(val: "")
       foo_bar_model = FooBarModel.new(not_nil_model: not_nil_model)
       expect(foo_bar_model.valid?(skip_associated: true)).to be_true
+      expect(not_nil_model.errors).to be_empty
+      expect(foo_bar_model.errors).to be_empty
+    end
+
+    it "does not validate the associated instance if it's unchanged" do
+      not_nil_model = NotNilModel.new(id: 9999_i64, val: "").tap(&.clear!)
+      foo_bar_model = FooBarModel.new(not_nil_model: not_nil_model)
+      expect(foo_bar_model.valid?).to be_true
       expect(not_nil_model.errors).to be_empty
       expect(foo_bar_model.errors).to be_empty
     end
@@ -580,6 +594,12 @@ Spectator.describe Ktistec::Model do
         expect{new_model.save}.to change{FooBarModel.count}.by(1)
       end
 
+      it "saves a new instance even if unchanged if saved directly" do
+        new_model = FooBarModel.new(id: 9999_i64, foo: "Foo", bar: "Bar").tap(&.clear!)
+        expect(new_model.changed?).to be_false
+        expect{new_model.save}.to change{FooBarModel.find?(foo: "Foo", bar: "Bar")}
+      end
+
       it "raises a validation exception" do
         new_model = NotNilModel.new(val: "")
         expect{new_model.save}.to raise_error(Ktistec::Model::Invalid)
@@ -605,12 +625,18 @@ Spectator.describe Ktistec::Model do
 
       it "saves the associated instance" do
         another_model = AnotherModel.new(val: "Val")
-        expect{DerivedModel.new(not_nil_model: another_model).save}.to change{another_model.id}
+        expect{DerivedModel.new(not_nil_model: another_model).save}.to change{AnotherModel.count}
       end
 
       it "doesn't save the associated instance" do
         another_model = AnotherModel.new(val: "Val")
-        expect{DerivedModel.new(not_nil_model: another_model).save(skip_associated: true)}.not_to change{another_model.id}
+        expect{DerivedModel.new(not_nil_model: another_model).save(skip_associated: true)}.not_to change{AnotherModel.count}
+      end
+
+      it "doesn't save the associated instance if it's unchanged" do
+        another_model = AnotherModel.new(id: 9999_i64, val: "Val").tap(&.clear!)
+        expect(another_model.changed?).to be_false
+        expect{DerivedModel.new(not_nil_model: another_model).save}.not_to change{AnotherModel.count}
       end
 
       it "doesn't save the instance" do
@@ -633,6 +659,12 @@ Spectator.describe Ktistec::Model do
       it "does not save a new instance with an assigned id" do
         saved_model = FooBarModel.new(id: 9999_i64).save
         expect{saved_model.save}.not_to change{FooBarModel.count}
+      end
+
+      it "updates the instance even if unchanged if saved directly" do
+        saved_model = FooBarModel.new.save.assign(foo: "Foo", bar: "Bar").tap(&.clear!)
+        expect(saved_model.changed?).to be_false
+        expect{saved_model.save}.to change{FooBarModel.find?(foo: "Foo", bar: "Bar")}
       end
 
       it "raises a validation exception" do
@@ -660,12 +692,18 @@ Spectator.describe Ktistec::Model do
 
       it "saves the associated instance" do
         another_model = AnotherModel.new(val: "Val")
-        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save}.to change{another_model.id}
+        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save}.to change{AnotherModel.count}
       end
 
       it "doesn't save the associated instance" do
         another_model = AnotherModel.new(val: "Val")
-        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save(skip_associated: true)}.not_to change{another_model.id}
+        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save(skip_associated: true)}.not_to change{AnotherModel.count}
+      end
+
+      it "doesn't save the associated instance if it's unchanged" do
+        another_model = AnotherModel.new(id: 9999_i64, val: "Val").tap(&.clear!)
+        expect(another_model.changed?).to be_false
+        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save}.not_to change{AnotherModel.count}
       end
 
       it "doesn't save the instance" do

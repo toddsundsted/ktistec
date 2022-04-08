@@ -594,6 +594,7 @@ module Ktistec
         nodes = [] of Node
         run_callback(before_validate, skip_associated: skip_associated, nodes: nodes)
         nodes.each do |node|
+          next unless node.model == self || node.model.changed?
           if (errors = node.model._run_validations)
             if (association = node.association)
               if (index = node.index)
@@ -648,6 +649,7 @@ module Ktistec
         nodes = [] of Node
         run_callback(before_save, skip_associated: skip_associated, nodes: nodes)
         nodes.each do |node|
+          next unless node.model == self || node.model.changed?
           node.model._save_model(skip_validation: skip_validation)
         end
         run_callback(after_save, skip_associated: skip_associated, nodes: nodes)

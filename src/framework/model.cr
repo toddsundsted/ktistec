@@ -521,12 +521,12 @@ module Ktistec
       )
 
       def serialize_graph(skip_associated = false)
-        ([] of Node).tap do |result|
-          _serialize_graph(result, skip_associated: skip_associated)
+        ([] of Node).tap do |nodes|
+          _serialize_graph(nodes, skip_associated: skip_associated)
         end
       end
 
-      def _serialize_graph(result, association = nil, index = nil, skip_associated = false)
+      def _serialize_graph(nodes, association = nil, index = nil, skip_associated = false)
         return if self.destroyed?
         {% if @type < Deletable %}
           return if self.deleted?
@@ -534,24 +534,23 @@ module Ktistec
         {% if @type < Undoable %}
           return if self.undone?
         {% end %}
-        result << Node.new(self, association, index)
+        nodes << Node.new(self, association, index)
         {% begin %}
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
           {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
           unless skip_associated
-            options = {skip_associated: skip_associated}
             {% for method in methods %}
               if (%body = {{method.body}}.last)
-                if %body.responds_to?(:each)
+                if %body.responds_to?(:each_with_index)
                   %body.each_with_index do |model, i|
-                    unless result.any? { |node| model == node.model }
-                      model._serialize_graph(result, {{method.name[13..-1].stringify}}, i, **options)
+                    unless nodes.any? { |node| model == node.model }
+                      model._serialize_graph(nodes, {{method.name[13..-1].stringify}}, i, skip_associated: false)
                     end
                   end
                 else
-                  unless result.any? { |node| %body == node.model }
-                    %body._serialize_graph(result, {{method.name[13..-1].stringify}}, **options)
+                  unless nodes.any? { |node| %body == node.model }
+                    %body._serialize_graph(nodes, {{method.name[13..-1].stringify}}, skip_associated: false)
                   end
                 end
               end

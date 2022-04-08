@@ -500,6 +500,10 @@ Spectator.describe Ktistec::Model do
     it "serializes the graph of models" do
       expect(graph.serialize_graph.map(&.model)).to eq([graph, foo_bar, not_nil])
     end
+
+    it "skips associated instances" do
+      expect(graph.serialize_graph(skip_associated: true).map(&.model)).to eq([graph])
+    end
   end
 
   describe "#valid?" do

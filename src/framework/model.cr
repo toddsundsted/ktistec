@@ -18,15 +18,6 @@ module Ktistec
     annotation Persistent
     end
 
-    macro persistent_columns
-      {
-        {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-        {% for v in vs %}
-          {{v.id}}: {{v.type}},
-        {% end %}
-      }
-    end
-
     module ClassMethods
       # Returns the table name.
       #

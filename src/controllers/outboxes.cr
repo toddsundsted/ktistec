@@ -1,6 +1,7 @@
 require "../framework/controller"
 require "../models/activity_pub/activity/**"
 require "../models/task/deliver"
+require "../rules/content_rules"
 
 class RelationshipsController
   include Ktistec::Controller
@@ -237,18 +238,14 @@ class RelationshipsController
 
     activity.save
 
-    # if the activity is a delete, the object will already have been
-    # deleted so herein and throughout don't validate and save the
-    # associated models -- they shouldn't have changed anyway.
-
-    # handle side-effects
-
     Relationship::Content::Outbox.new(
       owner: account.actor,
       activity: activity
     ).save(skip_associated: true)
 
-    Relationship::Content::Timeline.update_timeline(account.actor, activity)
+    ContentRules.new.run(account.actor, activity)
+
+    # handle side-effects
 
     case activity
     when ActivityPub::Activity::Follow

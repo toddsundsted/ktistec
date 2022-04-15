@@ -4,6 +4,7 @@ require "../framework/open"
 require "../framework/signature"
 require "../models/activity_pub/activity/**"
 require "../models/task/receive"
+require "../rules/content_rules"
 
 class RelationshipsController
   include Ktistec::Controller
@@ -240,12 +241,6 @@ class RelationshipsController
 
     activity.save
 
-    # if the activity is a delete, the object will already have been
-    # deleted so herein and throughout don't validate and save the
-    # associated models -- they shouldn't have changed anyway.
-
-    # handle side-effects
-
     recipients = [activity.to, activity.cc, deliver_to].flatten.compact
 
     if recipients.includes?(account.actor.iri) ||
@@ -256,9 +251,10 @@ class RelationshipsController
         activity: activity,
       ).save(skip_associated: true)
 
-      Relationship::Content::Notification.update_notifications(account.actor, activity)
-      Relationship::Content::Timeline.update_timeline(account.actor, activity)
+      ContentRules.new.run(account.actor, activity)
     end
+
+    # handle side-effects
 
     case activity
     when ActivityPub::Activity::Follow

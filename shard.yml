@@ -28,7 +28,8 @@ dependencies:
     github: toddsundsted/web_finger
     version: ~> 0.2.1
   school:
-    path: ../school
+    github: toddsundsted/school
+    branch: main
 
 development_dependencies:
   spectator:

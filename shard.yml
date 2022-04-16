@@ -12,6 +12,9 @@ dependencies:
   kemal:
     github: kemalcr/kemal
     version: ~> 1.1.0
+  kilt:
+    github: jeromegn/kilt
+    version: ~> 0.6.0
   slang:
     github: toddsundsted/slang
     branch: main
@@ -27,12 +30,18 @@ dependencies:
   web_finger:
     github: toddsundsted/web_finger
     version: ~> 0.2.1
+  school:
+    github: toddsundsted/school
+    branch: main
 
 development_dependencies:
   spectator:
     gitlab: arctic-fox/spectator
     version: ~> 0.10.3
 
-crystal: 0.36.1
+crystal: 1.2.2
+
+libraries:
+  libsqlite3: ">= 3.11.0"
 
 license: MIT

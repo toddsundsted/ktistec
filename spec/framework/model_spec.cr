@@ -6,7 +6,7 @@ require "../../src/framework/model"
 require "../spec_helper/base"
 
 class FooBarModel
-  include Ktistec::Model(Deletable)
+  include Ktistec::Model(Deletable, Undoable)
 
   @[Persistent]
   property foo : String? = "Foo"
@@ -32,7 +32,7 @@ class FooBarModel
 end
 
 class NotNilModel
-  include Ktistec::Model(Deletable)
+  include Ktistec::Model(Deletable, Undoable)
 
   @[Persistent]
   property key : String = "Key"
@@ -97,6 +97,7 @@ Spectator.describe Ktistec::Model do
       CREATE TABLE foo_bar_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime,
+        undone_at datetime,
         not_nil_model_id integer,
         foo text,
         bar text
@@ -106,6 +107,7 @@ Spectator.describe Ktistec::Model do
       CREATE TABLE not_nil_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime,
+        undone_at datetime,
         foo_bar_model_id integer,
         key text NOT NULL,
         val text NOT NULL
@@ -134,6 +136,18 @@ Spectator.describe Ktistec::Model do
 
     it "returns the table name" do
       expect(DerivedModel.new.table_name).to eq("foo_bar_models")
+    end
+  end
+
+  describe ".values" do
+    it "raises an error if column doesn't exist" do
+      expect{QueryModel.values(xyz: 123)}.to raise_error(Ktistec::Model::ColumnError)
+    end
+  end
+
+  describe ".conditions" do
+    it "raises an error if column doesn't exist" do
+      expect{QueryModel.conditions(xyz: 123)}.to raise_error(Ktistec::Model::ColumnError)
     end
   end
 
@@ -167,12 +181,18 @@ Spectator.describe Ktistec::Model do
       expect(NotNilModel.new(val: "Val").val).to eq("Val")
     end
 
-    it "ignores supplied prefix" do
-      expect(FooBarModel.new({"prefix.foo" => "Foo"}, prefix: "prefix.").foo).to eq("Foo")
+    it "bulk assigns properties" do
+      expect(FooBarModel.new({"foo" => "Foo"}).foo).to eq("Foo")
     end
 
     it "supports assignment of nil" do
       expect(FooBarModel.new(foo: nil).foo).to be_nil
+    end
+
+    let(foo_bar) { FooBarModel.new.save }
+
+    it "assigns belongs_to associations" do
+      expect(NotNilModel.new(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
     end
   end
 
@@ -185,12 +205,28 @@ Spectator.describe Ktistec::Model do
       expect(NotNilModel.new(val: "").assign(val: "Val").val).to eq("Val")
     end
 
-    it "ignores supplied prefix" do
-      expect(FooBarModel.new(foo: "").assign({"prefix.foo" => "Foo"}, prefix: "prefix.").foo).to eq("Foo")
+    it "bulk assigns properties" do
+      expect(FooBarModel.new(foo: "").assign({"foo" => "Foo"}).foo).to eq("Foo")
     end
 
     it "supports assignment of nil" do
       expect(FooBarModel.new(foo: "Foo").assign(foo: nil).foo).to be_nil
+    end
+
+    let(foo_bar) { FooBarModel.new.save }
+
+    it "assigns belongs_to associations" do
+      expect(NotNilModel.new.assign(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
+    end
+
+    let(not_nil) { NotNilModel.new(val: "Val").save }
+
+    it "assigns has_one associations" do
+      expect{foo_bar.assign(not_nil_model: not_nil)}.to change{not_nil.foo_bar_model_id}
+    end
+
+    it "assigns has_many associations" do
+      expect{not_nil.assign(foo_bar_models: [foo_bar])}.to change{foo_bar.not_nil_model_id}
     end
   end
 
@@ -232,12 +268,20 @@ Spectator.describe Ktistec::Model do
       expect(FooBarModel.count(foo: "", bar: "")).to eq(0)
     end
 
+    it "returns the count of matching instances" do
+      expect(FooBarModel.count({"foo" => "", "bar" => ""})).to eq(0)
+    end
+
     it "returns the count of persisted instances" do
       expect(NotNilModel.count).to eq(1)
     end
 
     it "returns the count of matching instances" do
       expect(NotNilModel.count(val: "")).to eq(0)
+    end
+
+    it "returns the count of matching instances" do
+      expect(NotNilModel.count({"val" => ""})).to eq(0)
     end
   end
 
@@ -257,19 +301,16 @@ Spectator.describe Ktistec::Model do
     context "given the id" do
       it "finds the saved instance" do
         saved_model = FooBarModel.new.save
-        expect(FooBarModel.find(saved_model.id)).not_to be(saved_model)
         expect(FooBarModel.find(saved_model.id)).to eq(saved_model)
       end
 
       it "finds the updated instance" do
         updated_model = FooBarModel.new.save.save
-        expect(FooBarModel.find(updated_model.id)).not_to be(updated_model)
         expect(FooBarModel.find(updated_model.id)).to eq(updated_model)
       end
 
       it "finds the saved instance" do
         saved_model = NotNilModel.new(val: "Val").save
-        expect(NotNilModel.find(saved_model.id)).not_to be(saved_model)
         expect(NotNilModel.find(saved_model.id)).to eq(saved_model)
       end
 
@@ -281,77 +322,169 @@ Spectator.describe Ktistec::Model do
     context "given properties" do
       it "finds the saved instance" do
         saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
-        expect(FooBarModel.find(foo: "Foo", bar: "Bar")).not_to be(saved_model)
         expect(FooBarModel.find(foo: "Foo", bar: "Bar")).to eq(saved_model)
+      end
+
+      it "finds the saved instance" do
+        saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
+        expect(FooBarModel.find({"foo" => "Foo", "bar" => "Bar"})).to eq(saved_model)
       end
 
       it "finds the updated instance" do
         updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
-        expect(FooBarModel.find(foo: "Bar", bar: "Bar")).not_to be(updated_model)
         expect(FooBarModel.find(foo: "Bar", bar: "Bar")).to eq(updated_model)
+      end
+
+      it "finds the updated instance" do
+        updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
+        expect(FooBarModel.find({"foo" => "Bar", "bar" => "Bar"})).to eq(updated_model)
       end
 
       it "finds the saved instance" do
         saved_model = NotNilModel.new(val: "Val").save
-        expect(NotNilModel.find(val: "Val")).not_to be(saved_model)
         expect(NotNilModel.find(val: "Val")).to eq(saved_model)
+      end
+
+      it "finds the saved instance" do
+        saved_model = NotNilModel.new({"val" => "Val"}).save
+        expect(NotNilModel.find({"val" => "Val"})).to eq(saved_model)
       end
 
       it "raises an exception" do
         expect{NotNilModel.find(val: "Baz")}.to raise_error(Ktistec::Model::NotFound)
       end
     end
+
+    context "given associations" do
+      let!(not_nil_model) { NotNilModel.new(val: "Val").save }
+      let!(foo_bar_model) { FooBarModel.new(not_nil: not_nil_model).save }
+
+      it "finds the saved instance using the foreign key" do
+        expect(FooBarModel.find(not_nil_model_id: not_nil_model.id)).to eq(foo_bar_model)
+      end
+
+      it "finds the saved instance using the foreign key" do
+        expect(FooBarModel.find({"not_nil_model_id" => not_nil_model.id})).to eq(foo_bar_model)
+      end
+
+      it "finds the saved instance using the association" do
+        expect(FooBarModel.find(not_nil: not_nil_model)).to eq(foo_bar_model)
+      end
+
+      it "finds the saved instance using the association" do
+        expect(FooBarModel.find({"not_nil" => not_nil_model})).to eq(foo_bar_model)
+      end
+    end
   end
 
   describe ".find?" do
-    context "given the id" do
-      it "returns nil" do
-        expect{NotNilModel.find?(999999)}.to be_nil
-      end
+    it "returns nil" do
+      expect{NotNilModel.find?(999999)}.to be_nil
     end
 
-    context "given properties" do
-      it "returns nil" do
-        expect{NotNilModel.find?(val: "Baz")}.to be_nil
-      end
+    it "returns nil" do
+      expect{NotNilModel.find?(val: "Baz")}.to be_nil
+    end
+
+    it "returns nil" do
+      expect{NotNilModel.find?({"val" => "Baz"})}.to be_nil
     end
   end
 
   describe ".where" do
-    it "returns the saved instances" do
-      saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
-      expect(FooBarModel.where(foo: "Foo", bar: "Bar")).to eq([saved_model])
-      expect(FooBarModel.where(foo: "Bar", bar: "Bar")).to be_empty
+    context "given properties" do
+      it "returns the saved instances" do
+        saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
+        expect(FooBarModel.where(foo: "Foo", bar: "Bar")).to eq([saved_model])
+      end
+
+      it "returns the saved instances" do
+        saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
+        expect(FooBarModel.where({"foo" => "Foo", "bar" => "Bar"})).to eq([saved_model])
+      end
+
+      it "returns the saved instances" do
+        saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
+        expect(FooBarModel.where("foo = ? and bar = ?", "Foo", "Bar")).to eq([saved_model])
+      end
+
+      it "returns the updated instances" do
+        updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
+        expect(FooBarModel.where(foo: "Bar")).to eq([updated_model])
+      end
+
+      it "returns the updated instances" do
+        updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
+        expect(FooBarModel.where({"foo" => "Bar"})).to eq([updated_model])
+      end
+
+      it "returns the updated instances" do
+        updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
+        expect(FooBarModel.where("foo = ?", "Bar")).to eq([updated_model])
+      end
+
+      it "returns the saved instances" do
+        saved_model = NotNilModel.new(val: "Val").save
+        expect(NotNilModel.where(val: "Val")).to eq([saved_model])
+      end
+
+      it "returns the saved instances" do
+        saved_model = NotNilModel.new(val: "Val").save
+        expect(NotNilModel.where({"val" => "Val"})).to eq([saved_model])
+      end
+
+      it "returns the saved instances" do
+        saved_model = NotNilModel.new(val: "Val").save
+        expect(NotNilModel.where("val = ?", "Val")).to eq([saved_model])
+      end
+
+      it "returns an empty collection" do
+        expect(FooBarModel.where(foo: "Foo", bar: "Bar")).to be_empty
+      end
+
+      it "returns an empty collection" do
+        expect(FooBarModel.where("foo = ? and bar = ?", "Foo", "Bar")).to be_empty
+      end
+
+      it "returns an empty collection" do
+        expect(NotNilModel.where(val: "Val")).to be_empty
+      end
+
+      it "returns an empty collection" do
+        expect(NotNilModel.where("val = ?", "Val")).to be_empty
+      end
     end
 
-    it "returns the saved instances" do
-      saved_model = FooBarModel.new(foo: "Foo", bar: "Bar").save
-      expect(FooBarModel.where("foo = ? and bar = ?", "Foo", "Bar")).to eq([saved_model])
-      expect(FooBarModel.where("foo = ? and bar = ?", "Bar", "Bar")).to be_empty
-    end
+    context "given associations" do
+      let!(not_nil_model) { NotNilModel.new(val: "Val").save }
+      let!(foo_bar_model) { FooBarModel.new(not_nil: not_nil_model).save }
 
-    it "returns the updated instances" do
-      updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
-      expect(FooBarModel.where(foo: "Bar")).to eq([updated_model])
-      expect(FooBarModel.where(foo: "Foo")).to be_empty
-    end
+      it "returns the saved instances using the foreign key" do
+        expect(FooBarModel.where(not_nil_model_id: not_nil_model.id)).to eq([foo_bar_model])
+      end
 
-    it "returns the updated instances" do
-      updated_model = FooBarModel.new(foo: "Foo", bar: "Bar").save.assign(foo: "Bar").save
-      expect(FooBarModel.where("foo = ?", "Bar")).to eq([updated_model])
-      expect(FooBarModel.where("foo = ?", "Foo")).to be_empty
-    end
+      it "returns the saved instances using the foreign key" do
+        expect(FooBarModel.where({"not_nil_model_id" => not_nil_model.id})).to eq([foo_bar_model])
+      end
 
+      it "returns the saved instances using the association" do
+        expect(FooBarModel.where(not_nil: not_nil_model)).to eq([foo_bar_model])
+      end
+
+      it "returns the saved instances using the association" do
+        expect(FooBarModel.where({"not_nil" => not_nil_model})).to eq([foo_bar_model])
+      end
+    end
+  end
+
+  describe ".sql" do
     it "returns the saved instances" do
       saved_model = NotNilModel.new(val: "Val").save
-      expect(NotNilModel.where(val: "Val")).to eq([saved_model])
-      expect(NotNilModel.where(val: "")).to be_empty
+      expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", "Val")).to eq([saved_model])
     end
 
-    it "returns the saved instances" do
-      saved_model = NotNilModel.new(val: "Val").save
-      expect(NotNilModel.where("val = ?", "Val")).to eq([saved_model])
-      expect(NotNilModel.where("val = ?", "")).to be_empty
+    it "returns an empty collection" do
+      expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", "Val")).to be_empty
     end
   end
 
@@ -367,6 +500,10 @@ Spectator.describe Ktistec::Model do
     it "serializes the graph of models" do
       expect(graph.serialize_graph.map(&.model)).to eq([graph, foo_bar, not_nil])
     end
+
+    it "skips associated instances" do
+      expect(graph.serialize_graph(skip_associated: true).map(&.model)).to eq([graph])
+    end
   end
 
   describe "#valid?" do
@@ -378,6 +515,12 @@ Spectator.describe Ktistec::Model do
 
     it "performs the validations" do
       new_model = NotNilModel.new(key: "key", val: "val")
+      expect(new_model.valid?).to be_false
+      expect(new_model.errors).to eq({"key" => ["is not capitalized"], "val" => ["is not capitalized"]})
+    end
+
+    it "performs the validations even if unchanged if called directly" do
+      new_model = NotNilModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
       expect(new_model.valid?).to be_false
       expect(new_model.errors).to eq({"key" => ["is not capitalized"], "val" => ["is not capitalized"]})
     end
@@ -412,6 +555,14 @@ Spectator.describe Ktistec::Model do
       expect(foo_bar_model.errors).to be_empty
     end
 
+    it "does not validate the associated instance if it's unchanged" do
+      not_nil_model = NotNilModel.new(id: 9999_i64, val: "").tap(&.clear!)
+      foo_bar_model = FooBarModel.new(not_nil_model: not_nil_model)
+      expect(foo_bar_model.valid?).to be_true
+      expect(not_nil_model.errors).to be_empty
+      expect(foo_bar_model.errors).to be_empty
+    end
+
     context "before validate lifecycle callback" do
       class AllCapsModel < NotNilModel
         @@table_name = "not_nil_models"
@@ -422,10 +573,23 @@ Spectator.describe Ktistec::Model do
         end
       end
 
-      it "converts properties to all capitals" do
+      it "runs the callback" do
         all_caps_model = AllCapsModel.new(key: "key", val: "val").tap(&.valid?)
         expect(all_caps_model.key).to eq("KEY")
         expect(all_caps_model.val).to eq("VAL")
+      end
+
+      it "runs the callbacks even if unchanged if called directly" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!).tap(&.valid?)
+        expect(all_caps_model.key).to eq("KEY")
+        expect(all_caps_model.val).to eq("VAL")
+      end
+
+      it "does not run the callbacks on associated instance if it's unchanged" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+        FooBarModel.new(not_nil_model: all_caps_model).valid?
+        expect(all_caps_model.key).to eq("key")
+        expect(all_caps_model.val).to eq("val")
       end
     end
   end
@@ -433,7 +597,8 @@ Spectator.describe Ktistec::Model do
   describe "#save" do
     context "new instance" do
       it "saves a new instance" do
-        expect{FooBarModel.new.save}.to change{FooBarModel.count}.by(1)
+        new_model = FooBarModel.new
+        expect{new_model.save}.to change{FooBarModel.count}.by(1)
       end
 
       it "assigns an id" do
@@ -443,7 +608,13 @@ Spectator.describe Ktistec::Model do
 
       it "saves a new instance with an assigned id" do
         new_model = FooBarModel.new(id: 9999_i64)
-        expect{new_model.save}.to change{FooBarModel.count(id: 9999_i64)}.by(1)
+        expect{new_model.save}.to change{FooBarModel.count}.by(1)
+      end
+
+      it "saves a new instance even if unchanged if saved directly" do
+        new_model = FooBarModel.new(id: 9999_i64, foo: "Foo", bar: "Bar").tap(&.clear!)
+        expect(new_model.changed?).to be_false
+        expect{new_model.save}.to change{FooBarModel.find?(foo: "Foo", bar: "Bar")}
       end
 
       it "raises a validation exception" do
@@ -452,7 +623,7 @@ Spectator.describe Ktistec::Model do
         expect(new_model.errors).to have_key("val")
       end
 
-      it "doesn't raise an exception" do
+      it "doesn't raise a validation exception" do
         new_model = NotNilModel.new(val: "")
         expect{new_model.save(skip_validation: true)}.not_to raise_error
         expect(new_model.errors).to be_empty
@@ -471,12 +642,18 @@ Spectator.describe Ktistec::Model do
 
       it "saves the associated instance" do
         another_model = AnotherModel.new(val: "Val")
-        expect{DerivedModel.new(not_nil_model: another_model).save}.to change{another_model.id}
+        expect{DerivedModel.new(not_nil_model: another_model).save}.to change{AnotherModel.count}
       end
 
       it "doesn't save the associated instance" do
         another_model = AnotherModel.new(val: "Val")
-        expect{DerivedModel.new(not_nil_model: another_model).save(skip_associated: true)}.not_to change{another_model.id}
+        expect{DerivedModel.new(not_nil_model: another_model).save(skip_associated: true)}.not_to change{AnotherModel.count}
+      end
+
+      it "doesn't save the associated instance if it's unchanged" do
+        another_model = AnotherModel.new(id: 9999_i64, val: "Val").tap(&.clear!)
+        expect(another_model.changed?).to be_false
+        expect{DerivedModel.new(not_nil_model: another_model).save}.not_to change{AnotherModel.count}
       end
 
       it "doesn't save the instance" do
@@ -487,7 +664,8 @@ Spectator.describe Ktistec::Model do
 
     context "existing instance" do
       it "does not save a new instance" do
-        expect{FooBarModel.new.save.save}.to change{FooBarModel.count}.by(1)
+        saved_model = FooBarModel.new.save
+        expect{saved_model.save}.not_to change{FooBarModel.count}
       end
 
       it "does not assign an id" do
@@ -496,8 +674,14 @@ Spectator.describe Ktistec::Model do
       end
 
       it "does not save a new instance with an assigned id" do
-        new_model = FooBarModel.new(id: 9999_i64).save
-        expect{new_model.save}.not_to change{FooBarModel.count}
+        saved_model = FooBarModel.new(id: 9999_i64).save
+        expect{saved_model.save}.not_to change{FooBarModel.count}
+      end
+
+      it "updates the instance even if unchanged if saved directly" do
+        saved_model = FooBarModel.new.save.assign(foo: "Foo", bar: "Bar").tap(&.clear!)
+        expect(saved_model.changed?).to be_false
+        expect{saved_model.save}.to change{FooBarModel.find?(foo: "Foo", bar: "Bar")}
       end
 
       it "raises a validation exception" do
@@ -506,7 +690,7 @@ Spectator.describe Ktistec::Model do
         expect(new_model.errors).to have_key("val")
       end
 
-      it "doesn't raise an exception" do
+      it "doesn't raise a validation exception" do
         new_model = NotNilModel.new(val: "Val").save
         expect{new_model.assign(val: "").save(skip_validation: true)}.not_to raise_error
         expect(new_model.errors).to be_empty
@@ -525,12 +709,18 @@ Spectator.describe Ktistec::Model do
 
       it "saves the associated instance" do
         another_model = AnotherModel.new(val: "Val")
-        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save}.to change{another_model.id}
+        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save}.to change{AnotherModel.count}
       end
 
       it "doesn't save the associated instance" do
         another_model = AnotherModel.new(val: "Val")
-        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save(skip_associated: true)}.not_to change{another_model.id}
+        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save(skip_associated: true)}.not_to change{AnotherModel.count}
+      end
+
+      it "doesn't save the associated instance if it's unchanged" do
+        another_model = AnotherModel.new(id: 9999_i64, val: "Val").tap(&.clear!)
+        expect(another_model.changed?).to be_false
+        expect{DerivedModel.new.save.assign(not_nil_model: another_model).save}.not_to change{AnotherModel.count}
       end
 
       it "doesn't save the instance" do
@@ -549,10 +739,23 @@ Spectator.describe Ktistec::Model do
         end
       end
 
-      it "converts properties to all capitals" do
+      it "runs the callback" do
         all_caps_model = AllCapsModel.new(key: "Key", val: "Val").save
         expect(all_caps_model.key).to eq("KEY")
         expect(all_caps_model.val).to eq("VAL")
+      end
+
+      it "runs the callbacks even if unchanged if called directly" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!).save
+        expect(all_caps_model.key).to eq("KEY")
+        expect(all_caps_model.val).to eq("VAL")
+      end
+
+      it "does not run the callbacks on associated instance if it's unchanged" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!)
+        FooBarModel.new(not_nil_model: all_caps_model).save
+        expect(all_caps_model.key).to eq("Key")
+        expect(all_caps_model.val).to eq("Val")
       end
     end
   end
@@ -575,7 +778,7 @@ Spectator.describe Ktistec::Model do
         end
       end
 
-      it "timestamps the model" do
+      it "runs the callback" do
         destroyed_at_model = DestroyedAtModel.new.save
         expect{destroyed_at_model.destroy}.to change{destroyed_at_model.destroyed_at}
       end
@@ -593,48 +796,100 @@ Spectator.describe Ktistec::Model do
   end
 
   describe "#changed?" do
-    it "returns false if the record has not been changed" do
-      expect(NotNilModel.new(val: "Val").save.changed?).to be_false
-    end
-
-    it "returns true if the record has been changed" do
-      expect(NotNilModel.new(val: "Val").save.assign(val: "Baz").changed?).to be_true
-    end
-
-    it "returns false if the record has been cleared after it was changed" do
-      expect(NotNilModel.new(val: "Val").save.assign(val: "Baz").tap(&.clear!).changed?).to be_false
-    end
-
-    it "returns false if the record has been saved" do
-      expect(NotNilModel.new(val: "Val").save.assign(val: "Baz").save.changed?).to be_false
-    end
-
-    it "returns false if the record has been saved" do
-      expect(NotNilModel.new(val: "Val").save.tap(&.changed?).assign(val: "Baz").save.changed?).to be_false
-    end
+    let(not_nil_model) { NotNilModel.new(val: "Val") }
 
     it "returns true if the record is new" do
-      expect(NotNilModel.new(val: "Val").changed?).to be_true
+      expect(not_nil_model.changed?).to be_true
     end
 
     it "returns true if the record is new even if it was cleared" do
-      expect(NotNilModel.new(val: "Val").tap(&.clear!).changed?).to be_true
+      expect(not_nil_model.tap(&.clear!).changed?).to be_true
+    end
+
+    it "returns false if the record has not been changed" do
+      expect(not_nil_model.save.changed?).to be_false
+    end
+
+    it "returns true if the record has been changed" do
+      expect(not_nil_model.save.assign(val: "Baz").changed?).to be_true
+    end
+
+    it "returns false if the record has been cleared after it was changed" do
+      expect(not_nil_model.save.assign(val: "Baz").tap(&.clear!).changed?).to be_false
+    end
+
+    it "returns false if the record has been saved" do
+      expect(not_nil_model.save.assign(val: "Baz").save.changed?).to be_false
+    end
+
+    it "returns false if the record has been saved" do
+      expect(not_nil_model.save.tap(&.changed?).assign(val: "Baz").save.changed?).to be_false
+    end
+
+    context "given a saved record" do
+      before_each { not_nil_model.save }
+
+      it "returns false if queried" do
+        expect(NotNilModel.all.any?(&.changed?)).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.find(not_nil_model.id).changed?).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.find(val: not_nil_model.val).changed?).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.find({"val" => not_nil_model.val}).changed?).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.where(val: not_nil_model.val).any?(&.changed?)).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.where({"val" => not_nil_model.val}).any?(&.changed?)).to be_false
+      end
+
+      it "returns false if queried" do
+        expect(NotNilModel.where("val = ?", not_nil_model.val).any?(&.changed?)).to be_false
+      end
+    end
+
+    context "with inverse associations" do
+      let(not_nil_model) { NotNilModel.new(val: "Val").save }
+
+      pre_condition { expect(not_nil_model.changed?).to be_false }
+
+      it "does not mark inverse record as changed" do
+        expect{FooBarModel.new(not_nil_model: not_nil_model)}.not_to change{not_nil_model.changed?}
+      end
+
+      let(foo_bar_model) { FooBarModel.new.save }
+
+      pre_condition { expect(foo_bar_model.changed?).to be_false }
+
+      it "does not mark inverse record as changed" do
+        expect{NotNilModel.new(foo_bar_models: [foo_bar_model])}.not_to change{foo_bar_model.changed?}
+      end
     end
 
     it "returns false if the property has not been changed" do
-      expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").changed?(:val)).to be_false
+      expect(not_nil_model.save.assign(key: "Foo").changed?(:val)).to be_false
     end
 
     it "returns true if the property has been changed" do
-      expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").changed?(:key)).to be_true
+      expect(not_nil_model.save.assign(key: "Foo").changed?(:key)).to be_true
     end
 
     it "returns false if the property has been cleared after it was changed" do
-      expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").tap(&.clear!(:key)).changed?(:key)).to be_false
+      expect(not_nil_model.save.assign(key: "Foo").tap(&.clear!(:key)).changed?(:key)).to be_false
     end
 
     it "returns true if the property has been changed" do
-      expect(NotNilModel.new(val: "Val").save.assign(key: "Foo").tap(&.clear!(:val)).changed?(:key)).to be_true
+      expect(not_nil_model.save.assign(key: "Foo").tap(&.clear!(:val)).changed?(:key)).to be_true
     end
   end
 
@@ -695,11 +950,35 @@ Spectator.describe Ktistec::Model do
         expect(not_nil.foo_bar).to eq(foo_bar)
         expect(foo_bar.not_nil_model).to eq(not_nil)
       end
+
+      it "finds a deleted instance if explicitly specified" do
+        not_nil.assign(foo_bar: foo_bar).save
+        foo_bar.dup.delete
+        expect(NotNilModel.find(not_nil.id).foo_bar?(include_deleted: true)).to eq(foo_bar)
+      end
+
+      it "finds a deleted instance if explicitly specified" do
+        not_nil.assign(foo_bar: foo_bar).save
+        foo_bar.dup.delete
+        expect(NotNilModel.find(not_nil.id).foo_bar(include_deleted: true)).to eq(foo_bar)
+      end
+
+      it "finds an undone instance if explicitly specified" do
+        not_nil.assign(foo_bar: foo_bar).save
+        foo_bar.dup.undo
+        expect(NotNilModel.find(not_nil.id).foo_bar?(include_undone: true)).to eq(foo_bar)
+      end
+
+      it "finds an undone instance if explicitly specified" do
+        not_nil.assign(foo_bar: foo_bar).save
+        foo_bar.dup.undo
+        expect(NotNilModel.find(not_nil.id).foo_bar(include_undone: true)).to eq(foo_bar)
+      end
     end
 
     context "has_many" do
       it "assigns the reciprocal instance" do
-        (not_nil.foo_bar_models = [foo_bar])
+        not_nil.foo_bar_models = [foo_bar]
         expect(foo_bar.not_nil).to eq(not_nil)
         expect(not_nil.foo_bar_models).to eq([foo_bar])
       end
@@ -741,11 +1020,23 @@ Spectator.describe Ktistec::Model do
         foo_bar.foo = "Changed"
         expect{new_foo_bar_model.save}.not_to change{FooBarModel.count(foo: "Changed")}
       end
+
+      it "includes a deleted instance if explicitly specified" do
+        not_nil.assign(foo_bar_models: [foo_bar]).save
+        foo_bar.dup.delete
+        expect(NotNilModel.find(not_nil.id).foo_bar_models(include_deleted: true)).to eq([foo_bar])
+      end
+
+      it "includes an undone instance if explicitly specified" do
+        not_nil.assign(foo_bar_models: [foo_bar]).save
+        foo_bar.dup.undo
+        expect(NotNilModel.find(not_nil.id).foo_bar_models(include_undone: true)).to eq([foo_bar])
+      end
     end
 
     context "has_one" do
       it "assigns the reciprocal instance" do
-        (foo_bar.not_nil_model = not_nil)
+        foo_bar.not_nil_model = not_nil
         expect(not_nil.foo_bar).to eq(foo_bar)
         expect(foo_bar.not_nil_model).to eq(not_nil)
       end
@@ -786,6 +1077,30 @@ Spectator.describe Ktistec::Model do
         foo_bar.delete
         not_nil.key = "Changed"
         expect{new_not_nil_model.save}.not_to change{NotNilModel.count(key: "Changed")}
+      end
+
+      it "finds a deleted instance if explicitly specified" do
+        foo_bar.assign(not_nil_model: not_nil).save
+        not_nil.dup.delete
+        expect(FooBarModel.find(foo_bar.id).not_nil_model?(include_deleted: true)).to eq(not_nil)
+      end
+
+      it "finds a deleted instance if explicitly specified" do
+        foo_bar.assign(not_nil_model: not_nil).save
+        not_nil.dup.delete
+        expect(FooBarModel.find(foo_bar.id).not_nil_model(include_deleted: true)).to eq(not_nil)
+      end
+
+      it "finds an undone instance if explicitly specified" do
+        foo_bar.assign(not_nil_model: not_nil).save
+        not_nil.dup.undo
+        expect(FooBarModel.find(foo_bar.id).not_nil_model?(include_undone: true)).to eq(not_nil)
+      end
+
+      it "finds an undone instance if explicitly specified" do
+        foo_bar.assign(not_nil_model: not_nil).save
+        not_nil.dup.undo
+        expect(FooBarModel.find(foo_bar.id).not_nil_model(include_undone: true)).to eq(not_nil)
       end
     end
 

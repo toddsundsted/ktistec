@@ -48,28 +48,56 @@ Spectator.describe Ktistec::Model::Deletable do
       expect(DeletableModel.count).to eq(0)
     end
 
+    it "isn't counted unless explicitly included" do
+      expect(DeletableModel.count(include_deleted: true)).to eq(1)
+    end
+
     it "isn't counted" do
       expect(DeletableModel.count(id: 9999)).to eq(0)
+    end
+
+    it "isn't counted unless explicitly included" do
+      expect(DeletableModel.count(id: 9999, include_deleted: true)).to eq(1)
     end
 
     it "isn't returned" do
       expect(DeletableModel.all).to be_empty
     end
 
+    it "isn't returned unless explicitly included" do
+      expect(DeletableModel.all(include_deleted: true)).not_to be_empty
+    end
+
     it "can't be found" do
       expect(DeletableModel.find?(9999)).to be_nil
+    end
+
+    it "can't be found unless explicitly included" do
+      expect(DeletableModel.find?(9999, include_deleted: true)).not_to be_nil
     end
 
     it "can't be found" do
       expect(DeletableModel.find?(id: 9999)).to be_nil
     end
 
+    it "can't be found unless explicitly included" do
+      expect(DeletableModel.find?(id: 9999, include_deleted: true)).not_to be_nil
+    end
+
     it "can't be found" do
       expect(DeletableModel.where(id: 9999)).to be_empty
     end
 
+    it "can't be found unless explicitly included" do
+      expect(DeletableModel.where(id: 9999, include_deleted: true)).not_to be_empty
+    end
+
     it "can't be found" do
       expect(DeletableModel.where("id = ?", 9999)).to be_empty
+    end
+
+    it "can't be found unless explicitly included" do
+      expect(DeletableModel.where("id = ?", 9999, include_deleted: true)).not_to be_empty
     end
   end
 

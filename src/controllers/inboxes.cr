@@ -4,6 +4,7 @@ require "../framework/open"
 require "../framework/signature"
 require "../models/activity_pub/activity/**"
 require "../models/task/receive"
+require "../rules/content_rules"
 
 class RelationshipsController
   include Ktistec::Controller
@@ -153,7 +154,7 @@ class RelationshipsController
       unless activity.object.actor == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(from_iri: account.actor.iri, to_iri: activity.actor.iri))
+      unless (follow = Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor))
         bad_request
       end
       # compatibility with implementations that don't address accepts
@@ -165,7 +166,7 @@ class RelationshipsController
       unless activity.object.actor == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(from_iri: account.actor.iri, to_iri: activity.actor.iri))
+      unless (follow = Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor))
         bad_request
       end
       # compatibility with implementations that don't address rejects
@@ -187,7 +188,7 @@ class RelationshipsController
         unless object.actor == activity.actor
           bad_request
         end
-        unless (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+        unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
           bad_request
         end
         deliver_to = [account.iri]
@@ -240,12 +241,6 @@ class RelationshipsController
 
     activity.save
 
-    # if the activity is a delete, the object will already have been
-    # deleted so herein and throughout don't validate and save the
-    # associated models -- they shouldn't have changed anyway.
-
-    # handle side-effects
-
     recipients = [activity.to, activity.cc, deliver_to].flatten.compact
 
     if recipients.includes?(account.actor.iri) ||
@@ -256,14 +251,15 @@ class RelationshipsController
         activity: activity,
       ).save(skip_associated: true)
 
-      Relationship::Content::Notification.update_notifications(account.actor, activity)
-      Relationship::Content::Timeline.update_timeline(account.actor, activity)
+      ContentRules.new.run(account.actor, activity)
     end
+
+    # handle side-effects
 
     case activity
     when ActivityPub::Activity::Follow
       if activity.object == account.actor
-        unless Relationship::Social::Follow.find?(from_iri: activity.actor.iri, to_iri: activity.object.iri)
+        unless Relationship::Social::Follow.find?(actor: activity.actor, object: activity.object)
           Relationship::Social::Follow.new(
             actor: activity.actor,
             object: activity.object,
@@ -272,20 +268,21 @@ class RelationshipsController
         end
       end
     when ActivityPub::Activity::Accept
-      if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
         follow.assign(confirmed: true).save
       end
     when ActivityPub::Activity::Reject
-      if (follow = Relationship::Social::Follow.find?(from_iri: activity.object.actor.iri, to_iri: activity.object.object.iri))
+      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
         follow.assign(confirmed: false).save
       end
     when ActivityPub::Activity::Undo
       case (object = activity.object)
       when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(from_iri: object.actor.iri, to_iri: object.object.iri))
+        if (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
           follow.destroy
         end
       end
+      activity.object.undo
     when ActivityPub::Activity::Delete
       case (object = activity.object?)
       when ActivityPub::Object

@@ -811,6 +811,15 @@ Spectator.describe RelationshipsController do
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", undo.to_json_ld, "application/json") }
 
+      class ::UndoneActivity
+        include Ktistec::Model(Common)
+
+        @@table_name = "activities"
+
+        @[Persistent]
+        property undone_at : Time?
+      end
+
       context "an announce" do
         let_create(:announce, actor: other)
 
@@ -833,6 +842,11 @@ Spectator.describe RelationshipsController do
         it "puts the activity in the actor's inbox" do
           expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
             to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "marks the announce as undone" do
+          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
+            to change{UndoneActivity.find(announce.id).undone_at}
         end
 
         it "succeeds" do
@@ -863,6 +877,11 @@ Spectator.describe RelationshipsController do
         it "puts the activity in the actor's inbox" do
           expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
             to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "marks the like as undone" do
+          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
+            to change{UndoneActivity.find(like.id).undone_at}
         end
 
         it "succeeds" do
@@ -910,6 +929,11 @@ Spectator.describe RelationshipsController do
         it "destroys the relationship" do
           expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
             to change{Relationship::Social::Follow.count(from_iri: other.iri, to_iri: actor.iri)}.by(-1)
+        end
+
+        it "marks the follow as undone" do
+          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
+            to change{UndoneActivity.find(follow.id).undone_at}
         end
 
         it "succeeds" do

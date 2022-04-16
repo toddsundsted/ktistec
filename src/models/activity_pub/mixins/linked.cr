@@ -40,12 +40,12 @@ module Ktistec
           end
         end
 
-        def self.find(_iri iri : String?)
-          find(iri: iri)
+        def self.find(_iri iri : String?, include_deleted : Bool = false, include_undone : Bool = false)
+          find(iri: iri, include_deleted: include_deleted, include_undone: include_undone)
         end
 
-        def self.find?(_iri iri : String?)
-          find?(iri: iri)
+        def self.find?(_iri iri : String?, include_deleted : Bool = false, include_undone : Bool = false)
+          find?(iri: iri, include_deleted: include_deleted, include_undone: include_undone)
         end
 
         def self.dereference?(key_pair, iri, ignore_cached = false) : self?
@@ -73,7 +73,7 @@ module Ktistec
                       unless (!ignore_cached && {{name}}) || ({{name}} && {{name}}.changed?)
                         if ({{name}}_iri = self.{{name}}_iri) && dereference
                           unless {{name}}_iri.starts_with?(Ktistec.host)
-                            {% for union_type in method.body[1].id.split(" | ").map(&.id) %}
+                            {% for union_type in method.body[3].id.split(" | ").map(&.id) %}
                               headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
                               headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
                               Ktistec::Open.open?({{name}}_iri, headers) do |response|

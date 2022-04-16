@@ -40,11 +40,19 @@ crystal:
     - if attachments && (attachment = attachments.shift?)
       - if attachment.image?
         img.ui.extra.attachment.image src=attachment.url
+      - elsif attachment.video?
+        video.ui.extra.attachment.video src=attachment.url controls=:true
+      - elsif attachment.audio?
+        audio.ui.extra.attachment.audio src=attachment.url controls=:true
       - unless attachments.empty?
-        .extra.images
+        .extra.media
           - attachments.each do |attachment|
             - if attachment.image?
               img.ui.attachment.image src=attachment.url
+            - elsif attachment.video?
+              video.ui.extra.attachment.video src=attachment.url controls=:true
+            - elsif attachment.audio?
+              audio.ui.extra.attachment.audio src=attachment.url controls=:true
     - if (name = object.name)
       .extra.text
         - if object.external?

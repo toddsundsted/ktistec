@@ -30,7 +30,7 @@ class Task
           actor.iri
         elsif recipient && recipient =~ /^#{sender.iri}\/followers$/
           Relationship::Social::Follow.where(
-            to_iri: sender.iri,
+            object: sender,
             confirmed: true
           ).select(&.actor?).map(&.actor.iri)
         end

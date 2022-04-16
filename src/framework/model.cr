@@ -18,16 +18,6 @@ module Ktistec
     annotation Persistent
     end
 
-    macro persistent_columns(prefix = nil)
-      {
-        {% prefix = prefix ? "#{prefix.id}." : "" %}
-        {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-        {% for v in vs %}
-          "{{prefix.id}}{{v.id}}": {{v.type}},
-        {% end %}
-      }
-    end
-
     module ClassMethods
       # Returns the table name.
       #
@@ -54,21 +44,55 @@ module Ktistec
         {% end %}
       end
 
-      def conditions(*terms, prefix = nil, **options)
-        prefix = prefix ? "\"#{prefix}\"." : ""
+      def values(options : Hash(String, Any)? = nil, **options_) forall Any
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          (options || options_).map do |o, v|
+            if o.to_s.in?({{vs.map(&.stringify)}})
+              v
+            {% ancestors = @type.ancestors << @type %}
+            {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+            {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+            {% for method in methods %}
+              elsif "_association_#{o}" == {{method.name.stringify}} && v.responds_to?({{method.body[1]}})
+                v.{{method.body[1].id}}
+            {% end %}
+            else
+              raise ColumnError.new("no such column: #{o}")
+            end
+          end
+        {% end %}
+      end
+
+      def conditions(*terms, include_deleted : Bool = false, include_undone : Bool = false, options : Hash(String, Any)? = nil, **options_) forall Any
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           conditions =
-            [
-              {% if @type < Deletable %}
-                "#{prefix}\"deleted_at\" IS NULL",
+            (options || options_).keys.reduce([] of String) do |c, o|
+              if o.to_s.in?({{vs.map(&.stringify)}})
+                c << %Q|"#{o}" = ?|
+              {% ancestors = @type.ancestors << @type %}
+              {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+              {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+              {% for method in methods %}
+                elsif "_association_#{o}" == {{method.name.stringify}}
+                  c << %Q|"#{{{method.body[2]}}}" = ?|
               {% end %}
-              {% if @type < Polymorphic %}
-                "#{prefix}\"type\" IN (%s)" % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}},
-              {% end %}
-            ] of String +
-            options.keys.select { |o| o.in?({{vs.map(&.symbolize)}}) }.map { |v| "#{prefix}\"#{v}\" = ?" } +
-            terms.to_a
+              else
+                raise ColumnError.new("no such column: #{o}")
+              end
+              c
+            end
+          {% if @type < Deletable %}
+            conditions << %Q|"deleted_at" IS NULL| unless include_deleted
+          {% end %}
+          {% if @type < Undoable %}
+            conditions << %Q|"undone_at" IS NULL| unless include_undone
+          {% end %}
+          {% if @type < Polymorphic %}
+            conditions << %Q|"type" IN (%s)| % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}}
+          {% end %}
+          conditions += terms.to_a
           conditions.size > 0 ?
             conditions.join(" AND ") :
             "1"
@@ -77,9 +101,17 @@ module Ktistec
 
       # Returns the count of saved instances.
       #
-      def count(**options)
+      def count(include_deleted : Bool = false, include_undone : Bool = false, **options)
         Ktistec.database.scalar(
-          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options)}", *options.values
+          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options)
+        ).as(Int)
+      end
+
+      # Returns the count of saved instances.
+      #
+      def count(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
+        Ktistec.database.scalar(
+          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(options: options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(options: options)
         ).as(Int)
       end
 
@@ -110,13 +142,13 @@ module Ktistec
             case options["type"]
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
-                {{subclass}}.new(options)
+                {{subclass}}.new(options).tap(&.clear!)
             {% end %}
             else
-              self.new(options)
+              self.new(options).tap(&.clear!)
             end
           {% else %}
-            self.new(options)
+            self.new(options).tap(&.clear!)
           {% end %}
         {% end %}
       end
@@ -146,9 +178,12 @@ module Ktistec
         end
       end
 
-      protected def query_all(query, *args, additional_columns = NamedTuple.new)
+      # specialize the following to avoid a compile bug?
+      # see: https://github.com/crystal-lang/crystal/issues/7164
+
+      protected def query_all(query, *args_, additional_columns = NamedTuple.new)
         Ktistec.database.query_all(
-          query, *args
+          query, *args_,
         ) do |rs|
           read(rs, **persistent_columns.merge(additional_columns))
         end.map do |options|
@@ -156,9 +191,29 @@ module Ktistec
         end
       end
 
-      protected def query_one(query, *args, additional_columns = NamedTuple.new)
+      protected def query_all(query, args : Array? = nil, additional_columns = NamedTuple.new)
+        Ktistec.database.query_all(
+          query, args: args,
+        ) do |rs|
+          read(rs, **persistent_columns.merge(additional_columns))
+        end.map do |options|
+          compose(**options)
+        end
+      end
+
+      protected def query_one(query, *args_, additional_columns = NamedTuple.new)
         Ktistec.database.query_one(
-          query, *args
+          query, *args_,
+        ) do |rs|
+          read(rs, **persistent_columns.merge(additional_columns))
+        end.try do |options|
+          compose(**options)
+        end
+      end
+
+      protected def query_one(query, args : Array? = nil, additional_columns = NamedTuple.new)
+        Ktistec.database.query_one(
+          query, args: args,
         ) do |rs|
           read(rs, **persistent_columns.merge(additional_columns))
         end.try do |options|
@@ -168,16 +223,16 @@ module Ktistec
 
       # Returns all instances.
       #
-      def all
-        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions}")
+      def all(include_deleted : Bool = false, include_undone : Bool = false)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(include_deleted: include_deleted, include_undone: include_undone)}")
       end
 
       # Finds the saved instance.
       #
       # Raises `NotFound` if no such saved instance exists.
       #
-      def find(_id id : Int?)
-        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id)}", id)
+      def find(_id id : Int?, include_deleted : Bool = false, include_undone : Bool = false)
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id, include_deleted: include_deleted, include_undone: include_undone)}", id)
       rescue DB::NoResultsError
         raise NotFound.new("#{self} id=#{id}: not found")
       end
@@ -186,8 +241,8 @@ module Ktistec
       #
       # Returns `nil` if no such saved instance exists.
       #
-      def find?(_id id : Int?)
-        find(id)
+      def find?(_id id : Int?, include_deleted : Bool = false, include_undone : Bool = false)
+        find(id, include_deleted: include_deleted, include_undone: include_undone)
       rescue NotFound
       end
 
@@ -195,8 +250,8 @@ module Ktistec
       #
       # Raises `NotFound` if no such saved instance exists.
       #
-      def find(**options)
-        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options)}", *options.values)
+      def find(include_deleted : Bool = false, include_undone : Bool = false, **options)
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options))
       rescue DB::NoResultsError
         raise NotFound.new("#{self} options=#{options}: not found")
       end
@@ -205,54 +260,69 @@ module Ktistec
       #
       # Returns `nil` if no such saved instance exists.
       #
-      def find?(**options)
-        find(**options)
+      def find?(include_deleted : Bool = false, include_undone : Bool = false, **options)
+        find(**options, include_deleted: include_deleted, include_undone: include_undone)
+      rescue NotFound
+      end
+
+      # Finds the saved instance.
+      #
+      # Raises `NotFound` if no such saved instance exists.
+      #
+      def find(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
+        query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(options: options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(options: options))
+      rescue DB::NoResultsError
+        raise NotFound.new("#{self} options=#{options}: not found")
+      end
+
+      # Finds the saved instance.
+      #
+      # Returns `nil` if no such saved instance exists.
+      #
+      def find?(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
+        find(options, include_deleted: include_deleted, include_undone: include_undone)
       rescue NotFound
       end
 
       # Returns saved instances.
       #
-      def where(**options)
-        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options)}", *options.values)
+      def where(include_deleted : Bool = false, include_undone : Bool = false, **options)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options))
       end
 
       # Returns saved instances.
       #
-      def where(where : String, *arguments)
-        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(where)}", *arguments)
+      def where(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(options: options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(options: options))
+      end
+
+      # Returns saved instances.
+      #
+      def where(where : String, *arguments, include_deleted : Bool = false, include_undone : Bool = false)
+        query_all("SELECT #{columns} FROM #{table} WHERE #{conditions(where, include_deleted: include_deleted, include_undone: include_undone)}", *arguments)
+      end
+
+      # Runs the query.
+      #
+      def sql(query : String, *arguments)
+        query_all(query, *arguments)
       end
     end
 
     module InstanceMethods
-      # Initializes the new instance.
-      #
-      def initialize(options : Hash, prefix : String = "")
-        {% begin %}
-          {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
-          {% for v in vs %}
-            key = prefix + {{v.stringify}}
-            if options.has_key?(key)
-              if (o = options[key]?).is_a?(typeof(self.{{v}}))
-                self.{{v}} = o
-              end
-            end
-          {% end %}
-        {% end %}
-        super()
-        # dup but don't maintain a linked list of previously saved records
-        @saved_record = self.dup.clear_saved_record
-        clear!
-      end
+      @changed : Set(Symbol)
 
       # Initializes the new instance.
       #
-      def initialize(**options)
+      def initialize(options : Hash(String, Any)) forall Any
+        @changed = Set(Symbol).new
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             key = {{v.stringify}}
             if options.has_key?(key)
-              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+              if (o = options[key]).is_a?(typeof(self.{{v}}))
+                @changed << {{v.symbolize}}
                 self.{{v}} = o
               end
             end
@@ -261,18 +331,38 @@ module Ktistec
         super()
         # dup but don't maintain a linked list of previously saved records
         @saved_record = self.dup.clear_saved_record
-        clear!
+      end
+
+      # Initializes the new instance.
+      #
+      def initialize(**options)
+        @changed = Set(Symbol).new
+        {% begin %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
+          {% for v in vs %}
+            key = {{v.stringify}}
+            if options.has_key?(key)
+              if (o = options[key]).is_a?(typeof(self.{{v}}))
+                @changed << {{v.symbolize}}
+                self.{{v}} = o
+              end
+            end
+          {% end %}
+        {% end %}
+        super()
+        # dup but don't maintain a linked list of previously saved records
+        @saved_record = self.dup.clear_saved_record
       end
 
       # Bulk assigns properties.
       #
-      def assign(options : Hash, prefix : String = "")
+      def assign(options : Hash(String, Any)) forall Any
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
-            key = prefix + {{v.stringify}}
+            key = {{v.stringify}}
             if options.has_key?(key)
-              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+              if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 self.{{v}} = o
               end
@@ -290,7 +380,7 @@ module Ktistec
           {% for v in vs %}
             key = {{v.stringify}}
             if options.has_key?(key)
-              if (o = options[key]?).is_a?(typeof(self.{{v}}))
+              if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 self.{{v}} = o
               end
@@ -332,24 +422,24 @@ module Ktistec
           self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
           {{name}}
         end
-        def {{name}}? : {{class_name}}?
+        def {{name}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
           @{{name}} ||= begin
             {% for union_type in union_types %}
-              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}) ||
+              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}, include_deleted: include_deleted, include_undone: include_undone) ||
             {% end %}
             nil
           end
         end
-        def {{name}} : {{class_name}}
+        def {{name}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
           @{{name}} ||= begin
             {% for union_type in union_types %}
-              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}) ||
+              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}, include_deleted: include_deleted, include_undone: include_undone) ||
             {% end %}
             raise NotFound.new("#{self.class} {{name}} {{primary_key}}=#{self.{{foreign_key}}}: not found")
           end
         end
         def _association_{{name}}
-          {:belongs_to, {{class_name}}, @{{name}}}
+          {:belongs_to, {{primary_key.symbolize}}, {{foreign_key.symbolize}}, {{class_name}}, @{{name}}}
         end
       end
 
@@ -369,19 +459,20 @@ module Ktistec
             n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}}))
             {% if inverse_of %}
               n.{{inverse_of}} = self
+              n.clear!({{inverse_of.symbolize}})
             {% end %}
           end
           {{name}}
         end
-        def {{name}} : Enumerable({{class_name}})
+        def {{name}}(include_deleted : Bool = false, include_undone : Bool = false) : Enumerable({{class_name}})
           {{name}} = @{{name}}
           if {{name}}.nil? || {{name}}.empty?
-            @{{name}} = {{class_name}}.where({{foreign_key}}: self.{{primary_key}})
+            @{{name}} = {{class_name}}.where({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
           end
           @{{name}}.not_nil!
         end
         def _association_{{name}}
-          {:has_many, Enumerable({{class_name}}), @{{name}}}
+          {:has_many, {{primary_key.symbolize}}, {{foreign_key.symbolize}}, Enumerable({{class_name}}), @{{name}}}
         end
       end
 
@@ -398,56 +489,60 @@ module Ktistec
           {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
           {% if inverse_of %}
             {{name}}.{{inverse_of}} = self
+            {{name}}.clear!({{inverse_of.symbolize}})
           {% end %}
           {{name}}
         end
-        def {{name}}? : {{class_name}}?
-          @{{name}} ||= {{class_name}}.find?({{foreign_key}}: self.{{primary_key}})
+        def {{name}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
+          @{{name}} ||= {{class_name}}.find?({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
         end
-        def {{name}} : {{class_name}}
-          @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}})
+        def {{name}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
+          @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
         end
         def _association_{{name}}
-          {:has_one, {{class_name}}, @{{name}}}
+          {:has_one, {{primary_key.symbolize}}, {{foreign_key.symbolize}}, {{class_name}}, @{{name}}}
         end
       end
 
       record(
         Node,
+        # use InstanceMethods because Model is parameterized
         model : Model::InstanceMethods,
         association : String?,
         index : Int32?
       )
 
       def serialize_graph(skip_associated = false)
-        ([] of Node).tap do |result|
-          _serialize_graph(result, skip_associated: skip_associated)
+        ([] of Node).tap do |nodes|
+          _serialize_graph(nodes, skip_associated: skip_associated)
         end
       end
 
-      def _serialize_graph(result, association = nil, index = nil, skip_associated = false)
+      def _serialize_graph(nodes, association = nil, index = nil, skip_associated = false)
         return if self.destroyed?
         {% if @type < Deletable %}
           return if self.deleted?
         {% end %}
-        result << Node.new(self, association, index)
+        {% if @type < Undoable %}
+          return if self.undone?
+        {% end %}
+        nodes << Node.new(self, association, index)
         {% begin %}
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
           {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
           unless skip_associated
-            options = {skip_associated: skip_associated}
             {% for method in methods %}
               if (%body = {{method.body}}.last)
-                if %body.responds_to?(:each)
+                if %body.responds_to?(:each_with_index)
                   %body.each_with_index do |model, i|
-                    unless result.any? { |node| model == node.model }
-                      model._serialize_graph(result, {{method.name[13..-1].stringify}}, i, **options)
+                    unless nodes.any? { |node| model == node.model }
+                      model._serialize_graph(nodes, {{method.name[13..-1].stringify}}, i, skip_associated: false)
                     end
                   end
                 else
-                  unless result.any? { |node| %body == node.model }
-                    %body._serialize_graph(result, {{method.name[13..-1].stringify}}, **options)
+                  unless nodes.any? { |node| %body == node.model }
+                    %body._serialize_graph(nodes, {{method.name[13..-1].stringify}}, skip_associated: false)
                   end
                 end
               end
@@ -456,23 +551,38 @@ module Ktistec
         {% end %}
       end
 
-      private macro run_callback(callback, skip_associated = false, nodes = nil)
+      private macro with_callbacks(before, after, skip_associated = false, &block)
         %nodes = [] of Node
         # iteratively run lifecycle callbacks, which can add new
-        # associated models, which must be processed in turn
+        # associated models, which must be processed and added to
+        # nodes, in turn
         loop do
           %new = serialize_graph(skip_associated: skip_associated)
           %delta = %new - %nodes
           %nodes = %new
           break if %delta.empty?
           %delta.each do |%node|
-            if (%model = %node.model) && %model.responds_to?({{callback.symbolize}})
-              %model.{{callback}}
+            %model = %node.model
+            next unless %model == self || %model.changed?
+            if %model.responds_to?({{before.symbolize}})
+              %model.{{before.id}}
             end
           end
         end
-        # return the serialize graph
-        {{nodes}} = %nodes if {{nodes}}
+        %nodes.each do |%node|
+          %model = %node.model
+          next unless %model == self || %model.changed?
+          {% (param = block.args.first) || raise "with_callbacks block must have one parameter" %}
+          {{param.id}} = %node
+          {{block.body}}
+        end
+        %nodes.each do |%node|
+          %model = %node.model
+          next unless %model == self || %model.changed?
+          if %model.responds_to?({{after.symbolize}})
+            %model.{{after.id}}
+          end
+        end
       end
 
       getter errors = Errors.new
@@ -487,9 +597,7 @@ module Ktistec
       #
       def validate(skip_associated = false)
         @errors.clear
-        nodes = [] of Node
-        run_callback(before_validate, skip_associated: skip_associated, nodes: nodes)
-        nodes.each do |node|
+        with_callbacks(before_validate, after_validate, skip_associated: skip_associated) do |node|
           if (errors = node.model._run_validations)
             if (association = node.association)
               if (index = node.index)
@@ -501,7 +609,6 @@ module Ktistec
             @errors.merge!(errors)
           end
         end
-        run_callback(after_validate, skip_associated: skip_associated, nodes: nodes)
         @errors
       end
 
@@ -541,12 +648,9 @@ module Ktistec
       #
       def save(skip_validation = false, skip_associated = false)
         raise Invalid.new(errors) unless skip_validation || valid?(skip_associated: skip_associated)
-        nodes = [] of Node
-        run_callback(before_save, skip_associated: skip_associated, nodes: nodes)
-        nodes.each do |node|
+        with_callbacks(before_save, after_save, skip_associated: skip_associated) do |node|
           node.model._save_model(skip_validation: skip_validation)
         end
-        run_callback(after_save, skip_associated: skip_associated, nodes: nodes)
         self
       end
 
@@ -610,8 +714,6 @@ module Ktistec
       def new_record?
         @id.nil?
       end
-
-      @changed = Set(Symbol).new
 
       def changed!(property : Symbol)
         @changed << property
@@ -681,10 +783,10 @@ module Ktistec
     @[Persistent]
     property id : Int64? = nil
 
-    class Error < Exception
+    class NotFound < Exception
     end
 
-    class NotFound < Exception
+    class ColumnError < Exception
     end
 
     class Invalid < Exception
@@ -699,4 +801,5 @@ module Ktistec
 end
 
 require "./model/deletable"
+require "./model/undoable"
 require "./model/polymorphic"

@@ -1,3 +1,5 @@
+require "kilt"
+
 require "../framework/controller"
 
 module Ktistec::ViewHelper
@@ -34,6 +36,39 @@ module Ktistec::ViewHelper
 
   macro included
     extend ClassMethods
+  end
+
+  # the following three macros were copied from kemal. copying them
+  # here was necessary because kilt was removed from kemal. we depend
+  # on kilt for rendering slang templates. see:
+  # https://github.com/kemalcr/kemal/pull/618
+
+  # Capture a block inside of a view.
+  #
+  # See Kemal's `content_for` macro for usage.
+  #
+  macro content_for(key, file = __FILE__)
+    %proc = ->() do
+      IO::Memory.new.tap do |__kilt_io__|
+        {{ yield }}
+      end
+    end
+    CONTENT_FOR_BLOCKS[{{key}}] = Tuple.new({{file}}, %proc)
+    nil
+  end
+
+  # Render a view with a layout as the superview.
+  #
+  macro render(filename, layout)
+    __content_filename__ = {{filename}}
+    content = render {{filename}}
+    render {{layout}}
+  end
+
+  # Render a view with the given filename.
+  #
+  macro render(filename)
+    Kilt.render({{filename}})
   end
 
   ## Parameter coercion

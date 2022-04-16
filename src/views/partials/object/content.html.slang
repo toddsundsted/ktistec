@@ -41,7 +41,7 @@ crystal:
       - if attachment.image?
         img.ui.extra.attachment.image src=attachment.url
       - unless attachments.empty?
-        .extra.images
+        .extra.media
           - attachments.each do |attachment|
             - if attachment.image?
               img.ui.attachment.image src=attachment.url

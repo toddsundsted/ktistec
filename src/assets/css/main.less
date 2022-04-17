@@ -98,13 +98,13 @@ body { display: flex; flex-direction: column; }
     .ui.image { object-fit: cover; cursor: zoom-in; }
     .extra.media img, .extra.media video { object-fit: cover; cursor: zoom-in; }
     @media screen and (max-width: 599px) {           /* phones */
-        .extra.media img.image, .extra.media video.video { width: 95px; height: 95px; }
+        .extra.media img.image, .extra.media video.video { display: inline-block; width: 95px; height: 95px; }
         .extra.text img.image, .extra.text video.video { width: 250px; height: 250px; }
         img.extra.image, video.extra.video { width: 250px; height: 250px; }
         figure figcaption { width: 250px; }
     }
     @media screen and (min-width: 600px) {           /* tablets portrait & larger */
-        .extra.media img.image, .extra.media video.video { width: 95px; height: 95px; }
+        .extra.media img.image, .extra.media video.video { display: inline-block; width: 95px; height: 95px; }
         .extra.text img.image, .extra.text video.video { width: 450px; height: 450px; }
         img.extra.image, video.extra.video { width: 450px; height: 450px; }
         figure figcaption { width: 450px; }

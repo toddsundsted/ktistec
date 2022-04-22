@@ -1,4 +1,4 @@
-# ![Mint](public/logo.png)
+# ![Ktistec](public/logo.png)
   - [Features](#features)
     - [Text and images](#text-and-images)
     - [Draft posts](#draft-posts)

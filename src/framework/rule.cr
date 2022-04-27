@@ -30,6 +30,16 @@ module Ktistec
           end
         end
 
+        def initialize(@target : Supported? = nil, options = {} of String => Supported)
+          if (target = @target).is_a?(School::Var)
+            @vars << target.name
+          end
+          options.each do |name, expression|
+            @vars << expression.name if expression.is_a?(School::Var)
+            @options[name] = expression
+          end
+        end
+
         # :inherit:
         def vars : Enumerable(String)
           @vars
@@ -232,12 +242,24 @@ module Ktistec
           {{clazz}}.new(transform(bindings, **options)).save
         end
 
+        def self.assert(bindings : School::Bindings, options : Hash(String, Supported))
+          {{clazz}}.new(transform(bindings, options)).save
+        end
+
         def self.retract(bindings : School::Bindings, **options : Supported)
           {{clazz}}.find(transform(bindings, **options)).destroy
         end
 
+        def self.retract(bindings : School::Bindings, options : Hash(String, Supported))
+          {{clazz}}.find(transform(bindings, options)).destroy
+        end
+
         private def self.transform(bindings, **options)
-          options.to_h.transform_keys do |key|
+          transform(bindings, options.to_h)
+        end
+
+        private def self.transform(bindings, options)
+          options.transform_keys do |key|
             key.to_s
           end.transform_values do |value|
             case value

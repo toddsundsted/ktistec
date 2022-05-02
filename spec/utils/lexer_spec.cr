@@ -44,6 +44,30 @@ Spectator.describe Ktistec::Lexer do
       expect(lexer.token.as_f).to eq(123.4)
     end
 
+    it "is a literal int" do
+      lexer = described_class.new("-123")
+      expect(lexer.advance.int?).to be_true
+      expect(lexer.token.as_i).to eq(-123)
+    end
+
+    it "is a literal float" do
+      lexer = described_class.new("-123.4")
+      expect(lexer.advance.float?).to be_true
+      expect(lexer.token.as_f).to eq(-123.4)
+    end
+
+    it "is a literal int" do
+      lexer = described_class.new("+123")
+      expect(lexer.advance.int?).to be_true
+      expect(lexer.token.as_i).to eq(+123)
+    end
+
+    it "is a literal float" do
+      lexer = described_class.new("+123.4")
+      expect(lexer.advance.float?).to be_true
+      expect(lexer.token.as_f).to eq(+123.4)
+    end
+
     it "is a constant" do
       lexer = described_class.new("Constant")
       expect(lexer.advance.constant?).to be_true
@@ -60,6 +84,18 @@ Spectator.describe Ktistec::Lexer do
       lexer = described_class.new("→")
       expect(lexer.advance.operator?).to be_true
       expect(lexer.token.as_s).to eq("→")
+    end
+
+    it "is an operator" do
+      lexer = described_class.new("-")
+      expect(lexer.advance.operator?).to be_true
+      expect(lexer.token.as_s).to eq("-")
+    end
+
+    it "is an operator" do
+      lexer = described_class.new("+")
+      expect(lexer.advance.operator?).to be_true
+      expect(lexer.token.as_s).to eq("+")
     end
 
     it "ignores whitespace" do

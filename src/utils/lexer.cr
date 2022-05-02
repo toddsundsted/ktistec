@@ -93,11 +93,18 @@ module Ktistec
       end
     end
 
+    private def peek
+      if @index + 1 < @size
+        @input[@index + 1]
+      end
+    end
+
     # Advances the lexer to the next token in the input.
     #
     # Returns the token.
     #
     def advance : Token
+      number_sign = false
       while @index < @size
         c = @input[@index]
         case c
@@ -130,8 +137,17 @@ module Ktistec
             (c == '"') ?
               Token.new(Token::Type::String, builder.to_s) :
               Token.new(Token::Type::Error, "unterminated string")
+        when '-', '+'
+          if peek.try(&.in?('0'..'9'))
+            number_sign = true
+            @index += 1
+            next
+          else
+            @index += 1
+            return @token = Token.new(Token::Type::Operator, @input[@index - 1].to_s)
+          end
         when '0'..'9'
-          start = @index
+          start = number_sign ? @index - 1 : @index
           forward_while(&.in?('0'..'9'))
           float = false
           if @index < @size && @input[@index] == '.'

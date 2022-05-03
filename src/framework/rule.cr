@@ -238,39 +238,20 @@ module Ktistec
           end
         end
 
-        def self.assert(bindings : School::Bindings, **options : Supported)
-          {{clazz}}.new(transform(bindings, **options)).save
+        def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)
+          {{clazz}}.new(**options).save
         end
 
-        def self.assert(bindings : School::Bindings, options : Hash(String, Supported))
-          {{clazz}}.new(transform(bindings, options)).save
+        def self.assert(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
+          {{clazz}}.new(options).save
         end
 
-        def self.retract(bindings : School::Bindings, **options : Supported)
-          {{clazz}}.find(transform(bindings, **options)).destroy
+        def self.retract(target : School::DomainTypes?, **options : School::DomainTypes)
+          {{clazz}}.find(**options).destroy
         end
 
-        def self.retract(bindings : School::Bindings, options : Hash(String, Supported))
-          {{clazz}}.find(transform(bindings, options)).destroy
-        end
-
-        private def self.transform(bindings, **options)
-          transform(bindings, options.to_h)
-        end
-
-        private def self.transform(bindings, options)
-          options.transform_keys do |key|
-            key.to_s
-          end.transform_values do |value|
-            case value
-            when School::Lit
-              value.target
-            when School::Var
-              bindings[value.name]
-            else
-              raise "#{value.class} is unsupported"
-            end
-          end
+        def self.retract(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
+          {{clazz}}.find(options).destroy
         end
       end
     end

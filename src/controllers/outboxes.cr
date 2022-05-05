@@ -243,6 +243,8 @@ class RelationshipsController
       activity: activity
     ).save(skip_associated: true)
 
+    School::Fact.clear!
+    School::Fact.assert(ContentRules::IsAddressedTo.new(activity, account.actor))
     ContentRules.new.run(account.actor, activity)
 
     # handle side-effects

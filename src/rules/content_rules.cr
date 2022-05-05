@@ -159,11 +159,7 @@ class ContentRules
   end
 
   def run(actor, activity)
-    School::Fact.clear!
-
     raise "actor must be local" unless actor.local?
-
-    self.class.domain.assert(IsAddressedTo.new(activity, actor))
 
     5.times do |i|
       break if self.class.domain.run == School::Domain::Status::Completed

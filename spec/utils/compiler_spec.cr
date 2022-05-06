@@ -58,6 +58,8 @@ Spectator.describe Ktistec::Compiler do
       expect(domain.rules.map(&.class)).to eq([School::Rule, School::Rule])
     end
 
+    subject { described_class.new(input) }
+
     context "given an input" do
       let(input) do
         <<-END
@@ -72,8 +74,6 @@ Spectator.describe Ktistec::Compiler do
           end
         END
       end
-
-      subject { described_class.new(input) }
 
       context "the compiled domain" do
         let(domain) { subject.compile }
@@ -201,8 +201,6 @@ Spectator.describe Ktistec::Compiler do
     context "given a rule definition using any" do
       let(input) { %q|rule "name" any FooBar end| }
 
-      subject { described_class.new(input) }
-
       it "defines conditions" do
         expect(subject.compile.rules.first.conditions.size).to eq(1)
       end
@@ -214,8 +212,6 @@ Spectator.describe Ktistec::Compiler do
 
     context "given a rule definition using none" do
       let(input) { %q|rule "name" none FooBar end| }
-
-      subject { described_class.new(input) }
 
       it "defines conditions" do
         expect(subject.compile.rules.first.conditions.size).to eq(1)
@@ -229,8 +225,6 @@ Spectator.describe Ktistec::Compiler do
     context "given a rule definition using a fact" do
       let(input) { %q|rule "name" condition Foo end| }
 
-      subject { described_class.new(input) }
-
       it "defines conditions" do
         expect(subject.compile.rules.first.conditions.size).to eq(1)
       end
@@ -243,8 +237,6 @@ Spectator.describe Ktistec::Compiler do
     context "given a rule definition using a property fact" do
       let(input) { %q|rule "name" condition Bar, abc end| }
 
-      subject { described_class.new(input) }
-
       it "defines conditions" do
         expect(subject.compile.rules.first.conditions.size).to eq(1)
       end
@@ -256,8 +248,6 @@ Spectator.describe Ktistec::Compiler do
 
     context "given a rule definition using a relationship fact" do
       let(input) { %q|rule "name" condition Baz, one, two end| }
-
-      subject { described_class.new(input) }
 
       it "defines conditions" do
         expect(subject.compile.rules.first.conditions.size).to eq(1)

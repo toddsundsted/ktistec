@@ -234,6 +234,44 @@ Spectator.describe Ktistec::Compiler do
       end
     end
 
+    context "given a fact" do
+      let(fact) { CompilerSpec::Foo.new }
+
+      let(empty_set) { Set(School::Fact).new }
+
+      let(bindings) { School::Bindings.new }
+
+      before_each { School::Fact.clear! }
+
+      context "and a rule definition asserting a fact" do
+        let(input) { %q|rule "name" assert Foo end| }
+
+        it "defines actions" do
+          expect(subject.compile.rules.first.actions.size).to eq(1)
+        end
+
+        it "asserts a fact" do
+          rule = subject.compile.rules.first
+          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(Set{fact})
+        end
+      end
+
+      context "and a rule definition retracting a fact" do
+        let(input) { %q|rule "name" retract Foo end| }
+
+        before_each { School::Fact.assert(fact) }
+
+        it "defines actions" do
+          expect(subject.compile.rules.first.actions.size).to eq(1)
+        end
+
+        it "retracts a fact" do
+          rule = subject.compile.rules.first
+          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(empty_set)
+        end
+      end
+    end
+
     context "given a rule definition using a property fact" do
       let(input) { %q|rule "name" condition Bar, abc end| }
 
@@ -246,6 +284,44 @@ Spectator.describe Ktistec::Compiler do
       end
     end
 
+    context "given a fact" do
+      let(fact) { CompilerSpec::Bar.new("abc") }
+
+      let(empty_set) { Set(School::Fact).new }
+
+      let(bindings) { School::Bindings.new }
+
+      before_each { School::Fact.clear! }
+
+      context "and a rule definition asserting a property fact" do
+        let(input) { %q|rule "name" assert Bar, "abc" end| }
+
+        it "defines actions" do
+          expect(subject.compile.rules.first.actions.size).to eq(1)
+        end
+
+        it "asserts a fact" do
+          rule = subject.compile.rules.first
+          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(Set{fact})
+        end
+      end
+
+      context "and a rule definition retracting a property fact" do
+        let(input) { %q|rule "name" retract Bar, "abc" end| }
+
+        before_each { School::Fact.assert(fact) }
+
+        it "defines actions" do
+          expect(subject.compile.rules.first.actions.size).to eq(1)
+        end
+
+        it "retracts a fact" do
+          rule = subject.compile.rules.first
+          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(empty_set)
+        end
+      end
+    end
+
     context "given a rule definition using a relationship fact" do
       let(input) { %q|rule "name" condition Baz, one, two end| }
 
@@ -255,6 +331,44 @@ Spectator.describe Ktistec::Compiler do
 
       it "is a binary pattern" do
         expect(subject.compile.rules.first.conditions.first).to be_a(School::BinaryPattern(CompilerSpec::Baz, School::Expression, School::Expression))
+      end
+    end
+
+    context "given a fact" do
+      let(fact) { CompilerSpec::Baz.new("one", "two") }
+
+      let(empty_set) { Set(School::Fact).new }
+
+      let(bindings) { School::Bindings.new }
+
+      before_each { School::Fact.clear! }
+
+      context "and a rule definition asserting a relationship fact" do
+        let(input) { %q|rule "name" assert Baz, "one", "two" end| }
+
+        it "defines actions" do
+          expect(subject.compile.rules.first.actions.size).to eq(1)
+        end
+
+        it "asserts a fact" do
+          rule = subject.compile.rules.first
+          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(Set{fact})
+        end
+      end
+
+      context "and a rule definition retracting a relationship fact" do
+        let(input) { %q|rule "name" retract Baz, "one", "two" end| }
+
+        before_each { School::Fact.assert(fact) }
+
+        it "defines actions" do
+          expect(subject.compile.rules.first.actions.size).to eq(1)
+        end
+
+        it "retracts a fact" do
+          rule = subject.compile.rules.first
+          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(empty_set)
+        end
       end
     end
 

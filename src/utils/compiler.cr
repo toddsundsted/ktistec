@@ -145,6 +145,20 @@ module Ktistec
             {% if clazz < School::Pattern %}
               raise LinkError.new(self, "too many arguments") if arguments.size > 1
               {{clazz}}.assert(transform_arguments(bindings, arguments)[0]?, transform_options(bindings, options))
+            {% elsif clazz < School::Relationship %}
+              raise LinkError.new(self, "too many arguments") if arguments.size != 2
+              arguments = transform_arguments(bindings, arguments)
+              a = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
+              b = arguments[1].as({{clazz.ancestors[0].type_vars[1]}})
+              School::Fact.assert({{clazz}}.new(a, b))
+            {% elsif clazz < School::Property %}
+              raise LinkError.new(self, "too many arguments") if arguments.size != 1
+              arguments = transform_arguments(bindings, arguments)
+              c = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
+              School::Fact.assert({{clazz}}.new(c))
+            {% elsif clazz < School::Fact %}
+              raise LinkError.new(self, "too many arguments") if arguments.size != 0
+              School::Fact.assert({{clazz}}.new)
             {% end %}
         {% end %}
         else
@@ -158,6 +172,20 @@ module Ktistec
             {% if clazz < School::Pattern %}
               raise LinkError.new(self, "too many arguments") if arguments.size > 1
               {{clazz}}.retract(transform_arguments(bindings, arguments)[0]?, transform_options(bindings, options))
+            {% elsif clazz < School::Relationship %}
+              raise LinkError.new(self, "too many arguments") if arguments.size != 2
+              arguments = transform_arguments(bindings, arguments)
+              a = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
+              b = arguments[1].as({{clazz.ancestors[0].type_vars[1]}})
+              School::Fact.retract({{clazz}}.new(a, b))
+            {% elsif clazz < School::Property %}
+              raise LinkError.new(self, "too many arguments") if arguments.size != 1
+              arguments = transform_arguments(bindings, arguments)
+              c = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
+              School::Fact.retract({{clazz}}.new(c))
+            {% elsif clazz < School::Fact %}
+              raise LinkError.new(self, "too many arguments") if arguments.size != 0
+              School::Fact.retract({{clazz}}.new)
             {% end %}
         {% end %}
         else

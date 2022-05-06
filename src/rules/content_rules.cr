@@ -71,16 +71,16 @@ class ContentRules
 
       rule "announce"
         condition activity, IsAddressedTo, actor
-        condition AnnounceActivity, activity, object: object1
-        condition Object, object1, attributed_to: actor
+        condition AnnounceActivity, activity, object: object
+        condition Object, object, attributed_to: actor
         none Notification, owner: actor, activity: activity
         assert Notification, owner: actor, activity: activity
       end
 
       rule "like"
         condition activity, IsAddressedTo, actor
-        condition LikeActivity, activity, object: object2
-        condition Object, object2, attributed_to: actor
+        condition LikeActivity, activity, object: object
+        condition Object, object, attributed_to: actor
         none Notification, owner: actor, activity: activity
         assert Notification, owner: actor, activity: activity
       end

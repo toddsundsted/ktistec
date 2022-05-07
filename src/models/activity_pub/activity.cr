@@ -20,6 +20,7 @@ module ActivityPub
 
     @[Persistent]
     property actor_iri : String?
+    belongs_to actor, class_name: ActivityPub::Actor, foreign_key: actor_iri, primary_key: iri
 
     @[Persistent]
     property object_iri : String?

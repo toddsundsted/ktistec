@@ -7,7 +7,6 @@ class ActivityPub::Activity
   class Follow < ActivityPub::Activity
     @@recursive = false
 
-    belongs_to actor, class_name: ActivityPub::Actor, foreign_key: actor_iri, primary_key: iri
     belongs_to object, class_name: ActivityPub::Actor, foreign_key: object_iri, primary_key: iri
 
     def self.follows?(actor_or_iri, object_or_iri)

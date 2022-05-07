@@ -64,6 +64,11 @@ Spectator.describe Ktistec::Model::Linked do
         iri: "https://test.test/objects/subject"
       )
     end
+    let(object) do
+      LinkedModel.new(
+        iri: "https://remote/objects/object"
+      )
+    end
     let(key_pair) do
       KeyPair.new("https://key_pair")
     end
@@ -72,18 +77,17 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { subject.linked_model_iri = "https://test.test/objects/object" }
 
       it "does not fetch the linked model instance" do
+        subject.linked_model?(key_pair, dereference: false)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "does not fetch the linked model instance" do
         subject.linked_model?(key_pair, dereference: true)
         expect(HTTP::Client.last?).to be_nil
       end
     end
 
     context "when linked object is remote" do
-      let(object) do
-        LinkedModel.new(
-          iri: "https://remote/objects/object"
-        )
-      end
-
       before_each { subject.linked_model_iri = "https://remote/objects/object" }
 
       it "does not fetch the linked model instance" do
@@ -100,7 +104,7 @@ Spectator.describe Ktistec::Model::Linked do
         before_each { object.save }
 
         it "does not fetch the linked model instance" do
-          subject.linked_model?(key_pair, dereference: true)
+          subject.linked_model?(key_pair, dereference: true, ignore_cached: false)
           expect(HTTP::Client.last?).to be_nil
         end
 
@@ -116,6 +120,11 @@ Spectator.describe Ktistec::Model::Linked do
     let(subject) do
       LinkedModel
     end
+    let(object) do
+      LinkedModel.new(
+        iri: "https://remote/objects/object"
+      )
+    end
     let(key_pair) do
       KeyPair.new("https://key_pair")
     end
@@ -130,12 +139,6 @@ Spectator.describe Ktistec::Model::Linked do
     end
 
     context "when linked object is remote" do
-      let(object) do
-        LinkedModel.new(
-          iri: "https://remote/objects/object"
-        )
-      end
-
       let(object_iri) { "https://remote/objects/object" }
 
       it "fetches the object" do
@@ -147,7 +150,7 @@ Spectator.describe Ktistec::Model::Linked do
         before_each { object.save }
 
         it "does not fetch the object" do
-          subject.dereference?(key_pair, object_iri)
+          subject.dereference?(key_pair, object_iri, ignore_cached: false)
           expect(HTTP::Client.last?).to be_nil
         end
 

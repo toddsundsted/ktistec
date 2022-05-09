@@ -73,6 +73,8 @@ Spectator.describe Ktistec::Model::Linked do
       KeyPair.new("https://key_pair")
     end
 
+    # linked object is not dereferenced.
+
     context "when linked object is local" do
       before_each { subject.linked_model_iri = "https://test.test/objects/object" }
 
@@ -112,6 +114,40 @@ Spectator.describe Ktistec::Model::Linked do
           subject.linked_model?(key_pair, dereference: true, ignore_cached: true)
           expect(HTTP::Client.last?).to match("GET #{object.iri}")
         end
+      end
+    end
+
+    # linked object is already dereferenced.
+
+    context "when linked object is cached and unchanged" do
+      before_each { subject.linked_model = object.save }
+
+      pre_condition { expect(object.changed?).to be_false }
+
+      it "does not fetch the linked model instance" do
+        subject.linked_model?(key_pair, dereference: true, ignore_cached: false)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "fetches the linked model instance" do
+        subject.linked_model?(key_pair, dereference: true, ignore_cached: true)
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+    end
+
+    context "when linked object is changed" do
+      before_each { subject.linked_model = object }
+
+      pre_condition { expect(object.changed?).to be_true }
+
+      it "does not fetch the linked model instance" do
+        subject.linked_model?(key_pair, dereference: true, ignore_changed: false)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "fetches the linked model instance" do
+        subject.linked_model?(key_pair, dereference: true, ignore_changed: true)
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
   end

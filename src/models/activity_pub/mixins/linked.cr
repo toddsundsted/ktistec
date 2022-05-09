@@ -61,6 +61,10 @@ module Ktistec
           instance
         end
 
+        # without arguments, or with `dereference: false`, the
+        # accessor behaves identically to the similarly named
+        # generated accessor in `Model`.
+
         macro finished
           {% verbatim do %}
             {% for type in @type.all_subclasses << @type %}
@@ -68,10 +72,10 @@ module Ktistec
                 {% if method.body.first == :belongs_to %}
                   {% name = method.name[13..-1] %}
                   class ::{{type}}
-                    def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, **options)
+                    def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, **options)
                       {{name}} = self.{{name}}?
-                      unless (!ignore_cached && {{name}}) || ({{name}} && {{name}}.changed?)
-                        if ({{name}}_iri = self.{{name}}_iri) && dereference
+                      if dereference && ({{name}}_iri = self.{{name}}_iri)
+                        if {{name}}.nil? || (ignore_cached && !{{name}}.changed?) || ignore_changed
                           unless {{name}}_iri.starts_with?(Ktistec.host)
                             {% for union_type in method.body[3].id.split(" | ").map(&.id) %}
                               headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)

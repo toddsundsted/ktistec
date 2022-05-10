@@ -66,7 +66,7 @@ class Task
         elsif recipient && recipient =~ /^#{receiver.iri}\/followers$/
           if (object_iri = activity.object_iri) && (reply = ActivityPub::Object.dereference?(receiver, object_iri))
             if (ancestors = ancestors(reply)) && (object = ancestors.last?)
-              if (attributed_to_iri = object.attributed_to_iri) && (actor = ActivityPub::Actor.dereference?(receiver, attributed_to_iri)) && actor == receiver
+              if (actor = object.attributed_to?(receiver, dereference: true)) && actor == receiver
                 if ancestors.all? { |ancestor| [ancestor.to, ancestor.cc].compact.flatten.includes?(recipient) }
                   Relationship::Social::Follow.where(
                     object: receiver,

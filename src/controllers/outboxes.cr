@@ -178,7 +178,7 @@ class RelationshipsController
       unless (iri = activity["object"]?) && (object = ActivityPub::Activity.find?(iri))
         bad_request
       end
-      unless object.actor_iri == account.actor.iri
+      unless object.actor == account.actor
         bad_request
       end
       to = [] of String

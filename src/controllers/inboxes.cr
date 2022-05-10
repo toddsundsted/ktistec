@@ -101,9 +101,7 @@ class RelationshipsController
 
     # 4
 
-    if activity.responds_to?(:actor=)
-      activity.actor = actor
-    end
+    activity.actor = actor
 
     case activity
     when ActivityPub::Activity::Announce

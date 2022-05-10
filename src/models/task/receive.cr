@@ -79,7 +79,7 @@ class Task
         # 3. receiver is a follower and the recipinet is either the
         # public collection or the sender's followers collection.
         # replace with the receiver.
-        elsif (actor_iri = activity.actor_iri) && (sender = ActivityPub::Actor.dereference?(receiver, actor_iri))
+        elsif (sender = activity.actor?(receiver, dereference: true))
           if receiver.follows?(sender, confirmed: true)
             if recipient == PUBLIC
               receiver.iri

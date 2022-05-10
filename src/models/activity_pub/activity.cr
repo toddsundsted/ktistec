@@ -50,7 +50,7 @@ module ActivityPub
       (published || created_at).in(timezone)
     end
 
-    @@recursive = true
+    @@recursive : Symbol | Bool = :default
 
     def to_json_ld(recursive = @@recursive)
       activity = self

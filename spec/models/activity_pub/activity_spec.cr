@@ -2,6 +2,7 @@ require "../../../src/models/activity_pub/activity"
 require "../../../src/models/activity_pub/object"
 
 require "../../spec_helper/model"
+require "../../spec_helper/factory"
 
 class FooBarActivity < ActivityPub::Activity
   belongs_to object, class_name: ActivityPub::Object, foreign_key: object_iri, primary_key: iri
@@ -133,6 +134,35 @@ Spectator.describe ActivityPub::Activity do
     it "renders an identical instance" do
       activity = described_class.from_json_ld(json)
       expect(described_class.from_json_ld(activity.to_json_ld)).to eq(activity)
+    end
+
+    let(activity) do
+      FooBarActivity.new(
+        actor: Factory.build(:actor),
+        object: Factory.build(:object),
+        target: Factory.build(:activity)
+      )
+    end
+
+    it "renders object and target recursively by default" do
+      json = JSON.parse(activity.to_json_ld)
+      expect(json["actor"].as_s?).to be_truthy
+      expect(json["object"].as_h?).to be_truthy
+      expect(json["target"].as_h?).to be_truthy
+    end
+
+    it "renders everything recursively if true" do
+      json = JSON.parse(activity.to_json_ld(recursive: true))
+      expect(json["actor"].as_h?).to be_truthy
+      expect(json["object"].as_h?).to be_truthy
+      expect(json["target"].as_h?).to be_truthy
+    end
+
+    it "renders nothing recursively if false" do
+      json = JSON.parse(activity.to_json_ld(recursive: false))
+      expect(json["actor"].as_s?).to be_truthy
+      expect(json["object"].as_s?).to be_truthy
+      expect(json["target"].as_s?).to be_truthy
     end
   end
 end

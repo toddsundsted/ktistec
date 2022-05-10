@@ -11,9 +11,11 @@ Spectator.describe RelationshipsController do
 
   describe "POST /actors/:username/inbox" do
     let!(actor) { register.actor }
+
+    # actor with keys is cached
     let_create(:actor, named: :other, with_keys: true)
 
-    # don't directly associate the activity with an actor, yet
+    # don't directly associate the activity with the actor, yet
     let_build(:activity, actor_iri: other.iri)
 
     let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
@@ -94,134 +96,254 @@ Spectator.describe RelationshipsController do
 
       before_each { HTTP::Client.activities << activity }
 
+      let(json_ld) { activity.to_json_ld }
+
       it "retrieves the activity from the origin" do
-        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
+        post "/actors/#{actor.username}/inbox", headers, json_ld
         expect(HTTP::Client.requests).to have("GET #{activity.iri}")
       end
 
+      it "does not retrieve the actor from the origin" do
+        post "/actors/#{actor.username}/inbox", headers, json_ld
+        expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
+      end
+
       it "saves the activity" do
-        expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)}.
+        expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
           to change{ActivityPub::Activity.count}.by(1)
       end
 
       it "is successful" do
-        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
+        post "/actors/#{actor.username}/inbox", headers, json_ld
         expect(response.status_code).to eq(200)
       end
 
-      context "and the actor is remote" do
+      context "and the actor is not cached" do
         let_build(:actor, named: :other, with_keys: true)
 
         before_each { HTTP::Client.actors << other }
 
         it "retrieves the actor from the origin" do
-          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
+          post "/actors/#{actor.username}/inbox", headers, json_ld
           expect(HTTP::Client.requests).to have("GET #{other.iri}")
         end
 
         it "saves the actor" do
-          expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)}.
+          expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
             to change{ActivityPub::Actor.count}.by(1)
         end
 
+        it "saves the actor's public key" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(ActivityPub::Actor.find(other.iri).pem_public_key).not_to be_nil
+        end
+
         it "is successful" do
-          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
+          post "/actors/#{actor.username}/inbox", headers, json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the actor is embedded in the activity" do
+          let(json_ld) { activity.to_json_ld(recursive: true) }
+
+          pre_condition { expect(JSON.parse(json_ld).dig("actor", "id")).to eq(other.iri) }
+
+          it "retrieves the actor from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{other.iri}")
+          end
+
+          it "saves the actor" do
+            expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
+              to change{ActivityPub::Actor.count}.by(1)
+          end
+
+          it "saves the actor's public key" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(ActivityPub::Actor.find(other.iri).pem_public_key).not_to be_nil
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the actor is referenced by the activity" do
+          let(json_ld) { activity.to_json_ld(recursive: false) }
+
+          pre_condition { expect(JSON.parse(json_ld).dig("actor")).to eq(other.iri) }
+
+          it "retrieves the actor from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{other.iri}")
+          end
+
+          it "saves the actor" do
+            expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
+              to change{ActivityPub::Actor.count}.by(1)
+          end
+
+          it "saves the actor's public key" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(ActivityPub::Actor.find(other.iri).pem_public_key).not_to be_nil
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
         end
       end
     end
 
     context "when signed" do
-      let_build(:note, attributed_to_iri: other.iri)
-      let_build(:create, named: :activity, actor_iri: other.iri, object_iri: note.iri)
+      let_build(:note, attributed_to: other)
+      let_build(:create, named: :activity, actor: other, object: note)
 
       before_each { HTTP::Client.objects << note }
 
-      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", activity.to_json_ld, "application/json") }
+      let(json_ld) { activity.to_json_ld }
 
-      it "does not retrieve the activity" do
-        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      let(headers) { Ktistec::Signature.sign(other, actor.inbox.not_nil!, json_ld, "application/json") }
+
+      it "does not retrieve the activity from the origin" do
+        post "/actors/#{actor.username}/inbox", headers, json_ld
         expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
       end
 
+      it "does not retrieve the actor from the origin" do
+        post "/actors/#{actor.username}/inbox", headers, json_ld
+        expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
+      end
+
       it "saves the activity" do
-        expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
+        expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
           to change{ActivityPub::Activity.count}.by(1)
       end
 
       it "is successful" do
-        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+        post "/actors/#{actor.username}/inbox", headers, json_ld
         expect(response.status_code).to eq(200)
       end
 
-      context "by remote actor" do
+      context "and the actor is not cached" do
         let_build(:actor, named: :other, with_keys: true)
 
         before_each { HTTP::Client.actors << other }
 
-        it "retrieves the remote actor from the origin" do
-          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+        it "retrieves the actor from the origin" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
           expect(HTTP::Client.requests).to have("GET #{other.iri}")
         end
 
         it "saves the actor" do
-          expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
+          expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
             to change{ActivityPub::Actor.count}.by(1)
         end
 
+        it "saves the actor's public key" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(ActivityPub::Actor.find(other.iri).pem_public_key).not_to be_nil
+        end
+
         it "is successful" do
-          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          post "/actors/#{actor.username}/inbox", headers, json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the actor is embedded in the activity" do
+          let(json_ld) { activity.to_json_ld(recursive: true) }
+
+          pre_condition { expect(JSON.parse(json_ld).dig("actor", "id")).to eq(other.iri) }
+
+          it "retrieves the remote actor from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{other.iri}")
+          end
+
+          it "saves the actor" do
+            expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
+              to change{ActivityPub::Actor.count}.by(1)
+          end
+
+          it "saves the actor's public key" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(ActivityPub::Actor.find(other.iri).pem_public_key).not_to be_nil
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the actor is referenced by the activity" do
+          let(json_ld) { activity.to_json_ld(recursive: false) }
+
+          pre_condition { expect(JSON.parse(json_ld).dig("actor")).to eq(other.iri) }
+
+          it "retrieves the remote actor from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{other.iri}")
+          end
+
+          it "saves the actor" do
+            expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
+              to change{ActivityPub::Actor.count}.by(1)
+          end
+
+          it "saves the actor's public key" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(ActivityPub::Actor.find(other.iri).pem_public_key).not_to be_nil
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
         end
       end
 
-      context "by cached actor" do
-        let_create(:actor, named: :other, with_keys: true)
+      context "and the actor is cached" do
+        pre_condition { expect(other.new_record?).to be_false }
 
         before_each { HTTP::Client.actors << other }
 
-        it "does not retrieve the actor" do
-          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-          expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
-        end
+        context "but doesn't have a public key" do
+          before_each { other.dup.assign(pem_public_key: nil).save }
 
-        it "is successful" do
-          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-          expect(response.status_code).to eq(200)
-        end
-
-        context "which doesn't have a public key" do
-          before_each do
-            other.pem_public_key = nil
-            other.save
-          end
-
-          it "retrieves the remote actor from the origin" do
-            post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          it "retrieves the actor from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
             expect(HTTP::Client.requests).to have("GET #{other.iri}")
           end
 
           it "updates the actor's public key" do
-            expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
+            expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
               to change{ActivityPub::Actor.find(other.id).pem_public_key}
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
           end
         end
 
-        context "which can't authenticate the activity" do
-          before_each do
-            pem_public_key, other.pem_public_key = other.pem_public_key, ""
-            HTTP::Client.actors << other.save
-            other.pem_public_key = pem_public_key
-          end
+        context "but the public key is wrong" do
+          before_each { other.dup.assign(pem_public_key: "").save }
 
           it "retrieves the activity from the origin" do
-            post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+            post "/actors/#{actor.username}/inbox", headers, json_ld
             expect(HTTP::Client.requests).to have("GET #{activity.iri}")
           end
 
+          it "does not retrieve the actor from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
+          end
+
           it "returns 400 if the activity can't be verified" do
-            post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-            expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+            post "/actors/#{actor.username}/inbox", headers, json_ld
             expect(response.status_code).to eq(400)
           end
         end

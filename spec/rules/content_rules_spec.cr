@@ -47,13 +47,103 @@ Spectator.describe ContentRules do
 
   subject { described_class.new }
 
+  # outbox
+
+  describe "#run" do
+    def run(owner, activity)
+      School::Fact.clear!
+      School::Fact.assert(ContentRules::Outgoing.new(owner, activity))
+      subject.run
+    end
+
+    context "given an empty outbox" do
+      pre_condition { expect(owner.in_outbox(public: false)).to be_empty }
+
+      it "adds the activity to the outbox" do
+        run(owner, create)
+        expect(owner.in_outbox(public: false)).to eq([create])
+      end
+    end
+  end
+
+  # inbox
+
+  describe "#run" do
+    let(recipients) { [] of String }
+
+    def run(owner, activity)
+      School::Fact.clear!
+      recipients.compact.each { |recipient| School::Fact.assert(ContentRules::IsRecipient.new(recipient)) }
+      School::Fact.assert(ContentRules::Incoming.new(owner, activity))
+      subject.run
+    end
+
+    context "given an empty inbox" do
+      pre_condition { expect(owner.in_inbox(public: false)).to be_empty }
+
+      it "does not add the activity to the inbox" do
+        run(owner, create)
+        expect(owner.in_inbox(public: false)).to be_empty
+      end
+
+      context "owner in recipients" do
+        let(recipients) { [owner.iri] }
+
+        it "adds the activity to the inbox" do
+          run(owner, create)
+          expect(owner.in_inbox(public: false)).to eq([create])
+        end
+      end
+
+      context "public URL in recipients" do
+        let(recipients) { ["https://www.w3.org/ns/activitystreams#Public"] }
+
+        it "does not add the activity to the inbox" do
+          run(owner, create)
+          expect(owner.in_inbox(public: false)).to be_empty
+        end
+
+        context "and owner is follows activity's actor" do
+          before_each do
+            owner.follow(create.actor).save
+          end
+
+          it "adds the activity to the inbox" do
+            run(owner, create)
+            expect(owner.in_inbox(public: false)).to eq([create])
+          end
+        end
+      end
+
+      context "followers collection in recipients" do
+        let(recipients) { [create.actor.followers] }
+
+        it "does not add the activity to the inbox" do
+          run(owner, create)
+          expect(owner.in_inbox(public: false)).to be_empty
+        end
+
+        context "and owner is follows activity's actor" do
+          before_each do
+            owner.follow(create.actor).save
+          end
+
+          it "adds the activity to the inbox" do
+            run(owner, create)
+            expect(owner.in_inbox(public: false)).to eq([create])
+          end
+        end
+      end
+    end
+  end
+
   # notifications
 
   describe "#run" do
     def run(owner, activity)
       School::Fact.clear!
       School::Fact.assert(ContentRules::IsAddressedTo.new(activity, owner))
-      subject.run(owner, activity)
+      subject.run
     end
 
     context "given no notifications" do
@@ -292,7 +382,7 @@ Spectator.describe ContentRules do
     def run(owner, activity)
       School::Fact.clear!
       School::Fact.assert(ContentRules::IsAddressedTo.new(activity, owner))
-      subject.run(owner, activity)
+      subject.run
     end
 
     context "given an empty timeline" do

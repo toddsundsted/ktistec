@@ -237,20 +237,11 @@ class RelationshipsController
 
     activity.save
 
-    recipients = [activity.to, activity.cc, deliver_to].flatten.compact
-
-    if recipients.includes?(account.actor.iri) ||
-       recipients.includes?(actor.followers) && account.actor.follows?(actor) ||
-       recipients.includes?(Ktistec::Constants::PUBLIC) && account.actor.follows?(actor)
-      Relationship::Content::Inbox.new(
-        owner: account.actor,
-        activity: activity,
-      ).save(skip_associated: true)
-
-      School::Fact.clear!
-      School::Fact.assert(ContentRules::IsAddressedTo.new(activity, account.actor))
-      ContentRules.new.run(account.actor, activity)
-    end
+    School::Fact.clear!
+    recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq
+    recipients.each { |recipient| School::Fact.assert(ContentRules::IsRecipient.new(recipient)) }
+    School::Fact.assert(ContentRules::Incoming.new(account.actor, activity))
+    ContentRules.new.run
 
     # handle side-effects
 

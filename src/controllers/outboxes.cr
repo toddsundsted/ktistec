@@ -238,14 +238,9 @@ class RelationshipsController
 
     activity.save
 
-    Relationship::Content::Outbox.new(
-      owner: account.actor,
-      activity: activity
-    ).save(skip_associated: true)
-
     School::Fact.clear!
-    School::Fact.assert(ContentRules::IsAddressedTo.new(activity, account.actor))
-    ContentRules.new.run(account.actor, activity)
+    School::Fact.assert(ContentRules::Outgoing.new(account.actor, activity))
+    ContentRules.new.run
 
     # handle side-effects
 

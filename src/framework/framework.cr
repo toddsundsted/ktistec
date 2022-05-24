@@ -137,7 +137,9 @@ module Ktistec
       end
       with new yield
       Kemal.config.app_name = "Ktistec"
-      Kemal.run
+      # work around Kemal's handling of the command line when running specs...
+      argv = (Kemal.config.env == "test") ? typeof(ARGV).new : ARGV
+      Kemal.run argv
     end
   end
 

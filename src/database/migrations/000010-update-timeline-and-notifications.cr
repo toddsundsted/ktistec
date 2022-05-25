@@ -5,6 +5,7 @@
 {% unless @type.has_constant? "Spectator" %}
   require "../../framework/database"
   require "../../models/relationship/content/inbox"
+  require "../../models/relationship/content/outbox"
   require "../../models/relationship/content/notification"
   require "../../models/relationship/content/timeline"
 
@@ -18,9 +19,11 @@
     Relationship::Content::Notification.all.each(&.destroy)
     Relationship::Content::Timeline.all.each(&.destroy)
     Account.all.each do |account|
-      Relationship::Content::Inbox.where("from_iri = ? ORDER BY created_at ASC", account.iri).each do |relationship|
-        if relationship.activity?
-          ContentRules.new.run(account.actor, relationship.activity)
+      Relationship.where(%q|type in ("Relationship::Content::Inbox","Relationship::Content::Outbox") AND from_iri = ? ORDER BY created_at ASC|, account.iri).each do |relationship|
+        if relationship.responds_to?(:activity) && relationship.activity?
+          School::Fact.clear!
+          School::Fact.assert(ContentRules::IsAddressedTo.new(relationship.activity, account.actor))
+          ContentRules.new.run
         end
       end
     end

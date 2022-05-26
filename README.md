@@ -109,25 +109,48 @@ machinery is in place to do much more.
 
 ## Prerequisites
 
-To run an instance of Ktistec, you'll need a server with a permanent
-hostname (AKA it's own domain). In the Fediverse, users are identified
+To run an instance of Ktistec as part of the Fediverse, you'll need a
+server with a fixed hostname. In the Fediverse, users are identified
 by (and content is addressed to) a hostname and a username.
 
 ## Installation
 
-You must build Ktistec from its source code. You will need a recent
-release of the [Crystal programming language](https://crystal-lang.org/).
+You must compile the Ktistec server executable from its source code.
+You will need to install a recent release of the [Crystal programming
+language](https://crystal-lang.org/install/).
 
-If you intend to do *development*, check out the **main** branch. In
-addition to Crystal, you'll also need Webpack to build the JavaScript
-and CSS assets from source.
+To obtain the source code, clone the [Ktistec Github
+repo](https://github.com/toddsundsted/ktistec).
 
-If you just want to try Ktistec out, check out the **dist** branch.
+If you intend to do *development* on the server, check out the
+**main** branch. In addition to Crystal, you'll also need Node.js and
+Webpack to build the JS and CSS assets from source.
 
-Since the project is still in development, I don't bother with a
-separate build step. I just run the server:
+If you just want to build and run the server, check out the **dist**
+branch.
 
-`$ LOG_LEVEL=INFO crystal run src/ktistec/server.cr`
+To compile the server:
+
+`$ crystal build src/ktistec/server.cr`
+
+If you're developing on the **main** branch, build the assets next
+(skip this step if you're on the **dist** branch--the latest JS and
+CSS assets are already built for you):
+
+`$ npm run build`
+
+Run the compiled executable:
+
+`$ LOG_LEVEL=INFO ./server`
+
+The first time the server runs it will run the database migrations
+necessary to create the database. This should only take a few seconds,
+maximum. When the server is ready to accept connections you will see
+something like:
+
+`Ktistec is ready to lead at http://0.0.0.0:3000`
+
+You can now connect to and configure the server.
 
 ## Usage
 
@@ -174,7 +197,7 @@ Once these steps are done, you're running!
 ## Copyright and License
 
 Ktistec ActivityPub Server
-Copyright (C) 2021 Todd Sundsted
+Copyright (C) 2021, 2022 Todd Sundsted
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as

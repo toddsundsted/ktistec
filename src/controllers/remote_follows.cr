@@ -36,7 +36,7 @@ class RemoteFollowsController
       unprocessable_entity "remote_follows/index"
     else
       begin
-        location = lookup(account).gsub("{uri}", URI.encode(actor.iri))
+        location = lookup(account).gsub("{uri}", URI.encode_path(actor.iri))
         if accepts?("text/html")
           redirect location
         else

@@ -66,7 +66,7 @@ class Task
         elsif recipient && recipient =~ /^#{receiver.iri}\/followers$/
           if (object_iri = activity.object_iri) && (reply = ActivityPub::Object.dereference?(receiver, object_iri))
             if (ancestors = ancestors(reply)) && (object = ancestors.last?)
-              if (attributed_to_iri = object.attributed_to_iri) && (actor = ActivityPub::Actor.dereference?(receiver, attributed_to_iri)) && actor == receiver
+              if (actor = object.attributed_to?(receiver, dereference: true)) && actor == receiver
                 if ancestors.all? { |ancestor| [ancestor.to, ancestor.cc].compact.flatten.includes?(recipient) }
                   Relationship::Social::Follow.where(
                     object: receiver,
@@ -79,7 +79,7 @@ class Task
         # 3. receiver is a follower and the recipinet is either the
         # public collection or the sender's followers collection.
         # replace with the receiver.
-        elsif (actor_iri = activity.actor_iri) && (sender = ActivityPub::Actor.dereference?(receiver, actor_iri))
+        elsif (sender = activity.actor?(receiver, dereference: true))
           if receiver.follows?(sender, confirmed: true)
             if recipient == PUBLIC
               receiver.iri

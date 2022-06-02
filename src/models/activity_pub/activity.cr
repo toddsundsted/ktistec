@@ -20,6 +20,7 @@ module ActivityPub
 
     @[Persistent]
     property actor_iri : String?
+    belongs_to actor, class_name: ActivityPub::Actor, foreign_key: actor_iri, primary_key: iri
 
     @[Persistent]
     property object_iri : String?
@@ -49,7 +50,7 @@ module ActivityPub
       (published || created_at).in(timezone)
     end
 
-    @@recursive = true
+    @@recursive : Symbol | Bool = :default
 
     def to_json_ld(recursive = @@recursive)
       activity = self

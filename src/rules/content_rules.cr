@@ -1,5 +1,6 @@
 require "school/domain/builder"
 
+require "../utils/compiler"
 require "../framework/rule"
 require "../models/activity_pub/activity"
 require "../models/activity_pub/actor"
@@ -24,12 +25,17 @@ class ContentRules
   class ::ActivityPub::Activity include School::DomainType end
   class ::ActivityPub::Actor include School::DomainType end
   class ::ActivityPub::Object include School::DomainType end
+  class ::Relationship::Content::Outbox include School::DomainType end
+  class ::Relationship::Content::Inbox include School::DomainType end
   class ::Relationship::Content::Notification include School::DomainType end
   class ::Relationship::Content::Timeline include School::DomainType end
+  class ::Relationship::Social::Follow include School::DomainType end
   class ::Tag::Mention include School::DomainType end
 
   # patterns and facts for the rules below
 
+  Ktistec::Rule.make_pattern(Actor, ActivityPub::Actor, properties: [:iri, :followers, :following])
+  Ktistec::Rule.make_pattern(Activity, ActivityPub::Activity, associations: [:actor])
   Ktistec::Rule.make_pattern(Object, ActivityPub::Object, associations: [:in_reply_to, :attributed_to])
   Ktistec::Rule.make_pattern(Mention, Tag::Mention, associations: [subject], properties: [href])
   Ktistec::Rule.make_pattern(CreateActivity, ActivityPub::Activity::Create, associations: [:object])
@@ -38,59 +44,128 @@ class ContentRules
   Ktistec::Rule.make_pattern(FollowActivity, ActivityPub::Activity::Follow, associations: [:object])
   Ktistec::Rule.make_pattern(DeleteActivity, ActivityPub::Activity::Delete, associations: [:object])
   Ktistec::Rule.make_pattern(UndoActivity, ActivityPub::Activity::Undo, associations: [:object])
+  Ktistec::Rule.make_pattern(Outbox, Relationship::Content::Outbox, associations: [:owner, :activity])
+  Ktistec::Rule.make_pattern(Inbox, Relationship::Content::Inbox, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(Notification, Relationship::Content::Notification, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(Timeline, Relationship::Content::Timeline, associations: [:owner, :object])
+  Ktistec::Rule.make_pattern(Follow, Relationship::Social::Follow, associations: [:actor, :object])
 
+  class Outgoing < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
+  class Incoming < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
   class IsAddressedTo < School::Relationship(ActivityPub::Activity, ActivityPub::Actor) end
+  class IsRecipient < School::Property(String) end
 
-  private getter domain : School::Domain do
-    School.domain do
+  Ktistec::Compiler.register_constant(ContentRules::Actor)
+  Ktistec::Compiler.register_constant(ContentRules::Activity)
+  Ktistec::Compiler.register_constant(ContentRules::Object)
+  Ktistec::Compiler.register_constant(ContentRules::Mention)
+  Ktistec::Compiler.register_constant(ContentRules::CreateActivity)
+  Ktistec::Compiler.register_constant(ContentRules::AnnounceActivity)
+  Ktistec::Compiler.register_constant(ContentRules::LikeActivity)
+  Ktistec::Compiler.register_constant(ContentRules::FollowActivity)
+  Ktistec::Compiler.register_constant(ContentRules::DeleteActivity)
+  Ktistec::Compiler.register_constant(ContentRules::UndoActivity)
+  Ktistec::Compiler.register_constant(ContentRules::Outbox)
+  Ktistec::Compiler.register_constant(ContentRules::Inbox)
+  Ktistec::Compiler.register_constant(ContentRules::Notification)
+  Ktistec::Compiler.register_constant(ContentRules::Timeline)
+  Ktistec::Compiler.register_constant(ContentRules::Follow)
+  Ktistec::Compiler.register_constant(ContentRules::Incoming)
+  Ktistec::Compiler.register_constant(ContentRules::Outgoing)
+  Ktistec::Compiler.register_constant(ContentRules::IsAddressedTo)
+  Ktistec::Compiler.register_constant(ContentRules::IsRecipient)
+
+  Ktistec::Compiler.register_accessor(iri)
+  Ktistec::Compiler.register_accessor(following)
+  Ktistec::Compiler.register_accessor(followers)
+
+  protected class_property domain : School::Domain do
+    definition = <<-RULE
+      # Outbox
+      rule "outbox"
+        condition Outgoing, actor, activity
+        none Outbox, owner: actor, activity: activity
+        assert Outbox, owner: actor, activity: activity
+        assert activity, IsAddressedTo, actor
+      end
+
+      # Inbox
+
+      rule "inbox"
+        condition Incoming, actor, activity
+        condition Actor, actor, iri: iri
+        condition iri, IsRecipient
+        none Inbox, owner: actor, activity: activity
+        assert Inbox, owner: actor, activity: activity
+        assert activity, IsAddressedTo, actor
+      end
+
+      rule "inbox"
+        condition Incoming, actor, activity
+        condition Activity, activity, actor: sender
+        condition Follow, actor: actor, object: sender
+        condition "https://www.w3.org/ns/activitystreams#Public", IsRecipient
+        none Inbox, owner: actor, activity: activity
+        assert Inbox, owner: actor, activity: activity
+        assert activity, IsAddressedTo, actor
+      end
+
+      rule "inbox"
+        condition Incoming, actor, activity
+        condition Activity, activity, actor: sender
+        condition Follow, actor: actor, object: sender
+        condition sender.followers, IsRecipient
+        none Inbox, owner: actor, activity: activity
+        assert Inbox, owner: actor, activity: activity
+        assert activity, IsAddressedTo, actor
+      end
+
       # Notifications
 
-      rule "create" do
-        condition var("activity"), IsAddressedTo, var("actor")
-        condition CreateActivity, var("activity"), object: var("object")
-        any Mention, var("mention"), subject: var("object"), href: var("actor").iri
-        none Notification, owner: var("actor"), activity: var("activity")
-        assert Notification, owner: var("actor"), activity: var("activity")
+      rule "create"
+        condition activity, IsAddressedTo, actor
+        condition CreateActivity, activity, object: object
+        any Mention, mention, subject: object, href: actor.iri
+        none Notification, owner: actor, activity: activity
+        assert Notification, owner: actor, activity: activity
       end
 
-      rule "announce" do
-        condition var("activity"), IsAddressedTo, var("actor")
-        condition AnnounceActivity, var("activity"), object: var("object")
-        condition Object, var("object"), attributed_to: var("actor")
-        none Notification, owner: var("actor"), activity: var("activity")
-        assert Notification, owner: var("actor"), activity: var("activity")
+      rule "announce"
+        condition activity, IsAddressedTo, actor
+        condition AnnounceActivity, activity, object: object
+        condition Object, object, attributed_to: actor
+        none Notification, owner: actor, activity: activity
+        assert Notification, owner: actor, activity: activity
       end
 
-      rule "like" do
-        condition var("activity"), IsAddressedTo, var("actor")
-        condition LikeActivity, var("activity"), object: var("object")
-        condition Object, var("object"), attributed_to: var("actor")
-        none Notification, owner: var("actor"), activity: var("activity")
-        assert Notification, owner: var("actor"), activity: var("activity")
+      rule "like"
+        condition activity, IsAddressedTo, actor
+        condition LikeActivity, activity, object: object
+        condition Object, object, attributed_to: actor
+        none Notification, owner: actor, activity: activity
+        assert Notification, owner: actor, activity: activity
       end
 
-      rule "follow" do
-        condition var("activity"), IsAddressedTo, var("actor")
-        condition FollowActivity, var("activity"), object: var("actor")
-        none Notification, owner: var("actor"), activity: var("activity")
-        assert Notification, owner: var("actor"), activity: var("activity")
+      rule "follow"
+        condition activity, IsAddressedTo, actor
+        condition FollowActivity, activity, object: actor
+        none Notification, owner: actor, activity: activity
+        assert Notification, owner: actor, activity: activity
       end
 
-      rule "delete" do
-        condition var("delete"), IsAddressedTo, var("actor")
-        condition DeleteActivity, var("delete"), object: var("object")
-        condition CreateActivity, var("activity"), object: var("object")
-        any Notification, owner: var("actor"), activity: var("activity")
-        retract Notification, owner: var("actor"), activity: var("activity")
+      rule "delete"
+        condition delete, IsAddressedTo, actor
+        condition DeleteActivity, delete, object: object
+        condition CreateActivity, activity, object: object
+        any Notification, owner: actor, activity: activity
+        retract Notification, owner: actor, activity: activity
       end
 
-      rule "undo" do
-        condition var("undo"), IsAddressedTo, var("actor")
-        condition UndoActivity, var("undo"), object: var("activity")
-        any Notification, owner: var("actor"), activity: var("activity")
-        retract Notification, owner: var("actor"), activity: var("activity")
+      rule "undo"
+        condition undo, IsAddressedTo, actor
+        condition UndoActivity, undo, object: activity
+        any Notification, owner: actor, activity: activity
+        retract Notification, owner: actor, activity: activity
       end
 
       # Timeline
@@ -99,59 +174,52 @@ class ContentRules
       # notify if there are either no replies and no mentions, or the
       # actor is mentioned.
 
-      rule "create" do
-        condition var("activity"), IsAddressedTo, var("actor")
-        condition CreateActivity, var("activity"), object: var("object")
-        none Object, var("object"), in_reply_to: var("any")
-        none Mention, var("mention"), subject: var("object")
-        none Timeline, owner: var("actor"), object: var("object")
-        assert Timeline, owner: var("actor"), object: var("object")
+      rule "create"
+        condition activity, IsAddressedTo, actor
+        condition CreateActivity, activity, object: object
+        none Object, object, in_reply_to: any
+        none Mention, mention, subject: object
+        none Timeline, owner: actor, object: object
+        assert Timeline, owner: actor, object: object
       end
 
-      rule "create" do
-        condition var("activity"), IsAddressedTo, var("actor")
-        condition CreateActivity, var("activity"), object: var("object")
-        any Mention, var("mention"), subject: var("object"), href: var("actor").iri
-        none Timeline, owner: var("actor"), object: var("object")
-        assert Timeline, owner: var("actor"), object: var("object")
+      rule "create"
+        condition activity, IsAddressedTo, actor
+        condition CreateActivity, activity, object: object
+        any Mention, mention, subject: object, href: actor.iri
+        none Timeline, owner: actor, object: object
+        assert Timeline, owner: actor, object: object
       end
 
-      rule "announce" do
-        condition var("activity"), IsAddressedTo, var("actor")
-        condition AnnounceActivity, var("activity"), object: var("object")
-        none Timeline, owner: var("actor"), object: var("object")
-        assert Timeline, owner: var("actor"), object: var("object")
+      rule "announce"
+        condition activity, IsAddressedTo, actor
+        condition AnnounceActivity, activity, object: object
+        none Timeline, owner: actor, object: object
+        assert Timeline, owner: actor, object: object
       end
 
-      rule "delete" do
-        condition var("activity"), IsAddressedTo, var("actor")
-        condition DeleteActivity, var("activity"), object: var("object")
-        any Timeline, owner: var("actor"), object: var("object")
-        retract Timeline, owner: var("actor"), object: var("object")
+      rule "delete"
+        condition activity, IsAddressedTo, actor
+        condition DeleteActivity, activity, object: object
+        any Timeline, owner: actor, object: object
+        retract Timeline, owner: actor, object: object
       end
 
-      rule "undo" do
-        condition var("undo"), IsAddressedTo, var("actor")
-        condition UndoActivity, var("undo"), object: var("activity")
-        condition AnnounceActivity, var("activity"), object: var("object")
-        none CreateActivity, object: var("object")
-        none AnnounceActivity, not(var("activity")), object: var("object")
-        any Timeline, owner: var("actor"), object: var("object")
-        retract Timeline, owner: var("actor"), object: var("object")
+      rule "undo"
+        condition undo, IsAddressedTo, actor
+        condition UndoActivity, undo, object: activity
+        condition AnnounceActivity, activity, object: object
+        none CreateActivity, object: object
+        none AnnounceActivity, not activity, object: object
+        any Timeline, owner: actor, object: object
+        retract Timeline, owner: actor, object: object
       end
-    end
+    RULE
+    compiler = Ktistec::Compiler.new(definition)
+    compiler.compile
   end
 
-  def run(actor, activity)
-    School::Fact.clear!
-
-    raise "actor must be local" unless actor.local?
-
-    domain.assert(IsAddressedTo.new(activity, actor))
-
-    5.times do |i|
-      break if domain.run == School::Domain::Status::Completed
-      raise "iteration limit exceeded" if i >= 4
-    end
+  def run
+    self.class.domain.run
   end
 end

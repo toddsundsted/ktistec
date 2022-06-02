@@ -178,7 +178,7 @@ class RelationshipsController
       unless (iri = activity["object"]?) && (object = ActivityPub::Activity.find?(iri))
         bad_request
       end
-      unless object.actor_iri == account.actor.iri
+      unless object.actor == account.actor
         bad_request
       end
       to = [] of String
@@ -238,12 +238,9 @@ class RelationshipsController
 
     activity.save
 
-    Relationship::Content::Outbox.new(
-      owner: account.actor,
-      activity: activity
-    ).save(skip_associated: true)
-
-    ContentRules.new.run(account.actor, activity)
+    School::Fact.clear!
+    School::Fact.assert(ContentRules::Outgoing.new(account.actor, activity))
+    ContentRules.new.run
 
     # handle side-effects
 

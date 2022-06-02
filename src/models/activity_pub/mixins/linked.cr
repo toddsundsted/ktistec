@@ -48,18 +48,22 @@ module Ktistec
           find?(iri: iri, include_deleted: include_deleted, include_undone: include_undone)
         end
 
-        def self.dereference?(key_pair, iri, ignore_cached = false) : self?
+        def self.dereference?(key_pair, iri, *, ignore_cached = false, **options) : self?
           unless !ignore_cached && (instance = self.find?(iri))
             unless iri.starts_with?(Ktistec.host)
               headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
               headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
               Ktistec::Open.open?(iri, headers) do |response|
-                instance = self.from_json_ld?(response.body)
+                instance = self.from_json_ld?(response.body, **options)
               end
             end
           end
           instance
         end
+
+        # without arguments, or with `dereference: false`, the
+        # accessor behaves identically to the similarly named
+        # generated accessor in `Model`.
 
         macro finished
           {% verbatim do %}
@@ -68,16 +72,16 @@ module Ktistec
                 {% if method.body.first == :belongs_to %}
                   {% name = method.name[13..-1] %}
                   class ::{{type}}
-                    def {{name}}?(key_pair, *, dereference = false, ignore_cached = false)
+                    def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, **options)
                       {{name}} = self.{{name}}?
-                      unless (!ignore_cached && {{name}}) || ({{name}} && {{name}}.changed?)
-                        if ({{name}}_iri = self.{{name}}_iri) && dereference
+                      if dereference && ({{name}}_iri = self.{{name}}_iri)
+                        if {{name}}.nil? || (ignore_cached && !{{name}}.changed?) || ignore_changed
                           unless {{name}}_iri.starts_with?(Ktistec.host)
                             {% for union_type in method.body[3].id.split(" | ").map(&.id) %}
                               headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
                               headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
                               Ktistec::Open.open?({{name}}_iri, headers) do |response|
-                                if ({{name}} = {{union_type}}.from_json_ld?(response.body))
+                                if ({{name}} = {{union_type}}.from_json_ld?(response.body, **options))
                                   return self.{{name}} = {{name}}
                                 end
                               end

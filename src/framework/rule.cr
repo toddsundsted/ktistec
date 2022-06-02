@@ -12,7 +12,7 @@ module Ktistec
 
         alias Supported = School::Lit | School::Var | School::Not | School::Within
 
-        @options = {} of Symbol => Supported
+        @options = {} of String => Supported
 
         def initialize(@target : Supported? = nil)
           if (target = @target).is_a?(School::Var)
@@ -21,6 +21,16 @@ module Ktistec
         end
 
         def initialize(@target : Supported? = nil, **options : Supported)
+          if (target = @target).is_a?(School::Var)
+            @vars << target.name
+          end
+          options.each do |name, expression|
+            @vars << expression.name if expression.is_a?(School::Var)
+            @options[name.to_s] = expression
+          end
+        end
+
+        def initialize(@target : Supported? = nil, options = {} of String => Supported)
           if (target = @target).is_a?(School::Var)
             @vars << target.name
           end
@@ -41,10 +51,10 @@ module Ktistec
         def match(bindings : School::Bindings, &block : School::Bindings -> Nil) : Nil
           keys = @options.keys
           {% if associations %}
-            keys -= {{associations.map(&.id.symbolize)}}
+            keys -= {{associations.map(&.id.stringify)}}
           {% end %}
           {% if properties %}
-            keys -= {{properties.map(&.id.symbolize)}}
+            keys -= {{properties.map(&.id.stringify)}}
           {% end %}
 
           raise ArgumentError.new("invalid arguments: #{keys.join(",")}") unless keys.empty?
@@ -69,8 +79,8 @@ module Ktistec
               {% end %}
               {% definition = method.body %}
               {% if definition[0] == :belongs_to %}
-                if @options.has_key?({{association.id.symbolize}})
-                  conditions << condition(table_name, {{definition[2].id.stringify}}, @options[{{association.id.symbolize}}], bindings) do |value|
+                if @options.has_key?({{association.id.stringify}})
+                  conditions << condition(table_name, {{definition[2].id.stringify}}, @options[{{association.id.stringify}}], bindings) do |value|
                     if value.responds_to?({{definition[1]}}) && value.{{definition[1].id}}
                       value.{{definition[1].id}}
                     end
@@ -84,8 +94,8 @@ module Ktistec
 
           {% if properties %}
             {% for property in properties %}
-              if @options.has_key?({{property.id.symbolize}})
-                conditions << condition(table_name, {{property.id.stringify}}, @options[{{property.id.symbolize}}], bindings) do |value|
+              if @options.has_key?({{property.id.stringify}})
+                conditions << condition(table_name, {{property.id.stringify}}, @options[{{property.id.stringify}}], bindings) do |value|
                   value
                 end
               end
@@ -93,13 +103,13 @@ module Ktistec
           {% end %}
 
           {% if clazz < Model::Undoable %}
-            conditions << "#{table_name}.undone_at IS NULL" unless @options.has_key?(:undone_at)
+            conditions << "#{table_name}.undone_at IS NULL" unless @options.has_key?("undone_at")
           {% end %}
           {% if clazz < Model::Deletable %}
-            conditions << "#{table_name}.deleted_at IS NULL" unless @options.has_key?(:deleted_at)
+            conditions << "#{table_name}.deleted_at IS NULL" unless @options.has_key?("deleted_at")
           {% end %}
           {% if clazz < Model::Polymorphic %}
-            unless @options.has_key?(:type)
+            unless @options.has_key?("type")
               types = {{(clazz.all_subclasses << clazz).map(&.stringify.stringify).join(",")}}
               conditions << "#{table_name}.type IN (#{types})"
             end
@@ -121,8 +131,8 @@ module Ktistec
 
             {% if associations %}
               {% for association in associations %}
-                if @options.has_key?({{association.id.symbolize}})
-                  if (target = @options[{{association.id.symbolize}}]) && (name = target.name?) && !temporary.has_key?(name)
+                if @options.has_key?({{association.id.stringify}})
+                  if (target = @options[{{association.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
                     if (value = model.{{association.id}}?(include_deleted: true, include_undone: true))
                       temporary[name] = value
                     end
@@ -133,8 +143,8 @@ module Ktistec
 
             {% if properties %}
               {% for property in properties %}
-                if @options.has_key?({{property.id.symbolize}})
-                  if (target = @options[{{property.id.symbolize}}]) && (name = target.name?) && !temporary.has_key?(name)
+                if @options.has_key?({{property.id.stringify}})
+                  if (target = @options[{{property.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
                     if (value = model.{{property.id}})
                       temporary[name] = value
                     end
@@ -228,27 +238,20 @@ module Ktistec
           end
         end
 
-        def self.assert(bindings : School::Bindings, **options : Supported)
-          {{clazz}}.new(transform(bindings, **options)).save
+        def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)
+          {{clazz}}.new(**options).save
         end
 
-        def self.retract(bindings : School::Bindings, **options : Supported)
-          {{clazz}}.find(transform(bindings, **options)).destroy
+        def self.assert(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
+          {{clazz}}.new(options).save
         end
 
-        private def self.transform(bindings, **options)
-          options.to_h.transform_keys do |key|
-            key.to_s
-          end.transform_values do |value|
-            case value
-            when School::Lit
-              value.target
-            when School::Var
-              bindings[value.name]
-            else
-              raise "#{value.class} is unsupported"
-            end
-          end
+        def self.retract(target : School::DomainTypes?, **options : School::DomainTypes)
+          {{clazz}}.find(**options).destroy
+        end
+
+        def self.retract(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
+          {{clazz}}.find(options).destroy
         end
       end
     end

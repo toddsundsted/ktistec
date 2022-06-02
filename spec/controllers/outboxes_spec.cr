@@ -1,5 +1,5 @@
-require "../../src/controllers/outboxes"
 require "../../src/models/activity_pub/object/note"
+require "../../src/controllers/outboxes"
 
 require "../spec_helper/controller"
 require "../spec_helper/factory"

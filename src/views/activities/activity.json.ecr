@@ -3,7 +3,9 @@
   <%- if (published = activity.published) -%>
   "published":<%= published.to_rfc3339(fraction_digits: 3).inspect %>,
   <%- end -%>
-  <%- if (actor_iri = activity.actor_iri) -%>
+  <%- if recursive == true && (actor = activity.actor?) -%>
+  "actor":<%= actor.to_json_ld %>,
+  <%- elsif (actor_iri = activity.actor_iri) -%>
   "actor":<%= actor_iri.inspect %>,
   <%- end -%>
   <%- if recursive && activity.responds_to?(:object) && (object = activity.object?) -%>

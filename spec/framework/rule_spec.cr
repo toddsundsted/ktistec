@@ -445,11 +445,11 @@ Spectator.describe Ktistec::Rule do
         let(bindings) { School::Bindings{"id" => 9999_i64} }
 
         it "creates an instance" do
-          expect{RulePattern.assert(bindings, id: School::Lit.new(9999_i64))}.to change{RuleModel.count(id: 9999_i64)}.by(1)
+          expect{RulePattern.assert(nil, id: 9999_i64)}.to change{RuleModel.count(id: 9999_i64)}.by(1)
         end
 
         it "creates an instance" do
-          expect{RulePattern.assert(bindings, id: School::Var.new("id"))}.to change{RuleModel.count(id: 9999_i64)}.by(1)
+          expect{RulePattern.assert(nil, {"id" => 9999_i64})}.to change{RuleModel.count(id: 9999_i64)}.by(1)
         end
       end
 
@@ -457,11 +457,11 @@ Spectator.describe Ktistec::Rule do
         let(bindings) { School::Bindings{"id" => 1_i64} }
 
         it "destroys an instance" do
-          expect{RulePattern.retract(bindings, id: School::Lit.new(1_i64))}.to change{RuleModel.count(id: 1_i64)}.by(-1)
+          expect{RulePattern.retract(nil, id: 1_i64)}.to change{RuleModel.count(id: 1_i64)}.by(-1)
         end
 
         it "destroys an instance" do
-          expect{RulePattern.retract(bindings, id: School::Var.new("id"))}.to change{RuleModel.count(id: 1_i64)}.by(-1)
+          expect{RulePattern.retract(nil, {"id" => 1_i64})}.to change{RuleModel.count(id: 1_i64)}.by(-1)
         end
       end
     end

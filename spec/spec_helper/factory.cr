@@ -102,10 +102,11 @@ end
 
 # activity factories
 
-def activity_factory(clazz = ActivityPub::Activity, iri = nil, actor_iri = nil, actor = false, object_iri = nil, object = false, local = nil, **options)
+def activity_factory(clazz = ActivityPub::Activity, iri = nil, actor_iri = nil, actor = false, object_iri = nil, object = false, target_iri = nil, target = false, local = nil, **options)
   iri ||= "#{base_url(actor_iri, actor, local)}/activities/#{random_string}"
   actor_iri ||= actor.iri if actor.responds_to?(:iri)
   object_iri ||= object.iri if object.responds_to?(:iri)
+  target_iri ||= target.iri if target.responds_to?(:iri)
   clazz.new(
     **{
       iri: iri,
@@ -113,6 +114,8 @@ def activity_factory(clazz = ActivityPub::Activity, iri = nil, actor_iri = nil, 
       actor: actor,
       object_iri: object_iri,
       object: object,
+      target_iri: target_iri,
+      target: target,
     }.merge(options)
   )
 end

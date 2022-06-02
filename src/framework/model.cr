@@ -323,7 +323,7 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o
+                self.{{v}} = o.as(typeof(self.{{v}}))
               end
             end
           {% end %}
@@ -344,7 +344,7 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o
+                self.{{v}} = o.as(typeof(self.{{v}}))
               end
             end
           {% end %}
@@ -364,7 +364,7 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o
+                self.{{v}} = o.as(typeof(self.{{v}}))
               end
             end
           {% end %}
@@ -382,7 +382,7 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o
+                self.{{v}} = o.as(typeof(self.{{v}}))
               end
             end
           {% end %}

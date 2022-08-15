@@ -36,4 +36,4 @@ h1 Site Settings
   == input_tag("Footer", settings, footer)
   input.ui.primary.button type="submit" value="Update"
 p.small.text Ktistec Version #{Ktistec::VERSION}
-br
+br.transition.hidden

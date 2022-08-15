@@ -42,4 +42,4 @@ canvas#charts data-controller="chart"
     == select_tag("Range", nil, :begin, ranges, env.params.query["begin"]?)
     == select_tag("Granularity", nil, :granularity, granularities, env.params.query["granularity"]?)
   input.ui.mini.primary.button type="submit" value="Update"
-br
+br.transition.hidden

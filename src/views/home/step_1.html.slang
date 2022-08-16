@@ -5,3 +5,4 @@ p Specify the host name and the site name for your instance.
   == input_tag("Host Name", settings, host, placeholder: "ex. https://my.site/")
   == input_tag("Site Name", settings, site, placeholder: "ex. My Site")
   input.ui.primary.button type="submit" value="Submit"
+p.small.text Ktistec Version #{Ktistec::VERSION}

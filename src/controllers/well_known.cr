@@ -73,7 +73,8 @@ class WellKnownController
       usage: {
         users: {
           total: Account.count
-        }
+        },
+        localPosts: ActivityPub::Object.public_posts_count
       },
       metadata: {
         siteName: Ktistec.site

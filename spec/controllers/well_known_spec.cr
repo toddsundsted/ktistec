@@ -122,7 +122,7 @@ Spectator.describe WellKnownController do
 
     it "returns usage" do
       get "/.well-known/nodeinfo/2.1"
-      message = {"users" => {"total" => 1}}
+      message = {"users" => {"total" => 1}, "localPosts" => 0}
       expect(JSON.parse(response.body)["usage"].as_h).to eq(message)
     end
 

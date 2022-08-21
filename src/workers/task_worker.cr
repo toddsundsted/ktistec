@@ -35,7 +35,7 @@ class TaskWorker
     task
   end
 
-  def work(now = Time.utc)
+  protected def work(now = Time.utc)
     tasks = Task.scheduled(now)
     ids = tasks.map(&.id.to_s).join(",")
     update = "UPDATE tasks SET running = 1 WHERE id IN (#{ids})"

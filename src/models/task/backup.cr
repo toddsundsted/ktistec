@@ -1,22 +1,13 @@
 require "benchmark"
 
 require "../task"
+require "./mixins/singleton"
 
 class Task
   # Creates a database backup.
   #
   class Backup < Task
-    def initialize(*args, **opts)
-      self.source_iri = ""
-      self.subject_iri = ""
-      super(*args, **opts)
-    end
-
-    def self.schedule_unless_exists
-      if self.where("running = 0 AND complete = 0 AND backtrace IS NULL").empty?
-        self.new.schedule
-      end
-    end
+    include Singleton
 
     def perform
       name = Ktistec.db_file

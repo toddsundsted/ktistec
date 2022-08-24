@@ -1,11 +1,14 @@
 require "../account"
 require "../point"
 require "../task"
+require "./mixins/singleton"
 
 class Task
   # Updates metrics.
   #
   class UpdateMetrics < Task
+    include Singleton
+
     private class State
       include JSON::Serializable
 
@@ -32,18 +35,6 @@ class Task
         state.last_id = last_id
         self.state = state.to_json
       end.last_id
-    end
-
-    def initialize(*args, **opts)
-      self.source_iri = ""
-      self.subject_iri = ""
-      super(*args, **opts)
-    end
-
-    def self.schedule_unless_exists
-      if self.where("running = 0 AND complete = 0 AND backtrace IS NULL").empty?
-        self.new.schedule
-      end
     end
 
     alias Key = Tuple(String, Time)

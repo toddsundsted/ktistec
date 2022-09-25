@@ -189,9 +189,9 @@ module Ktistec
     macro def_response_helper(name, message, code)
       macro {{name.id}}(message = nil, code = nil, basedir = "src/views")
         \{% if message.is_a?(StringLiteral) && message.includes?('/') %}
-          \{% if read_file?("#{basedir.id}/#{message.id}.html.slang") %}
-            if accepts?("text/html")
-              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.slang"}}, "src/views/layouts/default.html.ecr"
+          \{% if read_file?("#{basedir.id}/#{message.id}.json.ecr") %}
+            if accepts?("application/ld+json", "application/activity+json", "application/json")
+              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.json.ecr"}}
             end
           \{% end %}
           \{% if read_file?("#{basedir.id}/#{message.id}.text.ecr") %}
@@ -199,17 +199,25 @@ module Ktistec
               halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.text.ecr"}}
             end
           \{% end %}
+          \{% if read_file?("#{basedir.id}/#{message.id}.html.slang") %}
+            if accepts?("text/html")
+              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.slang"}}, "src/views/layouts/default.html.ecr"
+            end
+          \{% end %}
           \{% if read_file?("#{basedir.id}/#{message.id}.json.ecr") %}
             accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
             halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.json.ecr"}}
           \{% end %}
         \{% else %}
-          if accepts?("text/html")
-            _message = \{{message}} || {{message}}
-            halt env, status_code: \{{code}} || {{code}}, response: render "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr"
+          if accepts?("application/ld+json", "application/activity+json", "application/json")
+            halt env, status_code: \{{code}} || {{code}}, response: ({msg: (\{{message}} || {{message}}).downcase}.to_json)
           end
           if accepts?("text/plain")
             halt env, status_code: \{{code}} || {{code}}, response: (\{{message}} || {{message}}).downcase
+          end
+          if accepts?("text/html")
+            _message = \{{message}} || {{message}}
+            halt env, status_code: \{{code}} || {{code}}, response: render "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr"
           end
           accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
           halt env, status_code: \{{code}} || {{code}}, response: ({msg: (\{{message}} || {{message}}).downcase}.to_json)

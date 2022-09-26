@@ -3,7 +3,7 @@ h1= actor.display_name
   p: img.ui.small.image src=icon
 - if (summary = actor.summary)
   p == s summary
-form.ui.form class=(error ? "error" : "") method="POST"
+form.ui.form class=(error ? "error" : "") method="POST" data-turbo="false"
   - if error
     .ui.error.message
       p= error.capitalize

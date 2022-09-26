@@ -86,6 +86,12 @@ Spectator.describe RemoteFollowsController do
         expect(response.headers["Location"]?).
           to eq("https://remote.com/actors/foobar/authorize-follow?uri=#{URI.encode_path(actor.iri)}")
       end
+
+      it "returns the remote location if successful" do
+        post "/actors/#{actor.username}/remote-follow", headers, "account=%40foobar%40remote.com"
+        expect(response.headers["Location"]?).
+          to eq("https://remote.com/actors/foobar/authorize-follow?uri=#{URI.encode_path(actor.iri)}")
+      end
     end
 
     context "when posting JSON data" do
@@ -121,6 +127,12 @@ Spectator.describe RemoteFollowsController do
 
       it "returns the remote location if successful" do
         post "/actors/#{actor.username}/remote-follow", headers, {account: "foobar@remote.com"}.to_json
+        expect(JSON.parse(response.body).dig?("location")).
+          to eq("https://remote.com/actors/foobar/authorize-follow?uri=#{URI.encode_path(actor.iri)}")
+      end
+
+      it "returns the remote location if successful" do
+        post "/actors/#{actor.username}/remote-follow", headers, {account: "@foobar@remote.com"}.to_json
         expect(JSON.parse(response.body).dig?("location")).
           to eq("https://remote.com/actors/foobar/authorize-follow?uri=#{URI.encode_path(actor.iri)}")
       end

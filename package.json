@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "chart.js": "^3.3.2",
-    "@hotwired/turbo": "^7.0.0-rc.1",
+    "@hotwired/turbo": "^7.2.0",
     "filepond": "^4.25.3",
     "filepond-plugin-file-validate-type": "^1.2.5",
     "filepond-plugin-image-preview": "^4.6.5",

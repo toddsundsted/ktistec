@@ -64,7 +64,7 @@ Spectator.describe SettingsController do
         let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
 
         it "succeeds" do
-          post "/settings/actor", headers, "name=&summary="
+          post "/settings/actor", headers, "name=&summary=&password="
           expect(response.status_code).to eq(302)
         end
 
@@ -81,6 +81,21 @@ Spectator.describe SettingsController do
         it "updates the timezone" do
           post "/settings/actor", headers, "name=&summary=&timezone=Etc/GMT"
           expect(Account.find(Global.account.not_nil!.id).timezone).to eq("Etc/GMT")
+        end
+
+        it "updates the password" do
+          expect{post "/settings/actor", headers, "password=foobarbaz1!"}.
+            to change{Account.find(Global.account.not_nil!.id).encrypted_password}
+        end
+
+        it "does not update the password if blank" do
+          expect{post "/settings/actor", headers, "password="}.
+            not_to change{Account.find(Global.account.not_nil!.id).encrypted_password}
+        end
+
+        it "does not update the password if empty" do
+          expect{post "/settings/actor", headers, "password=%20"}.
+            not_to change{Account.find(Global.account.not_nil!.id).encrypted_password}
         end
 
         it "updates the image" do

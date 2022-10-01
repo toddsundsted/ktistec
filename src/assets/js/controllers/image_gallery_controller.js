@@ -1,4 +1,4 @@
-import { Controller } from "stimulus"
+import { Controller } from "@hotwired/stimulus"
 
 import lightGallery from "lightgallery"
 import "lightgallery/css/lightgallery.css"

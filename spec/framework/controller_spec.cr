@@ -372,9 +372,9 @@ Spectator.describe Ktistec::Controller do
   end
 
   describe "/foo/bar/ok" do
-    it "responds with html" do
-      get "/foo/bar/ok", HTTP::Headers{"Accept" => "text/html"}
-      expect(XML.parse_html(response.body).xpath_nodes("//cite").first).to eq("html")
+    it "responds with json" do
+      get "/foo/bar/ok", HTTP::Headers{"Accept" => "application/json"}
+      expect(JSON.parse(response.body)).to eq("json")
     end
 
     it "responds with text" do
@@ -382,8 +382,18 @@ Spectator.describe Ktistec::Controller do
       expect(response.body.strip).to eq("text")
     end
 
-    it "responds with json" do
+    it "responds with html" do
+      get "/foo/bar/ok", HTTP::Headers{"Accept" => "text/html"}
+      expect(XML.parse_html(response.body).xpath_nodes("//cite").first).to eq("html")
+    end
+
+    it "responds with json by default" do
       get "/foo/bar/ok"
+      expect(JSON.parse(response.body)).to eq("json")
+    end
+
+    it "prefers json" do
+      get "/foo/bar/ok", HTTP::Headers{"Accept" => "application/json, text/plain, text/html"}
       expect(JSON.parse(response.body)).to eq("json")
     end
 

@@ -363,6 +363,78 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe ".public_posts_count" do
+    let(actor) { register.actor }
+
+    macro post(index)
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
+      let_build(:announce, named: activity{{index}}, actor: actor, object: post{{index}})
+      let_create!(
+        :outbox_relationship, named: relationship{{index}},
+        owner: actor,
+        activity: activity{{index}}
+      )
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(described_class.public_posts_count).to be_a(Int64)
+    end
+
+    it "filters out deleted posts" do
+      post5.delete
+      expect(described_class.public_posts_count).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      post5.block
+      expect(described_class.public_posts_count).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete
+      expect(described_class.public_posts_count).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block
+      expect(described_class.public_posts_count).to eq(4)
+    end
+
+    it "filters out non-public posts" do
+      post5.assign(visible: false).save
+      expect(described_class.public_posts_count).to eq(4)
+    end
+
+    it "filters out replies" do
+      post5.assign(in_reply_to: post3).save
+      expect(described_class.public_posts_count).to eq(4)
+    end
+
+    it "filters out objects belonging to undone activities" do
+      activity5.undo
+      expect(described_class.public_posts_count).to eq(4)
+    end
+
+    let_build(:create, actor: actor, object: post5)
+    let_build(:outbox_relationship, named: :outbox, owner: actor, activity: create)
+
+    it "counts posts only once" do
+      outbox.save
+      expect(described_class.public_posts_count).to eq(5)
+    end
+
+    it "returns the count" do
+      expect(described_class.public_posts_count).to eq(5)
+    end
+  end
+
   describe "#with_statistics!" do
     let(object) do
       described_class.new(

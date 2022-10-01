@@ -8,5 +8,6 @@ Ktistec::Server.run do
   Log.setup_from_env
   spawn { TaskWorker.start }
   Task::UpdateMetrics.schedule_unless_exists
+  Task::Backup.schedule_unless_exists
   Session.clean_up_stale_sessions
 end

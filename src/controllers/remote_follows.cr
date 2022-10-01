@@ -77,7 +77,9 @@ class RemoteFollowsController
 
   private def self.account(env)
     if (params = (env.params.body.presence || env.params.json.presence))
-      params["account"]?.try(&.to_s)
+      if (param = params["account"]?) && param.is_a?(String)
+        param.lstrip('@')
+      end
     end
   end
 end

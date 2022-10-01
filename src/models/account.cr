@@ -50,16 +50,15 @@ class Account
     Crypto::Bcrypt::Password.new(encrypted_password).verify(password)
   end
 
-  def password=(@password : String)
-    if (password = @password.presence)
+  def password=(password)
+    if (password = password.presence)
       self.encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
-    else
-      self.encrypted_password = ""
+      @password = password
     end
   end
 
   def password
-    @password.not_nil!
+    @password
   end
 
   def before_save

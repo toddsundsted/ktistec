@@ -8,7 +8,7 @@ crystal:
   end
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
   type = object.type.split("::").last.downcase
-.content data-controller="image-gallery clickable-background" data-action="click->clickable-background#click" data-clickable-background-href-value=href
+.content data-controller="image-gallery clickable-background" data-clickable-background-href-value=href
   - timezone = account.try { |account| Time::Location.load(account.timezone) }
   .summary
     - if object.draft?

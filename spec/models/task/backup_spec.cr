@@ -19,11 +19,11 @@ Spectator.describe Task::Backup do
     end
   end
 
-  describe "#perform" do
+  describe "#perform_backup" do
     subject { described_class.new }
 
     it "sets the next attempt at" do
-      subject.perform
+      subject.perform_backup
       expect(subject.next_attempt_at).not_to be_nil
     end
 
@@ -32,7 +32,7 @@ Spectator.describe Task::Backup do
     let(backup) { "#{file}.backup_#{date}".split("//").last }
 
     it "dumps a backup file" do
-      subject.perform
+      subject.perform_backup
       expect(File.exists?(backup))
     end
   end

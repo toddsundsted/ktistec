@@ -10,6 +10,12 @@ class Task
     include Singleton
 
     def perform
+      if Kemal.config.env == "production"
+        perform_backup
+      end
+    end
+
+    def perform_backup
       name = Ktistec.db_file
       date = Time.local.to_s("%Y%m%d")
       backup = "#{name}.backup_#{date}"

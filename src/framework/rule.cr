@@ -48,7 +48,7 @@ module Ktistec
         {% clazz = clazz.resolve %}
 
         # :inherit:
-        def match(bindings : School::Bindings, &block : School::Bindings -> Nil) : Nil
+        def match(bindings : School::Bindings, trace : School::Trace? = nil, &block : School::Bindings -> Nil) : Nil
           keys = @options.keys
           {% if associations %}
             keys -= {{associations.map(&.id.stringify)}}
@@ -122,6 +122,8 @@ module Ktistec
             query += " WHERE " + conditions.compact.join(" AND ")
           end
 
+          trace.condition(self) if trace
+
           {{clazz.id}}.sql(query).each do |model|
             temporary = bindings.dup
 
@@ -152,6 +154,8 @@ module Ktistec
                 end
               {% end %}
             {% end %}
+
+            trace.fact(model, bindings, temporary) if trace
 
             yield temporary
           end

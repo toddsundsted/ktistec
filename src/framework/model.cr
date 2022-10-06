@@ -732,6 +732,29 @@ module Ktistec
         self
       end
 
+      def to_s(io : IO)
+        io << "#<"
+        self.class.to_s(io)
+        io << " id="
+        self.id.to_s(io)
+        io << ">"
+      end
+
+      def inspect(io : IO)
+        io << "#<"
+        self.class.to_s(io)
+        io << ":0x"
+        self.object_id.to_s(io, 16)
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          {% for v in vs %}
+            io << " " << {{v.stringify}} << "="
+            self.{{v}}.inspect(io)
+          {% end %}
+        {% end %}
+        io << ">"
+      end
+
       def to_json(json : JSON::Builder)
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
@@ -740,16 +763,6 @@ module Ktistec
               json.field({{v.stringify}}, self.{{v}})
             {% end %}
           end
-        {% end %}
-      end
-
-      def to_s(io : IO)
-        super
-        {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-          {% for v in vs %}
-            io << " " << {{v.stringify}} << "=" << self.{{v}}.inspect
-          {% end %}
         {% end %}
       end
 

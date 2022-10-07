@@ -1,5 +1,6 @@
 require "../framework/controller"
 require "../models/activity_pub/activity/**"
+require "../models/activity_pub/object/note"
 require "../models/task/deliver"
 require "../rules/content_rules"
 

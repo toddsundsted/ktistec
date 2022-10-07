@@ -13,7 +13,11 @@ require "http/request"
 # `expect(...last).to match("GET /foo/bar")`
 #
 class HTTP::Client
-  class Cache < Hash(String, String)
+  class Cache
+    @cache = Hash(String, String).new
+
+    delegate :[]?, :[]=, :clear, to: @cache
+
     def <<(object)
       if object.responds_to?(:iri) && object.responds_to?(:to_json_ld)
         self[object.iri] = object.to_json_ld(recursive: true)

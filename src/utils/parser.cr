@@ -153,6 +153,7 @@ module Ktistec
     # rule definition implementation follows...
 
     getter! name : String
+    getter trace : Bool = false
     getter patterns = [] of Pattern
 
     # :inherit:
@@ -165,6 +166,9 @@ module Ktistec
       parser.advance
       loop do
         case parser.current.id
+        when "trace"
+          parser.advance("trace")
+          @trace = true
         when "condition", "any", "none", "assert", "retract"
           pattern = Pattern.new(parser.current.id)
           patterns << pattern.parse(parser)

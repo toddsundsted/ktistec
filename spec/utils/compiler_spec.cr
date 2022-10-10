@@ -198,6 +198,14 @@ Spectator.describe Ktistec::Compiler do
       end
     end
 
+    context "given a rule definition with trace specified" do
+      let(input) { %q|rule "name" trace end| }
+
+      it "enables tracing" do
+        expect(subject.compile.rules.first.trace).to be_true
+      end
+    end
+
     context "given a rule definition using any" do
       let(input) { %q|rule "name" any FooBar end| }
 

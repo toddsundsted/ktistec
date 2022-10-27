@@ -48,7 +48,7 @@ module Ktistec
         {% clazz = clazz.resolve %}
 
         # :inherit:
-        def match(bindings : School::Bindings, trace : School::Trace? = nil, &block : School::Bindings -> Nil) : Nil
+        def match(bindings : School::Bindings, trace : School::TraceNode? = nil, &block : School::Bindings -> Nil) : Nil
           keys = @options.keys
           {% if associations %}
             keys -= {{associations.map(&.id.stringify)}}

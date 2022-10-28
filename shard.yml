@@ -44,4 +44,4 @@ crystal: 1.2.2
 libraries:
   libsqlite3: ">= 3.11.0"
 
-license: MIT
+license: AGPL-3.0

@@ -1,5 +1,3 @@
-require "kilt"
-
 require "../framework/controller"
 
 module Ktistec::ViewHelper

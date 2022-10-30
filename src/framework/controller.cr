@@ -1,5 +1,4 @@
 require "kemal"
-require "kilt/slang"
 
 require "./ext/context"
 require "../views/view_helper"

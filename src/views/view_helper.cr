@@ -1,3 +1,6 @@
+require "ecr"
+require "slang"
+
 require "../framework/controller"
 
 module Ktistec::ViewHelper
@@ -36,9 +39,9 @@ module Ktistec::ViewHelper
     extend ClassMethods
   end
 
-  # the following three macros were copied from kemal. copying them
-  # here was necessary because kilt was removed from kemal. we depend
-  # on kilt for rendering slang templates. see:
+  # the following four macros were copied from kemal and kilt. copying
+  # them here was necessary because kilt was removed from kemal. we
+  # depended on kilt for rendering slang templates. see:
   # https://github.com/kemalcr/kemal/pull/618
 
   # Capture a block inside of a view.
@@ -47,7 +50,7 @@ module Ktistec::ViewHelper
   #
   macro content_for(key, file = __FILE__)
     %proc = ->() do
-      IO::Memory.new.tap do |__kilt_io__|
+      IO::Memory.new.tap do |__ktistec_io__|
         {{ yield }}
       end
     end
@@ -66,7 +69,22 @@ module Ktistec::ViewHelper
   # Render a view with the given filename.
   #
   macro render(filename)
-    Kilt.render({{filename}})
+    String.build do |__ktistec_io__|
+      embed({{filename}}, "__ktistec_io__")
+    end
+  end
+
+  # Embed a view with the given filename.
+  #
+  macro embed(filename, io_name)
+    {% ext = filename.split(".").last %}
+    {% if ext == "ecr" %}
+      ECR.embed({{filename}}, {{io_name}})
+    {% elsif ext == "slang" %}
+      Slang.embed({{filename}}, {{io_name}})
+    {% else %}
+      {% raise "unsupported template extension: #{ext.id}" %}
+    {% end %}
   end
 
   ## Parameter coercion

@@ -30,7 +30,7 @@ class Task
     end
 
     @[Assignable]
-    property deliver_to : Array(String)?
+    @deliver_to : Array(String)?
 
     def deliver_to
       @deliver_to ||=

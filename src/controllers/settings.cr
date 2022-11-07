@@ -73,6 +73,7 @@ class SettingsController
       "name" => params["name"]?.try(&.to_s),
       "summary" => params["summary"]?.try(&.to_s),
       "timezone" => params["timezone"]?.try(&.to_s),
+      "password" => params["password"]?.try(&.to_s),
       # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
       "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },

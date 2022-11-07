@@ -10,4 +10,6 @@ Ktistec::Server.run do
   Task::UpdateMetrics.schedule_unless_exists
   Task::Backup.schedule_unless_exists
   Session.clean_up_stale_sessions
+  # check the rules when the server starts
+  ContentRules.domain
 end

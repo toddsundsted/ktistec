@@ -79,7 +79,7 @@ class ContentRules
   Ktistec::Compiler.register_accessor(following)
   Ktistec::Compiler.register_accessor(followers)
 
-  protected class_property domain : School::Domain do
+  class_property domain : School::Domain do
     definition = File.read(File.join(Dir.current, "etc", "rules", "content.rules"))
     compiler = Ktistec::Compiler.new(definition)
     compiler.compile

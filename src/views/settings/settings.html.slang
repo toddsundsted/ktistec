@@ -1,16 +1,21 @@
 - content_for "head" do
   script src="/dist/settings.bundle.js"
 == render "src/views/partials/actor-panel.html.slang"
-h1 User Settings
+h1 Account Settings
+p
+  | Settings for account <strong>#{actor.username}</strong>.
 == form_tag(account, "/settings/actor") do
   == error_messages(account)
   == input_tag("Display Name", actor, name)
   == input_tag("Summary", actor, summary)
   == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone"})
+  == input_tag("Password", account, password, type: "password", placeholder: "Leave blank to leave unchanged")
   == input_tag("Background Image", actor, image, class: "filepond", type: "file")
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
   input.ui.primary.button type="submit" value="Update"
 h2 Delete Account!
+p
+  | Delete account <strong>#{actor.username}</strong>. This action cannot be undone!
 == form_tag(nil, "/settings/terminate") do
   input.ui.dangerous.button type="submit" value="Delete Account" data-modal="terminate"
 .ui.basic.tiny.terminate.modal

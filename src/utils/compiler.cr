@@ -46,7 +46,7 @@ module Ktistec
                 # this should never happen
               end
             end
-            rule = School::Rule.new(statement.name, patterns, actions)
+            rule = School::Rule.new(statement.name, patterns, actions, trace: statement.trace)
             domain.add(rule)
           end
         end

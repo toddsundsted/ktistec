@@ -893,17 +893,24 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe "#to_s" do
+    it "returns a string representation" do
+      saved_model = FooBarModel.new
+      expect(saved_model.to_s).to match(/id=/)
+    end
+  end
+
+  describe "#inspect" do
+    it "returns a string representation" do
+      saved_model = FooBarModel.new
+      expect(saved_model.inspect).to match(/id=nil/)
+    end
+  end
+
   describe "#to_json" do
     it "returns the JSON representation" do
       saved_model = FooBarModel.new
       expect(saved_model.to_json).to match(/"id":null/)
-    end
-  end
-
-  describe "#to_s" do
-    it "returns the string representation" do
-      saved_model = FooBarModel.new
-      expect(saved_model.to_s).to match(/id=nil/)
     end
   end
 

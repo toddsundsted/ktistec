@@ -15,6 +15,14 @@ Spectator.describe Account do
     it "sets the password" do
       expect{subject.password = "foobar"}.to change{subject.encrypted_password}
     end
+
+    it "does not set the password if the password is nil" do
+      expect{subject.password = nil}.not_to change{subject.encrypted_password}
+    end
+
+    it "does not set the password if the password is an empty string" do
+      expect{subject.password = ""}.not_to change{subject.encrypted_password}
+    end
   end
 
   describe "#encrypted_password" do

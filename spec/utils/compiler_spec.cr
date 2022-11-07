@@ -18,7 +18,7 @@ module CompilerSpec
       raise "not implemented"
     end
 
-    def match(bindings : School::Bindings, &block : School::Bindings -> Nil) : Nil
+    def match(bindings : School::Bindings, trace : School::TraceNode? = nil, &block : School::Bindings -> Nil) : Nil
       raise "not implemented"
     end
 
@@ -195,6 +195,14 @@ Spectator.describe Ktistec::Compiler do
             end
           end
         end
+      end
+    end
+
+    context "given a rule definition with trace specified" do
+      let(input) { %q|rule "name" trace end| }
+
+      it "enables tracing" do
+        expect(subject.compile.rules.first.trace).to be_true
       end
     end
 

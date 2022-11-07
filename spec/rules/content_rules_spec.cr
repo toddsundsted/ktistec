@@ -206,6 +206,43 @@ Spectator.describe ContentRules do
         end
       end
 
+      context "object is in reply to an object attributed to the owner" do
+        before_each do
+          object.assign(in_reply_to:
+            Factory.build(:object, attributed_to: owner)
+          )
+        end
+
+        it "adds the create to the notifications" do
+          run(owner, create)
+          expect(owner.notifications).to eq([create])
+        end
+      end
+
+      context "object is in reply to an object attributed to another actor" do
+        before_each do
+          object.assign(in_reply_to:
+            Factory.build(:object, attributed_to: other)
+          )
+        end
+
+        it "does not add the create to the notifications" do
+          run(owner, create)
+          expect(owner.notifications).to be_empty
+        end
+      end
+
+      context "another object is in reply to an object attributed to the owner" do
+        let_create!(:object, named: nil, in_reply_to:
+          Factory.build(:object, attributed_to: owner)
+        )
+
+        it "does not add the create to the notifications" do
+          run(owner, create)
+          expect(owner.notifications).to be_empty
+        end
+      end
+
       context "object is attributed to another actor" do
         before_each { object.assign(attributed_to: other) }
 

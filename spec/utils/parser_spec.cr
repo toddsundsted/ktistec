@@ -135,6 +135,11 @@ Spectator.describe Ktistec::RuleDefinition do
       expect{subject.std(parser)}.to change{subject.name?}.to("name")
     end
 
+    it "parses the trace keyword" do
+      parser = Ktistec::Parser.new(%q|rule "name" trace end|).tap(&.current)
+      expect{subject.std(parser)}.to change{subject.trace}.to(true)
+    end
+
     it "parses the patterns" do
       parser = Ktistec::Parser.new(%q|rule "name" condition One condition Two end|).tap(&.current)
       expect{subject.std(parser)}.to change{subject.patterns.size}.to(2)

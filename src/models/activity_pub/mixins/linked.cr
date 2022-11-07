@@ -25,6 +25,14 @@ module Ktistec
         !local?
       end
 
+      def to_s(io : IO)
+        io << "#<"
+        self.class.to_s(io)
+        io << " iri="
+        self.iri.to_s(io)
+        io << ">"
+      end
+
       macro included
         @[Persistent]
         property iri : String { "" }

@@ -80,7 +80,7 @@ class ContentRules
   Ktistec::Compiler.register_accessor(followers)
 
   class_property domain : School::Domain do
-    definition = File.read(File.join(Dir.current, "etc", "rules", "content.rules"))
+    definition = {{read_file("#{__DIR__}/../../etc/rules/content.rules")}}
     compiler = Ktistec::Compiler.new(definition)
     compiler.compile
   end

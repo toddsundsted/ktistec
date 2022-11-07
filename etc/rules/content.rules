@@ -1,3 +1,84 @@
+# These are the rule definitions for Ktistec. Rules define how inbound
+# and outbound activities are processed and stored in collections.
+#
+# Rules are processed in order of their appearance in this file. For
+# each rule, conditions are tested against facts and all combinations
+# of facts for which all conditions were true are placed into an
+# agenda. Once matching is complete, all of the actions associated
+# with each match are executed. It's not possible for an action to
+# change the contents of the agenda -- for each rule, all matches are
+# computed and then actions are executed. An action can influence the
+# matches for subsequent rules, however.
+#
+# Rules have the following syntax:
+#   rule <name>
+#     [optional trace]
+#     <condition 1>
+#     <condition 2>
+#       ...
+#     <condition N>
+#     <action 1>
+#     <action 2>
+#       ...
+#     <action M>
+#   end
+#
+# <name> is a string of characters, enclosed in quotes. It does not
+# have to be unique.
+#
+# Each <condition n> must begin with "condition", "any", or
+# "none". The keyword "condition" specifies a pattern that must match
+# a fact for the condition to be true. The keyword "any" specifies a
+# pattern that must match at least once fact for the condition to be
+# true. The keyword "none" specifies a pattern that must not match any
+# facts for the condition to be true.
+#
+# Each <action m> must begin with "assert" or "retract". The keyword
+# "assert" asserts a fact, adding it to the database. The keyword
+# "retract" retracts a fact, removing it from the database.
+#
+# The keyword "trace" is optional. If specified in a rule, it enables
+# tracing for the rule. Tracing dumps information about the matching
+# process to the console, which can assist with debugging.
+#
+# Capitalized words (e.g. Object) are names of classes of facts.
+# Uncapitalized words (e.g. owner) are variables that can be bound to
+# values during matching and then used to constrain subsequent
+# conditions. A variable can be bound to a fact, or to a string or
+# numeric value.
+#
+# Some facts have fields, which are specified in patterns by names
+# ending in a colon (e.g. owner:). Fields constrain the instances of a
+# fact class that match a pattern.
+#
+# Consider a condition like the following:
+#   condition Actor actor, iri: "https://foo.bar/baz"
+#
+# It will only match instances of the class Actor with the IRI
+# "https://foo.bar/baz". Since IRIs happen to be unique, it will match
+# one instance or none at all. If successful, it will bind `actor` to
+# the matched fact.
+#
+# Consider a condition like the following where the string literal has
+# been replaced by a variable:
+#   condition Actor actor, iri: iri
+#
+# It will match all instances of the class Actor -- failing only if
+# there are none. If successful, it will bind `actor` and `iri` to
+# each matched fact and its IRI.
+#
+# Bound variables can be used in later conditions. Consider the
+# following pair of conditions:
+#   condition Actor actor, iri: "https://foo.bar/baz"
+#   condition Object, object, attributed_to: actor
+#
+# These conditions will only match successfully if there is an
+# instance of the class Actor with the IRI "https://foo.bar/baz" and
+# at least one instance of the class Object which is attributed to
+# that actor. If this were part of a rule, the rule actions would be
+# executed for each such instance of class Object. Bound values for
+# actor and object would be available to each action invocation.
+
 # Outbox
 rule "outbox"
   condition Outgoing, actor, activity

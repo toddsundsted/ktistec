@@ -9,6 +9,7 @@ RUN crystal build src/ktistec/server.cr --static --no-debug --release
 FROM alpine:latest AS server
 RUN apk --no-cache add tzdata
 WORKDIR /app
+COPY --from=builder /build/etc /app/etc
 COPY --from=builder /build/public /app/public
 COPY --from=builder /build/server /bin/server
 RUN mkdir /db

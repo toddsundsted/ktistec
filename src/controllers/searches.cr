@@ -17,6 +17,9 @@ class SearchesController
         if url.scheme && url.host && url.path
           query
         else
+          if query.starts_with?("@")
+            query = query[1..]
+          end
           WebFinger.query("acct:#{query}").link("self").href.not_nil!
         end
       actor_or_object =

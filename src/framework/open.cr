@@ -11,7 +11,7 @@ module Ktistec
         case response.status_code
         when 200
           return yield response
-        when 301, 302, 307, 308
+        when 301, 302, 303, 307, 308
           if (tmp = response.headers["Location"]?) && (url = tmp)
             next
           else

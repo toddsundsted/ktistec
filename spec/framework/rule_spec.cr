@@ -439,6 +439,42 @@ Spectator.describe Ktistec::Rule do
             expect(yields).to be_empty
           end
         end
+
+        # edge cases
+
+        context "with a target with a cached association" do
+          let(model11) { RuleModel.new(id: 11_i64, parent_id: 2_i64).save }
+
+          pre_condition { expect(model11.child_of?).to eq(model2) }
+
+          subject { RulePattern.new(School::Lit.new(model11), child_of: School::Var.new("parent")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the association" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"parent" => model2}])
+          end
+        end
+
+        context "with a target with an uncached association" do
+          let(model11) { RuleModel.new(id: 11_i64, parent_id: 22_i64).save }
+
+          pre_condition { expect(model11.child_of?).to be_nil }
+
+          subject { RulePattern.new(School::Lit.new(model11), child_of: School::Var.new("parent")) }
+
+          it "does not invoke the block" do
+            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+          end
+
+          it "does not bind values" do
+            subject.match(bindings, &block)
+            expect(yields).to be_empty
+          end
+        end
       end
 
       describe ".assert" do

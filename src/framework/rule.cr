@@ -135,9 +135,8 @@ module Ktistec
               {% for association in associations %}
                 if @options.has_key?({{association.id.stringify}})
                   if (target = @options[{{association.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
-                    if (value = model.{{association.id}}?(include_deleted: true, include_undone: true))
-                      temporary[name] = value
-                    end
+                    next unless (value = model.{{association.id}}?(include_deleted: true, include_undone: true))
+                    temporary[name] = value
                   end
                 end
               {% end %}

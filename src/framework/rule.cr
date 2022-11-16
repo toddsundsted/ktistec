@@ -146,9 +146,8 @@ module Ktistec
               {% for property in properties %}
                 if @options.has_key?({{property.id.stringify}})
                   if (target = @options[{{property.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
-                    if (value = model.{{property.id}})
-                      temporary[name] = value
-                    end
+                    next unless (value = model.{{property.id}})
+                    temporary[name] = value
                   end
                 end
               {% end %}

@@ -185,9 +185,7 @@ module Ktistec
         Ktistec.database.query_all(
           query, *args_,
         ) do |rs|
-          read(rs, **persistent_columns.merge(additional_columns))
-        end.map do |options|
-          compose(**options)
+          compose(**read(rs, **persistent_columns.merge(additional_columns)))
         end
       end
 
@@ -195,9 +193,7 @@ module Ktistec
         Ktistec.database.query_all(
           query, args: args,
         ) do |rs|
-          read(rs, **persistent_columns.merge(additional_columns))
-        end.map do |options|
-          compose(**options)
+          compose(**read(rs, **persistent_columns.merge(additional_columns)))
         end
       end
 
@@ -205,9 +201,7 @@ module Ktistec
         Ktistec.database.query_one(
           query, *args_,
         ) do |rs|
-          read(rs, **persistent_columns.merge(additional_columns))
-        end.try do |options|
-          compose(**options)
+          compose(**read(rs, **persistent_columns.merge(additional_columns)))
         end
       end
 
@@ -215,9 +209,7 @@ module Ktistec
         Ktistec.database.query_one(
           query, args: args,
         ) do |rs|
-          read(rs, **persistent_columns.merge(additional_columns))
-        end.try do |options|
-          compose(**options)
+          compose(**read(rs, **persistent_columns.merge(additional_columns)))
         end
       end
 

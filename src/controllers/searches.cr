@@ -12,6 +12,7 @@ class SearchesController
     actor_or_object = nil
 
     if (query = env.params.query["query"]?)
+      query = query.strip()
       url = URI.parse(query)
       url =
         if url.scheme && url.host && url.path

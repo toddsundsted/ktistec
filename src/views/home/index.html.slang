@@ -1,8 +1,5 @@
-h1 Community
-section.ui.cards
-  - accounts.map(&.actor).each do |actor|
-    == render "src/views/partials/actor-card.html.slang"
-h1 Activity
+- accounts.map(&.actor).each do |actor|
+  == render "src/views/partials/actor-panel.html.slang"
 section.ui.feed
   - objects.each do |object|
     crystal:

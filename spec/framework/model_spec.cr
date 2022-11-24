@@ -478,13 +478,24 @@ Spectator.describe Ktistec::Model do
   end
 
   describe ".sql" do
-    it "returns the saved instances" do
-      saved_model = NotNilModel.new(val: "Val").save
-      expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", "Val")).to eq([saved_model])
+    context "given a saved instance" do
+      let!(saved_model) { NotNilModel.new(val: "Val").save }
+
+      it "returns the saved instances" do
+        expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", "Val")).to eq([saved_model])
+      end
+
+      it "returns the saved instances" do
+        expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", ["Val"])).to eq([saved_model])
+      end
     end
 
     it "returns an empty collection" do
       expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", "Val")).to be_empty
+    end
+
+    it "returns an empty collection" do
+      expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", ["Val"])).to be_empty
     end
   end
 

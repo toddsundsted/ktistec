@@ -27,8 +27,8 @@ Spectator.describe Task::Performance do
       expect(subject.next_attempt_at).not_to be_nil
     end
 
-    it "records a data point" do
-      expect{subject.perform}.to change{Point.count}.by(1)
+    it "records three data points" do
+      expect{subject.perform}.to change{Point.count}.by(3)
     end
   end
 end

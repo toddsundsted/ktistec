@@ -23,7 +23,7 @@
           - attachments.each do |attachment|
             tr
               th.name == attachment.name
-              td.value == maybe_show_link(attachment.value)
+              td.value == attachment.value
   - if (_account = env.account?) && _account.actor != actor
     .ui.basic.segment
       - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))

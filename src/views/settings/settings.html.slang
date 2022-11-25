@@ -21,12 +21,8 @@ p
 	  label
 	    | Value
     - 0.upto(3).each do |i|
-      - if actor.attachments[i].nil?
-        input style="width: 48%; margin-right: 1ex" type="text" name="attachment_#{i}_name"
-        input style="width: 48%; margin-right: 1ex" type="text" name="attachment_#{i}_value"
-      - else
-        input style="width: 48%; margin-right: 1ex" type="text" name="attachment_#{i}_name" value=actor.attachments[i].name
-        input style="width: 48%; margin-right: 1ex" type="text" name="attachment_#{i}_value" value=actor.attachments[i].value
+      input type="text" name="attachment_#{i}_name" value=actor.attachments[i].name
+      input type="text" name="attachment_#{i}_value" value=actor.attachments[i].value
   == input_tag("Background Image", actor, image, class: "filepond", type: "file")
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
   input.ui.primary.button type="submit" value="Update"

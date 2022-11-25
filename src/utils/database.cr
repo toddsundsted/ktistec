@@ -13,17 +13,41 @@ module Ktistec
   module Database
     # Destroy and recreate timeline and notifications.
     #
-    def self.recreate_timeline_and_notifications
+    def self.recreate_timeline_and_notifications(limit = 1000)
+      query = <<-QUERY
+        type IN ("#{Relationship::Content::Inbox}","#{Relationship::Content::Outbox}")
+        AND from_iri = ?
+        AND created_at > ?
+        ORDER BY created_at ASC
+        LIMIT ?
+      QUERY
+
       Relationship::Content::Notification.all.each(&.destroy)
       Relationship::Content::Timeline.all.each(&.destroy)
+
       Account.all.each do |account|
-        Relationship.where(%Q|type in ("#{Relationship::Content::Inbox}","#{Relationship::Content::Outbox}") AND from_iri = ? ORDER BY created_at ASC|, account.iri).each do |relationship|
-          if relationship.responds_to?(:activity) && relationship.activity?
-            School::Fact.clear!
-            School::Fact.assert(ContentRules::IsAddressedTo.new(relationship.activity, account.actor))
-            ContentRules.new.run
+        i = 0
+        done = false
+        last = Time::UNIX_EPOCH
+        while !done
+          i += 1
+          done = true
+          Relationship.where(query, account.iri, last, limit).each do |relationship|
+            done = false
+            last = relationship.created_at
+            if relationship.responds_to?(:activity) && relationship.activity?
+              begin
+                School::Fact.clear!
+                School::Fact.assert(ContentRules::IsAddressedTo.new(relationship.activity, account.actor))
+                ContentRules.new.run
+              rescue ex
+                puts "Exception while running rules: " + ex.inspect_with_backtrace
+              end
+            end
           end
+          puts "Batch #{i} complete"
         end
+
         # adjust timestamps
         Relationship::Content::Notification.all.each do |notification|
           if (created_at = notification.activity?.try(&.created_at))

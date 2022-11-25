@@ -6,7 +6,23 @@ module Ktistec
   module Rule
     # Makes a pattern class given a model class.
     #
+    #   Ktistec::Rule.make_pattern(
+    #     RulePattern,
+    #     RuleModel,
+    #     associations: [child_of],
+    #     properties: [id, name]
+    #   )
+    #
+    # In order to perform a match operation, pattern classes have to
+    # transform literals and bound values into the types the SQLite
+    # client library understands. This imposes constraints on types
+    # that participating model properties may use. In the example
+    # above, properties `id` and `name` must be one of the supported
+    # types.
+    #
     macro make_pattern(name, clazz, associations = nil, properties = nil)
+      {% clazz = clazz.resolve %}
+
       class {{name.id}} < School::Pattern
         @vars = [] of String
 
@@ -45,7 +61,9 @@ module Ktistec
           @vars
         end
 
-        {% clazz = clazz.resolve %}
+        private alias SupportedType = String | Symbol | Float64 | Float32 | Int64 | Int32 | Char | Bool
+
+        private alias ConditionPair = Tuple(String, SupportedType | Array(SupportedType) | Nil)?
 
         # :inherit:
         def match(bindings : School::Bindings, trace : School::TraceNode? = nil, &block : School::Bindings -> Nil) : Nil
@@ -56,13 +74,12 @@ module Ktistec
           {% if properties %}
             keys -= {{properties.map(&.id.stringify)}}
           {% end %}
-
           raise ArgumentError.new("invalid arguments: #{keys.join(",")}") unless keys.empty?
 
           table_name = {{clazz.id}}.table_name
           column_names = {{clazz.id}}.columns(table_name)
 
-          conditions = [] of String?
+          conditions = [] of ConditionPair
 
           if (target = @target)
             conditions << condition(table_name, "id", target, bindings) do |value|
@@ -96,6 +113,7 @@ module Ktistec
             {% for property in properties %}
               if @options.has_key?({{property.id.stringify}})
                 conditions << condition(table_name, {{property.id.stringify}}, @options[{{property.id.stringify}}], bindings) do |value|
+                  raise "values of type #{value.class} are currently unsupported" unless value.is_a?(SupportedType?)
                   value
                 end
               end
@@ -103,28 +121,29 @@ module Ktistec
           {% end %}
 
           {% if clazz < Model::Undoable %}
-            conditions << "#{table_name}.undone_at IS NULL" unless @options.has_key?("undone_at")
+            conditions << { %Q|#{table_name}."undone_at" IS NULL|, nil } unless @options.has_key?("undone_at")
           {% end %}
           {% if clazz < Model::Deletable %}
-            conditions << "#{table_name}.deleted_at IS NULL" unless @options.has_key?("deleted_at")
+            conditions << { %Q|#{table_name}."deleted_at" IS NULL|, nil } unless @options.has_key?("deleted_at")
           {% end %}
           {% if clazz < Model::Polymorphic %}
             unless @options.has_key?("type")
               types = {{(clazz.all_subclasses << clazz).map(&.stringify.stringify).join(",")}}
-              conditions << "#{table_name}.type IN (#{types})"
+              conditions << { %Q|#{table_name}."type" IN (#{types})|, nil }
             end
           {% end %}
 
           query = <<-SQL
           SELECT #{column_names} FROM #{table_name}
           SQL
-          unless conditions.compact.empty?
-            query += " WHERE " + conditions.compact.join(" AND ")
+          unless (conditions = conditions.compact).empty?
+            query += " WHERE " + conditions.map(&.first).join(" AND ")
+            args = conditions.map(&.last).flatten.compact
           end
 
           trace.condition(self) if trace
 
-          {{clazz.id}}.sql(query).each do |model|
+          {{clazz.id}}.sql(query, args).each do |model|
             temporary = bindings.dup
 
             if (target = @target) && (name = target.name?) && !temporary.has_key?(name)
@@ -159,42 +178,42 @@ module Ktistec
           end
         end
 
-        private def condition(table, column, expression, bindings, &block)
+        private def condition(table, column, expression, bindings, &block) : ConditionPair
           case expression
           when School::Lit
             if (term = yield expression.target)
-              %Q|"#{table}"."#{column}" = #{term.inspect}|
+              { %Q|"#{table}"."#{column}" = ?|, term }
             else
-              %Q|"#{table}"."#{column}" IS NULL|
+              { %Q|"#{table}"."#{column}" IS NULL|, nil }
             end
           when School::Var
             if bindings.has_key?(expression.name)
               if (term = yield bindings[expression.name])
-                %Q|"#{table}"."#{column}" = #{term.inspect}|
+                 { %Q|"#{table}"."#{column}" = ?|, term }
               else
-                %Q|"#{table}"."#{column}" IS NULL|
+                { %Q|"#{table}"."#{column}" IS NULL|, nil }
               end
             else
-              %Q|"#{table}"."#{column}" IS NOT NULL|
+              { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
             end
           when School::Not
             target = expression.target
             case target
             when School::Lit
               if (term = yield target.target)
-                %Q|"#{table}"."#{column}" != #{term.inspect}|
+                { %Q|"#{table}"."#{column}" != ?|, term }
               else
-                %Q|"#{table}"."#{column}" IS NOT NULL|
+                { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
               end
             when School::Var
               if bindings.has_key?(target.name)
                 if (term = yield bindings[target.name])
-                  %Q|"#{table}"."#{column}" != #{term.inspect}|
+                  { %Q|"#{table}"."#{column}" != ?|, term }
                 else
-                  %Q|"#{table}"."#{column}" IS NOT NULL|
+                  { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
                 end
               else
-                %Q|"#{table}"."#{column}" IS NULL|
+                { %Q|"#{table}"."#{column}" IS NULL|, nil }
               end
             end
           when School::Within
@@ -202,21 +221,24 @@ module Ktistec
             # effectively match anything. `wildcard` tracks
             # that.
             wildcard = false
-            values = [] of String
+            params = [] of String
+            values = [] of SupportedType
             expression.targets.each do |target|
               case target
               when School::Lit
                 if (term = yield target.target)
-                  values << term.inspect
+                  params << "?"
+                  values << term
                 else
-                  values << "NULL"
+                  params << "NULL"
                 end
               when School::Var
                 if bindings.has_key?(target.name)
                   if (term = yield bindings[target.name])
-                    values << term.inspect
+                    params << "?"
+                    values << term
                   else
-                    values << "NULL"
+                    params << "NULL"
                   end
                 else
                   wildcard = true
@@ -224,16 +246,15 @@ module Ktistec
               end
             end
             if wildcard
-              %Q|"#{table}"."#{column}" IS NOT NULL|
+              { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
             else
-              %Q|"#{table}"."#{column}" IN (#{values.join(",")})|
+              { %Q|"#{table}"."#{column}" IN (#{params.join(',')})|, values }
             end
-
           when School::Accessor
             if (term = yield expression.call(bindings))
-              %Q|"#{table}"."#{column}" = #{term.inspect}|
+              { %Q|"#{table}"."#{column}" = ?|, term }
             else
-              %Q|"#{table}"."#{column}" IS NULL|
+              { %Q|"#{table}"."#{column}" IS NULL|, nil }
             end
           else
             raise "#{expression.class} is unsupported"

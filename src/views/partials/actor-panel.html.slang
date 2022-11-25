@@ -15,7 +15,8 @@
     .ui.segment
       = actor.display_name
       br: a href=actor.display_link = actor.account_uri
-      br: == s actor.summary
+      - if (summary = actor.summary.presence)
+        br: == s summary
   - if (_account = env.account?) && _account.actor != actor
     .ui.basic.segment
       - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))

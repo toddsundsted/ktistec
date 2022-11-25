@@ -193,7 +193,7 @@ Spectator.describe HomeController do
         it "renders a list of local actors" do
           get "/", HTML_HEADERS
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//a[contains(@href,'#{username}')]/@href")).to contain_exactly(/\/actors\/#{username}/)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'segments')]//a[contains(@href,'#{username}')]/@href")).to contain_exactly(/\/@#{username}/)
         end
 
         it "renders a list of local actors" do

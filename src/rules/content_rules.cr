@@ -1,10 +1,8 @@
-require "school/domain/builder"
-
-require "../utils/compiler"
 require "../framework/rule"
 require "../models/activity_pub/activity"
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
+require "../utils/compiler"
 
 # optionally count database operations.
 

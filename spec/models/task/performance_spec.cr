@@ -1,8 +1,8 @@
-require "../../../src/models/task/backup"
+require "../../../src/models/task/performance"
 
 require "../../spec_helper/model"
 
-Spectator.describe Task::Backup do
+Spectator.describe Task::Performance do
   setup_spec
 
   describe ".schedule_unless_exists" do
@@ -19,21 +19,16 @@ Spectator.describe Task::Backup do
     end
   end
 
-  describe "#perform_backup" do
+  describe "#perform" do
     subject { described_class.new }
 
     it "sets the next attempt at" do
-      subject.perform_backup
+      subject.perform
       expect(subject.next_attempt_at).not_to be_nil
     end
 
-    let(file) { Ktistec.db_file }
-    let(date) { Time.local.to_s("%Y%m%d") }
-    let(backup) { "#{file}.backup_#{date}".split("//").last }
-
-    it "dumps a backup file" do
-      subject.perform_backup
-      expect(File.exists?(backup))
+    it "records three data points" do
+      expect{subject.perform}.to change{Point.count}.by(3)
     end
   end
 end

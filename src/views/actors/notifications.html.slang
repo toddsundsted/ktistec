@@ -44,10 +44,15 @@
               i.user.icon
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-              | mentioned you in
-              a< href=remote_object_path(activity.object) their post
-              | .
+              - if (in_reply_to = activity.object.in_reply_to?)
+                a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+                a> href=remote_object_path(activity.object) replied to
+                a< href=remote_object_path(in_reply_to) your post
+                | .
+              - else
+                a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+                a<> href=remote_object_path(activity.object) mentioned
+                | you.
         - elsif activity.is_a?(ActivityPub::Activity::Follow)
           .label
             - if (icon = activity.actor.icon)

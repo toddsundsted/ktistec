@@ -9,6 +9,9 @@ class RuleModel
   @[Persistent]
   property parent_id : Int64?
   belongs_to child_of, class_name: RuleModel, foreign_key: parent_id, primary_key: id
+
+  @[Persistent]
+  property name : String?
 end
 
 Spectator.describe Ktistec::Rule do
@@ -28,7 +31,7 @@ Spectator.describe Ktistec::Rule do
       RulePattern,
       RuleModel,
       associations: [child_of],
-      properties: [id]
+      properties: [id, name]
     )
 
     describe "#vars" do
@@ -58,12 +61,13 @@ Spectator.describe Ktistec::Rule do
         Ktistec.database.exec <<-SQL
           CREATE TABLE rule_models (
             id integer PRIMARY KEY AUTOINCREMENT,
-            parent_id integer
+            parent_id integer,
+            name text
           )
         SQL
         Ktistec.database.exec <<-SQL
-          INSERT INTO rule_models (id, parent_id)
-          VALUES (1, null), (2, 1), (3, 2)
+          INSERT INTO rule_models (id, parent_id, name)
+          VALUES (1, null, "one"), (2, 1, "two"), (3, 2, "three")
         SQL
       end
       after_each do
@@ -429,6 +433,76 @@ Spectator.describe Ktistec::Rule do
           let(bindings) { School::Bindings{"id" => nil} }
 
           subject { RulePattern.new(id: School::Var.new("id")) }
+
+          it "does not invoke the block" do
+            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+          end
+
+          it "does not bind values" do
+            subject.match(bindings, &block)
+            expect(yields).to be_empty
+          end
+        end
+
+        # edge cases
+
+        context "with a target with a cached association" do
+          let(model11) { RuleModel.new(id: 11_i64, parent_id: 2_i64).save }
+
+          pre_condition { expect(model11.child_of?).to eq(model2) }
+
+          subject { RulePattern.new(School::Lit.new(model11), child_of: School::Var.new("parent")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the association" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"parent" => model2}])
+          end
+        end
+
+        context "with a target with an uncached association" do
+          let(model11) { RuleModel.new(id: 11_i64, parent_id: 22_i64).save }
+
+          pre_condition { expect(model11.child_of?).to be_nil }
+
+          subject { RulePattern.new(School::Lit.new(model11), child_of: School::Var.new("parent")) }
+
+          it "does not invoke the block" do
+            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+          end
+
+          it "does not bind values" do
+            subject.match(bindings, &block)
+            expect(yields).to be_empty
+          end
+        end
+
+        context "with a target with a non-nil property" do
+          let(model11) { RuleModel.new(id: 11_i64, name: "eleven").save }
+
+          pre_condition { expect(model11.name).to eq("eleven") }
+
+          subject { RulePattern.new(School::Lit.new(model11), name: School::Var.new("name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the association" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "eleven"}])
+          end
+        end
+
+        context "with a target with a nil property" do
+          let(model11) { RuleModel.new(id: 11_i64).save }
+
+          pre_condition { expect(model11.name).to be_nil }
+
+          subject { RulePattern.new(School::Lit.new(model11), name: School::Var.new("name")) }
 
           it "does not invoke the block" do
             expect{subject.match(bindings, &block)}.not_to change{yields.size}

@@ -82,6 +82,22 @@ module ActivityPub
 
     has_many objects, class_name: ActivityPub::Object, foreign_key: attributed_to_iri, primary_key: iri
 
+    struct Attachment
+      include JSON::Serializable
+
+      property name : String
+
+      property type : String
+
+      property value : String
+
+      def initialize(@name, @type, @value)
+      end
+    end
+
+    @[Persistent]
+    property attachments : Array(Attachment)
+
     def before_validate
       if changed?(:username)
         clear!(:username)
@@ -93,6 +109,7 @@ module ActivityPub
           self.following = "#{host}/actors/#{username}/following"
           self.followers = "#{host}/actors/#{username}/followers"
           self.urls = ["#{host}/@#{username}"]
+          self.attachments = [] of Attachment
         end
       end
     end
@@ -691,6 +708,12 @@ module ActivityPub
             AND rel.created_at > ?
       QUERY
       Ktistec.database.scalar(query, iri, since).as(Int64)
+    end
+
+    def prepare_attachments
+      self.attachments.size.upto(3) do |i|
+        self.attachments << Attachment.new("", "", "")
+      end
     end
 
     def approve(object)

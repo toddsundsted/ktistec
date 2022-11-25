@@ -7,6 +7,7 @@ class SettingsController
   get "/settings" do |env|
     account = env.account
     actor = account.actor
+    actor.prepare_attachments
 
     settings = Ktistec.settings
 
@@ -78,7 +79,15 @@ class SettingsController
       "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "footer" => params["footer"]?.try(&.to_s.presence),
-      "site" => params["site"]?.try(&.to_s.presence)
+      "site" => params["site"]?.try(&.to_s.presence),
+
+      "attachments" => 1.upto(4).reduce(Hash(String, String).new) do |memo, i|
+        if params["attachment_#{i}_name"]?.try(&.to_s.presence) &&
+            params["attachment_#{i}_value"]?.try(&.to_s.presence)
+          memo[params["attachment_#{i}_name"].to_s] = params["attachment_#{i}_value"].to_s
+        end
+        memo
+      end.to_json
     }
   end
 end

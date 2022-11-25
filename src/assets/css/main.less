@@ -147,6 +147,13 @@ body { display: flex; flex-direction: column; }
         line-height: 5rem;
         font-size: 5rem;
     }
+	> .segment th {
+		border-right: 1px solid #eeeeee;
+		text-align: right;
+		font-weight: normal;
+		padding-right: 1ex;
+		margin-right: 1ex;
+	}
 }
 
 /** small actor partial **/
@@ -195,12 +202,15 @@ body { display: flex; flex-direction: column; }
 
 /* missing styling for forms */
 .ui.form { margin-bottom: 1rem; }
+#half { width: calc(48% - 1ex); margin-right: 1ex; }
 .ui.form:last-child { margin-bottom: 0; }
 .ui.inline.form { display: inline-block; }
+
 
 /* missing styling for button elements (vs input elements) */
 /* used in sign out item in the menu */
 .ui.input > button { border: 1px solid rgba(34,36,38,.15); }
+
 
 /* additional button styles */
 /* used in posts in the timeline */

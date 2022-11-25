@@ -50,6 +50,9 @@
     "url":<%= image.inspect %>
   },
   <%- end -%>
+  <%- if (attachments = actor.attachments) -%>
+  "attachment":<%= attachments.to_json %>,
+  <%- end -%>
   <%- if (urls = actor.urls) -%>
   <%- if urls.size > 1 -%>
   "url":<%= urls.to_json %>,

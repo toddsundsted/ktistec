@@ -12,6 +12,25 @@ p
   == input_tag("Summary", actor, summary)
   == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone"})
   == input_tag("Password", account, password, type: "password", placeholder: "Leave blank to leave unchanged")
+  crystal:
+    attachments = actor.attachments || [] of ActivityPub::Actor::Attachment
+    attachments.size.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1) do |i|
+      attachments << ActivityPub::Actor::Attachment.new("", "", "")
+    end
+  .field
+    label Metadata
+    p You can have up to four items displayed on your profile.
+  .two.fields
+    .field
+      label Name
+    .field
+      label Value
+  - 0.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1).each do |i|
+    .two.fields
+      .field
+        input type="text" name="attachment_#{i}_name" value=attachments[i].name
+      .field
+        input type="text" name="attachment_#{i}_value" value=attachments[i].value
   == input_tag("Background Image", actor, image, class: "filepond", type: "file")
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
   input.ui.primary.button type="submit" value="Update"

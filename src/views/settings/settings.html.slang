@@ -12,16 +12,18 @@ p
   == input_tag("Password", account, password, type: "password", placeholder: "Leave blank to leave unchanged")
   div class="field"
     label Metadata
-	p
-	  | You can have up to 4 items displayed on your profile.
-	div#half class="field"
-	  label 
-	    | Name
-	div#half class="field"
-	  label
-	    | Value
-    - 0.upto(3).each do |i|
+    p
+      | You can have up to 4 items displayed on your profile.
+  div class="field half"
+    label 
+      | Name
+  div class="field half"
+    label
+      | Value
+  - 0.upto(3).each do |i|
+    div class="field half"
       input type="text" name="attachment_#{i}_name" value=actor.attachments[i].name
+    div class="field half"
       input type="text" name="attachment_#{i}_value" value=actor.attachments[i].value
   == input_tag("Background Image", actor, image, class: "filepond", type: "file")
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")

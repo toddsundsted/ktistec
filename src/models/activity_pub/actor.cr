@@ -28,6 +28,8 @@ module ActivityPub
     include Ktistec::Model(Common, Blockable, Deletable, Polymorphic, Serialized, Linked)
     include ActivityPub
 
+    ATTACHMENT_LIMIT = 4
+
     @@table_name = "actors"
 
     @[Persistent]
@@ -711,7 +713,7 @@ module ActivityPub
     end
 
     def prepare_attachments
-      self.attachments.size.upto(3) do |i|
+      self.attachments.size.upto(ATTACHMENT_LIMIT - 1) do |i|
         self.attachments << Attachment.new("", "", "")
       end
     end

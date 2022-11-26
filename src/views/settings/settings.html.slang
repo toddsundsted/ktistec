@@ -20,7 +20,7 @@ p
   div class="field half"
     label
       | Value
-  - 0.upto(3).each do |i|
+  - 0.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1).each do |i|
     div class="field half"
       input type="text" name="attachment_#{i}_name" value=actor.attachments[i].name
     div class="field half"

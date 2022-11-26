@@ -85,7 +85,7 @@ class SettingsController
   end
 
   private def self.reduce_attachments(params)
-    0.upto(3).reduce(Array(ActivityPub::Actor::Attachment).new) do |memo, i|
+    0.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1).reduce(Array(ActivityPub::Actor::Attachment).new) do |memo, i|
       if params["attachment_#{i}_name"]?.try(&.to_s.presence) &&
           params["attachment_#{i}_value"]?.try(&.to_s.presence)
         memo << ActivityPub::Actor::Attachment.new(

@@ -80,14 +80,21 @@ class SettingsController
       "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "footer" => params["footer"]?.try(&.to_s.presence),
       "site" => params["site"]?.try(&.to_s.presence),
-
-      "attachments" => 1.upto(4).reduce(Hash(String, String).new) do |memo, i|
-        if params["attachment_#{i}_name"]?.try(&.to_s.presence) &&
-            params["attachment_#{i}_value"]?.try(&.to_s.presence)
-          memo[params["attachment_#{i}_name"].to_s] = params["attachment_#{i}_value"].to_s
-        end
-        memo
-      end.to_json
+      "attachments" => reduce_attachments(params)
     }
+  end
+
+  private def self.reduce_attachments(params)
+    0.upto(3).reduce(Array(ActivityPub::Actor::Attachment).new) do |memo, i|
+      if params["attachment_#{i}_name"]?.try(&.to_s.presence) &&
+          params["attachment_#{i}_value"]?.try(&.to_s.presence)
+        memo << ActivityPub::Actor::Attachment.new(
+          params["attachment_#{i}_name"].to_s,
+          "PropertyValue",
+          params["attachment_#{i}_value"].to_s
+        )
+      end
+      memo
+    end
   end
 end

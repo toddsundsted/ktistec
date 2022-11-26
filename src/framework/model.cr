@@ -357,6 +357,8 @@ module Ktistec
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 self.{{v}} = o.as(typeof(self.{{v}}))
+              else
+                Log.warn { "Got invalid type assigned to #{key}" }
               end
             end
           {% end %}

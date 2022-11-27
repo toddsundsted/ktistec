@@ -1,7 +1,7 @@
 section.ui.feed
   - objects.each do |object|
     crystal:
-      activity = object.activities.find do |activity|
+      activity = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Create]).find do |activity|
         Relationship::Content::Outbox.find?(owner: actor, activity: activity) ||
           Relationship::Content::Inbox.find?(owner: actor, activity: activity)
       end

@@ -61,9 +61,9 @@ module Ktistec
     end
 
     def assign(options)
-      @host = options["host"].to_s if options.has_key?("host")
-      @site = options["site"].to_s if options.has_key?("site")
-      @footer = options["footer"].to_s if options.has_key?("footer")
+      @host = options["host"].as(String) if options.has_key?("host")
+      @site = options["site"].as(String) if options.has_key?("site")
+      @footer = options["footer"].as(String) if options.has_key?("footer")
       self
     end
 

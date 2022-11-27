@@ -734,7 +734,19 @@ module ActivityPub
 
     def to_json_ld(recursive = true)
       actor = self
+      # May need to wrap links as HTML like Mastodon, if attachments are links
+      actor.attachments = actor.attachments.map { |a| a.value = maybe_wrap_link(a.value); a }
       render "src/views/actors/actor.json.ecr"
+    end
+
+    # This is here because we render the JSON view from the model and don't have
+    # access to the view_helper
+    private def maybe_wrap_link(str)
+      if str =~ %r{^[a-zA-Z]+://}
+        "<a href=\"#{str}\" target=\"_blank\">#{str}</a>"
+      else
+        str
+      end
     end
 
     def from_json_ld(json, *, include_key = false)

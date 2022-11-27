@@ -33,6 +33,14 @@ module Ktistec::ViewHelper
       page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1
       render "./src/views/partials/paginator.html.slang"
     end
+
+    def maybe_wrap_link(str)
+      if str =~ %r{^[a-zA-Z]+://}
+        "<a href=\"#{str}\" target=\"_blank\">#{str}</a>"
+      else
+        str
+      end
+    end
   end
 
   macro included

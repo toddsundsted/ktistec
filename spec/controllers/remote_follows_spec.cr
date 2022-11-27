@@ -165,7 +165,7 @@ Spectator.describe RemoteFollowsController do
       end
 
       it "returns 400 if the uri can't be dereferenced" do
-        get "/actors/#{actor.username}/authorize-follow?uri=returns-404", headers
+        get "/actors/#{actor.username}/authorize-follow?uri=https://remote/returns-404", headers
         expect(response.status_code).to eq(400)
       end
 
@@ -200,7 +200,7 @@ Spectator.describe RemoteFollowsController do
       end
 
       it "returns 400 if the uri can't be dereferenced" do
-        get "/actors/#{actor.username}/authorize-follow?uri=returns-404", headers
+        get "/actors/#{actor.username}/authorize-follow?uri=https://remote/returns-404", headers
         expect(response.status_code).to eq(400)
       end
 

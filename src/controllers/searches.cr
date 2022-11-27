@@ -1,8 +1,7 @@
-require "web_finger"
-
 require "../framework/controller"
 require "../framework/open"
 require "../framework/signature"
+require "../utils/network"
 
 class SearchesController
   include Ktistec::Controller
@@ -13,16 +12,7 @@ class SearchesController
 
     if (query = env.params.query["query"]?)
       query = query.strip()
-      url = URI.parse(query)
-      url =
-        if url.scheme && url.host && url.path
-          query
-        else
-          if query.starts_with?("@")
-            query = query[1..]
-          end
-          WebFinger.query("acct:#{query}").link("self").href.not_nil!
-        end
+      url = Ktistec::Network.resolve(query)
       actor_or_object =
         if url.starts_with?("#{host}/actors/")
           ActivityPub::Actor.find(url)

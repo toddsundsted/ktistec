@@ -2,6 +2,7 @@ require "web_finger"
 
 require "../framework/controller"
 require "../models/activity_pub/activity/follow"
+require "../utils/network"
 
 class RemoteFollowsController
   include Ktistec::Controller
@@ -64,6 +65,7 @@ class RemoteFollowsController
     unless (uri = env.params.query["uri"]?)
       bad_request("Missing URI")
     end
+    uri = Ktistec::Network.resolve(uri)
     unless (actor = ActivityPub::Actor.dereference?(env.account.actor, uri).try(&.save))
       bad_request("Can't Dereference URI")
     end

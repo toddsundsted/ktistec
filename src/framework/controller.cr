@@ -235,12 +235,21 @@ module Ktistec
 
     # Don't authenticate specified handlers.
     #
+    # Use at the beginning of a controller.
+    #
     #     skip_auth ["/foo", "/bar"], GET, POST
+    #
+    # Defaults to GET if no other method is specified. Automatically
+    # includes HEAD if GET is specified.
     #
     macro skip_auth(paths, method = GET, *methods)
       class ::Ktistec::Auth < ::Kemal::Handler
-        {% for method in (methods << method) %}
-          exclude {{paths}}, {{method.stringify}}
+        {% methods = (methods << method).map(&.stringify) %}
+        {% for method in methods %}
+          exclude {{paths}}, {{method}}
+        {% end %}
+        {% if methods.includes?("GET") && !methods.includes?("HEAD") %}
+          exclude {{paths}}, "HEAD"
         {% end %}
       end
     end

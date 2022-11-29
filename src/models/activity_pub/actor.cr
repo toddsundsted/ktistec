@@ -98,7 +98,7 @@ module ActivityPub
     end
 
     @[Persistent]
-    property attachments : Array(Attachment)
+    property attachments : Array(Attachment)?
 
     def before_validate
       if changed?(:username)
@@ -713,8 +713,9 @@ module ActivityPub
     end
 
     def prepare_attachments
-      self.attachments.size.upto(ATTACHMENT_LIMIT - 1) do |i|
-        self.attachments << Attachment.new("", "", "")
+      self.attachments ||= [] of Attachment
+      self.attachments.not_nil!.size.upto(ATTACHMENT_LIMIT - 1) do |i|
+        self.attachments.not_nil! << Attachment.new("", "", "")
       end
     end
 
@@ -735,7 +736,7 @@ module ActivityPub
     def to_json_ld(recursive = true)
       actor = self
       # May need to wrap links as HTML like Mastodon, if attachments are links
-      actor.attachments = actor.attachments.map { |a| a.value = maybe_wrap_link(a.value); a }
+      actor.attachments = (actor.attachments || [] of Attachment).not_nil!.map { |a| a.value = maybe_wrap_link(a.value); a }
       render "src/views/actors/actor.json.ecr"
     end
 

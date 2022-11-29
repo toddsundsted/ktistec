@@ -12,7 +12,7 @@ Spectator.describe Tag::Hashtag do
 
     it "associates with an actor" do
       expect{described_class.new(subject: actor, name: "actor").save}.to change{Tag::Hashtag.count}.by(1)
-      expect(described_class.find(name: "actor").subject).to eq(actor)
+      expect(described_class.find(name: "actor").subject.iri).to eq(actor.iri)
     end
 
     it "associates with an object" do

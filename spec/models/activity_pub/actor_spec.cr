@@ -50,7 +50,8 @@ Spectator.describe ActivityPub::Actor do
       described_class.new(
         iri: "https://bar.com/actor",
         username: "foo",
-        urls: ["https://bar.com/@foo"]
+        urls: ["https://bar.com/@foo"],
+        attachments: [] of ActivityPub::Actor::Attachment
       ).save
     end
 
@@ -191,6 +192,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
+      expect(actor.attachments).to eq([] of ActivityPub::Actor::Attachment)
     end
 
     it "includes the public key" do
@@ -295,26 +297,32 @@ Spectator.describe ActivityPub::Actor do
 
     it "adds a public following relationship" do
       foo_bar.follow(other, confirmed: true, visible: true).save
-      expect(foo_bar.all_following(public: true)).to eq([other])
-      expect(foo_bar.all_following(public: false)).to eq([other])
+      expect(foo_bar.all_following(public: true).size).to eq(1)
+      expect(foo_bar.all_following(public: true).first.iri).to eq(other.iri)
+      expect(foo_bar.all_following(public: false).size).to eq(1)
+      expect(foo_bar.all_following(public: false).first.iri).to eq(other.iri)
     end
 
     it "adds a public followers relationship" do
       other.follow(foo_bar, confirmed: true, visible: true).save
-      expect(foo_bar.all_followers(public: true)).to eq([other])
-      expect(foo_bar.all_followers(public: false)).to eq([other])
+      expect(foo_bar.all_followers(public: true).size).to eq(1)
+      expect(foo_bar.all_followers(public: true).first.iri).to eq(other.iri)
+      expect(foo_bar.all_followers(public: false).size).to eq(1)
+      expect(foo_bar.all_followers(public: false).first.iri).to eq(other.iri)
     end
 
     it "adds a non-public following relationship" do
       foo_bar.follow(other).save
       expect(foo_bar.all_following(public: true)).to be_empty
-      expect(foo_bar.all_following(public: false)).to eq([other])
+      expect(foo_bar.all_following(public: false).size).to eq(1)
+      expect(foo_bar.all_following(public: false).first.iri).to eq(other.iri)
     end
 
-    it "adds a non-public followers relationship" do
-      other.follow(foo_bar).save
-      expect(foo_bar.all_followers(public: true)).to be_empty
-      expect(foo_bar.all_followers(public: false)).to eq([other])
+   it "adds a non-public followers relationship" do
+     other.follow(foo_bar).save
+     expect(foo_bar.all_followers(public: true)).to be_empty
+     expect(foo_bar.all_followers(public: false).size).to eq(1)
+     expect(foo_bar.all_followers(public: false).first.iri).to eq(other.iri)
     end
 
     it "does not display a deleted following actor" do

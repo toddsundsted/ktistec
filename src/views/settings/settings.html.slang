@@ -22,9 +22,9 @@ p
       | Value
   - 0.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1).each do |i|
     div class="field half"
-      input type="text" name="attachment_#{i}_name" value=actor.attachments[i].name
+      input type="text" name="attachment_#{i}_name" value=actor.attachments.not_nil![i].name
     div class="field half"
-      input type="text" name="attachment_#{i}_value" value=actor.attachments[i].value
+      input type="text" name="attachment_#{i}_value" value=actor.attachments.not_nil![i].value
   == input_tag("Background Image", actor, image, class: "filepond", type: "file")
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
   input.ui.primary.button type="submit" value="Update"

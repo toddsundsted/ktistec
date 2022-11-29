@@ -770,7 +770,8 @@ module ActivityPub
         summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
         icon: dig_id?(json, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url"),
         image: dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
-        urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")
+        urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+        attachments: [] of Attachment
       }
     end
 

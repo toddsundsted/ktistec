@@ -190,6 +190,15 @@ Once these steps are done, you're running!
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/o0ton2.png" width=640>
 
+## Running Tests
+
+The the tests requires that you set the `KEMAL_ENV` environment variable before
+running them, or they will lock up. Running the tests is:
+
+```
+KEMAL_ENV=test crystal spec
+```
+
 ## Contributors
 
 - [Todd Sundsted](https://github.com/toddsundsted) - creator and maintainer

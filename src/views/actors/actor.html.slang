@@ -1,4 +1,4 @@
-- if env.account?.try(&.actor) == actor
+- if env.account?.try(&.actor.iri) == actor.iri
   .ui.compact.stackable.secondary.menu
     a.item href=actor_relationships_path(actor, "posts") Posts
     a.item href=actor_relationships_path(actor, "drafts") Drafts

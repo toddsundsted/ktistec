@@ -204,10 +204,17 @@ Spectator.describe ActivityPub::Actor do
       expect(attachments.all? { |a| a.type == "PropertyValue" }).to be_true
 
       expect(attachments.first.name).to eq("Blog")
-      expect(attachments.first.value).to eq("https://somewhere.example.com")
+      expect(attachments.first.value).to eq(
+        "<a href=\"https://somewhere.example.com\" target=\"_blank\" " +
+        "rel=\"nofollow noopener noreferrer me\"><span class=\"invisible\">" +
+        "https://</span><span class=\"\">somewhere.example.com</span><span class=\"invisible\"></span></a>"
+      )
 
       expect(attachments.last.name).to eq("Website")
-      expect(attachments.last.value).to eq("http://site.example.com")
+      expect(attachments.last.value).to eq("<a href=\"http://site.example.com\" target=\"_blank\" " +
+        "rel=\"nofollow noopener noreferrer me\"><span class=\"invisible\">"+
+        "http://</span><span class=\"\">site.example.com</span><span class=\"invisible\"></span></a>"
+      )
     end
 
     it "includes the public key" do

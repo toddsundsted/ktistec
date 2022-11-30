@@ -35,8 +35,18 @@ module Ktistec::ViewHelper
     end
 
     def maybe_wrap_link(str)
-      if str =~ %r{^[a-zA-Z]+://}
-        "<a href=\"#{str}\" target=\"_blank\">#{str}</a>"
+      if str =~ %r{^[a-zA-Z0-9]+://}
+        uri = URI.parse(str)
+        port = uri.port.nil? ? "" : ":" + uri.port.to_s
+        path = uri.path.nil? ? "" : uri.path.to_s
+
+        # Match the weird format used by Mastodon here
+        <<-LINK.gsub(/(\n|^ +)/, "")
+        <a href="#{str}" target="_blank" rel="nofollow noopener noreferrer me">
+          <span class="invisible">#{uri.scheme}://</span><span class="">#{uri.host}#{port}#{path}</span>
+          <span class="invisible"></span>
+        </a>
+        LINK
       else
         str
       end

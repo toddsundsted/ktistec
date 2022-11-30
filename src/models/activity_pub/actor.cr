@@ -733,18 +733,35 @@ module ActivityPub
       end
     end
 
-    def to_json_ld(recursive = true)
-      actor = self
+    def wrap_attachment_links
       # May need to wrap links as HTML like Mastodon, if attachments are links
-      actor.attachments = (actor.attachments || [] of Attachment).not_nil!.map { |a| a.value = maybe_wrap_link(a.value); a }
+      self.attachments = (self.attachments || [] of Attachment).not_nil!.map do |attachment|
+        attachment.value = self.class.maybe_wrap_link(attachment.value)
+        attachment
+      end
+    end
+
+    def to_json_ld(recursive = true)
+      wrap_attachment_links
+      actor = self
       render "src/views/actors/actor.json.ecr"
     end
 
     # This is here because we render the JSON view from the model and don't have
     # access to the view_helper
-    private def maybe_wrap_link(str)
-      if str =~ %r{^[a-zA-Z]+://}
-        "<a href=\"#{str}\" target=\"_blank\">#{str}</a>"
+    def self.maybe_wrap_link(str)
+      if str =~ %r{^[a-zA-Z0-9]+://}
+        uri = URI.parse(str)
+        port = uri.port.nil? ? "" : ":" + uri.port.to_s
+        path = uri.path.nil? ? "" : uri.path.to_s
+
+        # Match the weird format used by Mastodon here
+        <<-LINK.gsub(/\n/, "")
+        <a href="#{str}" target="_blank" rel="nofollow noopener noreferrer me">
+        <span class="invisible">#{uri.scheme}://</span><span class="">#{uri.host}#{port}#{path}</span>
+        <span class="invisible"></span>
+        </a>
+        LINK
       else
         str
       end
@@ -784,7 +801,7 @@ module ActivityPub
       entry_not_nil.reduce([] of Attachment) do |memo, a|
         name = a["name"].to_s
         type = a["type"].to_s
-        value = a["value"].to_s
+        value = maybe_wrap_link(a["value"].to_s)
 
         unless name.empty? || value.empty?
           memo << Attachment.new(name, type, value)

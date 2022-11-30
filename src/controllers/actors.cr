@@ -15,6 +15,7 @@ class ActorsController
     end
 
     actor = account.actor
+    actor.wrap_attachment_links
 
     ok "actors/actor"
   end

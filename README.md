@@ -192,8 +192,8 @@ Once these steps are done, you're running!
 
 ## Running Tests
 
-The the tests requires that you set the `KEMAL_ENV` environment variable before
-running them, or they will lock up. Running the tests is:
+The tests require that you set the `KEMAL_ENV` environment variable before
+running them. Running the tests is:
 
 ```
 KEMAL_ENV=test crystal spec

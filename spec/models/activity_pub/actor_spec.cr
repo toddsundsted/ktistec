@@ -167,7 +167,12 @@ Spectator.describe ActivityPub::Actor do
           "mediaType": "image/jpeg",
           "url": "image link"
         },
-        "url":"url link"
+        "url":"url link",
+        "attachment": [
+          {"name": "Blog", "type": "PropertyValue", "value": "https://somewhere.example.com"},
+          {"name": "Website", "type": "PropertyValue", "value": "http://site.example.com"},
+          {"name": "", "type": "invalid entry", "value": "http://site.example.com"}
+        ]
       }
     JSON
   end
@@ -192,7 +197,17 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
-      expect(actor.attachments).to eq([] of ActivityPub::Actor::Attachment)
+
+      expect(actor.attachments).not_to be_nil
+      attachments = actor.attachments.not_nil!
+      expect(attachments.size).to eq(2)
+      expect(attachments.all? { |a| a.type == "PropertyValue" }).to be_true
+
+      expect(attachments.first.name).to eq("Blog")
+      expect(attachments.first.value).to eq("https://somewhere.example.com")
+
+      expect(attachments.last.name).to eq("Website")
+      expect(attachments.last.value).to eq("http://site.example.com")
     end
 
     it "includes the public key" do

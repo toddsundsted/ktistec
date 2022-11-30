@@ -606,8 +606,8 @@ module ActivityPub
           Tag::Mention.new(name: name, href: href)
         end,
         attachments: dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
-          url = attachment.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s)
-          media_type = attachment.dig?("https://www.w3.org/ns/activitystreams#mediaType").try(&.as_s)
+          url = attachment["url"].try(&.as_s)
+          media_type = attachment["mediaType"].try(&.as_s)
           Attachment.new(url, media_type) if url && media_type
         end,
         urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),

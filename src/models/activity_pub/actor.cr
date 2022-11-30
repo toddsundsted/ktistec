@@ -772,8 +772,25 @@ module ActivityPub
         icon: dig_id?(json, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url"),
         image: dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
         urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
-        attachments: [] of Attachment
+        attachments: attachments_from_ldjson(
+          json.dig?("https://www.w3.org/ns/activitystreams#attachment")
+        )
       }
+    end
+
+    def self.attachments_from_ldjson(entry)
+      entry_not_nil = (entry.try(&.as_a) || [] of JSON::Any).not_nil!
+
+      entry_not_nil.reduce([] of Attachment) do |memo, a|
+        name = a["name"].to_s
+        type = a["type"].to_s
+        value = a["value"].to_s
+
+        unless name.empty? || value.empty?
+          memo << Attachment.new(name, type, value)
+        end
+        memo
+      end
     end
 
     def make_delete_activity

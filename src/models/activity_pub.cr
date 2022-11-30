@@ -13,14 +13,14 @@ module ActivityPub
         when {{name = subclass.stringify.split("::").last}}
           {% id = name.downcase.id %}
           attrs = {{subclass}}.map(json, **options)
-          {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(**attrs)) ||
-            {{subclass}}.new(**attrs)
+          {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(attrs)) ||
+            {{subclass}}.new(attrs)
       {% end %}
       else
         if (default = options[:default]?)
           attrs = default.map(json, **options)
-          default.find?(json["@id"]?.try(&.as_s)).try(&.assign(**attrs)) ||
-            default.new(**attrs)
+          default.find?(json["@id"]?.try(&.as_s)).try(&.assign(attrs)) ||
+            default.new(attrs)
         elsif (type = json["@type"]?)
           raise NotImplementedError.new(type.as_s)
         else

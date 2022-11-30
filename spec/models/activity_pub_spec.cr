@@ -19,7 +19,7 @@ class ActivityPubModel
   end
 
   def self.map(json, **options)
-    NamedTuple.new
+    Hash(String, String).new
   end
 end
 

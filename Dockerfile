@@ -1,8 +1,11 @@
 FROM crystallang/crystal:1.2.2-alpine AS builder
-RUN apk update && apk upgrade && apk add sqlite-static
+RUN apk update && apk upgrade && apk add sqlite-static npm
 WORKDIR /build/
-ARG version
-RUN git clone --branch ${version:-dist} --depth 1 https://github.com/toddsundsted/ktistec .
+ADD ./package.json /build/package.json
+RUN npm install
+
+ADD . /build/
+RUN npm run build
 RUN shards update
 RUN shards install --production
 RUN crystal build src/ktistec/server.cr --static --no-debug --release

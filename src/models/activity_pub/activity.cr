@@ -58,36 +58,36 @@ module ActivityPub
     end
 
     def from_json_ld(json)
-      self.assign(**self.class.map(json))
+      self.assign(self.class.map(json))
     end
 
     def self.map(json, **options)
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
-        iri: json.dig?("@id").try(&.as_s),
-        _type: json.dig?("@type").try(&.as_s.split("#").last),
-        published: (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
+        "iri" => json.dig?("@id").try(&.as_s),
+        "_type" => json.dig?("@type").try(&.as_s.split("#").last),
+        "published" => (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
         # either pick up the actor's id or the embedded actor
-        actor_iri: json.dig?("https://www.w3.org/ns/activitystreams#actor").try(&.as_s?),
-        actor: if (actor = json.dig?("https://www.w3.org/ns/activitystreams#actor")) && actor.as_h?
+        "actor_iri" => json.dig?("https://www.w3.org/ns/activitystreams#actor").try(&.as_s?),
+        "actor" => if (actor = json.dig?("https://www.w3.org/ns/activitystreams#actor")) && actor.as_h?
           ActivityPub.from_json_ld(actor)
         end,
         # either pick up the object's id or the embedded object
-        object_iri: json.dig?("https://www.w3.org/ns/activitystreams#object").try(&.as_s?),
-        object: if (object = json.dig?("https://www.w3.org/ns/activitystreams#object")) && object.as_h?
+        "object_iri" => json.dig?("https://www.w3.org/ns/activitystreams#object").try(&.as_s?),
+        "object" => if (object = json.dig?("https://www.w3.org/ns/activitystreams#object")) && object.as_h?
           ActivityPub.from_json_ld(object)
         end,
         # either pick up the target's id or the embedded target
-        target_iri: json.dig?("https://www.w3.org/ns/activitystreams#target").try(&.as_s?),
-        target: if (target = json.dig?("https://www.w3.org/ns/activitystreams#target")) && target.as_h?
+        "target_iri" => json.dig?("https://www.w3.org/ns/activitystreams#target").try(&.as_s?),
+        "target" => if (target = json.dig?("https://www.w3.org/ns/activitystreams#target")) && target.as_h?
           ActivityPub.from_json_ld(target)
         end,
-        to: to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
-        cc: cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
-        summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+        "to" => to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
+        "cc" => cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+        "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
         # use addressing to establish visibility
-        visible: [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
-      }
+        "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
+      }.compact
     end
   end
 end

@@ -78,14 +78,12 @@ end
 def object_factory(clazz = ActivityPub::Object, iri = nil, attributed_to_iri = nil, attributed_to = false, visible = true, local = nil, **options)
   attributed_to = actor_factory(local: local) unless attributed_to_iri || attributed_to.nil? || attributed_to
   iri ||= "#{base_url(attributed_to_iri, attributed_to, local)}/objects/#{random_string}"
-  clazz.new(
-    **{
-      iri: iri,
-      attributed_to_iri: attributed_to_iri,
-      attributed_to: attributed_to,
-      visible: visible
-    }.merge(options)
-  )
+  clazz.new({
+    "iri" => iri,
+    "attributed_to_iri" => attributed_to_iri,
+    "attributed_to" => attributed_to,
+    "visible" => visible
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
 def note_factory(**options)
@@ -107,17 +105,15 @@ def activity_factory(clazz = ActivityPub::Activity, iri = nil, actor_iri = nil, 
   actor_iri ||= actor.iri if actor.responds_to?(:iri)
   object_iri ||= object.iri if object.responds_to?(:iri)
   target_iri ||= target.iri if target.responds_to?(:iri)
-  clazz.new(
-    **{
-      iri: iri,
-      actor_iri: actor_iri,
-      actor: actor,
-      object_iri: object_iri,
-      object: object,
-      target_iri: target_iri,
-      target: target,
-    }.merge(options)
-  )
+  clazz.new({
+    "iri" => iri,
+    "actor_iri" => actor_iri,
+    "actor" => actor ? actor : nil,
+    "object_iri" => object_iri,
+    "object" => object ? object : nil,
+    "target_iri" => target_iri,
+    "target" => target ? target : nil
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
 def announce_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
@@ -179,7 +175,7 @@ end
 # relationship factories
 
 def relationship_factory(clazz = Relationship, from_iri = "https://from/#{random_string}", to_iri = "https://to/#{random_string}", **options)
-  clazz.new(**{from_iri: from_iri, to_iri: to_iri}.merge(options))
+  clazz.new({"from_iri" => from_iri, "to_iri" => to_iri}.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
 def notification_factory(owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)

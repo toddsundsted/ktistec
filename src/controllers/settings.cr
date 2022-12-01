@@ -79,6 +79,6 @@ class SettingsController
       "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "footer" => params["footer"]?.try(&.to_s.presence),
       "site" => params["site"]?.try(&.to_s.presence)
-    }
+    }.compact
   end
 end

@@ -316,6 +316,8 @@ module Ktistec
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 self.{{v}} = o.as(typeof(self.{{v}}))
+              else
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
             end
           {% end %}
@@ -337,6 +339,8 @@ module Ktistec
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 self.{{v}} = o.as(typeof(self.{{v}}))
+              else
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
             end
           {% end %}
@@ -357,6 +361,8 @@ module Ktistec
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 self.{{v}} = o.as(typeof(self.{{v}}))
+              else
+                raise TypeError.new("#{self.class}#assign: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
             end
           {% end %}
@@ -375,6 +381,8 @@ module Ktistec
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 self.{{v}} = o.as(typeof(self.{{v}}))
+              else
+                raise TypeError.new("#{self.class}#assign: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
             end
           {% end %}
@@ -792,6 +800,9 @@ module Ktistec
     end
 
     class ColumnError < Exception
+    end
+
+    class TypeError < Exception
     end
 
     class Invalid < Exception

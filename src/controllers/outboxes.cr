@@ -103,7 +103,7 @@ class RelationshipsController
       object.assign(
         source: ActivityPub::Object::Source.new(content, "text/html; editor=trix"),
         attributed_to_iri: account.iri,
-        in_reply_to: in_reply_to,
+        in_reply_to_iri: in_reply_to_iri,
         canonical_path: canonical_path,
         visible: visible,
         to: to,

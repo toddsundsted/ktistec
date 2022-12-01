@@ -440,14 +440,8 @@ Spectator.describe RelationshipsController do
         end
 
         context "and the object is a reply" do
-          before_each do
-            object.assign(
-              in_reply_to: Factory.build(:object)
-            ).save
-          end
-
           it "does not put the object in the actor's timeline" do
-            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}&in-reply-to=#{URI.encode_www_form(topic.iri)}"}.
               not_to change{Timeline.count(from_iri: actor.iri)}
           end
         end

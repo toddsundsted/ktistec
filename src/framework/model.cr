@@ -347,7 +347,11 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o.as(typeof(self.{{v}}))
+                if self.responds_to?({{"#{v}=".id.symbolize}})
+                  self.{{v}} = o.as(typeof(self.{{v}}))
+                else
+                  raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
+                end
               else
                 raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
@@ -370,7 +374,11 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o.as(typeof(self.{{v}}))
+                if self.responds_to?({{"#{v}=".id.symbolize}})
+                  self.{{v}} = o.as(typeof(self.{{v}}))
+                else
+                  raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
+                end
               else
                 raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
@@ -392,7 +400,11 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o.as(typeof(self.{{v}}))
+                if self.responds_to?({{"#{v}=".id.symbolize}})
+                  self.{{v}} = o.as(typeof(self.{{v}}))
+                else
+                  raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
+                end
               else
                 raise TypeError.new("#{self.class}#assign: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
@@ -412,7 +424,11 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o.as(typeof(self.{{v}}))
+                if self.responds_to?({{"#{v}=".id.symbolize}})
+                  self.{{v}} = o.as(typeof(self.{{v}}))
+                else
+                  raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
+                end
               else
                 raise TypeError.new("#{self.class}#assign: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end

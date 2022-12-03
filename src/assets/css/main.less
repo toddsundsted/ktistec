@@ -97,17 +97,23 @@ body { display: flex; flex-direction: column; }
     /* media in posts */
     .ui.image { object-fit: cover; cursor: zoom-in; }
     .extra.media img, .extra.media video { object-fit: cover; cursor: zoom-in; }
+    > .event {
+        .extra.text img.image, .extra.text video.video { width: 100%; }
+        img.extra.image, video.extra.video { width: 100%; }
+    }
+    > .detailed.event {
+        .extra.text img.image, .extra.text video.video { height: auto; }
+        img.extra.image, video.extra.video { height: auto; }
+    }
     @media screen and (max-width: 599px) {           /* phones */
         .extra.media img.image, .extra.media video.video { display: inline-block; width: 95px; height: 95px; }
-        .extra.text img.image, .extra.text video.video { width: 250px; height: 250px; }
-        img.extra.image, video.extra.video { width: 250px; height: 250px; }
-        figure figcaption { width: 250px; }
+        .extra.text img.image, .extra.text video.video { height: 200px; }
+        img.extra.image, video.extra.video { height: 200px; }
     }
     @media screen and (min-width: 600px) {           /* tablets portrait & larger */
         .extra.media img.image, .extra.media video.video { display: inline-block; width: 95px; height: 95px; }
-        .extra.text img.image, .extra.text video.video { width: 450px; height: 450px; }
-        img.extra.image, video.extra.video { width: 450px; height: 450px; }
-        figure figcaption { width: 450px; }
+        .extra.text img.image, .extra.text video.video { height: 375px; }
+        img.extra.image, video.extra.video { height: 375px; }
     }
     @media screen and (min-width: 900px) {           /* tablets landscape & larger */
     }
@@ -257,15 +263,5 @@ trix-editor {
     .attachment__caption-editor { padding: 0 !important; border: none !important; resize: unset !important; height: unset !important; min-height: unset !important; max-height: unset !important; }
     .attachment__caption { text-align: center; }
 
-    figure img { object-fit: cover; }
-    @media screen and (max-width: 599px) { /* phones */
-        figure img { width: 250px; height: 250px; }
-        figure .attachment__toolbar { width: 250px; }
-        figure figcaption { width: 250px; }
-    }
-    @media screen and (min-width: 600px) { /* tablets portrait & larger */
-        figure img { width: 450px; height: 450px; }
-        figure .attachment__toolbar { width: 450px; }
-        figure figcaption { width: 450px; }
-    }
+    figure img { object-fit: cover; width: 100%; height: auto; }
 }

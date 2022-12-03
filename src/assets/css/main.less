@@ -38,7 +38,8 @@ body { display: flex; flex-direction: column; }
         }
 
         > .content {
-            width: inherit;
+            /* account for the label */
+            width: calc(100% - 3.75em);
             overflow-wrap: break-word;
             word-wrap: break-word;
             word-break: break-word;

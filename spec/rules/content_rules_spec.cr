@@ -449,6 +449,17 @@ Spectator.describe ContentRules do
           run(owner, announce)
           expect(owner.timeline).to eq([object])
         end
+
+        context "but is attributed to the owner" do
+          before_each do
+            object.assign(attributed_to: owner).save
+          end
+
+          it "adds the object to the timeline" do
+            run(owner, create)
+            expect(owner.timeline).to eq([object])
+          end
+        end
       end
 
       context "another object is a reply" do
@@ -519,6 +530,17 @@ Spectator.describe ContentRules do
         it "adds the object to the timeline" do
           run(owner, announce)
           expect(owner.timeline).to eq([object])
+        end
+
+        context "but is attributed to the owner" do
+          before_each do
+            object.assign(attributed_to: owner).save
+          end
+
+          it "adds the object to the timeline" do
+            run(owner, create)
+            expect(owner.timeline).to eq([object])
+          end
         end
       end
     end

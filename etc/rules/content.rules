@@ -181,7 +181,7 @@ end
 # notify if there are either no replies and no mentions, or the
 # actor is mentioned.
 
-rule "create"
+rule "create/none"
   condition activity, IsAddressedTo, actor
   condition CreateActivity, activity, object: object
   none Object, object, in_reply_to: any
@@ -190,7 +190,15 @@ rule "create"
   assert Timeline, owner: actor, object: object
 end
 
-rule "create"
+rule "create/owner"
+  condition activity, IsAddressedTo, actor
+  condition CreateActivity, activity, object: object
+  condition Object, object, attributed_to: actor
+  none Timeline, owner: actor, object: object
+  assert Timeline, owner: actor, object: object
+end
+
+rule "create/mention"
   condition activity, IsAddressedTo, actor
   condition CreateActivity, activity, object: object
   any Mention, mention, subject: object, href: actor.iri

@@ -63,6 +63,30 @@ Spectator.describe SearchesController do
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
 
+        it "works with a leading @ if present" do
+          expect{get "/search?query=@foo_bar@remote", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo_bar')]")).not_to be_empty
+        end
+
+        it "works with a leading @ if present" do
+          expect{get "/search?query=@foo_bar@remote", JSON_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
+        end
+
+        it "ignores surrounding whitespace if present" do
+          expect{get "/search?query=+foo_bar@remote+", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo_bar')]")).not_to be_empty
+        end
+
+        it "ignores surrounding whitespace if present" do
+          expect{get "/search?query=+foo_bar@remote+", JSON_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
+        end
+
         context "of an existing actor" do
           before_each { other.assign(username: "bar_foo").save }
 

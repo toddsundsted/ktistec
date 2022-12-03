@@ -713,28 +713,28 @@ module ActivityPub
     end
 
     def from_json_ld(json, *, include_key = false)
-      self.assign(**self.class.map(json, include_key: include_key))
+      self.assign(self.class.map(json, include_key: include_key))
     end
 
     def self.map(json, *, include_key = false, **options)
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
-        iri: json.dig?("@id").try(&.as_s),
-        _type: json.dig?("@type").try(&.as_s.split("#").last),
-        username: dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
-        pem_public_key: if include_key
+        "iri" => json.dig?("@id").try(&.as_s),
+        "_type" => json.dig?("@type").try(&.as_s.split("#").last),
+        "username" => dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
+        "pem_public_key" => if include_key
           dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
         end,
-        inbox: dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
-        outbox: dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
-        following: dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
-        followers: dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
-        name: dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
-        summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-        icon: dig_id?(json, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url"),
-        image: dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
-        urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")
-      }
+        "inbox" => dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
+        "outbox" => dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
+        "following" => dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
+        "followers" => dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
+        "name" => dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
+        "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+        "icon" => dig_id?(json, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url"),
+        "image" => dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
+        "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")
+      }.compact
     end
 
     def make_delete_activity

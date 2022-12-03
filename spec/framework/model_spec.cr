@@ -194,6 +194,14 @@ Spectator.describe Ktistec::Model do
     it "assigns belongs_to associations" do
       expect(NotNilModel.new(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
     end
+
+    it "raises an error if property type is wrong" do
+      expect{NotNilModel.new(val: 1)}.to raise_error(Ktistec::Model::TypeError)
+    end
+
+    it "raises an error if property type is wrong" do
+      expect{FooBarModel.new({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError)
+    end
   end
 
   describe "#assign" do
@@ -227,6 +235,14 @@ Spectator.describe Ktistec::Model do
 
     it "assigns has_many associations" do
       expect{not_nil.assign(foo_bar_models: [foo_bar])}.to change{foo_bar.not_nil_model_id}
+    end
+
+    it "raises an error if property type is wrong" do
+      expect{NotNilModel.new(val: "").assign(val: 1)}.to raise_error(Ktistec::Model::TypeError)
+    end
+
+    it "raises an error if property type is wrong" do
+      expect{FooBarModel.new(foo: "").assign({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError)
     end
   end
 

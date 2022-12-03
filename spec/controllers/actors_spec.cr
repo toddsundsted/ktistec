@@ -407,9 +407,31 @@ Spectator.describe ActorsController do
             put_in_timeline(owner: actor, object: object)
           end
 
-          it "renders the object's like aspect" do
+          it "renders the object without aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-like")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
+          end
+
+          context "and a create" do
+            before_each do
+              put_in_inbox(owner: actor, activity: create)
+            end
+
+            it "renders the object's create aspect" do
+              get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            end
+          end
+
+          context "and an announce" do
+            before_each do
+              put_in_inbox(owner: actor, activity: announce)
+            end
+
+            it "renders the object's announce aspect" do
+              get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            end
           end
         end
       end

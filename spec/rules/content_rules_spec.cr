@@ -37,13 +37,13 @@ Spectator.describe ContentRules do
   let(owner) { register.actor }
 
   let_build(:actor, named: other)
-  let_build(:object, attributed_to: owner)
-  let_create(:create, actor: owner, object: object)
-  let_create(:announce, actor: owner, object: object)
-  let_create(:like, actor: owner, object: object)
-  let_create(:follow, actor: owner, object: owner)
-  let_create(:delete, actor: owner, object: object)
-  let_create(:undo, actor: owner)
+  let_build(:object, attributed_to: other)
+  let_create(:create, actor: other, object: object)
+  let_create(:announce, actor: other, object: object)
+  let_create(:like, actor: other, object: object)
+  let_create(:follow, actor: other, object: owner)
+  let_create(:delete, actor: other, object: object)
+  let_create(:undo, actor: other)
 
   subject { described_class.new }
 
@@ -154,14 +154,14 @@ Spectator.describe ContentRules do
         expect(owner.notifications).to be_empty
       end
 
-      it "adds the announce to the notifications" do
+      it "does not add the announce to the notifications" do
         run(owner, announce)
-        expect(owner.notifications).to eq([announce])
+        expect(owner.notifications).to be_empty
       end
 
-      it "adds the like to the notifications" do
+      it "does not add the like to the notifications" do
         run(owner, like)
-        expect(owner.notifications).to eq([like])
+        expect(owner.notifications).to be_empty
       end
 
       it "adds the follow to the notifications" do
@@ -243,8 +243,22 @@ Spectator.describe ContentRules do
         end
       end
 
-      context "object is attributed to another actor" do
-        before_each { object.assign(attributed_to: other) }
+      context "object is attributed to the owner" do
+        before_each { object.assign(attributed_to: owner) }
+
+        it "adds the announce to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications).to eq([announce])
+        end
+
+        it "adds the like to the notifications" do
+          run(owner, like)
+          expect(owner.notifications).to eq([like])
+        end
+      end
+
+      context "another object is attributed to the owner" do
+        let_create!(:object, named: nil, attributed_to: owner)
 
         it "does not add the announce to the notifications" do
           run(owner, announce)
@@ -254,20 +268,6 @@ Spectator.describe ContentRules do
         it "does not add the like to the notifications" do
           run(owner, like)
           expect(owner.notifications).to be_empty
-        end
-
-        context "another object is attributed to the owner" do
-          let_create!(:object, named: nil, attributed_to: owner)
-
-          it "does not add the announce to the notifications" do
-            run(owner, announce)
-            expect(owner.notifications).to be_empty
-          end
-
-          it "does not add the like to the notifications" do
-            run(owner, like)
-            expect(owner.notifications).to be_empty
-          end
         end
       end
 
@@ -449,6 +449,17 @@ Spectator.describe ContentRules do
           run(owner, announce)
           expect(owner.timeline).to eq([object])
         end
+
+        context "but is attributed to the owner" do
+          before_each do
+            object.assign(attributed_to: owner).save
+          end
+
+          it "adds the object to the timeline" do
+            run(owner, create)
+            expect(owner.timeline).to eq([object])
+          end
+        end
       end
 
       context "another object is a reply" do
@@ -519,6 +530,17 @@ Spectator.describe ContentRules do
         it "adds the object to the timeline" do
           run(owner, announce)
           expect(owner.timeline).to eq([object])
+        end
+
+        context "but is attributed to the owner" do
+          before_each do
+            object.assign(attributed_to: owner).save
+          end
+
+          it "adds the object to the timeline" do
+            run(owner, create)
+            expect(owner.timeline).to eq([object])
+          end
         end
       end
     end

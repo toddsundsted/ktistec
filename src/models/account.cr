@@ -39,7 +39,7 @@ class Account
   property username : String
 
   @[Persistent]
-  property encrypted_password : String
+  getter encrypted_password : String
 
   @[Assignable]
   @password : String?
@@ -52,7 +52,7 @@ class Account
 
   def password=(password)
     if (password = password.presence)
-      self.encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
+      @encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
       @password = password
     end
   end

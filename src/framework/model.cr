@@ -135,20 +135,31 @@ module Ktistec
         {% end %}
       end
 
+      # Compose an instance of the correct type from the query results.
+      #
+      # Invokes the protected __for_internal_use_only initializer to
+      # instantiate the instance.
+      #
       private def compose(**options) : self
-        options = options.to_h.transform_keys(&.to_s.as(String))
+        options = options.to_h.transform_keys(&.to_s)
         {% begin %}
           {% if @type < Polymorphic %}
             case options["type"]
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
-                {{subclass}}.new(options).tap(&.clear!)
+                {{subclass}}.allocate.tap do |instance|
+                  instance.__for_internal_use_only(options).clear!
+                end
             {% end %}
             else
-              self.new(options).tap(&.clear!)
+              self.allocate.tap do |instance|
+                instance.__for_internal_use_only(options).clear!
+              end
             end
           {% else %}
-            self.new(options).tap(&.clear!)
+            self.allocate.tap do |instance|
+              instance.__for_internal_use_only(options).clear!
+            end
           {% end %}
         {% end %}
       end
@@ -306,6 +317,27 @@ module Ktistec
 
       # Initializes the new instance.
       #
+      # Sets instance variables directly to skip side effects.
+      #
+      protected def __for_internal_use_only(options)
+        @changed = Set(Symbol).new
+        {% begin %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
+          {% for v in vs %}
+            key = {{v.stringify}}
+            if options.has_key?(key)
+              if (o = options[key]).is_a?(typeof(@{{v}}))
+                @{{v}} = o
+              end
+            end
+          {% end %}
+        {% end %}
+        # dup but don't maintain a linked list of previously saved records
+        @saved_record = self.dup.clear_saved_record
+      end
+
+      # Initializes the new instance.
+      #
       def initialize(options : Hash(String, Any)) forall Any
         @changed = Set(Symbol).new
         {% begin %}
@@ -315,7 +347,13 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o.as(typeof(self.{{v}}))
+                if self.responds_to?({{"#{v}=".id.symbolize}})
+                  self.{{v}} = o.as(typeof(self.{{v}}))
+                else
+                  raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
+                end
+              else
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
             end
           {% end %}
@@ -336,7 +374,13 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o.as(typeof(self.{{v}}))
+                if self.responds_to?({{"#{v}=".id.symbolize}})
+                  self.{{v}} = o.as(typeof(self.{{v}}))
+                else
+                  raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
+                end
+              else
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
             end
           {% end %}
@@ -356,7 +400,13 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o.as(typeof(self.{{v}}))
+                if self.responds_to?({{"#{v}=".id.symbolize}})
+                  self.{{v}} = o.as(typeof(self.{{v}}))
+                else
+                  raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
+                end
+              else
+                raise TypeError.new("#{self.class}#assign: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
             end
           {% end %}
@@ -374,7 +424,13 @@ module Ktistec
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
-                self.{{v}} = o.as(typeof(self.{{v}}))
+                if self.responds_to?({{"#{v}=".id.symbolize}})
+                  self.{{v}} = o.as(typeof(self.{{v}}))
+                else
+                  raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
+                end
+              else
+                raise TypeError.new("#{self.class}#assign: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
               end
             end
           {% end %}
@@ -792,6 +848,9 @@ module Ktistec
     end
 
     class ColumnError < Exception
+    end
+
+    class TypeError < Exception
     end
 
     class Invalid < Exception

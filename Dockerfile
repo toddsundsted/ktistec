@@ -8,7 +8,7 @@ ADD . /build/
 RUN npm run build
 RUN shards update
 RUN shards install --production
-RUN crystal build src/ktistec/server.cr --static --no-debug --release
+RUN crystal build src/ktistec/server.cr --static --debug --release
 
 FROM alpine:latest AS server
 RUN apk --no-cache add tzdata

@@ -49,10 +49,8 @@ class HomeController
 
       if account.valid?
         account.save
-
         session = Session.new(account).save
-        payload = {jti: session.session_key, iat: Time.utc}
-        jwt = Ktistec::JWT.encode(payload)
+        jwt = session.generate_jwt
 
         if accepts?("text/html")
           env.response.cookies["AuthToken"] = jwt

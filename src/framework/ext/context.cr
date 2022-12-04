@@ -1,7 +1,5 @@
 require "http/server"
 
-require "../jwt"
-
 class HTTP::Server::Context
   property! session : Session
 
@@ -13,21 +11,13 @@ class HTTP::Server::Context
 
   private def find_session
     if (jwt = check_authorization || check_cookie)
-      if (payload = Ktistec::JWT.decode(jwt))
-        unless Ktistec::JWT.expired?(payload)
-          if (session = Session.find(session_key: payload["jti"].as_s))
-            return session
-          end
-        end
-      end
+      Session.find_by_jwt?(jwt)
     end
-  rescue Ktistec::JWT::Error | Ktistec::Model::NotFound
   end
 
   private def new_session
     session = Session.new.save
-    payload = {"jti" => session.session_key, "iat" => Time.utc}
-    jwt = Ktistec::JWT.encode(payload)
+    jwt = session.generate_jwt
     response.headers["X-Auth-Token"] = jwt
     response.cookies["AuthToken"] = jwt
     session

@@ -90,10 +90,10 @@ $(document).on("click", ".dangerous.button[data-modal]", function (e) {
 })
 
 // transitions for transitional elements
-$(document).on("turbo:load", function() {
-  $(".transitional").transition("fade", "500ms")
+document.addEventListener("turbo:load", function() {
+  document.querySelectorAll(".transitional").forEach(transitional => transitional.style.opacity = 1)
 })
 
-$(document).on("turbo:before-cache", function() {
-  $(".transitional").removeClass("visible").addClass("hidden")
+document.addEventListener("turbo:before-cache", function() {
+  document.querySelectorAll(".transitional").forEach(transitional => transitional.style.opacity = 0)
 })

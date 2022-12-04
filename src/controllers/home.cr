@@ -49,11 +49,10 @@ class HomeController
 
       if account.valid?
         account.save
-        session = Session.new(account).save
+        session = env.new_session(account)
         jwt = session.generate_jwt
 
         if accepts?("text/html")
-          env.response.cookies["AuthToken"] = jwt
           redirect actor_path(actor)
         else
           env.response.content_type = "application/json"

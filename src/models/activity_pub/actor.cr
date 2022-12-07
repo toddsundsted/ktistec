@@ -780,16 +780,16 @@ module ActivityPub
         "pem_public_key" => if include_key
           dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
         end,
-        inbox: dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
-        outbox: dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
-        following: dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
-        followers: dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
-        name: dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
-        summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-        icon: dig_id?(json, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url"),
-        image: dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
-        urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
-        attachments: attachments_from_ldjson(
+        "inbox" => dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
+        "outbox" => dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
+        "following" => dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
+        "followers" => dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
+        "name" => dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
+        "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+        "icon" => dig_id?(json, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url"),
+        "image" => dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
+        "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+        "attachments" => attachments_from_ldjson(
           json.dig?("https://www.w3.org/ns/activitystreams#attachment")
         )
       }.compact

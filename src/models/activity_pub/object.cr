@@ -87,7 +87,7 @@ module ActivityPub
       end
 
       def audio?
-        media_type.in?(%w[audio/mp4 audio/webm audio/ogg audio/flac])
+        media_type.in?(%w[audio/mpeg audio/mp4 audio/webm audio/ogg audio/flac])
       end
     end
 
@@ -575,45 +575,45 @@ module ActivityPub
     end
 
     def from_json_ld(json)
-      self.assign(**self.class.map(json))
+      self.assign(self.class.map(json))
     end
 
     def self.map(json, **options)
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
-        iri: json.dig?("@id").try(&.as_s),
-        _type: json.dig?("@type").try(&.as_s.split("#").last),
-        published: (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
-        attributed_to_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
-        in_reply_to_iri: dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
-        replies: dig_id?(json, "https://www.w3.org/ns/activitystreams#replies"),
-        to: to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
-        cc: cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
-        name: dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
-        summary: dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-        content: dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
-        media_type: dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
-        hashtags: dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
+        "iri" => json.dig?("@id").try(&.as_s),
+        "_type" => json.dig?("@type").try(&.as_s.split("#").last),
+        "published" => (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
+        "attributed_to_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
+        "in_reply_to_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
+        "replies" => dig_id?(json, "https://www.w3.org/ns/activitystreams#replies"),
+        "to" => to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
+        "cc" => cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+        "name" => dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
+        "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+        "content" => dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
+        "media_type" => dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
+        "hashtags" => dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
           next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Hashtag"
           name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").try(&.lstrip('#'))
           href = dig?(tag, "https://www.w3.org/ns/activitystreams#href")
           Tag::Hashtag.new(name: name, href: href)
         end,
-        mentions: dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
+        "mentions" => dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
           next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Mention"
           name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").try(&.lstrip('@'))
           href = dig?(tag, "https://www.w3.org/ns/activitystreams#href")
           Tag::Mention.new(name: name, href: href)
         end,
-        attachments: dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
+        "attachments" => dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
           url = attachment["url"].try(&.as_s)
           media_type = attachment["mediaType"].try(&.as_s)
           Attachment.new(url, media_type) if url && media_type
         end,
-        urls: dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+        "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
         # use addressing to establish visibility
-        visible: [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
-      }
+        "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
+      }.compact
     end
 
     def make_delete_activity

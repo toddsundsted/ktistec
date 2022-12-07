@@ -768,16 +768,16 @@ module ActivityPub
     end
 
     def from_json_ld(json, *, include_key = false)
-      self.assign(**self.class.map(json, include_key: include_key))
+      self.assign(self.class.map(json, include_key: include_key))
     end
 
     def self.map(json, *, include_key = false, **options)
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
-        iri: json.dig?("@id").try(&.as_s),
-        _type: json.dig?("@type").try(&.as_s.split("#").last),
-        username: dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
-        pem_public_key: if include_key
+        "iri" => json.dig?("@id").try(&.as_s),
+        "_type" => json.dig?("@type").try(&.as_s.split("#").last),
+        "username" => dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
+        "pem_public_key" => if include_key
           dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
         end,
         inbox: dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
@@ -792,7 +792,7 @@ module ActivityPub
         attachments: attachments_from_ldjson(
           json.dig?("https://www.w3.org/ns/activitystreams#attachment")
         )
-      }
+      }.compact
     end
 
     def self.attachments_from_ldjson(entry)

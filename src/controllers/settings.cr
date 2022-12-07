@@ -81,7 +81,7 @@ class SettingsController
       "footer" => params["footer"]?.try(&.to_s.presence),
       "site" => params["site"]?.try(&.to_s.presence),
       "attachments" => reduce_attachments(params)
-    }
+    }.compact
   end
 
   private def self.reduce_attachments(params)

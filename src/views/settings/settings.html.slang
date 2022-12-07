@@ -38,7 +38,7 @@ h2 Delete Account!
 p
   | Delete account <strong>#{actor.username}</strong>. This action cannot be undone!
 == form_tag(nil, "/settings/terminate") do
-  input.ui.dangerous.button type="submit" value="Delete Account" data-modal="terminate"
+  input.ui.dangerous.button type="submit" value="Delete Account" data-modal="terminate" data-controller="modal-action" data-action="click->modal-action#show"
 .ui.basic.tiny.terminate.modal
   .header: i.trash.icon
     | Delete This Account

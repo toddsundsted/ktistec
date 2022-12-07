@@ -278,10 +278,25 @@ trix-editor {
     figure img { object-fit: cover; width: 100%; height: auto; }
 }
 
-/** transitions for transitional elements **/
+/** transitions **/
+
+/* transitional elements */
 .transitional {
     transition: opacity 0.5s !important;
     opacity: 0;
+}
+
+/* modals */
+.ui.dimmer > .ui.modal {
+    display: block;
+    transition: all .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: scale(0.85);
+    opacity: 0.0;
+}
+
+.ui.dimmer > .ui.modal.active {
+    transform: scale(1.0);
+    opacity: 1.0;
 }
 
 /** from mastodon **/

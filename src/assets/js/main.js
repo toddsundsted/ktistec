@@ -74,21 +74,6 @@ Trix.config.textAttributes.code = { tagName: "code", inheritable: true }
 Trix.config.textAttributes.sub = { tagName: "sub", inheritable: true }
 Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
 
-// modal popup for dangrous actions
-$(document).on("click", ".dangerous.button[data-modal]", function (e) {
-  e.preventDefault()
-  let $this = $(this)
-  let $form = $this.closest("form")
-  let modal = $this.data("modal")
-  $(".ui.modal." + modal)
-    .modal({
-      onApprove: function() {
-        $form.submit()
-      }
-    })
-    .modal("show")
-})
-
 // transitions for transitional elements
 document.addEventListener("turbo:load", function() {
   document.querySelectorAll(".transitional").forEach(transitional => transitional.style.opacity = 1)

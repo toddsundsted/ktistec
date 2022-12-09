@@ -1,9 +1,36 @@
 require "benchmark"
 require "sqlite3"
 
-require "./framework"
-
 module Ktistec
+  @@db_file : String =
+    begin
+      ENV["KTISTEC_DB"]?.try { |db| "sqlite3://#{db}" } ||
+        if ENV["KEMAL_ENV"]? == "production"
+          "sqlite3://#{File.expand_path("~/.ktistec.db", home: true)}"
+        else
+          "sqlite3://ktistec.db"
+        end
+    end
+
+  @@database : DB::Database =
+    begin
+      unless File.exists?(db_file.split("//").last)
+        DB.open(db_file) do |db|
+          db.exec "CREATE TABLE options (key TEXT PRIMARY KEY, value TEXT)"
+          db.exec "INSERT INTO options (key, value) VALUES (?, ?)", "secret_key", Random::Secure.hex(64)
+          db.exec "CREATE TABLE migrations (id INTEGER PRIMARY KEY, name TEXT)"
+        end
+      end
+      DB.open(db_file)
+    end
+
+  @@secret_key : String =
+    begin
+      database.scalar("SELECT value FROM options WHERE key = ?", "secret_key").as(String)
+    end
+
+  class_getter db_file, database, secret_key
+
   # Database utilities.
   #
   module Database

@@ -1,7 +1,7 @@
 require "../model"
 
 module Ktistec
-  module Model
+  module Model(*T)
     module Deletable
       @[Persistent]
       @[Insignificant]

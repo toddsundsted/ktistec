@@ -8,7 +8,6 @@ require "../../src/framework/ext/params"
 require "../../src/handlers/**"
 
 require "./base"
-require "./model"
 
 # from https://github.com/kemalcr/spec-kemal/blob/master/src/spec-kemal.cr
 # run specs with `KEMAL_ENV=test crystal spec`

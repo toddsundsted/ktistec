@@ -1,6 +1,6 @@
 require "../../src/models/tag"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 
 Spectator.describe Tag do
   setup_spec

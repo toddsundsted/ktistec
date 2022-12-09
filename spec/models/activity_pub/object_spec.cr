@@ -2,7 +2,7 @@ require "../../../src/models/activity_pub/object"
 require "../../../src/models/activity_pub/activity/announce"
 require "../../../src/models/activity_pub/activity/like"
 
-require "../../spec_helper/model"
+require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
 class FooBarObject < ActivityPub::Object

@@ -1,6 +1,6 @@
 require "../../src/framework/database"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 
 class TestMigraton
   extend Ktistec::Database::Migration

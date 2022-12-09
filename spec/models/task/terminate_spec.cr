@@ -1,6 +1,6 @@
 require "../../../src/models/task/terminate"
 
-require "../../spec_helper/model"
+require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
 Spectator.describe Task::Terminate do

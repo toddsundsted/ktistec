@@ -1,6 +1,6 @@
 require "../../src/workers/task_worker"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 
 class TaskWorker
   # expose method for testing

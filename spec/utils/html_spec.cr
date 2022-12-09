@@ -1,6 +1,6 @@
 require "../../src/utils/html"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 require "../spec_helper/factory"
 
 Spectator.describe Ktistec::HTML do

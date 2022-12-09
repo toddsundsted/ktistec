@@ -5,6 +5,11 @@ require "uri"
 require "./database"
 
 module Ktistec
+  # always run database migrations when we boot up the framework
+  Ktistec::Database.all_pending_versions.each do |version|
+    puts Ktistec::Database.do_operation(:apply, version)
+  end
+
   # Model-like class for managing settings.
   #
   class Settings
@@ -103,9 +108,6 @@ module Ktistec
   #
   class Server
     def self.run
-      Ktistec::Database.all_pending_versions.each do |version|
-        puts Ktistec::Database.do_operation(:apply, version)
-      end
       with new yield
       Kemal.config.app_name = "Ktistec"
       # work around Kemal's handling of the command line when running specs...

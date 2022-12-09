@@ -40,6 +40,10 @@ Spectator.describe ActivityPub::Actor do
       expect{subject.assign(username: "foobar").save}.to change{subject.urls}
     end
 
+    it "assigns attachments" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.attachments}
+    end
+
     it "doesn't assign if the actor isn't local" do
       expect{subject.assign(iri: "https://remote/object", username: "foobar").save}.not_to change{subject.urls}
     end
@@ -247,6 +251,20 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
+
+      expect(actor.attachments.not_nil!.size).to eq(2)
+      expect(actor.attachments.not_nil!.all? { |a| a.type == "PropertyValue" }).to be_true
+      expect(actor.attachments.not_nil!.first.name).to eq("Blog")
+      expect(actor.attachments.not_nil!.first.value).to eq(
+        "<a href=\"https://somewhere.example.com\" target=\"_blank\" " +
+        "rel=\"nofollow noopener noreferrer me\"><span class=\"invisible\">" +
+        "https://</span><span class=\"\">somewhere.example.com</span><span class=\"invisible\"></span></a>"
+      )
+      expect(actor.attachments.not_nil!.last.name).to eq("Website")
+      expect(actor.attachments.not_nil!.last.value).to eq("<a href=\"http://site.example.com\" target=\"_blank\" " +
+        "rel=\"nofollow noopener noreferrer me\"><span class=\"invisible\">"+
+        "http://</span><span class=\"\">site.example.com</span><span class=\"invisible\"></span></a>"
+      )
     end
 
     it "includes the public key" do
@@ -280,6 +298,15 @@ Spectator.describe ActivityPub::Actor do
 
       it "renders the array of URLs" do
         expect(actor.to_json_ld).to match(/"url":\["url one","url two"\]/)
+      end
+    end
+
+    context "given an array of attachments" do
+      before_each { actor.assign(urls: ["url one", "url two"]) }
+
+      it "renders the array of attachments, with html links" do
+        expect(actor.to_json_ld).to match(/"attachment":\[[^\]]+\]/)
+        expect(actor.to_json_ld).to match(%r{"value\":\"<a href=\\\"https://somewhere.example.com\\\" target=\\\"_blank\\\" rel=\\\"nofollow noopener noreferrer me\\\"><span class=\\\"invisible\\\">https://</span><span class=\\\"\\\">somewhere.example.com</span><span class=\\\"invisible\\\"></span></a>\"})
       end
     end
   end

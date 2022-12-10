@@ -16,9 +16,15 @@ module Ktistec
     begin
       unless File.exists?(db_file.split("//").last)
         DB.open(db_file) do |db|
-          db.exec "CREATE TABLE options (key TEXT PRIMARY KEY, value TEXT)"
+          File.read(File.join(Dir.current, "etc", "database", "schema.sql")).split(';').each do |command|
+            db.exec(command) unless command.blank?
+          end
+          # sqlite only recently replaced (insecure) rc4 with chacha20
+          # for random number generation. to avoid problems with older
+          # sqlite versions in the field, use the following instead of
+          # hex(randomblob) to generate the secret key.
+          # see: https://sqlite.org/src/info/084d8776fa95c754
           db.exec "INSERT INTO options (key, value) VALUES (?, ?)", "secret_key", Random::Secure.hex(64)
-          db.exec "CREATE TABLE migrations (id INTEGER PRIMARY KEY, name TEXT)"
         end
       end
       DB.open(db_file)

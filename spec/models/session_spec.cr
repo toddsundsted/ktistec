@@ -60,6 +60,28 @@ Spectator.describe Session do
     end
   end
 
+  describe "#generate_jwt" do
+    it "generates a web token" do
+      expect(subject.generate_jwt).to match(/^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)$/)
+    end
+  end
+
+  describe ".find_by_jwt?" do
+    let(jwt) { subject.generate_jwt }
+
+    it "returns the session" do
+      expect(described_class.find_by_jwt?(jwt)).to eq(subject)
+    end
+
+    it "returns nil" do
+      expect(described_class.find_by_jwt?(described_class.new.generate_jwt)).to be_nil
+    end
+
+    it "returns nil" do
+      expect(described_class.find_by_jwt?("garbage.garbage.garbage")).to be_nil
+    end
+  end
+
   let(anonymous) { described_class.new.save }
 
   describe ".clean_up_stale_sessions" do

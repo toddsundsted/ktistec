@@ -44,7 +44,7 @@
               i.user.icon
           .content
             .summary
-              - if (in_reply_to = activity.object.in_reply_to?)
+              - if (in_reply_to = activity.object.in_reply_to?) && in_reply_to.attributed_to? == account.actor
                 a> href=remote_actor_path(activity.actor) = activity.actor.display_name
                 a> href=remote_object_path(activity.object) replied to
                 a< href=remote_object_path(in_reply_to) your post

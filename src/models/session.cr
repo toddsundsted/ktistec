@@ -1,5 +1,6 @@
 require "json"
 
+require "../framework/jwt"
 require "../framework/model"
 require "../framework/model/**"
 require "./account"
@@ -47,6 +48,24 @@ class Session
   end
 
   belongs_to account
+
+  @jwt : String?
+
+  def generate_jwt
+    @jwt ||= begin
+      payload = {"jti" => session_key, "iat" => Time.utc}
+      Ktistec::JWT.encode(payload)
+    end
+  end
+
+  def self.find_by_jwt?(jwt)
+    if (payload = Ktistec::JWT.decode(jwt))
+      unless Ktistec::JWT.expired?(payload)
+        Session.find(session_key: payload["jti"].as_s)
+      end
+    end
+  rescue Ktistec::JWT::Error | Ktistec::Model::NotFound
+  end
 
   def self.clean_up_stale_sessions(time = 1.day.ago)
     delete = "DELETE FROM sessions WHERE account_id IS NULL AND updated_at < ?"

@@ -15,12 +15,10 @@ class SessionsController
     username, password = params(env)
 
     if account = account?(username, password)
-      session = Session.new(account).save
-      payload = {jti: session.session_key, iat: Time.utc}
-      jwt = Ktistec::JWT.encode(payload)
+      session = env.new_session(account)
+      jwt = session.generate_jwt
 
       if accepts?("text/html")
-        env.response.cookies["AuthToken"] = jwt
         redirect actor_path(account)
       else
         env.response.content_type = "application/json"

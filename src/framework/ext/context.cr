@@ -1,6 +1,7 @@
 require "http/server"
 
-require "../jwt"
+require "../../models/account"
+require "../../models/session"
 
 class HTTP::Server::Context
   property! session : Session
@@ -8,29 +9,31 @@ class HTTP::Server::Context
   delegate :account, :account?, :account=, to: session
 
   def session
-    @session ||= find_session || new_session
+    @session ||= (find_session || new_session)
   end
 
   private def find_session
     if (jwt = check_authorization || check_cookie)
-      if (payload = Ktistec::JWT.decode(jwt))
-        unless Ktistec::JWT.expired?(payload)
-          if (session = Session.find(session_key: payload["jti"].as_s))
-            return session
-          end
-        end
-      end
+      Session.find_by_jwt?(jwt)
     end
-  rescue Ktistec::JWT::Error | Ktistec::Model::NotFound
   end
 
   private def new_session
-    session = Session.new.save
-    payload = {"jti" => session.session_key, "iat" => Time.utc}
-    jwt = Ktistec::JWT.encode(payload)
-    response.headers["X-Auth-Token"] = jwt
-    response.cookies["AuthToken"] = jwt
-    session
+    Session.new.save.tap do |session|
+      jwt = session.generate_jwt
+      response.headers["X-Auth-Token"] = jwt
+      response.cookies["AuthToken"] = jwt
+    end
+  end
+
+  # Replaces the existing session with a new, authenticated session.
+  #
+  def new_session(account : Account)
+    @session = Session.new(account).save.tap do |session|
+      jwt = session.generate_jwt
+      response.headers["X-Auth-Token"] = jwt
+      response.cookies["AuthToken"] = jwt
+    end
   end
 
   private def check_authorization

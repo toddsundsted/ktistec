@@ -87,7 +87,7 @@ module ActivityPub
       end
 
       def audio?
-        media_type.in?(%w[audio/mp4 audio/webm audio/ogg audio/flac])
+        media_type.in?(%w[audio/mpeg audio/mp4 audio/webm audio/ogg audio/flac])
       end
     end
 

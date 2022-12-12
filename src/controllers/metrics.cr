@@ -115,9 +115,9 @@ class MetricsController
     {_begin, _end}
   end
 
-  private def self.get_granularity(env, default = MetricsController::Chart::Granularity::Daily)
+  private def self.get_granularity(env, default = Granularity::Daily)
     if (granularity = env.params.query["granularity"]?.try(&.presence))
-      granularity = MetricsController::Chart::Granularity.parse?(granularity)
+      granularity = Granularity.parse?(granularity)
     end
     granularity || default
   end

@@ -18,6 +18,11 @@ class MetricsController
       Yearly
     end
 
+    enum Predicate
+      Summate
+      Average
+    end
+
     def self.labels(begin _begin, end _end, granularity : Granularity = Granularity::Daily)
       Array(String).new.tap do |result|
         if _begin && _end
@@ -48,30 +53,42 @@ class MetricsController
       end
     end
 
-    def data(begin _begin, end _end, granularity : Granularity = Granularity::Daily)
-      points.reduce(Hash(Time, Int32).new(0)) do |data, point|
+    def data(begin _begin, end _end, granularity : Granularity = Granularity::Daily, predicate : Predicate = Predicate::Summate)
+      points.reduce(Hash(Time, {Int32, Int32}).new({0, 0})) do |data, point|
         if _begin && point.timestamp >= _begin && _end && point.timestamp <= _end
-          case granularity
-          in Granularity::Daily
-            data[point.timestamp.at_beginning_of_day] += point.value
-          in Granularity::Weekly
-            data[point.timestamp.at_beginning_of_week] += point.value
-          in Granularity::Monthly
-            data[point.timestamp.at_beginning_of_month] += point.value
-          in Granularity::Yearly
-            data[point.timestamp.at_beginning_of_year] += point.value
-          end
+          key =
+            case granularity
+            in Granularity::Daily
+              point.timestamp.at_beginning_of_day
+            in Granularity::Weekly
+              point.timestamp.at_beginning_of_week
+            in Granularity::Monthly
+              point.timestamp.at_beginning_of_month
+            in Granularity::Yearly
+              point.timestamp.at_beginning_of_year
+            end
+          data[key] = {data[key][0] + point.value, data[key][1] + 1}
         end
         data
+      end.transform_values do |value|
+        case predicate
+        in Predicate::Summate
+          value[0]
+        in Predicate::Average
+          (value[0] / value[1]).to_i32
+        end
       end.transform_keys(&.to_s("%Y-%m-%d"))
     end
   end
+
+  alias Granularity = Chart::Granularity
+  alias Predicate = Chart::Predicate
 
   get "/metrics" do |env|
     range = get_range(env)
     granularity = get_granularity(env)
 
-    charts = Point.charts.select(&.starts_with?(/inbox-|outbox-/)).map do |chart|
+    charts = Point.charts.select(&.starts_with?(/inbox-|outbox-|heap-|server-/)).map do |chart|
       Chart.new(
         name: chart,
         points: Point.chart(chart, *range)
@@ -81,6 +98,8 @@ class MetricsController
     minmax = charts.flat_map(&.points).map(&.timestamp).minmax?
 
     range = {range[0] || minmax[0], range[1] || minmax[1]}
+
+    labels = Chart.labels(*range, granularity: granularity)
 
     ok "metrics/metrics"
   end
@@ -96,9 +115,9 @@ class MetricsController
     {_begin, _end}
   end
 
-  private def self.get_granularity(env, default = MetricsController::Chart::Granularity::Daily)
+  private def self.get_granularity(env, default = Granularity::Daily)
     if (granularity = env.params.query["granularity"]?.try(&.presence))
-      granularity = MetricsController::Chart::Granularity.parse?(granularity)
+      granularity = Granularity.parse?(granularity)
     end
     granularity || default
   end

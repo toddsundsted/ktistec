@@ -7,6 +7,7 @@ Spectator.describe MetricsController::Chart do
   setup_spec
 
   alias Granularity = MetricsController::Chart::Granularity
+  alias Predicate = MetricsController::Chart::Predicate
 
   describe ".labels" do
     let(from) { Time.utc(2016, 12, 31) }
@@ -54,20 +55,36 @@ Spectator.describe MetricsController::Chart do
 
     subject { described_class.new("test-chart", [point1, point2, point3]) }
 
-    it "returns the data at daily granularity" do
+    it "returns the summated data at daily granularity" do
       expect(subject.data(from, to)).to eq({"2016-12-31" => 1, "2017-01-01" => 2, "2017-01-02" => 3})
     end
 
-    it "returns the data at weekly granularity" do
+    it "returns the summated data at weekly granularity" do
       expect(subject.data(from, to, granularity: Granularity::Weekly)).to eq({"2016-12-26" => 3, "2017-01-02" => 3})
     end
 
-    it "returns the data at monthly granularity" do
+    it "returns the summated data at monthly granularity" do
       expect(subject.data(from, to, granularity: Granularity::Monthly)).to eq({"2016-12-01" => 1, "2017-01-01" => 5})
     end
 
-    it "returns the data at yearly granularity" do
+    it "returns the summated data at yearly granularity" do
       expect(subject.data(from, to, granularity: Granularity::Yearly)).to eq({"2016-01-01" => 1, "2017-01-01" => 5})
+    end
+
+    it "returns the averaged data at daily granularity" do
+      expect(subject.data(from, to, predicate: Predicate::Average)).to eq({"2016-12-31" => 1, "2017-01-01" => 2, "2017-01-02" => 3})
+    end
+
+    it "returns the averaged data at weekly granularity" do
+      expect(subject.data(from, to, granularity: Granularity::Weekly, predicate: Predicate::Average)).to eq({"2016-12-26" => 1, "2017-01-02" => 3})
+    end
+
+    it "returns the averaged data at monthly granularity" do
+      expect(subject.data(from, to, granularity: Granularity::Monthly, predicate: Predicate::Average)).to eq({"2016-12-01" => 1, "2017-01-01" => 2})
+    end
+
+    it "returns the averaged data at yearly granularity" do
+      expect(subject.data(from, to, granularity: Granularity::Yearly, predicate: Predicate::Average)).to eq({"2016-01-01" => 1, "2017-01-01" => 2})
     end
 
     it "returns an empty collection" do

@@ -11,10 +11,7 @@ export default class extends Controller {
       data: {
         labels: JSON.parse(this.labelsTarget.textContent),
         datasets: JSON.parse(this.datasetsTarget.textContent)
-      },
-      type: "line",
-      tension: 0.1,
-      spanGaps: false
+      }
     })
   }
 

@@ -88,7 +88,7 @@ class MetricsController
     range = get_range(env)
     granularity = get_granularity(env)
 
-    charts = Point.charts.select(&.starts_with?(/inbox-|outbox-/)).map do |chart|
+    charts = Point.charts.select(&.starts_with?(/inbox-|outbox-|heap-|server-/)).map do |chart|
       Chart.new(
         name: chart,
         points: Point.chart(chart, *range)
@@ -98,6 +98,8 @@ class MetricsController
     minmax = charts.flat_map(&.points).map(&.timestamp).minmax?
 
     range = {range[0] || minmax[0], range[1] || minmax[1]}
+
+    labels = Chart.labels(*range, granularity: granularity)
 
     ok "metrics/metrics"
   end

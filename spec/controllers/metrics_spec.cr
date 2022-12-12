@@ -140,18 +140,18 @@ Spectator.describe MetricsController do
 
       it "renders metrics chart" do
         get "/metrics", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//canvas[@id='charts']")).not_to be_empty
+        expect(XML.parse_html(response.body).xpath_nodes("//canvas[@id='charts-1']")).not_to be_empty
       end
 
       it "renders metrics labels" do
         get "/metrics", ACCEPT_HTML
-        labels = JSON.parse(XML.parse_html(response.body).xpath_nodes("//script[@id='chart-labels']").first.text).as_a
+        labels = JSON.parse(XML.parse_html(response.body).xpath_nodes("//script[@id='chart-labels-1']").first.text).as_a
         expect(labels).to contain_exactly("2016-02-15")
       end
 
       it "renders metrics datasets" do
         get "/metrics", ACCEPT_HTML
-        datasets = JSON.parse(XML.parse_html(response.body).xpath_nodes("//script[@id='chart-datasets']").first.text).as_a
+        datasets = JSON.parse(XML.parse_html(response.body).xpath_nodes("//script[@id='chart-datasets-1']").first.text).as_a
         expect(datasets.map(&.dig("label"))).to contain_exactly("inbox-test-chart")
         expect(datasets.map(&.dig("data"))).to contain_exactly({"2016-02-15" => 15})
       end

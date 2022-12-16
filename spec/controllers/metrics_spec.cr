@@ -53,7 +53,7 @@ Spectator.describe MetricsController::Chart do
     create_point!(2)
     create_point!(3)
 
-    subject { described_class.new("test-chart", [point1, point2, point3]) }
+    subject { described_class.new("test-chart", [point1, point2, point3], Time::Location::UTC) }
 
     it "returns the summated data at daily granularity" do
       expect(subject.data(from, to)).to eq({"2016-12-31" => 1, "2017-01-01" => 2, "2017-01-02" => 3})

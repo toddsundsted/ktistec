@@ -7,8 +7,9 @@ class MetricsController
   class Chart
     property name : String
     property points : Array(Point)
+    private getter timezone : Time::Location
 
-    def initialize(@name, @points)
+    def initialize(@name, @points, @timezone)
     end
 
     enum Granularity
@@ -59,13 +60,13 @@ class MetricsController
           key =
             case granularity
             in Granularity::Daily
-              point.timestamp.at_beginning_of_day
+              point.timestamp.in(timezone).at_beginning_of_day
             in Granularity::Weekly
-              point.timestamp.at_beginning_of_week
+              point.timestamp.in(timezone).at_beginning_of_week
             in Granularity::Monthly
-              point.timestamp.at_beginning_of_month
+              point.timestamp.in(timezone).at_beginning_of_month
             in Granularity::Yearly
-              point.timestamp.at_beginning_of_year
+              point.timestamp.in(timezone).at_beginning_of_year
             end
           data[key] = {data[key][0] + point.value, data[key][1] + 1}
         end
@@ -84,6 +85,10 @@ class MetricsController
   alias Granularity = Chart::Granularity
   alias Predicate = Chart::Predicate
 
+  private macro timezone(env)
+    Time::Location.load({{env}}.account.timezone)
+  end
+
   get "/metrics" do |env|
     range = get_range(env)
     granularity = get_granularity(env)
@@ -91,7 +96,8 @@ class MetricsController
     charts = Point.charts.select(&.starts_with?(/inbox-|outbox-|heap-|server-/)).map do |chart|
       Chart.new(
         name: chart,
-        points: Point.chart(chart, *range)
+        points: Point.chart(chart, *range),
+        timezone: timezone(env)
       )
     end
 
@@ -105,7 +111,7 @@ class MetricsController
   end
 
   private def self.get_range(env)
-    timezone = Time::Location.load(env.account.timezone)
+    timezone = timezone(env)
     if (_begin = env.params.query["begin"]?.try(&.presence))
       _begin = Time.parse(_begin, "%Y-%m-%d", timezone)
     end

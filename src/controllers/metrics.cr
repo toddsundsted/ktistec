@@ -93,7 +93,7 @@ class MetricsController
     range = get_range(env)
     granularity = get_granularity(env)
 
-    charts = Point.charts.select(&.starts_with?(/inbox-|outbox-|heap-|server-/)).map do |chart|
+    charts = Point.charts.select(&.starts_with?(/inbox-|outbox-|heap-|free-|server-/)).map do |chart|
       Chart.new(
         name: chart,
         points: Point.chart(chart, *range),

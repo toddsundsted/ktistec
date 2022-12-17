@@ -27,7 +27,7 @@ canvas#charts-1 data-controller="chart"
   script#chart-datasets-1 type="application/json" data-chart-target="datasets"
     == datasets.to_json
 crystal:
-  datasets = charts.select(&.name.starts_with?(/heap-/)).map do |chart|
+  datasets = charts.select(&.name.starts_with?(/heap-|free-/)).map do |chart|
     {
       label: chart.name,
       data: chart.data(*range, granularity: granularity, predicate: Predicate::Average),

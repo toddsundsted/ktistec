@@ -19,7 +19,12 @@ class RelationshipsController
       bad_request("Body Is Blank")
     end
 
-    activity = ActivityPub::Activity.from_json_ld(body)
+    activity =
+      begin
+        ActivityPub::Activity.from_json_ld(body)
+      rescue Ktistec::Model::TypeError
+        bad_request("Unsupported Type")
+      end
 
     if activity.local?
       forbidden

@@ -14,8 +14,10 @@
       .extra.content
         p == s summary
   .extra.content
-    a.left.floated href=actor.iri
+    a.left.floated href=remote_actor_path(actor)
       .meta= actor.display_name
+    br
+    a.left.floated href=actor.iri
       .meta= actor.account_uri
     - if (_account = env.account?) && _account.actor != actor
       - if env.request.path =~ /followers$/ && actor.follows?(_account.actor, confirmed: false) && (_follow = ActivityPub::Activity::Follow.follows?(actor, _account.actor))

@@ -13,7 +13,7 @@
       - else
         i.user.icon
     .ui.segment
-      = actor.display_name
+      a href=remote_actor_path(actor) = actor.display_name
       br: a href=actor.display_link = actor.account_uri
       - if (summary = actor.summary.presence)
         br: == s summary

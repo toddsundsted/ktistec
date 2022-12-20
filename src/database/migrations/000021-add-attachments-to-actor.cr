@@ -3,7 +3,7 @@ require "../../framework/database"
 extend Ktistec::Database::Migration
 
 up do |db|
-  add_column "actors", "attachments", "text not null default '[]'"
+  add_column "actors", "attachments", "text"
 end
 
 down do |db|

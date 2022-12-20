@@ -940,6 +940,7 @@ Spectator.describe ActivityPub::Actor do
     macro post(index)
       let_build(:actor, named: actor{{index}})
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
+      let_create!(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
       let_create!(
         :timeline, named: relationship{{index}},
         owner: subject,
@@ -987,6 +988,16 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.timeline(since: since)).to eq(4)
     end
 
+    it "filters out posts not associated with included activities" do
+      expect(subject.timeline(inclusion: [ActivityPub::Activity::Create], page: 1, size: 2)).to be_empty
+      expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Create])).to eq(0)
+    end
+
+    it "filters out posts not associated with included activities" do
+      expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([object5, object4])
+      expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
+    end
+
     it "paginates the results" do
       expect(subject.timeline(page: 1, size: 2)).to eq([object5, object4])
       expect(subject.timeline(page: 3, size: 2)).to eq([object1])
@@ -998,8 +1009,8 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro notification(index)
-      let_create(:actor, named: actor{{index}})
-      let_create(:activity, named: activity{{index}}, actor: actor{{index}})
+      let_build(:actor, named: actor{{index}})
+      let_build(:activity, named: activity{{index}}, actor: actor{{index}})
       let_create!(
         :notification, named: relationship{{index}},
         owner: subject,

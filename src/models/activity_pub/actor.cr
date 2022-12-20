@@ -799,9 +799,10 @@ module ActivityPub
       entry_not_nil = (entry.try(&.as_a) || [] of JSON::Any).not_nil!
 
       entry_not_nil.reduce([] of Attachment) do |memo, a|
-        name = a["name"].to_s
-        type = a["type"].to_s
-        value = maybe_wrap_link(a["value"].to_s)
+        p a
+        name = (dig?(a, "https://www.w3.org/ns/activitystreams#name", "und") || "").not_nil!
+        type = (a.dig?("@type").try(&.as_s) || "").not_nil!
+        value = maybe_wrap_link((dig?(a, "http://schema.org#value") || "").not_nil!)
 
         unless name.empty? || value.empty?
           memo << Attachment.new(name, type, value)

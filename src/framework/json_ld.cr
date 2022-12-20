@@ -104,7 +104,7 @@ module Ktistec
     end
 
     private def self.expand_value(term, value, context, loader)
-      if term.in?(["https://www.w3.org/ns/activitystreams#content", "https://www.w3.org/ns/activitystreams#name", "https://www.w3.org/ns/activitystreams#summary", "https://www.w3.org/ns/activitystreams#attachment"])
+      if term.in?(["https://www.w3.org/ns/activitystreams#content", "https://www.w3.org/ns/activitystreams#name", "https://www.w3.org/ns/activitystreams#summary"])
         value.as_s? ? wrap({"und" => value}) : value
       elsif value.as_a?
         wrap(value.as_a.map { |v| v.as_h? ? expand(v, context, loader) : v })

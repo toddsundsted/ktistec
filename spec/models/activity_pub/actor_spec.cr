@@ -145,7 +145,12 @@ Spectator.describe ActivityPub::Actor do
       {
         "@context":[
           "https://www.w3.org/ns/activitystreams",
-          "https://w3id.org/security/v1"
+          "https://w3id.org/security/v1",
+          {
+            "schema":"http://schema.org#",
+            "PropertyValue": "schema:PropertyValue",
+            "value": "schema:value"
+          }
         ],
         "@id":"https://remote/foo_bar",
         "@type":"FooBarActor",
@@ -205,7 +210,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.attachments).not_to be_nil
       attachments = actor.attachments.not_nil!
       expect(attachments.size).to eq(2)
-      expect(attachments.all? { |a| a.type == "PropertyValue" }).to be_true
+      expect(attachments.all? { |a| a.type == "http://schema.org#PropertyValue" }).to be_true
 
       expect(attachments.first.name).to eq("Blog")
       expect(attachments.first.value).to eq(
@@ -253,7 +258,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.urls).to eq(["url link"])
 
       expect(actor.attachments.not_nil!.size).to eq(2)
-      expect(actor.attachments.not_nil!.all? { |a| a.type == "PropertyValue" }).to be_true
+      expect(actor.attachments.not_nil!.all? { |a| a.type == "http://schema.org#PropertyValue" }).to be_true
       expect(actor.attachments.not_nil!.first.name).to eq("Blog")
       expect(actor.attachments.not_nil!.first.value).to eq(
         "<a href=\"https://somewhere.example.com\" target=\"_blank\" " +

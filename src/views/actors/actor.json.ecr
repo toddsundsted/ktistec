@@ -1,7 +1,12 @@
 {
   "@context":[
     "https://www.w3.org/ns/activitystreams",
-    "https://w3id.org/security/v1"
+    "https://w3id.org/security/v1",
+	{
+      "schema":"http://schema.org#",
+	  "PropertyValue":"schema:PropertyValue",
+	  "value":"schema:value"
+	}
   ],
   <%- if (username = actor.username) -%>
   "preferredUsername":<%= username.inspect %>,

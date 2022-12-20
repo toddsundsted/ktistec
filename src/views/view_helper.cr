@@ -16,6 +16,8 @@ module Ktistec::ViewHelper
     def object_partial(env, object, actor = object.attributed_to, author = actor, *, activity = nil, with_detail = false, for_thread = nil)
       if for_thread
         render "src/views/partials/thread.html.slang"
+      elsif with_detail
+        render "src/views/partials/detail.html.slang"
       else
         render "src/views/partials/object.html.slang"
       end

@@ -37,9 +37,9 @@ class TaskWorker
 
   protected def work(now = Time.utc)
     tasks = Task.scheduled(now)
-    ids = tasks.map(&.id.to_s).join(",")
-    update = "UPDATE tasks SET running = 1 WHERE id IN (#{ids})"
-    Ktistec.database.exec(update)
+    ids = tasks.map(&.id).compact
+    update = "UPDATE tasks SET running = 1 WHERE id IN (#{("?," * ids.size)[0...-1]})"
+    Ktistec.database.exec(update, args: ids)
     tasks.each do |task|
       if task.is_a?(Task::ConcurrentTask)
         spawn { perform(task) }

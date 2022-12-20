@@ -69,6 +69,13 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(403)
     end
 
+    it "returns 400 if the activity cannot be deserialized due to an unsupported type" do
+      json = %q|{"type":"Activity","id":"https://remote/one","actor":{"type":"Activity","id":"https://remote/two"}}|
+      post "/actors/#{actor.username}/inbox", headers, json
+      expect(JSON.parse(response.body)["msg"]).to eq("unsupported type")
+      expect(response.status_code).to eq(400)
+    end
+
     it "returns 400 if activity is not supported" do
       HTTP::Client.activities << activity
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld

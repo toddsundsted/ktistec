@@ -626,6 +626,7 @@ Spectator.describe ContentRules do
 
     context "given a timeline with another object already added" do
       let_build(:object, named: another)
+      let_create!(:create, object: another)
 
       before_each { put_in_timeline(owner, another) }
 

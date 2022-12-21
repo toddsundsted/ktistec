@@ -10,11 +10,17 @@
     a.item href=actor_relationships_path(actor, "following") Following
   - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
   == render "src/views/partials/editor.html.slang"
-  - filters = env.params.query["filters"]?.try(&.split(","))
-  - if filters && filters.includes?("no-shares")
-    - objects = actor.timeline([ActivityPub::Activity::Create], **pagination_params(env))
-  - else
-    - objects = actor.timeline(**pagination_params(env))
+  crystal:
+    filters = env.params.query["filters"]?.try(&.split(","))
+    if filters && filters.includes?("no-shares") && filters.includes?("no-replies")
+      objects = actor.timeline(**pagination_params(env), inclusion: [ActivityPub::Activity::Create], exclude_replies: true)
+    elsif filters && filters.includes?("no-shares")
+      objects = actor.timeline(**pagination_params(env), inclusion: [ActivityPub::Activity::Create])
+    elsif filters && filters.includes?("no-replies")
+      objects = actor.timeline(**pagination_params(env), exclude_replies: true)
+    else
+      objects = actor.timeline(**pagination_params(env))
+    end
   == render "src/views/actors/timeline.html.slang"
 - elsif !actor.blocked?
   == render "src/views/partials/actor-panel.html.slang"

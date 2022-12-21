@@ -64,6 +64,20 @@ Spectator.describe ActorsController do
         get "/actors/#{actor.username}?filters=no-shares", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
       end
+
+      context "given a reply" do
+        before_each { create.object.assign(in_reply_to: announce.object).save }
+
+        it "with no filters it renders all posts" do
+          get "/actors/#{actor.username}?filters=none", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create", "event activity-announce").in_any_order
+        end
+
+        it "filters out replies from posts" do
+          get "/actors/#{actor.username}?filters=no-replies", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+        end
+      end
     end
   end
 

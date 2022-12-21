@@ -571,10 +571,16 @@ module ActivityPub
     #
     # Includes private (not visible) posts and replies.
     #
+    # May be filtered to exclude replies (via `exclude_replies`).
+    #
     # May be filtered to include only objects with associated
     # activities of the specified type (via `inclusion`).
     #
-    def timeline(inclusion = nil, page = 1, size = 10)
+    def timeline(exclude_replies = false, inclusion = nil, page = 1, size = 10)
+      exclude_replies =
+        exclude_replies ?
+        "AND o.in_reply_to_iri IS NULL" :
+        ""
       inclusion =
         case inclusion
         when Class, String
@@ -600,6 +606,7 @@ module ActivityPub
                    LIMIT 1
                 )
           WHERE r.from_iri = ?
+            #{exclude_replies}
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
             AND t.deleted_at IS NULL
@@ -622,6 +629,7 @@ module ActivityPub
                          LIMIT 1
                       )
                 WHERE r.from_iri = ?
+                  #{exclude_replies}
                   AND o.deleted_at IS NULL
                   AND o.blocked_at IS NULL
                   AND t.deleted_at IS NULL
@@ -640,7 +648,11 @@ module ActivityPub
     #
     # See `#timeline(inclusion, page, size)` for further details.
     #
-    def timeline(since : Time, inclusion = nil)
+    def timeline(since : Time, exclude_replies = false, inclusion = nil)
+      exclude_replies =
+        exclude_replies ?
+        "AND o.in_reply_to_iri IS NULL" :
+        ""
       inclusion =
         case inclusion
         when Class, String
@@ -666,6 +678,7 @@ module ActivityPub
                    LIMIT 1
                 )
           WHERE r.from_iri = ?
+            #{exclude_replies}
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
             AND t.deleted_at IS NULL

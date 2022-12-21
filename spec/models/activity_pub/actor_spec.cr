@@ -998,6 +998,25 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
     end
 
+    context "given a reply" do
+      before_each { object4.assign(in_reply_to: object5).save }
+
+      it "includes replies by default" do
+        expect(subject.timeline(page: 1, size: 2)).to eq([object5, object4])
+        expect(subject.timeline(since: since)).to eq(5)
+      end
+
+      it "includes replies" do
+        expect(subject.timeline(exclude_replies: false, page: 1, size: 2)).to eq([object5, object4])
+        expect(subject.timeline(since: since, exclude_replies: false)).to eq(5)
+      end
+
+      it "filters out replies" do
+        expect(subject.timeline(exclude_replies: true, page: 1, size: 2)).to eq([object5, object3])
+        expect(subject.timeline(since: since, exclude_replies: true)).to eq(4)
+      end
+    end
+
     it "paginates the results" do
       expect(subject.timeline(page: 1, size: 2)).to eq([object5, object4])
       expect(subject.timeline(page: 3, size: 2)).to eq([object1])

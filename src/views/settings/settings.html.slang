@@ -1,5 +1,7 @@
 - content_for "head" do
   script src="/dist/settings.bundle.js"
+- content_for "title" do
+  | Settings
 == render "src/views/partials/actor-panel.html.slang"
 h1 Account Settings
 p

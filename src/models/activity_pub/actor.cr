@@ -28,6 +28,8 @@ module ActivityPub
     include Ktistec::Model(Common, Blockable, Deletable, Polymorphic, Serialized, Linked)
     include ActivityPub
 
+    ATTACHMENT_LIMIT = 4
+
     @@table_name = "actors"
 
     @[Persistent]
@@ -82,6 +84,22 @@ module ActivityPub
 
     has_many objects, class_name: ActivityPub::Object, foreign_key: attributed_to_iri, primary_key: iri
 
+    struct Attachment
+      include JSON::Serializable
+
+      property name : String
+
+      property type : String
+
+      property value : String
+
+      def initialize(@name, @type, @value)
+      end
+    end
+
+    @[Persistent]
+    property attachments : Array(Attachment)?
+
     def before_validate
       if changed?(:username)
         clear!(:username)
@@ -93,6 +111,7 @@ module ActivityPub
           self.following = "#{host}/actors/#{username}/following"
           self.followers = "#{host}/actors/#{username}/followers"
           self.urls = ["#{host}/@#{username}"]
+          self.attachments = [] of Attachment
         end
       end
     end
@@ -707,7 +726,36 @@ module ActivityPub
       end
     end
 
+    def wrap_attachment_links
+      # May need to wrap links as HTML like Mastodon, if attachments are links
+      self.attachments = (self.attachments || [] of Attachment).not_nil!.map do |attachment|
+        attachment.value = self.class.maybe_wrap_link(attachment.value)
+        attachment
+      end
+    end
+
+    # This is here because we render the JSON view from the model and don't have
+    # access to the view_helper
+    def self.maybe_wrap_link(str)
+      if str =~ %r{^[a-zA-Z0-9]+://}
+        uri = URI.parse(str)
+        port = uri.port.nil? ? "" : ":" + uri.port.to_s
+        path = uri.path.nil? ? "" : uri.path.to_s
+
+        # Match the weird format used by Mastodon here
+        <<-LINK.gsub(/\n/, "")
+        <a href="#{str}" target="_blank" rel="nofollow noopener noreferrer me">
+        <span class="invisible">#{uri.scheme}://</span><span class="">#{uri.host}#{port}#{path}</span>
+        <span class="invisible"></span>
+        </a>
+        LINK
+      else
+        str
+      end
+    end
+
     def to_json_ld(recursive = true)
+      wrap_attachment_links
       actor = self
       render "src/views/actors/actor.json.ecr"
     end
@@ -733,8 +781,26 @@ module ActivityPub
         "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
         "icon" => dig_id?(json, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url"),
         "image" => dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
-        "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")
+        "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+        "attachments" => attachments_from_ldjson(
+          json.dig?("https://www.w3.org/ns/activitystreams#attachment")
+        )
       }.compact
+    end
+
+    def self.attachments_from_ldjson(entry)
+      entry_not_nil = (entry.try(&.as_a) || [] of JSON::Any).not_nil!
+
+      entry_not_nil.reduce([] of Attachment) do |memo, a|
+        name = (dig?(a, "https://www.w3.org/ns/activitystreams#name", "und") || "").not_nil!
+        type = (a.dig?("@type").try(&.as_s) || "").not_nil!
+        value = maybe_wrap_link((dig?(a, "http://schema.org#value") || "").not_nil!)
+
+        unless name.empty? || value.empty?
+          memo << Attachment.new(name, type, value)
+        end
+        memo
+      end
     end
 
     def make_delete_activity

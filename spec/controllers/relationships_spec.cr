@@ -56,13 +56,15 @@ Spectator.describe RelationshipsController do
       it "renders only the related public actors" do
         get "/actors/#{actor.username}/following", HTML_HEADERS
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).to contain_exactly(other1.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).to contain(other1.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).not_to contain(other2.iri)
       end
 
       it "renders only the related public actors" do
         get "/actors/#{actor.username}/following", JSON_HEADERS
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("first", "orderedItems")).to eq([other1.iri])
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain(other1.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).not_to contain(other2.iri)
       end
     end
 
@@ -72,13 +74,13 @@ Spectator.describe RelationshipsController do
       it "renders all the related actors" do
         get "/actors/#{actor.username}/following", HTML_HEADERS
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).to contain_exactly(other1.iri, other2.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).to contain(other1.iri, other2.iri)
       end
 
       it "renders all the related actors" do
         get "/actors/#{actor.username}/following", JSON_HEADERS
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(other1.iri, other2.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain(other1.iri, other2.iri)
       end
 
       it "renders only the related public actors" do

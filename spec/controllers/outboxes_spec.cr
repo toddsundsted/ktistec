@@ -328,6 +328,16 @@ Spectator.describe RelationshipsController do
               not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
           end
 
+          it "changes the content" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}"}.
+              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).content}
+          end
+
+          it "changes the object replied to" do
+            expect{post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=#{object.iri}&in-reply-to=#{URI.encode_www_form(topic.iri)}"}.
+              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).in_reply_to_iri}
+          end
+
           it "returns 400 if object does not exist" do
             post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&object=http://test.test/does-not-exist"
             expect(response.status_code).to eq(400)

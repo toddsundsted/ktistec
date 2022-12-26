@@ -1,3 +1,4 @@
+- _account = env.account?
 .ui.actor.segments
   - if actor.blocked?
     .ui.blocked.segment
@@ -13,7 +14,10 @@
       - else
         i.user.icon
     .ui.segment
-      a href=remote_actor_path(actor) = actor.display_name
+      - if _account
+        a href=remote_actor_path(actor) = actor.display_name
+      - else
+        span = actor.display_name
       br: a href=actor.display_link = actor.account_uri
       - if (summary = actor.summary.presence)
         br: == s summary
@@ -24,7 +28,7 @@
             tr
               th.name = attachment.name
               td.value == s maybe_wrap_link(attachment.value)
-  - if (_account = env.account?) && _account.actor != actor
+  - if _account && _account.actor != actor
     .ui.basic.segment
       - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
         == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo"

@@ -593,6 +593,7 @@ Spectator.describe "partials" do
     end
 
     let_build(:object, local: true)
+    let_build(:object, named: :original)
 
     context "if authenticated" do
       before_each { env.account = register }
@@ -630,8 +631,17 @@ Spectator.describe "partials" do
         end
 
         it "renders an input with the object iri" do
-          expect(subject.xpath_nodes("//input[@name='object']")).
-            not_to be_empty
+          expect(subject.xpath_nodes("//input[@name='object']/@value")).
+            to have(object.iri)
+        end
+      end
+
+      context "given a reply" do
+        before_each { object.assign(in_reply_to: original).save }
+
+        it "renders an input with the replied to object's iri" do
+          expect(subject.xpath_nodes("//input[@name='in-reply-to']/@value")).
+            to have(original.iri)
         end
       end
 

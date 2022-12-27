@@ -11,6 +11,7 @@
     - [Metrics](#metrics)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
+    - [Running Tests](#running-tests)
   - [Usage](#usage)
   - [Contributors](#contributors)
   - [Copyright and License](#copyright-and-license)
@@ -152,6 +153,12 @@ something like:
 
 You can now connect to and configure the server.
 
+### Running Tests
+
+If you change the code, you should run the tests:
+
+`$ crystal spec`
+
 ## Usage
 
 The server runs on port 3000. If you're planning on running it in
@@ -189,15 +196,6 @@ database string (e.g. "America/New_York").
 Once these steps are done, you're running!
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/o0ton2.png" width=640>
-
-## Running Tests
-
-The tests require that you set the `KEMAL_ENV` environment variable
-before running them, or they will lock up. Running the tests is:
-
-```
-KEMAL_ENV=test crystal spec
-```
 
 ## Contributors
 

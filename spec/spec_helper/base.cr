@@ -99,6 +99,8 @@ def self.random_password
   random_string + "1="
 end
 
+Kemal.config.env = ENV["KEMAL_ENV"]? || "test"
+
 Ktistec.settings.host = "https://test.test"
 Ktistec.settings.site = "Test"
 

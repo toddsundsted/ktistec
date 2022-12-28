@@ -1,0 +1,36 @@
+on:
+  push:
+  pull_request:
+    branches: [main]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        crystal: [latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Download source
+        uses: actions/checkout@v3
+      - name: Install Crystal
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: ${{ matrix.crystal }}
+      - name: Install libraries
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+               brew install libxml2
+          fi
+        shell: bash
+      - name: Install shards
+        run: shards install
+      - name: Run tests
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+               LOG_LEVEL=NONE PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/opt/libxml2/lib/pkgconfig" crystal spec
+          else
+               LOG_LEVEL=NONE crystal spec
+          fi
+      - name: Build
+        run: shards build

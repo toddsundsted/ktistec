@@ -45,7 +45,7 @@ module Ktistec
               end
             end
           end
-          puts "Batch #{i} complete"
+          Log.info { "Batch #{i} complete" }
         end
 
         # adjust timestamps

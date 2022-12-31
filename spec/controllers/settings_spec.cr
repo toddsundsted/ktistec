@@ -1,6 +1,7 @@
 require "../../src/controllers/settings"
 
 require "../spec_helper/controller"
+require "../spec_helper/factory"
 
 Spectator.describe SettingsController do
   setup_spec

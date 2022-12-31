@@ -1,6 +1,7 @@
 require "../../src/controllers/uploads"
 
 require "../spec_helper/controller"
+require "../spec_helper/factory"
 
 Spectator.describe UploadsController do
   setup_spec

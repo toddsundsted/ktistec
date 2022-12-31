@@ -9,7 +9,6 @@ require "../../src/handlers/**"
 
 require "./base"
 require "./model"
-require "./factory"
 
 # from https://github.com/kemalcr/spec-kemal/blob/master/src/spec-kemal.cr
 # run specs with `KEMAL_ENV=test crystal spec`

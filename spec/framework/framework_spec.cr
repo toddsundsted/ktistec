@@ -5,8 +5,6 @@ require "../../src/framework"
 require "../spec_helper/base"
 
 Spectator.describe Ktistec::Settings do
-  setup_spec
-
   subject { Ktistec.settings }
 
   after_each do
@@ -102,8 +100,6 @@ Spectator.describe Ktistec::Settings do
 end
 
 Spectator.describe Ktistec do
-  setup_spec
-
   describe "::VERSION" do
     it "should return the version" do
       version = YAML.parse(File.read(File.join(__DIR__, "..", "..", "shard.yml")))["version"].as_s

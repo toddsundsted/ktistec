@@ -61,7 +61,7 @@
     "type":<%= attachment.type.inspect %>,
     "name":<%= attachment.name.inspect %>,
     "value":<%= actor.class.maybe_wrap_link(attachment.value).inspect %>
-    }<%= i < attachments.size - 1 ? "," : "" %><%- end -%>
+    }<%= comma(attachments, i) %><%- end -%>
   ],
   <%- end -%>
   <%- if (urls = actor.urls) -%>

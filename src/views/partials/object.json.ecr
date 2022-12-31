@@ -40,9 +40,9 @@
   "tag":[
     <%- tags.each_with_index do |tag, i| -%>
       <%- if tag.type == "Tag::Hashtag" -%>
-      {"type":"Hashtag","name":"#<%= tag.name %>","href":"<%= tag.href %>"}<%= i < tags.size - 1 ? "," : "" %>
+      {"type":"Hashtag","name":"#<%= tag.name %>","href":"<%= tag.href %>"}<%= comma(tags, i) %>
       <%- elsif tag.type == "Tag::Mention" -%>
-      {"type":"Mention","name":"@<%= tag.name %>","href":"<%= tag.href %>"}<%= i < tags.size - 1 ? "," : "" %>
+      {"type":"Mention","name":"@<%= tag.name %>","href":"<%= tag.href %>"}<%= comma(tags, i) %>
       <%- end -%>
     <%- end -%>
   ],

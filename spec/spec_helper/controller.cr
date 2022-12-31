@@ -10,7 +10,6 @@ require "../../src/handlers/**"
 require "./base"
 
 # from https://github.com/kemalcr/spec-kemal/blob/master/src/spec-kemal.cr
-# run specs with `KEMAL_ENV=test crystal spec`
 
 class Global
   class_property response : HTTP::Client::Response?

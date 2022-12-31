@@ -17,7 +17,7 @@ class LinkedModel
 end
 
 Spectator.describe Ktistec::Model::Linked do
-  before_each { HTTP::Client.reset }
+  setup_spec
 
   before_each do
     Ktistec.database.exec <<-SQL

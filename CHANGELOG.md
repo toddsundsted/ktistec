@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [v2.0.0-7]
 ### Added
 - Merged [relistan](https://github.com/relistan)'s work on Mastodon-compatible user profile metadata. ([#60](https://github.com/toddsundsted/ktistec/pull/60), fixes [#35](https://github.com/toddsundsted/ktistec/issues/35))
 - Merged [vrthra](https://github.com/vrthra)'s work adding links to the internal pages of remote actors. ([#58](https://github.com/toddsundsted/ktistec/pull/58))
@@ -11,6 +11,7 @@ All notable changes to this project are documented in this file.
 - Bottom margin of inline forms with more than one button is now correct.
 - Posts no longer drop out of threads when edited.
 - Fix CI build failure by including all ActivityPub models before rules definition. ([2258a0f5](https://github.com/toddsundsted/ktistec/commit/2258a0f5))
+- Tests run correctly when order of tests is randomized.
 
 ### Changed
 - Section names ("Metrics" and "Settings") added to title of page.
@@ -129,7 +130,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
-[Unreleased]: https://github.com/toddsundsted/ktistec/compare/9a05dced...main
+[v2.0.0-7]: https://github.com/toddsundsted/ktistec/compare/9a05dced...7d189bd0
 [v2.0.0-6]: https://github.com/toddsundsted/ktistec/compare/c71f3ad9...a71ebfda
 [v2.0.0-5]: https://github.com/toddsundsted/ktistec/compare/fe3e6967...99dca654
 [v2.0.0-4]: https://github.com/toddsundsted/ktistec/compare/31f361b7...76f27dbb

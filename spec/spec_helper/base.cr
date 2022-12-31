@@ -101,7 +101,6 @@ end
 
 Kemal.config.env = ENV["KEMAL_ENV"]? || "test"
 
-Ktistec.settings.host = "https://test.test"
-Ktistec.settings.site = "Test"
+Ktistec.settings.assign({"host" => "https://test.test", "site" => "Test"}).save
 
 Log.setup_from_env

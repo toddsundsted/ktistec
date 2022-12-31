@@ -48,6 +48,8 @@ end
 Spectator.describe TaskWorker do
   setup_spec
 
+  before_each { FooBarTask.performed.clear }
+
   macro create_task!(index, next_attempt_at = nil)
     let!(task{{index}}) do
       FooBarTask.new(

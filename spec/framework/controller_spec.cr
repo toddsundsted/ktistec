@@ -153,14 +153,14 @@ class FooBarController
 end
 
 Spectator.describe Ktistec::Controller do
-  before_all do
+  before_each do
     Ktistec.database.exec "SAVEPOINT __all__"
     FooBarController.activity = Factory.create(:activity)
     FooBarController.object = Factory.create(:object)
     FooBarController.actor = Factory.create(:actor)
   end
 
-  after_all do
+  after_each do
     Ktistec.database.exec "ROLLBACK"
   end
 

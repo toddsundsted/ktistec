@@ -376,4 +376,41 @@ module Ktistec::ViewHelper
     %value = {{model}}.{{field.id}}.try(&.inspect) || "null"
     %Q|"{{field.id}}":#{%value}#{%comma}|
   end
+
+  ## General purpose helpers
+
+  # Sanitizes HTML.
+  #
+  # For use in views:
+  #     <%= s string %>
+  #
+  macro s(str)
+    Ktistec::Util.sanitize({{str}})
+  end
+
+  # Pluralizes the noun.
+  #
+  # For use in views:
+  #     <%= pluralize(1, "fox") %>
+  #
+  macro pluralize(count, noun)
+    if {{count}} == 1
+      "1 #{{{noun}}}"
+    else
+      "#{{{count}}} #{Ktistec::Util.pluralize({{noun}})}"
+    end
+  end
+
+  # Emits a comma when one would be necessary when iterating through
+  # a collection.
+  #
+  macro comma(collection, counter)
+    {{counter}} < {{collection}}.size - 1 ? "," : ""
+  end
+
+  # Generates a random, URL-safe identifier.
+  #
+  macro id
+    Ktistec::Util.id
+  end
 end

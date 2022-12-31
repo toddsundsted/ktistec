@@ -25,10 +25,6 @@ class FooBarController
     "/foo/bar/xhr",
     "/foo/bar/created",
     "/foo/bar/redirect",
-    "/foo/bar/sanitize",
-    "/foo/bar/pluralize",
-    "/foo/bar/comma",
-    "/foo/bar/id",
     "/foo/bar/ok"
   ]
 
@@ -122,29 +118,6 @@ class FooBarController
   get "/foo/bar/redirect" do |env|
     redirect "/foobar", 301, body: "Foo Bar"
     ok # should never get here
-  end
-
-  get "/foo/bar/sanitize" do |env|
-    s "<body>Foo Bar</body>"
-  end
-
-  get "/foo/bar/pluralize" do |env|
-    count = env.params.query["count"].to_i
-    noun = env.params.query["noun"]
-    pluralize(count, noun)
-  end
-
-  get "/foo/bar/comma" do |env|
-    String.build do |s|
-      ns = env.params.query["n"].split
-      ns.each_with_index do |n, i|
-        s << "#{n}#{comma(ns, i)}"
-      end
-    end
-  end
-
-  get "/foo/bar/id" do |env|
-    id
   end
 
   get "/foo/bar/ok" do |env|
@@ -330,44 +303,6 @@ Spectator.describe Ktistec::Controller do
     it "includes the body" do
       get "/foo/bar/redirect"
       expect(response.body).to eq("Foo Bar")
-    end
-  end
-
-  describe "/foo/bar/sanitize" do
-    it "sanitizes HTML" do
-      get "/foo/bar/sanitize"
-      expect(response.body).to eq("Foo Bar")
-    end
-  end
-
-  describe "/foo/bar/pluralize" do
-    it "pluralizes the noun" do
-      get "/foo/bar/pluralize?count=0&noun=fox"
-      expect(response.body).to eq("fox")
-    end
-
-    it "pluralizes the noun" do
-      get "/foo/bar/pluralize?count=1&noun=fox"
-      expect(response.body).to eq("1 fox")
-    end
-
-    it "pluralizes the noun" do
-      get "/foo/bar/pluralize?count=2&noun=fox"
-      expect(response.body).to eq("2 foxes")
-    end
-  end
-
-  describe "/foo/bar/comma" do
-    it "adds a comma where appropriate" do
-      get "/foo/bar/comma?n=1 2 3 4 5 6"
-      expect(response.body).to eq("1,2,3,4,5,6")
-    end
-  end
-
-  describe "/foo/bar/id" do
-    it "generates a URL-safe random string" do
-      get "/foo/bar/id"
-      expect(response.body).to match(/^[a-zA-Z0-9_-]+$/)
     end
   end
 

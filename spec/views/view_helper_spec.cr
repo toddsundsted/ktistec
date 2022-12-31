@@ -536,4 +536,42 @@ Spectator.describe "helpers" do
       expect(subject).to eq(%q|"field":"Value"|)
     end
   end
+
+  ## General purpose helpers
+
+  describe "sanitize" do
+    it "sanitizes HTML" do
+      expect(s("<body>Foo Bar</body>")).to eq("Foo Bar")
+    end
+  end
+
+  describe "pluralize" do
+    it "pluralizes the noun" do
+      expect(pluralize(0, "fox")).to eq("0 foxes")
+    end
+
+    it "does not pluralize the noun" do
+      expect(pluralize(1, "fox")).to eq("1 fox")
+    end
+
+    it "pluralizes the noun" do
+      expect(pluralize(2, "fox")).to eq("2 foxes")
+    end
+  end
+
+  describe "comma" do
+    it "emits a comma" do
+      expect(comma([1, 2, 3], 1)).to eq(",")
+    end
+
+    it "does not emit a comma" do
+      expect(comma([1, 2, 3], 2)).to eq("")
+    end
+  end
+
+  describe "id" do
+    it "generates an id" do
+      expect(id).to match(/^[a-zA-Z0-9_-]+$/)
+    end
+  end
 end

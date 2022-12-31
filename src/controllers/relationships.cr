@@ -26,9 +26,9 @@ class RelationshipsController
   private def self.all_related(env, actor, public = true)
     case env.params.url["relationship"]?
     when "following"
-      actor.all_following(*pagination_params(env), public: public)
+      actor.all_following(**pagination_params(env), public: public)
     when "followers"
-      actor.all_followers(*pagination_params(env), public: public)
+      actor.all_followers(**pagination_params(env), public: public)
     else
     end
   end

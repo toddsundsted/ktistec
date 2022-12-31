@@ -28,7 +28,7 @@ class ActorsController
 
     actor = account.actor
 
-    objects = actor.public_posts(*pagination_params(env))
+    objects = actor.public_posts(**pagination_params(env))
 
     ok "actors/public_posts"
   end
@@ -45,7 +45,7 @@ class ActorsController
 
     actor = account.actor
 
-    objects = actor.all_posts(*pagination_params(env))
+    objects = actor.all_posts(**pagination_params(env))
 
     ok "actors/posts"
   end
@@ -62,7 +62,7 @@ class ActorsController
 
     actor = account.actor
 
-    objects = actor.timeline(*pagination_params(env))
+    objects = actor.timeline(**pagination_params(env))
 
     account.update_last_timeline_checked_at.save
 
@@ -81,7 +81,7 @@ class ActorsController
 
     actor = account.actor
 
-    activities = actor.notifications(*pagination_params(env))
+    activities = actor.notifications(**pagination_params(env))
 
     account.update_last_notifications_checked_at.save
 
@@ -98,7 +98,7 @@ class ActorsController
       forbidden
     end
 
-    drafts = account.actor.drafts(*pagination_params(env))
+    drafts = account.actor.drafts(**pagination_params(env))
 
     ok "objects/index"
   end

@@ -571,33 +571,69 @@ module ActivityPub
     #
     # Includes private (not visible) posts and replies.
     #
-    def timeline(page = 1, size = 10)
+    # May be filtered to exclude replies (via `exclude_replies`).
+    #
+    # May be filtered to include only objects with associated
+    # activities of the specified type (via `inclusion`).
+    #
+    def timeline(exclude_replies = false, inclusion = nil, page = 1, size = 10)
+      exclude_replies =
+        exclude_replies ?
+        "AND o.in_reply_to_iri IS NULL" :
+        ""
+      inclusion =
+        case inclusion
+        when Class, String
+          %Q|AND a.type = "#{inclusion}"|
+        when Array
+          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        end
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
-           JOIN actors AS a
-             ON a.iri = o.attributed_to_iri
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
            JOIN relationships AS r
              ON r.to_iri = o.iri
             AND r.type = "#{Relationship::Content::Timeline}"
+           JOIN activities AS a ON a.id = (
+                  SELECT a.id
+                    FROM activities AS a
+                   WHERE a.object_iri = o.iri
+                     AND a.undone_at IS NULL
+                     #{inclusion}
+                ORDER BY a.created_at ASC
+                   LIMIT 1
+                )
           WHERE r.from_iri = ?
+            #{exclude_replies}
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
-            AND a.deleted_at IS NULL
-            AND a.blocked_at IS NULL
+            AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND o.id NOT IN (
                SELECT o.id
                  FROM objects AS o
-                 JOIN actors AS a
-                   ON a.iri = o.attributed_to_iri
+                 JOIN actors AS t
+                   ON t.iri = o.attributed_to_iri
                  JOIN relationships AS r
                    ON r.to_iri = o.iri
                   AND r.type = "#{Relationship::Content::Timeline}"
+                 JOIN activities AS a ON a.id = (
+                        SELECT a.id
+                          FROM activities AS a
+                         WHERE a.object_iri = o.iri
+                           AND a.undone_at IS NULL
+                           #{inclusion}
+                      ORDER BY a.created_at ASC
+                         LIMIT 1
+                      )
                 WHERE r.from_iri = ?
+                  #{exclude_replies}
                   AND o.deleted_at IS NULL
                   AND o.blocked_at IS NULL
-                  AND a.deleted_at IS NULL
-                  AND a.blocked_at IS NULL
+                  AND t.deleted_at IS NULL
+                  AND t.blocked_at IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
             )
@@ -610,22 +646,43 @@ module ActivityPub
     # Returns the count of objects in the actor's timeline since the
     # given date.
     #
-    # See `#timeline(page, size)` for further details.
+    # See `#timeline(inclusion, page, size)` for further details.
     #
-    def timeline(since : Time)
+    def timeline(since : Time, exclude_replies = false, inclusion = nil)
+      exclude_replies =
+        exclude_replies ?
+        "AND o.in_reply_to_iri IS NULL" :
+        ""
+      inclusion =
+        case inclusion
+        when Class, String
+          %Q|AND a.type = "#{inclusion}"|
+        when Array
+          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        end
       query = <<-QUERY
          SELECT count(*)
            FROM objects AS o
-           JOIN actors AS a
-             ON a.iri = o.attributed_to_iri
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
            JOIN relationships AS r
              ON r.to_iri = o.iri
             AND r.type = "#{Relationship::Content::Timeline}"
+           JOIN activities AS a ON a.id = (
+                  SELECT a.id
+                    FROM activities AS a
+                   WHERE a.object_iri = o.iri
+                     AND a.undone_at IS NULL
+                     #{inclusion}
+                ORDER BY a.created_at ASC
+                   LIMIT 1
+                )
           WHERE r.from_iri = ?
+            #{exclude_replies}
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
-            AND a.deleted_at IS NULL
-            AND a.blocked_at IS NULL
+            AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND r.created_at > ?
       QUERY
       Ktistec.database.scalar(query, iri, since).as(Int64)

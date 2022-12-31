@@ -1,3 +1,4 @@
+require "../framework/ext/sqlite3"
 require "../framework/model"
 require "../framework/model/**"
 require "../workers/task_worker"

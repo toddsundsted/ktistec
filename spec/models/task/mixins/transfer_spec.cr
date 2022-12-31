@@ -1,7 +1,7 @@
 require "../../../../src/models/task"
 require "../../../../src/models/task/mixins/transfer"
 
-require "../../../spec_helper/model"
+require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
 require "../../../spec_helper/network"
 

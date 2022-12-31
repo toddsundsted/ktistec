@@ -1,7 +1,7 @@
 require "../../src/utils/database"
 
+require "../spec_helper/base"
 require "../spec_helper/factory"
-require "../spec_helper/model"
 
 Spectator.describe Ktistec::Database do
   setup_spec

@@ -1,6 +1,6 @@
 require "../../../../src/models/activity_pub/activity/like"
 
-require "../../../spec_helper/model"
+require "../../../spec_helper/base"
 
 Spectator.describe ActivityPub::Activity::Like do
   setup_spec

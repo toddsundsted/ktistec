@@ -41,9 +41,7 @@ class Array(T)
 end
 
 module Ktistec
-  def self.db_file
-    @@db_file ||= "sqlite3://#{File.tempname("ktistec-test", ".db")}"
-  end
+  @@db_file = "sqlite3://#{File.tempname("ktistec-test", ".db")}"
 
   class Settings
     def clear_host

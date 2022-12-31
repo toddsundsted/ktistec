@@ -1,7 +1,7 @@
 require "../../src/rules/content_rules"
 
+require "../spec_helper/base"
 require "../spec_helper/factory"
-require "../spec_helper/model"
 
 alias Notification = Relationship::Content::Notification
 alias Timeline = Relationship::Content::Timeline

@@ -1,6 +1,6 @@
 require "../../src/models/point"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 
 Spectator.describe Point do
   setup_spec

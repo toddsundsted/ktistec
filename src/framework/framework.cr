@@ -2,36 +2,12 @@ require "kemal"
 require "sqlite3"
 require "uri"
 
+require "./database"
+
 module Ktistec
-  def self.db_file
-    @@db_file ||=
-      ENV["KTISTEC_DB"]?.try { |db| "sqlite3://#{db}" } ||
-        if Kemal.config.env == "production"
-          "sqlite3://#{File.expand_path("~/.ktistec.db", home: true)}"
-        else
-          "sqlite3://ktistec.db"
-        end
-  end
-
-  @@database : DB::Database?
-
-  def self.database
-    @@database ||= begin
-      unless File.exists?(Ktistec.db_file.split("//").last)
-        DB.open(Ktistec.db_file) do |db|
-          db.exec "CREATE TABLE options (key TEXT PRIMARY KEY, value TEXT)"
-          db.exec "INSERT INTO options (key, value) VALUES (?, ?)", "secret_key", Random::Secure.hex(64)
-          db.exec "CREATE TABLE migrations (id INTEGER PRIMARY KEY, name TEXT)"
-        end
-      end
-      DB.open(Ktistec.db_file)
-    end
-  end
-
-  @@secret_key : String?
-
-  def self.secret_key
-    @@secret_key ||= Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "secret_key").as(String)
+  # always run database migrations when we boot up the framework
+  Ktistec::Database.all_pending_versions.each do |version|
+    puts Ktistec::Database.do_operation(:apply, version)
   end
 
   # Model-like class for managing settings.
@@ -132,9 +108,6 @@ module Ktistec
   #
   class Server
     def self.run
-      Ktistec::Database.all_pending_versions.each do |version|
-        puts Ktistec::Database.do_operation(:apply, version)
-      end
       with new yield
       Kemal.config.app_name = "Ktistec"
       # work around Kemal's handling of the command line when running specs...

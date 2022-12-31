@@ -1,6 +1,6 @@
 require "../../../src/models/activity_pub/collection"
 
-require "../../spec_helper/model"
+require "../../spec_helper/base"
 
 Spectator.describe ActivityPub::Collection do
   setup_spec

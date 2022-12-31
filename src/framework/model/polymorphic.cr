@@ -1,7 +1,7 @@
 require "../model"
 
 module Ktistec
-  module Model
+  module Model(*T)
     module Polymorphic
       macro find(_id id, *, as _as)
         {% raise "can't convert #{@type} to #{_as}" unless _as.resolve < @type %}

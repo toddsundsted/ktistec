@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+### Added
+- Create the starting database from a single dump instead of running each incremental migration.
+- Basic support for timeline filters ("?filters=no-shares,no-replies").
+
 ## [v2.0.0-7]
 ### Added
 - Merged [relistan](https://github.com/relistan)'s work on Mastodon-compatible user profile metadata. ([#60](https://github.com/toddsundsted/ktistec/pull/60), fixes [#35](https://github.com/toddsundsted/ktistec/issues/35))
@@ -130,6 +135,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[Unreleased]: https://github.com/toddsundsted/ktistec/compare/b3ce035d...main
 [v2.0.0-7]: https://github.com/toddsundsted/ktistec/compare/9a05dced...7d189bd0
 [v2.0.0-6]: https://github.com/toddsundsted/ktistec/compare/c71f3ad9...a71ebfda
 [v2.0.0-5]: https://github.com/toddsundsted/ktistec/compare/fe3e6967...99dca654

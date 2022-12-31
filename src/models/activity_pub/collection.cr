@@ -6,6 +6,16 @@ require "../../framework/model"
 require "../../framework/model/**"
 require "../activity_pub"
 
+require "../../views/view_helper"
+
+module CollectionModelRenderer
+  include Ktistec::ViewHelper
+
+  def self.to_json_ld(collection, recursive)
+    render "src/views/collections/collection.json.ecr"
+  end
+end
+
 module ActivityPub
   class Collection
     include Ktistec::Model(Common, Linked, Serialized)
@@ -38,8 +48,7 @@ module ActivityPub
     property current : String?
 
     def to_json_ld(recursive = true)
-      collection = self
-      render "src/views/collections/collection.json.ecr"
+      CollectionModelRenderer.to_json_ld(self, recursive)
     end
 
     def from_json_ld(json)

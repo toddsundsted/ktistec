@@ -10,6 +10,16 @@ require "../../framework/model"
 require "../../framework/model/**"
 require "../../utils/html"
 
+require "../../views/view_helper"
+
+module ObjectModelRenderer
+  include Ktistec::ViewHelper
+
+  def self.to_json_ld(object, recursive)
+    render "src/views/objects/object.json.ecr"
+  end
+end
+
 module ActivityPub
   class Object
     include Ktistec::Model(Common, Blockable, Deletable, Polymorphic, Serialized, Linked)
@@ -570,8 +580,7 @@ module ActivityPub
     end
 
     def to_json_ld(recursive = true)
-      object = self
-      render "src/views/objects/object.json.ecr"
+      ObjectModelRenderer.to_json_ld(self, recursive)
     end
 
     def from_json_ld(json)

@@ -5,6 +5,16 @@ require "../../framework/model"
 require "../../framework/model/**"
 require "../activity_pub"
 
+require "../../views/view_helper"
+
+module ActivityModelRenderer
+  include Ktistec::ViewHelper
+
+  def self.to_json_ld(activity, recursive)
+    render "src/views/activities/activity.json.ecr"
+  end
+end
+
 module ActivityPub
   class Activity
     include Ktistec::Model(Common, Undoable, Polymorphic, Serialized, Linked)
@@ -53,8 +63,7 @@ module ActivityPub
     @@recursive : Symbol | Bool = :default
 
     def to_json_ld(recursive = @@recursive)
-      activity = self
-      render "src/views/activities/activity.json.ecr"
+      ActivityModelRenderer.to_json_ld(self, recursive)
     end
 
     def from_json_ld(json)

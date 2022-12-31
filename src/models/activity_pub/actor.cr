@@ -23,6 +23,16 @@ require "./activity/like"
 require "./activity/undo"
 require "./object"
 
+require "../../views/view_helper"
+
+module ActorModelRenderer
+  include Ktistec::ViewHelper
+
+  def self.to_json_ld(actor, recursive)
+    render "src/views/actors/actor.json.ecr"
+  end
+end
+
 module ActivityPub
   class Actor < Ktistec::KeyPair
     include Ktistec::Model(Common, Blockable, Deletable, Polymorphic, Serialized, Linked)
@@ -813,8 +823,7 @@ module ActivityPub
 
     def to_json_ld(recursive = true)
       wrap_attachment_links
-      actor = self
-      render "src/views/actors/actor.json.ecr"
+      ActorModelRenderer.to_json_ld(self, recursive)
     end
 
     def from_json_ld(json, *, include_key = false)

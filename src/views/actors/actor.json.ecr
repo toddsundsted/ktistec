@@ -60,7 +60,7 @@
     <%- attachments.each.with_index do |attachment, i| %> {
     "type":<%= attachment.type.inspect %>,
     "name":<%= attachment.name.inspect %>,
-    "value":<%= actor.class.maybe_wrap_link(attachment.value).inspect %>
+    "value":<%= maybe_wrap_link(attachment.value).inspect %>
     }<%= comma(attachments, i) %><%- end -%>
   ],
   <%- end -%>

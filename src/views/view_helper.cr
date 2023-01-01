@@ -42,11 +42,12 @@ module Ktistec::ViewHelper
         port = uri.port.nil? ? "" : ":" + uri.port.to_s
         path = uri.path.nil? ? "" : uri.path.to_s
 
-        # Match the weird format used by Mastodon here
+        # match the weird format used by mastodon
+        # see: https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb#L72
         <<-LINK.gsub(/(\n|^ +)/, "")
         <a href="#{str}" target="_blank" rel="nofollow noopener noreferrer me">
-          <span class="invisible">#{uri.scheme}://</span><span class="">#{uri.host}#{port}#{path}</span>
-          <span class="invisible"></span>
+        <span class="invisible">#{uri.scheme}://</span><span class="">#{uri.host}#{port}#{path}</span>
+        <span class="invisible"></span>
         </a>
         LINK
       else

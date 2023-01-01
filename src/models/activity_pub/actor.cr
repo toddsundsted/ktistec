@@ -793,36 +793,7 @@ module ActivityPub
       end
     end
 
-    def wrap_attachment_links
-      # May need to wrap links as HTML like Mastodon, if attachments are links
-      self.attachments = (self.attachments || [] of Attachment).not_nil!.map do |attachment|
-        attachment.value = self.class.maybe_wrap_link(attachment.value)
-        attachment
-      end
-    end
-
-    # This is here because we render the JSON view from the model and don't have
-    # access to the view_helper
-    def self.maybe_wrap_link(str)
-      if str =~ %r{^[a-zA-Z0-9]+://}
-        uri = URI.parse(str)
-        port = uri.port.nil? ? "" : ":" + uri.port.to_s
-        path = uri.path.nil? ? "" : uri.path.to_s
-
-        # Match the weird format used by Mastodon here
-        <<-LINK.gsub(/\n/, "")
-        <a href="#{str}" target="_blank" rel="nofollow noopener noreferrer me">
-        <span class="invisible">#{uri.scheme}://</span><span class="">#{uri.host}#{port}#{path}</span>
-        <span class="invisible"></span>
-        </a>
-        LINK
-      else
-        str
-      end
-    end
-
     def to_json_ld(recursive = true)
-      wrap_attachment_links
       ActorModelRenderer.to_json_ld(self, recursive)
     end
 

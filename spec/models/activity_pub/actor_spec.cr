@@ -297,8 +297,6 @@ Spectator.describe ActivityPub::Actor do
     end
 
     context "given an array of attachments" do
-      before_each { actor.assign(urls: ["url one", "url two"]) }
-
       it "renders the array of attachments, with html links" do
         expect(actor.to_json_ld).to match(/"attachment":\[[^\]]+\]/)
         expect(actor.to_json_ld).to match(%r{"value\":\"<a href=\\\"https://somewhere.example.com\\\" target=\\\"_blank\\\" rel=\\\"nofollow noopener noreferrer me\\\"><span class=\\\"invisible\\\">https://</span><span class=\\\"\\\">somewhere.example.com</span><span class=\\\"invisible\\\"></span></a>\"})

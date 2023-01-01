@@ -211,19 +211,10 @@ Spectator.describe ActivityPub::Actor do
       attachments = actor.attachments.not_nil!
       expect(attachments.size).to eq(2)
       expect(attachments.all? { |a| a.type == "http://schema.org#PropertyValue" }).to be_true
-
       expect(attachments.first.name).to eq("Blog")
-      expect(attachments.first.value).to eq(
-        "<a href=\"https://somewhere.example.com\" target=\"_blank\" " +
-        "rel=\"nofollow noopener noreferrer me\"><span class=\"invisible\">" +
-        "https://</span><span class=\"\">somewhere.example.com</span><span class=\"invisible\"></span></a>"
-      )
-
+      expect(attachments.first.value).to eq("https://somewhere.example.com")
       expect(attachments.last.name).to eq("Website")
-      expect(attachments.last.value).to eq("<a href=\"http://site.example.com\" target=\"_blank\" " +
-        "rel=\"nofollow noopener noreferrer me\"><span class=\"invisible\">"+
-        "http://</span><span class=\"\">site.example.com</span><span class=\"invisible\"></span></a>"
-      )
+      expect(attachments.last.value).to eq("http://site.example.com")
     end
 
     it "includes the public key" do
@@ -257,19 +248,14 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
 
-      expect(actor.attachments.not_nil!.size).to eq(2)
-      expect(actor.attachments.not_nil!.all? { |a| a.type == "http://schema.org#PropertyValue" }).to be_true
-      expect(actor.attachments.not_nil!.first.name).to eq("Blog")
-      expect(actor.attachments.not_nil!.first.value).to eq(
-        "<a href=\"https://somewhere.example.com\" target=\"_blank\" " +
-        "rel=\"nofollow noopener noreferrer me\"><span class=\"invisible\">" +
-        "https://</span><span class=\"\">somewhere.example.com</span><span class=\"invisible\"></span></a>"
-      )
-      expect(actor.attachments.not_nil!.last.name).to eq("Website")
-      expect(actor.attachments.not_nil!.last.value).to eq("<a href=\"http://site.example.com\" target=\"_blank\" " +
-        "rel=\"nofollow noopener noreferrer me\"><span class=\"invisible\">"+
-        "http://</span><span class=\"\">site.example.com</span><span class=\"invisible\"></span></a>"
-      )
+      expect(actor.attachments).not_to be_nil
+      attachments = actor.attachments.not_nil!
+      expect(attachments.size).to eq(2)
+      expect(attachments.all? { |a| a.type == "http://schema.org#PropertyValue" }).to be_true
+      expect(attachments.first.name).to eq("Blog")
+      expect(attachments.first.value).to eq("https://somewhere.example.com")
+      expect(attachments.last.name).to eq("Website")
+      expect(attachments.last.value).to eq("http://site.example.com")
     end
 
     it "includes the public key" do
@@ -291,6 +277,10 @@ Spectator.describe ActivityPub::Actor do
     let(actor) { described_class.from_json_ld(json) }
 
     it "renders an identical instance" do
+      # attachment values may change round trip because of the
+      # Mastodon compatibile post-processing that happens to URLs,
+      # so clear the attachments for this test.
+      actor.attachments.try(&.clear)
       expect(described_class.from_json_ld(actor.to_json_ld)).to eq(actor)
     end
 

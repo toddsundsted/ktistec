@@ -860,7 +860,7 @@ module ActivityPub
       entry_not_nil.reduce([] of Attachment) do |memo, a|
         name = (dig?(a, "https://www.w3.org/ns/activitystreams#name", "und") || "").not_nil!
         type = (a.dig?("@type").try(&.as_s) || "").not_nil!
-        value = maybe_wrap_link((dig?(a, "http://schema.org#value") || "").not_nil!)
+        value = (a.dig?("http://schema.org#value").try(&.as_s) || "").not_nil!
 
         unless name.empty? || value.empty?
           memo << Attachment.new(name, type, value)

@@ -1,6 +1,5 @@
 require "kemal"
 
-require "./ext/context"
 require "../views/view_helper"
 
 class HTTP::Server::Context

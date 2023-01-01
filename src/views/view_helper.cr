@@ -1,8 +1,6 @@
 require "ecr"
 require "slang"
 
-require "../framework/controller"
-
 module Ktistec::ViewHelper
   module ClassMethods
     def depth(object)

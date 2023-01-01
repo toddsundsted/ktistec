@@ -4,6 +4,7 @@ require "../../src/framework/method"
 require "../../src/framework/rewrite"
 require "../../src/framework/ext/array"
 require "../../src/framework/ext/hash"
+require "../../src/framework/ext/context"
 require "../../src/framework/ext/params"
 require "../../src/handlers/**"
 

@@ -11,22 +11,9 @@
         <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
         <link rel="manifest" href="/site.webmanifest">
         <title><%= Ktistec.settings.site || "Ktistec" %><%= (title = yield_content("title")) && " | #{title}" %></title>
-        <script
-            src="https://code.jquery.com/jquery-3.4.1.min.js"
-            integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
-            crossorigin="anonymous"
-        ></script>
-        <script
-            src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"
-            integrity="sha512-dqw6X88iGgZlTsONxZK9ePmJEFrmHwpuMrsUChjAw1mRUhUITE5QU9pkcSox+ynfLhL15Sv2al5A0LVyDCmtUw=="
-            crossorigin="anonymous"
-        ></script>
-        <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css"
-            integrity="sha512-8bHTC73gkZ7rZ7vpqUQThUDhqcNFyYi2xgDgPDHc+GXVGHXq+xPjynxIopALmOPqzo9JZj0k6OqqewdGO3EsrQ=="
-            crossorigin="anonymous"
-        />
+        <script src="/3rd/jquery-3.4.1.min.js"></script>
+        <script src="/3rd/semantic-2.4.1.min.js"></script>
+        <link rel="stylesheet" href="/3rd/semantic-2.4.1.min.css"/>
         <script>
           window.Ktistec = {
             csrf: '<%= env.session.string?("csrf") %>'

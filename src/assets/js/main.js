@@ -1,7 +1,5 @@
 "use strict"
 
-import $ from "jquery"
-
 /**
  * Turbo
  */

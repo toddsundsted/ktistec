@@ -86,7 +86,7 @@ crystal:
         button.ui.mini.iconic.button
           i.edit.icon
           | Edit
-      == form_button object_path(object), method: "DELETE", button_class: "ui mini dangerous iconic button", button_data: {"modal" => "delete"} do
+      == form_button object_path(object), method: "DELETE", button_class: "ui mini dangerous iconic button", button_data: {"modal" => "delete", "controller" => "modal-action", "action" => "click->modal-action#show"} do
         i.trash.icon
         | Delete
     - elsif account
@@ -134,11 +134,11 @@ crystal:
           button.ui.mini.iconic.button
             i.edit.icon
             | Edit
-        == activity_button(outbox_path(account), object.iri, "Delete", button_class: "ui button mini dangerous iconic", button_data: {"modal": "delete"}) do
+        == activity_button(outbox_path(account), object.iri, "Delete", button_class: "ui button mini dangerous iconic", button_data: {"modal": "delete", "controller": "modal-action", "action": "click->modal-action#show"}) do
           i.trash.icon
           | Delete
       - elsif announce.nil? && like.nil?
-        == form_button block_object_path(object), button_class: "ui button mini dangerous iconic", button_data: {"modal": "block.object"} do
+        == form_button block_object_path(object), button_class: "ui button mini dangerous iconic", button_data: {"modal": "block.object", "controller": "modal-action", "action": "click->modal-action#show"} do
           i.times.icon
           | Block
     - else

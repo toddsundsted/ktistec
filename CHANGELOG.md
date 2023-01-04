@@ -6,6 +6,9 @@ All notable changes to this project are documented in this file.
 - Create the starting database from a single dump instead of running each incremental migration.
 - Basic support for timeline filters ("?filters=no-shares,no-replies").
 
+### Removed
+- Removed dependencies on externally hosted Semantic UI assets. Removed jQuery.
+
 ## [v2.0.0-7]
 ### Added
 - Merged [relistan](https://github.com/relistan)'s work on Mastodon-compatible user profile metadata. ([#60](https://github.com/toddsundsted/ktistec/pull/60), fixes [#35](https://github.com/toddsundsted/ktistec/issues/35))

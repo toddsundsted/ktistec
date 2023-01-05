@@ -1,8 +1,6 @@
 require "ecr"
 require "slang"
 
-require "../framework/controller"
-
 module Ktistec::ViewHelper
   module ClassMethods
     def depth(object)
@@ -25,8 +23,8 @@ module Ktistec::ViewHelper
 
     def pagination_params(env)
       {
-        Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
-        Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
+        page: Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
+        size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
       }
     end
 
@@ -34,6 +32,25 @@ module Ktistec::ViewHelper
       query = env.params.query
       page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1
       render "./src/views/partials/paginator.html.slang"
+    end
+
+    def maybe_wrap_link(str)
+      if str =~ %r{^[a-zA-Z0-9]+://}
+        uri = URI.parse(str)
+        port = uri.port.nil? ? "" : ":" + uri.port.to_s
+        path = uri.path.nil? ? "" : uri.path.to_s
+
+        # match the weird format used by mastodon
+        # see: https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb#L72
+        <<-LINK.gsub(/(\n|^ +)/, "")
+        <a href="#{str}" target="_blank" rel="nofollow noopener noreferrer me">
+        <span class="invisible">#{uri.scheme}://</span><span class="">#{uri.host}#{port}#{path}</span>
+        <span class="invisible"></span>
+        </a>
+        LINK
+      else
+        str
+      end
     end
   end
 
@@ -357,5 +374,42 @@ module Ktistec::ViewHelper
     %comma = {{comma}} ? "," : ""
     %value = {{model}}.{{field.id}}.try(&.inspect) || "null"
     %Q|"{{field.id}}":#{%value}#{%comma}|
+  end
+
+  ## General purpose helpers
+
+  # Sanitizes HTML.
+  #
+  # For use in views:
+  #     <%= s string %>
+  #
+  macro s(str)
+    Ktistec::Util.sanitize({{str}})
+  end
+
+  # Pluralizes the noun.
+  #
+  # For use in views:
+  #     <%= pluralize(1, "fox") %>
+  #
+  macro pluralize(count, noun)
+    if {{count}} == 1
+      "1 #{{{noun}}}"
+    else
+      "#{{{count}}} #{Ktistec::Util.pluralize({{noun}})}"
+    end
+  end
+
+  # Emits a comma when one would be necessary when iterating through
+  # a collection.
+  #
+  macro comma(collection, counter)
+    {{counter}} < {{collection}}.size - 1 ? "," : ""
+  end
+
+  # Generates a random, URL-safe identifier.
+  #
+  macro id
+    Ktistec::Util.id
   end
 end

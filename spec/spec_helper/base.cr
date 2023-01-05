@@ -41,9 +41,7 @@ class Array(T)
 end
 
 module Ktistec
-  def self.db_file
-    @@db_file ||= "sqlite3://#{File.tempname("ktistec-test", ".db")}"
-  end
+  @@db_file = "sqlite3://#{File.tempname("ktistec-test", ".db")}"
 
   class Settings
     def clear_host
@@ -99,7 +97,8 @@ def self.random_password
   random_string + "1="
 end
 
-Ktistec.settings.host = "https://test.test"
-Ktistec.settings.site = "Test"
+Kemal.config.env = ENV["KEMAL_ENV"]? || "test"
+
+Ktistec.settings.assign({"host" => "https://test.test", "site" => "Test"}).save
 
 Log.setup_from_env

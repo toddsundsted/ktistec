@@ -4,7 +4,7 @@ class EverythingController
   include Ktistec::Controller
 
   get "/everything" do |env|
-    collection = ActivityPub::Object.federated_posts(*pagination_params(env))
+    collection = ActivityPub::Object.federated_posts(**pagination_params(env))
 
     accepts?("text/html") ?
       render_html(env, collection) :

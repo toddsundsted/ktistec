@@ -1,6 +1,6 @@
 require "../../../src/models/task/performance"
 
-require "../../spec_helper/model"
+require "../../spec_helper/base"
 
 Spectator.describe Task::Performance do
   setup_spec

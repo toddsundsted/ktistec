@@ -1,6 +1,7 @@
 require "../../src/controllers/settings"
 
 require "../spec_helper/controller"
+require "../spec_helper/factory"
 
 Spectator.describe SettingsController do
   setup_spec
@@ -107,6 +108,14 @@ Spectator.describe SettingsController do
           post "/settings/actor", headers, "icon=%2Ffoo%2Fbar%2Fbaz"
           expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
         end
+
+        it "updates the attachments" do
+          post "/settings/actor", headers, "attachment_0_name=Blog&attachment_0_value=https://beowulf.example.com"
+          attachments = ActivityPub::Actor.find(actor.id).attachments.not_nil!
+          expect(attachments.size).to eq(1)
+          expect(attachments.first.name).to eq("Blog")
+          expect(attachments.first.value).to eq("https://beowulf.example.com")
+        end
       end
 
       context "and posting JSON data" do
@@ -140,6 +149,14 @@ Spectator.describe SettingsController do
         it "updates the icon" do
           post "/settings/actor", headers, %q|{"icon":"/foo/bar/baz"}|
           expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
+        end
+
+        it "updates the attachments" do
+          post "/settings/actor", headers, %q|{"attachment_0_name":"Blog","attachment_0_value":"https://beowulf.example.com"}|
+          attachments = ActivityPub::Actor.find(actor.id).attachments.not_nil!
+          expect(attachments.size).to eq(1)
+          expect(attachments.first.name).to eq("Blog")
+          expect(attachments.first.value).to eq("https://beowulf.example.com")
         end
       end
     end

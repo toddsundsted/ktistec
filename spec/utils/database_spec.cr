@@ -1,7 +1,7 @@
 require "../../src/utils/database"
 
+require "../spec_helper/base"
 require "../spec_helper/factory"
-require "../spec_helper/model"
 
 Spectator.describe Ktistec::Database do
   setup_spec
@@ -13,11 +13,11 @@ Spectator.describe Ktistec::Database do
 
     context "given notifications" do
       let_build(:object, named: object1, attributed_to: owner)
-      let_create(:announce, named: announce1, actor: owner, object: object1)
+      let_create!(:announce, named: announce1, actor: owner, object: object1)
       let_build(:object, named: object2, attributed_to: other)
-      let_create(:announce, named: announce2, actor: other, object: object2)
+      let_create!(:announce, named: announce2, actor: other, object: object2)
       let_build(:object, named: object3, attributed_to: owner)
-      let_create(:announce, named: announce3, actor: owner, object: object3)
+      let_create!(:announce, named: announce3, actor: owner, object: object3)
 
       before_each do
         put_in_inbox(owner, announce1)
@@ -46,11 +46,11 @@ Spectator.describe Ktistec::Database do
 
     context "given a timeline" do
       let_build(:object, named: object1, attributed_to: owner)
-      let_create(:create, named: create1, actor: owner, object: object1)
+      let_create!(:create, named: create1, actor: owner, object: object1)
       let_build(:object, named: object2, attributed_to: other)
-      let_create(:create, named: create2, actor: other, object: object2)
+      let_create!(:create, named: create2, actor: other, object: object2)
       let_build(:object, named: object3, attributed_to: owner)
-      let_create(:create, named: create3, actor: owner, object: object3)
+      let_create!(:create, named: create3, actor: owner, object: object3)
 
       before_each do
         put_in_inbox(owner, create1)

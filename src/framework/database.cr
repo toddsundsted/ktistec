@@ -1,9 +1,42 @@
 require "benchmark"
 require "sqlite3"
 
-require "./framework"
-
 module Ktistec
+  @@db_file : String =
+    begin
+      ENV["KTISTEC_DB"]?.try { |db| "sqlite3://#{db}" } ||
+        if ENV["KEMAL_ENV"]? == "production"
+          "sqlite3://#{File.expand_path("~/.ktistec.db", home: true)}"
+        else
+          "sqlite3://ktistec.db"
+        end
+    end
+
+  @@database : DB::Database =
+    begin
+      unless File.exists?(db_file.split("//").last)
+        DB.open(db_file) do |db|
+          File.read(File.join(Dir.current, "etc", "database", "schema.sql")).split(';').each do |command|
+            db.exec(command) unless command.blank?
+          end
+          # sqlite only recently replaced (insecure) rc4 with chacha20
+          # for random number generation. to avoid problems with older
+          # sqlite versions in the field, use the following instead of
+          # hex(randomblob) to generate the secret key.
+          # see: https://sqlite.org/src/info/084d8776fa95c754
+          db.exec "INSERT INTO options (key, value) VALUES (?, ?)", "secret_key", Random::Secure.hex(64)
+        end
+      end
+      DB.open(db_file)
+    end
+
+  @@secret_key : String =
+    begin
+      database.scalar("SELECT value FROM options WHERE key = ?", "secret_key").as(String)
+    end
+
+  class_getter db_file, database, secret_key
+
   # Database utilities.
   #
   module Database

@@ -1,7 +1,7 @@
 require "../../src/rules/content_rules"
 
+require "../spec_helper/base"
 require "../spec_helper/factory"
-require "../spec_helper/model"
 
 alias Notification = Relationship::Content::Notification
 alias Timeline = Relationship::Content::Timeline
@@ -626,6 +626,7 @@ Spectator.describe ContentRules do
 
     context "given a timeline with another object already added" do
       let_build(:object, named: another)
+      let_create!(:create, object: another)
 
       before_each { put_in_timeline(owner, another) }
 

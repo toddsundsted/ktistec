@@ -4,15 +4,13 @@ require "../../src/framework/method"
 require "../../src/framework/rewrite"
 require "../../src/framework/ext/array"
 require "../../src/framework/ext/hash"
+require "../../src/framework/ext/context"
 require "../../src/framework/ext/params"
 require "../../src/handlers/**"
 
 require "./base"
-require "./model"
-require "./factory"
 
 # from https://github.com/kemalcr/spec-kemal/blob/master/src/spec-kemal.cr
-# run specs with `KEMAL_ENV=test crystal spec`
 
 class Global
   class_property response : HTTP::Client::Response?

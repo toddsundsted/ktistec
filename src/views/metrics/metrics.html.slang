@@ -1,5 +1,7 @@
 - content_for "head" do
   meta name="turbo-cache-control" content="no-cache"
+- content_for "title" do
+  | Metrics
 crystal:
   colors = [
     "#619ED6",

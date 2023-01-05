@@ -1,6 +1,6 @@
 require "../../src/framework/rule"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 
 class RuleModel
   include Ktistec::Model(Nil)

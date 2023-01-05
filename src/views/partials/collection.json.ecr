@@ -17,7 +17,7 @@
   <%- end -%>
   "orderedItems":[
   <%- collection.each_with_index do |item, i| -%>
-    "<%= item.iri %>"<%= i < collection.size - 1 ? "," : "" %>
+    "<%= item.iri %>"<%= comma(collection, i) %>
   <%- end -%>
   ]
   <%- else -%>
@@ -33,7 +33,7 @@
     <%- end -%>
     "orderedItems":[
     <%- collection.each_with_index do |item, i| -%>
-      "<%= item.iri %>"<%= i < collection.size - 1 ? "," : "" %>
+      "<%= item.iri %>"<%= comma(collection, i) %>
     <%- end -%>
     ]
   }

@@ -1,7 +1,7 @@
 require "../../../framework/model"
 
 module Ktistec
-  module Model
+  module Model(*T)
     module Serialized
       macro included
         extend ClassMethods

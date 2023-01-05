@@ -1,6 +1,6 @@
 require "../../src/models/task"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 
 Spectator.describe Task do
   setup_spec

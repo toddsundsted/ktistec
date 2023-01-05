@@ -4,7 +4,7 @@
   "type": "Collection",
   "items":[
     <%- accounts.each_with_index do |account, i| -%>
-      "<%= actor_path(account) %>"<%= i < accounts.size - 1 ? "," : "" %>
+      "<%= actor_path(account) %>"<%= comma(accounts, i) %>
     <%- end -%>
   ]
 }

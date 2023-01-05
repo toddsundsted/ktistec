@@ -5,9 +5,12 @@ require "../../src/framework"
 require "../spec_helper/base"
 
 Spectator.describe Ktistec::Settings do
-  setup_spec
-
   subject { Ktistec.settings }
+
+  after_each do
+    # reset settings to initial values
+    Ktistec.settings.assign({"host" => "https://test.test/", "site" => "Test", "footer" => nil}).save
+  end
 
   it "initializes instance from the persisted values" do
     Ktistec.clear_settings
@@ -97,8 +100,6 @@ Spectator.describe Ktistec::Settings do
 end
 
 Spectator.describe Ktistec do
-  setup_spec
-
   describe "::VERSION" do
     it "should return the version" do
       version = YAML.parse(File.read(File.join(__DIR__, "..", "..", "shard.yml")))["version"].as_s
@@ -111,7 +112,7 @@ Spectator.describe Ktistec do
       expect(Ktistec.settings).to be_a(Ktistec::Settings)
     end
 
-    context "give previous errors" do
+    context "given previous errors" do
       before_each { Ktistec.settings.errors["settings"] = ["has an error"] }
 
       it "clears the errors when getting the settings singleton" do
@@ -121,7 +122,7 @@ Spectator.describe Ktistec do
   end
 
   context "given initialized settings" do
-    before_all do
+    before_each do
       Ktistec.settings.assign({"host" => "https://test.test/", "site" => "Test", "footer" => "Copyright"}).save
     end
 

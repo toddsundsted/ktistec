@@ -1,6 +1,6 @@
 require "../../../src/models/tag/hashtag"
 
-require "../../spec_helper/model"
+require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
 Spectator.describe Tag::Hashtag do

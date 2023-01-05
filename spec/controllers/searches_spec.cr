@@ -54,7 +54,7 @@ Spectator.describe SearchesController do
         it "retrieves and saves an actor" do
           expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo_bar')]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//div/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an actor" do
@@ -66,7 +66,7 @@ Spectator.describe SearchesController do
         it "works with a leading @ if present" do
           expect{get "/search?query=@foo_bar@remote", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo_bar')]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//div/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "works with a leading @ if present" do
@@ -78,7 +78,7 @@ Spectator.describe SearchesController do
         it "ignores surrounding whitespace if present" do
           expect{get "/search?query=+foo_bar@remote+", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo_bar')]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//div/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "ignores surrounding whitespace if present" do
@@ -140,7 +140,7 @@ Spectator.describe SearchesController do
         it "retrieves and saves an actor" do
           expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo_bar')]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//div/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an actor" do

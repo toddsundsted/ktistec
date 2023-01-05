@@ -11,6 +11,7 @@
     - [Metrics](#metrics)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
+    - [Running Tests](#running-tests)
   - [Usage](#usage)
   - [Contributors](#contributors)
   - [Copyright and License](#copyright-and-license)
@@ -151,6 +152,12 @@ something like:
 `Ktistec is ready to lead at http://0.0.0.0:3000`
 
 You can now connect to and configure the server.
+
+### Running Tests
+
+If you change the code, you should run the tests:
+
+`$ crystal spec`
 
 ## Usage
 

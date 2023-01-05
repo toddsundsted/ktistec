@@ -1,6 +1,6 @@
 require "../../../../src/models/relationship/content/canonical"
 
-require "../../../spec_helper/model"
+require "../../../spec_helper/base"
 
 Spectator.describe Relationship::Content::Canonical do
   setup_spec

@@ -34,8 +34,6 @@ def process_request_and_return_response(handler, request)
 end
 
 Spectator.describe Ktistec::CSRF do
-  setup_spec
-
   it "sends GETs to next handler" do
     handler = described_class.new
     request = HTTP::Request.new("GET", "/")

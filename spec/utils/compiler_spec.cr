@@ -198,6 +198,22 @@ Spectator.describe Ktistec::Compiler do
       end
     end
 
+    context "given an input" do
+      let(input) do
+        <<-END
+          rule "name"
+            condition FooBar, within("foo", "bar")
+          end
+        END
+      end
+
+      let(condition) { subject.compile.rules.first.conditions.first.as(CompilerSpec::FooBar) }
+
+      it "supports the predicate 'within'" do
+        expect(condition.target).to eq(School::Within.new(School::Lit.new("foo"), School::Lit.new("bar")))
+      end
+    end
+
     context "given a rule definition with trace specified" do
       let(input) { %q|rule "name" trace end| }
 

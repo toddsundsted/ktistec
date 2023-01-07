@@ -73,6 +73,18 @@ module Ktistec
         when "."
           return accessor(node.left.id, node.right.id)
         end
+      when Ktistec::FunctionOperator
+        case node.left.id
+        when "within"
+          right = node.right.map do |node|
+            if (exp = compile_expression(node)).is_a?(School::Atomic)
+              exp
+            else
+              raise LinkError.new(self, "argument must be atomic")
+            end
+          end
+          return School::Within.new(right)
+        end
       end
       raise LinkError.new(self, "unsupported expression")
     end

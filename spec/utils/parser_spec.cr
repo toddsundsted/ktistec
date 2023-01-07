@@ -294,6 +294,56 @@ Spectator.describe Ktistec::Parser do
         expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token/)
       end
     end
+
+    context "given a function operator" do
+      it "parses the expression" do
+        expression = described_class.new(%q|within(x, 1, 2, 3)|).expression
+        expect({expression.class, expression.id}).to eq({Ktistec::FunctionOperator, "("})
+        left = expression.as(Ktistec::FunctionOperator).left
+        expect({left.class, left.id}).to eq({Ktistec::Identifier, "within"})
+        right = expression.as(Ktistec::FunctionOperator).right
+        expect(right.size).to eq(4)
+        expect({right[0].class, right[0].id}).to eq({Ktistec::Identifier, "x"})
+        expect({right[1].class, right[1].token.as_i}).to eq({Ktistec::Literal, 1})
+        expect({right[2].class, right[2].token.as_i}).to eq({Ktistec::Literal, 2})
+        expect({right[3].class, right[3].token.as_i}).to eq({Ktistec::Literal, 3})
+      end
+
+      it "positions the parser on the next token" do
+        parser = described_class.new(%q|within()|).tap(&.expression)
+        expect(parser.current.token.eoi?).to be_true
+      end
+
+      it "positions the parser on the next token" do
+        parser = described_class.new(%q|within() x|).tap(&.expression)
+        expect(parser.current.id).to eq("x")
+      end
+
+      it "positions the parser on the next token" do
+        parser = described_class.new(%q|within(),|).tap(&.expression)
+        expect(parser.current.id).to eq(",")
+      end
+
+      it "raises an error if there is no closing parenthesis" do
+        parser = described_class.new(%q|within(|)
+        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /missing token: \)/)
+      end
+
+      it "raises an error if there is no closing parenthesis" do
+        parser = described_class.new(%q|within(,|)
+        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \,/)
+      end
+
+      it "raises an error if there is no expression to the left" do
+        parser = described_class.new(%q|()|)
+        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \(/)
+      end
+
+      it "raises an error if the expression to the left is not an identifier" do
+        parser = described_class.new(%q|5()|)
+        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /expecting identifier/)
+      end
+    end
   end
 
   describe "#statement" do

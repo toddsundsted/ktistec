@@ -15,6 +15,7 @@ require "../relationship/content/timeline"
 require "../relationship/content/inbox"
 require "../relationship/content/outbox"
 require "../relationship/social/follow"
+require "../filter_term"
 require "./activity"
 require "./activity/announce"
 require "./activity/create"
@@ -93,6 +94,8 @@ module ActivityPub
     property urls : Array(String)?
 
     has_many objects, class_name: ActivityPub::Object, foreign_key: attributed_to_iri, primary_key: iri
+
+    has_many filter_terms, inverse_of: actor
 
     struct Attachment
       include JSON::Serializable

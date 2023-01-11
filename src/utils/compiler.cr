@@ -53,6 +53,34 @@ module Ktistec
       end
     end
 
+    class ::Ktistec::Function::Strip < School::Expression
+      include School::Atomic
+
+      getter target
+
+      def initialize(@target : School::Atomic, name : String? = nil)
+        self.name = name if name
+      end
+
+      # :inherit:
+      def ==(other : self)
+        self.target == other.target
+      end
+    end
+
+    class ::Ktistec::Function::Filter < School::Expression
+      getter target
+
+      def initialize(@target : School::Atomic, name : String? = nil)
+        self.name = name if name
+      end
+
+      # :inherit:
+      def ==(other : self)
+        self.target == other.target
+      end
+    end
+
     private def compile_expression(node : Ktistec::Node) : School::Expression
       case node
       when Ktistec::Literal
@@ -84,6 +112,20 @@ module Ktistec
             end
           end
           return School::Within.new(right)
+        when "strip"
+          raise LinkError.new(self, "wrong number of arguments: strip") if node.right.size != 1
+          if (exp = compile_expression(node.right.first)).is_a?(School::Atomic)
+            return Function::Strip.new(exp)
+          else
+            raise LinkError.new(self, "argument must be atomic")
+          end
+        when "filter"
+          raise LinkError.new(self, "wrong number of arguments: filter") if node.right.size != 1
+          if (exp = compile_expression(node.right.first)).is_a?(School::Atomic)
+            return Function::Filter.new(exp)
+          else
+            raise LinkError.new(self, "argument must be atomic")
+          end
         end
       end
       raise LinkError.new(self, "unsupported expression")

@@ -60,7 +60,7 @@ Spectator.describe Ktistec::Compiler do
 
     subject { described_class.new(input) }
 
-    context "given an input" do
+    context "given a rule" do
       let(input) do
         <<-END
           rule "name"
@@ -198,7 +198,7 @@ Spectator.describe Ktistec::Compiler do
       end
     end
 
-    context "given an input" do
+    context "given a rule with 'within'" do
       let(input) do
         <<-END
           rule "name"
@@ -211,6 +211,38 @@ Spectator.describe Ktistec::Compiler do
 
       it "supports the predicate 'within'" do
         expect(condition.target).to eq(School::Within.new(School::Lit.new("foo"), School::Lit.new("bar")))
+      end
+    end
+
+    context "given a rule with 'strip'" do
+      let(input) do
+        <<-END
+          rule "name"
+            condition FooBar, strip("foobar")
+          end
+        END
+      end
+
+      let(condition) { subject.compile.rules.first.conditions.first.as(CompilerSpec::FooBar) }
+
+      it "supports the function 'strip'" do
+        expect(condition.target).to eq(Ktistec::Function::Strip.new(School::Lit.new("foobar")))
+      end
+    end
+
+    context "given a rule with 'filter'" do
+      let(input) do
+        <<-END
+          rule "name"
+            condition FooBar, filter("foobar")
+          end
+        END
+      end
+
+      let(condition) { subject.compile.rules.first.conditions.first.as(CompilerSpec::FooBar) }
+
+      it "supports the function 'filter'" do
+        expect(condition.target).to eq(Ktistec::Function::Filter.new(School::Lit.new("foobar")))
       end
     end
 

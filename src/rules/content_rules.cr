@@ -1,7 +1,7 @@
 require "../framework/rule"
-# include *every* ActivityPub model to ensure generated
+# include *every* model to ensure generated
 # queries include *all* subtypes.
-require "../models/activity_pub/**"
+require "../models/**"
 require "../utils/compiler"
 
 # optionally count database operations.

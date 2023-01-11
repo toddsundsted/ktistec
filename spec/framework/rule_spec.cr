@@ -562,6 +562,129 @@ Spectator.describe Ktistec::Rule do
           end
         end
 
+        context "with a property and the function 'strip'" do
+          subject { RulePattern.new(name: Ktistec::Function::Strip.new(School::Lit.new("<span>th</span><span>ree</span>"), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        context "with a property and the function 'strip'" do
+          let(bindings) { School::Bindings{"value" => "<span>th</span><span>ree</span>"} }
+
+          subject { RulePattern.new(name: Ktistec::Function::Strip.new(School::Var.new("value"), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"value" => "<span>th</span><span>ree</span>", "name" => "three"}])
+          end
+        end
+
+        context "with a property and the function 'strip'" do
+          subject { RulePattern.new(name: Ktistec::Function::Strip.new(School::Accessor.new { "<span>th</span><span>ree</span>" }, name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        context "with a property and the predicate 'filter'" do
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(School::Lit.new("three"), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        context "with a property and the predicate 'filter'" do
+          let(bindings) { School::Bindings{"value" => "three"} }
+
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(School::Var.new("value"), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"value" => "three", "name" => "three"}])
+          end
+        end
+
+        context "with a property and the predicate 'filter'" do
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(School::Accessor.new { "three" }, name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        context "with a property, the predicate 'filter', and the function 'strip'" do
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Lit.new("<span>THREE</span>")), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        context "with a property, the predicate 'filter', and the function 'strip'" do
+          let(bindings) { School::Bindings{"value" => "THREE"} }
+
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Var.new("value")), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"value" => "THREE", "name" => "three"}])
+          end
+        end
+
+        context "with a property, the predicate 'filter', and the function 'strip'" do
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Accessor.new { "<span>THREE</span>" }), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
         # edge cases
 
         context "with a target with a cached association" do

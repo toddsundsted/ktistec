@@ -1,5 +1,9 @@
 require "school/rule/pattern"
 
+# pick up function definitions
+require "../utils/compiler"
+
+require "./ext/sqlite3"
 require "./model"
 
 module Ktistec
@@ -251,6 +255,90 @@ module Ktistec
               { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
             else
               { %Q|"#{table}"."#{column}" IN (#{params.join(',')})|, values }
+            end
+          when Ktistec::Function::Strip
+            target = expression.target
+            case target
+            when School::Lit
+              if (term = yield target.target)
+                { %Q|"#{table}"."#{column}" = strip(?)|, term }
+              else
+                { %Q|"#{table}"."#{column}" IS NULL|, nil }
+              end
+            when School::Var
+              if bindings.has_key?(target.name)
+                if (term = yield bindings[target.name])
+                  { %Q|"#{table}"."#{column}" = strip(?)|, term }
+                else
+                  { %Q|"#{table}"."#{column}" IS NULL|, nil }
+                end
+              else
+                { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
+              end
+            when School::Accessor
+              if (term = yield target.call(bindings))
+                { %Q|"#{table}"."#{column}" = strip(?)|, term }
+              else
+                { %Q|"#{table}"."#{column}" IS NULL|, nil }
+              end
+            else
+              raise "#{target.class} is unsupported"
+            end
+          when Ktistec::Function::Filter
+            target = expression.target
+            case target
+            when School::Lit
+              if (term = yield target.target)
+                { %Q|like("#{table}"."#{column}", ?, "%")|, term }
+              else
+                { %Q|"#{table}"."#{column}" IS NULL|, nil }
+              end
+            when School::Var
+              if bindings.has_key?(target.name)
+                if (term = yield bindings[target.name])
+                  { %Q|like("#{table}"."#{column}", ?, "%")|, term }
+                else
+                  { %Q|"#{table}"."#{column}" IS NULL|, nil }
+                end
+              else
+                { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
+              end
+            when School::Accessor
+              if (term = yield target.call(bindings))
+                { %Q|like("#{table}"."#{column}", ?, "%")|, term }
+              else
+                { %Q|"#{table}"."#{column}" IS NULL|, nil }
+              end
+            when Ktistec::Function::Strip
+              target = target.target
+              case target
+              when School::Lit
+                if (term = yield target.target)
+                  { %Q|like("#{table}"."#{column}", strip(?), "%")|, term }
+                else
+                  { %Q|"#{table}"."#{column}" IS NULL|, nil }
+                end
+              when School::Var
+                if bindings.has_key?(target.name)
+                  if (term = yield bindings[target.name])
+                    { %Q|like("#{table}"."#{column}", strip(?), "%")|, term }
+                  else
+                    { %Q|"#{table}"."#{column}" IS NULL|, nil }
+                  end
+                else
+                  { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
+                end
+              when School::Accessor
+                if (term = yield target.call(bindings))
+                  { %Q|like("#{table}"."#{column}", strip(?), "%")|, term }
+                else
+                  { %Q|"#{table}"."#{column}" IS NULL|, nil }
+                end
+              else
+                raise "#{target.class} is unsupported"
+              end
+            else
+              raise "#{target.class} is unsupported"
             end
           when School::Accessor
             if (term = yield expression.call(bindings))

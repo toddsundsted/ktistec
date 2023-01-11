@@ -35,10 +35,10 @@ class ContentRules
 
   Ktistec::Rule.make_pattern(Actor, ActivityPub::Actor, properties: [:iri, :followers, :following])
   Ktistec::Rule.make_pattern(Activity, ActivityPub::Activity, associations: [:actor])
-  Ktistec::Rule.make_pattern(Object, ActivityPub::Object, associations: [:in_reply_to, :attributed_to])
+  Ktistec::Rule.make_pattern(Object, ActivityPub::Object, associations: [:in_reply_to, :attributed_to], properties: [:content])
   Ktistec::Rule.make_pattern(Mention, Tag::Mention, associations: [subject], properties: [href])
-  Ktistec::Rule.make_pattern(CreateActivity, ActivityPub::Activity::Create, associations: [:object])
-  Ktistec::Rule.make_pattern(AnnounceActivity, ActivityPub::Activity::Announce, associations: [:object])
+  Ktistec::Rule.make_pattern(CreateActivity, ActivityPub::Activity::Create, associations: [:actor, :object])
+  Ktistec::Rule.make_pattern(AnnounceActivity, ActivityPub::Activity::Announce, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(LikeActivity, ActivityPub::Activity::Like, associations: [:object])
   Ktistec::Rule.make_pattern(FollowActivity, ActivityPub::Activity::Follow, associations: [:object])
   Ktistec::Rule.make_pattern(DeleteActivity, ActivityPub::Activity::Delete, associations: [:object])
@@ -48,7 +48,7 @@ class ContentRules
   Ktistec::Rule.make_pattern(Notification, Relationship::Content::Notification, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(Timeline, Relationship::Content::Timeline, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(Follow, Relationship::Social::Follow, associations: [:actor, :object])
-  Ktistec::Rule.make_pattern(Filter, FilterTerm, properties: [:term])
+  Ktistec::Rule.make_pattern(Filter, FilterTerm, associations: [:actor], properties: [:term])
 
   class Outgoing < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
   class Incoming < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
@@ -77,6 +77,7 @@ class ContentRules
   Ktistec::Compiler.register_constant(ContentRules::IsRecipient)
 
   Ktistec::Compiler.register_accessor(iri)
+  Ktistec::Compiler.register_accessor(content)
   Ktistec::Compiler.register_accessor(following)
   Ktistec::Compiler.register_accessor(followers)
 

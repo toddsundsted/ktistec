@@ -62,11 +62,10 @@ module Ktistec
       when Ktistec::PrefixOperator
         case node.id
         when "not"
-          case (right = node.right)
-          when Ktistec::Literal
-            return School::Not.new(School::Lit.new(right.token.value))
-          when Ktistec::Identifier
-            return School::Not.new(School::Var.new(right.token.as_s))
+          if (exp = compile_expression(node.right)).is_a?(School::Matcher)
+            return School::Not.new(exp)
+          else
+            raise LinkError.new(self, "argument must be a matcher")
           end
         end
       when Ktistec::InfixOperator

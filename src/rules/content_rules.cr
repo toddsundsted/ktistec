@@ -29,6 +29,7 @@ class ContentRules
   class ::Relationship::Content::Timeline include School::DomainType end
   class ::Relationship::Social::Follow include School::DomainType end
   class ::Tag::Mention include School::DomainType end
+  class ::FilterTerm include School::DomainType end
 
   # patterns and facts for the rules below
 
@@ -47,6 +48,7 @@ class ContentRules
   Ktistec::Rule.make_pattern(Notification, Relationship::Content::Notification, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(Timeline, Relationship::Content::Timeline, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(Follow, Relationship::Social::Follow, associations: [:actor, :object])
+  Ktistec::Rule.make_pattern(Filter, FilterTerm, properties: [:term])
 
   class Outgoing < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
   class Incoming < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
@@ -68,6 +70,7 @@ class ContentRules
   Ktistec::Compiler.register_constant(ContentRules::Notification)
   Ktistec::Compiler.register_constant(ContentRules::Timeline)
   Ktistec::Compiler.register_constant(ContentRules::Follow)
+  Ktistec::Compiler.register_constant(ContentRules::Filter)
   Ktistec::Compiler.register_constant(ContentRules::Incoming)
   Ktistec::Compiler.register_constant(ContentRules::Outgoing)
   Ktistec::Compiler.register_constant(ContentRules::IsAddressedTo)

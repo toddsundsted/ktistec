@@ -27,7 +27,7 @@ class FooBarModel
   @[Persistent]
   property not_nil_model_id : Int64?
 
-  belongs_to not_nil, class_name: NotNilModel, foreign_key: not_nil_model_id
+  belongs_to not_nil, class_name: NotNilModel, foreign_key: not_nil_model_id, inverse_of: foo_bar_models
   has_one not_nil_model, inverse_of: foo_bar
 end
 
@@ -49,7 +49,7 @@ class NotNilModel
   @[Persistent]
   property foo_bar_model_id : Int64?
 
-  belongs_to foo_bar, class_name: FooBarModel, foreign_key: foo_bar_model_id
+  belongs_to foo_bar, class_name: FooBarModel, foreign_key: foo_bar_model_id, inverse_of: not_nil_model
   has_many foo_bar_models, inverse_of: not_nil
 end
 
@@ -894,12 +894,20 @@ Spectator.describe Ktistec::Model do
         expect{FooBarModel.new(not_nil_model: not_nil_model)}.not_to change{not_nil_model.changed?}
       end
 
+      it "does not mark inverse record as changed" do
+        expect{FooBarModel.new(not_nil: not_nil_model)}.not_to change{not_nil_model.changed?}
+      end
+
       let(foo_bar_model) { FooBarModel.new.save }
 
       pre_condition { expect(foo_bar_model.changed?).to be_false }
 
       it "does not mark inverse record as changed" do
         expect{NotNilModel.new(foo_bar_models: [foo_bar_model])}.not_to change{foo_bar_model.changed?}
+      end
+
+      it "does not mark inverse record as changed" do
+        expect{NotNilModel.new(foo_bar: foo_bar_model)}.not_to change{foo_bar_model.changed?}
       end
     end
 

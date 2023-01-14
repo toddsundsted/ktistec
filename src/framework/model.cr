@@ -459,15 +459,28 @@ module Ktistec
 
       # Specifies a one-to-one association with another model.
       #
-      macro belongs_to(name, primary_key = id, foreign_key = nil, class_name = nil)
+      macro belongs_to(name, primary_key = id, foreign_key = nil, class_name = nil, inverse_of = nil)
         {% foreign_key = foreign_key || "#{name}_id".id %}
         {% class_name = class_name ? class_name.id : name.stringify.camelcase.id %}
         {% union_types = class_name.split("|").map(&.strip.id) %}
         @[Assignable]
         @{{name}} : {{class_name}}?
         def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
+          _belongs_to_setter_for_{{name}}({{name}})
+        end
+        def _belongs_to_setter_for_{{name}}(@{{name}} : {{class_name}}, update_associations = true) : {{class_name}}
           changed!({{name.symbolize}})
           self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
+          {% if inverse_of %}
+            if update_associations
+              if {{name}}.responds_to?(:_has_one_setter_for_{{inverse_of}})
+                {{name}}._has_one_setter_for_{{inverse_of}}(self, false)
+              elsif {{name}}.responds_to?(:_has_many_setter_for_{{inverse_of}})
+                {{name}}._has_many_setter_for_{{inverse_of}}({{name}}.{{inverse_of}} << self, false)
+              end
+              {{name}}.clear!({{inverse_of.symbolize}})
+            end
+          {% end %}
           {{name}}
         end
         def {{name}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
@@ -501,13 +514,18 @@ module Ktistec
         @[Assignable]
         @{{name}} : Array({{class_name}})?
         def {{name}}=({{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
+          _has_many_setter_for_{{name}}({{name}})
+        end
+        def _has_many_setter_for_{{name}}({{name}} : Enumerable({{class_name}}), update_associations = true) : Enumerable({{class_name}})
           @{{name}} = {{name}}.to_a
           changed!({{name.symbolize}})
           {{name}}.each do |n|
             n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}}))
             {% if inverse_of %}
-              n.{{inverse_of}} = self
-              n.clear!({{inverse_of.symbolize}})
+              if update_associations
+                n._belongs_to_setter_for_{{inverse_of}}(self, false)
+                n.clear!({{inverse_of.symbolize}})
+              end
             {% end %}
           end
           {{name}}
@@ -532,12 +550,17 @@ module Ktistec
         @[Assignable]
         @{{name}} : {{class_name}}?
         def {{name}}=({{name}} : {{class_name}}) : {{class_name}}
+          _has_one_setter_for_{{name}}({{name}})
+        end
+        def _has_one_setter_for_{{name}}({{name}} : {{class_name}}, update_associations = true) : {{class_name}}
           @{{name}} = {{name}}
           changed!({{name.symbolize}})
           {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
           {% if inverse_of %}
-            {{name}}.{{inverse_of}} = self
-            {{name}}.clear!({{inverse_of.symbolize}})
+            if update_associations
+              {{name}}._belongs_to_setter_for_{{inverse_of}}(self, false)
+              {{name}}.clear!({{inverse_of.symbolize}})
+            end
           {% end %}
           {{name}}
         end

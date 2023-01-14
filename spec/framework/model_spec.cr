@@ -1016,6 +1016,18 @@ Spectator.describe Ktistec::Model do
         foo_bar.dup.undo
         expect(NotNilModel.find(not_nil.id).foo_bar(include_undone: true)).to eq(foo_bar)
       end
+
+      it "updates the foreign key when saved" do
+        foo_bar.assign(not_nil: NotNilModel.new(val: "New"))
+        expect{foo_bar.save}.to change{foo_bar.not_nil_model_id}
+        expect(FooBarModel.find(foo_bar.id).not_nil_model_id).not_to be_nil
+      end
+
+      it "updates the foreign key when saved" do
+        not_nil.assign(foo_bar: FooBarModel.new)
+        expect{not_nil.save}.to change{not_nil.foo_bar_model_id}
+        expect(NotNilModel.find(not_nil.id).foo_bar_model_id).not_to be_nil
+      end
     end
 
     context "has_many" do

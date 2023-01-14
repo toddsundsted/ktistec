@@ -733,6 +733,7 @@ module Ktistec
           if self.responds_to?(:updated_at=)
             self.updated_at = Time.utc
           end
+          old = @id
           @id = Ktistec.database.exec(
             "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{conditions})",
             {% for v in vs %}
@@ -740,11 +741,32 @@ module Ktistec
             {% end %}
           ).last_insert_id
         {% end %}
-        # destroy unassociated instances
         {% begin %}
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
           {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+          # update associated instances
+          if @id != old
+            {% for method in methods %}
+              {% name = method.name[13..-1] %}
+              {% if method.body[0] == :has_one && method.body[1] == :id %}
+                if (model = {{method.body.last}})
+                  model._update_property({{method.body[2].id.stringify}}, @id)
+                  model.{{method.body[2].id}} = @id
+                  model.clear!({{method.body[2]}})
+                end
+              {% elsif method.body[0] == :has_many && method.body[1] == :id %}
+                if (models = {{method.body.last}})
+                  models.each do |model|
+                    model._update_property({{method.body[2].id.stringify}}, @id)
+                    model.{{method.body[2].id}} = @id
+                    model.clear!({{method.body[2]}})
+                  end
+                end
+              {% end %}
+            {% end %}
+          end
+          # destroy unassociated instances
           if (saved_record = @saved_record)
             {% for method in methods %}
               {% name = method.name[13..-1] %}
@@ -770,6 +792,10 @@ module Ktistec
       end
 
       getter? destroyed = false
+
+      def _update_property(property, value)
+        Ktistec.database.exec("UPDATE #{table_name} SET #{property} = ? WHERE id = ?", value, @id)
+      end
 
       # Destroys the instance.
       #

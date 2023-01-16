@@ -91,7 +91,9 @@ module Ktistec
 
           {% if associations %}
             {% for association in associations %}
-              {% unless (method = clazz.methods.find { |d| d.name == "_association_#{association.id}" }) %}
+              {% ancestors = clazz.ancestors << clazz %}
+              {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+              {% unless (method = methods.find { |d| d.name == "_association_#{association.id}" }) %}
                 {% raise "#{association.id} is not an association on #{clazz}" %}
               {% end %}
               {% definition = method.body %}

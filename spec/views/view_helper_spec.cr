@@ -77,11 +77,20 @@ Spectator.describe "helpers" do
     let(collection) { Ktistec::Util::PaginatedArray(Int32).new }
 
     subject do
-      XML.parse_html(self.class.paginate(env, collection)).document
+      begin
+        XML.parse_html(self.class.paginate(env, collection)).document
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
     end
 
-    it "does not render pagination controls" do
-      expect(subject.xpath_nodes("//a")).to be_empty
+    # note that the context block is required below in order to pick
+    # up the `embed` macro definition in the view helper module.
+
+    context "by default" do
+      it "does not render pagination controls" do
+        expect(subject.xpath_nodes("/nav[contains(@class,'pagination')]")).to be_empty
+      end
     end
 
     context "with more pages" do

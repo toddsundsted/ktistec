@@ -110,6 +110,40 @@ Spectator.describe "helpers" do
     end
   end
 
+  PARSER_OPTIONS =
+    XML::HTMLParserOptions::NOIMPLIED |
+    XML::HTMLParserOptions::NODEFDTD
+
+  describe ".wrap_filter_term" do
+    let(term) { "%f%%o%_o_" }
+
+    subject { XML.parse_html(self.class.wrap_filter_term(term), PARSER_OPTIONS) }
+
+    it "wraps a filter term in a span" do
+      expect(subject.xpath_nodes("/span/@class")).to contain_exactly("ui filter term")
+    end
+
+    it "wraps a wildcard % in a span" do
+      expect(subject.xpath_nodes("/span/span[contains(@class,'wildcard')]/text()")).to contain("%")
+    end
+
+    it "wraps a wildcard _ in a span" do
+      expect(subject.xpath_nodes("/span/span[contains(@class,'wildcard')]/text()")).to contain("_")
+    end
+
+    it "wraps an escaped wildcard % in a span" do
+      expect(subject.xpath_nodes("/span/span[contains(@class,'wildcard')]/text()")).to contain("%%")
+    end
+
+    it "wraps an escaped wildcard _ in a span" do
+      expect(subject.xpath_nodes("/span/span[contains(@class,'wildcard')]/text()")).to contain("%_")
+    end
+
+    it "does not wrap text" do
+      expect(subject.xpath_nodes("/span/text()")).to contain("f", "o")
+    end
+  end
+
   describe "activity_button" do
     subject do
       XML.parse_html(activity_button("/foobar", "https://object", "Zap", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }).document

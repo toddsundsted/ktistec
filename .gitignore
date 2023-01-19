@@ -1,2 +1,5 @@
 /public/uploads/*
 !/public/uploads/.keep
+/lib
+/node_modules
+/public/dist

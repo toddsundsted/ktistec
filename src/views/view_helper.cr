@@ -363,6 +363,10 @@ module Ktistec::ViewHelper
     HTML
   end
 
+  macro submit_button(value = "Submit", class _class = "ui primary button")
+    %Q|<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">|
+  end
+
   ## JSON helpers
 
   macro error_block(model, comma = true)

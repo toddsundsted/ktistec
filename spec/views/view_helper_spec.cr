@@ -558,6 +558,24 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "submit_button" do
+    subject do
+      XML.parse_html(submit_button("Text", class: "blarg")).document
+    end
+
+    it "emits an input of type submit" do
+      expect(subject.xpath_nodes("//input[@type='submit']")).not_to be_empty
+    end
+
+    it "specifies the value" do
+      expect(subject.xpath_nodes("//input[@type='submit']/@value")).to contain_exactly("Text")
+    end
+
+    it "specifies the class" do
+      expect(subject.xpath_nodes("//input[@type='submit']/@class")).to contain_exactly("blarg")
+    end
+  end
+
   ## JSON helpers
 
   describe "error_block" do

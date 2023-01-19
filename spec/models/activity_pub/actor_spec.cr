@@ -1114,6 +1114,31 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  context "terms" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    let_create!(:filter_term, named: term1, actor: subject, term: "one")
+    let_create!(:filter_term, named: term2, actor: subject, term: "two")
+    let_create!(:filter_term, named: term3, actor: subject, term: "three")
+    let_create!(:filter_term, named: term4, actor: subject, term: "four")
+    let_create!(:filter_term, named: term5, actor: subject, term: "five")
+    let_create!(:filter_term, term: "term")
+
+    pre_condition { expect(FilterTerm.count).to eq(6) }
+
+    describe "#terms" do
+      it "instantiates the correct subclass" do
+        expect(subject.terms(page: 1, size: 2).first).to be_a(FilterTerm)
+      end
+
+      it "paginates the results" do
+        expect(subject.terms(page: 1, size: 2)).to eq([term1, term2])
+        expect(subject.terms(page: 3, size: 2)).to eq([term5])
+        expect(subject.terms(page: 3, size: 2).more?).not_to be_true
+      end
+    end
+  end
+
   describe "#account_uri" do
     it "returns the webfinger account uri" do
       expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar").account_uri).to eq("foobar@test.test")

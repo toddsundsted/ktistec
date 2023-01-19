@@ -1,9 +1,10 @@
-FROM crystallang/crystal:1.2.2-alpine AS builder
+FROM docker.io/crystallang/crystal:1.2.2-alpine AS builder
 RUN apk update && apk upgrade && apk add sqlite-static
 WORKDIR /build/
 ARG version
-RUN git clone --branch ${version:-dist} --depth 1 https://github.com/toddsundsted/ktistec .
+COPY --chown=0.0 shard.yml shard.lock .
 RUN shards install --production
+COPY --chown=0:0 . .
 RUN crystal build src/ktistec/server.cr --static --no-debug --release
 
 FROM alpine:latest AS server

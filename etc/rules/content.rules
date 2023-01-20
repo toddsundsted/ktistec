@@ -118,6 +118,22 @@ rule "inbox"
   assert activity, IsAddressedTo, actor
 end
 
+# Filter Content
+
+rule "filter content/create"
+  condition activity, IsAddressedTo, actor
+  condition CreateActivity, activity, actor: not actor, object: object
+  any Filter, actor: actor, term: filter(strip(object.content))
+  retract activity, IsAddressedTo, actor
+end
+
+rule "filter content/announce"
+  condition activity, IsAddressedTo, actor
+  condition AnnounceActivity, activity, actor: not actor, object: object
+  any Filter, actor: actor, term: filter(strip(object.content))
+  retract activity, IsAddressedTo, actor
+end
+
 # Notifications
 
 rule "create/mention"

@@ -15,6 +15,7 @@ require "../relationship/content/timeline"
 require "../relationship/content/inbox"
 require "../relationship/content/outbox"
 require "../relationship/social/follow"
+require "../filter_term"
 require "./activity"
 require "./activity/announce"
 require "./activity/create"
@@ -93,6 +94,8 @@ module ActivityPub
     property urls : Array(String)?
 
     has_many objects, class_name: ActivityPub::Object, foreign_key: attributed_to_iri, primary_key: iri
+
+    has_many filter_terms, inverse_of: actor
 
     struct Attachment
       include JSON::Serializable
@@ -791,6 +794,26 @@ module ActivityPub
       if (approved = Relationship::Content::Approved.find?(from_iri: iri, to_iri: to_iri))
         approved.destroy
       end
+    end
+
+    # Returns the content filter terms for the actor.
+    #
+    def terms(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT #{FilterTerm.columns(prefix: "f")}
+           FROM filter_terms AS f
+          WHERE f.actor_id = ?
+            AND f.id NOT IN (
+               SELECT f.id
+                 FROM filter_terms AS f
+                WHERE f.actor_id = ?
+             ORDER BY f.id ASC
+                LIMIT ?
+            )
+       ORDER BY f.id ASC
+          LIMIT ?
+      QUERY
+      FilterTerm.query_and_paginate(query, id, id, page: page, size: size)
     end
 
     def to_json_ld(recursive = true)

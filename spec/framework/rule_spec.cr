@@ -332,6 +332,68 @@ Spectator.describe Ktistec::Rule do
           end
         end
 
+        # context on the following two sets of tests: the semantics of
+        # a not expression are the same as the `!=` operator in SQL.
+        # in particular, "xyz != 123" is *not* true if column "xyz" is
+        # `null` because a null column is treated as having no value
+        # to compare against.
+
+        context "with a not association" do
+          subject { RulePattern.new(child_of: School::Not.new(School::Lit.new(model1), name: "parent")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"parent" => model2}])
+          end
+        end
+
+        context "with a not association" do
+          let(bindings) { School::Bindings{"model" => model1} }
+
+          subject { RulePattern.new(child_of: School::Not.new(School::Var.new("model"), name: "parent")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"model" => model1, "parent" => model2}])
+          end
+        end
+
+        context "with a within association" do
+          subject { RulePattern.new(child_of: School::Within.new(School::Lit.new(model2), name: "parent")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"parent" => model2}])
+          end
+        end
+
+        context "with a within association" do
+          let(bindings) { School::Bindings{"model" => model2} }
+
+          subject { RulePattern.new(child_of: School::Within.new(School::Var.new("model"), name: "parent")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"model" => model2, "parent" => model2}])
+          end
+        end
+
         # properties
 
         context "with a lit property that matches a model value" do
@@ -441,6 +503,185 @@ Spectator.describe Ktistec::Rule do
           it "does not bind values" do
             subject.match(bindings, &block)
             expect(yields).to be_empty
+          end
+        end
+
+        context "with a not property" do
+          subject { RulePattern.new(id: School::Not.new(School::Lit.new(1_i64), name: "id")) }
+
+          it "invokes the block twice" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"id" => 2_i64}, {"id" => 3_i64}])
+          end
+        end
+
+        context "with a not property" do
+          let(bindings) { School::Bindings{"value" => 1_i64} }
+
+          subject { RulePattern.new(id: School::Not.new(School::Var.new("value"), name: "id")) }
+
+          it "invokes the block twice" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"value" => 1_i64, "id" => 2_i64}, {"value" => 1_i64, "id" => 3_i64}])
+          end
+        end
+
+        context "with a within property" do
+          subject { RulePattern.new(id: School::Within.new(School::Lit.new(2_i64), School::Lit.new(3_i64), name: "id")) }
+
+          it "invokes the block twice" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"id" => 2_i64}, {"id" => 3_i64}])
+          end
+        end
+
+        context "with a within property" do
+          let(bindings) { School::Bindings{"value" => 2_i64} }
+
+          subject { RulePattern.new(id: School::Within.new(School::Var.new("value"), School::Lit.new(3_i64), name: "id")) }
+
+          it "invokes the block twice" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"value" => 2_i64, "id" => 2_i64}, {"value" => 2_i64, "id" => 3_i64}])
+          end
+        end
+
+        context "with a property and the function 'strip'" do
+          subject { RulePattern.new(name: Ktistec::Function::Strip.new(School::Lit.new("<span>th</span><span>ree</span>"), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        context "with a property and the function 'strip'" do
+          let(bindings) { School::Bindings{"value" => "<span>th</span><span>ree</span>"} }
+
+          subject { RulePattern.new(name: Ktistec::Function::Strip.new(School::Var.new("value"), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"value" => "<span>th</span><span>ree</span>", "name" => "three"}])
+          end
+        end
+
+        context "with a property and the function 'strip'" do
+          subject { RulePattern.new(name: Ktistec::Function::Strip.new(School::Accessor.new { "<span>th</span><span>ree</span>" }, name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        context "with a property and the predicate 'filter'" do
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(School::Lit.new("three"), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        context "with a property and the predicate 'filter'" do
+          let(bindings) { School::Bindings{"value" => "three"} }
+
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(School::Var.new("value"), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"value" => "three", "name" => "three"}])
+          end
+        end
+
+        context "with a property and the predicate 'filter'" do
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(School::Accessor.new { "three" }, name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        context "with a property, the predicate 'filter', and the function 'strip'" do
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Lit.new("<span>THREE</span>")), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        context "with a property, the predicate 'filter', and the function 'strip'" do
+          let(bindings) { School::Bindings{"value" => "THREE"} }
+
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Var.new("value")), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"value" => "THREE", "name" => "three"}])
+          end
+        end
+
+        context "with a property, the predicate 'filter', and the function 'strip'" do
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Accessor.new { "<span>THREE</span>" }), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "three"}])
           end
         end
 

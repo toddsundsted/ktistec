@@ -52,6 +52,11 @@ module Ktistec::ViewHelper
         str
       end
     end
+
+    def wrap_filter_term(str)
+      str = str.gsub(/(_|%[%_]?)/) { %Q|<span class="wildcard">#{$1}</span>| }
+      %Q|<span class="ui filter term">#{str}</span>|
+    end
   end
 
   macro included
@@ -356,6 +361,10 @@ module Ktistec::ViewHelper
     <select #{%attributes.join(" ")}>#{%options.join("")}</select>\
     </div>
     HTML
+  end
+
+  macro submit_button(value = "Submit", class _class = "ui primary button")
+    %Q|<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">|
   end
 
   ## JSON helpers

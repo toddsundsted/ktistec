@@ -53,6 +53,34 @@ module Ktistec
       end
     end
 
+    class ::Ktistec::Function::Strip < School::Expression
+      include School::Atomic
+
+      getter target
+
+      def initialize(@target : School::Atomic, name : String? = nil)
+        self.name = name if name
+      end
+
+      # :inherit:
+      def ==(other : self)
+        self.target == other.target
+      end
+    end
+
+    class ::Ktistec::Function::Filter < School::Expression
+      getter target
+
+      def initialize(@target : School::Atomic, name : String? = nil)
+        self.name = name if name
+      end
+
+      # :inherit:
+      def ==(other : self)
+        self.target == other.target
+      end
+    end
+
     private def compile_expression(node : Ktistec::Node) : School::Expression
       case node
       when Ktistec::Literal
@@ -62,17 +90,42 @@ module Ktistec
       when Ktistec::PrefixOperator
         case node.id
         when "not"
-          case (right = node.right)
-          when Ktistec::Literal
-            return School::Not.new(School::Lit.new(right.token.value))
-          when Ktistec::Identifier
-            return School::Not.new(School::Var.new(right.token.as_s))
+          if (exp = compile_expression(node.right)).is_a?(School::Matcher)
+            return School::Not.new(exp)
+          else
+            raise LinkError.new(self, "argument must be a matcher")
           end
         end
       when Ktistec::InfixOperator
         case node.id
         when "."
           return accessor(node.left.id, node.right.id)
+        end
+      when Ktistec::FunctionOperator
+        case node.left.id
+        when "within"
+          right = node.right.map do |node|
+            if (exp = compile_expression(node)).is_a?(School::Atomic)
+              exp
+            else
+              raise LinkError.new(self, "argument must be atomic")
+            end
+          end
+          return School::Within.new(right)
+        when "strip"
+          raise LinkError.new(self, "wrong number of arguments: strip") if node.right.size != 1
+          if (exp = compile_expression(node.right.first)).is_a?(School::Atomic)
+            return Function::Strip.new(exp)
+          else
+            raise LinkError.new(self, "argument must be atomic")
+          end
+        when "filter"
+          raise LinkError.new(self, "wrong number of arguments: filter") if node.right.size != 1
+          if (exp = compile_expression(node.right.first)).is_a?(School::Atomic)
+            return Function::Filter.new(exp)
+          else
+            raise LinkError.new(self, "argument must be atomic")
+          end
         end
       end
       raise LinkError.new(self, "unsupported expression")

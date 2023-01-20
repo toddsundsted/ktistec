@@ -70,6 +70,14 @@ module Ktistec
       "/metrics"
     end
 
+    macro filters_path
+      "/filters"
+    end
+
+    macro filter_path(filter = nil)
+      "/filters/#{{{filter}}.try(&.id) || env.params.url["id"]}"
+    end
+
     macro back_path
       env.request.headers.fetch("Referer", "/")
     end

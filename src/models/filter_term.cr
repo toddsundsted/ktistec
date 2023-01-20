@@ -22,4 +22,9 @@ class FilterTerm
       "already exists: #{term}"
     end
   end
+
+  # for compatibility with the ActivityPub collection view
+  def iri
+    "#{Ktistec.host}/filters/#{@id}"
+  end
 end

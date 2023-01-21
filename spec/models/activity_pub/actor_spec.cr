@@ -469,7 +469,7 @@ Spectator.describe ActivityPub::Actor do
         visible: false
       )
       let_create!(
-        :outbox_relationship, named: relationship{{index}},
+        :outbox_relationship, named: nil,
         owner: subject,
         activity: activity{{index}},
         confirmed: true
@@ -581,7 +581,7 @@ Spectator.describe ActivityPub::Actor do
         visible: false
       )
       let_create!(
-        :inbox_relationship, named: relationship{{index}},
+        :inbox_relationship, named: nil,
         owner: subject,
         activity: activity{{index}},
         confirmed: true
@@ -781,11 +781,7 @@ Spectator.describe ActivityPub::Actor do
       let_build(:actor, named: actor{{index}})
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
       let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(
-        :outbox_relationship, named: relationship{{index}},
-        owner: subject,
-        activity: activity{{index}}
-      )
+      let_create!(:outbox_relationship, named: nil, owner: subject, activity: activity{{index}})
     end
 
     post(1)
@@ -855,11 +851,7 @@ Spectator.describe ActivityPub::Actor do
       let_build(:actor, named: actor{{index}})
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
       let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(
-        :outbox_relationship, named: relationship{{index}},
-        owner: subject,
-        activity: activity{{index}}
-      )
+      let_create!(:outbox_relationship, named: nil, owner: subject, activity: activity{{index}})
     end
 
     post(1)
@@ -1046,11 +1038,7 @@ Spectator.describe ActivityPub::Actor do
     macro notification(index)
       let_build(:actor, named: actor{{index}})
       let_build(:activity, named: activity{{index}}, actor: actor{{index}})
-      let_create!(
-        :notification, named: relationship{{index}},
-        owner: subject,
-        activity: activity{{index}}
-      )
+      let_create!(:notification, named: nil, owner: subject, activity: activity{{index}})
     end
 
     notification(1)

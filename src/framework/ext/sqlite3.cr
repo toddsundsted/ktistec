@@ -21,11 +21,19 @@ class SQLite3::Statement
 end
 
 lib LibSQLite3
+  fun config = sqlite3_config(Int32, ...) : Code
+  fun memory_used = sqlite3_memory_used() : Int64
   fun result_text = sqlite3_result_text(SQLite3Context, UInt8*, Int32, Void*) : Nil
 end
 
 module Ktistec
   module SQLite3
+    SQLITE_CONFIG_MEMSTATUS = 9_i32
+
+    if (code = LibSQLite3.config(SQLITE_CONFIG_MEMSTATUS, 1_i32)) != LibSQLite3::Code::OKAY
+      Log.warn { "#{code}: couldn't set SQLITE_CONFIG_MEMSTATUS: this is not fatal" }
+    end
+
     TRANSIENT = Pointer(Void*).new(-1)
 
     private def self.strip_fn(context : LibSQLite3::SQLite3Context, argc : Int32, argv : LibSQLite3::SQLite3Value*)

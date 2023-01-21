@@ -1,6 +1,8 @@
 require "benchmark"
 require "sqlite3"
 
+require "./ext/sqlite3"
+
 module Ktistec
   @@db_file : String =
     begin

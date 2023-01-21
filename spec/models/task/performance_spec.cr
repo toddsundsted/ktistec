@@ -28,7 +28,7 @@ Spectator.describe Task::Performance do
     end
 
     it "records three data points" do
-      expect{subject.perform}.to change{Point.count}.by(3)
+      expect{subject.perform}.to change{Point.count}.by(4)
     end
   end
 end

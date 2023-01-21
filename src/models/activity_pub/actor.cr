@@ -612,7 +612,11 @@ module ActivityPub
            JOIN activities AS a ON a.id = (
                   SELECT a.id
                     FROM activities AS a
-                   WHERE a.object_iri = o.iri
+                    JOIN relationships AS l
+                      ON l.to_iri = a.iri
+                     AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+                   WHERE l.from_iri = ?
+                     AND a.object_iri = o.iri
                      AND a.undone_at IS NULL
                      #{inclusion}
                 ORDER BY a.created_at ASC
@@ -635,7 +639,11 @@ module ActivityPub
                  JOIN activities AS a ON a.id = (
                         SELECT a.id
                           FROM activities AS a
-                         WHERE a.object_iri = o.iri
+                          JOIN relationships AS l
+                            ON l.to_iri = a.iri
+                           AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+                         WHERE l.from_iri = ?
+                           AND a.object_iri = o.iri
                            AND a.undone_at IS NULL
                            #{inclusion}
                       ORDER BY a.created_at ASC
@@ -653,7 +661,7 @@ module ActivityPub
        ORDER BY r.created_at DESC
           LIMIT ?
       QUERY
-      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+      Object.query_and_paginate(query, self.iri, self.iri, self.iri, self.iri, page: page, size: size)
     end
 
     # Returns the count of objects in the actor's timeline since the
@@ -684,7 +692,11 @@ module ActivityPub
            JOIN activities AS a ON a.id = (
                   SELECT a.id
                     FROM activities AS a
-                   WHERE a.object_iri = o.iri
+                    JOIN relationships AS l
+                      ON l.to_iri = a.iri
+                     AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+                   WHERE l.from_iri = ?
+                     AND a.object_iri = o.iri
                      AND a.undone_at IS NULL
                      #{inclusion}
                 ORDER BY a.created_at ASC
@@ -698,7 +710,7 @@ module ActivityPub
             AND t.blocked_at IS NULL
             AND r.created_at > ?
       QUERY
-      Ktistec.database.scalar(query, iri, since).as(Int64)
+      Ktistec.database.scalar(query, iri, iri, since).as(Int64)
     end
 
     # Returns notification activities for the actor.

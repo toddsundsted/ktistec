@@ -929,11 +929,8 @@ Spectator.describe ActivityPub::Actor do
       let_build(:actor, named: actor{{index}})
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
       let_create!(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
-      let_create!(
-        :timeline, named: relationship{{index}},
-        owner: subject,
-        object: object{{index}}
-      )
+      let_create!(:inbox_relationship, named: nil, owner: subject, activity: activity{{index}})
+      let_create!(:timeline, named: nil, owner: subject, object: object{{index}})
     end
 
     post(1)
@@ -977,13 +974,32 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out posts not associated with included activities" do
+      expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([object5, object4])
+      expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
+    end
+
+    it "filters out posts not associated with included activities" do
       expect(subject.timeline(inclusion: [ActivityPub::Activity::Create], page: 1, size: 2)).to be_empty
       expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Create])).to eq(0)
     end
 
-    it "filters out posts not associated with included activities" do
-      expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([object5, object4])
-      expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
+    context "given a prior create not in timeline" do
+      let_create!(:create, actor: actor5, object: object5)
+
+      it "includes announcements by default" do
+        expect(subject.timeline(page: 1, size: 2)).to eq([object5, object4])
+        expect(subject.timeline(since: since)).to eq(5)
+      end
+
+      it "includes announcements" do
+        expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([object5, object4])
+        expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
+      end
+
+      it "filters out announcements" do
+        expect(subject.timeline(inclusion: [ActivityPub::Activity::Create], page: 1, size: 2)).to be_empty
+        expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Create])).to eq(0)
+      end
     end
 
     context "given a reply" do
@@ -1002,6 +1018,18 @@ Spectator.describe ActivityPub::Actor do
       it "filters out replies" do
         expect(subject.timeline(exclude_replies: true, page: 1, size: 2)).to eq([object5, object3])
         expect(subject.timeline(since: since, exclude_replies: true)).to eq(4)
+      end
+    end
+
+    context "given a local post" do
+      let_build(:object, attributed_to: subject)
+      let_create!(:create, actor: subject, object: object)
+      let_create!(:outbox_relationship, owner: subject, activity: create)
+      let_create!(:timeline, owner: subject, object: object)
+
+      it "includes the post" do
+        expect(subject.timeline(page: 1, size: 2)).to eq([object, object5])
+        expect(subject.timeline(since: since)).to eq(6)
       end
     end
 

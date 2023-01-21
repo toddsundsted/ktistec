@@ -4,6 +4,9 @@ require "../spec_helper/base"
 require "../spec_helper/factory"
 
 Spectator.describe Ktistec::Database do
+  alias Notification = ::Relationship::Content::Notification
+  alias Timeline = ::Relationship::Content::Timeline
+
   setup_spec
 
   describe ".recreate_timeline_and_notifications" do
@@ -26,21 +29,25 @@ Spectator.describe Ktistec::Database do
         put_in_inbox(owner, announce3)
       end
 
-      pre_condition { expect(owner.notifications).to contain_exactly(announce1, announce2).in_any_order }
+      def notifications
+        Notification.where(from_iri: owner.iri).map(&.activity)
+      end
+
+      pre_condition { expect(notifications).to contain_exactly(announce1, announce2).in_any_order }
 
       it "leaves entries that belong" do
         Ktistec::Database.recreate_timeline_and_notifications
-        expect(owner.notifications).to have(announce1)
+        expect(notifications).to have(announce1)
       end
 
       it "removes entries that don't belong" do
         Ktistec::Database.recreate_timeline_and_notifications
-        expect(owner.notifications).not_to have(announce2)
+        expect(notifications).not_to have(announce2)
       end
 
       it "adds entries that are missing" do
         Ktistec::Database.recreate_timeline_and_notifications
-        expect(owner.notifications).to have(announce3)
+        expect(notifications).to have(announce3)
       end
     end
 
@@ -59,21 +66,25 @@ Spectator.describe Ktistec::Database do
         put_in_inbox(owner, create3)
       end
 
-      pre_condition { expect(owner.timeline).to contain_exactly(object1, object2).in_any_order }
+      def timeline
+        Timeline.where(from_iri: owner.iri).map(&.object)
+      end
+
+      pre_condition { expect(timeline).to contain_exactly(object1, object2).in_any_order }
 
       it "leaves entries that belong" do
         Ktistec::Database.recreate_timeline_and_notifications
-        expect(owner.timeline).to have(object1)
+        expect(timeline).to have(object1)
       end
 
       it "removes entries that don't belong" do
         Ktistec::Database.recreate_timeline_and_notifications
-        expect(owner.timeline).not_to have(object2)
+        expect(timeline).not_to have(object2)
       end
 
       it "adds entries that are missing" do
         Ktistec::Database.recreate_timeline_and_notifications
-        expect(owner.timeline).to have(object3)
+        expect(timeline).to have(object3)
       end
     end
   end

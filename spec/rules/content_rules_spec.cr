@@ -3,10 +3,10 @@ require "../../src/rules/content_rules"
 require "../spec_helper/base"
 require "../spec_helper/factory"
 
-alias Notification = Relationship::Content::Notification
-alias Timeline = Relationship::Content::Timeline
-
 Spectator.describe ContentRules do
+  alias Notification = ::Relationship::Content::Notification
+  alias Timeline = ::Relationship::Content::Timeline
+
   setup_spec
 
   {% if flag?(:"school:metrics") %}
@@ -417,6 +417,7 @@ Spectator.describe ContentRules do
 
   describe "#run" do
     def run(owner, activity)
+      put_in_inbox(owner, activity)
       School::Fact.clear!
       School::Fact.assert(ContentRules::IsAddressedTo.new(activity, owner))
       subject.run
@@ -551,7 +552,7 @@ Spectator.describe ContentRules do
       pre_condition { expect(owner.timeline).to eq([object]) }
 
       context "and an associated create" do
-        before_each { create }
+        before_each { put_in_inbox(owner, create) }
 
         it "does not add the object to the timeline" do
           run(owner, create)
@@ -583,7 +584,7 @@ Spectator.describe ContentRules do
       end
 
       context "and an associated announce" do
-        before_each { announce }
+        before_each { put_in_inbox(owner, announce) }
 
         it "does not add the object to the timeline" do
           run(owner, announce)
@@ -628,7 +629,10 @@ Spectator.describe ContentRules do
       let_build(:object, named: another)
       let_create!(:create, object: another)
 
-      before_each { put_in_timeline(owner, another) }
+      before_each do
+        put_in_inbox(owner, create)
+        put_in_timeline(owner, another)
+      end
 
       pre_condition { expect(owner.timeline).to eq([another]) }
 

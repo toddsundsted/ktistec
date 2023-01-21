@@ -851,13 +851,35 @@ module ActivityPub
         "followers" => dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
         "name" => dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
         "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-        "icon" => dig_id?(json, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url"),
+        "icon" => map_icon?(json),
         "image" => dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
         "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
         "attachments" => attachments_from_ldjson(
           json.dig?("https://www.w3.org/ns/activitystreams#attachment")
         )
       }.compact
+    end
+
+    def self.map_icon?(json)
+      json.dig?("https://www.w3.org/ns/activitystreams#icon").try do |icons|
+        if icons.as_a?
+          icon =
+            icons.as_a.map do |icon|
+              if (width = icon.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = icon.dig?("https://www.w3.org/ns/activitystreams#height"))
+                {width.as_i * height.as_i, icon}
+              else
+                {0, icon}
+              end
+            end.sort do |(a, _), (b, _)|
+              b <=> a
+            end.first?
+          if icon
+            icon[1].dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+          end
+        elsif icons
+          icons.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+        end
+      end
     end
 
     def self.attachments_from_ldjson(entry)

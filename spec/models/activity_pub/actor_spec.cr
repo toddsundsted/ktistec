@@ -186,6 +186,52 @@ Spectator.describe ActivityPub::Actor do
     JSON
   end
 
+  describe ".map" do
+    let(json) { super.gsub(/"icon": {[^}]+}/, icon) }
+
+    context "given an array of icons with width and height" do
+      let(icon) do
+        <<-ICON
+          "icon": [{
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "height": 40, "width": 40,
+            "url": "first link"
+          }, {
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "height": 120, "width": 120,
+            "url": "second link"
+          }]
+        ICON
+      end
+
+      it "picks the largest icon" do
+        expect(described_class.map(json)["icon"]).to eq("second link")
+      end
+    end
+
+    context "given an array of icons" do
+      let(icon) do
+        <<-ICON
+          "icon": [{
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "url": "first link"
+          }, {
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "url": "second link"
+          }]
+        ICON
+      end
+
+      it "picks the first icon" do
+        expect(described_class.map(json)["icon"]).to eq("first link")
+      end
+    end
+  end
+
   describe ".from_json_ld" do
     it "instantiates the subclass" do
       actor = described_class.from_json_ld(json)

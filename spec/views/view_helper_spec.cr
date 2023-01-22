@@ -608,7 +608,7 @@ Spectator.describe "helpers" do
 
   describe "pluralize" do
     it "pluralizes the noun" do
-      expect(pluralize(0, "fox")).to eq("0 foxes")
+      expect(pluralize(0, "fox")).to eq("fox")
     end
 
     it "does not pluralize the noun" do

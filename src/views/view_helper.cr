@@ -398,11 +398,17 @@ module Ktistec::ViewHelper
 
   # Pluralizes the noun.
   #
+  # Important note: if the count is zero, the noun is returned as is,
+  # without a quantity (e.g. "fox" not "0 foxes").
+  #
   # For use in views:
   #     <%= pluralize(1, "fox") %>
   #
   macro pluralize(count, noun)
-    if {{count}} == 1
+    case {{count}}
+    when 0
+      {{noun}}
+    when 1
       "1 #{{{noun}}}"
     else
       "#{{{count}}} #{Ktistec::Util.pluralize({{noun}})}"

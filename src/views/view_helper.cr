@@ -421,4 +421,126 @@ module Ktistec::ViewHelper
   macro id
     Ktistec::Util.id
   end
+
+  ## Path helpers
+
+  macro back_path
+    env.request.headers.fetch("Referer", "/")
+  end
+
+  macro home_path
+    "/"
+  end
+
+  macro sessions_path
+    "/sessions"
+  end
+
+  macro search_path
+    "/search"
+  end
+
+  macro settings_path
+    "/settings"
+  end
+
+  macro filters_path
+    "/filters"
+  end
+
+  macro filter_path(filter = nil)
+    "/filters/#{{{filter}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro metrics_path
+    "/metrics"
+  end
+
+  macro remote_activity_path(activity = nil)
+    "/remote/activities/#{{{activity}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro activity_path(activity = nil)
+    "/activities/#{{{activity}}.try(&.uid) || env.params.url["id"]}"
+  end
+
+  macro anchor(object = nil)
+    "object-#{{{object}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro objects_path
+    "/objects"
+  end
+
+  macro remote_object_path(object = nil)
+    "/remote/objects/#{{{object}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro object_path(object = nil)
+    "/objects/#{{{object}}.try(&.uid) || env.params.url["id"]}"
+  end
+
+  macro remote_thread_path(object = nil)
+    "#{remote_object_path({{object}})}/thread##{anchor({{object}})}"
+  end
+
+  macro thread_path(object = nil)
+    "#{object_path({{object}})}/thread##{anchor({{object}})}"
+  end
+
+  macro edit_object_path(object = nil)
+    "#{object_path({{object}})}/edit"
+  end
+
+  macro reply_path(object = nil)
+    "#{remote_object_path({{object}})}/reply"
+  end
+
+  macro approve_path(object = nil)
+    "#{remote_object_path({{object}})}/approve"
+  end
+
+  macro unapprove_path(object = nil)
+    "#{remote_object_path({{object}})}/unapprove"
+  end
+
+  macro block_object_path(object = nil)
+    "#{remote_object_path({{object}})}/block"
+  end
+
+  macro unblock_object_path(object = nil)
+    "#{remote_object_path({{object}})}/unblock"
+  end
+
+  macro remote_actor_path(actor = nil)
+    "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro actor_path(actor = nil)
+    "/actors/#{{{actor}}.try(&.uid) || env.params.url["username"]}"
+  end
+
+  macro block_actor_path(actor = nil)
+    "#{remote_actor_path({{actor}})}/block"
+  end
+
+  macro unblock_actor_path(actor = nil)
+    "#{remote_actor_path({{actor}})}/unblock"
+  end
+
+  macro actor_relationships_path(actor = nil, relationship = nil)
+    "#{actor_path({{actor}})}/#{{{relationship}} || env.params.url["relationship"]}"
+  end
+
+  macro outbox_path(actor = nil)
+    actor_relationships_path({{actor}}, "outbox")
+  end
+
+  macro inbox_path(actor = nil)
+    actor_relationships_path({{actor}}, "inbox")
+  end
+
+  macro actor_remote_follow_path(actor = nil)
+    "#{actor_path({{actor}})}/remote-follow"
+  end
 end

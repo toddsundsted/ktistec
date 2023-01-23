@@ -54,7 +54,7 @@ module Ktistec::ViewHelper
     end
 
     def wrap_filter_term(str)
-      str = str.gsub(/(_|%[%_]?)/) { %Q|<span class="wildcard">#{$1}</span>| }
+      str = str.gsub(/\\?[%_]/) { %Q|<span class="wildcard">#{$0}</span>| }
       %Q|<span class="ui filter term">#{str}</span>|
     end
   end

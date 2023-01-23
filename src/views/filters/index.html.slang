@@ -26,8 +26,8 @@ p
     post <em>exactly</em>. Filter terms support wildcards "_" and "%".
     Wildcard "_" matches any single character and wildcard "%" matches
     zero or more consecutive characters. To match a <em>single</em>
-    percent character use "%%". To match a <em>single</em> underscore
-    use "%_". As an example, to match the word "term" found anywhere
+    percent character use "\\%". To match a <em>single</em> underscore
+    use "\\_". As an example, to match the word "term" found anywhere
     inside the content of a post, use "%term%".
 - term = FilterTerm.new(term: "")
 == form_tag(term, filters_path) do

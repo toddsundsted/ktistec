@@ -115,7 +115,7 @@ Spectator.describe "helpers" do
   end
 
   describe ".wrap_filter_term" do
-    let(term) { "%f%%o%_o_" }
+    let(term) { "%f\\%o\\_o_" }
 
     subject { XML.parse_html(self.class.wrap_filter_term(term), PARSER_OPTIONS) }
 
@@ -132,11 +132,11 @@ Spectator.describe "helpers" do
     end
 
     it "wraps an escaped wildcard % in a span" do
-      expect(subject.xpath_nodes("/span/span[contains(@class,'wildcard')]/text()")).to contain("%%")
+      expect(subject.xpath_nodes("/span/span[contains(@class,'wildcard')]/text()")).to contain("\\%")
     end
 
     it "wraps an escaped wildcard _ in a span" do
-      expect(subject.xpath_nodes("/span/span[contains(@class,'wildcard')]/text()")).to contain("%_")
+      expect(subject.xpath_nodes("/span/span[contains(@class,'wildcard')]/text()")).to contain("\\_")
     end
 
     it "does not wrap text" do

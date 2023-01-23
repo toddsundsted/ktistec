@@ -658,7 +658,7 @@ Spectator.describe Ktistec::Rule do
         end
 
         context "with a property, the predicate 'filter', and the function 'strip'" do
-          let(bindings) { School::Bindings{"value" => "THREE"} }
+          let(bindings) { School::Bindings{"value" => "<span>THREE</span>"} }
 
           subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Var.new("value")), name: "name")) }
 
@@ -668,7 +668,7 @@ Spectator.describe Ktistec::Rule do
 
           it "binds the match" do
             subject.match(bindings, &block)
-            expect(yields).to eq([{"value" => "THREE", "name" => "three"}])
+            expect(yields).to eq([{"value" => "<span>THREE</span>", "name" => "three"}])
           end
         end
 
@@ -682,6 +682,53 @@ Spectator.describe Ktistec::Rule do
           it "binds the match" do
             subject.match(bindings, &block)
             expect(yields).to eq([{"name" => "three"}])
+          end
+        end
+
+        # wildcards
+
+        context "with a wildcard" do
+          before_each { RuleModel.new(name: "%four%").save }
+
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Lit.new("<p>three four five</p>")), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => "%four%"}])
+          end
+        end
+
+        context "with an escaped wildcard" do
+          before_each { RuleModel.new(name: %q|\%|).save }
+
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Lit.new("%")), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => %q|\%|}])
+          end
+        end
+
+        context "with an escaped escape" do
+          before_each { RuleModel.new(name: %q|\\|).save }
+
+          subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Lit.new("\\")), name: "name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"name" => %q|\\|}])
           end
         end
 

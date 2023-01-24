@@ -2,7 +2,7 @@ version: 2.0
 shards:
   backtracer:
     git: https://github.com/sija/backtracer.cr.git
-    version: 1.2.1
+    version: 1.2.2
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
@@ -10,7 +10,7 @@ shards:
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
-    version: 0.2.2
+    version: 0.3.0
 
   host_meta:
     git: https://github.com/toddsundsted/host_meta.git
@@ -18,11 +18,7 @@ shards:
 
   kemal:
     git: https://github.com/kemalcr/kemal.git
-    version: 1.1.2
-
-  kilt:
-    git: https://github.com/jeromegn/kilt.git
-    version: 0.6.1
+    version: 1.3.0
 
   libxml_ext:
     git: https://github.com/toddsundsted/libxml_ext.git
@@ -30,7 +26,7 @@ shards:
 
   openssl_ext:
     git: https://github.com/toddsundsted/openssl_ext.git
-    version: 0.1.4
+    version: 0.1.5
 
   radix:
     git: https://github.com/luislavena/radix.git
@@ -38,15 +34,15 @@ shards:
 
   school:
     git: https://github.com/toddsundsted/school.git
-    version: 0.1.0+git.commit.bf0034ca5a1bb2336650223b27b7e6aba51fe5ad
+    version: 0.2.4
 
   slang:
     git: https://github.com/toddsundsted/slang.git
-    version: 1.7.1+git.commit.64bc795c3d940dd0fa921173970d07c73d6bace0
+    version: 1.7.1+git.commit.35149a3c293dfa8428f1fcb02612994a6a29acef
 
   spectator:
     git: https://gitlab.com/arctic-fox/spectator.git
-    version: 0.10.5
+    version: 0.10.6
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git

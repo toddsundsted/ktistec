@@ -106,7 +106,7 @@ module Ktistec
         when "within"
           right = node.right.map do |node|
             if (exp = compile_expression(node)).is_a?(School::Atomic)
-              exp
+              exp.as(School::Atomic)
             else
               raise LinkError.new(self, "argument must be atomic")
             end

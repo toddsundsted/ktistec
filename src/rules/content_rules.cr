@@ -20,16 +20,16 @@ require "../utils/compiler"
 class ContentRules
   # domain types
 
-  class ::ActivityPub::Activity include School::DomainType end
-  class ::ActivityPub::Actor include School::DomainType end
-  class ::ActivityPub::Object include School::DomainType end
-  class ::Relationship::Content::Outbox include School::DomainType end
-  class ::Relationship::Content::Inbox include School::DomainType end
-  class ::Relationship::Content::Notification include School::DomainType end
-  class ::Relationship::Content::Timeline include School::DomainType end
-  class ::Relationship::Social::Follow include School::DomainType end
-  class ::Tag::Mention include School::DomainType end
-  class ::FilterTerm include School::DomainType end
+  class ::ActivityPub::Activity ; include School::DomainType ; end
+  class ::ActivityPub::Actor ; include School::DomainType ; end
+  class ::ActivityPub::Object ; include School::DomainType ; end
+  class ::Relationship::Content::Outbox ; include School::DomainType ; end
+  class ::Relationship::Content::Inbox ; include School::DomainType ; end
+  class ::Relationship::Content::Notification ; include School::DomainType ; end
+  class ::Relationship::Content::Timeline ; include School::DomainType ; end
+  class ::Relationship::Social::Follow ; include School::DomainType ; end
+  class ::Tag::Mention ; include School::DomainType ; end
+  class ::FilterTerm ; include School::DomainType ; end
 
   # patterns and facts for the rules below
 

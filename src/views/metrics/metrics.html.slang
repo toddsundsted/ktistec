@@ -75,5 +75,5 @@ crystal:
   .two.fields
     == select_tag("Range", nil, :begin, ranges, env.params.query["begin"]?)
     == select_tag("Granularity", nil, :granularity, granularities, env.params.query["granularity"]?)
-  input.ui.mini.primary.button type="submit" value="Update"
+  == submit_button("Update", class: "ui mini primary button")
 br.transition.hidden

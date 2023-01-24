@@ -33,7 +33,7 @@ p
         input type="text" name="attachment_#{i}_value" value=attachments[i].value
   == input_tag("Background Image", actor, image, class: "filepond", type: "file")
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
-  input.ui.primary.button type="submit" value="Update"
+  == submit_button("Update")
 h2 Delete Account!
 p
   | Delete account <strong>#{actor.username}</strong>. This action cannot be undone!
@@ -60,6 +60,6 @@ h1 Site Settings
   == error_messages(settings)
   == input_tag("Site Name", settings, site)
   == input_tag("Footer", settings, footer)
-  input.ui.primary.button type="submit" value="Update"
+  == submit_button("Update")
 p.small.text Ktistec Version #{Ktistec::VERSION}
 br.transition.hidden

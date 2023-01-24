@@ -54,6 +54,9 @@ module Ktistec
       img: {
         keep: ["src", "alt"],
         all: [{"class", "ui image"}, {"loading", "lazy"}]
+      },
+      span: {
+        class: ["invisible"]
       }
     }
 
@@ -75,8 +78,14 @@ module Ktistec
       elsif html.element? && name.in?(ELEMENTS)
         if (attributes = ATTRIBUTES[name]?)
           build << "<" << name
-          (attributes[:keep] & html.attributes.map(&.name)).each do |attribute|
-            build << " #{attribute}='#{html[attribute]}'"
+          if (keep = attributes[:keep]?)
+            (keep & html.attributes.map(&.name)).each do |attribute|
+              build << " #{attribute}='#{html[attribute]}'"
+            end
+          end
+          if (classes = attributes[:class]?) && (class_attribute = html.attributes["class"]?)
+            classes = (classes & class_attribute.content.split).join(' ')
+            build << " class='#{classes}'" if classes.presence
           end
           local =
             if (key = attributes[:key]?) && (value = html.attributes[key]?)

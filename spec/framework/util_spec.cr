@@ -54,6 +54,12 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' alt='picture' class='ui image' loading='lazy'>")
     end
 
+    # for presentation of mastodon compatible profile metadata
+    it "preserves 'invisible' in class attribute on span elements" do
+      content = "<span class='invisible foo bar'>a span</span>"
+      expect(described_class.sanitize(content)).to eq("<span class='invisible'>a span</span>")
+    end
+
     it "doesn't corrupt element order" do
       content = "<figure></figure><p></p>"
       expect(described_class.sanitize(content)).to eq("<figure></figure><p></p>")

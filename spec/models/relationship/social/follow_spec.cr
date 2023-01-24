@@ -1,6 +1,6 @@
 require "../../../../src/models/relationship/social/follow"
 
-require "../../../spec_helper/model"
+require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
 
 Spectator.describe Relationship::Social::Follow do

@@ -6,7 +6,7 @@ require "../../../framework/signature"
 require "../../../framework/constants"
 
 module Ktistec
-  module Model
+  module Model(*T)
     module Linked
       def origin
         uri = URI.parse(iri)

@@ -8,7 +8,7 @@ class TagsController
 
   get "/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
-    if (collection = Tag::Hashtag.objects_with_tag(hashtag, *pagination_params(env))).empty?
+    if (collection = Tag::Hashtag.objects_with_tag(hashtag, **pagination_params(env))).empty?
       not_found
     end
     accepts?("text/html") ?

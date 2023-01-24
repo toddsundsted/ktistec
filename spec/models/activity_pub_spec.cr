@@ -3,7 +3,7 @@ require "../../src/models/activity_pub/actor/person"
 require "../../src/models/activity_pub/collection"
 require "../../src/models/activity_pub/object/note"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 require "../spec_helper/factory"
 
 class ActivityPubModel

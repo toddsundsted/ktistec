@@ -1,6 +1,6 @@
 require "../../../src/models/task/backup"
 
-require "../../spec_helper/model"
+require "../../spec_helper/base"
 
 Spectator.describe Task::Backup do
   setup_spec

@@ -1,6 +1,6 @@
 require "../../../src/models/task/performance"
 
-require "../../spec_helper/model"
+require "../../spec_helper/base"
 
 Spectator.describe Task::Performance do
   setup_spec
@@ -28,7 +28,7 @@ Spectator.describe Task::Performance do
     end
 
     it "records three data points" do
-      expect{subject.perform}.to change{Point.count}.by(3)
+      expect{subject.perform}.to change{Point.count}.by(4)
     end
   end
 end

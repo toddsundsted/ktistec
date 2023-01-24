@@ -1,12 +1,12 @@
 require "../../src/rules/content_rules"
 
+require "../spec_helper/base"
 require "../spec_helper/factory"
-require "../spec_helper/model"
-
-alias Notification = Relationship::Content::Notification
-alias Timeline = Relationship::Content::Timeline
 
 Spectator.describe ContentRules do
+  alias Notification = ::Relationship::Content::Notification
+  alias Timeline = ::Relationship::Content::Timeline
+
   setup_spec
 
   {% if flag?(:"school:metrics") %}
@@ -417,6 +417,7 @@ Spectator.describe ContentRules do
 
   describe "#run" do
     def run(owner, activity)
+      put_in_inbox(owner, activity)
       School::Fact.clear!
       School::Fact.assert(ContentRules::IsAddressedTo.new(activity, owner))
       subject.run
@@ -551,7 +552,7 @@ Spectator.describe ContentRules do
       pre_condition { expect(owner.timeline).to eq([object]) }
 
       context "and an associated create" do
-        before_each { create }
+        before_each { put_in_inbox(owner, create) }
 
         it "does not add the object to the timeline" do
           run(owner, create)
@@ -583,7 +584,7 @@ Spectator.describe ContentRules do
       end
 
       context "and an associated announce" do
-        before_each { announce }
+        before_each { put_in_inbox(owner, announce) }
 
         it "does not add the object to the timeline" do
           run(owner, announce)
@@ -626,8 +627,12 @@ Spectator.describe ContentRules do
 
     context "given a timeline with another object already added" do
       let_build(:object, named: another)
+      let_create!(:create, object: another)
 
-      before_each { put_in_timeline(owner, another) }
+      before_each do
+        put_in_inbox(owner, create)
+        put_in_timeline(owner, another)
+      end
 
       pre_condition { expect(owner.timeline).to eq([another]) }
 
@@ -661,6 +666,137 @@ Spectator.describe ContentRules do
       it "destroys the timeline entry" do
         run(owner, delete_fresh)
         expect(Timeline.where(from_iri: owner.iri)).to be_empty
+      end
+    end
+  end
+
+  # content filters / outgoing
+
+  describe "#run" do
+    def run(owner, activity)
+      School::Fact.clear!
+      School::Fact.assert(ContentRules::Outgoing.new(owner, activity))
+      subject.run
+    end
+
+    before_each do
+      create.assign(actor: owner).save
+      announce.assign(actor: owner).save
+    end
+
+    context "given an empty timeline" do
+      pre_condition { expect(owner.timeline).to be_empty }
+
+      it "adds the object to the timeline" do
+        run(owner, create)
+        expect(owner.timeline).to eq([object])
+      end
+
+      it "adds the object to the timeline" do
+        run(owner, announce)
+        expect(owner.timeline).to eq([object])
+      end
+
+      context "given a content filter" do
+        let_create!(:filter_term, term: "%content%")
+
+        before_each do
+          object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
+        end
+
+        it "adds the object to the timeline" do
+          run(owner, create)
+          expect(owner.timeline).to eq([object])
+        end
+
+        it "adds the object to the timeline" do
+          run(owner, announce)
+          expect(owner.timeline).to eq([object])
+        end
+      end
+
+      context "given a content filter of the actor" do
+        let_create!(:filter_term, actor: owner, term: "%content%")
+
+        before_each do
+          object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
+        end
+
+        it "adds the object to the timeline" do
+          run(owner, create)
+          expect(owner.timeline).to eq([object])
+        end
+
+        it "adds the object to the timeline" do
+          run(owner, announce)
+          expect(owner.timeline).to eq([object])
+        end
+      end
+    end
+  end
+
+  # content filters / incoming
+
+  describe "#run" do
+    def run(owner, activity)
+      School::Fact.clear!
+      School::Fact.assert(ContentRules::IsRecipient.new(owner.iri))
+      School::Fact.assert(ContentRules::Incoming.new(owner, activity))
+      subject.run
+    end
+
+    pre_condition do
+      expect(create.actor).not_to eq(owner)
+      expect(announce.actor).not_to eq(owner)
+    end
+
+    context "given an empty timeline" do
+      pre_condition { expect(owner.timeline).to be_empty }
+
+      it "adds the object to the timeline" do
+        run(owner, create)
+        expect(owner.timeline).to eq([object])
+      end
+
+      it "adds the object to the timeline" do
+        run(owner, announce)
+        expect(owner.timeline).to eq([object])
+      end
+
+      context "given a content filter" do
+        let_create!(:filter_term, term: "%content%")
+
+        before_each do
+          object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
+        end
+
+        it "adds the object to the timeline" do
+          run(owner, create)
+          expect(owner.timeline).to eq([object])
+        end
+
+        it "adds the object to the timeline" do
+          run(owner, announce)
+          expect(owner.timeline).to eq([object])
+        end
+      end
+
+      context "given a content filter of the actor" do
+        let_create!(:filter_term, actor: owner, term: "%content%")
+
+        before_each do
+          object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
+        end
+
+        it "does not add the object to the timeline" do
+          run(owner, create)
+          expect(owner.timeline).to be_empty
+        end
+
+        it "does not add the object to the timeline" do
+          run(owner, announce)
+          expect(owner.timeline).to be_empty
+        end
       end
     end
   end

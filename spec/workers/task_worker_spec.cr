@@ -1,6 +1,6 @@
 require "../../src/workers/task_worker"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 
 class TaskWorker
   # expose method for testing
@@ -47,6 +47,8 @@ end
 
 Spectator.describe TaskWorker do
   setup_spec
+
+  before_each { FooBarTask.performed.clear }
 
   macro create_task!(index, next_attempt_at = nil)
     let!(task{{index}}) do

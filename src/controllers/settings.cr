@@ -78,7 +78,24 @@ class SettingsController
       "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "footer" => params["footer"]?.try(&.to_s.presence),
-      "site" => params["site"]?.try(&.to_s.presence)
-    }.compact
+      "site" => params["site"]?.try(&.to_s.presence),
+      "attachments" => reduce_attachments(params)
+    }.reject do |k, v|
+      v.presence.nil? && k.in?("timezone", "password", "site")
+    end
+  end
+
+  private def self.reduce_attachments(params)
+    0.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1).reduce(Array(ActivityPub::Actor::Attachment).new) do |memo, i|
+      if params["attachment_#{i}_name"]?.try(&.to_s.presence) &&
+          params["attachment_#{i}_value"]?.try(&.to_s.presence)
+        memo << ActivityPub::Actor::Attachment.new(
+          params["attachment_#{i}_name"].to_s,
+          "PropertyValue",
+          params["attachment_#{i}_value"].to_s
+        )
+      end
+      memo
+    end
   end
 end

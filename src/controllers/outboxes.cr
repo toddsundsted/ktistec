@@ -306,7 +306,7 @@ class RelationshipsController
     unless (account = get_account(env))
       not_found
     end
-    activities = account.actor.in_outbox(*pagination_params(env), public: env.account? != account)
+    activities = account.actor.in_outbox(**pagination_params(env), public: env.account? != account)
 
     ok "relationships/outbox"
   end

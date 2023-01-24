@@ -1,6 +1,6 @@
 require "../../../src/models/tag/mention"
 
-require "../../spec_helper/model"
+require "../../spec_helper/base"
 
 Spectator.describe Tag::Mention do
   setup_spec

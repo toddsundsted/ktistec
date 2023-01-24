@@ -1,7 +1,7 @@
 require "../../../../src/models/activity_pub/activity/undo"
 require "../../../../src/models/activity_pub/activity/follow"
 
-require "../../../spec_helper/model"
+require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
 
 Spectator.describe ActivityPub::Activity::Undo do

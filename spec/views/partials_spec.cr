@@ -135,6 +135,10 @@ Spectator.describe "partials" do
     end
 
     context "if anonymous" do
+      it "does not render an internal link to the actor" do
+        expect(subject.xpath_nodes("//a/@href")).not_to have("/remote/actors/#{actor.id}")
+      end
+
       it "does not render buttons" do
         expect(subject.xpath_nodes("//button")).to be_empty
       end
@@ -152,6 +156,10 @@ Spectator.describe "partials" do
       let(account) { register }
 
       before_each { env.account = account }
+
+      it "renders an internal link to the actor" do
+        expect(subject.xpath_nodes("//a/@href")).to have("/remote/actors/#{actor.id}")
+      end
 
       context "if account actor is actor" do
         let(actor) { account.actor }
@@ -217,6 +225,10 @@ Spectator.describe "partials" do
     end
 
     context "if anonymous" do
+      it "does not render an internal link to the actor" do
+        expect(subject.xpath_nodes("//a/@href")).not_to have("/remote/actors/#{actor.id}")
+      end
+
       it "does not render buttons" do
         expect(subject.xpath_nodes("//buttons")).to be_empty
       end
@@ -234,6 +246,10 @@ Spectator.describe "partials" do
       let(account) { register }
 
       before_each { env.account = account }
+
+      it "renders an internal link to the actor" do
+        expect(subject.xpath_nodes("//a/@href")).to have("/remote/actors/#{actor.id}")
+      end
 
       context "if account actor is actor" do
         let(actor) { account.actor }
@@ -577,6 +593,7 @@ Spectator.describe "partials" do
     end
 
     let_build(:object, local: true)
+    let_build(:object, named: :original)
 
     context "if authenticated" do
       before_each { env.account = register }
@@ -614,8 +631,17 @@ Spectator.describe "partials" do
         end
 
         it "renders an input with the object iri" do
-          expect(subject.xpath_nodes("//input[@name='object']")).
-            not_to be_empty
+          expect(subject.xpath_nodes("//input[@name='object']/@value")).
+            to have(object.iri)
+        end
+      end
+
+      context "given a reply" do
+        before_each { object.assign(in_reply_to: original).save }
+
+        it "renders an input with the replied to object's iri" do
+          expect(subject.xpath_nodes("//input[@name='in-reply-to']/@value")).
+            to have(original.iri)
         end
       end
 

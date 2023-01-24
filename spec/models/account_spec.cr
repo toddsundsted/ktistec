@@ -1,6 +1,6 @@
 require "../../src/models/account"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 require "../spec_helper/factory"
 
 Spectator.describe Account do

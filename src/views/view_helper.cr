@@ -1,8 +1,6 @@
 require "ecr"
 require "slang"
 
-require "../framework/controller"
-
 module Ktistec::ViewHelper
   module ClassMethods
     def depth(object)
@@ -25,8 +23,8 @@ module Ktistec::ViewHelper
 
     def pagination_params(env)
       {
-        Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
-        Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
+        page: Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
+        size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
       }
     end
 
@@ -34,6 +32,30 @@ module Ktistec::ViewHelper
       query = env.params.query
       page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1
       render "./src/views/partials/paginator.html.slang"
+    end
+
+    def maybe_wrap_link(str)
+      if str =~ %r{^[a-zA-Z0-9]+://}
+        uri = URI.parse(str)
+        port = uri.port.nil? ? "" : ":" + uri.port.to_s
+        path = uri.path.nil? ? "" : uri.path.to_s
+
+        # match the weird format used by mastodon
+        # see: https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb#L72
+        <<-LINK.gsub(/(\n|^ +)/, "")
+        <a href="#{str}" target="_blank" rel="nofollow noopener noreferrer me">
+        <span class="invisible">#{uri.scheme}://</span><span class="">#{uri.host}#{port}#{path}</span>
+        <span class="invisible"></span>
+        </a>
+        LINK
+      else
+        str
+      end
+    end
+
+    def wrap_filter_term(str)
+      str = str.gsub(/\\?[%_]/) { %Q|<span class="wildcard">#{$0}</span>| }
+      %Q|<span class="ui filter term">#{str}</span>|
     end
   end
 
@@ -341,6 +363,10 @@ module Ktistec::ViewHelper
     HTML
   end
 
+  macro submit_button(value = "Submit", class _class = "ui primary button")
+    %Q|<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">|
+  end
+
   ## JSON helpers
 
   macro error_block(model, comma = true)
@@ -357,5 +383,170 @@ module Ktistec::ViewHelper
     %comma = {{comma}} ? "," : ""
     %value = {{model}}.{{field.id}}.try(&.inspect) || "null"
     %Q|"{{field.id}}":#{%value}#{%comma}|
+  end
+
+  ## General purpose helpers
+
+  # Sanitizes HTML.
+  #
+  # For use in views:
+  #     <%= s string %>
+  #
+  macro s(str)
+    Ktistec::Util.sanitize({{str}})
+  end
+
+  # Pluralizes the noun.
+  #
+  # Important note: if the count is zero, the noun is returned as is,
+  # without a quantity (e.g. "fox" not "0 foxes").
+  #
+  # For use in views:
+  #     <%= pluralize(1, "fox") %>
+  #
+  macro pluralize(count, noun)
+    case {{count}}
+    when 0
+      {{noun}}
+    when 1
+      "1 #{{{noun}}}"
+    else
+      "#{{{count}}} #{Ktistec::Util.pluralize({{noun}})}"
+    end
+  end
+
+  # Emits a comma when one would be necessary when iterating through
+  # a collection.
+  #
+  macro comma(collection, counter)
+    {{counter}} < {{collection}}.size - 1 ? "," : ""
+  end
+
+  # Generates a random, URL-safe identifier.
+  #
+  macro id
+    Ktistec::Util.id
+  end
+
+  ## Path helpers
+
+  macro back_path
+    env.request.headers.fetch("Referer", "/")
+  end
+
+  macro home_path
+    "/"
+  end
+
+  macro sessions_path
+    "/sessions"
+  end
+
+  macro search_path
+    "/search"
+  end
+
+  macro settings_path
+    "/settings"
+  end
+
+  macro filters_path
+    "/filters"
+  end
+
+  macro filter_path(filter = nil)
+    "/filters/#{{{filter}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro metrics_path
+    "/metrics"
+  end
+
+  macro remote_activity_path(activity = nil)
+    "/remote/activities/#{{{activity}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro activity_path(activity = nil)
+    "/activities/#{{{activity}}.try(&.uid) || env.params.url["id"]}"
+  end
+
+  macro anchor(object = nil)
+    "object-#{{{object}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro objects_path
+    "/objects"
+  end
+
+  macro remote_object_path(object = nil)
+    "/remote/objects/#{{{object}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro object_path(object = nil)
+    "/objects/#{{{object}}.try(&.uid) || env.params.url["id"]}"
+  end
+
+  macro remote_thread_path(object = nil)
+    "#{remote_object_path({{object}})}/thread##{anchor({{object}})}"
+  end
+
+  macro thread_path(object = nil)
+    "#{object_path({{object}})}/thread##{anchor({{object}})}"
+  end
+
+  macro edit_object_path(object = nil)
+    "#{object_path({{object}})}/edit"
+  end
+
+  macro reply_path(object = nil)
+    "#{remote_object_path({{object}})}/reply"
+  end
+
+  macro approve_path(object = nil)
+    "#{remote_object_path({{object}})}/approve"
+  end
+
+  macro unapprove_path(object = nil)
+    "#{remote_object_path({{object}})}/unapprove"
+  end
+
+  macro block_object_path(object = nil)
+    "#{remote_object_path({{object}})}/block"
+  end
+
+  macro unblock_object_path(object = nil)
+    "#{remote_object_path({{object}})}/unblock"
+  end
+
+  macro remote_actor_path(actor = nil)
+    "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro actor_path(actor = nil)
+    "/actors/#{{{actor}}.try(&.uid) || env.params.url["username"]}"
+  end
+
+  macro block_actor_path(actor = nil)
+    "#{remote_actor_path({{actor}})}/block"
+  end
+
+  macro unblock_actor_path(actor = nil)
+    "#{remote_actor_path({{actor}})}/unblock"
+  end
+
+  macro actor_relationships_path(actor = nil, relationship = nil)
+    "#{actor_path({{actor}})}/#{{{relationship}} || env.params.url["relationship"]}"
+  end
+
+  macro outbox_path(actor = nil)
+    actor_relationships_path({{actor}}, "outbox")
+  end
+
+  macro inbox_path(actor = nil)
+    actor_relationships_path({{actor}}, "inbox")
+  end
+
+  macro actor_remote_follow_path(actor = nil)
+    "#{actor_path({{actor}})}/remote-follow"
   end
 end

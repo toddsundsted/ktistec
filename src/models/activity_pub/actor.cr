@@ -15,6 +15,7 @@ require "../relationship/content/timeline"
 require "../relationship/content/inbox"
 require "../relationship/content/outbox"
 require "../relationship/social/follow"
+require "../filter_term"
 require "./activity"
 require "./activity/announce"
 require "./activity/create"
@@ -23,10 +24,22 @@ require "./activity/like"
 require "./activity/undo"
 require "./object"
 
+require "../../views/view_helper"
+
+module ActorModelRenderer
+  include Ktistec::ViewHelper
+
+  def self.to_json_ld(actor, recursive)
+    render "src/views/actors/actor.json.ecr"
+  end
+end
+
 module ActivityPub
   class Actor < Ktistec::KeyPair
     include Ktistec::Model(Common, Blockable, Deletable, Polymorphic, Serialized, Linked)
     include ActivityPub
+
+    ATTACHMENT_LIMIT = 4
 
     @@table_name = "actors"
 
@@ -82,6 +95,24 @@ module ActivityPub
 
     has_many objects, class_name: ActivityPub::Object, foreign_key: attributed_to_iri, primary_key: iri
 
+    has_many filter_terms, inverse_of: actor
+
+    struct Attachment
+      include JSON::Serializable
+
+      property name : String
+
+      property type : String
+
+      property value : String
+
+      def initialize(@name, @type, @value)
+      end
+    end
+
+    @[Persistent]
+    property attachments : Array(Attachment)?
+
     def before_validate
       if changed?(:username)
         clear!(:username)
@@ -93,6 +124,7 @@ module ActivityPub
           self.following = "#{host}/actors/#{username}/following"
           self.followers = "#{host}/actors/#{username}/followers"
           self.urls = ["#{host}/@#{username}"]
+          self.attachments = [] of Attachment
         end
       end
     end
@@ -552,64 +584,133 @@ module ActivityPub
     #
     # Includes private (not visible) posts and replies.
     #
-    def timeline(page = 1, size = 10)
+    # May be filtered to exclude replies (via `exclude_replies`).
+    #
+    # May be filtered to include only objects with associated
+    # activities of the specified type (via `inclusion`).
+    #
+    def timeline(exclude_replies = false, inclusion = nil, page = 1, size = 10)
+      exclude_replies =
+        exclude_replies ?
+        "AND o.in_reply_to_iri IS NULL" :
+        ""
+      inclusion =
+        case inclusion
+        when Class, String
+          %Q|AND a.type = "#{inclusion}"|
+        when Array
+          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        end
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
-           JOIN actors AS a
-             ON a.iri = o.attributed_to_iri
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
            JOIN relationships AS r
              ON r.to_iri = o.iri
             AND r.type = "#{Relationship::Content::Timeline}"
+           JOIN activities AS a ON a.id = (
+                  SELECT a.id
+                    FROM activities AS a
+                    JOIN relationships AS l
+                      ON l.to_iri = a.iri
+                     AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+                   WHERE l.from_iri = ?
+                     AND a.object_iri = o.iri
+                     AND a.undone_at IS NULL
+                     #{inclusion}
+                ORDER BY a.created_at ASC
+                   LIMIT 1
+                )
           WHERE r.from_iri = ?
+            #{exclude_replies}
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
-            AND a.deleted_at IS NULL
-            AND a.blocked_at IS NULL
+            AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND o.id NOT IN (
                SELECT o.id
                  FROM objects AS o
-                 JOIN actors AS a
-                   ON a.iri = o.attributed_to_iri
+                 JOIN actors AS t
+                   ON t.iri = o.attributed_to_iri
                  JOIN relationships AS r
                    ON r.to_iri = o.iri
                   AND r.type = "#{Relationship::Content::Timeline}"
+                 JOIN activities AS a ON a.id = (
+                        SELECT a.id
+                          FROM activities AS a
+                          JOIN relationships AS l
+                            ON l.to_iri = a.iri
+                           AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+                         WHERE l.from_iri = ?
+                           AND a.object_iri = o.iri
+                           AND a.undone_at IS NULL
+                           #{inclusion}
+                      ORDER BY a.created_at ASC
+                         LIMIT 1
+                      )
                 WHERE r.from_iri = ?
+                  #{exclude_replies}
                   AND o.deleted_at IS NULL
                   AND o.blocked_at IS NULL
-                  AND a.deleted_at IS NULL
-                  AND a.blocked_at IS NULL
+                  AND t.deleted_at IS NULL
+                  AND t.blocked_at IS NULL
              ORDER BY r.created_at DESC
                 LIMIT ?
             )
        ORDER BY r.created_at DESC
           LIMIT ?
       QUERY
-      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+      Object.query_and_paginate(query, self.iri, self.iri, self.iri, self.iri, page: page, size: size)
     end
 
     # Returns the count of objects in the actor's timeline since the
     # given date.
     #
-    # See `#timeline(page, size)` for further details.
+    # See `#timeline(inclusion, page, size)` for further details.
     #
-    def timeline(since : Time)
+    def timeline(since : Time, exclude_replies = false, inclusion = nil)
+      exclude_replies =
+        exclude_replies ?
+        "AND o.in_reply_to_iri IS NULL" :
+        ""
+      inclusion =
+        case inclusion
+        when Class, String
+          %Q|AND a.type = "#{inclusion}"|
+        when Array
+          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        end
       query = <<-QUERY
          SELECT count(*)
            FROM objects AS o
-           JOIN actors AS a
-             ON a.iri = o.attributed_to_iri
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
            JOIN relationships AS r
              ON r.to_iri = o.iri
             AND r.type = "#{Relationship::Content::Timeline}"
+           JOIN activities AS a ON a.id = (
+                  SELECT a.id
+                    FROM activities AS a
+                    JOIN relationships AS l
+                      ON l.to_iri = a.iri
+                     AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+                   WHERE l.from_iri = ?
+                     AND a.object_iri = o.iri
+                     AND a.undone_at IS NULL
+                     #{inclusion}
+                ORDER BY a.created_at ASC
+                   LIMIT 1
+                )
           WHERE r.from_iri = ?
+            #{exclude_replies}
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
-            AND a.deleted_at IS NULL
-            AND a.blocked_at IS NULL
+            AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND r.created_at > ?
       QUERY
-      Ktistec.database.scalar(query, iri, since).as(Int64)
+      Ktistec.database.scalar(query, iri, iri, since).as(Int64)
     end
 
     # Returns notification activities for the actor.
@@ -707,9 +808,28 @@ module ActivityPub
       end
     end
 
+    # Returns the content filter terms for the actor.
+    #
+    def terms(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT #{FilterTerm.columns(prefix: "f")}
+           FROM filter_terms AS f
+          WHERE f.actor_id = ?
+            AND f.id NOT IN (
+               SELECT f.id
+                 FROM filter_terms AS f
+                WHERE f.actor_id = ?
+             ORDER BY f.id ASC
+                LIMIT ?
+            )
+       ORDER BY f.id ASC
+          LIMIT ?
+      QUERY
+      FilterTerm.query_and_paginate(query, id, id, page: page, size: size)
+    end
+
     def to_json_ld(recursive = true)
-      actor = self
-      render "src/views/actors/actor.json.ecr"
+      ActorModelRenderer.to_json_ld(self, recursive)
     end
 
     def from_json_ld(json, *, include_key = false)
@@ -731,10 +851,50 @@ module ActivityPub
         "followers" => dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
         "name" => dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
         "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-        "icon" => dig_id?(json, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url"),
+        "icon" => map_icon?(json),
         "image" => dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
-        "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")
+        "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+        "attachments" => attachments_from_ldjson(
+          json.dig?("https://www.w3.org/ns/activitystreams#attachment")
+        )
       }.compact
+    end
+
+    def self.map_icon?(json)
+      json.dig?("https://www.w3.org/ns/activitystreams#icon").try do |icons|
+        if icons.as_a?
+          icon =
+            icons.as_a.map do |icon|
+              if (width = icon.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = icon.dig?("https://www.w3.org/ns/activitystreams#height"))
+                {width.as_i * height.as_i, icon}
+              else
+                {0, icon}
+              end
+            end.sort do |(a, _), (b, _)|
+              b <=> a
+            end.first?
+          if icon
+            icon[1].dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+          end
+        elsif icons
+          icons.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+        end
+      end
+    end
+
+    def self.attachments_from_ldjson(entry)
+      entry_not_nil = (entry.try(&.as_a) || [] of JSON::Any).not_nil!
+
+      entry_not_nil.reduce([] of Attachment) do |memo, a|
+        name = (dig?(a, "https://www.w3.org/ns/activitystreams#name", "und") || "").not_nil!
+        type = (a.dig?("@type").try(&.as_s) || "").not_nil!
+        value = (a.dig?("http://schema.org#value").try(&.as_s) || "").not_nil!
+
+        unless name.empty? || value.empty?
+          memo << Attachment.new(name, type, value)
+        end
+        memo
+      end
     end
 
     def make_delete_activity

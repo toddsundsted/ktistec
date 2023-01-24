@@ -1,6 +1,5 @@
 require "kemal"
 
-require "./ext/context"
 require "../views/view_helper"
 
 class HTTP::Server::Context
@@ -49,118 +48,6 @@ module Ktistec
 
     macro host
       Ktistec.host
-    end
-
-    macro home_path
-      "/"
-    end
-
-    macro search_path
-      "/search"
-    end
-
-    macro sessions_path
-      "/sessions"
-    end
-
-    macro settings_path
-      "/settings"
-    end
-
-    macro metrics_path
-      "/metrics"
-    end
-
-    macro back_path
-      env.request.headers.fetch("Referer", "/")
-    end
-
-    macro remote_activity_path(activity = nil)
-      "/remote/activities/#{{{activity}}.try(&.id) || env.params.url["id"]}"
-    end
-
-    macro activity_path(activity = nil)
-      "/activities/#{{{activity}}.try(&.uid) || env.params.url["id"]}"
-    end
-
-    macro objects_path
-      "/objects"
-    end
-
-    macro remote_object_path(object = nil)
-      "/remote/objects/#{{{object}}.try(&.id) || env.params.url["id"]}"
-    end
-
-    macro edit_object_path(object = nil)
-      "/objects/#{{{object}}.try(&.uid) || env.params.url["id"]}/edit"
-    end
-
-    macro object_path(object = nil)
-      "/objects/#{{{object}}.try(&.uid) || env.params.url["id"]}"
-    end
-
-    macro remote_actor_path(actor = nil)
-      "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
-    end
-
-    macro actor_path(actor = nil)
-      "/actors/#{{{actor}}.try(&.uid) || env.params.url["username"]}"
-    end
-
-    macro actor_relationships_path(actor = nil, relationship = nil)
-      "#{actor_path({{actor}})}/#{{{relationship}} || env.params.url["relationship"]}"
-    end
-
-    macro actor_remote_follow_path(actor = nil)
-      "#{actor_path({{actor}})}/remote-follow"
-    end
-
-    macro outbox_path(actor = nil)
-      "#{actor_path({{actor}})}/outbox"
-    end
-
-    macro inbox_path(actor = nil)
-      "#{actor_path({{actor}})}/inbox"
-    end
-
-    macro anchor(object)
-      "object-#{{{object}}.id}"
-    end
-
-    macro thread_path(object)
-      "/objects/#{{{object}}.uid}/thread#object-#{{{object}}.id}"
-    end
-
-    macro remote_thread_path(object)
-      "/remote/objects/#{{{object}}.id}/thread#object-#{{{object}}.id}"
-    end
-
-    macro reply_path(object)
-      "/remote/objects/#{{{object}}.id}/reply"
-    end
-
-    macro approve_path(object)
-      "/remote/objects/#{{{object}}.id}/approve"
-    end
-
-    macro unapprove_path(object)
-      "/remote/objects/#{{{object}}.id}/unapprove"
-    end
-
-    macro block_actor_path(actor)
-      "/remote/actors/#{{{actor}}.id}/block"
-    end
-
-    macro unblock_actor_path(actor)
-      "/remote/actors/#{{{actor}}.id}/unblock"
-    end
-
-    macro block_object_path(object)
-      "/remote/objects/#{{{object}}.id}/block"
-    end
-
-    macro unblock_object_path(object)
-      "/remote/objects/#{{{object}}.id}/unblock"
     end
 
     macro accepts?(*mime_type)
@@ -252,44 +139,6 @@ module Ktistec
           exclude {{paths}}, "HEAD"
         {% end %}
       end
-    end
-
-    # Sanitizes HTML.
-    #
-    # For use in views:
-    #     <%= s string %>
-    #
-    macro s(str)
-      Ktistec::Util.sanitize({{str}})
-    end
-
-    # Pluralizes the noun.
-    #
-    # For use in views:
-    #     <%= pluralize(1, "fox") %>
-    #
-    macro pluralize(count, noun)
-      case {{count}}
-      when 0
-        {{noun}}
-      when 1
-        "1 #{{{noun}}}"
-      else
-        "#{{{count}}} #{Ktistec::Util.pluralize({{noun}})}"
-      end
-    end
-
-    # Emits a comma when one would be necessary when iterating through
-    # a collection.
-    #
-    macro comma(collection, counter)
-      {{counter}} < {{collection}}.size - 1 ? "," : ""
-    end
-
-    # Generates a random, URL-safe identifier.
-    #
-    macro id
-      Ktistec::Util.id
     end
   end
 end

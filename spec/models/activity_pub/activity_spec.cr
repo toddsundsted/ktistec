@@ -1,7 +1,7 @@
 require "../../../src/models/activity_pub/activity"
 require "../../../src/models/activity_pub/object"
 
-require "../../spec_helper/model"
+require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
 class FooBarActivity < ActivityPub::Activity

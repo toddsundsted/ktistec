@@ -1,6 +1,6 @@
 require "../../src/models/relationship"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 
 class FooBarRelationship < Relationship
   validates(from_iri) { "missing actor" if from_iri =~ /missing/ }

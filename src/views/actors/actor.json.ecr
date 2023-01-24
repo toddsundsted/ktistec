@@ -1,7 +1,12 @@
 {
   "@context":[
     "https://www.w3.org/ns/activitystreams",
-    "https://w3id.org/security/v1"
+    "https://w3id.org/security/v1",
+    {
+      "schema":"http://schema.org#",
+      "PropertyValue":"schema:PropertyValue",
+      "value":"schema:value"
+    }
   ],
   <%- if (username = actor.username) -%>
   "preferredUsername":<%= username.inspect %>,
@@ -49,6 +54,15 @@
     "type":"Image",
     "url":<%= image.inspect %>
   },
+  <%- end -%>
+  <%- if (attachments = actor.attachments) -%>
+  "attachment":[
+    <%- attachments.each.with_index do |attachment, i| %> {
+    "type":<%= attachment.type.inspect %>,
+    "name":<%= attachment.name.inspect %>,
+    "value":<%= maybe_wrap_link(attachment.value).inspect %>
+    }<%= comma(attachments, i) %><%- end -%>
+  ],
   <%- end -%>
   <%- if (urls = actor.urls) -%>
   <%- if urls.size > 1 -%>

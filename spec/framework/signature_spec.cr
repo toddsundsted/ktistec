@@ -1,11 +1,9 @@
 require "../../src/framework/signature"
 
 require "../spec_helper/key_pair"
-require "../spec_helper/model"
+require "../spec_helper/base"
 
 Spectator.describe Ktistec::Signature do
-  setup_spec
-
   let(key_pair) { KeyPair.new("https://key_pair") }
 
   describe ".sign" do

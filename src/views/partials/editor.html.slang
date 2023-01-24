@@ -21,6 +21,8 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
   input type="hidden" name="type" value="Publish"
   - unless object.new_record?
     input type="hidden" name="object" value=object.iri
+  - if object.in_reply_to?
+    input type="hidden" name="in-reply-to" value=object.in_reply_to_iri
   input type="hidden" name="public" value="true"
   .field
     input#input-trix-editor type="hidden" name="content" value=content

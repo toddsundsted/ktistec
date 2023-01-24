@@ -1,7 +1,7 @@
 require "../../../src/models/task/receive"
 
+require "../../spec_helper/base"
 require "../../spec_helper/factory"
-require "../../spec_helper/model"
 require "../../spec_helper/network"
 
 Spectator.describe Task::Receive do

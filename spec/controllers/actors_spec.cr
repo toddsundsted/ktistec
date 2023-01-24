@@ -41,6 +41,44 @@ Spectator.describe ActorsController do
       get "/actors/#{actor.username}", ACCEPT_JSON
       expect(JSON.parse(response.body).dig("type")).to be_truthy
     end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      let_build(:create)
+      let_build(:announce)
+
+      before_each do
+        put_in_outbox(owner: actor, activity: create)
+        put_in_timeline(owner: actor, object: create.object)
+        put_in_outbox(owner: actor, activity: announce)
+        put_in_timeline(owner: actor, object: announce.object)
+      end
+
+      it "with no filters it renders all posts" do
+        get "/actors/#{actor.username}?filters=none", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create", "event activity-announce").in_any_order
+      end
+
+      it "filters out shares from posts" do
+        get "/actors/#{actor.username}?filters=no-shares", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+      end
+
+      context "given a reply" do
+        before_each { create.object.assign(in_reply_to: announce.object).save }
+
+        it "with no filters it renders all posts" do
+          get "/actors/#{actor.username}?filters=none", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create", "event activity-announce").in_any_order
+        end
+
+        it "filters out replies from posts" do
+          get "/actors/#{actor.username}?filters=no-replies", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+        end
+      end
+    end
   end
 
   describe "GET /actors/:username/public-posts" do
@@ -357,19 +395,6 @@ Spectator.describe ActorsController do
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
-          end
-        end
-
-        context "given both a create and an announce outside of actor's mailbox" do
-          before_each do
-            create.save
-            announce.save
-            put_in_timeline(owner: actor, object: object)
-          end
-
-          it "renders the object without aspect" do
-            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
           end
         end
 

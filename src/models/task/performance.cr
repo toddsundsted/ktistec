@@ -26,6 +26,12 @@ class Task
         timestamp: now,
         value: (stats.total_bytes / 1000).to_i32
       ).save
+      memory_used = LibSQLite3.memory_used
+      Point.new(
+        chart: "sqlite-kilobytes",
+        timestamp: now,
+        value: (memory_used / 1000).to_i32
+      ).save
     ensure
       self.next_attempt_at = 1.hour.from_now
     end

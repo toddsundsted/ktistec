@@ -7,10 +7,12 @@
     - [Control over comment visibility](#control-over-comment-visibility)
     - [Pretty URLs](#pretty-urls)
     - [Followers/following](#followersfollowing)
+    - [Content filtering](#content-filtering)
     - [Blocking](#blocking)
     - [Metrics](#metrics)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
+    - [Running Tests](#running-tests)
   - [Usage](#usage)
   - [Contributors](#contributors)
   - [Copyright and License](#copyright-and-license)
@@ -90,6 +92,14 @@ used by Mastodon and others.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/88hvqq.png" width=460>
 
+### Content filtering
+
+Content filters prevent undesirable content from appearing in your
+timeline and notifications. Filter terms match on the text of a post
+(ignoring any markup). Wildcards are supported.
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/wzgeti.png" width=460>
+
 ### Blocking
 
 Ktistec gives you control over what you see. Blocking authors and
@@ -151,6 +161,12 @@ something like:
 `Ktistec is ready to lead at http://0.0.0.0:3000`
 
 You can now connect to and configure the server.
+
+### Running Tests
+
+If you change the code, you should run the tests:
+
+`$ crystal spec`
 
 ## Usage
 

@@ -1,6 +1,6 @@
 require "../../src/utils/html"
 
-require "../spec_helper/model"
+require "../spec_helper/base"
 require "../spec_helper/factory"
 
 Spectator.describe Ktistec::HTML do
@@ -169,17 +169,17 @@ Spectator.describe Ktistec::HTML do
 
       it "replaces matched mentions with links" do
         content = %q|<div>@foo@bar.com</div>|
-        expect(described_class.enhance(content).content).to eq(%Q|<p><a href="https://bar.com/actors/foo" class="mention" rel="tag">@foo</a></p>|)
+        expect(described_class.enhance(content).content).to eq(%q|<p><a href="https://bar.com/actors/foo" class="mention" rel="tag">@foo</a></p>|)
       end
 
       it "preserves adjacent text" do
         content = %q|<div> @foo@bar.com </div>|
-        expect(described_class.enhance(content).content).to eq(%Q|<p> <a href="https://bar.com/actors/foo" class="mention" rel="tag">@foo</a> </p>|)
+        expect(described_class.enhance(content).content).to eq(%q|<p> <a href="https://bar.com/actors/foo" class="mention" rel="tag">@foo</a> </p>|)
       end
 
       it "skips mentions inside links" do
         content = %q|<a href="#">@foo@bar.com</a>|
-        expect(described_class.enhance(content).content).to eq(%Q|<a href="#">@foo@bar.com</a>|)
+        expect(described_class.enhance(content).content).to eq(%q|<a href="#">@foo@bar.com</a>|)
       end
 
       it "returns mentions" do
@@ -191,7 +191,7 @@ Spectator.describe Ktistec::HTML do
       context "given a mention that doesn't match any actor" do
         it "replaces unmatched mentions with spans" do
           content = %q|<div>@bar@foo.com</div>|
-          expect(described_class.enhance(content).content).to eq(%Q|<p><span class="mention">@bar@foo.com</span></p>|)
+          expect(described_class.enhance(content).content).to eq(%q|<p><span class="mention">@bar@foo.com</span></p>|)
         end
 
         it "doesn't return mentions" do

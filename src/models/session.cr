@@ -13,7 +13,7 @@ class Session
   # Allocates a new session for an account.
   #
   def self.new(_account account : Account)
-    new(account_id: account.id)
+    new(account: account)
   end
 
   @[Persistent]
@@ -24,6 +24,7 @@ class Session
 
   @[Persistent]
   property account_id : Int64?
+  belongs_to account
 
   def body
     JSON.parse(body_json)
@@ -46,8 +47,6 @@ class Session
   def string?(key)
     self.body[key]?.try(&.as_s)
   end
-
-  belongs_to account
 
   @jwt : String?
 

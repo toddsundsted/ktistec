@@ -1,6 +1,7 @@
 require "../../src/controllers/settings"
 
 require "../spec_helper/controller"
+require "../spec_helper/factory"
 
 Spectator.describe SettingsController do
   setup_spec
@@ -83,6 +84,15 @@ Spectator.describe SettingsController do
           expect(Account.find(Global.account.not_nil!.id).timezone).to eq("Etc/GMT")
         end
 
+        context "given an account with a timezone" do
+          before_each { Global.account.not_nil!.assign(timezone: "Etc/UTC").save }
+
+          it "does not updates the timezone if blank" do
+            expect{post "/settings/actor", headers, "timezone="}.
+              not_to change{Account.find(Global.account.not_nil!.id).timezone}
+          end
+        end
+
         it "updates the password" do
           expect{post "/settings/actor", headers, "password=foobarbaz1!"}.
             to change{Account.find(Global.account.not_nil!.id).encrypted_password}
@@ -107,6 +117,28 @@ Spectator.describe SettingsController do
           post "/settings/actor", headers, "icon=%2Ffoo%2Fbar%2Fbaz"
           expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
         end
+
+        context "given an actor with an image and an icon" do
+          before_each { actor.assign(image: "https://test.test/foo/bar/baz", icon: "https://test.test/foo/bar/baz").save }
+
+          it "removes the image" do
+            post "/settings/actor", headers, "image="
+            expect(ActivityPub::Actor.find(actor.id).image).to be_nil
+          end
+
+          it "removes the icon" do
+            post "/settings/actor", headers, "icon="
+            expect(ActivityPub::Actor.find(actor.id).icon).to be_nil
+          end
+        end
+
+        it "updates the attachments" do
+          post "/settings/actor", headers, "attachment_0_name=Blog&attachment_0_value=https://beowulf.example.com"
+          attachments = ActivityPub::Actor.find(actor.id).attachments.not_nil!
+          expect(attachments.size).to eq(1)
+          expect(attachments.first.name).to eq("Blog")
+          expect(attachments.first.value).to eq("https://beowulf.example.com")
+        end
       end
 
       context "and posting JSON data" do
@@ -122,14 +154,38 @@ Spectator.describe SettingsController do
           expect(ActivityPub::Actor.find(actor.id).name).to eq("Foo Bar")
         end
 
+        it "updates the summary" do
+          post "/settings/actor", headers, %q|{"name":"","summary":"Foo Bar"}|
+          expect(ActivityPub::Actor.find(actor.id).summary).to eq("Foo Bar")
+        end
+
         it "updates the timezone" do
           post "/settings/actor", headers, %q|{"name":"","summary":"","timezone":"Etc/GMT"}|
           expect(Account.find(Global.account.not_nil!.id).timezone).to eq("Etc/GMT")
         end
 
-        it "updates the summary" do
-          post "/settings/actor", headers, %q|{"name":"","summary":"Foo Bar"}|
-          expect(ActivityPub::Actor.find(actor.id).summary).to eq("Foo Bar")
+        context "given an account with a timezone" do
+          before_each { Global.account.not_nil!.assign(timezone: "Etc/UTC").save }
+
+          it "does not updates the timezone if blank" do
+            expect{post "/settings/actor", headers, %q|{"timezone":""}|}.
+              not_to change{Account.find(Global.account.not_nil!.id).timezone}
+          end
+        end
+
+        it "updates the password" do
+          expect{post "/settings/actor", headers, %q|{"password":"foobarbaz1!"}|}.
+            to change{Account.find(Global.account.not_nil!.id).encrypted_password}
+        end
+
+        it "does not update the password if blank" do
+          expect{post "/settings/actor", headers, %q|{"password":""}|}.
+            not_to change{Account.find(Global.account.not_nil!.id).encrypted_password}
+        end
+
+        it "does not update the password if null" do
+          expect{post "/settings/actor", headers, %q|{"password":null}|}.
+            not_to change{Account.find(Global.account.not_nil!.id).encrypted_password}
         end
 
         it "updates the image" do
@@ -140,6 +196,28 @@ Spectator.describe SettingsController do
         it "updates the icon" do
           post "/settings/actor", headers, %q|{"icon":"/foo/bar/baz"}|
           expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
+        end
+
+        context "given an actor with an image and an icon" do
+          before_each { actor.assign(image: "https://test.test/foo/bar/baz", icon: "https://test.test/foo/bar/baz").save }
+
+          it "removes the image" do
+            post "/settings/actor", headers, %q|{"image":null}|
+            expect(ActivityPub::Actor.find(actor.id).image).to be_nil
+          end
+
+          it "removes the icon" do
+            post "/settings/actor", headers, %q|{"icon":null}|
+            expect(ActivityPub::Actor.find(actor.id).icon).to be_nil
+          end
+        end
+
+        it "updates the attachments" do
+          post "/settings/actor", headers, %q|{"attachment_0_name":"Blog","attachment_0_value":"https://beowulf.example.com"}|
+          attachments = ActivityPub::Actor.find(actor.id).attachments.not_nil!
+          expect(attachments.size).to eq(1)
+          expect(attachments.first.name).to eq("Blog")
+          expect(attachments.first.value).to eq("https://beowulf.example.com")
         end
       end
     end
@@ -176,6 +254,11 @@ Spectator.describe SettingsController do
           expect {post "/settings/service", headers, "site=Name"}.
             to change{Ktistec.settings.site}
         end
+
+        it "does not change the site" do
+          expect {post "/settings/service", headers, "site="}.
+            not_to change{Ktistec.settings.site}
+        end
       end
 
       context "and posting JSON data" do
@@ -194,6 +277,11 @@ Spectator.describe SettingsController do
         it "changes the site" do
           expect {post "/settings/service", headers, %q|{"site":"Name"}|}.
             to change{Ktistec.settings.site}
+        end
+
+        it "does not change the site" do
+          expect {post "/settings/service", headers, %q|{"site":""}|}.
+            not_to change{Ktistec.settings.site}
         end
       end
     end

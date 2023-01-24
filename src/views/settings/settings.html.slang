@@ -1,5 +1,7 @@
 - content_for "head" do
   script src="/dist/settings.bundle.js"
+- content_for "title" do
+  | Settings
 == render "src/views/partials/actor-panel.html.slang"
 h1 Account Settings
 p
@@ -10,14 +12,33 @@ p
   == input_tag("Summary", actor, summary)
   == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone"})
   == input_tag("Password", account, password, type: "password", placeholder: "Leave blank to leave unchanged")
+  crystal:
+    attachments = actor.attachments || [] of ActivityPub::Actor::Attachment
+    attachments.size.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1) do |i|
+      attachments << ActivityPub::Actor::Attachment.new("", "", "")
+    end
+  .field
+    label Metadata
+    p You can have up to four items displayed on your profile.
+  .two.fields
+    .field
+      label Name
+    .field
+      label Value
+  - 0.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1).each do |i|
+    .two.fields
+      .field
+        input type="text" name="attachment_#{i}_name" value=attachments[i].name
+      .field
+        input type="text" name="attachment_#{i}_value" value=attachments[i].value
   == input_tag("Background Image", actor, image, class: "filepond", type: "file")
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
-  input.ui.primary.button type="submit" value="Update"
+  == submit_button("Update")
 h2 Delete Account!
 p
   | Delete account <strong>#{actor.username}</strong>. This action cannot be undone!
 == form_tag(nil, "/settings/terminate") do
-  input.ui.dangerous.button type="submit" value="Delete Account" data-modal="terminate"
+  input.ui.dangerous.button type="submit" value="Delete Account" data-modal="terminate" data-controller="modal-action" data-action="click->modal-action#show"
 .ui.basic.tiny.terminate.modal
   .header: i.trash.icon
     | Delete This Account
@@ -39,6 +60,6 @@ h1 Site Settings
   == error_messages(settings)
   == input_tag("Site Name", settings, site)
   == input_tag("Footer", settings, footer)
-  input.ui.primary.button type="submit" value="Update"
+  == submit_button("Update")
 p.small.text Ktistec Version #{Ktistec::VERSION}
 br.transition.hidden

@@ -1,7 +1,7 @@
 require "../../../../src/models/relationship/content/timeline"
 
+require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
-require "../../../spec_helper/model"
 
 Spectator.describe Relationship::Content::Timeline do
   setup_spec

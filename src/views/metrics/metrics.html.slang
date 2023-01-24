@@ -1,5 +1,7 @@
 - content_for "head" do
   meta name="turbo-cache-control" content="no-cache"
+- content_for "title" do
+  | Metrics
 crystal:
   colors = [
     "#619ED6",
@@ -27,7 +29,7 @@ canvas#charts-1 data-controller="chart"
   script#chart-datasets-1 type="application/json" data-chart-target="datasets"
     == datasets.to_json
 crystal:
-  datasets = charts.select(&.name.starts_with?(/heap-|free-/)).map do |chart|
+  datasets = charts.select(&.name.starts_with?(/heap-|free-|sqlite-/)).map do |chart|
     {
       label: chart.name,
       data: chart.data(*range, granularity: granularity, predicate: Predicate::Average),
@@ -73,5 +75,5 @@ crystal:
   .two.fields
     == select_tag("Range", nil, :begin, ranges, env.params.query["begin"]?)
     == select_tag("Granularity", nil, :granularity, granularities, env.params.query["granularity"]?)
-  input.ui.mini.primary.button type="submit" value="Update"
+  == submit_button("Update", class: "ui mini primary button")
 br.transition.hidden

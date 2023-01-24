@@ -1,7 +1,5 @@
 "use strict"
 
-import $ from "jquery"
-
 /**
  * Turbo
  */
@@ -74,26 +72,11 @@ Trix.config.textAttributes.code = { tagName: "code", inheritable: true }
 Trix.config.textAttributes.sub = { tagName: "sub", inheritable: true }
 Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
 
-// modal popup for dangrous actions
-$(document).on("click", ".dangerous.button[data-modal]", function (e) {
-  e.preventDefault()
-  let $this = $(this)
-  let $form = $this.closest("form")
-  let modal = $this.data("modal")
-  $(".ui.modal." + modal)
-    .modal({
-      onApprove: function() {
-        $form.submit()
-      }
-    })
-    .modal("show")
-})
-
 // transitions for transitional elements
-$(document).on("turbo:load", function() {
-  $(".transitional").transition("fade", "500ms")
+document.addEventListener("turbo:load", function() {
+  document.querySelectorAll(".transitional").forEach(transitional => transitional.style.opacity = 1)
 })
 
-$(document).on("turbo:before-cache", function() {
-  $(".transitional").removeClass("visible").addClass("hidden")
+document.addEventListener("turbo:before-cache", function() {
+  document.querySelectorAll(".transitional").forEach(transitional => transitional.style.opacity = 0)
 })

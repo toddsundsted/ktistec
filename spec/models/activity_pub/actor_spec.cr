@@ -1071,6 +1071,16 @@ Spectator.describe ActivityPub::Actor do
       end
     end
 
+    context "given a post without an associated activity" do
+      let_build(:object, attributed_to: subject)
+      let_create!(:timeline, owner: subject, object: object)
+
+      it "includes the post" do
+        expect(subject.timeline(page: 1, size: 2)).to eq([object, object5])
+        expect(subject.timeline(since: since)).to eq(6)
+      end
+    end
+
     it "paginates the results" do
       expect(subject.timeline(page: 1, size: 2)).to eq([object5, object4])
       expect(subject.timeline(page: 3, size: 2)).to eq([object1])

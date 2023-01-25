@@ -609,7 +609,7 @@ module ActivityPub
            JOIN relationships AS r
              ON r.to_iri = o.iri
             AND r.type = "#{Relationship::Content::Timeline}"
-           JOIN activities AS a ON a.id = (
+      LEFT JOIN activities AS a ON a.id = (
                   SELECT a.id
                     FROM activities AS a
                     JOIN relationships AS l
@@ -618,11 +618,11 @@ module ActivityPub
                    WHERE l.from_iri = ?
                      AND a.object_iri = o.iri
                      AND a.undone_at IS NULL
-                     #{inclusion}
                 ORDER BY a.created_at ASC
                    LIMIT 1
                 )
           WHERE r.from_iri = ?
+            #{inclusion}
             #{exclude_replies}
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
@@ -636,7 +636,7 @@ module ActivityPub
                  JOIN relationships AS r
                    ON r.to_iri = o.iri
                   AND r.type = "#{Relationship::Content::Timeline}"
-                 JOIN activities AS a ON a.id = (
+            LEFT JOIN activities AS a ON a.id = (
                         SELECT a.id
                           FROM activities AS a
                           JOIN relationships AS l
@@ -645,11 +645,11 @@ module ActivityPub
                          WHERE l.from_iri = ?
                            AND a.object_iri = o.iri
                            AND a.undone_at IS NULL
-                           #{inclusion}
                       ORDER BY a.created_at ASC
                          LIMIT 1
                       )
                 WHERE r.from_iri = ?
+                  #{inclusion}
                   #{exclude_replies}
                   AND o.deleted_at IS NULL
                   AND o.blocked_at IS NULL
@@ -689,7 +689,7 @@ module ActivityPub
            JOIN relationships AS r
              ON r.to_iri = o.iri
             AND r.type = "#{Relationship::Content::Timeline}"
-           JOIN activities AS a ON a.id = (
+      LEFT JOIN activities AS a ON a.id = (
                   SELECT a.id
                     FROM activities AS a
                     JOIN relationships AS l
@@ -698,11 +698,11 @@ module ActivityPub
                    WHERE l.from_iri = ?
                      AND a.object_iri = o.iri
                      AND a.undone_at IS NULL
-                     #{inclusion}
                 ORDER BY a.created_at ASC
                    LIMIT 1
                 )
           WHERE r.from_iri = ?
+            #{inclusion}
             #{exclude_replies}
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL

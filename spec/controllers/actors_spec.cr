@@ -398,6 +398,19 @@ Spectator.describe ActorsController do
           end
         end
 
+        context "given both a create and an announce outside of actor's mailbox" do
+          before_each do
+            create.save
+            announce.save
+            put_in_timeline(owner: actor, object: object)
+          end
+
+          it "renders the object without aspect" do
+            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
+          end
+        end
+
         context "given a create, and an announce outside of actor's mailbox" do
           before_each do
             announce.save

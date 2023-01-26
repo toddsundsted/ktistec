@@ -60,6 +60,12 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("<span class='invisible'>a span</span>")
     end
 
+    # for presentation of mastodon compatible profile metadata
+    it "preserves 'ellipsis' in class attribute on span elements" do
+      content = "<span class='ellipsis foo bar'>a span</span>"
+      expect(described_class.sanitize(content)).to eq("<span class='ellipsis'>a span</span>")
+    end
+
     it "doesn't corrupt element order" do
       content = "<figure></figure><p></p>"
       expect(described_class.sanitize(content)).to eq("<figure></figure><p></p>")

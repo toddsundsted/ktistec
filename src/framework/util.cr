@@ -56,7 +56,7 @@ module Ktistec
         all: [{"class", "ui image"}, {"loading", "lazy"}]
       },
       span: {
-        class: ["invisible"]
+        class: ["invisible", "ellipsis"]
       }
     }
 

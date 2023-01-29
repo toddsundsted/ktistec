@@ -13,16 +13,40 @@ Spectator.describe "object partials" do
   include Ktistec::Controller
   include Ktistec::ViewHelper::ClassMethods
 
-  describe "object.html.slang" do
-    let(activity) { nil }
+  describe "label.html.slang" do
+    subject do
+      begin
+        XML.parse_html(render "./src/views/partials/object/label.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
 
-    let(for_thread) { nil }
+    let_build(:actor, icon: random_string)
 
+    context "the actor is the author" do
+      let(author) { actor }
+
+      it "renders one profile icon" do
+        expect(subject.xpath_nodes("//img/@src")).to contain_exactly(author.icon)
+      end
+    end
+
+    context "the actor is not the author" do
+      let_build(:actor, named: author, icon: random_string)
+
+      it "renders two profile icons" do
+        expect(subject.xpath_nodes("//img/@src")).to contain_exactly(author.icon, actor.icon)
+      end
+    end
+  end
+
+  describe "content.html.slang" do
     let(env) { env_factory("GET", "/object") }
 
     subject do
       begin
-        XML.parse_html(object_partial(env, object, activity: activity, for_thread: for_thread))
+        XML.parse_html(render "./src/views/partials/object/content.html.slang")
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -30,122 +54,71 @@ Spectator.describe "object partials" do
 
     let(account) { register }
     let(actor) { account.actor }
+    let(author) { actor }
 
     let_create!(:object, attributed_to: actor, published: Time.utc)
     let_build(:object, named: :original)
 
+    let(with_detail) { false }
+    let(for_thread) { nil }
+
+    # threads
+
     it "does not render a button to the threaded conversation" do
-      object.assign(in_reply_to: original, attributed_to: actor).save
+      object.assign(in_reply_to: original).save
       expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
     end
 
     it "does not render a button to the threaded conversation" do
-      original.assign(in_reply_to: object, attributed_to: actor).save
+      original.assign(in_reply_to: object).save
       expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
+    end
+
+    context "when authenticated" do
+      before_each { env.account = account }
+
+      pre_condition { expect(object.draft?).to be_false }
+
+      it "renders a button to the threaded conversation" do
+        object.assign(in_reply_to: original).save
+        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+      end
+
+      it "renders a button to the threaded conversation" do
+        original.assign(in_reply_to: object).save
+        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+      end
     end
 
     context "if approved" do
-      before_each do
-        actor.approve(original.save)
-      end
+      before_each { actor.approve(original.save) }
+
+      pre_condition { expect(object.draft?).to be_false }
 
       it "renders a button to the threaded conversation" do
-        object.assign(in_reply_to: original, attributed_to: actor).save
+        object.assign(in_reply_to: original).save
         expect(subject.xpath_nodes("//button/text()")).to have("Thread")
       end
 
       it "renders a button to the threaded conversation" do
-        original.assign(in_reply_to: object, attributed_to: actor).save
+        original.assign(in_reply_to: object).save
         expect(subject.xpath_nodes("//button/text()")).to have("Thread")
       end
     end
 
-    context "given an associated activity" do
-      let_build(:like, named: :activity, actor: actor, object: object)
+    # drafts
 
-      it "renders the activity type as a class" do
-        expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
+    context "when is draft" do
+      before_each { object.assign(published: nil).save }
+
+      pre_condition { expect(object.draft?).to be_true }
+
+      it "does not render a button to edit" do
+        expect(subject.xpath_nodes("//button/text()")).not_to have("Edit")
       end
 
-      context "when a reply" do
-        let(for_thread) { [original] }
-
-        it "renders the activity type as a class" do
-          expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
-        end
-      end
-    end
-
-    context "if external" do
-      let_create!(:video, named: :object, name: "Foo Bar Baz")
-
-      pre_condition { expect(object.external?).to be_true }
-
-      it "renders a link to the external object" do
-        expect(subject.xpath_nodes("//a/strong/text()")).to have("Foo Bar Baz")
-      end
-    end
-
-    context "if not external" do
-      let_create!(:note, named: :object, name: "Foo Bar Baz")
-
-      pre_condition { expect(object.external?).to be_false }
-
-      it "renders the name of the object" do
-        expect(subject.xpath_nodes("//strong/text()")).to have("Foo Bar Baz")
-      end
-    end
-
-    context "if authenticated" do
-      before_each { env.account = account }
-
-      it "does not render a button to block" do
-        expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
-      end
-
-      it "does not render a button to unblock" do
-        expect(subject.xpath_nodes("//button/text()")).not_to have("Unblock")
-      end
-
-      context "for approvals" do
-        context "on a page of threaded replies" do
-          let(env) { env_factory("GET", "/thread") }
-
-          it "does not render a checkbox to approve" do
-            actor.unapprove(object)
-            expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
-          end
-
-          it "does not render a checkbox to unapprove" do
-            actor.approve(object)
-            expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
-          end
-
-          context "unless in reply to a post by the account's actor" do
-            let(for_thread) { [original] }
-
-            before_each do
-              original.assign(attributed_to: account.actor).save
-              object.assign(in_reply_to: original).save
-            end
-
-            it "renders a checkbox to approve" do
-              actor.unapprove(object)
-              expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']/@checked")).to be_empty
-            end
-
-            it "renders a checkbox to unapprove" do
-              actor.approve(object)
-              expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']/@checked")).not_to be_empty
-            end
-          end
-        end
-      end
-
-      context "and given a draft" do
-        before_each { object.assign(published: nil).save }
-
-        pre_condition { expect(object.draft?).to be_true }
+      context "when authenticated" do
+        before_each { env.account = account }
 
         it "does not render a button to reply" do
           expect(subject.xpath_nodes("//button/text()")).not_to have("Reply")
@@ -167,31 +140,34 @@ Spectator.describe "object partials" do
           expect(subject.xpath_nodes("//button/text()")).to have("Edit")
         end
       end
+    end
 
-      context "and is published" do
-        before_each { object.assign(published: Time.utc).save }
+    # blocking/unblocking
 
-        pre_condition { expect(object.draft?).to be_false }
+    it "does not render a button to block" do
+      expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
+    end
 
-        it "does not render a button to the threaded conversation" do
-          expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
-        end
+    it "does not render a button to unblock" do
+      expect(subject.xpath_nodes("//button/text()")).not_to have("Unblock")
+    end
 
-        it "renders a button to the threaded conversation" do
-          object.assign(in_reply_to: original, attributed_to: account.actor).save
-          expect(subject.xpath_nodes("//button/text()")).to have("Thread")
-        end
+    context "when is remote" do
+      let_create!(:object, published: Time.utc)
+      let(author) { object.attributed_to }
 
-        it "renders a button to the threaded conversation" do
-          original.assign(in_reply_to: object, attributed_to: account.actor).save
-          expect(subject.xpath_nodes("//button/text()")).to have("Thread")
-        end
+      pre_condition { expect(object.local?).to be_false }
+
+      it "does not render a button to block" do
+        expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
       end
 
-      context "and is remote" do
-        let_create!(:object, published: Time.utc)
+      it "does not render a button to unblock" do
+        expect(subject.xpath_nodes("//button/text()")).not_to have("Unblock")
+      end
 
-        pre_condition { expect(object.local?).to be_false }
+      context "when authenticated" do
+        before_each { env.account = account }
 
         it "renders a button to block" do
           expect(subject.xpath_nodes("//button/text()")).to have("Block")
@@ -213,7 +189,7 @@ Spectator.describe "object partials" do
           end
         end
 
-        context "and object is announced" do
+        context "and object has been announced" do
           let_create!(:announce, actor: actor, object: object)
 
           it "does not render a button to block" do
@@ -221,13 +197,120 @@ Spectator.describe "object partials" do
           end
         end
 
-        context "and object is liked" do
+        context "and object has been liked" do
           let_create!(:like, actor: actor, object: object)
 
           it "does not render a button to block" do
             expect(subject.xpath_nodes("//button/text()")).not_to have("Block")
           end
         end
+      end
+    end
+
+    # approving/unapproving
+
+    context "when in reply to a post by the account's actor" do
+      let(for_thread) { [original] }
+
+      before_each do
+        original.assign(attributed_to: account.actor).save
+        object.assign(in_reply_to: original).save
+      end
+
+      it "does not render a checkbox" do
+        actor.unapprove(object)
+        expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
+      end
+
+      it "does not render a checkbox" do
+        actor.approve(object)
+        expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).to be_empty
+      end
+
+      context "when authenticated" do
+        before_each { env.account = account }
+
+        it "renders a checkbox" do
+          actor.unapprove(object)
+          expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).not_to be_empty
+        end
+
+        it "renders a checkbox" do
+          actor.approve(object)
+          expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']")).not_to be_empty
+        end
+
+        it "expects the checkbox not to be checked" do
+          actor.unapprove(object)
+          expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']/@checked")).to be_empty
+        end
+
+        it "expects the checkbox to be checked" do
+          actor.approve(object)
+          expect(subject.xpath_nodes("//input[@type='checkbox'][@name='public']/@checked")).not_to be_empty
+        end
+      end
+    end
+
+    # hosting
+
+    context "if object content is externally hosted" do
+      let_create!(:video, named: :object, name: "Foo Bar Baz")
+
+      pre_condition { expect(object.external?).to be_true }
+
+      it "renders link to the external content" do
+        expect(subject.xpath_nodes("//a/strong/text()")).to have("Foo Bar Baz")
+      end
+    end
+
+    context "if object content is not externally hosted" do
+      let_create!(:note, named: :object, name: "Foo Bar Baz")
+
+      pre_condition { expect(object.external?).to be_false }
+
+      it "renders name of the object" do
+        expect(subject.xpath_nodes("//strong/text()")).to have("Foo Bar Baz")
+      end
+    end
+  end
+
+  describe "object_partial" do
+    let(env) { env_factory("GET", "/object") }
+
+    subject do
+      begin
+        XML.parse_html(object_partial(env, object, activity: activity, with_detail: with_detail, for_thread: for_thread))
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    let_create!(:object)
+    let_build(:object, named: :original)
+
+    let_build(:like, named: :activity, object: object)
+
+    let(with_detail) { false }
+    let(for_thread) { nil }
+
+    it "renders the activity type as a class" do
+      expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
+    end
+
+    context "when with detail" do
+      let(with_detail) { true }
+
+      it "renders the activity type as a class" do
+        expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
+      end
+    end
+
+    context "when in a thread" do
+      let(for_thread) { [original] }
+
+      it "renders the activity type as a class" do
+        expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
       end
     end
   end

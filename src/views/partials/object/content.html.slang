@@ -1,5 +1,6 @@
 crystal:
   account = env.account?
+  timezone = account.try { |account| Time::Location.load(account.timezone) }
   if (attachments = object.attachments) && (content = object.content)
     unless content.empty?
       urls = XML.parse_html(content).xpath_nodes("//img/@src").map(&.text)
@@ -9,7 +10,6 @@ crystal:
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
   type = object.type.split("::").last.downcase
 .content data-controller="image-gallery clickable-background" data-clickable-background-href-value=href
-  - timezone = account.try { |account| Time::Location.load(account.timezone) }
   .summary
     - if object.draft?
       | draft created

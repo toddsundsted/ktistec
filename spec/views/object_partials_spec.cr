@@ -74,6 +74,11 @@ Spectator.describe "object partials" do
       expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
     end
 
+    it "does not render a button to the threaded conversation" do
+      object.assign(in_reply_to_iri: "not dereferenced link")
+      expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
+    end
+
     context "when authenticated" do
       before_each { env.account = account }
 
@@ -86,6 +91,11 @@ Spectator.describe "object partials" do
 
       it "renders a button to the threaded conversation" do
         original.assign(in_reply_to: object).save
+        expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+      end
+
+      it "renders a button to the threaded conversation" do
+        object.assign(in_reply_to_iri: "not dereferenced link")
         expect(subject.xpath_nodes("//button/text()")).to have("Thread")
       end
     end

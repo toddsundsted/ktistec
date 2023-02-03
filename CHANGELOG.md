@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+### Added
+- Support manually fetching posts that are missing from threads.
+
+### Fixed
+- Add ellipsis to Mastodon marked-up URLs in content.
+
 ## [v2.0.0-8]
 ### Added
 - Support content filtering.
@@ -116,7 +123,7 @@ All notable changes to this project are documented in this file.
 - No longer use Travis CI.
 - Remove Kilt.
 
-## [v2.0.0-1]
+## [v2.0.0-1] - 2023-01-24
 ### Added
 - Add `include_deleted` support.
 - Add `include_undone` support.
@@ -147,6 +154,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[Unreleased]: https://github.com/toddsundsted/ktistec/compare/4d9094fa...main
 [v2.0.0-8]: https://github.com/toddsundsted/ktistec/compare/b3ce035d...cde86283
 [v2.0.0-7]: https://github.com/toddsundsted/ktistec/compare/9a05dced...7d189bd0
 [v2.0.0-6]: https://github.com/toddsundsted/ktistec/compare/c71f3ad9...a71ebfda

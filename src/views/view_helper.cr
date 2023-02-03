@@ -77,9 +77,13 @@ module Ktistec::ViewHelper
     embed {{content}}, content_io
     content = content_io.to_s
 
-    layout_io = IO::Memory.new
-    embed {{layout}}, layout_io
-    layout_io.to_s
+    {% if layout %}
+      layout_io = IO::Memory.new
+      embed {{layout}}, layout_io
+      layout_io.to_s
+    {% else %}
+      content
+    {% end %}
   end
 
   # Render a view with the given filename.

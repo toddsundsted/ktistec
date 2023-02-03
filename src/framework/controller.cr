@@ -73,7 +73,13 @@ module Ktistec
     # Define a simple response helper.
     #
     macro def_response_helper(name, message, code)
-      macro {{name.id}}(message = nil, code = nil, basedir = "src/views")
+      macro {{name.id}}(message = nil, code = nil, basedir = "src/views", layout = nil, operation = nil, target = nil)
+        \{% if layout && (operation || target) %}
+          \{% raise "either layout may be specified, or operation and target" %}
+        \{% end %}
+        \{% if !layout && !operation && !target %}
+          \{% layout = "src/views/layouts/default.html.ecr" %}
+        \{% end %}
         \{% if message.is_a?(StringLiteral) && message.includes?('/') %}
           \{% if file_exists?("#{basedir.id}/#{message.id}.json.ecr") %}
             if accepts?("application/ld+json", "application/activity+json", "application/json")
@@ -86,9 +92,18 @@ module Ktistec
             end
           \{% end %}
           \{% if file_exists?("#{basedir.id}/#{message.id}.html.slang") %}
-            if accepts?("text/html")
-              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.slang"}}, "src/views/layouts/default.html.ecr"
-            end
+            \{% if layout %}
+              if accepts?("text/html")
+                halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.slang"}}, \{{layout}}
+              end
+            \{% end %}
+            \{% if operation && target %}
+              if accepts?("text/vnd.turbo-stream.html")
+                %body = render \{{"#{basedir.id}/#{message.id}.html.slang"}}
+                %body = %Q|<turbo-stream action="\{{operation.id}}" target="\{{target.id}}"><template>#{%body}</template></turbo-stream>|
+                halt env, status_code: \{{code}} || {{code}}, response: %body
+              end
+            \{% end %}
           \{% end %}
           \{% if file_exists?("#{basedir.id}/#{message.id}.json.ecr") %}
             accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
@@ -101,10 +116,20 @@ module Ktistec
           if accepts?("text/plain")
             halt env, status_code: \{{code}} || {{code}}, response: (\{{message}} || {{message}}).downcase
           end
-          if accepts?("text/html")
-            _message = \{{message}} || {{message}}
-            halt env, status_code: \{{code}} || {{code}}, response: render "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr"
-          end
+          \{% if layout %}
+            if accepts?("text/html")
+              _message = \{{message}} || {{message}}
+              halt env, status_code: \{{code}} || {{code}}, response: render "src/views/pages/generic.html.slang", \{{layout}}
+            end
+          \{% end %}
+          \{% if operation && target %}
+            if accepts?("text/vnd.turbo-stream.html")
+              _message = \{{message}} || {{message}}
+              %body = render "src/views/pages/generic.html.slang"
+              %body = %Q|<turbo-stream action="\{{operation.id}}" target="\{{target.id}}"><template>#{%body}</template></turbo-stream>|
+              halt env, status_code: \{{code}} || {{code}}, response: %body
+            end
+          \{% end %}
           accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
           halt env, status_code: \{{code}} || {{code}}, response: ({msg: (\{{message}} || {{message}}).downcase}.to_json)
         \{% end %}
@@ -119,6 +144,7 @@ module Ktistec
     def_response_helper(conflict, "Conflict", 409)
     def_response_helper(unprocessable_entity, "Unprocessable Entity", 422)
     def_response_helper(server_error, "Server Error", 500)
+    def_response_helper(bad_gateway, "Bad Gateway", 502)
 
     # Don't authenticate specified handlers.
     #

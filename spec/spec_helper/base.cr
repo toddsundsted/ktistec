@@ -1,6 +1,7 @@
 require "spectator"
 require "http/request"
 require "xml/node"
+require "json"
 
 require "../../src/framework"
 
@@ -12,6 +13,10 @@ class String
   def ==(other : XML::Node)
     other.content == self
   end
+
+  def ==(other : JSON::Any)
+    other.raw == self
+  end
 end
 
 class Regex
@@ -21,6 +26,10 @@ class Regex
 
   def ==(other : XML::Node)
     !!(other.content =~ self)
+  end
+
+  def ==(other : JSON::Any)
+    !!(other.raw =~ self)
   end
 end
 

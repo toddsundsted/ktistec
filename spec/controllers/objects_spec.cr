@@ -2,6 +2,7 @@ require "../../src/controllers/objects"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"
+require "../spec_helper/network"
 
 Spectator.describe ObjectsController do
   setup_spec
@@ -40,9 +41,9 @@ Spectator.describe ObjectsController do
     local: true
   )
 
-  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
+  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
-  FORM_DATA = HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"}
+  FORM_DATA = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html", "Content-Type" => "application/x-www-form-urlencoded"}
   JSON_DATA = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
 
   describe "POST /objects" do
@@ -919,6 +920,102 @@ Spectator.describe ObjectsController do
       it "returns 404 if object does not exist" do
         post "/remote/objects/999999/unblock"
         expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/fetch" do
+    it "returns 401 if not authorized" do
+      post "/remote/objects/fetch"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      let_build(:object)
+
+      before_each do
+        HTTP::Client.objects << object
+        HTTP::Client.actors << object.attributed_to
+      end
+
+      it "succeeds" do
+        post "/remote/objects/fetch", FORM_DATA, "iri=#{URI.encode_www_form(object.iri)}"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "succeeds" do
+        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"#{object.iri}"}|
+        expect(response.status_code).to eq(302)
+      end
+
+      it "makes a request fetch the object" do
+        post "/remote/objects/fetch", FORM_DATA, "iri=#{URI.encode_www_form(object.iri)}"
+        expect(HTTP::Client.requests).to have("GET #{object.iri}")
+      end
+
+      it "makes a request fetch the object" do
+        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"#{object.iri}"}|
+        expect(HTTP::Client.requests).to have("GET #{object.iri}")
+      end
+
+      it "makes a request to fetch the actor" do
+        post "/remote/objects/fetch", FORM_DATA, "iri=#{URI.encode_www_form(object.iri)}"
+        expect(HTTP::Client.requests).to have("GET #{object.attributed_to.iri}")
+      end
+
+      it "makes a request to fetch the actor" do
+        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"#{object.iri}"}|
+        expect(HTTP::Client.requests).to have("GET #{object.attributed_to.iri}")
+      end
+
+      it "renders an error message if hostname lookup fails" do
+        post "/remote/objects/fetch", FORM_DATA, "iri=https://remote/socket-addrinfo-error"
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'message')]")).to have(/hostname lookup fail/i)
+      end
+
+      it "renders an error message if hostname lookup fails" do
+        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"https://remote/socket-addrinfo-error"}|
+        expect(JSON.parse(response.body).dig("msg")).to eq(/hostname lookup fail/i)
+      end
+
+      it "renders an error message if can't connect to host" do
+        post "/remote/objects/fetch", FORM_DATA, "iri=https://remote/socket-connect-error"
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'message')]")).to have(/could not connect/i)
+      end
+
+      it "renders an error message if can't connect to host" do
+        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"https://remote/socket-connect-error"}|
+        expect(JSON.parse(response.body).dig("msg")).to eq(/could not connect/i)
+      end
+
+      context "if object has been deleted" do
+        before_each { object.assign(iri: "https://remote/returns-404") }
+
+        it "renders an error message if post not found" do
+          post "/remote/objects/fetch", FORM_DATA, "iri=#{URI.encode_www_form(object.iri)}"
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'message')]")).to have(/post could not be found/i)
+        end
+
+        it "renders an error message if post not found" do
+          post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"#{object.iri}"}|
+          expect(JSON.parse(response.body).dig("msg")).to eq(/post could not be found/i)
+        end
+      end
+
+      context "if author has been deleted" do
+        before_each { HTTP::Client.objects << object.assign(attributed_to_iri: "https://remote/returns-404") }
+
+        it "renders an error message if post's author not found" do
+          post "/remote/objects/fetch", FORM_DATA, "iri=#{URI.encode_www_form(object.iri)}"
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'message')]")).to have(/author could not be found/i)
+        end
+
+        it "renders an error message if post's author not found" do
+          post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"#{object.iri}"}|
+          expect(JSON.parse(response.body).dig("msg")).to eq(/author could not be found/i)
+        end
       end
     end
   end

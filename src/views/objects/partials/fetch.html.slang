@@ -2,6 +2,8 @@
   .label
     i.user.outline.icon
   .content
+    - if message
+      .ui.error.message = message
     p: em
       | The replied to post (
       a href=iri target="_blank" link

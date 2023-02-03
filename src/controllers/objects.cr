@@ -137,6 +137,33 @@ class ObjectsController
     redirect back_path
   end
 
+  post "/remote/objects/fetch" do |env|
+    params = accepts?("text/html") ? env.params.body : env.params.json
+
+    iri = params["iri"].to_s
+
+    begin
+      message = nil
+      unless (object = ActivityPub::Object.dereference?(env.account.actor, iri))
+        message = "The post could not be found or could not be retrieved."
+      end
+      unless message || (object && object.attributed_to?(env.account.actor, dereference: true))
+        message = "The post's author could not be found or could not be retrieved."
+      end
+    rescue Socket::Addrinfo::Error
+      message = "There was a hostname lookup failure and the post could not be retrieved."
+    rescue Socket::ConnectError
+      message = "The server could not connect to the remote host and the post could not be retrieved."
+    end
+
+    if message
+      bad_gateway "objects/partials/fetch", operation: "replace", target: "thread-fetch"
+    end
+
+    object.not_nil!.save
+    redirect back_path
+  end
+
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
     {

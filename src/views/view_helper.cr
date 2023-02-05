@@ -371,6 +371,18 @@ module Ktistec::ViewHelper
     %Q|<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">|
   end
 
+  macro params_to_inputs(params, exclude exclude_ = nil, include include_ = nil)
+    {{params}}.map do |%name, %value|
+      if (%exclude = {{exclude_}})
+        next if %exclude.includes?(%name)
+      end
+      if (%include = {{include_}})
+        next unless %include.includes?(%name)
+      end
+      %Q|<input type="hidden" name="#{%name}" value="#{%value}">|
+    end.join
+  end
+
   ## JSON helpers
 
   macro error_block(model, comma = true)

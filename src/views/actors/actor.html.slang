@@ -11,7 +11,7 @@
     a.item href=actor_relationships_path(actor, "following") Following
     a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"
       i.horizontal.sliders.icon
-      form.menu data-controller="checkbox-submit" data-turbo-frame="main-timeline" data-turbo-action="advance"
+      form.menu data-controller="checkbox-submit" data-turbo-frame="main-timeline" data-turbo-action="replace"
         == params_to_inputs(env.params.query, exclude: ["filters"])
         .item
           .ui.slider.checkbox

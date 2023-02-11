@@ -167,6 +167,11 @@ module ActivityPub
       (published || created_at).in(timezone)
     end
 
+    # NOTE: in the following three queries, the query planner does not
+    # always pick the optimal query plan. use cross joins to force
+    # sqlite to use a plan that has been seen to work well in
+    # practice.
+
     # Returns federated posts.
     #
     # Includes local posts. Does not include private (not visible)
@@ -174,30 +179,30 @@ module ActivityPub
     #
     def self.federated_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-          WHERE o.visible = 1
-            AND o.deleted_at is NULL
-            AND o.blocked_at is NULL
-            AND t.deleted_at IS NULL
-            AND t.blocked_at IS NULL
-            AND o.id NOT IN (
-               SELECT o.id
-                 FROM objects AS o
-                 JOIN actors AS t
-                   ON t.iri = o.attributed_to_iri
-                WHERE o.visible = 1
-                  AND o.deleted_at is NULL
-                  AND o.blocked_at is NULL
-                  AND t.deleted_at IS NULL
-                  AND t.blocked_at IS NULL
-             ORDER BY o.published DESC
-                LIMIT ?
-            )
-       ORDER BY o.published DESC
-          LIMIT ?
+          SELECT #{Object.columns(prefix: "o")}
+            FROM objects AS o
+      CROSS JOIN actors AS t
+              ON t.iri = o.attributed_to_iri
+           WHERE o.visible = 1
+             AND o.deleted_at is NULL
+             AND o.blocked_at is NULL
+             AND t.deleted_at IS NULL
+             AND t.blocked_at IS NULL
+             AND o.id NOT IN (
+                SELECT o.id
+                  FROM objects AS o
+            CROSS JOIN actors AS t
+                    ON t.iri = o.attributed_to_iri
+                 WHERE o.visible = 1
+                   AND o.deleted_at is NULL
+                   AND o.blocked_at is NULL
+                   AND t.deleted_at IS NULL
+                   AND t.blocked_at IS NULL
+              ORDER BY o.published DESC
+                 LIMIT ?
+             )
+        ORDER BY o.published DESC
+           LIMIT ?
       QUERY
       Object.query_and_paginate(query, page: page, size: size)
     end
@@ -208,50 +213,50 @@ module ActivityPub
     #
     def self.public_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = "#{Relationship::Content::Outbox}"
-           JOIN accounts AS c
-             ON c.iri = r.from_iri
-          WHERE o.visible = 1
-            AND o.in_reply_to_iri IS NULL
-            AND o.deleted_at IS NULL
-            AND o.blocked_at IS NULL
-            AND t.deleted_at IS NULL
-            AND t.blocked_at IS NULL
-            AND a.undone_at IS NULL
-            AND o.id NOT IN (
-               SELECT DISTINCT o.id
-                 FROM objects AS o
-                 JOIN actors AS t
-                   ON t.iri = o.attributed_to_iri
-                 JOIN activities AS a
-                   ON a.object_iri = o.iri
-                  AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
-                 JOIN relationships AS r
-                   ON r.to_iri = a.iri
-                  AND r.type = "#{Relationship::Content::Outbox}"
-                 JOIN accounts AS c
-                   ON c.iri = r.from_iri
-                WHERE o.visible = 1
-                  AND o.in_reply_to_iri IS NULL
-                  AND o.deleted_at IS NULL
-                  AND o.blocked_at IS NULL
-                  AND t.deleted_at IS NULL
-                  AND t.blocked_at IS NULL
-                  AND a.undone_at IS NULL
-             ORDER BY r.created_at DESC
-                LIMIT ?
-            )
-         ORDER BY r.created_at DESC
-            LIMIT ?
+          SELECT DISTINCT #{Object.columns(prefix: "o")}
+            FROM accounts AS c
+      CROSS JOIN relationships AS r
+              ON r.from_iri = c.iri
+             AND r.type = "#{Relationship::Content::Outbox}"
+      CROSS JOIN activities AS a
+              ON a.iri = r.to_iri
+             AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+      CROSS JOIN objects AS o
+              ON o.iri = a.object_iri
+            JOIN actors AS t
+              ON t.iri = o.attributed_to_iri
+           WHERE o.visible = 1
+             AND o.in_reply_to_iri IS NULL
+             AND o.deleted_at IS NULL
+             AND o.blocked_at IS NULL
+             AND t.deleted_at IS NULL
+             AND t.blocked_at IS NULL
+             AND a.undone_at IS NULL
+             AND o.id NOT IN (
+                SELECT DISTINCT o.id
+                  FROM accounts AS c
+            CROSS JOIN relationships AS r
+                    ON r.from_iri = c.iri
+                   AND r.type = "#{Relationship::Content::Outbox}"
+            CROSS JOIN activities AS a
+                    ON a.iri = r.to_iri
+                   AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+            CROSS JOIN objects AS o
+                    ON o.iri = a.object_iri
+                  JOIN actors AS t
+                    ON t.iri = o.attributed_to_iri
+                 WHERE o.visible = 1
+                   AND o.in_reply_to_iri IS NULL
+                   AND o.deleted_at IS NULL
+                   AND o.blocked_at IS NULL
+                   AND t.deleted_at IS NULL
+                   AND t.blocked_at IS NULL
+                   AND a.undone_at IS NULL
+              ORDER BY r.created_at DESC
+                 LIMIT ?
+             )
+          ORDER BY r.created_at DESC
+             LIMIT ?
       QUERY
       Object.query_and_paginate(query, page: page, size: size)
     end
@@ -262,25 +267,25 @@ module ActivityPub
     #
     def self.public_posts_count
       query = <<-QUERY
-         SELECT COUNT(DISTINCT o.id)
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = "#{Relationship::Content::Outbox}"
-           JOIN accounts AS c
-             ON c.iri = r.from_iri
-          WHERE o.visible = 1
-            AND o.in_reply_to_iri IS NULL
-            AND o.deleted_at IS NULL
-            AND o.blocked_at IS NULL
-            AND t.deleted_at IS NULL
-            AND t.blocked_at IS NULL
-            AND a.undone_at IS NULL
+          SELECT COUNT(DISTINCT o.id)
+            FROM accounts AS c
+      CROSS JOIN relationships AS r
+              ON r.from_iri = c.iri
+             AND r.type = "#{Relationship::Content::Outbox}"
+      CROSS JOIN activities AS a
+              ON a.iri = r.to_iri
+             AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+      CROSS JOIN objects AS o
+              ON o.iri = a.object_iri
+            JOIN actors AS t
+              ON t.iri = o.attributed_to_iri
+           WHERE o.visible = 1
+             AND o.in_reply_to_iri IS NULL
+             AND o.deleted_at IS NULL
+             AND o.blocked_at IS NULL
+             AND t.deleted_at IS NULL
+             AND t.blocked_at IS NULL
+             AND a.undone_at IS NULL
       QUERY
       Ktistec.database.scalar(query).as(Int64)
     end

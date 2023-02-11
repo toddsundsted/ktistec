@@ -578,6 +578,11 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
+    # NOTE: in the following two queries, the query planner does not
+    # always pick the optimal query plan. use cross joins to force
+    # sqlite to use a plan that has been seen to work well in
+    # practice.
+
     # Returns objects in the actor's timeline.
     #
     # Meant to be called on local (not cached) actors.
@@ -602,64 +607,66 @@ module ActivityPub
           %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN relationships AS r
-             ON r.to_iri = o.iri
-            AND r.type = "#{Relationship::Content::Timeline}"
-      LEFT JOIN activities AS a ON a.id = (
-                  SELECT a.id
-                    FROM activities AS a
-                    JOIN relationships AS l
-                      ON l.to_iri = a.iri
-                     AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-                   WHERE l.from_iri = ?
-                     AND a.object_iri = o.iri
-                     AND a.undone_at IS NULL
-                ORDER BY a.created_at ASC
-                   LIMIT 1
-                )
-          WHERE r.from_iri = ?
-            #{inclusion}
-            #{exclude_replies}
-            AND o.deleted_at IS NULL
-            AND o.blocked_at IS NULL
-            AND t.deleted_at IS NULL
-            AND t.blocked_at IS NULL
-            AND o.id NOT IN (
-               SELECT o.id
-                 FROM objects AS o
-                 JOIN actors AS t
-                   ON t.iri = o.attributed_to_iri
-                 JOIN relationships AS r
-                   ON r.to_iri = o.iri
-                  AND r.type = "#{Relationship::Content::Timeline}"
-            LEFT JOIN activities AS a ON a.id = (
-                        SELECT a.id
-                          FROM activities AS a
-                          JOIN relationships AS l
-                            ON l.to_iri = a.iri
-                           AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-                         WHERE l.from_iri = ?
-                           AND a.object_iri = o.iri
-                           AND a.undone_at IS NULL
-                      ORDER BY a.created_at ASC
-                         LIMIT 1
-                      )
-                WHERE r.from_iri = ?
-                  #{inclusion}
-                  #{exclude_replies}
-                  AND o.deleted_at IS NULL
-                  AND o.blocked_at IS NULL
-                  AND t.deleted_at IS NULL
-                  AND t.blocked_at IS NULL
-             ORDER BY r.created_at DESC
-                LIMIT ?
-            )
-       ORDER BY r.created_at DESC
-          LIMIT ?
+          SELECT #{Object.columns(prefix: "o")}
+            FROM relationships AS r
+      CROSS JOIN objects AS o
+              ON o.iri = r.to_iri
+              #{exclude_replies}
+      CROSS JOIN actors AS t
+              ON t.iri = o.attributed_to_iri
+       LEFT JOIN activities AS a
+              ON a.id = (
+                   SELECT a.id
+                     FROM activities AS a
+                     JOIN relationships AS l
+                       ON l.to_iri = a.iri
+                      AND l.from_iri = ?
+                      AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+                    WHERE a.object_iri = o.iri
+                      AND a.undone_at IS NULL
+                 ORDER BY a.created_at ASC
+                    LIMIT 1
+                 )
+           WHERE r.from_iri = ?
+             AND r.type = "#{Relationship::Content::Timeline}"
+             #{inclusion}
+             AND o.deleted_at IS NULL
+             AND o.blocked_at IS NULL
+             AND t.deleted_at IS NULL
+             AND t.blocked_at IS NULL
+             AND o.id NOT IN (
+                SELECT o.id
+                  FROM relationships AS r
+            CROSS JOIN objects AS o
+                    ON o.iri = r.to_iri
+                    #{exclude_replies}
+            CROSS JOIN actors AS t
+                    ON t.iri = o.attributed_to_iri
+             LEFT JOIN activities AS a
+                    ON a.id = (
+                         SELECT a.id
+                           FROM activities AS a
+                           JOIN relationships AS l
+                             ON l.to_iri = a.iri
+                            AND l.from_iri = ?
+                            AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+                          WHERE a.object_iri = o.iri
+                            AND a.undone_at IS NULL
+                       ORDER BY a.created_at ASC
+                          LIMIT 1
+                       )
+                 WHERE r.from_iri = ?
+                   AND r.type = "#{Relationship::Content::Timeline}"
+                   #{inclusion}
+                   AND o.deleted_at IS NULL
+                   AND o.blocked_at IS NULL
+                   AND t.deleted_at IS NULL
+                   AND t.blocked_at IS NULL
+              ORDER BY r.created_at DESC
+                 LIMIT ?
+             )
+        ORDER BY r.created_at DESC
+           LIMIT ?
       QUERY
       Object.query_and_paginate(query, self.iri, self.iri, self.iri, self.iri, page: page, size: size)
     end
@@ -682,33 +689,34 @@ module ActivityPub
           %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
-         SELECT count(*)
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN relationships AS r
-             ON r.to_iri = o.iri
-            AND r.type = "#{Relationship::Content::Timeline}"
-      LEFT JOIN activities AS a ON a.id = (
-                  SELECT a.id
-                    FROM activities AS a
-                    JOIN relationships AS l
-                      ON l.to_iri = a.iri
-                     AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-                   WHERE l.from_iri = ?
-                     AND a.object_iri = o.iri
-                     AND a.undone_at IS NULL
-                ORDER BY a.created_at ASC
-                   LIMIT 1
-                )
-          WHERE r.from_iri = ?
-            #{inclusion}
-            #{exclude_replies}
-            AND o.deleted_at IS NULL
-            AND o.blocked_at IS NULL
-            AND t.deleted_at IS NULL
-            AND t.blocked_at IS NULL
-            AND r.created_at > ?
+          SELECT count(o.id)
+            FROM relationships AS r
+      CROSS JOIN objects AS o
+              ON o.iri = r.to_iri
+              #{exclude_replies}
+      CROSS JOIN actors AS t
+              ON t.iri = o.attributed_to_iri
+       LEFT JOIN activities AS a
+              ON a.id = (
+                   SELECT a.id
+                     FROM activities AS a
+                     JOIN relationships AS l
+                       ON l.to_iri = a.iri
+                      AND l.from_iri = ?
+                      AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
+                    WHERE a.object_iri = o.iri
+                      AND a.undone_at IS NULL
+                 ORDER BY a.created_at ASC
+                    LIMIT 1
+                 )
+           WHERE r.from_iri = ?
+             AND r.type = "#{Relationship::Content::Timeline}"
+             #{inclusion}
+             AND o.deleted_at IS NULL
+             AND o.blocked_at IS NULL
+             AND t.deleted_at IS NULL
+             AND t.blocked_at IS NULL
+             AND r.created_at > ?
       QUERY
       Ktistec.database.scalar(query, iri, iri, since).as(Int64)
     end

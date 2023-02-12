@@ -4,6 +4,7 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 ### Added
 - Support manually fetching posts that are missing from threads.
+- Expose the /everything endpoint.
 
 ### Fixed
 - Add ellipsis to Mastodon marked-up URLs in content.

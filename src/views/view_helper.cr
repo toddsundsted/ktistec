@@ -454,6 +454,10 @@ module Ktistec::ViewHelper
     "/"
   end
 
+  macro everything_path
+    "/everything"
+  end
+
   macro sessions_path
     "/sessions"
   end

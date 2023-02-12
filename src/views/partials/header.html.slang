@@ -3,9 +3,15 @@ nav.ui.top.fixed.inverted.navigation.menu
     - if (_account = env.account?)
       a.item href=actor_path(_account) Home
       a.item href=search_path Search
-      a.item href=settings_path Settings
-      a.item href=filters_path Filters
-      a.item href=metrics_path Metrics
+      a.item href=everything_path Everything
+      .compact.menu
+        .ui.simple.dropdown.item
+          | Advanced
+          i.dropdown.icon
+          .menu
+            a.item href=settings_path Settings
+            a.item href=filters_path Filters
+            a.item href=metrics_path Metrics
       .right.menu
         == form_tag(nil, sessions_path, method: "DELETE", class: "form") do
           .ui.action.input

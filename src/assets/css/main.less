@@ -12,6 +12,9 @@ body { display: flex; flex-direction: column; }
 /* remove visible outlines on focused menu items */
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 
+/* compact menus should be flex, too */
+.ui > .compact.menu { display: flex; }
+
 /** menu **/
 .ui.secondary.menu {
     margin-bottom: 0;

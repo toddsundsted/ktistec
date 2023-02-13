@@ -1,3 +1,5 @@
+- content_for "title" do
+  | Everything
 h1 Everything
 p
   | This page shows every post that has arrived at #{Ktistec.site},

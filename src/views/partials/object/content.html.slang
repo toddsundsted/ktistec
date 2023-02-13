@@ -141,6 +141,11 @@ crystal:
         == form_button block_object_path(object), button_class: "ui button mini dangerous iconic", button_data: {"modal": "block.object", "controller": "modal-action", "action": "click->modal-action#show"} do
           i.times.icon
           | Block
+      - if object.cached?
+        a.source target="_blank" href=object.display_link
+          button.ui.mini.iconic.button
+            i.external.arrow.icon
+            | Source
     - else
       - object.with_statistics!.with_replies_count!(approved_by: object.attributed_to)
       - if (c = object.replies_count) > 0 || object.in_reply_to?.try(&.approved_by?(object.attributed_to))

@@ -65,7 +65,7 @@ crystal:
       - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
         .extra.detail
           - activities.each do |activity|
-            - if activity.responds_to?(:actor?) && activity.actor?
+            - if activity.actor?
               a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
                 - if (icon = activity.actor.icon)
                   img.ui.avatar.image data-actor-id=activity.actor.id src=icon

@@ -451,6 +451,18 @@ module Ktistec
         end
       end
 
+      # Computes the hash for this instance.
+      #
+      def hash(hasher)
+        {% begin %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
+          {% for v in vs %}
+            hasher = self.{{v}}.hash(hasher)
+          {% end %}
+        {% end %}
+        hasher
+      end
+
       # Returns the table name.
       #
       def table_name

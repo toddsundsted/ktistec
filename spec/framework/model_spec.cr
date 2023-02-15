@@ -265,6 +265,20 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe "#hash" do
+    it "returns the hash" do
+      a = FooBarModel.new(foo: "Foo")
+      b = FooBarModel.new(foo: "Foo")
+      expect(a.hash).to eq(b.hash)
+    end
+
+    it "returns the hash" do
+      a = NotNilModel.new(val: "Val")
+      b = NotNilModel.new(val: "Val")
+      expect(a.hash).to eq(b.hash)
+    end
+  end
+
   describe ".empty?" do
     it "returns true" do
       expect(FooBarModel.empty?).to be_true

@@ -5,6 +5,8 @@ All notable changes to this project are documented in this file.
 ### Added
 - Support manually fetching posts that are missing from threads.
 - Expose the /everything endpoint.
+- Add link to source/origin of post. (fixes [#42](https://github.com/toddsundsted/ktistec/issues/42))
+- Render to HTML posts when content is Markdown. Improves compatibility with Peertube.
 
 ### Fixed
 - Add ellipsis to Mastodon marked-up URLs in content.

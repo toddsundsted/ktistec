@@ -60,7 +60,16 @@ crystal:
         - else
           strong = name
     .extra.text
-      == s object.content
+      crystal:
+        if (content = object.content)
+          content = case object.media_type
+            when "text/markdown"
+              Markd.to_html content
+            else
+              content
+            end
+        end
+      == s content
     - if with_detail && account
       - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
         .extra.detail

@@ -62,6 +62,22 @@ Spectator.describe "object partials" do
     let(with_detail) { false }
     let(for_thread) { nil }
 
+    context "given HTML content" do
+      before_each { object.assign(content: "<ul><li>One</li><li>Two</li></ul>", media_type: "text/html") }
+
+      it "renders the content as is" do
+        expect(subject.xpath_nodes("//ul/li/text()")).to contain_exactly("One", "Two")
+      end
+    end
+
+    context "given Markdown content" do
+      before_each { object.assign(content: "* One\n* Two", media_type: "text/markdown") }
+
+      it "renders the content as HTML" do
+        expect(subject.xpath_nodes("//ul/li/text()")).to contain_exactly("One", "Two")
+      end
+    end
+
     # threads
 
     it "does not render a button to the threaded conversation" do

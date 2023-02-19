@@ -27,6 +27,10 @@ class HTTP::Server::Context
     end
   end
 
+  def turbo_frame?
+    @request.headers.has_key?("Turbo-Frame")
+  end
+
   def created(url, status_code = nil, *, body = nil)
     @response.headers.add("Location", url)
     @response.status_code = status_code.nil? ? accepts?("text/html") ? 302 : 201 : status_code
@@ -48,6 +52,10 @@ module Ktistec
 
     macro accepts?(*mime_type)
       env.accepts?({{*mime_type}})
+    end
+
+    macro turbo_frame?
+      env.turbo_frame?
     end
 
     # Redirect and end processing.

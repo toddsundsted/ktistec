@@ -8,6 +8,7 @@ class FooBarController
   skip_auth [
     "/foo/bar/host",
     "/foo/bar/accepts",
+    "/foo/bar/turbo-frame",
     "/foo/bar/created",
     "/foo/bar/redirect",
     "/foo/bar/ok"
@@ -24,6 +25,14 @@ class FooBarController
       ok "text"
     elsif accepts?("application/ld+json", "application/activity+json", "application/json")
       ok "json"
+    end
+  end
+
+  get "/foo/bar/turbo-frame" do |env|
+    if turbo_frame?
+      ok "turbo-frame"
+    else
+      ok
     end
   end
 
@@ -78,6 +87,18 @@ Spectator.describe Ktistec::Controller do
       get "/foo/bar/accepts", HTTP::Headers{"Accept" => "application/json"}
       expect(response.headers["Content-Type"]).to eq("application/json")
       expect(JSON.parse(response.body)["msg"]).to eq("json")
+    end
+  end
+
+  describe "post /foo/bar/turbo-frame" do
+    it "responds with turbo-frame" do
+      get "/foo/bar/turbo-frame", HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "foo-bar"}
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).to eq("turbo-frame")
+    end
+
+    it "does not respond with turbo-frame" do
+      get "/foo/bar/turbo-frame", HTTP::Headers{"Accept" => "text/html"}
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).not_to eq("turbo-frame")
     end
   end
 

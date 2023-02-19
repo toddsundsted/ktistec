@@ -8,7 +8,6 @@ class FooBarController
   skip_auth [
     "/foo/bar/host",
     "/foo/bar/accepts",
-    "/foo/bar/xhr",
     "/foo/bar/created",
     "/foo/bar/redirect",
     "/foo/bar/ok"
@@ -25,14 +24,6 @@ class FooBarController
       ok "text"
     elsif accepts?("application/ld+json", "application/activity+json", "application/json")
       ok "json"
-    end
-  end
-
-  get "/foo/bar/xhr" do |env|
-    if xhr?
-      ok "xhr"
-    else
-      ok
     end
   end
 
@@ -90,27 +81,10 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "get /foo/bar/xhr" do
-    it "responds with xhr" do
-      get "/foo/bar/xhr", HTTP::Headers{"Accept" => "text/html", "X-Requested-With" => "XMLHttpRequest"}
-      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).to eq("xhr")
-    end
-
-    it "does not respond with xhr" do
-      get "/foo/bar/xhr", HTTP::Headers{"Accept" => "text/html"}
-      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).not_to eq("xhr")
-    end
-  end
-
   describe "get /foo/bar/created" do
     it "redirects with 302" do
       get "/foo/bar/created", HTTP::Headers{"Accept" => "text/html"}
       expect(response.status_code).to eq(302)
-    end
-
-    it "redirects with 201" do
-      get "/foo/bar/created", HTTP::Headers{"Accept" => "text/html", "X-Requested-With" => "XMLHttpRequest"}
-      expect(response.status_code).to eq(201)
     end
 
     it "redirects with 201" do

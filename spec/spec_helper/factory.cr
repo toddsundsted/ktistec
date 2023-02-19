@@ -234,6 +234,13 @@ def point_factory(clazz = Point, **options)
   clazz.new(**options)
 end
 
+# filter term factory
+
+def filter_term_factory(clazz = FilterTerm, actor_id = nil, actor = false, **options)
+  actor = actor_factory(local: true) unless actor_id || actor.nil? || actor
+  clazz.new(**{actor_id: actor_id, actor: actor}.merge(options))
+end
+
 # account factory
 
 require "../../src/models/account"

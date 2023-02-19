@@ -186,6 +186,52 @@ Spectator.describe ActivityPub::Actor do
     JSON
   end
 
+  describe ".map" do
+    let(json) { super.gsub(/"icon": {[^}]+}/, icon) }
+
+    context "given an array of icons with width and height" do
+      let(icon) do
+        <<-ICON
+          "icon": [{
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "height": 40, "width": 40,
+            "url": "first link"
+          }, {
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "height": 120, "width": 120,
+            "url": "second link"
+          }]
+        ICON
+      end
+
+      it "picks the largest icon" do
+        expect(described_class.map(json)["icon"]).to eq("second link")
+      end
+    end
+
+    context "given an array of icons" do
+      let(icon) do
+        <<-ICON
+          "icon": [{
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "url": "first link"
+          }, {
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "url": "second link"
+          }]
+        ICON
+      end
+
+      it "picks the first icon" do
+        expect(described_class.map(json)["icon"]).to eq("first link")
+      end
+    end
+  end
+
   describe ".from_json_ld" do
     it "instantiates the subclass" do
       actor = described_class.from_json_ld(json)
@@ -469,7 +515,7 @@ Spectator.describe ActivityPub::Actor do
         visible: false
       )
       let_create!(
-        :outbox_relationship, named: relationship{{index}},
+        :outbox_relationship, named: nil,
         owner: subject,
         activity: activity{{index}},
         confirmed: true
@@ -581,7 +627,7 @@ Spectator.describe ActivityPub::Actor do
         visible: false
       )
       let_create!(
-        :inbox_relationship, named: relationship{{index}},
+        :inbox_relationship, named: nil,
         owner: subject,
         activity: activity{{index}},
         confirmed: true
@@ -781,11 +827,7 @@ Spectator.describe ActivityPub::Actor do
       let_build(:actor, named: actor{{index}})
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
       let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(
-        :outbox_relationship, named: relationship{{index}},
-        owner: subject,
-        activity: activity{{index}}
-      )
+      let_create!(:outbox_relationship, named: nil, owner: subject, activity: activity{{index}})
     end
 
     post(1)
@@ -855,11 +897,7 @@ Spectator.describe ActivityPub::Actor do
       let_build(:actor, named: actor{{index}})
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
       let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(
-        :outbox_relationship, named: relationship{{index}},
-        owner: subject,
-        activity: activity{{index}}
-      )
+      let_create!(:outbox_relationship, named: nil, owner: subject, activity: activity{{index}})
     end
 
     post(1)
@@ -929,11 +967,8 @@ Spectator.describe ActivityPub::Actor do
       let_build(:actor, named: actor{{index}})
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
       let_create!(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
-      let_create!(
-        :timeline, named: relationship{{index}},
-        owner: subject,
-        object: object{{index}}
-      )
+      let_create!(:inbox_relationship, named: nil, owner: subject, activity: activity{{index}})
+      let_create!(:timeline, named: nil, owner: subject, object: object{{index}})
     end
 
     post(1)
@@ -977,13 +1012,32 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out posts not associated with included activities" do
+      expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([object5, object4])
+      expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
+    end
+
+    it "filters out posts not associated with included activities" do
       expect(subject.timeline(inclusion: [ActivityPub::Activity::Create], page: 1, size: 2)).to be_empty
       expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Create])).to eq(0)
     end
 
-    it "filters out posts not associated with included activities" do
-      expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([object5, object4])
-      expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
+    context "given a prior create not in timeline" do
+      let_create!(:create, actor: actor5, object: object5)
+
+      it "includes announcements by default" do
+        expect(subject.timeline(page: 1, size: 2)).to eq([object5, object4])
+        expect(subject.timeline(since: since)).to eq(5)
+      end
+
+      it "includes announcements" do
+        expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([object5, object4])
+        expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
+      end
+
+      it "filters out announcements" do
+        expect(subject.timeline(inclusion: [ActivityPub::Activity::Create], page: 1, size: 2)).to be_empty
+        expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Create])).to eq(0)
+      end
     end
 
     context "given a reply" do
@@ -1005,6 +1059,28 @@ Spectator.describe ActivityPub::Actor do
       end
     end
 
+    context "given a local post" do
+      let_build(:object, attributed_to: subject)
+      let_create!(:create, actor: subject, object: object)
+      let_create!(:outbox_relationship, owner: subject, activity: create)
+      let_create!(:timeline, owner: subject, object: object)
+
+      it "includes the post" do
+        expect(subject.timeline(page: 1, size: 2)).to eq([object, object5])
+        expect(subject.timeline(since: since)).to eq(6)
+      end
+    end
+
+    context "given a post without an associated activity" do
+      let_build(:object, attributed_to: subject)
+      let_create!(:timeline, owner: subject, object: object)
+
+      it "includes the post" do
+        expect(subject.timeline(page: 1, size: 2)).to eq([object, object5])
+        expect(subject.timeline(since: since)).to eq(6)
+      end
+    end
+
     it "paginates the results" do
       expect(subject.timeline(page: 1, size: 2)).to eq([object5, object4])
       expect(subject.timeline(page: 3, size: 2)).to eq([object1])
@@ -1018,11 +1094,7 @@ Spectator.describe ActivityPub::Actor do
     macro notification(index)
       let_build(:actor, named: actor{{index}})
       let_build(:activity, named: activity{{index}}, actor: actor{{index}})
-      let_create!(
-        :notification, named: relationship{{index}},
-        owner: subject,
-        activity: activity{{index}}
-      )
+      let_create!(:notification, named: nil, owner: subject, activity: activity{{index}})
     end
 
     notification(1)
@@ -1110,6 +1182,31 @@ Spectator.describe ActivityPub::Actor do
 
       it "unapproves the object" do
         expect{subject.unapprove(object)}.to change{object.approved_by?(subject)}
+      end
+    end
+  end
+
+  context "terms" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    let_create!(:filter_term, named: term1, actor: subject, term: "one")
+    let_create!(:filter_term, named: term2, actor: subject, term: "two")
+    let_create!(:filter_term, named: term3, actor: subject, term: "three")
+    let_create!(:filter_term, named: term4, actor: subject, term: "four")
+    let_create!(:filter_term, named: term5, actor: subject, term: "five")
+    let_create!(:filter_term, term: "term")
+
+    pre_condition { expect(FilterTerm.count).to eq(6) }
+
+    describe "#terms" do
+      it "instantiates the correct subclass" do
+        expect(subject.terms(page: 1, size: 2).first).to be_a(FilterTerm)
+      end
+
+      it "paginates the results" do
+        expect(subject.terms(page: 1, size: 2)).to eq([term1, term2])
+        expect(subject.terms(page: 3, size: 2)).to eq([term5])
+        expect(subject.terms(page: 3, size: 2).more?).not_to be_true
       end
     end
   end

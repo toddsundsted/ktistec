@@ -80,7 +80,9 @@ class SettingsController
       "footer" => params["footer"]?.try(&.to_s.presence),
       "site" => params["site"]?.try(&.to_s.presence),
       "attachments" => reduce_attachments(params)
-    }.compact
+    }.reject do |k, v|
+      v.presence.nil? && k.in?("timezone", "password", "site")
+    end
   end
 
   private def self.reduce_attachments(params)

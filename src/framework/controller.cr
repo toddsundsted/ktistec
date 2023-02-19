@@ -50,118 +50,6 @@ module Ktistec
       Ktistec.host
     end
 
-    macro home_path
-      "/"
-    end
-
-    macro search_path
-      "/search"
-    end
-
-    macro sessions_path
-      "/sessions"
-    end
-
-    macro settings_path
-      "/settings"
-    end
-
-    macro metrics_path
-      "/metrics"
-    end
-
-    macro back_path
-      env.request.headers.fetch("Referer", "/")
-    end
-
-    macro remote_activity_path(activity = nil)
-      "/remote/activities/#{{{activity}}.try(&.id) || env.params.url["id"]}"
-    end
-
-    macro activity_path(activity = nil)
-      "/activities/#{{{activity}}.try(&.uid) || env.params.url["id"]}"
-    end
-
-    macro objects_path
-      "/objects"
-    end
-
-    macro remote_object_path(object = nil)
-      "/remote/objects/#{{{object}}.try(&.id) || env.params.url["id"]}"
-    end
-
-    macro edit_object_path(object = nil)
-      "/objects/#{{{object}}.try(&.uid) || env.params.url["id"]}/edit"
-    end
-
-    macro object_path(object = nil)
-      "/objects/#{{{object}}.try(&.uid) || env.params.url["id"]}"
-    end
-
-    macro remote_actor_path(actor = nil)
-      "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
-    end
-
-    macro actor_path(actor = nil)
-      "/actors/#{{{actor}}.try(&.uid) || env.params.url["username"]}"
-    end
-
-    macro actor_relationships_path(actor = nil, relationship = nil)
-      "#{actor_path({{actor}})}/#{{{relationship}} || env.params.url["relationship"]}"
-    end
-
-    macro actor_remote_follow_path(actor = nil)
-      "#{actor_path({{actor}})}/remote-follow"
-    end
-
-    macro outbox_path(actor = nil)
-      "#{actor_path({{actor}})}/outbox"
-    end
-
-    macro inbox_path(actor = nil)
-      "#{actor_path({{actor}})}/inbox"
-    end
-
-    macro anchor(object)
-      "object-#{{{object}}.id}"
-    end
-
-    macro thread_path(object)
-      "/objects/#{{{object}}.uid}/thread#object-#{{{object}}.id}"
-    end
-
-    macro remote_thread_path(object)
-      "/remote/objects/#{{{object}}.id}/thread#object-#{{{object}}.id}"
-    end
-
-    macro reply_path(object)
-      "/remote/objects/#{{{object}}.id}/reply"
-    end
-
-    macro approve_path(object)
-      "/remote/objects/#{{{object}}.id}/approve"
-    end
-
-    macro unapprove_path(object)
-      "/remote/objects/#{{{object}}.id}/unapprove"
-    end
-
-    macro block_actor_path(actor)
-      "/remote/actors/#{{{actor}}.id}/block"
-    end
-
-    macro unblock_actor_path(actor)
-      "/remote/actors/#{{{actor}}.id}/unblock"
-    end
-
-    macro block_object_path(object)
-      "/remote/objects/#{{{object}}.id}/block"
-    end
-
-    macro unblock_object_path(object)
-      "/remote/objects/#{{{object}}.id}/unblock"
-    end
-
     macro accepts?(*mime_type)
       env.accepts?({{*mime_type}})
     end
@@ -185,7 +73,13 @@ module Ktistec
     # Define a simple response helper.
     #
     macro def_response_helper(name, message, code)
-      macro {{name.id}}(message = nil, code = nil, basedir = "src/views")
+      macro {{name.id}}(message = nil, code = nil, basedir = "src/views", layout = nil, operation = nil, target = nil)
+        \{% if layout && (operation || target) %}
+          \{% raise "either layout may be specified, or operation and target" %}
+        \{% end %}
+        \{% if !layout && !operation && !target %}
+          \{% layout = "src/views/layouts/default.html.ecr" %}
+        \{% end %}
         \{% if message.is_a?(StringLiteral) && message.includes?('/') %}
           \{% if file_exists?("#{basedir.id}/#{message.id}.json.ecr") %}
             if accepts?("application/ld+json", "application/activity+json", "application/json")
@@ -198,9 +92,18 @@ module Ktistec
             end
           \{% end %}
           \{% if file_exists?("#{basedir.id}/#{message.id}.html.slang") %}
-            if accepts?("text/html")
-              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.slang"}}, "src/views/layouts/default.html.ecr"
-            end
+            \{% if layout %}
+              if accepts?("text/html")
+                halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.slang"}}, \{{layout}}
+              end
+            \{% end %}
+            \{% if operation && target %}
+              if accepts?("text/vnd.turbo-stream.html")
+                %body = render \{{"#{basedir.id}/#{message.id}.html.slang"}}
+                %body = %Q|<turbo-stream action="\{{operation.id}}" target="\{{target.id}}"><template>#{%body}</template></turbo-stream>|
+                halt env, status_code: \{{code}} || {{code}}, response: %body
+              end
+            \{% end %}
           \{% end %}
           \{% if file_exists?("#{basedir.id}/#{message.id}.json.ecr") %}
             accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
@@ -213,10 +116,20 @@ module Ktistec
           if accepts?("text/plain")
             halt env, status_code: \{{code}} || {{code}}, response: (\{{message}} || {{message}}).downcase
           end
-          if accepts?("text/html")
-            _message = \{{message}} || {{message}}
-            halt env, status_code: \{{code}} || {{code}}, response: render "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr"
-          end
+          \{% if layout %}
+            if accepts?("text/html")
+              _message = \{{message}} || {{message}}
+              halt env, status_code: \{{code}} || {{code}}, response: render "src/views/pages/generic.html.slang", \{{layout}}
+            end
+          \{% end %}
+          \{% if operation && target %}
+            if accepts?("text/vnd.turbo-stream.html")
+              _message = \{{message}} || {{message}}
+              %body = render "src/views/pages/generic.html.slang"
+              %body = %Q|<turbo-stream action="\{{operation.id}}" target="\{{target.id}}"><template>#{%body}</template></turbo-stream>|
+              halt env, status_code: \{{code}} || {{code}}, response: %body
+            end
+          \{% end %}
           accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
           halt env, status_code: \{{code}} || {{code}}, response: ({msg: (\{{message}} || {{message}}).downcase}.to_json)
         \{% end %}
@@ -231,6 +144,7 @@ module Ktistec
     def_response_helper(conflict, "Conflict", 409)
     def_response_helper(unprocessable_entity, "Unprocessable Entity", 422)
     def_response_helper(server_error, "Server Error", 500)
+    def_response_helper(bad_gateway, "Bad Gateway", 502)
 
     # Don't authenticate specified handlers.
     #

@@ -555,7 +555,6 @@ Spectator.describe ActorsController do
     end
   end
 
-
   describe "GET /actors/:username/drafts" do
     it "returns 401 if not authorized" do
       get "/actors/missing/drafts", ACCEPT_HTML

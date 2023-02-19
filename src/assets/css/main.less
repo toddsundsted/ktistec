@@ -12,8 +12,12 @@ body { display: flex; flex-direction: column; }
 /* remove visible outlines on focused menu items */
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 
+/* compact menus should be flex, too */
+.ui > .compact.menu { display: flex; }
+
 /** menu **/
 .ui.secondary.menu {
+    margin-bottom: 0;
     .item {
         height: 2.5em;
         > a { color: inherit; }
@@ -299,6 +303,13 @@ trix-editor {
     opacity: 1.0;
 }
 
+/** filter terms **/
+.ui.filter.term > .wildcard {
+    background-color: #eee;
+    padding: 0 0.2em;
+    margin: 0 0.1em;
+}
+
 /** from mastodon **/
 .invisible {
     font-size: 0;
@@ -306,4 +317,8 @@ trix-editor {
     display: inline-block;
     width: 0;
     height: 0;
+}
+
+.ellipsis::after {
+    content: "…";
 }

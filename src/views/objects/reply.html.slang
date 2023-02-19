@@ -15,3 +15,4 @@ section.ui.feed
       trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-change@window->trix#change input->has-content#change" data-has-content-target="input" input="input-trix-editor"
     .ui.buttons
       input.ui.disabled.primary.button data-has-content-target="button" data-action="click->multi-action#submit" type="submit" value="Reply" action=outbox_path(actor)
+br.transition.hidden

@@ -1,6 +1,8 @@
 require "benchmark"
 require "sqlite3"
 
+require "./ext/sqlite3"
+
 module Ktistec
   @@db_file : String =
     begin
@@ -176,8 +178,8 @@ module Ktistec
       def up(filename = __FILE__, &proc : Operation)
         if filename.split("/").last =~ PATTERN
           Ktistec::Database.all_migrations.tap do |all_migrations|
-            all_migrations[$1.to_i] =
-              if (definition = all_migrations[$1.to_i]?)
+            all_migrations[$1.to_i64] =
+              if (definition = all_migrations[$1.to_i64]?)
                 definition.copy_with(up: proc)
               else
                 Definition.new(name: $2, up: proc)
@@ -191,8 +193,8 @@ module Ktistec
       def down(filename = __FILE__, &proc : Operation)
         if filename.split("/").last =~ PATTERN
           Ktistec::Database.all_migrations.tap do |all_migrations|
-            all_migrations[$1.to_i] =
-              if (definition = all_migrations[$1.to_i]?)
+            all_migrations[$1.to_i64] =
+              if (definition = all_migrations[$1.to_i64]?)
                 definition.copy_with(down: proc)
               else
                 Definition.new(name: $2, down: proc)
@@ -204,7 +206,7 @@ module Ktistec
       private PATTERN = /^([0-9]+)-(.+).cr$/
     end
 
-    private alias Version = Int32
+    private alias Version = Int64
     private alias Operation = Proc(DB::Database, Nil)
 
     private record(

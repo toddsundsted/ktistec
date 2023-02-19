@@ -451,6 +451,18 @@ module Ktistec
         end
       end
 
+      # Computes the hash for this instance.
+      #
+      def hash(hasher)
+        {% begin %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
+          {% for v in vs %}
+            hasher = self.{{v}}.hash(hasher)
+          {% end %}
+        {% end %}
+        hasher
+      end
+
       # Returns the table name.
       #
       def table_name
@@ -459,15 +471,28 @@ module Ktistec
 
       # Specifies a one-to-one association with another model.
       #
-      macro belongs_to(name, primary_key = id, foreign_key = nil, class_name = nil)
+      macro belongs_to(name, primary_key = id, foreign_key = nil, class_name = nil, inverse_of = nil)
         {% foreign_key = foreign_key || "#{name}_id".id %}
         {% class_name = class_name ? class_name.id : name.stringify.camelcase.id %}
         {% union_types = class_name.split("|").map(&.strip.id) %}
         @[Assignable]
         @{{name}} : {{class_name}}?
         def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
+          _belongs_to_setter_for_{{name}}({{name}})
+        end
+        def _belongs_to_setter_for_{{name}}(@{{name}} : {{class_name}}, update_associations = true) : {{class_name}}
           changed!({{name.symbolize}})
           self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
+          {% if inverse_of %}
+            if update_associations
+              if {{name}}.responds_to?(:_has_one_setter_for_{{inverse_of}})
+                {{name}}._has_one_setter_for_{{inverse_of}}(self, false)
+              elsif {{name}}.responds_to?(:_has_many_setter_for_{{inverse_of}})
+                {{name}}._has_many_setter_for_{{inverse_of}}({{name}}.{{inverse_of}} << self, false)
+              end
+              {{name}}.clear!({{inverse_of.symbolize}})
+            end
+          {% end %}
           {{name}}
         end
         def {{name}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
@@ -501,13 +526,18 @@ module Ktistec
         @[Assignable]
         @{{name}} : Array({{class_name}})?
         def {{name}}=({{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
+          _has_many_setter_for_{{name}}({{name}})
+        end
+        def _has_many_setter_for_{{name}}({{name}} : Enumerable({{class_name}}), update_associations = true) : Enumerable({{class_name}})
           @{{name}} = {{name}}.to_a
           changed!({{name.symbolize}})
           {{name}}.each do |n|
             n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}}))
             {% if inverse_of %}
-              n.{{inverse_of}} = self
-              n.clear!({{inverse_of.symbolize}})
+              if update_associations
+                n._belongs_to_setter_for_{{inverse_of}}(self, false)
+                n.clear!({{inverse_of.symbolize}})
+              end
             {% end %}
           end
           {{name}}
@@ -532,12 +562,17 @@ module Ktistec
         @[Assignable]
         @{{name}} : {{class_name}}?
         def {{name}}=({{name}} : {{class_name}}) : {{class_name}}
+          _has_one_setter_for_{{name}}({{name}})
+        end
+        def _has_one_setter_for_{{name}}({{name}} : {{class_name}}, update_associations = true) : {{class_name}}
           @{{name}} = {{name}}
           changed!({{name.symbolize}})
           {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
           {% if inverse_of %}
-            {{name}}.{{inverse_of}} = self
-            {{name}}.clear!({{inverse_of.symbolize}})
+            if update_associations
+              {{name}}._belongs_to_setter_for_{{inverse_of}}(self, false)
+              {{name}}.clear!({{inverse_of.symbolize}})
+            end
           {% end %}
           {{name}}
         end
@@ -710,6 +745,7 @@ module Ktistec
           if self.responds_to?(:updated_at=)
             self.updated_at = Time.utc
           end
+          old = @id
           @id = Ktistec.database.exec(
             "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{conditions})",
             {% for v in vs %}
@@ -717,11 +753,32 @@ module Ktistec
             {% end %}
           ).last_insert_id
         {% end %}
-        # destroy unassociated instances
         {% begin %}
           {% ancestors = @type.ancestors << @type %}
           {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
           {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+          # update associated instances
+          if @id != old
+            {% for method in methods %}
+              {% name = method.name[13..-1] %}
+              {% if method.body[0] == :has_one && method.body[1] == :id %}
+                if (model = {{method.body.last}})
+                  model._update_property({{method.body[2].id.stringify}}, @id)
+                  model.{{method.body[2].id}} = @id
+                  model.clear!({{method.body[2]}})
+                end
+              {% elsif method.body[0] == :has_many && method.body[1] == :id %}
+                if (models = {{method.body.last}})
+                  models.each do |model|
+                    model._update_property({{method.body[2].id.stringify}}, @id)
+                    model.{{method.body[2].id}} = @id
+                    model.clear!({{method.body[2]}})
+                  end
+                end
+              {% end %}
+            {% end %}
+          end
+          # destroy unassociated instances
           if (saved_record = @saved_record)
             {% for method in methods %}
               {% name = method.name[13..-1] %}
@@ -747,6 +804,10 @@ module Ktistec
       end
 
       getter? destroyed = false
+
+      def _update_property(property, value)
+        Ktistec.database.exec("UPDATE #{table_name} SET #{property} = ? WHERE id = ?", value, @id)
+      end
 
       # Destroys the instance.
       #

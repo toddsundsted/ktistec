@@ -7,6 +7,7 @@
     - [Control over comment visibility](#control-over-comment-visibility)
     - [Pretty URLs](#pretty-urls)
     - [Followers/following](#followersfollowing)
+    - [Content filtering](#content-filtering)
     - [Blocking](#blocking)
     - [Metrics](#metrics)
   - [Prerequisites](#prerequisites)
@@ -61,6 +62,12 @@ posts.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/eaxx1q.png" width=460>
 
+In a distributed, federated system, it's not uncommon for threads to
+be incomplete. Someone you follow shares a reply to a post—you see the
+shared reply but not the original post. Threads with incomplete
+history are now noted as such, and you can fetch the missing posts
+from the top of the thread.
+
 ### @-mention and #-hashtag autocomplete
 
 Ktistec automatically converts @-mentions and #-hashtags into links,
@@ -90,6 +97,14 @@ name. Ktistec is also compatible with the "remote follow" protocol
 used by Mastodon and others.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/88hvqq.png" width=460>
+
+### Content filtering
+
+Content filters prevent undesirable content from appearing in your
+timeline and notifications. Filter terms match on the text of a post
+(ignoring any markup). Wildcards are supported.
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/wzgeti.png" width=460>
 
 ### Blocking
 

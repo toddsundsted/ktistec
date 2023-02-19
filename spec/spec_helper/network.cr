@@ -88,6 +88,10 @@ class HTTP::Client
         headers: HTTP::Headers{"Location" => "https://#{url.host}/specified-page"},
         body: ""
       )
+    when /socket-addrinfo-error/
+      raise Socket::Addrinfo::Error.from_os_error(nil, nil)
+    when /socket-connect-error/
+      raise Socket::ConnectError.from_os_error(nil, nil)
     when /returns-([0-9]{3})/
       HTTP::Client::Response.new(
         $1.to_i,

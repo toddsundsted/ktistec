@@ -1,5 +1,6 @@
 require "ecr"
 require "slang"
+require "markd"
 
 module Ktistec::ViewHelper
   module ClassMethods
@@ -52,6 +53,11 @@ module Ktistec::ViewHelper
         str
       end
     end
+
+    def wrap_filter_term(str)
+      str = str.gsub(/\\?[%_]/) { %Q|<span class="wildcard">#{$0}</span>| }
+      %Q|<span class="ui filter term">#{str}</span>|
+    end
   end
 
   macro included
@@ -72,9 +78,13 @@ module Ktistec::ViewHelper
     embed {{content}}, content_io
     content = content_io.to_s
 
-    layout_io = IO::Memory.new
-    embed {{layout}}, layout_io
-    layout_io.to_s
+    {% if layout %}
+      layout_io = IO::Memory.new
+      embed {{layout}}, layout_io
+      layout_io.to_s
+    {% else %}
+      content
+    {% end %}
   end
 
   # Render a view with the given filename.
@@ -358,6 +368,22 @@ module Ktistec::ViewHelper
     HTML
   end
 
+  macro submit_button(value = "Submit", class _class = "ui primary button")
+    %Q|<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">|
+  end
+
+  macro params_to_inputs(params, exclude exclude_ = nil, include include_ = nil)
+    {{params}}.map do |%name, %value|
+      if (%exclude = {{exclude_}})
+        next if %exclude.includes?(%name)
+      end
+      if (%include = {{include_}})
+        next unless %include.includes?(%name)
+      end
+      %Q|<input type="hidden" name="#{%name}" value="#{%value}">|
+    end.join
+  end
+
   ## JSON helpers
 
   macro error_block(model, comma = true)
@@ -389,11 +415,17 @@ module Ktistec::ViewHelper
 
   # Pluralizes the noun.
   #
+  # Important note: if the count is zero, the noun is returned as is,
+  # without a quantity (e.g. "fox" not "0 foxes").
+  #
   # For use in views:
   #     <%= pluralize(1, "fox") %>
   #
   macro pluralize(count, noun)
-    if {{count}} == 1
+    case {{count}}
+    when 0
+      {{noun}}
+    when 1
       "1 #{{{noun}}}"
     else
       "#{{{count}}} #{Ktistec::Util.pluralize({{noun}})}"
@@ -411,5 +443,131 @@ module Ktistec::ViewHelper
   #
   macro id
     Ktistec::Util.id
+  end
+
+  ## Path helpers
+
+  macro back_path
+    env.request.headers.fetch("Referer", "/")
+  end
+
+  macro home_path
+    "/"
+  end
+
+  macro everything_path
+    "/everything"
+  end
+
+  macro sessions_path
+    "/sessions"
+  end
+
+  macro search_path
+    "/search"
+  end
+
+  macro settings_path
+    "/settings"
+  end
+
+  macro filters_path
+    "/filters"
+  end
+
+  macro filter_path(filter = nil)
+    "/filters/#{{{filter}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro metrics_path
+    "/metrics"
+  end
+
+  macro remote_activity_path(activity = nil)
+    "/remote/activities/#{{{activity}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro activity_path(activity = nil)
+    "/activities/#{{{activity}}.try(&.uid) || env.params.url["id"]}"
+  end
+
+  macro anchor(object = nil)
+    "object-#{{{object}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro objects_path
+    "/objects"
+  end
+
+  macro remote_object_path(object = nil)
+    "/remote/objects/#{{{object}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro object_path(object = nil)
+    "/objects/#{{{object}}.try(&.uid) || env.params.url["id"]}"
+  end
+
+  macro remote_thread_path(object = nil)
+    "#{remote_object_path({{object}})}/thread##{anchor({{object}})}"
+  end
+
+  macro thread_path(object = nil)
+    "#{object_path({{object}})}/thread##{anchor({{object}})}"
+  end
+
+  macro edit_object_path(object = nil)
+    "#{object_path({{object}})}/edit"
+  end
+
+  macro reply_path(object = nil)
+    "#{remote_object_path({{object}})}/reply"
+  end
+
+  macro approve_path(object = nil)
+    "#{remote_object_path({{object}})}/approve"
+  end
+
+  macro unapprove_path(object = nil)
+    "#{remote_object_path({{object}})}/unapprove"
+  end
+
+  macro block_object_path(object = nil)
+    "#{remote_object_path({{object}})}/block"
+  end
+
+  macro unblock_object_path(object = nil)
+    "#{remote_object_path({{object}})}/unblock"
+  end
+
+  macro remote_actor_path(actor = nil)
+    "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
+  end
+
+  macro actor_path(actor = nil)
+    "/actors/#{{{actor}}.try(&.uid) || env.params.url["username"]}"
+  end
+
+  macro block_actor_path(actor = nil)
+    "#{remote_actor_path({{actor}})}/block"
+  end
+
+  macro unblock_actor_path(actor = nil)
+    "#{remote_actor_path({{actor}})}/unblock"
+  end
+
+  macro actor_relationships_path(actor = nil, relationship = nil)
+    "#{actor_path({{actor}})}/#{{{relationship}} || env.params.url["relationship"]}"
+  end
+
+  macro outbox_path(actor = nil)
+    actor_relationships_path({{actor}}, "outbox")
+  end
+
+  macro inbox_path(actor = nil)
+    actor_relationships_path({{actor}}, "inbox")
+  end
+
+  macro actor_remote_follow_path(actor = nil)
+    "#{actor_path({{actor}})}/remote-follow"
   end
 end

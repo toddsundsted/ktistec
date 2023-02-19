@@ -30,4 +30,21 @@ Spectator.describe "SQLite3 extensions" do
     expect(r).to eq(%Q<["one","two"]>)
     expect(c).to eq(1)
   end
+
+  context "strip" do
+    it "strips the markup" do
+      query = %q|SELECT strip("")|
+      expect(Ktistec.database.scalar(query)).to eq("")
+    end
+
+    it "strips the markup" do
+      query = %q|SELECT strip("text")|
+      expect(Ktistec.database.scalar(query)).to eq("text")
+    end
+
+    it "strips the markup" do
+      query = %q|SELECT strip('<body class="foobar"><div style="margin: inherit">line 1</div> <div>line <span>2</span></div></body>')|
+      expect(Ktistec.database.scalar(query)).to eq("line 1 line 2")
+    end
+  end
 end

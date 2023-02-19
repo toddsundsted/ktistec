@@ -105,6 +105,27 @@ module Ktistec
     end
   end
 
+  # A function operator.
+  #
+  class FunctionOperator < Operator
+    getter! left : Node, right : Array(Node)
+
+    # :inherit:
+    def led(parser : Parser, @left : Node) : self
+      @right = right = [] of Node
+      if parser.current.id != ")"
+        loop do
+          right << parser.expression(0)
+          break if parser.current.id != ","
+          parser.advance(",")
+        end
+      end
+      parser.advance(")")
+      raise Parser::SyntaxError.new(parser, "expecting identifier") unless @left.is_a?(Identifier)
+      self
+    end
+  end
+
   # A rule definition.
   #
   class RuleDefinition < Node
@@ -215,6 +236,8 @@ module Ktistec
       register("end", 0, Keyword)
       register("not", 500, PrefixOperator)
       register(".", 800, InfixOperator)
+      register("(", 700, FunctionOperator)
+      register(")")
       register(":")
       register(",")
     end
@@ -270,7 +293,7 @@ module Ktistec
     #
     def advance(id : String? = nil)
       if id && @node.try(&.id) != id
-        raise SyntaxError.new(self, "missing #{id}")
+        raise SyntaxError.new(self, "missing token: #{id}")
       end
       @node = nil
       self

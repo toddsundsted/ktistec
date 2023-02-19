@@ -1,5 +1,6 @@
 crystal:
   account = env.account?
+  timezone = account.try { |account| Time::Location.load(account.timezone) }
   if (attachments = object.attachments) && (content = object.content)
     unless content.empty?
       urls = XML.parse_html(content).xpath_nodes("//img/@src").map(&.text)
@@ -9,7 +10,6 @@ crystal:
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
   type = object.type.split("::").last.downcase
 .content data-controller="image-gallery clickable-background" data-clickable-background-href-value=href
-  - timezone = account.try { |account| Time::Location.load(account.timezone) }
   .summary
     - if object.draft?
       | draft created
@@ -60,12 +60,21 @@ crystal:
         - else
           strong = name
     .extra.text
-      == s object.content
+      crystal:
+        if (content = object.content)
+          content = case object.media_type
+            when "text/markdown"
+              Markd.to_html content
+            else
+              content
+            end
+        end
+      == s content
     - if with_detail && account
       - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
         .extra.detail
           - activities.each do |activity|
-            - if activity.responds_to?(:actor?) && activity.actor?
+            - if activity.actor?
               a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
                 - if (icon = activity.actor.icon)
                   img.ui.avatar.image data-actor-id=activity.actor.id src=icon
@@ -91,7 +100,7 @@ crystal:
         | Delete
     - elsif account
       - object.with_statistics!.with_replies_count!
-      - if (c = object.replies_count) > 0 || object.in_reply_to?
+      - if (c = object.replies_count) > 0 || object.in_reply_to_iri.presence
         a data-turbo-frame="_top" href=remote_thread_path(object)
           button.ui.mini.iconic.button
             i.comments.icon
@@ -141,6 +150,11 @@ crystal:
         == form_button block_object_path(object), button_class: "ui button mini dangerous iconic", button_data: {"modal": "block.object", "controller": "modal-action", "action": "click->modal-action#show"} do
           i.times.icon
           | Block
+      - if object.cached?
+        a.source target="_blank" href=object.display_link
+          button.ui.mini.iconic.button
+            i.external.arrow.icon
+            | Source
     - else
       - object.with_statistics!.with_replies_count!(approved_by: object.attributed_to)
       - if (c = object.replies_count) > 0 || object.in_reply_to?.try(&.approved_by?(object.attributed_to))

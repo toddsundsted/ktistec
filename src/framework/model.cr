@@ -620,12 +620,16 @@ module Ktistec
                 if %body.responds_to?(:each_with_index)
                   %body.each_with_index do |model, i|
                     unless nodes.any? { |node| model == node.model }
-                      model._serialize_graph(nodes, {{method.name[13..-1].stringify}}, i, skip_associated: false)
+                      if model.responds_to?(:_serialize_graph)
+                        model._serialize_graph(nodes, {{method.name[13..-1].stringify}}, i, skip_associated: false)
+                      end
                     end
                   end
                 else
                   unless nodes.any? { |node| %body == node.model }
-                    %body._serialize_graph(nodes, {{method.name[13..-1].stringify}}, skip_associated: false)
+                    if %body.responds_to?(:_serialize_graph)
+                      %body._serialize_graph(nodes, {{method.name[13..-1].stringify}}, skip_associated: false)
+                    end
                   end
                 end
               end

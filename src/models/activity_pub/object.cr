@@ -42,6 +42,9 @@ module ActivityPub
     belongs_to in_reply_to, class_name: ActivityPub::Object, foreign_key: in_reply_to_iri, primary_key: iri
 
     @[Persistent]
+    property thread : String?
+
+    @[Persistent]
     property replies : String?
 
     @[Persistent]
@@ -561,6 +564,41 @@ module ActivityPub
             urls << "#{Ktistec.host}#{canonical_path}"
           else
             self.urls = ["#{Ktistec.host}#{canonical_path}"]
+          end
+        end
+      end
+      # update thread
+      new_thread =
+        if self.in_reply_to_iri
+          if self.in_reply_to? && self.in_reply_to.thread
+            self.in_reply_to.thread
+          elsif self.in_reply_to? && self.in_reply_to.in_reply_to_iri
+            self.in_reply_to.in_reply_to_iri
+          else
+            self.in_reply_to_iri
+          end
+        else
+          self.iri
+        end
+      if self.thread != new_thread
+        self.thread = new_thread
+      end
+    end
+
+    def after_save
+      # update thread in replies
+      self.class.where(in_reply_to: self).each do |reply|
+        if reply.thread != self.thread
+          reply.save
+        end
+      end
+      # update thread in follow relationships
+      if self.iri != self.thread
+        Relationship::Content::Follow::Thread.where(thread: self.iri).each do |follow|
+          unless Relationship::Content::Follow::Thread.find?(actor: follow.actor, thread: self.thread)
+            follow.assign(thread: self.thread).save
+          else
+            follow.destroy
           end
         end
       end

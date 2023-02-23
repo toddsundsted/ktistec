@@ -473,6 +473,77 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#thread" do
+    let_build(:object)
+
+    it "sets thread to its iri" do
+      expect{object.save}.to change{object.thread}.to(object.iri)
+    end
+
+    context "given a reply" do
+      before_each { object.save.assign(thread: nil) }
+
+      let_build(:object, named: reply, in_reply_to: object)
+
+      context "and a thread on object" do
+        before_each { object.assign(thread: "https://somewhere") }
+
+        it "sets thread to object's thread" do
+          expect{reply.save}.to change{reply.thread}.to("https://somewhere")
+        end
+      end
+
+      context "and an in_reply_to_iri on object" do
+        before_each { object.assign(in_reply_to_iri: "https://elsewhere") }
+
+        it "sets thread to object's in_reply_to_iri" do
+          expect{reply.save}.to change{reply.thread}.to("https://elsewhere")
+        end
+      end
+
+      context "and an in_reply_to_iri on reply" do
+        before_each { reply.assign(in_reply_to_iri: "https://nowhere") }
+
+        it "sets thread to its in_reply_to_iri" do
+          expect{reply.save}.to change{reply.thread}.to("https://nowhere")
+        end
+      end
+
+      it "sets thread to object's iri" do
+        expect{reply.save}.to change{reply.thread}.to(object.iri)
+      end
+
+      context "when saving the root in a thread" do
+        before_each { reply.save }
+
+        before_each { object.assign(in_reply_to_iri: "https://anywhere", thread: "https://anywhere") }
+
+        it "sets reply's thread to object's thread" do
+          expect{object.save}.to change{ActivityPub::Object.find(reply.id).thread}.to("https://anywhere")
+        end
+      end
+    end
+
+    context "given a follow" do
+      let_create(:actor)
+      let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: object.save.thread)
+
+      def all_follows ; Relationship::Content::Follow::Thread.all end
+
+      it "updates follow relationships when thread changes" do
+        expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{all_follows.map(&.to_iri)}.to(["https://elsewhere"])
+      end
+
+      context "given an existing follow relationship" do
+        let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: "https://elsewhere")
+
+        it "updates follow relationships when thread changes" do
+          expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{all_follows.map(&.to_iri)}.to(["https://elsewhere"])
+        end
+      end
+    end
+  end
+
   context "when threaded" do
     subject do
       described_class.new(

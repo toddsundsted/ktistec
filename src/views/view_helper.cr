@@ -538,6 +538,14 @@ module Ktistec::ViewHelper
     "#{remote_object_path({{object}})}/unblock"
   end
 
+  macro follow_thread_path(object = nil)
+    "#{remote_object_path({{object}})}/follow"
+  end
+
+  macro unfollow_thread_path(object = nil)
+    "#{remote_object_path({{object}})}/unfollow"
+  end
+
   macro remote_actor_path(actor = nil)
     "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
   end

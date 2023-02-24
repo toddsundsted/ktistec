@@ -88,7 +88,7 @@ class ObjectsController
       not_found
     end
 
-    thread = object.thread
+    thread = object.thread(for_actor: env.account.actor)
 
     ok "objects/thread"
   end

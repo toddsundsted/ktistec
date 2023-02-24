@@ -5,6 +5,7 @@ require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
 require "../relationship/content/canonical"
+require "../relationship/content/follow/thread"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
@@ -369,6 +370,9 @@ module ActivityPub
     @[Assignable]
     property depth : Int32 = 0
 
+    @[Assignable]
+    property relationship_id : Int64? = nil
+
     private def thread_query_with_recursive
       query = <<-QUERY
       WITH RECURSIVE
@@ -403,18 +407,34 @@ module ActivityPub
       QUERY
     end
 
-    def thread
+    # Returns all objects in the thread to which this object belongs.
+    #
+    # Intended for presenting a thread to an authorized user (one who
+    # may see all objects in a thread). Includes which objects in the
+    # thread `for_actor` has followed.
+    #
+    def thread(*, for_actor)
       query = <<-QUERY
          #{thread_query_with_recursive}
-         SELECT #{Object.columns(prefix: "o")}, r.depth
+         SELECT #{Object.columns(prefix: "o")}, r.depth, l.id
            FROM objects AS o, replies_to AS r
+      LEFT JOIN relationships AS l
+             ON l.type = "#{Relationship::Content::Follow::Thread}"
+            AND l.from_iri = ? AND l.to_iri = o.thread
           WHERE o.iri IN (r.iri)
           ORDER BY r.position
       QUERY
-      Object.query_all(query, iri, additional_columns: {depth: Int32})
+      Object.query_all(query, iri, for_actor.iri, additional_columns: {depth: Int32, relationship_id: Int64?})
     end
 
-    def thread(approved_by)
+    # Returns all objects in the thread to which this object belongs
+    # which have been approved by `approved_by`.
+    #
+    # Intended for presenting a thread to an unauthorized user (one
+    # who may not see all objects in a thread e.g. an anonymous
+    # user).
+    #
+    def thread(*, approved_by)
       query = <<-QUERY
          #{thread_query_with_recursive}
          SELECT #{Object.columns(prefix: "o")}, t.depth

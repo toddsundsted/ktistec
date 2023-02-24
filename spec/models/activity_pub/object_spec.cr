@@ -637,63 +637,95 @@ Spectator.describe ActivityPub::Object do
     end
 
     describe "#thread" do
+      let_build(:actor)
+
       it "returns all replies properly nested" do
-        expect(subject.thread).to eq([subject, object1, object2, object3, object4, object5])
-        expect(object1.thread).to eq([subject, object1, object2, object3, object4, object5])
-        expect(object5.thread).to eq([subject, object1, object2, object3, object4, object5])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5])
+        expect(object1.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5])
+        expect(object5.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5])
       end
 
       it "omits deleted replies and their children" do
         object4.delete
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits blocked replies and their children" do
         object4.block
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits destroyed replies and their children" do
         object4.destroy
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits replies with deleted attributed to actors" do
         actor4.delete
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits replies with blocked attributed to actors" do
         actor4.block
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits replies with destroyed attributed to actors" do
         actor4.destroy
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "returns the depths" do
-        expect(object5.thread.map(&.depth)).to eq([0, 1, 2, 3, 1, 2])
+        expect(object5.thread(for_actor: actor).map(&.depth)).to eq([0, 1, 2, 3, 1, 2])
       end
 
-      context "given an actor" do
-        let_build(:actor)
+      context "given a follow" do
+        let_create!(:follow_thread_relationship, named: :follow1, actor: actor, thread: object1.thread)
 
+        it "returns the id of the relationship" do
+          expect(object1.thread(for_actor: actor).map(&.relationship_id)).to eq([follow1.id, follow1.id, follow1.id, follow1.id, follow1.id, follow1.id])
+        end
+      end
+
+      context "given multiple legacy follows" do
+        before_each do
+          # manipulate the database directly -- only legacy objects
+          # in a thread will have `thread` set "incorrectly".
+          Ktistec.database.exec <<-SQL
+            UPDATE objects SET thread = iri WHERE id IN (#{object3.id}, #{object5.id})
+          SQL
+        end
+
+        let(object3legacy) { ActivityPub::Object.find(object3.id) }
+        let(object5legacy) { ActivityPub::Object.find(object5.id) }
+
+        let_create!(:follow_thread_relationship, named: :follow3, actor: actor, thread: object3legacy.thread)
+        let_create!(:follow_thread_relationship, named: :follow5, actor: actor, thread: object5legacy.thread)
+
+        it "returns the ids of the relationships" do
+          expect(object3.thread(for_actor: actor).map(&.relationship_id)).to eq([nil, nil, nil, follow3.id, nil, follow5.id])
+        end
+
+        it "returns the ids of the relationships" do
+          expect(object5.thread(for_actor: actor).map(&.relationship_id)).to eq([nil, nil, nil, follow3.id, nil, follow5.id])
+        end
+      end
+
+      context "given an approval" do
         it "only includes the subject" do
-          expect(subject.thread(actor)).to eq([subject])
+          expect(subject.thread(approved_by: actor)).to eq([subject])
         end
 
         context "and an approved object" do
           let_create!(:approved_relationship, named: :approved, actor: actor, object: object5)
 
           it "omits unapproved replies but includes their approved children" do
-            expect(subject.thread(actor)).to eq([subject, object5])
+            expect(subject.thread(approved_by: actor)).to eq([subject, object5])
           end
 
           it "doesn't include the actor's unapproved replies" do
             object4.assign(attributed_to: actor).save
-            expect(subject.thread(actor)).to eq([subject, object5])
+            expect(subject.thread(approved_by: actor)).to eq([subject, object5])
           end
         end
       end

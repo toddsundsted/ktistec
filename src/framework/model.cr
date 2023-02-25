@@ -469,6 +469,22 @@ module Ktistec
         self.class.table_name
       end
 
+      # Specifies a property that is derived from another property.
+      #
+      macro derived(decl, *, aliased_to)
+        @[Assignable]
+        @{{decl.var}} : {{decl.type}}?
+        def {{decl.var}}=({{decl.var}} : {{decl.type}}) : {{decl.type}}
+          @{{decl.var}} = @{{aliased_to}} = {{decl.var}}
+        end
+        def {{decl.var}} : {{decl.type}}
+          @{{decl.var}} = @{{aliased_to}}
+        end
+        def _association_{{decl.var}}
+          {:derived, :itself, {{aliased_to.symbolize}}, {{decl.type}}, @{{decl.var}}}
+        end
+      end
+
       # Specifies a one-to-one association with another model.
       #
       macro belongs_to(name, primary_key = id, foreign_key = nil, class_name = nil, inverse_of = nil)

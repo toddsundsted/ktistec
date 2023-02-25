@@ -55,10 +55,14 @@ end
 
 class DerivedModel < FooBarModel
   @@table_name = "foo_bar_models"
+
+  derived index : Int64?, aliased_to: not_nil_model_id
 end
 
 class AnotherModel < NotNilModel
   @@table_name = "not_nil_models"
+
+  derived index : Int64?, aliased_to: foo_bar_model_id
 end
 
 class UnionAssociationModel
@@ -972,6 +976,33 @@ Spectator.describe Ktistec::Model do
     it "returns the hash representation" do
       saved_model = FooBarModel.new
       expect(saved_model.to_h.to_a).to contain({"id", nil})
+    end
+  end
+
+  context "derived properties" do
+    let(derived) { DerivedModel.new(id: 13_i64, not_nil_model_id: 17_i64) }
+    let(another) { AnotherModel.new(id: 17_i64, foo_bar_model_id: 13_i64, val: "Val") }
+
+    it "sets the aliased property" do
+      expect{derived.assign(index: 1_i64)}.to change{derived.not_nil_model_id}.to(1_i64)
+      expect{another.assign(index: 1_i64)}.to change{another.foo_bar_model_id}.to(1_i64)
+    end
+
+    it "gets the aliased property" do
+      expect(derived.index).to eq(17_i64)
+      expect(another.index).to eq(13_i64)
+    end
+
+    context "when queried via the aliased property" do
+      before_each do
+        derived.save
+        another.save
+      end
+
+      it "returns the model" do
+        expect(DerivedModel.where(index: 17_i64)).to have(derived)
+        expect(AnotherModel.where(index: 13_i64)).to have(another)
+      end
     end
   end
 

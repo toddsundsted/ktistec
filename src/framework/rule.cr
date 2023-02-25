@@ -117,8 +117,16 @@ module Ktistec
 
           {% if properties %}
             {% for property in properties %}
+              {% derived_name = property %}
+              {% ancestors = clazz.ancestors << clazz %}
+              {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+              {% if (method = methods.find { |d| d.name == "_association_#{property.id}" }) %}
+                {% if method.body[0] == :derived %}
+                  {% derived_name = method.body[2] %}
+                {% end %}
+              {% end %}
               if @options.has_key?({{property.id.stringify}})
-                conditions << condition(table_name, {{property.id.stringify}}, @options[{{property.id.stringify}}], bindings) do |value|
+                conditions << condition(table_name, {{derived_name.id.stringify}}, @options[{{property.id.stringify}}], bindings) do |value|
                   raise "values of type #{value.class} are currently unsupported" unless value.is_a?(SupportedType?)
                   value
                 end

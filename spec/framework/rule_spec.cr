@@ -4,7 +4,6 @@ require "../spec_helper/base"
 
 class RuleModel
   include Ktistec::Model(Nil)
-  include School::DomainType
 
   @[Persistent]
   property parent_id : Int64?

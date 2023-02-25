@@ -27,6 +27,8 @@ module Ktistec
     macro make_pattern(name, clazz, associations = nil, properties = nil)
       {% clazz = clazz.resolve %}
 
+      class ::{{clazz}} ; include ::School::DomainType ; end
+
       class {{name.id}} < School::Pattern
         @vars = [] of String
 

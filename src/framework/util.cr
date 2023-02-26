@@ -128,9 +128,22 @@ module Ktistec
     end
 
     class PaginatedArray(T)
-      @array = [] of T
+      def initialize
+        @array = Array(T).new
+      end
 
-      delegate :<<, :each, :each_with_index, :empty?, :first, :map, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
+      def initialize(size : Int)
+        @array = Array(T).new(size)
+      end
+
+      delegate :<<, :each, :each_with_index, :empty?, :first, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
+
+      def map(&block : T -> U) : PaginatedArray(U) forall U
+        PaginatedArray(U).new(size).tap do |array|
+          each { |t| array << yield t }
+          array.more = more?
+        end
+      end
 
       property? more : Bool = false
     end

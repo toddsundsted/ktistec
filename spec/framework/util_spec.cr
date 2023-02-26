@@ -111,4 +111,18 @@ Spectator.describe Ktistec::Util::PaginatedArray do
       expect{subject.more = true}.to change{subject.more?}
     end
   end
+
+  describe "#map" do
+    it "returns a paginated array" do
+      expect(subject.map(&.-)).to be_a(Ktistec::Util::PaginatedArray(Int32))
+    end
+
+    it "returns a paginated array with the results of applying the supplied block" do
+      expect(subject.map(&.-)).to eq([0, -1, -2, -3, -4, -5, -6, -7, -8, -9])
+    end
+
+    it "returns an indication of whether there are more results" do
+      expect(subject.map(&.-).more?).to eq(false)
+    end
+  end
 end

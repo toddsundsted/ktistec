@@ -155,6 +155,16 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe ".all_subtypes" do
+    it "returns type and all subtypes" do
+      expect(FooBarModel.all_subtypes).to contain("FooBarModel", "DerivedModel")
+    end
+
+    it "returns type and all subtypes" do
+      expect(NotNilModel.all_subtypes).to contain("NotNilModel", "AnotherModel")
+    end
+  end
+
   describe ".query_and_paginate" do
     it "includes the additional columns" do
       query = %Q|SELECT 0, "foo", "bar", ?, ?|

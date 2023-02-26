@@ -99,6 +99,12 @@ module Ktistec
         {% end %}
       end
 
+      # Returns type and all subtypes.
+      #
+      def all_subtypes
+        {{(@type.all_subclasses << @type).map(&.stringify)}}
+      end
+
       # Returns the count of saved instances.
       #
       def count(include_deleted : Bool = false, include_undone : Bool = false, **options)

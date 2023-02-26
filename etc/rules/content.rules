@@ -153,6 +153,15 @@ rule "create/reply"
   assert NotificationReply, owner: actor, activity: activity
 end
 
+rule "create/thread"
+  condition activity, IsAddressedTo, actor
+  condition CreateActivity, activity, object: object
+  condition Object, object, thread: thread
+  condition FollowThread, actor: actor, thread: thread
+  none Notification, owner: actor, activity: activity
+  assert NotificationThread, owner: actor, activity: activity
+end
+
 rule "announce"
   condition activity, IsAddressedTo, actor
   condition AnnounceActivity, activity, object: object

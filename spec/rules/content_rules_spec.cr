@@ -230,6 +230,24 @@ Spectator.describe ContentRules do
           run(owner, create)
           expect(owner.notifications).to be_empty
         end
+
+        context "in a thread being followed by the owner" do
+          let_create!(:follow_thread_relationship, actor: owner, thread: object.in_reply_to_iri)
+
+          it "adds the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.activity)).to eq([create])
+          end
+        end
+
+        context "in a thread being followed by another actor" do
+          let_create!(:follow_thread_relationship, actor: other, thread: object.in_reply_to_iri)
+
+          it "does not add the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications).to be_empty
+          end
+        end
       end
 
       context "another object is in reply to an object attributed to the owner" do

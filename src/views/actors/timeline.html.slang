@@ -1,3 +1,4 @@
+- objects = timeline.map(&.object)
 section.ui.feed
   - objects.each do |object|
     crystal:

@@ -1,5 +1,6 @@
 - content_for "title" do
   | Notifications
+- activities = notifications.map(&.activity)
 - if activities.empty?
   .ui.basic.very.padded.center.aligned.segment
     .ui.icon.header

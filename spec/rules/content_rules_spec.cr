@@ -166,7 +166,7 @@ Spectator.describe ContentRules do
 
       it "adds the follow to the notifications" do
         run(owner, follow)
-        expect(owner.notifications).to eq([follow])
+        expect(owner.notifications.map(&.activity)).to eq([follow])
       end
 
       context "object mentions the owner" do
@@ -178,7 +178,7 @@ Spectator.describe ContentRules do
 
         it "adds the create to the notifications" do
           run(owner, create)
-          expect(owner.notifications).to eq([create])
+          expect(owner.notifications.map(&.activity)).to eq([create])
         end
       end
 
@@ -215,7 +215,7 @@ Spectator.describe ContentRules do
 
         it "adds the create to the notifications" do
           run(owner, create)
-          expect(owner.notifications).to eq([create])
+          expect(owner.notifications.map(&.activity)).to eq([create])
         end
       end
 
@@ -248,12 +248,12 @@ Spectator.describe ContentRules do
 
         it "adds the announce to the notifications" do
           run(owner, announce)
-          expect(owner.notifications).to eq([announce])
+          expect(owner.notifications.map(&.activity)).to eq([announce])
         end
 
         it "adds the like to the notifications" do
           run(owner, like)
-          expect(owner.notifications).to eq([like])
+          expect(owner.notifications.map(&.activity)).to eq([like])
         end
       end
 
@@ -286,11 +286,11 @@ Spectator.describe ContentRules do
         put_in_notifications(owner, create)
       end
 
-      pre_condition { expect(owner.notifications).to eq([create]) }
+      pre_condition { expect(owner.notifications.map(&.activity)).to eq([create]) }
 
       it "does not add the create to the notifications" do
         run(owner, create)
-        expect(owner.notifications).to eq([create])
+        expect(owner.notifications.map(&.activity)).to eq([create])
       end
 
       it "removes the create from the notifications" do
@@ -303,7 +303,7 @@ Spectator.describe ContentRules do
 
         it "does not remove the create from the notifications" do
           run(owner, unrelated)
-          expect(owner.notifications).to eq([create])
+          expect(owner.notifications.map(&.activity)).to eq([create])
         end
       end
 
@@ -312,7 +312,7 @@ Spectator.describe ContentRules do
 
         it "does not remove the create from the notifications" do
           run(owner, undo)
-          expect(owner.notifications).to eq([create])
+          expect(owner.notifications.map(&.activity)).to eq([create])
         end
       end
     end
@@ -323,11 +323,11 @@ Spectator.describe ContentRules do
         put_in_notifications(owner, announce)
       end
 
-      pre_condition { expect(owner.notifications).to eq([announce]) }
+      pre_condition { expect(owner.notifications.map(&.activity)).to eq([announce]) }
 
       it "does not add the announce to the notifications" do
         run(owner, announce)
-        expect(owner.notifications).to eq([announce])
+        expect(owner.notifications.map(&.activity)).to eq([announce])
       end
 
       it "removes the announce from the notifications" do
@@ -337,7 +337,7 @@ Spectator.describe ContentRules do
 
       it "does not remove the announce from the notifications" do
         run(owner, delete)
-        expect(owner.notifications).to eq([announce])
+        expect(owner.notifications.map(&.activity)).to eq([announce])
       end
     end
 
@@ -347,11 +347,11 @@ Spectator.describe ContentRules do
         put_in_notifications(owner, like)
       end
 
-      pre_condition { expect(owner.notifications).to eq([like]) }
+      pre_condition { expect(owner.notifications.map(&.activity)).to eq([like]) }
 
       it "does not add the like to the notifications" do
         run(owner, like)
-        expect(owner.notifications).to eq([like])
+        expect(owner.notifications.map(&.activity)).to eq([like])
       end
 
       it "removes the like from the notifications" do
@@ -361,7 +361,7 @@ Spectator.describe ContentRules do
 
       it "does not remove the like from the notifications" do
         run(owner, delete)
-        expect(owner.notifications).to eq([like])
+        expect(owner.notifications.map(&.activity)).to eq([like])
       end
     end
 
@@ -371,11 +371,11 @@ Spectator.describe ContentRules do
         put_in_notifications(owner, follow)
       end
 
-      pre_condition { expect(owner.notifications).to eq([follow]) }
+      pre_condition { expect(owner.notifications.map(&.activity)).to eq([follow]) }
 
       it "does not add the follow to the notifications" do
         run(owner, follow)
-        expect(owner.notifications).to eq([follow])
+        expect(owner.notifications.map(&.activity)).to eq([follow])
       end
 
       it "removes the follow from the notifications" do
@@ -385,7 +385,7 @@ Spectator.describe ContentRules do
 
       it "does not remove the follow from the notifications" do
         run(owner, delete)
-        expect(owner.notifications).to eq([follow])
+        expect(owner.notifications.map(&.activity)).to eq([follow])
       end
     end
 
@@ -428,12 +428,12 @@ Spectator.describe ContentRules do
 
       it "adds the object to the timeline" do
         run(owner, create)
-        expect(owner.timeline).to eq([object])
+        expect(owner.timeline.map(&.object)).to eq([object])
       end
 
       it "adds the object to the timeline" do
         run(owner, announce)
-        expect(owner.timeline).to eq([object])
+        expect(owner.timeline.map(&.object)).to eq([object])
       end
 
       context "object is a reply" do
@@ -448,7 +448,7 @@ Spectator.describe ContentRules do
 
         it "adds the object to the timeline" do
           run(owner, announce)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
 
         context "but is attributed to the owner" do
@@ -458,7 +458,7 @@ Spectator.describe ContentRules do
 
           it "adds the object to the timeline" do
             run(owner, create)
-            expect(owner.timeline).to eq([object])
+            expect(owner.timeline.map(&.object)).to eq([object])
           end
         end
       end
@@ -470,12 +470,12 @@ Spectator.describe ContentRules do
 
         it "adds the object to the timeline" do
           run(owner, create)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
 
         it "adds the object to the timeline" do
           run(owner, announce)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
       end
 
@@ -488,12 +488,12 @@ Spectator.describe ContentRules do
 
         it "adds the object to the timeline" do
           run(owner, create)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
 
         it "adds the object to the timeline" do
           run(owner, announce)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
       end
 
@@ -507,12 +507,12 @@ Spectator.describe ContentRules do
 
         it "adds the object to the timeline" do
           run(owner, create)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
 
         it "adds the object to the timeline" do
           run(owner, announce)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
       end
 
@@ -530,7 +530,7 @@ Spectator.describe ContentRules do
 
         it "adds the object to the timeline" do
           run(owner, announce)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
 
         context "but is attributed to the owner" do
@@ -540,7 +540,7 @@ Spectator.describe ContentRules do
 
           it "adds the object to the timeline" do
             run(owner, create)
-            expect(owner.timeline).to eq([object])
+            expect(owner.timeline.map(&.object)).to eq([object])
           end
         end
       end
@@ -549,14 +549,14 @@ Spectator.describe ContentRules do
     context "given a timeline with an object already added" do
       before_each { put_in_timeline(owner, object) }
 
-      pre_condition { expect(owner.timeline).to eq([object]) }
+      pre_condition { expect(owner.timeline.map(&.object)).to eq([object]) }
 
       context "and an associated create" do
         before_each { put_in_inbox(owner, create) }
 
         it "does not add the object to the timeline" do
           run(owner, create)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
 
         it "removes the object from the timeline" do
@@ -569,7 +569,7 @@ Spectator.describe ContentRules do
 
           it "does not remove the object from the timeline" do
             run(owner, unrelated)
-            expect(owner.timeline).to eq([object])
+            expect(owner.timeline.map(&.object)).to eq([object])
           end
         end
 
@@ -578,7 +578,7 @@ Spectator.describe ContentRules do
 
           it "does not remove the object from the timeline" do
             run(owner, undo)
-            expect(owner.timeline).to eq([object])
+            expect(owner.timeline.map(&.object)).to eq([object])
           end
         end
       end
@@ -588,7 +588,7 @@ Spectator.describe ContentRules do
 
         it "does not add the object to the timeline" do
           run(owner, announce)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
 
         it "removes the object from the timeline" do
@@ -609,7 +609,7 @@ Spectator.describe ContentRules do
 
             it "does not remove the object from the timeline" do
               run(owner, undo)
-              expect(owner.timeline).to eq([object])
+              expect(owner.timeline.map(&.object)).to eq([object])
             end
 
             context "that has been undone" do
@@ -634,16 +634,16 @@ Spectator.describe ContentRules do
         put_in_timeline(owner, another)
       end
 
-      pre_condition { expect(owner.timeline).to eq([another]) }
+      pre_condition { expect(owner.timeline.map(&.object)).to eq([another]) }
 
       it "does not remove the object from the timeline" do
         run(owner, delete)
-        expect(owner.timeline).to eq([another])
+        expect(owner.timeline.map(&.object)).to eq([another])
       end
 
       it "does not remove the object from the timeline" do
         run(owner, undo)
-        expect(owner.timeline).to eq([another])
+        expect(owner.timeline.map(&.object)).to eq([another])
       end
     end
 
@@ -689,12 +689,12 @@ Spectator.describe ContentRules do
 
       it "adds the object to the timeline" do
         run(owner, create)
-        expect(owner.timeline).to eq([object])
+        expect(owner.timeline.map(&.object)).to eq([object])
       end
 
       it "adds the object to the timeline" do
         run(owner, announce)
-        expect(owner.timeline).to eq([object])
+        expect(owner.timeline.map(&.object)).to eq([object])
       end
 
       context "given a content filter" do
@@ -706,12 +706,12 @@ Spectator.describe ContentRules do
 
         it "adds the object to the timeline" do
           run(owner, create)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
 
         it "adds the object to the timeline" do
           run(owner, announce)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
       end
 
@@ -724,12 +724,12 @@ Spectator.describe ContentRules do
 
         it "adds the object to the timeline" do
           run(owner, create)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
 
         it "adds the object to the timeline" do
           run(owner, announce)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
       end
     end
@@ -755,12 +755,12 @@ Spectator.describe ContentRules do
 
       it "adds the object to the timeline" do
         run(owner, create)
-        expect(owner.timeline).to eq([object])
+        expect(owner.timeline.map(&.object)).to eq([object])
       end
 
       it "adds the object to the timeline" do
         run(owner, announce)
-        expect(owner.timeline).to eq([object])
+        expect(owner.timeline.map(&.object)).to eq([object])
       end
 
       context "given a content filter" do
@@ -772,12 +772,12 @@ Spectator.describe ContentRules do
 
         it "adds the object to the timeline" do
           run(owner, create)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
 
         it "adds the object to the timeline" do
           run(owner, announce)
-          expect(owner.timeline).to eq([object])
+          expect(owner.timeline.map(&.object)).to eq([object])
         end
       end
 

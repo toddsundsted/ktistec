@@ -968,7 +968,7 @@ Spectator.describe ActivityPub::Actor do
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
       let_create!(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
       let_create!(:inbox_relationship, named: nil, owner: subject, activity: activity{{index}})
-      let_create!(:timeline, named: nil, owner: subject, object: object{{index}})
+      let_create!(:timeline, named: timeline{{index}}, owner: subject, object: object{{index}})
     end
 
     post(1)
@@ -980,7 +980,7 @@ Spectator.describe ActivityPub::Actor do
     let(since) { KTISTEC_EPOCH }
 
     it "instantiates the correct subclass" do
-      expect(subject.timeline(page: 1, size: 2).first).to be_a(ActivityPub::Object)
+      expect(subject.timeline(page: 1, size: 2).first).to be_a(Relationship::Content::Timeline)
     end
 
     it "returns the count" do
@@ -989,30 +989,30 @@ Spectator.describe ActivityPub::Actor do
 
     it "filters out deleted posts" do
       object5.delete
-      expect(subject.timeline(page: 1, size: 2)).to eq([object4, object3])
+      expect(subject.timeline(page: 1, size: 2)).to eq([timeline4, timeline3])
       expect(subject.timeline(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
       object5.block
-      expect(subject.timeline(page: 1, size: 2)).to eq([object4, object3])
+      expect(subject.timeline(page: 1, size: 2)).to eq([timeline4, timeline3])
       expect(subject.timeline(since: since)).to eq(4)
     end
 
     it "filters out posts by deleted actors" do
       actor5.delete
-      expect(subject.timeline(page: 1, size: 2)).to eq([object4, object3])
+      expect(subject.timeline(page: 1, size: 2)).to eq([timeline4, timeline3])
       expect(subject.timeline(since: since)).to eq(4)
     end
 
     it "filters out posts by blocked actors" do
       actor5.block
-      expect(subject.timeline(page: 1, size: 2)).to eq([object4, object3])
+      expect(subject.timeline(page: 1, size: 2)).to eq([timeline4, timeline3])
       expect(subject.timeline(since: since)).to eq(4)
     end
 
     it "filters out posts not associated with included activities" do
-      expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([object5, object4])
+      expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([timeline5, timeline4])
       expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
     end
 
@@ -1025,12 +1025,12 @@ Spectator.describe ActivityPub::Actor do
       let_create!(:create, actor: actor5, object: object5)
 
       it "includes announcements by default" do
-        expect(subject.timeline(page: 1, size: 2)).to eq([object5, object4])
+        expect(subject.timeline(page: 1, size: 2)).to eq([timeline5, timeline4])
         expect(subject.timeline(since: since)).to eq(5)
       end
 
       it "includes announcements" do
-        expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([object5, object4])
+        expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([timeline5, timeline4])
         expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
       end
 
@@ -1044,17 +1044,17 @@ Spectator.describe ActivityPub::Actor do
       before_each { object4.assign(in_reply_to: object5).save }
 
       it "includes replies by default" do
-        expect(subject.timeline(page: 1, size: 2)).to eq([object5, object4])
+        expect(subject.timeline(page: 1, size: 2)).to eq([timeline5, timeline4])
         expect(subject.timeline(since: since)).to eq(5)
       end
 
       it "includes replies" do
-        expect(subject.timeline(exclude_replies: false, page: 1, size: 2)).to eq([object5, object4])
+        expect(subject.timeline(exclude_replies: false, page: 1, size: 2)).to eq([timeline5, timeline4])
         expect(subject.timeline(since: since, exclude_replies: false)).to eq(5)
       end
 
       it "filters out replies" do
-        expect(subject.timeline(exclude_replies: true, page: 1, size: 2)).to eq([object5, object3])
+        expect(subject.timeline(exclude_replies: true, page: 1, size: 2)).to eq([timeline5, timeline3])
         expect(subject.timeline(since: since, exclude_replies: true)).to eq(4)
       end
     end
@@ -1066,7 +1066,7 @@ Spectator.describe ActivityPub::Actor do
       let_create!(:timeline, owner: subject, object: object)
 
       it "includes the post" do
-        expect(subject.timeline(page: 1, size: 2)).to eq([object, object5])
+        expect(subject.timeline(page: 1, size: 2)).to eq([timeline, timeline5])
         expect(subject.timeline(since: since)).to eq(6)
       end
     end
@@ -1076,14 +1076,14 @@ Spectator.describe ActivityPub::Actor do
       let_create!(:timeline, owner: subject, object: object)
 
       it "includes the post" do
-        expect(subject.timeline(page: 1, size: 2)).to eq([object, object5])
+        expect(subject.timeline(page: 1, size: 2)).to eq([timeline, timeline5])
         expect(subject.timeline(since: since)).to eq(6)
       end
     end
 
     it "paginates the results" do
-      expect(subject.timeline(page: 1, size: 2)).to eq([object5, object4])
-      expect(subject.timeline(page: 3, size: 2)).to eq([object1])
+      expect(subject.timeline(page: 1, size: 2)).to eq([timeline5, timeline4])
+      expect(subject.timeline(page: 3, size: 2)).to eq([timeline1])
       expect(subject.timeline(page: 3, size: 2).more?).not_to be_true
     end
   end
@@ -1094,7 +1094,7 @@ Spectator.describe ActivityPub::Actor do
     macro notification(index)
       let_build(:actor, named: actor{{index}})
       let_build(:activity, named: activity{{index}}, actor: actor{{index}})
-      let_create!(:notification, named: nil, owner: subject, activity: activity{{index}})
+      let_create!(:notification, named: notification{{index}}, owner: subject, activity: activity{{index}})
     end
 
     notification(1)
@@ -1106,7 +1106,7 @@ Spectator.describe ActivityPub::Actor do
     let(since) { KTISTEC_EPOCH }
 
     it "instantiates the correct subclass" do
-      expect(subject.notifications(page: 1, size: 2).first).to be_a(ActivityPub::Activity)
+      expect(subject.notifications(page: 1, size: 2).first).to be_a(Relationship::Content::Notification)
     end
 
     it "returns the count" do
@@ -1115,7 +1115,7 @@ Spectator.describe ActivityPub::Actor do
 
     it "filters out undone activities" do
       activity5.undo
-      expect(subject.notifications(page: 1, size: 2)).to eq([activity4, activity3])
+      expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
       expect(subject.notifications(since: since)).to eq(4)
     end
 
@@ -1126,38 +1126,38 @@ Spectator.describe ActivityPub::Actor do
 
       it "filters out activities with deleted objects" do
         object.delete
-        expect(subject.notifications(page: 1, size: 2)).to eq([activity4, activity3])
+        expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
         expect(subject.notifications(since: since)).to eq(4)
       end
 
       it "filters out activities with blocked objects" do
         object.block
-        expect(subject.notifications(page: 1, size: 2)).to eq([activity4, activity3])
+        expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
         expect(subject.notifications(since: since)).to eq(4)
       end
     end
 
     it "filters out activities from deleted actors" do
       actor5.delete
-      expect(subject.notifications(page: 1, size: 2)).to eq([activity4, activity3])
+      expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
       expect(subject.notifications(since: since)).to eq(4)
     end
 
-    it "filters out activities from block actors" do
+    it "filters out activities from blocked actors" do
       actor5.block
-      expect(subject.notifications(page: 1, size: 2)).to eq([activity4, activity3])
+      expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
       expect(subject.notifications(since: since)).to eq(4)
     end
 
     it "filters out activities from destroyed actors" do
       actor5.destroy
-      expect(subject.notifications(page: 1, size: 2)).to eq([activity4, activity3])
+      expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
       expect(subject.notifications(since: since)).to eq(4)
     end
 
     it "paginates the results" do
-      expect(subject.notifications(page: 1, size: 2)).to eq([activity5, activity4])
-      expect(subject.notifications(page: 3, size: 2)).to eq([activity1])
+      expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
+      expect(subject.notifications(page: 3, size: 2)).to eq([notification1])
       expect(subject.notifications(page: 3, size: 2).more?).not_to be_true
     end
   end

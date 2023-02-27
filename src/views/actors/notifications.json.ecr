@@ -1,2 +1,2 @@
-<%- collection = activities -%>
+<%- collection = notifications.map(&.activity) -%>
 <%= render "src/views/partials/collection.json.ecr" %>

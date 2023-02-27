@@ -25,13 +25,13 @@
   == render "src/views/partials/editor.html.slang"
   crystal:
     if filters.includes?("no-shares") && filters.includes?("no-replies")
-      objects = actor.timeline(**pagination_params(env), inclusion: [ActivityPub::Activity::Create], exclude_replies: true)
+      timeline = actor.timeline(**pagination_params(env), inclusion: [ActivityPub::Activity::Create], exclude_replies: true)
     elsif filters.includes?("no-shares")
-      objects = actor.timeline(**pagination_params(env), inclusion: [ActivityPub::Activity::Create])
+      timeline = actor.timeline(**pagination_params(env), inclusion: [ActivityPub::Activity::Create])
     elsif filters.includes?("no-replies")
-      objects = actor.timeline(**pagination_params(env), exclude_replies: true)
+      timeline = actor.timeline(**pagination_params(env), exclude_replies: true)
     else
-      objects = actor.timeline(**pagination_params(env))
+      timeline = actor.timeline(**pagination_params(env))
     end
   turbo-frame#main-timeline
     == render "src/views/actors/timeline.html.slang"

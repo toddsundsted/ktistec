@@ -1,5 +1,4 @@
 require "../framework/controller"
-require "../models/activity_pub/activity/follow"
 require "../models/task/refresh_actor"
 
 class ActorsController

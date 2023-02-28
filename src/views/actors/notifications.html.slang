@@ -1,7 +1,6 @@
 - content_for "title" do
   | Notifications
-- activities = notifications.map(&.activity)
-- if activities.empty?
+- if notifications.empty?
   .ui.basic.very.padded.center.aligned.segment
     .ui.icon.header
       i.exclamation.icon
@@ -11,9 +10,10 @@
 - else
   h1 Notifications
   section.ui.feed
-    - activities.each do |activity|
+    - notifications.each do |notification|
       article.event
-        - if activity.is_a?(ActivityPub::Activity::Announce)
+        - if notification.is_a?(Relationship::Content::Notification::Announce)
+          - activity = notification.activity.as(ActivityPub::Activity::Announce)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -25,7 +25,8 @@
               | shared
               a< href=remote_object_path(activity.object) your post
               | .
-        - elsif activity.is_a?(ActivityPub::Activity::Like)
+        - elsif notification.is_a?(Relationship::Content::Notification::Like)
+          - activity = notification.activity.as(ActivityPub::Activity::Like)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -37,7 +38,8 @@
               | liked
               a< href=remote_object_path(activity.object) your post
               | .
-        - elsif activity.is_a?(ActivityPub::Activity::Create)
+        - elsif notification.is_a?(Relationship::Content::Notification::Reply)
+          - activity = notification.activity.as(ActivityPub::Activity::Create)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -45,16 +47,24 @@
               i.user.icon
           .content
             .summary
-              - if (in_reply_to = activity.object.in_reply_to?) && in_reply_to.attributed_to? == account.actor
-                a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-                a> href=remote_object_path(activity.object) replied to
-                a< href=remote_object_path(in_reply_to) your post
-                | .
-              - else
-                a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-                a<> href=remote_object_path(activity.object) mentioned
-                | you.
-        - elsif activity.is_a?(ActivityPub::Activity::Follow)
+              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a> href=remote_object_path(activity.object) replied to
+              a< href=remote_object_path(activity.object.in_reply_to) your post
+              | .
+        - elsif notification.is_a?(Relationship::Content::Notification::Mention)
+          - activity = notification.activity.as(ActivityPub::Activity::Create)
+          .label
+            - if (icon = activity.actor.icon)
+              img data-actor-id=activity.actor.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a<> href=remote_object_path(activity.object) mentioned
+              | you.
+        - elsif notification.is_a?(Relationship::Content::Notification::Follow)
+          - activity = notification.activity.as(ActivityPub::Activity::Follow)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -78,7 +88,8 @@
               .extra.meta
                 | Rejected #{ response.short_date }.
         - else
+          - activity = notification.activity
           .content
             .meta
               a href=activity.iri
-  == paginate(env, activities)
+  == paginate(env, notifications)

@@ -141,7 +141,7 @@ rule "create/mention"
   condition CreateActivity, activity, object: object
   any Mention, mention, subject: object, href: actor.iri
   none Notification, owner: actor, activity: activity
-  assert Notification, owner: actor, activity: activity
+  assert NotificationMention, owner: actor, activity: activity
 end
 
 rule "create/reply"
@@ -150,7 +150,7 @@ rule "create/reply"
   condition Object, object, in_reply_to: other
   condition Object, other, attributed_to: actor
   none Notification, owner: actor, activity: activity
-  assert Notification, owner: actor, activity: activity
+  assert NotificationReply, owner: actor, activity: activity
 end
 
 rule "announce"
@@ -158,7 +158,7 @@ rule "announce"
   condition AnnounceActivity, activity, object: object
   condition Object, object, attributed_to: actor
   none Notification, owner: actor, activity: activity
-  assert Notification, owner: actor, activity: activity
+  assert NotificationAnnounce, owner: actor, activity: activity
 end
 
 rule "like"
@@ -166,14 +166,14 @@ rule "like"
   condition LikeActivity, activity, object: object
   condition Object, object, attributed_to: actor
   none Notification, owner: actor, activity: activity
-  assert Notification, owner: actor, activity: activity
+  assert NotificationLike, owner: actor, activity: activity
 end
 
 rule "follow"
   condition activity, IsAddressedTo, actor
   condition FollowActivity, activity, object: actor
   none Notification, owner: actor, activity: activity
-  assert Notification, owner: actor, activity: activity
+  assert NotificationFollow, owner: actor, activity: activity
 end
 
 rule "delete"
@@ -203,7 +203,7 @@ rule "create/none"
   none Object, object, in_reply_to: any
   none Mention, mention, subject: object
   none Timeline, owner: actor, object: object
-  assert Timeline, owner: actor, object: object
+  assert TimelineCreate, owner: actor, object: object
 end
 
 rule "create/owner"
@@ -211,7 +211,7 @@ rule "create/owner"
   condition CreateActivity, activity, object: object
   condition Object, object, attributed_to: actor
   none Timeline, owner: actor, object: object
-  assert Timeline, owner: actor, object: object
+  assert TimelineCreate, owner: actor, object: object
 end
 
 rule "create/mention"
@@ -219,14 +219,14 @@ rule "create/mention"
   condition CreateActivity, activity, object: object
   any Mention, mention, subject: object, href: actor.iri
   none Timeline, owner: actor, object: object
-  assert Timeline, owner: actor, object: object
+  assert TimelineCreate, owner: actor, object: object
 end
 
 rule "announce"
   condition activity, IsAddressedTo, actor
   condition AnnounceActivity, activity, object: object
   none Timeline, owner: actor, object: object
-  assert Timeline, owner: actor, object: object
+  assert TimelineAnnounce, owner: actor, object: object
 end
 
 rule "delete"

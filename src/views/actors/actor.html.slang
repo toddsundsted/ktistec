@@ -25,9 +25,9 @@
   == render "src/views/partials/editor.html.slang"
   crystal:
     if filters.includes?("no-shares") && filters.includes?("no-replies")
-      timeline = actor.timeline(**pagination_params(env), inclusion: [ActivityPub::Activity::Create], exclude_replies: true)
+      timeline = actor.timeline(**pagination_params(env), inclusion: [Relationship::Content::Timeline::Create], exclude_replies: true)
     elsif filters.includes?("no-shares")
-      timeline = actor.timeline(**pagination_params(env), inclusion: [ActivityPub::Activity::Create])
+      timeline = actor.timeline(**pagination_params(env), inclusion: [Relationship::Content::Timeline::Create])
     elsif filters.includes?("no-replies")
       timeline = actor.timeline(**pagination_params(env), exclude_replies: true)
     else

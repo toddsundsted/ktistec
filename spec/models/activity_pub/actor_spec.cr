@@ -968,7 +968,7 @@ Spectator.describe ActivityPub::Actor do
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
       let_create!(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
       let_create!(:inbox_relationship, named: nil, owner: subject, activity: activity{{index}})
-      let_create!(:timeline, named: timeline{{index}}, owner: subject, object: object{{index}})
+      let_create!(:timeline_announce, named: timeline{{index}}, owner: subject, object: object{{index}})
     end
 
     post(1)
@@ -1012,13 +1012,13 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out posts not associated with included activities" do
-      expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([timeline5, timeline4])
-      expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
+      expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Announce], page: 1, size: 2)).to eq([timeline5, timeline4])
+      expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Announce])).to eq(5)
     end
 
     it "filters out posts not associated with included activities" do
-      expect(subject.timeline(inclusion: [ActivityPub::Activity::Create], page: 1, size: 2)).to be_empty
-      expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Create])).to eq(0)
+      expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Create], page: 1, size: 2)).to be_empty
+      expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create])).to eq(0)
     end
 
     context "given a prior create not in timeline" do
@@ -1030,13 +1030,13 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "includes announcements" do
-        expect(subject.timeline(inclusion: [ActivityPub::Activity::Announce], page: 1, size: 2)).to eq([timeline5, timeline4])
-        expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Announce])).to eq(5)
+        expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Announce], page: 1, size: 2)).to eq([timeline5, timeline4])
+        expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Announce])).to eq(5)
       end
 
       it "filters out announcements" do
-        expect(subject.timeline(inclusion: [ActivityPub::Activity::Create], page: 1, size: 2)).to be_empty
-        expect(subject.timeline(since: since, inclusion: [ActivityPub::Activity::Create])).to eq(0)
+        expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Create], page: 1, size: 2)).to be_empty
+        expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create])).to eq(0)
       end
     end
 

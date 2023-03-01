@@ -594,7 +594,7 @@ module ActivityPub
     # May be filtered to exclude replies (via `exclude_replies`).
     #
     # May be filtered to include only objects with associated
-    # activities of the specified type (via `inclusion`).
+    # relationships of the specified type (via `inclusion`).
     #
     def timeline(exclude_replies = false, inclusion = nil, page = 1, size = 10)
       exclude_replies =
@@ -604,34 +604,22 @@ module ActivityPub
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND a.type = "#{inclusion}"|
+          %Q|AND t.type = "#{inclusion}"|
         when Array
-          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        else
+          %Q|AND t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
             FROM relationships AS t
       CROSS JOIN objects AS o
               ON o.iri = t.to_iri
-              #{exclude_replies}
       CROSS JOIN actors AS c
               ON c.iri = o.attributed_to_iri
-       LEFT JOIN activities AS a
-              ON a.id = (
-                   SELECT a.id
-                     FROM activities AS a
-                     JOIN relationships AS l
-                       ON l.to_iri = a.iri
-                      AND l.from_iri = ?
-                      AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-                    WHERE a.object_iri = o.iri
-                      AND a.undone_at IS NULL
-                 ORDER BY a.created_at ASC
-                    LIMIT 1
-                 )
            WHERE t.from_iri = ?
-             AND t.type IN (#{Timeline.all_subtypes.map(&.inspect).join(",")})
              #{inclusion}
+             #{exclude_replies}
              AND o.deleted_at IS NULL
              AND o.blocked_at IS NULL
              AND c.deleted_at IS NULL
@@ -641,25 +629,11 @@ module ActivityPub
                   FROM relationships AS t
             CROSS JOIN objects AS o
                     ON o.iri = t.to_iri
-                    #{exclude_replies}
             CROSS JOIN actors AS c
                     ON c.iri = o.attributed_to_iri
-             LEFT JOIN activities AS a
-                    ON a.id = (
-                         SELECT a.id
-                           FROM activities AS a
-                           JOIN relationships AS l
-                             ON l.to_iri = a.iri
-                            AND l.from_iri = ?
-                            AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-                          WHERE a.object_iri = o.iri
-                            AND a.undone_at IS NULL
-                       ORDER BY a.created_at ASC
-                          LIMIT 1
-                       )
                  WHERE t.from_iri = ?
-                   AND t.type IN (#{Timeline.all_subtypes.map(&.inspect).join(",")})
                    #{inclusion}
+                   #{exclude_replies}
                    AND o.deleted_at IS NULL
                    AND o.blocked_at IS NULL
                    AND c.deleted_at IS NULL
@@ -670,7 +644,7 @@ module ActivityPub
         ORDER BY t.created_at DESC
            LIMIT ?
       QUERY
-      Timeline.query_and_paginate(query, self.iri, self.iri, self.iri, self.iri, page: page, size: size)
+      Timeline.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
     # Returns the count of entries in the actor's timeline since the
@@ -686,9 +660,11 @@ module ActivityPub
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND a.type = "#{inclusion}"|
+          %Q|AND t.type = "#{inclusion}"|
         when Array
-          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        else
+          %Q|AND t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
           SELECT count(t.id)
@@ -698,21 +674,7 @@ module ActivityPub
               #{exclude_replies}
       CROSS JOIN actors AS c
               ON c.iri = o.attributed_to_iri
-       LEFT JOIN activities AS a
-              ON a.id = (
-                   SELECT a.id
-                     FROM activities AS a
-                     JOIN relationships AS l
-                       ON l.to_iri = a.iri
-                      AND l.from_iri = ?
-                      AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-                    WHERE a.object_iri = o.iri
-                      AND a.undone_at IS NULL
-                 ORDER BY a.created_at ASC
-                    LIMIT 1
-                 )
            WHERE t.from_iri = ?
-             AND t.type IN (#{Timeline.all_subtypes.map(&.inspect).join(",")})
              #{inclusion}
              AND o.deleted_at IS NULL
              AND o.blocked_at IS NULL
@@ -720,7 +682,7 @@ module ActivityPub
              AND c.blocked_at IS NULL
              AND t.created_at > ?
       QUERY
-      Ktistec.database.scalar(query, iri, iri, since).as(Int64)
+      Ktistec.database.scalar(query, iri, since).as(Int64)
     end
 
     private alias Notification = Relationship::Content::Notification

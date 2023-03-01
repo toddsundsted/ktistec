@@ -87,6 +87,18 @@
             - elsif response.is_a?(ActivityPub::Activity::Reject)
               .extra.meta
                 | Rejected #{ response.short_date }.
+        - elsif notification.is_a?(Relationship::Content::Notification::Thread)
+          - activity = notification.activity.as(ActivityPub::Activity::Create)
+          .label
+            - if (icon = activity.actor.icon)
+              img data-actor-id=activity.actor.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a<> href=remote_object_path(activity.object) replied to a thread
+              | you follow.
         - else
           - activity = notification.activity
           .content

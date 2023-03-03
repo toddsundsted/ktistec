@@ -95,7 +95,7 @@ Spectator.describe Tag::Hashtag do
     end
   end
 
-  describe ".objects_with_tag" do
+  describe ".public_objects" do
     let_build(:actor, named: :author)
 
     macro create_tagged_object(index, *tags)
@@ -122,42 +122,42 @@ Spectator.describe Tag::Hashtag do
     create_tagged_object(5, "foo", "quux")
 
     it "returns objects with the tag" do
-      expect(described_class.objects_with_tag("bar")).to eq([object3, object1])
+      expect(described_class.public_objects("bar")).to eq([object3, object1])
     end
 
     it "filters out non-published objects" do
       object5.assign(published: nil).save
-      expect(described_class.objects_with_tag("foo")).not_to have(object5)
+      expect(described_class.public_objects("foo")).not_to have(object5)
     end
 
     it "filters out non-visible objects" do
       object5.assign(visible: false).save
-      expect(described_class.objects_with_tag("foo")).not_to have(object5)
+      expect(described_class.public_objects("foo")).not_to have(object5)
     end
 
     it "filters out deleted objects" do
       object5.delete
-      expect(described_class.objects_with_tag("foo")).not_to have(object5)
+      expect(described_class.public_objects("foo")).not_to have(object5)
     end
 
     it "filters out blocked objects" do
       object5.block
-      expect(described_class.objects_with_tag("foo")).not_to have(object5)
+      expect(described_class.public_objects("foo")).not_to have(object5)
     end
 
     it "filters out objects with deleted attributed to actors" do
       author.delete
-      expect(described_class.objects_with_tag("foo")).to be_empty
+      expect(described_class.public_objects("foo")).to be_empty
     end
 
     it "filters out objects with blocked attributed to actors" do
       author.block
-      expect(described_class.objects_with_tag("foo")).to be_empty
+      expect(described_class.public_objects("foo")).to be_empty
     end
 
     it "filters out objects with destroyed attributed to actors" do
       author.destroy
-      expect(described_class.objects_with_tag("foo")).to be_empty
+      expect(described_class.public_objects("foo")).to be_empty
     end
 
     context "given a remote object" do
@@ -173,22 +173,22 @@ Spectator.describe Tag::Hashtag do
       end
 
       it "filters out the object" do
-        expect(described_class.objects_with_tag("foo")).not_to have(remote)
+        expect(described_class.public_objects("foo")).not_to have(remote)
       end
 
       context "that has been approved" do
         before_each { author.approve(remote) }
 
         it "includes the object" do
-          expect(described_class.objects_with_tag("foo")).to have(remote)
+          expect(described_class.public_objects("foo")).to have(remote)
         end
       end
     end
 
     it "paginates the results" do
-      expect(described_class.objects_with_tag("foo", 1, 2)).to eq([object5, object4])
-      expect(described_class.objects_with_tag("foo", 2, 2)).to eq([object3, object2])
-      expect(described_class.objects_with_tag("foo", 2, 2).more?).to be_true
+      expect(described_class.public_objects("foo", 1, 2)).to eq([object5, object4])
+      expect(described_class.public_objects("foo", 2, 2)).to eq([object3, object2])
+      expect(described_class.public_objects("foo", 2, 2).more?).to be_true
     end
   end
 end

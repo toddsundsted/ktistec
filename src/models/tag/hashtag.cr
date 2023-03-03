@@ -45,7 +45,7 @@ class Tag
       ActivityPub::Object.query_and_paginate(query, name, name, page: page, size: size)
     end
 
-    def self.objects_with_tag(name, page = 1, size = 10)
+    def self.public_objects(name, page = 1, size = 10)
       query = <<-QUERY
         SELECT #{ActivityPub::Object.columns(prefix: "o")}
              FROM objects AS o

@@ -11,12 +11,11 @@ module Ktistec
         self.before_delete if self.responds_to?(:before_delete)
         Ktistec.database.exec("UPDATE #{table_name} SET deleted_at = ? WHERE id = ?", @deleted_at = Time.utc, @id)
         self.after_delete if self.responds_to?(:after_delete)
-        @id = nil
         self
       end
 
       def deleted?
-        deleted_at
+        !!deleted_at
       end
     end
   end

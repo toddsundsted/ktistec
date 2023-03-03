@@ -8,9 +8,18 @@ class TagsController
 
   get "/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
-    if (collection = Tag::Hashtag.public_objects(hashtag, **pagination_params(env))).empty?
+
+    collection =
+      if env.account?
+        Tag::Hashtag.all_objects(hashtag, **pagination_params(env))
+      else
+        Tag::Hashtag.public_objects(hashtag, **pagination_params(env))
+      end
+
+    if collection.empty?
       not_found
     end
+
     ok "tags/index"
   end
 end

@@ -7,6 +7,10 @@ class Tag
     belongs_to subject, class_name: ActivityPub::Object | ActivityPub::Actor, foreign_key: subject_iri, primary_key: iri
     validates(subject) { "missing: #{subject_iri}" unless subject? }
 
+    # Returns the objects with the given tag.
+    #
+    # Includes private (not visible) objects.
+    #
     def self.all_objects(name, page = 1, size = 10)
       query = <<-QUERY
         SELECT #{ActivityPub::Object.columns(prefix: "o")}
@@ -45,6 +49,11 @@ class Tag
       ActivityPub::Object.query_and_paginate(query, name, name, page: page, size: size)
     end
 
+    # Returns the public objects with the given tag.
+    #
+    # Does not include private (not visible) objects. Includes
+    # approved remote objects.
+    #
     def self.public_objects(name, page = 1, size = 10)
       query = <<-QUERY
         SELECT #{ActivityPub::Object.columns(prefix: "o")}

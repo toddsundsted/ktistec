@@ -107,9 +107,26 @@ module Ktistec
       if term.in?(["https://www.w3.org/ns/activitystreams#content", "https://www.w3.org/ns/activitystreams#name", "https://www.w3.org/ns/activitystreams#summary"])
         value.as_s? ? wrap({"und" => value}) : value
       elsif value.as_a?
-        wrap(value.as_a.map { |v| v.as_h? ? expand(v, context, loader) : v })
+        array = value.as_a.map do |v|
+          if v.as_h?
+            new_context = context
+            if v["@context"]?
+              c = context(v["@context"]?, loader)
+              new_context = wrap(new_context.as_h.merge(c.as_h))
+            end
+            expand(v, new_context, loader)
+          else
+            v
+          end
+        end
+        wrap(array)
       elsif value.as_h?
-        expand(value, context, loader)
+        new_context = context
+        if value["@context"]?
+          c = context(value["@context"]?, loader)
+          new_context = wrap(new_context.as_h.merge(c.as_h))
+        end
+        expand(value, new_context, loader)
       else
         value
       end

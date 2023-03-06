@@ -684,10 +684,6 @@ module Ktistec
           {% (param = block.args.first) || raise "with_callbacks block must have one parameter" %}
           {{param.id}} = %node
           {{block.body}}
-        end
-        %nodes.each do |%node|
-          %model = %node.model
-          next unless %model == self || %model.changed?
           if %model.responds_to?({{after.symbolize}})
             %model.{{after.id}}
           end

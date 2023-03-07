@@ -261,6 +261,49 @@ Spectator.describe ContentRules do
         end
       end
 
+      context "object is tagged with hashtags" do
+        before_each do
+          Factory.create(:hashtag, name: "foo", subject: create.object)
+          Factory.create(:hashtag, name: "bar", subject: create.object)
+        end
+
+        context "where 'foo' is followed by the owner" do
+          let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "foo")
+
+          it "adds the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.activity)).to eq([create])
+          end
+
+          context "and 'bar' is followed by the owner" do
+            let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "bar")
+
+            it "adds a single create to the notifications" do
+              run(owner, create)
+              expect(owner.notifications.map(&.activity)).to eq([create])
+            end
+          end
+        end
+
+        context "where 'foo' is followed by another actor" do
+          let_create!(:follow_hashtag_relationship, named: nil, actor: other, name: "foo")
+
+          it "does not add the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications).to be_empty
+          end
+
+          context "and 'bar' is followed by another actor" do
+            let_create!(:follow_hashtag_relationship, named: nil, actor: other, name: "bar")
+
+            it "does not add the create to the notifications" do
+              run(owner, create)
+              expect(owner.notifications).to be_empty
+            end
+          end
+        end
+      end
+
       context "object is attributed to the owner" do
         before_each { object.assign(attributed_to: owner) }
 

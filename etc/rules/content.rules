@@ -153,6 +153,15 @@ rule "create/reply"
   assert NotificationReply, owner: actor, activity: activity
 end
 
+rule "create/follow/hashtag"
+  condition activity, IsAddressedTo, actor
+  condition CreateActivity, activity, object: object
+  condition Hashtag, subject: object, name: name
+  any FollowHashtag, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationHashtag, owner: actor, activity: activity
+end
+
 rule "create/thread"
   condition activity, IsAddressedTo, actor
   condition CreateActivity, activity, object: object

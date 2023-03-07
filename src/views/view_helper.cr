@@ -577,4 +577,16 @@ module Ktistec::ViewHelper
   macro actor_remote_follow_path(actor = nil)
     "#{actor_path({{actor}})}/remote-follow"
   end
+
+  macro hashtag_path(hashtag = nil)
+    "/tags/#{{{hashtag}} || env.params.url["hashtag"]}"
+  end
+
+  macro follow_hashtag_path(hashtag = nil)
+    "#{hashtag_path({{hashtag}})}/follow"
+  end
+
+  macro unfollow_hashtag_path(hashtag = nil)
+    "#{hashtag_path({{hashtag}})}/unfollow"
+  end
 end

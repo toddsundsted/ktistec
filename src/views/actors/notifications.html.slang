@@ -51,6 +51,26 @@
               a> href=remote_object_path(activity.object) replied to
               a< href=remote_object_path(activity.object.in_reply_to) your post
               | .
+        - elsif notification.is_a?(Relationship::Content::Notification::Hashtag)
+          - activity = notification.activity.as(ActivityPub::Activity::Create)
+          .label
+            - if (icon = activity.actor.icon)
+              img data-actor-id=activity.actor.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              crystal:
+                ht1 = activity.object.hashtags.map(&.name)
+                ht2 = Relationship::Content::Follow::Hashtag.where(actor: env.account.actor).map(&.name)
+                hashtags = (ht1 & ht2) + (ht1 - ht2)
+              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              | tagged
+              a<> href=remote_object_path(activity.object) a post
+              | with
+              - hashtags.each do |hashtag|
+                a< href=hashtag_path(hashtag) ##{hashtag}
+              | .
         - elsif notification.is_a?(Relationship::Content::Notification::Mention)
           - activity = notification.activity.as(ActivityPub::Activity::Create)
           .label

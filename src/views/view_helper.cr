@@ -589,4 +589,16 @@ module Ktistec::ViewHelper
   macro unfollow_hashtag_path(hashtag = nil)
     "#{hashtag_path({{hashtag}})}/unfollow"
   end
+
+  macro mention_path(mention = nil)
+    "/mentions/#{{{mention}} || env.params.url["mention"]}"
+  end
+
+  macro follow_mention_path(mention = nil)
+    "#{mention_path({{mention}})}/follow"
+  end
+
+  macro unfollow_mention_path(mention = nil)
+    "#{mention_path({{mention}})}/unfollow"
+  end
 end

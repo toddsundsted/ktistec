@@ -304,6 +304,49 @@ Spectator.describe ContentRules do
         end
       end
 
+      context "object is tagged with mentions" do
+        before_each do
+          Factory.create(:mention, name: "foo@remote.com", subject: create.object)
+          Factory.create(:mention, name: "bar@remote.com", subject: create.object)
+        end
+
+        context "where 'foo@remote.com' is followed by the owner" do
+          let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "foo@remote.com")
+
+          it "adds the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.activity)).to eq([create])
+          end
+
+          context "and 'bar@remote.com' is followed by the owner" do
+            let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "bar@remote.com")
+
+            it "adds a single create to the notifications" do
+              run(owner, create)
+              expect(owner.notifications.map(&.activity)).to eq([create])
+            end
+          end
+        end
+
+        context "where 'foo@remote.com' is followed by another actor" do
+          let_create!(:follow_mention_relationship, named: nil, actor: other, name: "foo@remote.com")
+
+          it "does not add the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications).to be_empty
+          end
+
+          context "and 'bar@remote.com' is followed by another actor" do
+            let_create!(:follow_mention_relationship, named: nil, actor: other, name: "bar@remote.com")
+
+            it "does not add the create to the notifications" do
+              run(owner, create)
+              expect(owner.notifications).to be_empty
+            end
+          end
+        end
+      end
+
       context "object is attributed to the owner" do
         before_each { object.assign(attributed_to: owner) }
 

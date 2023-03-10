@@ -24,7 +24,7 @@ class ContentRules
   Ktistec::Rule.make_pattern(Activity, ActivityPub::Activity, associations: [:actor])
   Ktistec::Rule.make_pattern(Object, ActivityPub::Object, associations: [:in_reply_to, :attributed_to], properties: [:content, :thread])
   Ktistec::Rule.make_pattern(Hashtag, Tag::Hashtag, associations: [subject], properties: [name])
-  Ktistec::Rule.make_pattern(Mention, Tag::Mention, associations: [subject], properties: [href])
+  Ktistec::Rule.make_pattern(Mention, Tag::Mention, associations: [subject], properties: [name, href])
   Ktistec::Rule.make_pattern(CreateActivity, ActivityPub::Activity::Create, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(AnnounceActivity, ActivityPub::Activity::Announce, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(LikeActivity, ActivityPub::Activity::Like, associations: [:object])
@@ -46,6 +46,7 @@ class ContentRules
   Ktistec::Rule.make_pattern(TimelineCreate, Relationship::Content::Timeline::Create, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(Follow, Relationship::Social::Follow, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(FollowHashtag, Relationship::Content::Follow::Hashtag, associations: [:actor], properties: [:name])
+  Ktistec::Rule.make_pattern(FollowMention, Relationship::Content::Follow::Mention, associations: [:actor], properties: [:name])
   Ktistec::Rule.make_pattern(FollowThread, Relationship::Content::Follow::Thread, associations: [:actor], properties: [:thread])
   Ktistec::Rule.make_pattern(Filter, FilterTerm, associations: [:actor], properties: [:term])
 
@@ -81,6 +82,7 @@ class ContentRules
   Ktistec::Compiler.register_constant(ContentRules::Follow)
   Ktistec::Compiler.register_constant(ContentRules::FollowHashtag)
   Ktistec::Compiler.register_constant(ContentRules::FollowThread)
+  Ktistec::Compiler.register_constant(ContentRules::FollowMention)
   Ktistec::Compiler.register_constant(ContentRules::Filter)
   Ktistec::Compiler.register_constant(ContentRules::Incoming)
   Ktistec::Compiler.register_constant(ContentRules::Outgoing)
@@ -99,7 +101,7 @@ class ContentRules
   # like `none Notification, owner: actor, activity: activity` will
   # *not* prevent a subsequent assert from attempting to create more
   # than one notification, assuming more than one match. the following
-  # adds a check inside `assert` and `retract`.
+  # adds a check inside `assert` and `retract` for two special cases.
 
   class NotificationHashtag
     def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)
@@ -122,6 +124,32 @@ class ContentRules
 
     def self.retract(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
       if (instance = ::Relationship::Content::Notification::Hashtag.find?(options))
+        instance.destroy
+      end
+    end
+  end
+
+  class NotificationMention
+    def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)
+      unless ::Relationship::Content::Notification::Mention.find?(**options)
+        ::Relationship::Content::Notification::Mention.new(**options).save
+      end
+    end
+
+    def self.assert(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
+      unless ::Relationship::Content::Notification::Mention.find?(options)
+        ::Relationship::Content::Notification::Mention.new(options).save
+      end
+    end
+
+    def self.retract(target : School::DomainTypes?, **options : School::DomainTypes)
+      if (instance = ::Relationship::Content::Notification::Mention.find?(**options))
+        instance.destroy
+      end
+    end
+
+    def self.retract(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
+      if (instance = ::Relationship::Content::Notification::Mention.find?(options))
         instance.destroy
       end
     end

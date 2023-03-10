@@ -80,9 +80,22 @@
               i.user.icon
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-              a<> href=remote_object_path(activity.object) mentioned
-              | you.
+              crystal:
+                mn1 = activity.object.mentions.map(&.name)
+                mn2 = Relationship::Content::Follow::Mention.where(actor: env.account.actor).map(&.name)
+                mentions = (mn1 & mn2) + (mn1 - mn2)
+              - if mentions.includes?(actor.account_uri)
+                a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+                a<> href=remote_object_path(activity.object) mentioned
+                | you.
+              - else
+                a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+                | tagged
+                a<> href=remote_object_path(activity.object) a post
+                | with
+                - mentions.each do |mention|
+                  a< href=mention_path(mention) @#{mention.split("@").first}
+                | .
         - elsif notification.is_a?(Relationship::Content::Notification::Follow)
           - activity = notification.activity.as(ActivityPub::Activity::Follow)
           .label

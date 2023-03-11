@@ -14,25 +14,25 @@ Spectator.describe Tag::Hashtag do
     end
   end
 
-  describe ".all_objects" do
-    let_build(:actor, named: :author)
+  let_build(:actor, named: :author)
 
-    macro create_tagged_object(index, *tags)
-      let_create!(
-        :object, named: object{{index}},
-        attributed_to: author,
-        published: Time.utc(2016, 2, 15, 10, 20, {{index}})
-      )
-      before_each do
-        {% for tag in tags %}
-          described_class.new(
-            name: {{tag}},
-            subject: object{{index}}
-          ).save
-        {% end %}
-      end
+  macro create_tagged_object(index, *tags)
+    let_create!(
+      :object, named: object{{index}},
+      attributed_to: author,
+      published: Time.utc(2016, 2, 15, 10, 20, {{index}})
+    )
+    before_each do
+      {% for tag in tags %}
+        described_class.new(
+        name: {{tag}},
+        subject: object{{index}}
+      ).save
+      {% end %}
     end
+  end
 
+  describe ".all_objects" do
     create_tagged_object(1, "foo", "bar")
     create_tagged_object(2, "foo")
     create_tagged_object(3, "foo", "bar")
@@ -80,9 +80,50 @@ Spectator.describe Tag::Hashtag do
     end
   end
 
-  describe ".public_objects" do
-    let_build(:actor, named: :author)
 
+  describe ".count_objects" do
+    create_tagged_object(1, "foo", "bar")
+    create_tagged_object(2, "foo")
+    create_tagged_object(3, "foo", "bar")
+    create_tagged_object(4, "foo")
+    create_tagged_object(5, "foo", "quux")
+
+    it "returns count of objects with the mention" do
+      expect(described_class.count_objects("bar")).to eq(2)
+    end
+
+    it "filters out draft objects" do
+      object5.assign(published: nil).save
+      expect(described_class.count_objects("foo")).to eq(4)
+    end
+
+    it "filters out deleted objects" do
+      object5.delete
+      expect(described_class.count_objects("foo")).to eq(4)
+    end
+
+    it "filters out blocked objects" do
+      object5.block
+      expect(described_class.count_objects("foo")).to eq(4)
+    end
+
+    it "filters out objects with deleted attributed to actors" do
+      author.delete
+      expect(described_class.count_objects("foo")).to eq(0)
+    end
+
+    it "filters out objects with blocked attributed to actors" do
+      author.block
+      expect(described_class.count_objects("foo")).to eq(0)
+    end
+
+    it "filters out objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.count_objects("foo")).to eq(0)
+    end
+  end
+
+  describe ".public_objects" do
     macro create_tagged_object(index, *tags)
       let_create!(
         :object, named: object{{index}},

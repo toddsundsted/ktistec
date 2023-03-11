@@ -5,8 +5,8 @@
     .ui.segment
       p
         a href=mention_path @#{mention}
-        - if (match = Tag::Mention.match(mention).first?)
-          span< #{match.last} posts
+        - if (count = Tag::Mention.count_objects(mention)) > 0
+          span< #{pluralize(count, "post")}
     turbo-frame#mention_page_mention_controls
       .ui.basic.segment
         - if follow

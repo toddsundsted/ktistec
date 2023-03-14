@@ -162,6 +162,15 @@ rule "create/follow/hashtag"
   assert NotificationHashtag, owner: actor, activity: activity
 end
 
+rule "announce/follow/hashtag"
+  condition activity, InMailboxOf, actor
+  condition AnnounceActivity, activity, object: object
+  condition Hashtag, subject: object, name: name
+  any FollowHashtag, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationHashtag, owner: actor, activity: activity
+end
+
 rule "create/follow/mention"
   condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
@@ -171,9 +180,27 @@ rule "create/follow/mention"
   assert NotificationMention, owner: actor, activity: activity
 end
 
+rule "announce/follow/mention"
+  condition activity, InMailboxOf, actor
+  condition AnnounceActivity, activity, object: object
+  condition Mention, subject: object, name: name
+  any FollowMention, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationMention, owner: actor, activity: activity
+end
+
 rule "create/thread"
   condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
+  condition Object, object, thread: thread
+  condition FollowThread, actor: actor, thread: thread
+  none Notification, owner: actor, activity: activity
+  assert NotificationThread, owner: actor, activity: activity
+end
+
+rule "announce/thread"
+  condition activity, InMailboxOf, actor
+  condition AnnounceActivity, activity, object: object
   condition Object, object, thread: thread
   condition FollowThread, actor: actor, thread: thread
   none Notification, owner: actor, activity: activity

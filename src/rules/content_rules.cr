@@ -52,7 +52,7 @@ class ContentRules
 
   class Outgoing < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
   class Incoming < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
-  class IsAddressedTo < School::Relationship(ActivityPub::Activity, ActivityPub::Actor) end
+  class InMailboxOf < School::Relationship(ActivityPub::Activity, ActivityPub::Actor) end
   class IsRecipient < School::Property(String) end
 
   Ktistec::Compiler.register_constant(ContentRules::Actor)
@@ -86,7 +86,7 @@ class ContentRules
   Ktistec::Compiler.register_constant(ContentRules::Filter)
   Ktistec::Compiler.register_constant(ContentRules::Incoming)
   Ktistec::Compiler.register_constant(ContentRules::Outgoing)
-  Ktistec::Compiler.register_constant(ContentRules::IsAddressedTo)
+  Ktistec::Compiler.register_constant(ContentRules::InMailboxOf)
   Ktistec::Compiler.register_constant(ContentRules::IsRecipient)
 
   Ktistec::Compiler.register_accessor(iri)

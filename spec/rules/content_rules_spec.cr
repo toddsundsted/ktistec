@@ -142,7 +142,7 @@ Spectator.describe ContentRules do
   describe "#run" do
     def run(owner, activity)
       School::Fact.clear!
-      School::Fact.assert(ContentRules::IsAddressedTo.new(activity, owner))
+      School::Fact.assert(ContentRules::InMailboxOf.new(activity, owner))
       subject.run
     end
 
@@ -523,7 +523,7 @@ Spectator.describe ContentRules do
     def run(owner, activity)
       put_in_inbox(owner, activity)
       School::Fact.clear!
-      School::Fact.assert(ContentRules::IsAddressedTo.new(activity, owner))
+      School::Fact.assert(ContentRules::InMailboxOf.new(activity, owner))
       subject.run
     end
 

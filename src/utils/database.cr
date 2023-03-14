@@ -38,7 +38,7 @@ module Ktistec
             if relationship.responds_to?(:activity) && relationship.activity?
               begin
                 School::Fact.clear!
-                School::Fact.assert(ContentRules::IsAddressedTo.new(relationship.activity, account.actor))
+                School::Fact.assert(ContentRules::InMailboxOf.new(relationship.activity, account.actor))
                 ContentRules.new.run
               rescue ex
                 puts "Exception while running rules: " + ex.inspect_with_backtrace

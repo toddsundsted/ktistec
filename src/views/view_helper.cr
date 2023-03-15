@@ -1,6 +1,5 @@
 require "ecr"
 require "slang"
-require "markd"
 
 module Ktistec::ViewHelper
   module ClassMethods

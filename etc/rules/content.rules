@@ -80,11 +80,28 @@
 # actor and object would be available to each action invocation.
 
 # Outbox
+
 rule "outbox"
   condition Outgoing, actor, activity
   none Outbox, owner: actor, activity: activity
   assert Outbox, owner: actor, activity: activity
   assert activity, InMailboxOf, actor
+end
+
+# Filter Incoming Content
+
+rule "filter content/create"
+  condition Incoming, actor, activity
+  condition CreateActivity, activity, actor: not actor, object: object
+  any Filter, actor: actor, term: filter(strip(object.content))
+  retract Incoming, actor, activity
+end
+
+rule "filter content/announce"
+  condition Incoming, actor, activity
+  condition AnnounceActivity, activity, actor: not actor, object: object
+  any Filter, actor: actor, term: filter(strip(object.content))
+  retract Incoming, actor, activity
 end
 
 # Inbox
@@ -118,23 +135,7 @@ rule "inbox"
   assert activity, InMailboxOf, actor
 end
 
-# Filter Content
-
-rule "filter content/create"
-  condition activity, InMailboxOf, actor
-  condition CreateActivity, activity, actor: not actor, object: object
-  any Filter, actor: actor, term: filter(strip(object.content))
-  retract activity, InMailboxOf, actor
-end
-
-rule "filter content/announce"
-  condition activity, InMailboxOf, actor
-  condition AnnounceActivity, activity, actor: not actor, object: object
-  any Filter, actor: actor, term: filter(strip(object.content))
-  retract activity, InMailboxOf, actor
-end
-
-# Notifications
+# Mailbox Notifications
 
 rule "create/mention"
   condition activity, InMailboxOf, actor
@@ -151,60 +152,6 @@ rule "create/reply"
   condition Object, other, attributed_to: actor
   none Notification, owner: actor, activity: activity
   assert NotificationReply, owner: actor, activity: activity
-end
-
-rule "create/follow/hashtag"
-  condition activity, InMailboxOf, actor
-  condition CreateActivity, activity, object: object
-  condition Hashtag, subject: object, name: name
-  any FollowHashtag, actor: actor, name: name
-  none Notification, owner: actor, activity: activity
-  assert NotificationHashtag, owner: actor, activity: activity
-end
-
-rule "announce/follow/hashtag"
-  condition activity, InMailboxOf, actor
-  condition AnnounceActivity, activity, object: object
-  condition Hashtag, subject: object, name: name
-  any FollowHashtag, actor: actor, name: name
-  none Notification, owner: actor, activity: activity
-  assert NotificationHashtag, owner: actor, activity: activity
-end
-
-rule "create/follow/mention"
-  condition activity, InMailboxOf, actor
-  condition CreateActivity, activity, object: object
-  condition Mention, subject: object, name: name
-  any FollowMention, actor: actor, name: name
-  none Notification, owner: actor, activity: activity
-  assert NotificationMention, owner: actor, activity: activity
-end
-
-rule "announce/follow/mention"
-  condition activity, InMailboxOf, actor
-  condition AnnounceActivity, activity, object: object
-  condition Mention, subject: object, name: name
-  any FollowMention, actor: actor, name: name
-  none Notification, owner: actor, activity: activity
-  assert NotificationMention, owner: actor, activity: activity
-end
-
-rule "create/thread"
-  condition activity, InMailboxOf, actor
-  condition CreateActivity, activity, object: object
-  condition Object, object, thread: thread
-  condition FollowThread, actor: actor, thread: thread
-  none Notification, owner: actor, activity: activity
-  assert NotificationThread, owner: actor, activity: activity
-end
-
-rule "announce/thread"
-  condition activity, InMailboxOf, actor
-  condition AnnounceActivity, activity, object: object
-  condition Object, object, thread: thread
-  condition FollowThread, actor: actor, thread: thread
-  none Notification, owner: actor, activity: activity
-  assert NotificationThread, owner: actor, activity: activity
 end
 
 rule "announce"
@@ -243,6 +190,62 @@ rule "undo"
   condition UndoActivity, undo, object: activity
   any Notification, owner: actor, activity: activity
   retract Notification, owner: actor, activity: activity
+end
+
+# Follow Notifications
+
+rule "create/follow/hashtag"
+  condition Incoming, actor, activity
+  condition CreateActivity, activity, object: object
+  condition Hashtag, subject: object, name: name
+  any FollowHashtag, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationHashtag, owner: actor, activity: activity
+end
+
+rule "announce/follow/hashtag"
+  condition Incoming, actor, activity
+  condition AnnounceActivity, activity, object: object
+  condition Hashtag, subject: object, name: name
+  any FollowHashtag, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationHashtag, owner: actor, activity: activity
+end
+
+rule "create/follow/mention"
+  condition Incoming, actor, activity
+  condition CreateActivity, activity, object: object
+  condition Mention, subject: object, name: name
+  any FollowMention, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationMention, owner: actor, activity: activity
+end
+
+rule "announce/follow/mention"
+  condition Incoming, actor, activity
+  condition AnnounceActivity, activity, object: object
+  condition Mention, subject: object, name: name
+  any FollowMention, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationMention, owner: actor, activity: activity
+end
+
+rule "create/follow/thread"
+  condition Incoming, actor, activity
+  condition CreateActivity, activity, object: object
+  condition Object, object, thread: thread
+  condition FollowThread, actor: actor, thread: thread
+  none Notification, owner: actor, activity: activity
+  assert NotificationThread, owner: actor, activity: activity
+end
+
+rule "announce/follow/thread"
+  condition Incoming, actor, activity
+  condition AnnounceActivity, activity, object: object
+  condition Object, object, thread: thread
+  condition FollowThread, actor: actor, thread: thread
+  none Notification, owner: actor, activity: activity
+  assert NotificationThread, owner: actor, activity: activity
 end
 
 # Timeline

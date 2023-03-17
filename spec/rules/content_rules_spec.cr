@@ -142,7 +142,8 @@ Spectator.describe ContentRules do
   describe "#run" do
     def run(owner, activity)
       School::Fact.clear!
-      School::Fact.assert(ContentRules::IsAddressedTo.new(activity, owner))
+      School::Fact.assert(ContentRules::Incoming.new(owner, activity))
+      School::Fact.assert(ContentRules::InMailboxOf.new(activity, owner))
       subject.run
     end
 
@@ -230,6 +231,34 @@ Spectator.describe ContentRules do
           run(owner, create)
           expect(owner.notifications).to be_empty
         end
+
+        context "in a thread being followed by the owner" do
+          let_create!(:follow_thread_relationship, actor: owner, thread: object.in_reply_to_iri)
+
+          it "adds the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.activity)).to eq([create])
+          end
+
+          it "adds the announce to the notifications" do
+            run(owner, announce)
+            expect(owner.notifications.map(&.activity)).to eq([announce])
+          end
+        end
+
+        context "in a thread being followed by another actor" do
+          let_create!(:follow_thread_relationship, actor: other, thread: object.in_reply_to_iri)
+
+          it "does not add the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications).to be_empty
+          end
+
+          it "does not add the announce to the notifications" do
+            run(owner, announce)
+            expect(owner.notifications).to be_empty
+          end
+        end
       end
 
       context "another object is in reply to an object attributed to the owner" do
@@ -240,6 +269,132 @@ Spectator.describe ContentRules do
         it "does not add the create to the notifications" do
           run(owner, create)
           expect(owner.notifications).to be_empty
+        end
+      end
+
+      context "object is tagged with hashtags" do
+        before_each do
+          Factory.create(:hashtag, name: "foo", subject: object)
+          Factory.create(:hashtag, name: "bar", subject: object)
+        end
+
+        context "where 'foo' is followed by the owner" do
+          let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "foo")
+
+          it "adds the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.activity)).to eq([create])
+          end
+
+          it "adds the announce to the notifications" do
+            run(owner, announce)
+            expect(owner.notifications.map(&.activity)).to eq([announce])
+          end
+
+          context "and 'bar' is followed by the owner" do
+            let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "bar")
+
+            it "adds a single create to the notifications" do
+              run(owner, create)
+              expect(owner.notifications.map(&.activity)).to eq([create])
+            end
+
+            it "adds a single announce to the notifications" do
+              run(owner, announce)
+              expect(owner.notifications.map(&.activity)).to eq([announce])
+            end
+          end
+        end
+
+        context "where 'foo' is followed by another actor" do
+          let_create!(:follow_hashtag_relationship, named: nil, actor: other, name: "foo")
+
+          it "does not add the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications).to be_empty
+          end
+
+          it "does not add the announce to the notifications" do
+            run(owner, announce)
+            expect(owner.notifications).to be_empty
+          end
+
+          context "and 'bar' is followed by another actor" do
+            let_create!(:follow_hashtag_relationship, named: nil, actor: other, name: "bar")
+
+            it "does not add the create to the notifications" do
+              run(owner, create)
+              expect(owner.notifications).to be_empty
+            end
+
+            it "does not add the announce to the notifications" do
+              run(owner, announce)
+              expect(owner.notifications).to be_empty
+            end
+          end
+        end
+      end
+
+      context "object is tagged with mentions" do
+        before_each do
+          Factory.create(:mention, name: "foo@remote.com", subject: object)
+          Factory.create(:mention, name: "bar@remote.com", subject: object)
+        end
+
+        context "where 'foo@remote.com' is followed by the owner" do
+          let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "foo@remote.com")
+
+          it "adds the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.activity)).to eq([create])
+          end
+
+          it "adds the announce to the notifications" do
+            run(owner, announce)
+            expect(owner.notifications.map(&.activity)).to eq([announce])
+          end
+
+          context "and 'bar@remote.com' is followed by the owner" do
+            let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "bar@remote.com")
+
+            it "adds a single create to the notifications" do
+              run(owner, create)
+              expect(owner.notifications.map(&.activity)).to eq([create])
+            end
+
+            it "adds a single announce to the notifications" do
+              run(owner, announce)
+              expect(owner.notifications.map(&.activity)).to eq([announce])
+            end
+          end
+        end
+
+        context "where 'foo@remote.com' is followed by another actor" do
+          let_create!(:follow_mention_relationship, named: nil, actor: other, name: "foo@remote.com")
+
+          it "does not add the create to the notifications" do
+            run(owner, create)
+            expect(owner.notifications).to be_empty
+          end
+
+          it "does not add the announce to the notifications" do
+            run(owner, announce)
+            expect(owner.notifications).to be_empty
+          end
+
+          context "and 'bar@remote.com' is followed by another actor" do
+            let_create!(:follow_mention_relationship, named: nil, actor: other, name: "bar@remote.com")
+
+            it "does not add the create to the notifications" do
+              run(owner, create)
+              expect(owner.notifications).to be_empty
+            end
+
+            it "does not add the announce to the notifications" do
+              run(owner, announce)
+              expect(owner.notifications).to be_empty
+            end
+          end
         end
       end
 
@@ -419,7 +574,8 @@ Spectator.describe ContentRules do
     def run(owner, activity)
       put_in_inbox(owner, activity)
       School::Fact.clear!
-      School::Fact.assert(ContentRules::IsAddressedTo.new(activity, owner))
+      School::Fact.assert(ContentRules::Incoming.new(owner, activity))
+      School::Fact.assert(ContentRules::InMailboxOf.new(activity, owner))
       subject.run
     end
 

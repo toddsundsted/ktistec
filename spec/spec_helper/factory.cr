@@ -214,6 +214,18 @@ def follow_relationship_factory(confirmed = true, **options)
   relationship_factory(Relationship::Social::Follow, **{confirmed: confirmed}.merge(options))
 end
 
+def follow_hashtag_relationship_factory(**options)
+  relationship_factory(Relationship::Content::Follow::Hashtag, **options)
+end
+
+def follow_mention_relationship_factory(**options)
+  relationship_factory(Relationship::Content::Follow::Mention, **options)
+end
+
+def follow_thread_relationship_factory(**options)
+  relationship_factory(Relationship::Content::Follow::Thread, **options)
+end
+
 def approved_relationship_factory(**options)
   relationship_factory(Relationship::Content::Approved, **options)
 end

@@ -88,7 +88,7 @@ class ObjectsController
       not_found
     end
 
-    thread = object.thread
+    thread = object.thread(for_actor: env.account.actor)
 
     ok "objects/thread"
   end
@@ -135,6 +135,57 @@ class ObjectsController
     object.unblock
 
     redirect back_path
+  end
+
+  # NOTE: there is currently no standard property whose value
+  # indicates that an object participates in a thread. mastodon uses
+  # the `conversation` property. friendica uses `context`. others use
+  # neither. in our implementation, following _any_ object in a thread
+  # follows the thread. usually that's the root object, but it's
+  # possible, because of legacy objects in the database and incomplete
+  # threads, for a follow relationship to point to one or more reply
+  # objects instead. deal with that.
+
+  post "/remote/objects/:id/follow" do |env|
+    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
+      not_found
+    end
+
+    thread = object.thread(for_actor: env.account.actor)
+
+    thread.first.save # lazy migration -- ensure the `thread` property is up to date
+
+    follow = Relationship::Content::Follow::Thread.new(actor: env.account.actor, thread: thread.first.thread).save
+
+    thread.first.relationship_id = follow.id
+
+    if turbo_frame?
+      ok "objects/thread"
+    else
+      redirect back_path
+    end
+  end
+
+  post "/remote/objects/:id/unfollow" do |env|
+    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
+      not_found
+    end
+
+    thread = object.thread(for_actor: env.account.actor)
+
+    thread.map(&.relationship_id).compact.uniq.each do |id|
+      Relationship::Content::Follow::Thread.find(id).destroy
+    end
+
+    thread.each do |_object|
+      _object.relationship_id = nil
+    end
+
+    if turbo_frame?
+      ok "objects/thread"
+    else
+      redirect back_path
+    end
   end
 
   post "/remote/objects/fetch" do |env|

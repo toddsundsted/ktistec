@@ -538,6 +538,14 @@ module Ktistec::ViewHelper
     "#{remote_object_path({{object}})}/unblock"
   end
 
+  macro follow_thread_path(object = nil)
+    "#{remote_object_path({{object}})}/follow"
+  end
+
+  macro unfollow_thread_path(object = nil)
+    "#{remote_object_path({{object}})}/unfollow"
+  end
+
   macro remote_actor_path(actor = nil)
     "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
   end
@@ -568,5 +576,29 @@ module Ktistec::ViewHelper
 
   macro actor_remote_follow_path(actor = nil)
     "#{actor_path({{actor}})}/remote-follow"
+  end
+
+  macro hashtag_path(hashtag = nil)
+    "/tags/#{{{hashtag}} || env.params.url["hashtag"]}"
+  end
+
+  macro follow_hashtag_path(hashtag = nil)
+    "#{hashtag_path({{hashtag}})}/follow"
+  end
+
+  macro unfollow_hashtag_path(hashtag = nil)
+    "#{hashtag_path({{hashtag}})}/unfollow"
+  end
+
+  macro mention_path(mention = nil)
+    "/mentions/#{{{mention}} || env.params.url["mention"]}"
+  end
+
+  macro follow_mention_path(mention = nil)
+    "#{mention_path({{mention}})}/follow"
+  end
+
+  macro unfollow_mention_path(mention = nil)
+    "#{mention_path({{mention}})}/unfollow"
   end
 end

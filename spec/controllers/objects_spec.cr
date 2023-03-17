@@ -924,6 +924,169 @@ Spectator.describe ObjectsController do
     end
   end
 
+  let(body) { XML.parse_html(response.body) }
+
+  TURBO_FRAME = HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "thread_page_thread_controls"}
+
+  describe "POST /remote/objects/:id/follow" do
+    it "returns 401" do
+      post "/remote/objects/0/follow"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/remote/objects/#{remote.id}/follow"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "follows the thread" do
+        post "/remote/objects/#{remote.id}/follow"
+        expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.iri)
+      end
+
+      context "within a turbo-frame" do
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
+          expect(response.status_code).to eq(200)
+        end
+
+        it "renders an unfollow button" do
+          post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
+          expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Unfollow")
+        end
+      end
+
+      context "given a reply" do
+        let_create!(:object, named: :reply, in_reply_to: remote)
+
+        it "succeeds" do
+          post "/remote/objects/#{reply.id}/follow"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "follows the root object of the thread" do
+          post "/remote/objects/#{reply.id}/follow"
+          expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.iri)
+        end
+
+        context "within a turbo-frame" do
+          it "succeeds" do
+            post "/remote/objects/#{reply.id}/follow", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+          end
+
+          it "renders an unfollow button" do
+            post "/remote/objects/#{reply.id}/follow", TURBO_FRAME
+            expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Unfollow")
+          end
+        end
+      end
+
+      it "returns 404 if object is draft" do
+        post "/remote/objects/#{draft.id}/follow"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/follow"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/:id/unfollow" do
+    it "returns 401" do
+      post "/remote/objects/0/unfollow"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      context "given a follow" do
+        let_create(:object, named: :reply, in_reply_to: remote)
+
+        let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: reply.thread)
+
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/unfollow"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "unfollows all followed objects in the thread" do
+          post "/remote/objects/#{remote.id}/unfollow"
+          expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+        end
+
+        context "within a turbo-frame" do
+          it "succeeds" do
+            post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+          end
+
+          it "renders a follow button" do
+            post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
+            expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
+          end
+        end
+      end
+
+      context "given multiple legacy follows" do
+        let_create(:object, named: :reply1, in_reply_to: remote)
+        let_create(:object, named: :reply2, in_reply_to: remote)
+
+        before_each do
+          # manipulate the database directly -- only legacy objects
+          # in a thread will have `thread` set "incorrectly".
+          Ktistec.database.exec <<-SQL
+            UPDATE objects SET thread = iri WHERE id IN (#{reply1.id}, #{reply2.id})
+          SQL
+        end
+
+        let(reply1legacy) { ActivityPub::Object.find(reply1.id) }
+        let(reply2legacy) { ActivityPub::Object.find(reply2.id) }
+
+        let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: reply1legacy.thread)
+        let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: reply2legacy.thread)
+
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/unfollow"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "unfollows all followed objects in the thread" do
+          post "/remote/objects/#{remote.id}/unfollow"
+          expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+        end
+
+        context "within a turbo-frame" do
+          it "succeeds" do
+            post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+          end
+
+          it "renders a follow button" do
+            post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
+            expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
+          end
+        end
+      end
+
+      it "returns 404 if object is draft" do
+        post "/remote/objects/#{draft.id}/unfollow"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/unfollow"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "POST /remote/objects/fetch" do
     it "returns 401 if not authorized" do
       post "/remote/objects/fetch"

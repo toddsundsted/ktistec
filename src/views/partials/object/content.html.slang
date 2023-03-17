@@ -66,6 +66,16 @@ crystal:
       .extra.text data-controller="clickable-background" data-clickable-background-href-value=href
         == s object.to_html
     - if with_detail && account
+      crystal:
+        hashtags = object.hashtags.map(&.name)
+        mentions = object.mentions.map(&.name)
+      - unless hashtags.empty? && mentions.empty?
+        .extra.detail
+          .ui.labels
+            - hashtags.each do |hashtag|
+              a.ui.small.label data-turbo-frame="_top" href=hashtag_path(hashtag) ##{hashtag}
+            - mentions.each do |mention|
+              a.ui.small.label data-turbo-frame="_top" href=mention_path(mention) @#{mention.split("@").first}
       - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
         .extra.detail
           - activities.each do |activity|

@@ -51,18 +51,67 @@
               a> href=remote_object_path(activity.object) replied to
               a< href=remote_object_path(activity.object.in_reply_to) your post
               | .
-        - elsif notification.is_a?(Relationship::Content::Notification::Mention)
-          - activity = notification.activity.as(ActivityPub::Activity::Create)
+        - elsif notification.is_a?(Relationship::Content::Notification::Hashtag)
+          crystal:
+            activity = notification.activity
+            object = ActivityPub::Object.find(activity.object_iri)
+            attributed_to = object.attributed_to
           .label
-            - if (icon = activity.actor.icon)
-              img data-actor-id=activity.actor.id src=icon
+            - if (icon = attributed_to.icon)
+              img data-actor-id=attributed_to.id src=icon
             - else
               i.user.icon
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-              a<> href=remote_object_path(activity.object) mentioned
-              | you.
+              crystal:
+                ht1 = object.hashtags.map(&.name)
+                ht2 = Relationship::Content::Follow::Hashtag.where(actor: actor).map(&.name)
+                ht3 = (ht1 & ht2)
+                ht4 = (ht1 - ht2)
+              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+              | tagged
+              a<> href=remote_object_path(object) a post
+              | with
+              - ht3.each do |hashtag|
+                a< href=hashtag_path(hashtag) ##{hashtag}
+              - if ht3.presence && ht4.presence
+                = " and"
+              - ht4.each do |hashtag|
+                a< href=hashtag_path(hashtag) ##{hashtag}
+              | .
+        - elsif notification.is_a?(Relationship::Content::Notification::Mention)
+          crystal:
+            activity = notification.activity
+            object = ActivityPub::Object.find(activity.object_iri)
+            attributed_to = object.attributed_to
+          .label
+            - if (icon = attributed_to.icon)
+              img data-actor-id=attributed_to.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              crystal:
+                mn1 = object.mentions.map(&.name)
+                mn2 = Relationship::Content::Follow::Mention.where(actor: actor).map(&.name)
+                mn3 = (mn1 & mn2)
+                mn4 = (mn1 - mn2)
+              - if mn1.includes?(actor.account_uri)
+                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+                a> href=remote_object_path(object) mentioned
+                | you.
+              - else
+                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+                | tagged
+                a<> href=remote_object_path(object) a post
+                | with
+                - mn3.each do |mention|
+                  a< href=mention_path(mention) @#{mention.split("@").first}
+                - if mn3.presence && mn4.presence
+                  = " and"
+                - mn4.each do |mention|
+                  a< href=mention_path(mention) @#{mention.split("@").first}
+                | .
         - elsif notification.is_a?(Relationship::Content::Notification::Follow)
           - activity = notification.activity.as(ActivityPub::Activity::Follow)
           .label
@@ -87,6 +136,21 @@
             - elsif response.is_a?(ActivityPub::Activity::Reject)
               .extra.meta
                 | Rejected #{ response.short_date }.
+        - elsif notification.is_a?(Relationship::Content::Notification::Thread)
+          crystal:
+            activity = notification.activity
+            object = ActivityPub::Object.find(activity.object_iri)
+            attributed_to = object.attributed_to
+          .label
+            - if (icon = attributed_to.icon)
+              img data-actor-id=attributed_to.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+              a> href=remote_object_path(object) replied to a thread
+              | you follow.
         - else
           - activity = notification.activity
           .content

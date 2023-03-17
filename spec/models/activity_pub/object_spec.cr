@@ -473,6 +473,77 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#thread" do
+    let_build(:object)
+
+    it "sets thread to its iri" do
+      expect{object.save}.to change{object.thread}.to(object.iri)
+    end
+
+    context "given a reply" do
+      before_each { object.save.assign(thread: nil) }
+
+      let_build(:object, named: reply, in_reply_to: object)
+
+      context "and a thread on object" do
+        before_each { object.assign(thread: "https://somewhere") }
+
+        it "sets thread to object's thread" do
+          expect{reply.save}.to change{reply.thread}.to("https://somewhere")
+        end
+      end
+
+      context "and an in_reply_to_iri on object" do
+        before_each { object.assign(in_reply_to_iri: "https://elsewhere") }
+
+        it "sets thread to object's in_reply_to_iri" do
+          expect{reply.save}.to change{reply.thread}.to("https://elsewhere")
+        end
+      end
+
+      context "and an in_reply_to_iri on reply" do
+        before_each { reply.assign(in_reply_to_iri: "https://nowhere") }
+
+        it "sets thread to its in_reply_to_iri" do
+          expect{reply.save}.to change{reply.thread}.to("https://nowhere")
+        end
+      end
+
+      it "sets thread to object's iri" do
+        expect{reply.save}.to change{reply.thread}.to(object.iri)
+      end
+
+      context "when saving the root in a thread" do
+        before_each { reply.save }
+
+        before_each { object.assign(in_reply_to_iri: "https://anywhere", thread: "https://anywhere") }
+
+        it "sets reply's thread to object's thread" do
+          expect{object.save}.to change{ActivityPub::Object.find(reply.id).thread}.to("https://anywhere")
+        end
+      end
+    end
+
+    context "given a follow" do
+      let_create(:actor)
+      let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: object.save.thread)
+
+      def all_follows ; Relationship::Content::Follow::Thread.all end
+
+      it "updates follow relationships when thread changes" do
+        expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{all_follows.map(&.to_iri)}.to(["https://elsewhere"])
+      end
+
+      context "given an existing follow relationship" do
+        let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: "https://elsewhere")
+
+        it "updates follow relationships when thread changes" do
+          expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{all_follows.map(&.to_iri)}.to(["https://elsewhere"])
+        end
+      end
+    end
+  end
+
   context "when threaded" do
     subject do
       described_class.new(
@@ -566,63 +637,95 @@ Spectator.describe ActivityPub::Object do
     end
 
     describe "#thread" do
+      let_build(:actor)
+
       it "returns all replies properly nested" do
-        expect(subject.thread).to eq([subject, object1, object2, object3, object4, object5])
-        expect(object1.thread).to eq([subject, object1, object2, object3, object4, object5])
-        expect(object5.thread).to eq([subject, object1, object2, object3, object4, object5])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5])
+        expect(object1.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5])
+        expect(object5.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5])
       end
 
       it "omits deleted replies and their children" do
         object4.delete
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits blocked replies and their children" do
         object4.block
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits destroyed replies and their children" do
         object4.destroy
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits replies with deleted attributed to actors" do
         actor4.delete
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits replies with blocked attributed to actors" do
         actor4.block
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits replies with destroyed attributed to actors" do
         actor4.destroy
-        expect(subject.thread).to eq([subject, object1, object2, object3])
+        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "returns the depths" do
-        expect(object5.thread.map(&.depth)).to eq([0, 1, 2, 3, 1, 2])
+        expect(object5.thread(for_actor: actor).map(&.depth)).to eq([0, 1, 2, 3, 1, 2])
       end
 
-      context "given an actor" do
-        let_build(:actor)
+      context "given a follow" do
+        let_create!(:follow_thread_relationship, named: :follow1, actor: actor, thread: object1.thread)
 
+        it "returns the id of the relationship" do
+          expect(object1.thread(for_actor: actor).map(&.relationship_id)).to eq([follow1.id, follow1.id, follow1.id, follow1.id, follow1.id, follow1.id])
+        end
+      end
+
+      context "given multiple legacy follows" do
+        before_each do
+          # manipulate the database directly -- only legacy objects
+          # in a thread will have `thread` set "incorrectly".
+          Ktistec.database.exec <<-SQL
+            UPDATE objects SET thread = iri WHERE id IN (#{object3.id}, #{object5.id})
+          SQL
+        end
+
+        let(object3legacy) { ActivityPub::Object.find(object3.id) }
+        let(object5legacy) { ActivityPub::Object.find(object5.id) }
+
+        let_create!(:follow_thread_relationship, named: :follow3, actor: actor, thread: object3legacy.thread)
+        let_create!(:follow_thread_relationship, named: :follow5, actor: actor, thread: object5legacy.thread)
+
+        it "returns the ids of the relationships" do
+          expect(object3.thread(for_actor: actor).map(&.relationship_id)).to eq([nil, nil, nil, follow3.id, nil, follow5.id])
+        end
+
+        it "returns the ids of the relationships" do
+          expect(object5.thread(for_actor: actor).map(&.relationship_id)).to eq([nil, nil, nil, follow3.id, nil, follow5.id])
+        end
+      end
+
+      context "given an approval" do
         it "only includes the subject" do
-          expect(subject.thread(actor)).to eq([subject])
+          expect(subject.thread(approved_by: actor)).to eq([subject])
         end
 
         context "and an approved object" do
           let_create!(:approved_relationship, named: :approved, actor: actor, object: object5)
 
           it "omits unapproved replies but includes their approved children" do
-            expect(subject.thread(actor)).to eq([subject, object5])
+            expect(subject.thread(approved_by: actor)).to eq([subject, object5])
           end
 
           it "doesn't include the actor's unapproved replies" do
             object4.assign(attributed_to: actor).save
-            expect(subject.thread(actor)).to eq([subject, object5])
+            expect(subject.thread(approved_by: actor)).to eq([subject, object5])
           end
         end
       end

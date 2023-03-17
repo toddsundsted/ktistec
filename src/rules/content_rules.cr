@@ -23,7 +23,7 @@ class ContentRules
   Ktistec::Rule.make_pattern(Actor, ActivityPub::Actor, properties: [:iri, :followers, :following])
   Ktistec::Rule.make_pattern(Activity, ActivityPub::Activity, associations: [:actor])
   Ktistec::Rule.make_pattern(Object, ActivityPub::Object, associations: [:in_reply_to, :attributed_to], properties: [:content, :thread])
-  Ktistec::Rule.make_pattern(Hashtag, Tag::Hashtag, associations: [subject], properties: [name])
+  Ktistec::Rule.make_pattern(Hashtag, Tag::Hashtag, associations: [subject], properties: [name, href])
   Ktistec::Rule.make_pattern(Mention, Tag::Mention, associations: [subject], properties: [name, href])
   Ktistec::Rule.make_pattern(CreateActivity, ActivityPub::Activity::Create, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(AnnounceActivity, ActivityPub::Activity::Announce, associations: [:actor, :object])

@@ -144,6 +144,10 @@ module ActivityPub
       end
     end
 
+    # indicates whether or not the content is best presented
+    # externally--at the source--or internally via the web front end.
+    # subclasses should redefine this, as appropriate.
+
     @@external : Bool = true
 
     def external?

@@ -6,7 +6,7 @@
       p
         a href=mention_path @#{mention}
         - if (count = Tag::Mention.count_objects(mention)) > 0
-          span< #{pluralize(count, "post")}
+          span< #{pluralize(count, "mention")}
     turbo-frame#mention_page_mention_controls
       .ui.basic.segment
         - if follow

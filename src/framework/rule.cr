@@ -254,6 +254,19 @@ module Ktistec
 
         # :inherit:
         def match(bindings : School::Bindings, trace : School::TraceNode? = nil, &block : School::Bindings -> Nil) : Nil
+          match_all(bindings, trace).each do |temporary|
+            yield temporary
+          end
+        end
+
+        # note: accumulate all matches, first, and then yield them
+        # one-by-one, instead of yielding them immediately to the
+        # block as they are generated to reduce code inlining due to
+        # block syntax and to reduce pressure on the stack (this
+        # reduces stack frame size by a tenth over just yielding to
+        # the block).
+
+        private def match_all(bindings : School::Bindings, trace : School::TraceNode?) : Enumerable(School::Bindings)
           keys = @options.keys
           {% if associations %}
             keys -= {{associations.map(&.id.stringify)}}
@@ -340,38 +353,36 @@ module Ktistec
 
           trace.condition(self) if trace
 
-          {{clazz.id}}.sql(query, args).each do |model|
-            temporary = bindings.dup
+          {{clazz.id}}.sql(query, args).map do |model|
+            bindings.dup.tap do |temporary|
+              if (target = @target) && (name = target.name?) && !temporary.has_key?(name)
+                temporary[name] = model
+              end
 
-            if (target = @target) && (name = target.name?) && !temporary.has_key?(name)
-              temporary[name] = model
+              {% if associations %}
+                {% for association in associations %}
+                  if @options.has_key?({{association.id.stringify}})
+                    if (target = @options[{{association.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
+                      next unless (value = model.{{association.id}}?(include_deleted: true, include_undone: true))
+                      temporary[name] = value
+                    end
+                  end
+                {% end %}
+              {% end %}
+
+              {% if properties %}
+                {% for property in properties %}
+                  if @options.has_key?({{property.id.stringify}})
+                    if (target = @options[{{property.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
+                      next unless (value = model.{{property.id}})
+                      temporary[name] = value
+                    end
+                  end
+                {% end %}
+              {% end %}
+
+              trace.fact(model, bindings, temporary) if trace
             end
-
-            {% if associations %}
-              {% for association in associations %}
-                if @options.has_key?({{association.id.stringify}})
-                  if (target = @options[{{association.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
-                    next unless (value = model.{{association.id}}?(include_deleted: true, include_undone: true))
-                    temporary[name] = value
-                  end
-                end
-              {% end %}
-            {% end %}
-
-            {% if properties %}
-              {% for property in properties %}
-                if @options.has_key?({{property.id.stringify}})
-                  if (target = @options[{{property.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
-                    next unless (value = model.{{property.id}})
-                    temporary[name] = value
-                  end
-                end
-              {% end %}
-            {% end %}
-
-            trace.fact(model, bindings, temporary) if trace
-
-            yield temporary
           end
         end
 

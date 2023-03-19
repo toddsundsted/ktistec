@@ -363,7 +363,7 @@ module Ktistec
                 {% for association in associations %}
                   if @options.has_key?({{association.id.stringify}})
                     if (target = @options[{{association.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
-                      next unless (value = model.{{association.id}}?(include_deleted: true, include_undone: true))
+                      break unless (value = model.{{association.id}}?(include_deleted: true, include_undone: true))
                       temporary[name] = value
                     end
                   end
@@ -374,7 +374,7 @@ module Ktistec
                 {% for property in properties %}
                   if @options.has_key?({{property.id.stringify}})
                     if (target = @options[{{property.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
-                      next unless (value = model.{{property.id}})
+                      break unless (value = model.{{property.id}})
                       temporary[name] = value
                     end
                   end
@@ -383,7 +383,7 @@ module Ktistec
 
               trace.fact(model, bindings, temporary) if trace
             end
-          end
+          end.compact
         end
 
         def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)

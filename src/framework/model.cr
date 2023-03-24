@@ -842,6 +842,31 @@ module Ktistec
         self
       end
 
+      # Reloads the properties from the database.
+      #
+      # Only reloads the persistent properties. Does not trigger any
+      # side effects. Does not ensure that the instance's state is
+      # otherwise valid.
+      #
+      def reload!
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          columns = {{vs.map(&.stringify.stringify).join(",")}}
+          Ktistec.database.query_one(
+            "SELECT #{columns} FROM #{table_name} WHERE id = ?", id,
+          ) do |rs|
+            __for_internal_use_only({
+              {% for v in vs %}
+                {{v.stringify}} => rs.read({{v.type}}),
+              {% end %}
+            })
+          end
+          self
+        {% end %}
+      rescue DB::NoResultsError
+        raise NotFound.new("#{self.class} id=#{id}: not found")
+      end
+
       def new_record?
         @id.nil?
       end

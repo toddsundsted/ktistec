@@ -929,6 +929,30 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe "#reload!" do
+    let!(foo_bar_model) { FooBarModel.new(foo: "Foo").save }
+
+    it "reloads the model properties from the database" do
+      FooBarModel.find(foo_bar_model.id).assign(foo: "New").save
+      expect(foo_bar_model.reload!.foo).to eq("New")
+    end
+
+    it "clears the changed status" do
+      foo_bar_model.assign(foo: "New")
+      expect{foo_bar_model.reload!}.to change{foo_bar_model.changed?}.to(false)
+    end
+
+    it "raises an error if not found" do
+      foo_bar_model.id = 999999
+      expect{foo_bar_model.reload!}.to raise_error(Ktistec::Model::NotFound)
+    end
+
+    it "raises an error if unsaved" do
+      foo_bar_model.id = nil
+      expect{foo_bar_model.reload!}.to raise_error(Ktistec::Model::NotFound)
+    end
+  end
+
   describe "#new_record?" do
     it "returns true if the record has not been saved" do
       expect(FooBarModel.new.new_record?).to be_true

@@ -613,15 +613,7 @@ module ActivityPub
         end
       end
       # update thread in follow relationships
-      if self.iri != self.thread
-        Relationship::Content::Follow::Thread.where(thread: self.iri).each do |follow|
-          unless Relationship::Content::Follow::Thread.find?(actor: follow.actor, thread: self.thread)
-            follow.assign(thread: self.thread).save
-          else
-            follow.destroy
-          end
-        end
-      end
+      Relationship::Content::Follow::Thread.merge_into(self.iri, self.thread)
     end
 
     def after_delete

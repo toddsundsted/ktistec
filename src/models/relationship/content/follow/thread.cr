@@ -15,6 +15,24 @@ class Relationship
         #
         derived thread : String, aliased_to: to_iri
         validates(thread) { "must not be blank" if thread.blank? }
+
+        # Merges relationships.
+        #
+        # Should be used in places where an object's thread property
+        # is changed. Ensures that only one relationship exists for a
+        # thread.
+        #
+        def self.merge_into(from, into)
+          if from != into
+            where(thread: from).each do |follow|
+              unless find?(actor: follow.actor, thread: into)
+                follow.assign(thread: into).save
+              else
+                follow.destroy
+              end
+            end
+          end
+        end
       end
     end
   end

@@ -131,24 +131,18 @@ module Ktistec
         {% end %}
       end
 
-      private def read(rs : DB::ResultSet, **types : **T) forall T
-        {% begin %}
-          {
-            {% for name, type in T %}
-              "{{name}}": rs.read({{type.instance}}),
-            {% end %}
-          }
-        {% end %}
-      end
-
       # Compose an instance of the correct type from the query results.
       #
       # Invokes the protected __for_internal_use_only initializer to
       # instantiate the instance.
       #
-      private def compose(**options) : self
-        options = options.to_h.transform_keys(&.to_s)
+      private def compose(rs : DB::ResultSet, **types : **Type) : self forall Type
         {% begin %}
+          options = {
+            {% for name, type in Type %}
+              {{name.stringify}} => rs.read({{type.instance}}),
+            {% end %}
+          }
           {% if @type < Polymorphic %}
             case options["type"]
             {% for subclass in @type.all_subclasses %}
@@ -170,23 +164,12 @@ module Ktistec
         {% end %}
       end
 
-      # Note: The following query helpers process query results in two
-      # steps, first (within the scope of the database call) mapping
-      # named tuples, and then (in a separate block) creating
-      # instances. This is intentional. Model initializers can make
-      # database calls, and nested database calls currently crash the
-      # runtime.
-
       protected def query_and_paginate(query, *args, additional_columns = NamedTuple.new, page = 1, size = 10)
         Ktistec::Util::PaginatedArray(self).new.tap do |array|
           Ktistec.database.query(
             query, *args, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
-            ([] of typeof(read(rs, **persistent_columns.merge(additional_columns)))).tap do |array|
-              rs.each { array << read(rs, **persistent_columns.merge(additional_columns)) }
-            end
-          end.each do |options|
-            array << compose(**options)
+            rs.each { array << compose(rs, **persistent_columns.merge(additional_columns)) }
           end
           if array.size > size
             array.more = true
@@ -202,7 +185,7 @@ module Ktistec
         Ktistec.database.query_all(
           query, *args_,
         ) do |rs|
-          compose(**read(rs, **persistent_columns.merge(additional_columns)))
+          compose(rs, **persistent_columns.merge(additional_columns))
         end
       end
 
@@ -210,7 +193,7 @@ module Ktistec
         Ktistec.database.query_all(
           query, args: args,
         ) do |rs|
-          compose(**read(rs, **persistent_columns.merge(additional_columns)))
+          compose(rs, **persistent_columns.merge(additional_columns))
         end
       end
 
@@ -218,7 +201,7 @@ module Ktistec
         Ktistec.database.query_one(
           query, *args_,
         ) do |rs|
-          compose(**read(rs, **persistent_columns.merge(additional_columns)))
+          compose(rs, **persistent_columns.merge(additional_columns))
         end
       end
 
@@ -226,7 +209,7 @@ module Ktistec
         Ktistec.database.query_one(
           query, args: args,
         ) do |rs|
-          compose(**read(rs, **persistent_columns.merge(additional_columns)))
+          compose(rs, **persistent_columns.merge(additional_columns))
         end
       end
 
@@ -325,7 +308,7 @@ module Ktistec
       #
       # Sets instance variables directly to skip side effects.
       #
-      protected def __for_internal_use_only(options)
+      protected def __for_internal_use_only(options : Hash(String, Any)) forall Any
         @changed = Set(Symbol).new
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}

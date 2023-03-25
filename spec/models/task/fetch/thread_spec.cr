@@ -49,4 +49,24 @@ Spectator.describe Task::Fetch::Thread do
       expect(subject.thread).to eq(subject.subject_iri)
     end
   end
+
+  describe ".merge_into" do
+    subject { described_class.new(**options).save }
+
+    it "updates task if thread changes" do
+      expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{subject.reload!.thread}.to("https://new_thread")
+    end
+
+    context "given another task for thread" do
+      let_create!(:fetch_thread_task, source: subject.source, thread: "https://new_thread")
+
+      it "merges the tasks" do
+        expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{described_class.count}.by(-1)
+      end
+
+      it "destroys the task which would be changed" do
+        expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{described_class.find?(subject.id)}.to(nil)
+      end
+    end
+  end
 end

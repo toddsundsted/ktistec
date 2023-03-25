@@ -7,6 +7,7 @@ require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
 require "../relationship/content/canonical"
 require "../relationship/content/follow/thread"
+require "../task/fetch/thread"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
@@ -614,6 +615,8 @@ module ActivityPub
       end
       # update thread in follow relationships
       Relationship::Content::Follow::Thread.merge_into(self.iri, self.thread)
+      # update thread in fetch tasks
+      Task::Fetch::Thread.merge_into(self.iri, self.thread)
     end
 
     def after_delete

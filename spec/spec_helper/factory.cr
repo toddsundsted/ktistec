@@ -266,6 +266,16 @@ def canonical_relationship_factory(**options)
   relationship_factory(Relationship::Content::Canonical, **options)
 end
 
+# task factories
+
+def task_factory(clazz = Task, source_iri = "https://source/#{random_string}", subject_iri = "https://subject/#{random_string}", **options)
+  clazz.new({"source_iri" => source_iri, "subject_iri" => subject_iri}.merge(options.to_h.transform_keys(&.to_s)).compact)
+end
+
+def fetch_thread_task_factory(**options)
+  task_factory(Task::Fetch::Thread, **options)
+end
+
 # tag factories
 
 def tag_factory(clazz = Tag, **options)

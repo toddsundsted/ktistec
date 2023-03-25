@@ -575,6 +575,25 @@ Spectator.describe ActivityPub::Object do
         end
       end
     end
+
+    context "given a task" do
+      let_create(:actor)
+      let_create!(:fetch_thread_task, named: nil, source: actor, thread: object.save.thread)
+
+      def all_fetches ; Task::Fetch::Thread.all end
+
+      it "updates fetch tasks when thread changes" do
+        expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{all_fetches.map(&.subject_iri)}.to(["https://elsewhere"])
+      end
+
+      context "given an existing fetch task" do
+        let_create!(:fetch_thread_task, named: nil, source: actor, thread: "https://elsewhere")
+
+        it "updates fetch tasks when thread changes" do
+          expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{all_fetches.map(&.subject_iri)}.to(["https://elsewhere"])
+        end
+      end
+    end
   end
 
   context "when threaded" do

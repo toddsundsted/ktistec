@@ -50,6 +50,28 @@ Spectator.describe Task::Fetch::Thread do
     end
   end
 
+  describe ".find_or_new" do
+    it "instantiates a new task" do
+      expect(described_class.find_or_new(**options).new_record?).to be_true
+    end
+
+    context "given an existing task" do
+      subject! { described_class.new(**options).save }
+
+      it "finds the existing task" do
+        expect(described_class.find_or_new(**options)).to eq(subject)
+      end
+    end
+  end
+
+  describe "#complete!" do
+    subject { described_class.new(**options).save }
+
+    it "makes the task not runnable" do
+      expect{subject.complete!}.to change{subject.reload!.runnable?}.to(false)
+    end
+  end
+
   describe ".merge_into" do
     subject { described_class.new(**options).save }
 

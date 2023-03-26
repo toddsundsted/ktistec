@@ -1016,7 +1016,7 @@ Spectator.describe ObjectsController do
           expect(response.status_code).to eq(302)
         end
 
-        it "unfollows all followed objects in the thread" do
+        it "unfollows the thread" do
           post "/remote/objects/#{remote.id}/unfollow"
           expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
         end
@@ -1032,45 +1032,30 @@ Spectator.describe ObjectsController do
             expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
           end
         end
-      end
 
-      context "given multiple legacy follows" do
-        let_create(:object, named: :reply1, in_reply_to: remote)
-        let_create(:object, named: :reply2, in_reply_to: remote)
+        context "given a reply" do
+          let_create!(:object, named: :reply, in_reply_to: remote)
 
-        before_each do
-          # manipulate the database directly -- only legacy objects
-          # in a thread will have `thread` set "incorrectly".
-          Ktistec.database.exec <<-SQL
-            UPDATE objects SET thread = iri WHERE id IN (#{reply1.id}, #{reply2.id})
-          SQL
-        end
-
-        let(reply1legacy) { ActivityPub::Object.find(reply1.id) }
-        let(reply2legacy) { ActivityPub::Object.find(reply2.id) }
-
-        let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: reply1legacy.thread)
-        let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: reply2legacy.thread)
-
-        it "succeeds" do
-          post "/remote/objects/#{remote.id}/unfollow"
-          expect(response.status_code).to eq(302)
-        end
-
-        it "unfollows all followed objects in the thread" do
-          post "/remote/objects/#{remote.id}/unfollow"
-          expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
-        end
-
-        context "within a turbo-frame" do
           it "succeeds" do
-            post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
-            expect(response.status_code).to eq(200)
+            post "/remote/objects/#{reply.id}/unfollow"
+            expect(response.status_code).to eq(302)
           end
 
-          it "renders a follow button" do
-            post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
-            expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
+          it "unfollows the root object of the thread" do
+            post "/remote/objects/#{reply.id}/unfollow"
+            expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+          end
+
+          context "within a turbo-frame" do
+            it "succeeds" do
+              post "/remote/objects/#{reply.id}/unfollow", TURBO_FRAME
+              expect(response.status_code).to eq(200)
+            end
+
+            it "renders a follow button" do
+              post "/remote/objects/#{reply.id}/unfollow", TURBO_FRAME
+              expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
+            end
           end
         end
       end

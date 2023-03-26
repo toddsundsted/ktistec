@@ -679,38 +679,6 @@ Spectator.describe ActivityPub::Object do
         expect(object5.thread(for_actor: actor).map(&.depth)).to eq([0, 1, 2, 3, 1, 2])
       end
 
-      context "given a follow" do
-        let_create!(:follow_thread_relationship, named: :follow1, actor: actor, thread: object1.thread)
-
-        it "returns the id of the relationship" do
-          expect(object1.thread(for_actor: actor).map(&.relationship_id)).to eq([follow1.id, follow1.id, follow1.id, follow1.id, follow1.id, follow1.id])
-        end
-      end
-
-      context "given multiple legacy follows" do
-        before_each do
-          # manipulate the database directly -- only legacy objects
-          # in a thread will have `thread` set "incorrectly".
-          Ktistec.database.exec <<-SQL
-            UPDATE objects SET thread = iri WHERE id IN (#{object3.id}, #{object5.id})
-          SQL
-        end
-
-        let(object3legacy) { ActivityPub::Object.find(object3.id) }
-        let(object5legacy) { ActivityPub::Object.find(object5.id) }
-
-        let_create!(:follow_thread_relationship, named: :follow3, actor: actor, thread: object3legacy.thread)
-        let_create!(:follow_thread_relationship, named: :follow5, actor: actor, thread: object5legacy.thread)
-
-        it "returns the ids of the relationships" do
-          expect(object3.thread(for_actor: actor).map(&.relationship_id)).to eq([nil, nil, nil, follow3.id, nil, follow5.id])
-        end
-
-        it "returns the ids of the relationships" do
-          expect(object5.thread(for_actor: actor).map(&.relationship_id)).to eq([nil, nil, nil, follow3.id, nil, follow5.id])
-        end
-      end
-
       context "given an approval" do
         it "only includes the subject" do
           expect(subject.thread(approved_by: actor)).to eq([subject])

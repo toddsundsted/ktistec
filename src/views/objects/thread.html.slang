@@ -16,7 +16,7 @@
             img.ui.avatar.image data-actor-id=actor.id src=icon
   turbo-frame#thread_page_thread_controls
     .ui.basic.segment
-      - if thread.none?(&.relationship_id)
+      - if follow.nil? || follow.new_record?
         == form_button "Follow", follow_thread_path(thread.first), button_class: "ui button primary"
       - else
         == form_button "Unfollow", unfollow_thread_path(thread.first)

@@ -374,9 +374,6 @@ module ActivityPub
     @[Assignable]
     property depth : Int32 = 0
 
-    @[Assignable]
-    property relationship_id : Int64? = nil
-
     private def thread_query_with_recursive
       query = <<-QUERY
       WITH RECURSIVE
@@ -414,21 +411,21 @@ module ActivityPub
     # Returns all objects in the thread to which this object belongs.
     #
     # Intended for presenting a thread to an authorized user (one who
-    # may see all objects in a thread). Includes which objects in the
-    # thread `for_actor` has followed.
+    # may see all objects in a thread).
+    #
+    # The `for_actor` parameter must be specified to disambiguate this
+    # method from the `thread` property getter, but is not currently
+    # used.
     #
     def thread(*, for_actor)
       query = <<-QUERY
          #{thread_query_with_recursive}
-         SELECT #{Object.columns(prefix: "o")}, r.depth, l.id
+         SELECT #{Object.columns(prefix: "o")}, r.depth
            FROM objects AS o, replies_to AS r
-      LEFT JOIN relationships AS l
-             ON l.type = "#{Relationship::Content::Follow::Thread}"
-            AND l.from_iri = ? AND l.to_iri = o.thread
           WHERE o.iri IN (r.iri)
           ORDER BY r.position
       QUERY
-      Object.query_all(query, iri, for_actor.iri, additional_columns: {depth: Int32, relationship_id: Int64?})
+      Object.query_all(query, iri, additional_columns: {depth: Int32})
     end
 
     # Returns all objects in the thread to which this object belongs

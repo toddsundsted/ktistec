@@ -947,6 +947,11 @@ Spectator.describe ObjectsController do
         expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.iri)
       end
 
+      it "fetches the thread" do
+        post "/remote/objects/#{remote.id}/follow"
+        expect(Task::Fetch::Thread.where(complete: false).map(&.subject_iri)).to contain_exactly(remote.iri)
+      end
+
       context "within a turbo-frame" do
         it "succeeds" do
           post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
@@ -970,6 +975,11 @@ Spectator.describe ObjectsController do
         it "follows the root object of the thread" do
           post "/remote/objects/#{reply.id}/follow"
           expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.iri)
+        end
+
+        it "fetches the root object of the thread" do
+          post "/remote/objects/#{reply.id}/follow"
+          expect(Task::Fetch::Thread.where(complete: false).map(&.subject_iri)).to contain_exactly(remote.iri)
         end
 
         context "within a turbo-frame" do
@@ -1011,6 +1021,8 @@ Spectator.describe ObjectsController do
 
         let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: reply.thread)
 
+        let_create!(:fetch_thread_task, named: nil, source: actor, thread: reply.thread)
+
         it "succeeds" do
           post "/remote/objects/#{remote.id}/unfollow"
           expect(response.status_code).to eq(302)
@@ -1019,6 +1031,11 @@ Spectator.describe ObjectsController do
         it "unfollows the thread" do
           post "/remote/objects/#{remote.id}/unfollow"
           expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+        end
+
+        it "stops fetching the thread" do
+          post "/remote/objects/#{remote.id}/unfollow"
+          expect(Task::Fetch::Thread.where(complete: true).map(&.subject_iri)).to eq([remote.iri])
         end
 
         context "within a turbo-frame" do
@@ -1044,6 +1061,11 @@ Spectator.describe ObjectsController do
           it "unfollows the root object of the thread" do
             post "/remote/objects/#{reply.id}/unfollow"
             expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+          end
+
+          it "stops fetching the root object of the thread" do
+            post "/remote/objects/#{reply.id}/unfollow"
+            expect(Task::Fetch::Thread.where(complete: true).map(&.subject_iri)).to eq([remote.iri])
           end
 
           context "within a turbo-frame" do

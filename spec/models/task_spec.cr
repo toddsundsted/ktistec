@@ -52,17 +52,12 @@ Spectator.describe Task do
   end
 
   describe "#schedule" do
-    it "raises an error if the task is not runnable" do
+    it "raises an error if the task is running" do
       subject.running = true
       expect{subject.schedule}.to raise_error(Exception)
     end
 
-    it "raises an error if the task is not runnable" do
-      subject.complete = true
-      expect{subject.schedule}.to raise_error(Exception)
-    end
-
-    it "raises an error if the task is not runnable" do
+    it "raises an error if the task has a backtrace" do
       subject.backtrace = [""]
       expect{subject.schedule}.to raise_error(Exception)
     end
@@ -70,6 +65,11 @@ Spectator.describe Task do
     it "sets the next_attempt_at if specified" do
       time = 1.day.from_now
       expect{subject.schedule(time)}.to change{subject.next_attempt_at}
+    end
+
+    it "sets complete to false" do
+      subject.complete = true
+      expect{subject.schedule}.to change{subject.complete}.to(false)
     end
 
     it "saves the task" do

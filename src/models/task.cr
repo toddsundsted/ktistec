@@ -70,7 +70,8 @@ class Task
   end
 
   def schedule(@next_attempt_at = nil)
-    raise "Not runnable" unless runnable?
+    raise "Not runnable" unless runnable? || complete
+    self.complete = false
     TaskWorker.schedule(self)
   end
 

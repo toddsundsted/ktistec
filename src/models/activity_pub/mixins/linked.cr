@@ -4,6 +4,7 @@ require "../../../framework/model"
 require "../../../framework/open"
 require "../../../framework/signature"
 require "../../../framework/constants"
+require "../../activity_pub"
 
 module Ktistec
   module Model(*T)
@@ -85,15 +86,12 @@ module Ktistec
                       if dereference && ({{name}}_iri = self.{{name}}_iri)
                         if {{name}}.nil? || (ignore_cached && !{{name}}.changed?) || ignore_changed
                           unless {{name}}_iri.starts_with?(Ktistec.host)
-                            {% for union_type in method.body[3].id.split(" | ").map(&.id) %}
-                              headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
-                              headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-                              Ktistec::Open.open?({{name}}_iri, headers) do |response|
-                                if ({{name}} = {{union_type}}.from_json_ld?(response.body, **options))
-                                  return self.{{name}} = {{name}}
-                                end
-                              end
-                            {% end %}
+                            headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
+                            headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
+                            Ktistec::Open.open?({{name}}_iri, headers) do |response|
+                              {{name}} = ActivityPub.from_json_ld?(response.body, **options).as({{method.body[3].id}})
+                              return self.{{name}} = {{name}}
+                            end
                           end
                         end
                       end

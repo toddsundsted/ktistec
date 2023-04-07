@@ -63,7 +63,11 @@ module Ktistec
               headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
               headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
               Ktistec::Open.open?(iri, headers) do |response|
-                instance = self.from_json_ld?(response.body, **options)
+                instance = self.from_json_ld(response.body, **options)
+              rescue ex : NotImplementedError | TypeCastError
+                # log errors when mapping JSON to a model since `open?`
+                # otherwise silently swallows those errors!
+                Log.debug { ex.message }
               end
             end
           end
@@ -89,8 +93,12 @@ module Ktistec
                             headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
                             headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
                             Ktistec::Open.open?({{name}}_iri, headers) do |response|
-                              {{name}} = ActivityPub.from_json_ld?(response.body, **options).as({{method.body[3].id}})
+                              {{name}} = ActivityPub.from_json_ld(response.body, **options).as({{method.body[3].id}})
                               return self.{{name}} = {{name}}
+                            rescue ex : NotImplementedError | TypeCastError
+                              # log errors when mapping JSON to a model since `open?`
+                              # otherwise silently swallows those errors!
+                              Log.debug { ex.message }
                             end
                           end
                         end

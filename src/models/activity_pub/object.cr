@@ -651,7 +651,7 @@ module ActivityPub
       self.assign(self.class.map(json))
     end
 
-    def self.map(json, **options)
+    def self.map(json : JSON::Any | String | IO, **options)
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
         "iri" => json.dig?("@id").try(&.as_s),

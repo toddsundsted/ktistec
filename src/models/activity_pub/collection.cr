@@ -84,8 +84,8 @@ module ActivityPub
       end
     end
 
-    def self.map(json, **options)
-      json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String)
+    def self.map(json : JSON::Any | String | IO, **options)
+      json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
         "iri" => json.dig?("@id").try(&.as_s),
         "items_iris" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),

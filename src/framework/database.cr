@@ -16,7 +16,7 @@ module Ktistec
 
   @@database : DB::Database =
     begin
-      unless File.exists?(db_file.split("//").last)
+      unless File.exists?(db_file.split("//").last.split("?").first)
         DB.open(db_file) do |db|
           File.read(File.join(Dir.current, "etc", "database", "schema.sql")).split(';').each do |command|
             db.exec(command) unless command.blank?

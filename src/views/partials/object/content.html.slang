@@ -9,7 +9,7 @@ crystal:
   end
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
   type = object.type.split("::").last.downcase
-.content data-controller="image-gallery clickable-background" data-clickable-background-href-value=href
+.content data-controller="image-gallery"
   .summary
     - if object.draft?
       | draft created
@@ -59,18 +59,23 @@ crystal:
           a href=object.display_link target="_blank" : strong = name
         - else
           strong = name
-    .extra.text
-      crystal:
-        if (content = object.content)
-          content = case object.media_type
-            when "text/markdown"
-              Markd.to_html content
-            else
-              content
-            end
-        end
-      == s content
+    - if with_detail
+      .extra.text
+        == s object.to_html
+    - else
+      .extra.text data-controller="clickable-background" data-clickable-background-href-value=href
+        == s object.to_html
     - if with_detail && account
+      crystal:
+        hashtags = object.hashtags.map(&.name)
+        mentions = object.mentions.map(&.name)
+      - unless hashtags.empty? && mentions.empty?
+        .extra.detail
+          .ui.labels
+            - hashtags.each do |hashtag|
+              a.ui.small.label data-turbo-frame="_top" href=hashtag_path(hashtag) ##{hashtag}
+            - mentions.each do |mention|
+              a.ui.small.label data-turbo-frame="_top" href=mention_path(mention) @#{mention.split("@").first}
       - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
         .extra.detail
           - activities.each do |activity|

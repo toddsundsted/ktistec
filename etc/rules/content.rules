@@ -80,11 +80,28 @@
 # actor and object would be available to each action invocation.
 
 # Outbox
+
 rule "outbox"
   condition Outgoing, actor, activity
   none Outbox, owner: actor, activity: activity
   assert Outbox, owner: actor, activity: activity
-  assert activity, IsAddressedTo, actor
+  assert activity, InMailboxOf, actor
+end
+
+# Filter Incoming Content
+
+rule "filter content/create"
+  condition Incoming, actor, activity
+  condition CreateActivity, activity, actor: not actor, object: object
+  any Filter, actor: actor, term: filter(strip(object.content))
+  retract Incoming, actor, activity
+end
+
+rule "filter content/announce"
+  condition Incoming, actor, activity
+  condition AnnounceActivity, activity, actor: not actor, object: object
+  any Filter, actor: actor, term: filter(strip(object.content))
+  retract Incoming, actor, activity
 end
 
 # Inbox
@@ -95,7 +112,7 @@ rule "inbox"
   condition iri, IsRecipient
   none Inbox, owner: actor, activity: activity
   assert Inbox, owner: actor, activity: activity
-  assert activity, IsAddressedTo, actor
+  assert activity, InMailboxOf, actor
 end
 
 rule "inbox"
@@ -105,7 +122,7 @@ rule "inbox"
   condition "https://www.w3.org/ns/activitystreams#Public", IsRecipient
   none Inbox, owner: actor, activity: activity
   assert Inbox, owner: actor, activity: activity
-  assert activity, IsAddressedTo, actor
+  assert activity, InMailboxOf, actor
 end
 
 rule "inbox"
@@ -115,69 +132,53 @@ rule "inbox"
   condition sender.followers, IsRecipient
   none Inbox, owner: actor, activity: activity
   assert Inbox, owner: actor, activity: activity
-  assert activity, IsAddressedTo, actor
+  assert activity, InMailboxOf, actor
 end
 
-# Filter Content
-
-rule "filter content/create"
-  condition activity, IsAddressedTo, actor
-  condition CreateActivity, activity, actor: not actor, object: object
-  any Filter, actor: actor, term: filter(strip(object.content))
-  retract activity, IsAddressedTo, actor
-end
-
-rule "filter content/announce"
-  condition activity, IsAddressedTo, actor
-  condition AnnounceActivity, activity, actor: not actor, object: object
-  any Filter, actor: actor, term: filter(strip(object.content))
-  retract activity, IsAddressedTo, actor
-end
-
-# Notifications
+# Mailbox Notifications
 
 rule "create/mention"
-  condition activity, IsAddressedTo, actor
+  condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
   any Mention, mention, subject: object, href: actor.iri
   none Notification, owner: actor, activity: activity
-  assert Notification, owner: actor, activity: activity
+  assert NotificationMention, owner: actor, activity: activity
 end
 
 rule "create/reply"
-  condition activity, IsAddressedTo, actor
+  condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
   condition Object, object, in_reply_to: other
   condition Object, other, attributed_to: actor
   none Notification, owner: actor, activity: activity
-  assert Notification, owner: actor, activity: activity
+  assert NotificationReply, owner: actor, activity: activity
 end
 
 rule "announce"
-  condition activity, IsAddressedTo, actor
+  condition activity, InMailboxOf, actor
   condition AnnounceActivity, activity, object: object
   condition Object, object, attributed_to: actor
   none Notification, owner: actor, activity: activity
-  assert Notification, owner: actor, activity: activity
+  assert NotificationAnnounce, owner: actor, activity: activity
 end
 
 rule "like"
-  condition activity, IsAddressedTo, actor
+  condition activity, InMailboxOf, actor
   condition LikeActivity, activity, object: object
   condition Object, object, attributed_to: actor
   none Notification, owner: actor, activity: activity
-  assert Notification, owner: actor, activity: activity
+  assert NotificationLike, owner: actor, activity: activity
 end
 
 rule "follow"
-  condition activity, IsAddressedTo, actor
+  condition activity, InMailboxOf, actor
   condition FollowActivity, activity, object: actor
   none Notification, owner: actor, activity: activity
-  assert Notification, owner: actor, activity: activity
+  assert NotificationFollow, owner: actor, activity: activity
 end
 
 rule "delete"
-  condition delete, IsAddressedTo, actor
+  condition delete, InMailboxOf, actor
   condition DeleteActivity, delete, object: object
   condition CreateActivity, activity, object: object
   any Notification, owner: actor, activity: activity
@@ -185,10 +186,66 @@ rule "delete"
 end
 
 rule "undo"
-  condition undo, IsAddressedTo, actor
+  condition undo, InMailboxOf, actor
   condition UndoActivity, undo, object: activity
   any Notification, owner: actor, activity: activity
   retract Notification, owner: actor, activity: activity
+end
+
+# Follow Notifications
+
+rule "create/follow/hashtag"
+  condition Incoming, actor, activity
+  condition CreateActivity, activity, object: object
+  condition Hashtag, subject: object, name: name
+  any FollowHashtag, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationHashtag, owner: actor, activity: activity
+end
+
+rule "announce/follow/hashtag"
+  condition Incoming, actor, activity
+  condition AnnounceActivity, activity, object: object
+  condition Hashtag, subject: object, name: name
+  any FollowHashtag, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationHashtag, owner: actor, activity: activity
+end
+
+rule "create/follow/mention"
+  condition Incoming, actor, activity
+  condition CreateActivity, activity, object: object
+  condition Mention, subject: object, name: name
+  any FollowMention, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationMention, owner: actor, activity: activity
+end
+
+rule "announce/follow/mention"
+  condition Incoming, actor, activity
+  condition AnnounceActivity, activity, object: object
+  condition Mention, subject: object, name: name
+  any FollowMention, actor: actor, name: name
+  none Notification, owner: actor, activity: activity
+  assert NotificationMention, owner: actor, activity: activity
+end
+
+rule "create/follow/thread"
+  condition Incoming, actor, activity
+  condition CreateActivity, activity, object: object
+  condition Object, object, thread: thread
+  condition FollowThread, actor: actor, thread: thread
+  none Notification, owner: actor, activity: activity
+  assert NotificationThread, owner: actor, activity: activity
+end
+
+rule "announce/follow/thread"
+  condition Incoming, actor, activity
+  condition AnnounceActivity, activity, object: object
+  condition Object, object, thread: thread
+  condition FollowThread, actor: actor, thread: thread
+  none Notification, owner: actor, activity: activity
+  assert NotificationThread, owner: actor, activity: activity
 end
 
 # Timeline
@@ -198,46 +255,46 @@ end
 # actor is mentioned.
 
 rule "create/none"
-  condition activity, IsAddressedTo, actor
+  condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
   none Object, object, in_reply_to: any
   none Mention, mention, subject: object
   none Timeline, owner: actor, object: object
-  assert Timeline, owner: actor, object: object
+  assert TimelineCreate, owner: actor, object: object
 end
 
 rule "create/owner"
-  condition activity, IsAddressedTo, actor
+  condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
   condition Object, object, attributed_to: actor
   none Timeline, owner: actor, object: object
-  assert Timeline, owner: actor, object: object
+  assert TimelineCreate, owner: actor, object: object
 end
 
 rule "create/mention"
-  condition activity, IsAddressedTo, actor
+  condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
   any Mention, mention, subject: object, href: actor.iri
   none Timeline, owner: actor, object: object
-  assert Timeline, owner: actor, object: object
+  assert TimelineCreate, owner: actor, object: object
 end
 
 rule "announce"
-  condition activity, IsAddressedTo, actor
+  condition activity, InMailboxOf, actor
   condition AnnounceActivity, activity, object: object
   none Timeline, owner: actor, object: object
-  assert Timeline, owner: actor, object: object
+  assert TimelineAnnounce, owner: actor, object: object
 end
 
 rule "delete"
-  condition activity, IsAddressedTo, actor
+  condition activity, InMailboxOf, actor
   condition DeleteActivity, activity, object: object
   any Timeline, owner: actor, object: object
   retract Timeline, owner: actor, object: object
 end
 
 rule "undo"
-  condition undo, IsAddressedTo, actor
+  condition undo, InMailboxOf, actor
   condition UndoActivity, undo, object: activity
   condition AnnounceActivity, activity, object: object
   none CreateActivity, object: object

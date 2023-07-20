@@ -257,13 +257,23 @@ Spectator.describe Ktistec::JSON_LD do
             "@context": [
               "https://vocab",
               {
-                "base": "https://base"
+                "node": "https://root"
               }
             ],
-            "@type": "Lock",
-            "base": [{
-              "name": "Foo Bar Baz",
-              "page": "https://test/"
+            "name": "Root",
+            "node": [{
+              "@context": {
+                "node": "https://node"
+              },
+              "name": "Node",
+              "node": [{
+                "@context": {
+                  "node": "https://leaf"
+                },
+                "name": "Leaf",
+                "node": [
+                ]
+              }]
             }]
           }
         JSON
@@ -272,8 +282,9 @@ Spectator.describe Ktistec::JSON_LD do
 
     describe "#[]" do
       it "returns mapped terms" do
-        expect(json.as_h.keys).to match_array(["@context", "@type", "https://base"]).in_any_order
-        expect(json["https://base"][0].as_h.keys).to match_array(["https://name", "https://page"]).in_any_order
+        expect(json.as_h.keys).to match_array(["@context", "https://name", "https://root"]).in_any_order
+        expect(json["https://root"][0].as_h.keys).to match_array(["@context", "https://name", "https://node"]).in_any_order
+        expect(json["https://root"][0]["https://node"][0].as_h.keys).to match_array(["@context", "https://name", "https://leaf"]).in_any_order
       end
     end
   end

@@ -4,7 +4,6 @@ require "../spec_helper/base"
 
 class RuleModel
   include Ktistec::Model(Nil)
-  include School::DomainType
 
   @[Persistent]
   property parent_id : Int64?
@@ -12,6 +11,7 @@ class RuleModel
 
   @[Persistent]
   property name : String?
+  derived quux : String?, aliased_to: name
 end
 
 Spectator.describe Ktistec::Rule do
@@ -31,7 +31,7 @@ Spectator.describe Ktistec::Rule do
       RulePattern,
       RuleModel,
       associations: [child_of],
-      properties: [id, name]
+      properties: [id, name, quux]
     )
 
     describe "#vars" do
@@ -729,6 +729,23 @@ Spectator.describe Ktistec::Rule do
           it "binds the match" do
             subject.match(bindings, &block)
             expect(yields).to eq([{"name" => %q|\\|}])
+          end
+        end
+
+        # derived properties
+
+        context "via a derived property" do
+          before_each { RuleModel.new(name: "test").save }
+
+          subject { RulePattern.new(quux: School::Lit.new("test", name: "quux")) }
+
+          it "invokes the block once" do
+            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(bindings, &block)
+            expect(yields).to eq([{"quux" => "test"}])
           end
         end
 

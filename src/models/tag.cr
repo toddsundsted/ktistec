@@ -20,58 +20,59 @@ class Tag
     end
   end
 
-  macro inherited
-    def self.short_type
-      self.to_s.split("::").last.underscore
-    end
-
-    def self.match(prefix, limit = 1)
-      query = <<-QUERY
-          SELECT name, count
-            FROM tag_statistics
-           WHERE type = ?
-             AND name LIKE ?
-        ORDER BY count DESC
-           LIMIT ?
-      QUERY
-      Ktistec.database.query_all(
-        query,
-        short_type,
-        prefix + "%",
-        limit,
-        as: {String, Int64}
-      )
-    end
+  def self.short_type
+    self.to_s.split("::").last.underscore
   end
 
   def short_type
-    self.class.to_s.split("::").last.underscore
+    self.class.short_type
   end
 
-  def count
+  # Matches on tag prefix.
+  #
+  # Returns results ordered by number of occurrences.
+  #
+  # Count is intentionally not adjusted for subjects that are deleted,
+  # blocked, etc. making the value unsuitable for presentation, in
+  # most cases.
+  #
+  def self.match(prefix, limit = 1)
     query = <<-QUERY
-      SELECT ifnull(sum(count), 0) FROM tag_statistics WHERE type = ? AND name = ?
+        SELECT name, count
+          FROM tag_statistics
+         WHERE type = ?
+           AND name LIKE ?
+      ORDER BY count DESC
+         LIMIT ?
     QUERY
-    Ktistec.database.scalar(
+    Ktistec.database.query_all(
       query,
-      self.short_type,
-      self.name
+      short_type,
+      prefix + "%",
+      limit,
+      as: {String, Int64}
     )
   end
 
+  # Updates tag statistics.
+  #
   private def recount
     query = <<-QUERY
       INSERT OR REPLACE INTO tag_statistics (type, name, count)
       VALUES (?, ?, (
-        SELECT count(*) FROM tags WHERE type = ? AND name = ?)
+        SELECT count(*)
+          FROM tags
+         WHERE type = ?
+           AND name = ?
+        )
       )
     QUERY
     Ktistec.database.exec(
       query,
-      self.short_type,
-      self.name,
-      self.type,
-      self.name
+      short_type,
+      name,
+      type,
+      name
     )
   end
 

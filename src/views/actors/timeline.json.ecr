@@ -1,2 +1,2 @@
-<%- collection = objects -%>
+<%- collection = timeline.map(&.object) -%>
 <%= render "src/views/partials/collection.json.ecr" %>

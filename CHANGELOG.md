@@ -7,9 +7,14 @@ All notable changes to this project are documented in this file.
 - Expose the /everything endpoint.
 - Add link to source/origin of post. (fixes [#42](https://github.com/toddsundsted/ktistec/issues/42))
 - Render to HTML posts when content is Markdown. Improves compatibility with Peertube.
+- In post details, include labels and links to internal hashtag and mention index pages.
+- Support following threads, hashtags and mentions.
 
 ### Fixed
 - Add ellipsis to Mastodon marked-up URLs in content.
+- Make content clickable only on listing pages.
+- Call `after_save` lifecycle callback when save occurs.
+- Fix bug affecting nested objects during JSON-LD expansion.
 
 ## [v2.0.0-8]
 ### Added

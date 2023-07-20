@@ -1,5 +1,6 @@
 require "../framework/controller"
 require "../models/tag/hashtag"
+require "../models/relationship/content/follow/hashtag"
 
 class TagsController
   include Ktistec::Controller
@@ -8,21 +9,63 @@ class TagsController
 
   get "/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
-    if (collection = Tag::Hashtag.objects_with_tag(hashtag, **pagination_params(env))).empty?
+
+    collection =
+      if env.account?
+        Tag::Hashtag.all_objects(hashtag, **pagination_params(env))
+      else
+        Tag::Hashtag.public_objects(hashtag, **pagination_params(env))
+      end
+
+    if collection.empty?
       not_found
     end
-    accepts?("text/html") ?
-      render_tags_html(env, collection) :
-      render_tags_json(env, collection)
+
+    if env.account?
+      follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
+    end
+
+    ok "tags/index"
   end
 
-  private def self.render_tags_html(env, collection, query = nil, message = nil)
-    env.response.content_type = "text/html"
-    render "src/views/tags/index.html.slang", "src/views/layouts/default.html.ecr"
+  post "/tags/:hashtag/follow" do |env|
+    hashtag = env.params.url["hashtag"]
+
+    if (collection = Tag::Hashtag.all_objects(hashtag)).empty?
+      not_found
+    end
+
+    if Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
+      bad_request
+    end
+
+    follow = Relationship::Content::Follow::Hashtag.new(actor: env.account.actor, name: hashtag).save
+
+    if turbo_frame?
+      ok "tags/index"
+    else
+      redirect back_path
+    end
   end
 
-  private def self.render_tags_json(env, collection, query = nil, message = nil)
-    env.response.content_type = "application/json"
-    render "src/views/partials/collection.json.ecr"
+  post "/tags/:hashtag/unfollow" do |env|
+    hashtag = env.params.url["hashtag"]
+
+    if (collection = Tag::Hashtag.all_objects(hashtag)).empty?
+      not_found
+    end
+
+    unless (follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag))
+      bad_request
+    end
+
+    follow.destroy
+    follow = nil
+
+    if turbo_frame?
+      ok "tags/index"
+    else
+      redirect back_path
+    end
   end
 end

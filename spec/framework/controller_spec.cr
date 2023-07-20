@@ -8,7 +8,7 @@ class FooBarController
   skip_auth [
     "/foo/bar/host",
     "/foo/bar/accepts",
-    "/foo/bar/xhr",
+    "/foo/bar/turbo-frame",
     "/foo/bar/created",
     "/foo/bar/redirect",
     "/foo/bar/ok"
@@ -28,9 +28,9 @@ class FooBarController
     end
   end
 
-  get "/foo/bar/xhr" do |env|
-    if xhr?
-      ok "xhr"
+  get "/foo/bar/turbo-frame" do |env|
+    if turbo_frame?
+      ok "turbo-frame"
     else
       ok
     end
@@ -90,15 +90,15 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "get /foo/bar/xhr" do
-    it "responds with xhr" do
-      get "/foo/bar/xhr", HTTP::Headers{"Accept" => "text/html", "X-Requested-With" => "XMLHttpRequest"}
-      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).to eq("xhr")
+  describe "post /foo/bar/turbo-frame" do
+    it "responds with turbo-frame" do
+      get "/foo/bar/turbo-frame", HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "foo-bar"}
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).to eq("turbo-frame")
     end
 
-    it "does not respond with xhr" do
-      get "/foo/bar/xhr", HTTP::Headers{"Accept" => "text/html"}
-      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).not_to eq("xhr")
+    it "does not respond with turbo-frame" do
+      get "/foo/bar/turbo-frame", HTTP::Headers{"Accept" => "text/html"}
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).not_to eq("turbo-frame")
     end
   end
 
@@ -106,11 +106,6 @@ Spectator.describe Ktistec::Controller do
     it "redirects with 302" do
       get "/foo/bar/created", HTTP::Headers{"Accept" => "text/html"}
       expect(response.status_code).to eq(302)
-    end
-
-    it "redirects with 201" do
-      get "/foo/bar/created", HTTP::Headers{"Accept" => "text/html", "X-Requested-With" => "XMLHttpRequest"}
-      expect(response.status_code).to eq(201)
     end
 
     it "redirects with 201" do

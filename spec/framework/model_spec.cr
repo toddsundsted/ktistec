@@ -55,10 +55,14 @@ end
 
 class DerivedModel < FooBarModel
   @@table_name = "foo_bar_models"
+
+  derived index : Int64?, aliased_to: not_nil_model_id
 end
 
 class AnotherModel < NotNilModel
   @@table_name = "not_nil_models"
+
+  derived index : Int64?, aliased_to: foo_bar_model_id
 end
 
 class UnionAssociationModel
@@ -148,6 +152,16 @@ Spectator.describe Ktistec::Model do
   describe ".conditions" do
     it "raises an error if column doesn't exist" do
       expect{QueryModel.conditions(xyz: 123)}.to raise_error(Ktistec::Model::ColumnError)
+    end
+  end
+
+  describe ".all_subtypes" do
+    it "returns type and all subtypes" do
+      expect(FooBarModel.all_subtypes).to contain("FooBarModel", "DerivedModel")
+    end
+
+    it "returns type and all subtypes" do
+      expect(NotNilModel.all_subtypes).to contain("NotNilModel", "AnotherModel")
     end
   end
 
@@ -613,29 +627,63 @@ Spectator.describe Ktistec::Model do
       class AllCapsModel < NotNilModel
         @@table_name = "not_nil_models"
 
+        getter before_validate_called = false
+
         def before_validate
-          @key = @key.try(&.upcase)
-          @val = @val.try(&.upcase)
+          @before_validate_called = true
         end
       end
 
       it "runs the callback" do
-        all_caps_model = AllCapsModel.new(key: "key", val: "val").tap(&.valid?)
-        expect(all_caps_model.key).to eq("KEY")
-        expect(all_caps_model.val).to eq("VAL")
+        all_caps_model = AllCapsModel.new(key: "key", val: "val")
+        expect{all_caps_model.valid?}.to change{all_caps_model.before_validate_called}.to(true)
       end
 
-      it "runs the callbacks even if unchanged if called directly" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!).tap(&.valid?)
-        expect(all_caps_model.key).to eq("KEY")
-        expect(all_caps_model.val).to eq("VAL")
-      end
-
-      it "does not run the callbacks on associated instance if it's unchanged" do
+      it "runs the callback even if unchanged if called directly" do
         all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
-        FooBarModel.new(not_nil_model: all_caps_model).valid?
-        expect(all_caps_model.key).to eq("key")
-        expect(all_caps_model.val).to eq("val")
+        expect{all_caps_model.valid?}.to change{all_caps_model.before_validate_called}.to(true)
+      end
+
+      it "runs the callback on associated instance" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).valid?}.to change{all_caps_model.before_validate_called}.to(true)
+      end
+
+      it "does not run the callback on associated instance if it's unchanged" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+        expect{FooBarModel.new(not_nil_model: all_caps_model).valid?}.not_to change{all_caps_model.before_validate_called}
+      end
+    end
+
+    context "after validate lifecycle callback" do
+      class AllCapsModel < NotNilModel
+        @@table_name = "not_nil_models"
+
+        getter after_validate_called = false
+
+        def after_validate
+          @after_validate_called = true
+        end
+      end
+
+      it "runs the callback" do
+        all_caps_model = AllCapsModel.new(key: "key", val: "val")
+        expect{all_caps_model.valid?}.to change{all_caps_model.after_validate_called}.to(true)
+      end
+
+      it "runs the callback even if unchanged if called directly" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+        expect{all_caps_model.valid?}.to change{all_caps_model.after_validate_called}.to(true)
+      end
+
+      it "runs the callback on associated instance" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).valid?}.to change{all_caps_model.after_validate_called}.to(true)
+      end
+
+      it "does not run the callback on associated instance if it's unchanged" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+        expect{FooBarModel.new(not_nil_model: all_caps_model).valid?}.not_to change{all_caps_model.after_validate_called}
       end
     end
   end
@@ -779,29 +827,63 @@ Spectator.describe Ktistec::Model do
       class AllCapsModel < NotNilModel
         @@table_name = "not_nil_models"
 
+        getter before_save_called = false
+
         def before_save
-          @key = @key.try(&.upcase)
-          @val = @val.try(&.upcase)
+          @before_save_called = true
         end
       end
 
       it "runs the callback" do
-        all_caps_model = AllCapsModel.new(key: "Key", val: "Val").save
-        expect(all_caps_model.key).to eq("KEY")
-        expect(all_caps_model.val).to eq("VAL")
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
+        expect{all_caps_model.save}.to change{all_caps_model.before_save_called}.to(true)
       end
 
-      it "runs the callbacks even if unchanged if called directly" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!).save
-        expect(all_caps_model.key).to eq("KEY")
-        expect(all_caps_model.val).to eq("VAL")
-      end
-
-      it "does not run the callbacks on associated instance if it's unchanged" do
+      it "runs the callback even if unchanged if called directly" do
         all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!)
-        FooBarModel.new(not_nil_model: all_caps_model).save
-        expect(all_caps_model.key).to eq("Key")
-        expect(all_caps_model.val).to eq("Val")
+        expect{all_caps_model.save}.to change{all_caps_model.before_save_called}.to(true)
+      end
+
+      it "runs the callback on associated instance" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.to change{all_caps_model.before_save_called}.to(true)
+      end
+
+      it "does not run the callback on associated instance if it's unchanged" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!)
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.not_to change{all_caps_model.before_save_called}
+      end
+    end
+
+    context "after save lifecycle callback" do
+      class AllCapsModel < NotNilModel
+        @@table_name = "not_nil_models"
+
+        getter after_save_called = false
+
+        def after_save
+          @after_save_called = true
+        end
+      end
+
+      it "runs the callback" do
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
+        expect{all_caps_model.save}.to change{all_caps_model.after_save_called}.to(true)
+      end
+
+      it "runs the callback even if unchanged if called directly" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!)
+        expect{all_caps_model.save}.to change{all_caps_model.after_save_called}.to(true)
+      end
+
+      it "runs the callback on associated instance" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.to change{all_caps_model.after_save_called}.to(true)
+      end
+
+      it "does not run the callback on associated instance if it's unchanged" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!)
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.not_to change{all_caps_model.after_save_called}
       end
     end
   end
@@ -816,18 +898,58 @@ Spectator.describe Ktistec::Model do
       class DestroyedAtModel < FooBarModel
         @@table_name = "foo_bar_models"
 
-        @[Assignable]
-        property destroyed_at : Time?
+        getter before_destroy_called = false
 
         def before_destroy
-          @destroyed_at = Time.utc
+          @before_destroy_called = true
         end
       end
 
       it "runs the callback" do
         destroyed_at_model = DestroyedAtModel.new.save
-        expect{destroyed_at_model.destroy}.to change{destroyed_at_model.destroyed_at}
+        expect{destroyed_at_model.destroy}.to change{destroyed_at_model.before_destroy_called}.to(true)
       end
+    end
+
+    context "after destroy lifecycle callback" do
+      class DestroyedAtModel < FooBarModel
+        @@table_name = "foo_bar_models"
+
+        getter after_destroy_called = false
+
+        def after_destroy
+          @after_destroy_called = true
+        end
+      end
+
+      it "runs the callback" do
+        destroyed_at_model = DestroyedAtModel.new.save
+        expect{destroyed_at_model.destroy}.to change{destroyed_at_model.after_destroy_called}.to(true)
+      end
+    end
+  end
+
+  describe "#reload!" do
+    let!(foo_bar_model) { FooBarModel.new(foo: "Foo").save }
+
+    it "reloads the model properties from the database" do
+      FooBarModel.find(foo_bar_model.id).assign(foo: "New").save
+      expect(foo_bar_model.reload!.foo).to eq("New")
+    end
+
+    it "clears the changed status" do
+      foo_bar_model.assign(foo: "New")
+      expect{foo_bar_model.reload!}.to change{foo_bar_model.changed?}.to(false)
+    end
+
+    it "raises an error if not found" do
+      foo_bar_model.id = 999999
+      expect{foo_bar_model.reload!}.to raise_error(Ktistec::Model::NotFound)
+    end
+
+    it "raises an error if unsaved" do
+      foo_bar_model.id = nil
+      expect{foo_bar_model.reload!}.to raise_error(Ktistec::Model::NotFound)
     end
   end
 
@@ -972,6 +1094,33 @@ Spectator.describe Ktistec::Model do
     it "returns the hash representation" do
       saved_model = FooBarModel.new
       expect(saved_model.to_h.to_a).to contain({"id", nil})
+    end
+  end
+
+  context "derived properties" do
+    let(derived) { DerivedModel.new(id: 13_i64, not_nil_model_id: 17_i64) }
+    let(another) { AnotherModel.new(id: 17_i64, foo_bar_model_id: 13_i64, val: "Val") }
+
+    it "sets the aliased property" do
+      expect{derived.assign(index: 1_i64)}.to change{derived.not_nil_model_id}.to(1_i64)
+      expect{another.assign(index: 1_i64)}.to change{another.foo_bar_model_id}.to(1_i64)
+    end
+
+    it "gets the aliased property" do
+      expect(derived.index).to eq(17_i64)
+      expect(another.index).to eq(13_i64)
+    end
+
+    context "when queried via the aliased property" do
+      before_each do
+        derived.save
+        another.save
+      end
+
+      it "returns the model" do
+        expect(DerivedModel.where(index: 17_i64)).to have(derived)
+        expect(AnotherModel.where(index: 13_i64)).to have(another)
+      end
     end
   end
 

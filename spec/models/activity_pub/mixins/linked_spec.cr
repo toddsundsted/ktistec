@@ -6,13 +6,19 @@ require "../../../spec_helper/network"
 
 class LinkedModel
   include Ktistec::Model(Linked)
+  include ActivityPub
 
   @[Persistent]
   property linked_model_iri : String?
 
   belongs_to linked_model, foreign_key: linked_model_iri, primary_key: iri
 
-  def self.from_json_ld?(json_ld)
+  def to_json_ld(**options)
+    %Q|{"@type":"LinkedModel","@id":"#{iri}"}|
+  end
+
+  def self.map(json, **options)
+    Hash(String, String).new
   end
 end
 
@@ -90,7 +96,10 @@ Spectator.describe Ktistec::Model::Linked do
     end
 
     context "when linked object is remote" do
-      before_each { subject.linked_model_iri = "https://remote/objects/object" }
+      before_each do
+        subject.linked_model_iri = "https://remote/objects/object"
+        HTTP::Client.objects << object
+      end
 
       it "does not fetch the linked model instance" do
         subject.linked_model?(key_pair, dereference: false)

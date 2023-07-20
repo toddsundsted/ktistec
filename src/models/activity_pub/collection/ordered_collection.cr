@@ -1,6 +1,6 @@
-require "../actor"
+require "../collection"
 
-class ActivityPub::Actor
+class ActivityPub::Collection
   class OrderedCollection < ActivityPub::Collection
   end
 end

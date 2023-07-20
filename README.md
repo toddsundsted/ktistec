@@ -7,6 +7,7 @@
     - [Control over comment visibility](#control-over-comment-visibility)
     - [Pretty URLs](#pretty-urls)
     - [Followers/following](#followersfollowing)
+    - [Content discovery](#content-discovery)
     - [Content filtering](#content-filtering)
     - [Blocking](#blocking)
     - [Metrics](#metrics)
@@ -97,6 +98,16 @@ name. Ktistec is also compatible with the "remote follow" protocol
 used by Mastodon and others.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/88hvqq.png" width=460>
+
+### Content discovery
+
+In addition to following other users, you can follow threads, hashtags
+and even mentions. When posts arrive for content you follow, a
+notification is added to your notifications. To make navigation and
+discovery easier, post details pages now have labels with links to
+internal hashtag and mention index pages.
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/d8kf0q.png" width=460>
 
 ### Content filtering
 
@@ -219,7 +230,7 @@ Once these steps are done, you're running!
 ## Copyright and License
 
 Ktistec ActivityPub Server
-Copyright (C) 2021, 2022 Todd Sundsted
+Copyright (C) 2021, 2022, 2023 Todd Sundsted
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as

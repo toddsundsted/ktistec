@@ -27,13 +27,13 @@ class HTTP::Server::Context
     end
   end
 
-  def xhr?
-    @request.headers["X-Requested-With"]? == "XMLHttpRequest"
+  def turbo_frame?
+    @request.headers.has_key?("Turbo-Frame")
   end
 
   def created(url, status_code = nil, *, body = nil)
     @response.headers.add("Location", url)
-    @response.status_code = status_code.nil? ? (accepts?("text/html") && !xhr?) ? 302 : 201 : status_code
+    @response.status_code = status_code.nil? ? accepts?("text/html") ? 302 : 201 : status_code
     @response.print(body) if body
   end
 end
@@ -54,8 +54,8 @@ module Ktistec
       env.accepts?({{*mime_type}})
     end
 
-    macro xhr?
-      env.xhr?
+    macro turbo_frame?
+      env.turbo_frame?
     end
 
     # Redirect and end processing.

@@ -21,7 +21,6 @@ Spectator.describe Ktistec::Handler::Canonical do
 
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
-  XHR = HTTP::Headers{"Accept" => "text/html", "X-Requested-With" => "XMLHttpRequest"}
 
   describe "get /does/not/exist" do
     it "returns 404" do
@@ -49,14 +48,14 @@ Spectator.describe Ktistec::Handler::Canonical do
 
       context "and a request for JSON" do
         it "does not redirect" do
-          get "/foo/bar/secret", ACCEPT_JSON
+          get "/does/not/exist", ACCEPT_JSON
           expect(response.status_code).to eq(200)
         end
       end
 
-      context "and an XHR request" do
+      context "and a request for JSON" do
         it "does not redirect" do
-          get "/foo/bar/secret", XHR
+          get "/foo/bar/secret", ACCEPT_JSON
           expect(response.status_code).to eq(200)
         end
       end

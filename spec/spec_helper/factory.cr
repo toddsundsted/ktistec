@@ -178,16 +178,24 @@ def relationship_factory(clazz = Relationship, from_iri = "https://from/#{random
   clazz.new({"from_iri" => from_iri, "to_iri" => to_iri}.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
-def notification_factory(owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
+def notification_factory(clazz = Relationship::Content::Notification, owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   activity = activity_factory(actor_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, actor: owner) unless activity_iri || activity.nil? || activity
-  relationship_factory(Relationship::Content::Notification, **{from_iri: owner_iri, owner: owner, to_iri: activity_iri, activity: activity}.merge(options))
+  relationship_factory(clazz, **{from_iri: owner_iri, owner: owner, to_iri: activity_iri, activity: activity}.merge(options))
 end
 
-def timeline_factory(owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
+def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   object = object_factory(attributed_to_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, attributed_to: owner) unless object_iri || object.nil? || object
-  relationship_factory(Relationship::Content::Timeline, **{from_iri: owner_iri, owner: owner, to_iri: object_iri, object: object}.merge(options))
+  relationship_factory(clazz, **{from_iri: owner_iri, owner: owner, to_iri: object_iri, object: object}.merge(options))
+end
+
+def timeline_announce_factory(**options)
+  timeline_factory(Relationship::Content::Timeline::Announce, **options)
+end
+
+def timeline_create_factory(**options)
+  timeline_factory(Relationship::Content::Timeline::Create, **options)
 end
 
 def inbox_relationship_factory(owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
@@ -204,6 +212,18 @@ end
 
 def follow_relationship_factory(confirmed = true, **options)
   relationship_factory(Relationship::Social::Follow, **{confirmed: confirmed}.merge(options))
+end
+
+def follow_hashtag_relationship_factory(**options)
+  relationship_factory(Relationship::Content::Follow::Hashtag, **options)
+end
+
+def follow_mention_relationship_factory(**options)
+  relationship_factory(Relationship::Content::Follow::Mention, **options)
+end
+
+def follow_thread_relationship_factory(**options)
+  relationship_factory(Relationship::Content::Follow::Thread, **options)
 end
 
 def approved_relationship_factory(**options)

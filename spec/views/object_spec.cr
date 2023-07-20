@@ -15,6 +15,7 @@ Spectator.describe "object" do
 
     subject do
       begin
+        follow = nil
         XML.parse_html(render "./src/views/objects/thread.html.slang")
       rescue XML::Error
         XML.parse_html("<div/>").document

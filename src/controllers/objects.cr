@@ -40,6 +40,8 @@ class ObjectsController
 
     thread = object.thread(approved_by: object.attributed_to)
 
+    follow = nil
+
     ok "objects/thread"
   end
 
@@ -88,7 +90,9 @@ class ObjectsController
       not_found
     end
 
-    thread = object.thread
+    thread = object.thread(for_actor: env.account.actor)
+
+    follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
 
     ok "objects/thread"
   end
@@ -135,6 +139,48 @@ class ObjectsController
     object.unblock
 
     redirect back_path
+  end
+
+  # NOTE: there is currently no standard property whose value
+  # indicates that an object participates in a thread. mastodon uses
+  # the `conversation` property. friendica uses `context`. others use
+  # neither. in our implementation, following any object in a thread
+  # follows the thread, which is indicated by a shared `thread`
+  # property, which identifies the root of the thread and which is
+  # updated when previously uncached parent objects are fetched.
+
+  post "/remote/objects/:id/follow" do |env|
+    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
+      not_found
+    end
+
+    thread = object.thread(for_actor: env.account.actor)
+
+    thread.first.save # lazy migration -- ensure the `thread` property is up to date
+
+    follow = Relationship::Content::Follow::Thread.new(actor: env.account.actor, thread: thread.first.thread).save
+
+    if turbo_frame?
+      ok "objects/thread"
+    else
+      redirect back_path
+    end
+  end
+
+  post "/remote/objects/:id/unfollow" do |env|
+    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
+      not_found
+    end
+
+    thread = object.thread(for_actor: env.account.actor)
+
+    follow = Relationship::Content::Follow::Thread.find(actor: env.account.actor, thread: thread.first.thread).destroy
+
+    if turbo_frame?
+      ok "objects/thread"
+    else
+      redirect back_path
+    end
   end
 
   post "/remote/objects/fetch" do |env|

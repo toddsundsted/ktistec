@@ -1,5 +1,4 @@
 require "../framework/controller"
-require "../models/activity_pub/activity/follow"
 require "../models/task/refresh_actor"
 
 class ActorsController
@@ -62,7 +61,7 @@ class ActorsController
 
     actor = account.actor
 
-    objects = actor.timeline(**pagination_params(env))
+    timeline = actor.timeline(**pagination_params(env))
 
     account.update_last_timeline_checked_at.save
 
@@ -81,7 +80,7 @@ class ActorsController
 
     actor = account.actor
 
-    activities = actor.notifications(**pagination_params(env))
+    notifications = actor.notifications(**pagination_params(env))
 
     account.update_last_notifications_checked_at.save
 

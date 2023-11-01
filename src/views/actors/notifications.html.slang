@@ -25,6 +25,9 @@
               | shared
               a< href=remote_object_path(activity.object) your post
               | .
+            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+              .extra.meta.truncated
+                == content
         - elsif notification.is_a?(Relationship::Content::Notification::Like)
           - activity = notification.activity.as(ActivityPub::Activity::Like)
           .label
@@ -38,6 +41,9 @@
               | liked
               a< href=remote_object_path(activity.object) your post
               | .
+            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+              .extra.meta.truncated
+                == content
         - elsif notification.is_a?(Relationship::Content::Notification::Reply)
           - activity = notification.activity.as(ActivityPub::Activity::Create)
           .label
@@ -51,10 +57,14 @@
               a> href=remote_object_path(activity.object) replied to
               a< href=remote_object_path(activity.object.in_reply_to) your post
               | .
+            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+              .extra.meta.truncated
+                == content
         - elsif notification.is_a?(Relationship::Content::Notification::Hashtag)
           crystal:
             activity = notification.activity
             object = ActivityPub::Object.find(activity.object_iri)
+            content = Ktistec::Util.render_as_text(object.content).presence
             attributed_to = object.attributed_to
           .label
             - if (icon = attributed_to.icon)
@@ -79,10 +89,14 @@
               - ht4.each do |hashtag|
                 a< href=hashtag_path(hashtag) ##{hashtag}
               | .
+            - if content
+              .extra.meta.truncated
+                == content
         - elsif notification.is_a?(Relationship::Content::Notification::Mention)
           crystal:
             activity = notification.activity
             object = ActivityPub::Object.find(activity.object_iri)
+            content = Ktistec::Util.render_as_text(object.content).presence
             attributed_to = object.attributed_to
           .label
             - if (icon = attributed_to.icon)
@@ -112,6 +126,9 @@
                 - mn4.each do |mention|
                   a< href=mention_path(mention) @#{mention.split("@").first}
                 | .
+            - if content
+              .extra.meta.truncated
+                == content
         - elsif notification.is_a?(Relationship::Content::Notification::Follow)
           - activity = notification.activity.as(ActivityPub::Activity::Follow)
           .label
@@ -140,6 +157,7 @@
           crystal:
             activity = notification.activity
             object = ActivityPub::Object.find(activity.object_iri)
+            content = Ktistec::Util.render_as_text(object.content).presence
             attributed_to = object.attributed_to
           .label
             - if (icon = attributed_to.icon)
@@ -151,6 +169,9 @@
               a> href=remote_actor_path(attributed_to) = attributed_to.display_name
               a> href=remote_object_path(object) replied to a thread
               | you follow.
+            - if content
+              .extra.meta.truncated
+                == content
         - else
           - activity = notification.activity
           .content

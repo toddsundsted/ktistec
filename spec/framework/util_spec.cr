@@ -9,6 +9,32 @@ Spectator.describe Ktistec::Util do
     end
   end
 
+  describe ".render_as_text" do
+    it "ignores empty content" do
+      expect(described_class.render_as_text("")).to eq("")
+    end
+
+    it "removes inline markup" do
+      content = "this is <span><strong>some</strong> <em>text</em></span>"
+      expect(described_class.render_as_text(content)).to eq("this is some text")
+    end
+
+    it "replaces block elements with newlines" do
+      content = "<p>foo</p><p>bar</p>"
+      expect(described_class.render_as_text(content)).to eq("foo\nbar\n")
+    end
+
+    it "leaves bare text alone" do
+      content = "some text"
+      expect(described_class.render_as_text(content)).to eq("some text")
+    end
+
+    it "leaves escaped content alone" do
+      content = "&lt;foo&gt;"
+      expect(described_class.render_as_text(content)).to eq("&lt;foo&gt;")
+    end
+  end
+
   describe ".sanitize" do
     it "ignores empty content" do
       expect(described_class.sanitize("")).to eq("")

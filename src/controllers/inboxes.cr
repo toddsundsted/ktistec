@@ -290,12 +290,7 @@ class RelationshipsController
       receiver: account.actor,
       activity: activity,
       deliver_to: deliver_to
-    )
-    if Kemal.config.env == "test"
-      task.perform
-    else
-      task.schedule
-    end
+    ).schedule
 
     ok
   end

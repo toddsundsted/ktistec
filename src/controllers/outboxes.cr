@@ -282,12 +282,7 @@ class RelationshipsController
     task = Task::Deliver.new(
       sender: account.actor,
       activity: activity
-    )
-    if Kemal.config.env == "test"
-      task.perform
-    else
-      task.schedule
-    end
+    ).schedule
 
     if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Update)
       if activity.object.in_reply_to?

@@ -26,6 +26,16 @@ class ExceptionTask < Task
     super(options)
   end
 
+  # raise an exception in `perform`. during tests, `schedule`
+  # immediately invokes `perform` so swallow that exception when
+  # scheduling.
+
+  def schedule
+    super
+  rescue NilAssertionError
+    self
+  end
+
   def perform
     nil.not_nil!
   end

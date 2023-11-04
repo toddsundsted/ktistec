@@ -59,6 +59,12 @@ class Account
   end
 end
 
+class Task
+  def schedule(next_attempt_at = nil)
+    previous_def(next_attempt_at).tap { perform } # always perform when testing
+  end
+end
+
 ## Test setup/teardown
 
 module Ktistec

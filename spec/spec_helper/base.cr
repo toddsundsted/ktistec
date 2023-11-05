@@ -5,6 +5,11 @@ require "json"
 
 require "../../src/framework"
 
+# require specific classes for later redefinitions
+
+require "../../src/models/account"
+require "../../src/models/task"
+
 ## Helpers for spec matchers
 
 class String

@@ -5,6 +5,12 @@ require "../spec_helper/base"
 Spectator.describe Task do
   setup_spec
 
+  mock Task do
+    stub perform do
+      # no-op
+    end
+  end
+
   subject do
     described_class.new(
       source_iri: "https://test.test/source",

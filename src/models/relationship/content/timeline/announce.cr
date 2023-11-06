@@ -1,8 +1,9 @@
+require "../../../relationship"
 require "../timeline"
 
 class Relationship
   class Content
-    class Timeline
+    class Timeline < Relationship
       class Announce < Timeline
       end
     end

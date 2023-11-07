@@ -31,4 +31,38 @@ Spectator.describe Relationship::Social::Follow do
       expect(new_relationship.valid?).to be_true
     end
   end
+
+  context "#activity?" do
+    let_build(:follow_relationship)
+
+    it "returns nil" do
+      expect(follow_relationship.activity?).to be_nil
+    end
+
+    context "given an associated follow activity" do
+      let_create!(:follow, actor: follow_relationship.actor, object: follow_relationship.object)
+
+      it "returns the associated follow activity" do
+        expect(follow_relationship.activity?).to eq(follow)
+      end
+
+      context "that has been undone" do
+        before_each { follow.undo }
+
+        it "returns nil" do
+          expect(follow_relationship.activity?).to be_nil
+        end
+      end
+    end
+
+    context "given multiple associated follow activities" do
+      let_create!(:follow, named: oldest, actor: follow_relationship.actor, object: follow_relationship.object, created_at: 3.days.ago)
+      let_create!(:follow, named: newest, actor: follow_relationship.actor, object: follow_relationship.object, created_at: 1.day.ago)
+      let_create!(:follow, named: older, actor: follow_relationship.actor, object: follow_relationship.object, created_at: 2.days.ago)
+
+      it "returns the most recent follow activity" do
+        expect(follow_relationship.activity?).to eq(newest)
+      end
+    end
+  end
 end

@@ -152,8 +152,10 @@ def delete_factory(actor_iri = nil, actor = false, object_iri = nil, object = fa
   activity_factory(ActivityPub::Activity::Delete, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
 end
 
-def follow_factory(**options)
-  activity_factory(ActivityPub::Activity::Follow, **options)
+def follow_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
+  actor = actor_factory unless actor_iri || actor.nil? || actor
+  object = actor_factory unless object_iri || object.nil? || object
+  activity_factory(ActivityPub::Activity::Follow, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
 end
 
 def accept_factory(**options)
@@ -210,8 +212,10 @@ def outbox_relationship_factory(owner_iri = nil, owner = false, activity_iri = n
   relationship_factory(Relationship::Content::Outbox, **{from_iri: owner_iri, owner: owner, to_iri: activity_iri, activity: activity}.merge(options))
 end
 
-def follow_relationship_factory(confirmed = true, **options)
-  relationship_factory(Relationship::Social::Follow, **{confirmed: confirmed}.merge(options))
+def follow_relationship_factory(confirmed = true, actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
+  actor = actor_factory unless actor_iri || actor.nil? || actor
+  object = actor_factory unless object_iri || object.nil? || object
+  relationship_factory(Relationship::Social::Follow, **{confirmed: confirmed, from_iri: actor_iri, actor: actor, to_iri: object_iri, object: object}.merge(options))
 end
 
 def follow_hashtag_relationship_factory(**options)

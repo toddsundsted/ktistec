@@ -279,7 +279,7 @@ class RelationshipsController
       end
     end
 
-    task = Task::Deliver.new(
+    Task::Deliver.new(
       sender: account.actor,
       activity: activity
     ).schedule

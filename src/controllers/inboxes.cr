@@ -286,7 +286,7 @@ class RelationshipsController
       end
     end
 
-    task = Task::Receive.new(
+    Task::Receive.new(
       receiver: account.actor,
       activity: activity,
       deliver_to: deliver_to

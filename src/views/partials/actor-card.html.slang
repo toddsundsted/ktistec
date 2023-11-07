@@ -25,11 +25,11 @@
     a.left.floated href=actor.iri
       .meta= actor.account_uri
     - if _account && _account.actor != actor
-      - if env.request.path =~ /followers$/ && actor.follows?(_account.actor, confirmed: false) && (_follow = ActivityPub::Activity::Follow.follows?(actor, _account.actor))
+      - if env.request.path =~ /followers$/ && actor.follows?(_account.actor, confirmed: false) && (_follow = actor.follows?(_account.actor).try(&.activity?))
         == form_button "Block", block_actor_path(actor), form_class: "ui form right floated", button_class: "ui button dangerous", button_data: {"modal": "block.actor", "controller": "modal-action", "action": "click->modal-action#show"}
         == activity_button "Reject", outbox_path(_account), _follow.iri, form_class: "ui form right floated", button_class: "ui button reject"
         == activity_button "Accept", outbox_path(_account), _follow.iri, form_class: "ui form right floated", button_class: "ui button accept"
-      - elsif (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
+      - elsif (_follow = _account.actor.follows?(actor).try(&.activity?))
         == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo", form_class: "ui form right floated"
       - else
         == form_button "Block", block_actor_path(actor), form_class: "ui form right floated", button_class: "ui button dangerous", button_data: {"modal": "block.actor", "controller": "modal-action", "action": "click->modal-action#show"}

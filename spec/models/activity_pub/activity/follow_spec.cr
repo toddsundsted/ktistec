@@ -20,28 +20,6 @@ Spectator.describe ActivityPub::Activity::Follow do
     end
   end
 
-  describe ".follows?" do
-    let_build(:actor)
-    let_build(:actor, named: :other)
-    let_create!(:follow_relationship, named: :follow, actor: actor, object: other)
-
-    before_each do
-      subject.assign(actor: actor, object: other).save
-    end
-
-    it "returns the most recent follow activity" do
-      expect(described_class.follows?(actor, other)).to eq(subject)
-    end
-
-    context "when not following" do
-      before_each { follow.destroy }
-
-      it "returns nil" do
-        expect(described_class.follows?(actor, other)).to be_nil
-      end
-    end
-  end
-
   describe "#accepted_or_rejected" do
     it "returns nil" do
       expect(subject.accepted_or_rejected?).to be_nil

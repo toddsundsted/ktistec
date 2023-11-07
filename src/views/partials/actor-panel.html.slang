@@ -30,7 +30,7 @@
               td.value == s maybe_wrap_link(attachment.value)
   - if _account && _account.actor != actor
     .ui.basic.segment
-      - if (_follow = ActivityPub::Activity::Follow.follows?(_account.actor, actor))
+      - if (_follow = _account.actor.follows?(actor).try(&.activity?))
         == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo"
       - elsif !actor.blocked?
         == activity_button "Follow", outbox_path(_account), actor.iri, button_class: "ui button primary"

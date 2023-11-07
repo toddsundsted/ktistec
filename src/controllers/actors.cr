@@ -1,6 +1,9 @@
 require "../framework/controller"
 require "../models/task/refresh_actor"
 
+require "../models/relationship/content/follow/hashtag"
+require "../models/relationship/content/follow/mention"
+
 class ActorsController
   include Ktistec::Controller
 

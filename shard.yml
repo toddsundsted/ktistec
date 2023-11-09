@@ -23,7 +23,7 @@ dependencies:
     version: ~> 0.1.0
   openssl_ext:
     github: toddsundsted/openssl_ext
-    version: ~> 0.1.2
+    version: ~> 0.1.6
   web_finger:
     github: toddsundsted/web_finger
     version: ~> 0.2.1

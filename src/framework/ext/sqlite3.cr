@@ -24,6 +24,7 @@ lib LibSQLite3
   fun config = sqlite3_config(Int32, ...) : Code
   fun memory_used = sqlite3_memory_used() : Int64
   fun result_text = sqlite3_result_text(SQLite3Context, UInt8*, Int32, Void*) : Nil
+  fun libversion = sqlite3_libversion_number() : Int32
 end
 
 module Ktistec

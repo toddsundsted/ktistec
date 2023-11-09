@@ -9,7 +9,20 @@ class TaskWorker
 
     self.new.tap do |worker|
       loop do
-        unless worker.work
+        # try to keep the task worker alive in the face of critical,
+        # but possibly transient, problems affecting the database --
+        # in particular, insufficient disk space and locking. if
+        # these things happen, individual tasks may be left in an
+        # inconsistent state, but the task worker will continue to
+        # process future tasks, which is less surprising and more
+        # useful than the alternative.
+        begin
+          work_done = worker.work
+        rescue ex : SQLite3::Exception
+          Log.warn { "Exception while doing task work: #{ex.class}: #{ex.message}: #{ex.backtrace.first?}" }
+          work_done = false
+        end
+        unless work_done
           select
           when @@channel.receive
             # process work
@@ -36,10 +49,7 @@ class TaskWorker
   end
 
   protected def work(now = Time.utc)
-    tasks = Task.scheduled(now)
-    ids = tasks.map(&.id).compact
-    update = "UPDATE tasks SET running = 1 WHERE id IN (#{("?," * ids.size)[0...-1]})"
-    Ktistec.database.exec(update, args: ids)
+    tasks = Task.scheduled(now, reserve: true)
     tasks.each do |task|
       if task.is_a?(Task::ConcurrentTask)
         spawn { perform(task) }

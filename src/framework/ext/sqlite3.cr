@@ -2,6 +2,30 @@ require "json"
 require "xml"
 require "sqlite3"
 
+module DB
+  abstract class Statement
+    # inject code around each request to capture and log time to
+    # execute queries. override the existing library definition of
+    # `emit_log` to silence it.
+
+    def_around_query_or_exec do |args|
+      start = Time.monotonic
+      result = yield
+      finish = Time.monotonic
+      Log.debug do |log|
+        elapsed = sprintf("%10.3fms", (finish - start).total_milliseconds)
+        message = command.each_line.map(&.strip).join(" ")
+        log.emit("Executing query [#{elapsed}] -- #{message}", args: MetadataValueConverter.arg_to_log(args))
+      end
+      result
+    end
+
+    protected def emit_log(args : Enumerable)
+      # no-op
+    end
+  end
+end
+
 private alias Supported = JSON::Serializable | Array(JSON::Serializable) | Array(String)
 
 class SQLite3::ResultSet

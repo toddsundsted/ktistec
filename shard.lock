@@ -6,7 +6,7 @@ shards:
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.11.0
+    version: 0.12.0
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
@@ -24,9 +24,13 @@ shards:
     git: https://github.com/toddsundsted/libxml_ext.git
     version: 0.1.2
 
+  markd:
+    git: https://github.com/icyleaf/markd.git
+    version: 0.5.0
+
   openssl_ext:
     git: https://github.com/toddsundsted/openssl_ext.git
-    version: 0.1.5
+    version: 0.1.6
 
   radix:
     git: https://github.com/luislavena/radix.git
@@ -46,7 +50,7 @@ shards:
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
-    version: 0.19.0
+    version: 0.20.0
 
   web_finger:
     git: https://github.com/toddsundsted/web_finger.git

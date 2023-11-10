@@ -10,8 +10,8 @@ require "../../framework/model/**"
 require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
-require "../relationship/content/notification"
-require "../relationship/content/timeline"
+require "../relationship/content/notification/*"
+require "../relationship/content/timeline/*"
 require "../relationship/content/inbox"
 require "../relationship/content/outbox"
 require "../relationship/social/follow"
@@ -578,7 +578,14 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
-    # Returns objects in the actor's timeline.
+    private alias Timeline = Relationship::Content::Timeline
+
+    # NOTE: in the following two queries, the query planner does not
+    # always pick the optimal query plan. use cross joins to force
+    # sqlite to use a plan that has been seen to work well in
+    # practice.
+
+    # Returns entries in the actor's timeline.
     #
     # Meant to be called on local (not cached) actors.
     #
@@ -587,7 +594,7 @@ module ActivityPub
     # May be filtered to exclude replies (via `exclude_replies`).
     #
     # May be filtered to include only objects with associated
-    # activities of the specified type (via `inclusion`).
+    # relationships of the specified type (via `inclusion`).
     #
     def timeline(exclude_replies = false, inclusion = nil, page = 1, size = 10)
       exclude_replies =
@@ -597,74 +604,50 @@ module ActivityPub
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND a.type = "#{inclusion}"|
+          %Q|AND t.type = "#{inclusion}"|
         when Array
-          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        else
+          %Q|AND t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN relationships AS r
-             ON r.to_iri = o.iri
-            AND r.type = "#{Relationship::Content::Timeline}"
-           JOIN activities AS a ON a.id = (
-                  SELECT a.id
-                    FROM activities AS a
-                    JOIN relationships AS l
-                      ON l.to_iri = a.iri
-                     AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-                   WHERE l.from_iri = ?
-                     AND a.object_iri = o.iri
-                     AND a.undone_at IS NULL
-                     #{inclusion}
-                ORDER BY a.created_at ASC
-                   LIMIT 1
-                )
-          WHERE r.from_iri = ?
-            #{exclude_replies}
-            AND o.deleted_at IS NULL
-            AND o.blocked_at IS NULL
-            AND t.deleted_at IS NULL
-            AND t.blocked_at IS NULL
-            AND o.id NOT IN (
-               SELECT o.id
-                 FROM objects AS o
-                 JOIN actors AS t
-                   ON t.iri = o.attributed_to_iri
-                 JOIN relationships AS r
-                   ON r.to_iri = o.iri
-                  AND r.type = "#{Relationship::Content::Timeline}"
-                 JOIN activities AS a ON a.id = (
-                        SELECT a.id
-                          FROM activities AS a
-                          JOIN relationships AS l
-                            ON l.to_iri = a.iri
-                           AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-                         WHERE l.from_iri = ?
-                           AND a.object_iri = o.iri
-                           AND a.undone_at IS NULL
-                           #{inclusion}
-                      ORDER BY a.created_at ASC
-                         LIMIT 1
-                      )
-                WHERE r.from_iri = ?
-                  #{exclude_replies}
-                  AND o.deleted_at IS NULL
-                  AND o.blocked_at IS NULL
-                  AND t.deleted_at IS NULL
-                  AND t.blocked_at IS NULL
-             ORDER BY r.created_at DESC
-                LIMIT ?
-            )
-       ORDER BY r.created_at DESC
-          LIMIT ?
+          SELECT #{Timeline.columns(prefix: "t")}
+            FROM relationships AS t
+      CROSS JOIN objects AS o
+              ON o.iri = t.to_iri
+      CROSS JOIN actors AS c
+              ON c.iri = o.attributed_to_iri
+           WHERE t.from_iri = ?
+             #{inclusion}
+             #{exclude_replies}
+             AND o.deleted_at IS NULL
+             AND o.blocked_at IS NULL
+             AND c.deleted_at IS NULL
+             AND c.blocked_at IS NULL
+             AND t.id NOT IN (
+                SELECT t.id
+                  FROM relationships AS t
+            CROSS JOIN objects AS o
+                    ON o.iri = t.to_iri
+            CROSS JOIN actors AS c
+                    ON c.iri = o.attributed_to_iri
+                 WHERE t.from_iri = ?
+                   #{inclusion}
+                   #{exclude_replies}
+                   AND o.deleted_at IS NULL
+                   AND o.blocked_at IS NULL
+                   AND c.deleted_at IS NULL
+                   AND c.blocked_at IS NULL
+              ORDER BY t.created_at DESC
+                 LIMIT ?
+             )
+        ORDER BY t.created_at DESC
+           LIMIT ?
       QUERY
-      Object.query_and_paginate(query, self.iri, self.iri, self.iri, self.iri, page: page, size: size)
+      Timeline.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
-    # Returns the count of objects in the actor's timeline since the
+    # Returns the count of entries in the actor's timeline since the
     # given date.
     #
     # See `#timeline(inclusion, page, size)` for further details.
@@ -677,119 +660,110 @@ module ActivityPub
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND a.type = "#{inclusion}"|
+          %Q|AND t.type = "#{inclusion}"|
         when Array
-          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+        else
+          %Q|AND t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
-         SELECT count(*)
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN relationships AS r
-             ON r.to_iri = o.iri
-            AND r.type = "#{Relationship::Content::Timeline}"
-           JOIN activities AS a ON a.id = (
-                  SELECT a.id
-                    FROM activities AS a
-                    JOIN relationships AS l
-                      ON l.to_iri = a.iri
-                     AND l.type IN ("#{Relationship::Content::Inbox}", "#{Relationship::Content::Outbox}")
-                   WHERE l.from_iri = ?
-                     AND a.object_iri = o.iri
-                     AND a.undone_at IS NULL
-                     #{inclusion}
-                ORDER BY a.created_at ASC
-                   LIMIT 1
-                )
-          WHERE r.from_iri = ?
-            #{exclude_replies}
-            AND o.deleted_at IS NULL
-            AND o.blocked_at IS NULL
-            AND t.deleted_at IS NULL
-            AND t.blocked_at IS NULL
-            AND r.created_at > ?
+          SELECT count(t.id)
+            FROM relationships AS t
+      CROSS JOIN objects AS o
+              ON o.iri = t.to_iri
+              #{exclude_replies}
+      CROSS JOIN actors AS c
+              ON c.iri = o.attributed_to_iri
+           WHERE t.from_iri = ?
+             #{inclusion}
+             AND o.deleted_at IS NULL
+             AND o.blocked_at IS NULL
+             AND c.deleted_at IS NULL
+             AND c.blocked_at IS NULL
+             AND t.created_at > ?
       QUERY
-      Ktistec.database.scalar(query, iri, iri, since).as(Int64)
+      Ktistec.database.scalar(query, iri, since).as(Int64)
     end
 
-    # Returns notification activities for the actor.
+    private alias Notification = Relationship::Content::Notification
+
+    # Returns notifications for the actor.
     #
     # Meant to be called on local (not cached) actors.
     #
-    # Note: filters out activities that have associated objects that
-    # have been deleted. does not filter out activities that are not
-    # associated with an object since some activities, like follows,
-    # are associated with actors. doesn't worry about actors that have
-    # been deleted since follows, the activities we care about in this
-    # case, are associated with the actor on which this method is
-    # called.
+    # Filters out notifications for activities that have associated
+    # objects that have been deleted. Does not filter out activities
+    # that are not associated with an object since some activities,
+    # like follows, are associated with actors. Doesn't consider
+    # actors that have been deleted, since follows -- the activities
+    # we care about in that case -- are associated with the actor on
+    # which this method is called.
     #
     def notifications(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Activity.columns(prefix: "a")}
-           FROM activities AS a
-           JOIN relationships AS rel
-             ON rel.to_iri = a.iri
-            AND rel.type = "#{Relationship::Content::Notification}"
-           JOIN actors AS act
-             ON act.iri = a.actor_iri
-      LEFT JOIN objects AS obj
-             ON obj.iri = a.object_iri
-          WHERE rel.from_iri = ?
-            AND act.deleted_at IS null
-            AND act.blocked_at IS null
-            AND obj.deleted_at IS null
-            AND obj.blocked_at IS null
+         SELECT #{Notification.columns(prefix: "n")}
+           FROM relationships AS n
+           JOIN activities AS a
+             ON a.iri = n.to_iri
+           JOIN actors AS c
+             ON c.iri = a.actor_iri
+      LEFT JOIN objects AS o
+             ON o.iri = a.object_iri
+          WHERE n.from_iri = ?
+            AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
+            AND c.deleted_at IS null
+            AND c.blocked_at IS null
+            AND o.deleted_at IS null
+            AND o.blocked_at IS null
             AND a.undone_at IS null
-            AND a.id NOT IN (
-               SELECT a.id
-                 FROM activities AS a
-                 JOIN relationships AS rel
-                   ON rel.to_iri = a.iri
-                  AND rel.type = "#{Relationship::Content::Notification}"
-                 JOIN actors AS act
-                   ON act.iri = a.actor_iri
-            LEFT JOIN objects AS obj
-                   ON obj.iri = a.object_iri
-                WHERE rel.from_iri = ?
-                  AND act.deleted_at IS null
-                  AND act.blocked_at IS null
-                  AND obj.deleted_at IS null
-                  AND obj.blocked_at IS null
+            AND n.id NOT IN (
+               SELECT n.id
+                 FROM relationships AS n
+                 JOIN activities AS a
+                   ON a.iri = n.to_iri
+                 JOIN actors AS c
+                   ON c.iri = a.actor_iri
+            LEFT JOIN objects AS o
+                   ON o.iri = a.object_iri
+                WHERE n.from_iri = ?
+                  AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
+                  AND c.deleted_at IS null
+                  AND c.blocked_at IS null
+                  AND o.deleted_at IS null
+                  AND o.blocked_at IS null
                   AND a.undone_at IS null
-             ORDER BY rel.created_at DESC
+             ORDER BY n.created_at DESC
                 LIMIT ?
             )
-       ORDER BY rel.created_at DESC
+       ORDER BY n.created_at DESC
           LIMIT ?
       QUERY
-      Activity.query_and_paginate(query, iri, iri, page: page, size: size)
+      Notification.query_and_paginate(query, iri, iri, page: page, size: size)
     end
 
-    # Returns the count of notification activities for the actor since
-    # the given date.
+    # Returns the count of notifications for the actor since the given
+    # date.
     #
     # See `#notifications(page, size)` for further details.
     #
     def notifications(since : Time)
       query = <<-QUERY
          SELECT count(*)
-           FROM activities AS a
-           JOIN relationships AS rel
-             ON rel.to_iri = a.iri
-            AND rel.type = "#{Relationship::Content::Notification}"
-           JOIN actors AS act
-             ON act.iri = a.actor_iri
-      LEFT JOIN objects AS obj
-             ON obj.iri = a.object_iri
-          WHERE rel.from_iri = ?
-            AND act.deleted_at IS null
-            AND act.blocked_at IS null
-            AND obj.deleted_at IS null
-            AND obj.blocked_at IS null
+           FROM relationships AS n
+           JOIN activities AS a
+             ON a.iri = n.to_iri
+           JOIN actors AS c
+             ON c.iri = a.actor_iri
+      LEFT JOIN objects AS o
+             ON o.iri = a.object_iri
+          WHERE n.from_iri = ?
+            AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
+            AND c.deleted_at IS null
+            AND c.blocked_at IS null
+            AND o.deleted_at IS null
+            AND o.blocked_at IS null
             AND a.undone_at IS null
-            AND rel.created_at > ?
+            AND n.created_at > ?
       QUERY
       Ktistec.database.scalar(query, iri, since).as(Int64)
     end
@@ -836,7 +810,7 @@ module ActivityPub
       self.assign(self.class.map(json, include_key: include_key))
     end
 
-    def self.map(json, *, include_key = false, **options)
+    def self.map(json : JSON::Any | String | IO, include_key = false, **options)
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
         "iri" => json.dig?("@id").try(&.as_s),

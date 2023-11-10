@@ -6,7 +6,7 @@ crystal:
   nav.ui.secondary.pagination.menu
     - if _prev
       - temp["page"] = (page - 1).to_s
-      a.item href="?#{temp}" : i.angle.double.left.icon
+      a.item href="?#{temp}" target="_top" : i.angle.double.left.icon
     - if _next
       - temp["page"] = (page + 1).to_s
-      a.item href="?#{temp}" : i.angle.double.right.icon
+      a.item href="?#{temp}" target="_top" : i.angle.double.right.icon

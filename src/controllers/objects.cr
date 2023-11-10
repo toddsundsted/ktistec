@@ -40,6 +40,8 @@ class ObjectsController
 
     thread = object.thread(approved_by: object.attributed_to)
 
+    follow = nil
+
     ok "objects/thread"
   end
 
@@ -88,7 +90,9 @@ class ObjectsController
       not_found
     end
 
-    thread = object.thread
+    thread = object.thread(for_actor: env.account.actor)
+
+    follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
 
     ok "objects/thread"
   end
@@ -134,6 +138,75 @@ class ObjectsController
 
     object.unblock
 
+    redirect back_path
+  end
+
+  # NOTE: there is currently no standard property whose value
+  # indicates that an object participates in a thread. mastodon uses
+  # the `conversation` property. friendica uses `context`. others use
+  # neither. in our implementation, following any object in a thread
+  # follows the thread, which is indicated by a shared `thread`
+  # property, which identifies the root of the thread and which is
+  # updated when previously uncached parent objects are fetched.
+
+  post "/remote/objects/:id/follow" do |env|
+    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
+      not_found
+    end
+
+    thread = object.thread(for_actor: env.account.actor)
+
+    thread.first.save # lazy migration -- ensure the `thread` property is up to date
+
+    follow = Relationship::Content::Follow::Thread.new(actor: env.account.actor, thread: thread.first.thread).save
+
+    if turbo_frame?
+      ok "objects/thread"
+    else
+      redirect back_path
+    end
+  end
+
+  post "/remote/objects/:id/unfollow" do |env|
+    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
+      not_found
+    end
+
+    thread = object.thread(for_actor: env.account.actor)
+
+    follow = Relationship::Content::Follow::Thread.find(actor: env.account.actor, thread: thread.first.thread).destroy
+
+    if turbo_frame?
+      ok "objects/thread"
+    else
+      redirect back_path
+    end
+  end
+
+  post "/remote/objects/fetch" do |env|
+    params = accepts?("text/html") ? env.params.body : env.params.json
+
+    iri = params["iri"].to_s
+
+    begin
+      message = nil
+      unless (object = ActivityPub::Object.dereference?(env.account.actor, iri))
+        message = "The post could not be found or could not be retrieved."
+      end
+      unless message || (object && object.attributed_to?(env.account.actor, dereference: true))
+        message = "The post's author could not be found or could not be retrieved."
+      end
+    rescue Socket::Addrinfo::Error
+      message = "There was a hostname lookup failure and the post could not be retrieved."
+    rescue Socket::ConnectError
+      message = "The server could not connect to the remote host and the post could not be retrieved."
+    end
+
+    if message
+      bad_gateway "objects/partials/fetch", operation: "replace", target: "thread-fetch"
+    end
+
+    object.not_nil!.save
     redirect back_path
   end
 

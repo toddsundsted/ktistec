@@ -77,9 +77,13 @@ module Ktistec::ViewHelper
     embed {{content}}, content_io
     content = content_io.to_s
 
-    layout_io = IO::Memory.new
-    embed {{layout}}, layout_io
-    layout_io.to_s
+    {% if layout %}
+      layout_io = IO::Memory.new
+      embed {{layout}}, layout_io
+      layout_io.to_s
+    {% else %}
+      content
+    {% end %}
   end
 
   # Render a view with the given filename.
@@ -367,6 +371,18 @@ module Ktistec::ViewHelper
     %Q|<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">|
   end
 
+  macro params_to_inputs(params, exclude exclude_ = nil, include include_ = nil)
+    {{params}}.map do |%name, %value|
+      if (%exclude = {{exclude_}})
+        next if %exclude.includes?(%name)
+      end
+      if (%include = {{include_}})
+        next unless %include.includes?(%name)
+      end
+      %Q|<input type="hidden" name="#{%name}" value="#{%value}">|
+    end.join
+  end
+
   ## JSON helpers
 
   macro error_block(model, comma = true)
@@ -436,6 +452,10 @@ module Ktistec::ViewHelper
 
   macro home_path
     "/"
+  end
+
+  macro everything_path
+    "/everything"
   end
 
   macro sessions_path
@@ -518,6 +538,14 @@ module Ktistec::ViewHelper
     "#{remote_object_path({{object}})}/unblock"
   end
 
+  macro follow_thread_path(object = nil)
+    "#{remote_object_path({{object}})}/follow"
+  end
+
+  macro unfollow_thread_path(object = nil)
+    "#{remote_object_path({{object}})}/unfollow"
+  end
+
   macro remote_actor_path(actor = nil)
     "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
   end
@@ -548,5 +576,29 @@ module Ktistec::ViewHelper
 
   macro actor_remote_follow_path(actor = nil)
     "#{actor_path({{actor}})}/remote-follow"
+  end
+
+  macro hashtag_path(hashtag = nil)
+    "/tags/#{{{hashtag}} || env.params.url["hashtag"]}"
+  end
+
+  macro follow_hashtag_path(hashtag = nil)
+    "#{hashtag_path({{hashtag}})}/follow"
+  end
+
+  macro unfollow_hashtag_path(hashtag = nil)
+    "#{hashtag_path({{hashtag}})}/unfollow"
+  end
+
+  macro mention_path(mention = nil)
+    "/mentions/#{{{mention}} || env.params.url["mention"]}"
+  end
+
+  macro follow_mention_path(mention = nil)
+    "#{mention_path({{mention}})}/follow"
+  end
+
+  macro unfollow_mention_path(mention = nil)
+    "#{mention_path({{mention}})}/unfollow"
   end
 end

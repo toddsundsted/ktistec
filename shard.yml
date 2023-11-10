@@ -17,19 +17,22 @@ dependencies:
     branch: main
   sqlite3:
     github: crystal-lang/crystal-sqlite3
-    version: ~> 0.17
+    version: ~> 0.20
   libxml_ext:
     github: toddsundsted/libxml_ext
     version: ~> 0.1.0
   openssl_ext:
     github: toddsundsted/openssl_ext
-    version: ~> 0.1.2
+    version: ~> 0.1.6
   web_finger:
     github: toddsundsted/web_finger
     version: ~> 0.2.1
   school:
     github: toddsundsted/school
     version: ~> 0.2.4
+  markd:
+    github: icyleaf/markd
+    version: ~> 0.5.0
 
 development_dependencies:
   spectator:

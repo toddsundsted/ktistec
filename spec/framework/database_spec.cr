@@ -75,8 +75,7 @@ Spectator.describe Ktistec::Database::Migration do
     )
     STR
     Ktistec.database.exec <<-STR
-    CREATE UNIQUE INDEX idx_foobars_name
-    ON foobars (name ASC)
+    CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)
     STR
     Ktistec.database.exec %q|INSERT INTO foobars VALUES (1, "one", 1)|
     Ktistec.database.exec %q|INSERT INTO foobars VALUES (2, "two", 2)|
@@ -90,27 +89,35 @@ Spectator.describe Ktistec::Database::Migration do
 
   describe ".indexes" do
     it "returns the table's indexes" do
-      expect(subject.indexes("foobars")).to contain_exactly(%Q|CREATE UNIQUE INDEX idx_foobars_name\nON foobars (name ASC)|)
+      expect(subject.indexes("foobars")).to contain_exactly(%q|CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)|)
     end
   end
 
   describe ".add_column" do
     it "adds the column" do
-      expect{subject.add_column("foobars", "other", "text")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ""|, %q|value integer|, %q|other text|])
+      expect{subject.add_column("foobars", "other", "text", index: "ASC")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ""|, %q|value integer|, %q|other text|])
+    end
+
+    it "adds the index" do
+      expect{subject.add_column("foobars", "other", "text", index: "ASC")}.to change{subject.indexes("foobars")}.to([%q|CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)|, %q|CREATE INDEX idx_foobars_other ON foobars (other ASC)|])
     end
   end
 
   describe ".remove_column" do
+    before_each do
+      subject.add_column("foobars", "other", "text", index: "DESC")
+    end
+
     it "removes the column" do
-      expect{subject.remove_column("foobars", "value")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ""|])
+      expect{subject.remove_column("foobars", "other")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ""|, %q|value integer|])
+    end
+
+    it "removes the index" do
+      expect{subject.remove_column("foobars", "other")}.to change{subject.indexes("foobars")}.to([(%q|CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)|)])
     end
 
     it "retains the data" do
-      expect{subject.remove_column("foobars", "value")}.not_to change{Ktistec.database.scalar("SELECT count(*) FROM foobars")}
-    end
-
-    it "retains the indexes" do
-      expect{subject.remove_column("foobars", "value")}.not_to change{subject.indexes("foobars")}
+      expect{subject.remove_column("foobars", "other")}.not_to change{Ktistec.database.scalar("SELECT count(*) FROM foobars")}
     end
   end
 end

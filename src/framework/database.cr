@@ -16,7 +16,7 @@ module Ktistec
 
   @@database : DB::Database =
     begin
-      unless File.exists?(db_file.split("//").last)
+      unless File.exists?(db_file.split("//").last.split("?").first)
         DB.open(db_file) do |db|
           File.read(File.join(Dir.current, "etc", "database", "schema.sql")).split(';').each do |command|
             db.exec(command) unless command.blank?
@@ -125,7 +125,7 @@ module Ktistec
       #
       def columns(table)
         schema = Ktistec.database.scalar("SELECT sql FROM sqlite_master WHERE type = 'table' AND tbl_name = ?", table).as(String)
-        schema[/(?<=\().*(?=\))/m]?.try(&.split(",").map(&.strip)).not_nil!
+        schema[/(?<=\().*(?=\))/m].split(",").map(&.strip)
       end
 
       # Returns the table's indexes.
@@ -136,10 +136,15 @@ module Ktistec
 
       # Adds a column to the table.
       #
-      def add_column(table, column, definition)
+      def add_column(table, column, definition, index = nil)
         Ktistec.database.exec <<-STR
           ALTER TABLE #{table} ADD COLUMN #{column} #{definition}
         STR
+        if index
+          Ktistec.database.exec <<-STR
+            CREATE INDEX idx_#{table}_#{column} ON #{table} (#{column} #{index})
+          STR
+        end
       end
 
       # Removes a column from the table.
@@ -152,6 +157,7 @@ module Ktistec
           columns[name] = column
           columns
         end
+
         columns.delete(column)
 
         Ktistec.database.exec <<-STR
@@ -168,7 +174,9 @@ module Ktistec
         Ktistec.database.exec <<-STR
           ALTER TABLE #{table}__new__ RENAME TO #{table}
         STR
+
         indexes.each do |index|
+          next if index[/(?<=\().*(?=\))/m].split(",").map(&.split.first).includes?(column)
           Ktistec.database.exec index
         end
       end

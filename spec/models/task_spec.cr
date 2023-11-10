@@ -5,6 +5,12 @@ require "../spec_helper/base"
 Spectator.describe Task do
   setup_spec
 
+  mock Task do
+    stub perform do
+      # no-op
+    end
+  end
+
   subject do
     described_class.new(
       source_iri: "https://test.test/source",
@@ -52,17 +58,12 @@ Spectator.describe Task do
   end
 
   describe "#schedule" do
-    it "raises an error if the task is not runnable" do
+    it "raises an error if the task is running" do
       subject.running = true
       expect{subject.schedule}.to raise_error(Exception)
     end
 
-    it "raises an error if the task is not runnable" do
-      subject.complete = true
-      expect{subject.schedule}.to raise_error(Exception)
-    end
-
-    it "raises an error if the task is not runnable" do
+    it "raises an error if the task has a backtrace" do
       subject.backtrace = [""]
       expect{subject.schedule}.to raise_error(Exception)
     end
@@ -70,6 +71,11 @@ Spectator.describe Task do
     it "sets the next_attempt_at if specified" do
       time = 1.day.from_now
       expect{subject.schedule(time)}.to change{subject.next_attempt_at}
+    end
+
+    it "sets complete to false" do
+      subject.complete = true
+      expect{subject.schedule}.to change{subject.complete}.to(false)
     end
 
     it "saves the task" do
@@ -92,7 +98,7 @@ Spectator.describe Task do
     create_task!(2, Time.utc(2016, 2, 15, 10, 20, 4))
     create_task!(3, Time.utc(2016, 2, 15, 10, 20, 6))
     create_task!(4, Time.utc(2016, 2, 15, 10, 20, 2))
-    create_task!(5)
+    create_task!(5) # perform immediately
     create_task!(6)
     create_task!(7)
 
@@ -104,7 +110,19 @@ Spectator.describe Task do
     let(now) { Time.utc(2016, 2, 15, 10, 20, 7) }
 
     it "returns the scheduled tasks in priority order" do
-      expect(described_class.scheduled(now)).to eq([task5, task4, task2, task3])
+      expect(described_class.scheduled(now, false)).to eq([task5, task4, task2, task3])
+    end
+
+    it "does not reserve the scheduled tasks" do
+      expect(described_class.scheduled(now, false).none?(&.running)).to be_true
+    end
+
+    it "returns the scheduled tasks in priority order" do
+      expect(described_class.scheduled(now, true)).to eq([task5, task4, task2, task3])
+    end
+
+    it "reserves the scheduled tasks" do
+      expect(described_class.scheduled(now, true).all?(&.running)).to be_true
     end
   end
 end

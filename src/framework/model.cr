@@ -99,6 +99,12 @@ module Ktistec
         {% end %}
       end
 
+      # Returns type and all subtypes.
+      #
+      def all_subtypes
+        {{(@type.all_subclasses << @type).map(&.stringify)}}
+      end
+
       # Returns the count of saved instances.
       #
       def count(include_deleted : Bool = false, include_undone : Bool = false, **options)
@@ -125,24 +131,18 @@ module Ktistec
         {% end %}
       end
 
-      private def read(rs : DB::ResultSet, **types : **T) forall T
-        {% begin %}
-          {
-            {% for name, type in T %}
-              "{{name}}": rs.read({{type.instance}}),
-            {% end %}
-          }
-        {% end %}
-      end
-
       # Compose an instance of the correct type from the query results.
       #
       # Invokes the protected __for_internal_use_only initializer to
       # instantiate the instance.
       #
-      private def compose(**options) : self
-        options = options.to_h.transform_keys(&.to_s)
+      private def compose(rs : DB::ResultSet, **types : **Type) : self forall Type
         {% begin %}
+          options = {
+            {% for name, type in Type %}
+              {{name.stringify}} => rs.read({{type.instance}}),
+            {% end %}
+          }
           {% if @type < Polymorphic %}
             case options["type"]
             {% for subclass in @type.all_subclasses %}
@@ -164,23 +164,12 @@ module Ktistec
         {% end %}
       end
 
-      # Note: The following query helpers process query results in two
-      # steps, first (within the scope of the database call) mapping
-      # named tuples, and then (in a separate block) creating
-      # instances. This is intentional. Model initializers can make
-      # database calls, and nested database calls currently crash the
-      # runtime.
-
       protected def query_and_paginate(query, *args, additional_columns = NamedTuple.new, page = 1, size = 10)
         Ktistec::Util::PaginatedArray(self).new.tap do |array|
           Ktistec.database.query(
             query, *args, ((page - 1) * size).to_i, size.to_i + 1
           ) do |rs|
-            ([] of typeof(read(rs, **persistent_columns.merge(additional_columns)))).tap do |array|
-              rs.each { array << read(rs, **persistent_columns.merge(additional_columns)) }
-            end
-          end.each do |options|
-            array << compose(**options)
+            rs.each { array << compose(rs, **persistent_columns.merge(additional_columns)) }
           end
           if array.size > size
             array.more = true
@@ -196,7 +185,7 @@ module Ktistec
         Ktistec.database.query_all(
           query, *args_,
         ) do |rs|
-          compose(**read(rs, **persistent_columns.merge(additional_columns)))
+          compose(rs, **persistent_columns.merge(additional_columns))
         end
       end
 
@@ -204,7 +193,7 @@ module Ktistec
         Ktistec.database.query_all(
           query, args: args,
         ) do |rs|
-          compose(**read(rs, **persistent_columns.merge(additional_columns)))
+          compose(rs, **persistent_columns.merge(additional_columns))
         end
       end
 
@@ -212,7 +201,7 @@ module Ktistec
         Ktistec.database.query_one(
           query, *args_,
         ) do |rs|
-          compose(**read(rs, **persistent_columns.merge(additional_columns)))
+          compose(rs, **persistent_columns.merge(additional_columns))
         end
       end
 
@@ -220,7 +209,7 @@ module Ktistec
         Ktistec.database.query_one(
           query, args: args,
         ) do |rs|
-          compose(**read(rs, **persistent_columns.merge(additional_columns)))
+          compose(rs, **persistent_columns.merge(additional_columns))
         end
       end
 
@@ -319,7 +308,7 @@ module Ktistec
       #
       # Sets instance variables directly to skip side effects.
       #
-      protected def __for_internal_use_only(options)
+      protected def __for_internal_use_only(options : Hash(String, Any)) forall Any
         @changed = Set(Symbol).new
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
@@ -451,10 +440,38 @@ module Ktistec
         end
       end
 
+      # Computes the hash for this instance.
+      #
+      def hash(hasher)
+        {% begin %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
+          {% for v in vs %}
+            hasher = self.{{v}}.hash(hasher)
+          {% end %}
+        {% end %}
+        hasher
+      end
+
       # Returns the table name.
       #
       def table_name
         self.class.table_name
+      end
+
+      # Specifies a property that is derived from another property.
+      #
+      macro derived(decl, *, aliased_to)
+        @[Assignable]
+        @{{decl.var}} : {{decl.type}}?
+        def {{decl.var}}=({{decl.var}} : {{decl.type}}) : {{decl.type}}
+          @{{decl.var}} = @{{aliased_to}} = {{decl.var}}
+        end
+        def {{decl.var}} : {{decl.type}}
+          @{{decl.var}} = @{{aliased_to}}
+        end
+        def _association_{{decl.var}}
+          {:derived, :itself, {{aliased_to.symbolize}}, {{decl.type}}, @{{decl.var}}}
+        end
       end
 
       # Specifies a one-to-one association with another model.
@@ -608,12 +625,16 @@ module Ktistec
                 if %body.responds_to?(:each_with_index)
                   %body.each_with_index do |model, i|
                     unless nodes.any? { |node| model == node.model }
-                      model._serialize_graph(nodes, {{method.name[13..-1].stringify}}, i, skip_associated: false)
+                      if model.responds_to?(:_serialize_graph)
+                        model._serialize_graph(nodes, {{method.name[13..-1].stringify}}, i, skip_associated: false)
+                      end
                     end
                   end
                 else
                   unless nodes.any? { |node| %body == node.model }
-                    %body._serialize_graph(nodes, {{method.name[13..-1].stringify}}, skip_associated: false)
+                    if %body.responds_to?(:_serialize_graph)
+                      %body._serialize_graph(nodes, {{method.name[13..-1].stringify}}, skip_associated: false)
+                    end
                   end
                 end
               end
@@ -646,10 +667,6 @@ module Ktistec
           {% (param = block.args.first) || raise "with_callbacks block must have one parameter" %}
           {{param.id}} = %node
           {{block.body}}
-        end
-        %nodes.each do |%node|
-          %model = %node.model
-          next unless %model == self || %model.changed?
           if %model.responds_to?({{after.symbolize}})
             %model.{{after.id}}
           end
@@ -806,6 +823,31 @@ module Ktistec
         @destroyed = true
         @id = nil
         self
+      end
+
+      # Reloads the properties from the database.
+      #
+      # Only reloads the persistent properties. Does not trigger any
+      # side effects. Does not ensure that the instance's state is
+      # otherwise valid.
+      #
+      def reload!
+        {% begin %}
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          columns = {{vs.map(&.stringify.stringify).join(",")}}
+          Ktistec.database.query_one(
+            "SELECT #{columns} FROM #{table_name} WHERE id = ?", id,
+          ) do |rs|
+            __for_internal_use_only({
+              {% for v in vs %}
+                {{v.stringify}} => rs.read({{v.type}}),
+              {% end %}
+            })
+          end
+          self
+        {% end %}
+      rescue DB::NoResultsError
+        raise NotFound.new("#{self.class} id=#{id}: not found")
       end
 
       def new_record?

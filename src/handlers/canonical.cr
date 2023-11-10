@@ -19,7 +19,7 @@ module Ktistec::Handler
         segment = "/#{suffix}"
         path = path.chomp(segment)
       end
-      if (canonical = Relationship::Content::Canonical.find?(to_iri: path)) && accepts?("text/html") && !xhr?
+      if (canonical = Relationship::Content::Canonical.find?(to_iri: path)) && accepts?("text/html")
         env.response.headers.add("Cache-Control", "max-age=3600")
         env.redirect "#{canonical.from_iri}#{segment}", 301
       elsif (canonical = Relationship::Content::Canonical.find?(from_iri: path))

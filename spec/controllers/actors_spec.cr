@@ -50,9 +50,9 @@ Spectator.describe ActorsController do
 
       before_each do
         put_in_outbox(owner: actor, activity: create)
-        put_in_timeline(owner: actor, object: create.object)
+        Factory.create(:timeline_create, owner: actor, object: create.object)
         put_in_outbox(owner: actor, activity: announce)
-        put_in_timeline(owner: actor, object: announce.object)
+        Factory.create(:timeline_announce, owner: actor, object: announce.object)
       end
 
       it "with no filters it renders all posts" do
@@ -398,6 +398,19 @@ Spectator.describe ActorsController do
           end
         end
 
+        context "given both a create and an announce outside of actor's mailbox" do
+          before_each do
+            create.save
+            announce.save
+            put_in_timeline(owner: actor, object: object)
+          end
+
+          it "renders the object without aspect" do
+            get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
+          end
+        end
+
         context "given a create, and an announce outside of actor's mailbox" do
           before_each do
             announce.save
@@ -541,7 +554,6 @@ Spectator.describe ActorsController do
       end
     end
   end
-
 
   describe "GET /actors/:username/drafts" do
     it "returns 401 if not authorized" do

@@ -2,6 +2,7 @@ require "../../src/controllers/objects"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"
+require "../spec_helper/network"
 
 Spectator.describe ObjectsController do
   setup_spec
@@ -40,9 +41,9 @@ Spectator.describe ObjectsController do
     local: true
   )
 
-  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
+  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
-  FORM_DATA = HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"}
+  FORM_DATA = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html", "Content-Type" => "application/x-www-form-urlencoded"}
   JSON_DATA = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
 
   describe "POST /objects" do
@@ -919,6 +920,250 @@ Spectator.describe ObjectsController do
       it "returns 404 if object does not exist" do
         post "/remote/objects/999999/unblock"
         expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  let(body) { XML.parse_html(response.body) }
+
+  TURBO_FRAME = HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "thread_page_thread_controls"}
+
+  describe "POST /remote/objects/:id/follow" do
+    it "returns 401" do
+      post "/remote/objects/0/follow"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/remote/objects/#{remote.id}/follow"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "follows the thread" do
+        post "/remote/objects/#{remote.id}/follow"
+        expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.iri)
+      end
+
+      context "within a turbo-frame" do
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
+          expect(response.status_code).to eq(200)
+        end
+
+        it "renders an unfollow button" do
+          post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
+          expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Unfollow")
+        end
+      end
+
+      context "given a reply" do
+        let_create!(:object, named: :reply, in_reply_to: remote)
+
+        it "succeeds" do
+          post "/remote/objects/#{reply.id}/follow"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "follows the root object of the thread" do
+          post "/remote/objects/#{reply.id}/follow"
+          expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.iri)
+        end
+
+        context "within a turbo-frame" do
+          it "succeeds" do
+            post "/remote/objects/#{reply.id}/follow", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+          end
+
+          it "renders an unfollow button" do
+            post "/remote/objects/#{reply.id}/follow", TURBO_FRAME
+            expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Unfollow")
+          end
+        end
+      end
+
+      it "returns 404 if object is draft" do
+        post "/remote/objects/#{draft.id}/follow"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/follow"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/:id/unfollow" do
+    it "returns 401" do
+      post "/remote/objects/0/unfollow"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      context "given a follow" do
+        let_create(:object, named: :reply, in_reply_to: remote)
+
+        let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: reply.thread)
+
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/unfollow"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "unfollows the thread" do
+          post "/remote/objects/#{remote.id}/unfollow"
+          expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+        end
+
+        context "within a turbo-frame" do
+          it "succeeds" do
+            post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+          end
+
+          it "renders a follow button" do
+            post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
+            expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
+          end
+        end
+
+        context "given a reply" do
+          let_create!(:object, named: :reply, in_reply_to: remote)
+
+          it "succeeds" do
+            post "/remote/objects/#{reply.id}/unfollow"
+            expect(response.status_code).to eq(302)
+          end
+
+          it "unfollows the root object of the thread" do
+            post "/remote/objects/#{reply.id}/unfollow"
+            expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+          end
+
+          context "within a turbo-frame" do
+            it "succeeds" do
+              post "/remote/objects/#{reply.id}/unfollow", TURBO_FRAME
+              expect(response.status_code).to eq(200)
+            end
+
+            it "renders a follow button" do
+              post "/remote/objects/#{reply.id}/unfollow", TURBO_FRAME
+              expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
+            end
+          end
+        end
+      end
+
+      it "returns 404 if object is draft" do
+        post "/remote/objects/#{draft.id}/unfollow"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/unfollow"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/fetch" do
+    it "returns 401 if not authorized" do
+      post "/remote/objects/fetch"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      let_build(:object)
+
+      before_each do
+        HTTP::Client.objects << object
+        HTTP::Client.actors << object.attributed_to
+      end
+
+      it "succeeds" do
+        post "/remote/objects/fetch", FORM_DATA, "iri=#{URI.encode_www_form(object.iri)}"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "succeeds" do
+        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"#{object.iri}"}|
+        expect(response.status_code).to eq(302)
+      end
+
+      it "makes a request fetch the object" do
+        post "/remote/objects/fetch", FORM_DATA, "iri=#{URI.encode_www_form(object.iri)}"
+        expect(HTTP::Client.requests).to have("GET #{object.iri}")
+      end
+
+      it "makes a request fetch the object" do
+        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"#{object.iri}"}|
+        expect(HTTP::Client.requests).to have("GET #{object.iri}")
+      end
+
+      it "makes a request to fetch the actor" do
+        post "/remote/objects/fetch", FORM_DATA, "iri=#{URI.encode_www_form(object.iri)}"
+        expect(HTTP::Client.requests).to have("GET #{object.attributed_to.iri}")
+      end
+
+      it "makes a request to fetch the actor" do
+        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"#{object.iri}"}|
+        expect(HTTP::Client.requests).to have("GET #{object.attributed_to.iri}")
+      end
+
+      it "renders an error message if hostname lookup fails" do
+        post "/remote/objects/fetch", FORM_DATA, "iri=https://remote/socket-addrinfo-error"
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'message')]")).to have(/hostname lookup fail/i)
+      end
+
+      it "renders an error message if hostname lookup fails" do
+        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"https://remote/socket-addrinfo-error"}|
+        expect(JSON.parse(response.body).dig("msg")).to eq(/hostname lookup fail/i)
+      end
+
+      it "renders an error message if can't connect to host" do
+        post "/remote/objects/fetch", FORM_DATA, "iri=https://remote/socket-connect-error"
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'message')]")).to have(/could not connect/i)
+      end
+
+      it "renders an error message if can't connect to host" do
+        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"https://remote/socket-connect-error"}|
+        expect(JSON.parse(response.body).dig("msg")).to eq(/could not connect/i)
+      end
+
+      context "if object has been deleted" do
+        before_each { object.assign(iri: "https://remote/returns-404") }
+
+        it "renders an error message if post not found" do
+          post "/remote/objects/fetch", FORM_DATA, "iri=#{URI.encode_www_form(object.iri)}"
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'message')]")).to have(/post could not be found/i)
+        end
+
+        it "renders an error message if post not found" do
+          post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"#{object.iri}"}|
+          expect(JSON.parse(response.body).dig("msg")).to eq(/post could not be found/i)
+        end
+      end
+
+      context "if author has been deleted" do
+        before_each { HTTP::Client.objects << object.assign(attributed_to_iri: "https://remote/returns-404") }
+
+        it "renders an error message if post's author not found" do
+          post "/remote/objects/fetch", FORM_DATA, "iri=#{URI.encode_www_form(object.iri)}"
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'message')]")).to have(/author could not be found/i)
+        end
+
+        it "renders an error message if post's author not found" do
+          post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"#{object.iri}"}|
+          expect(JSON.parse(response.body).dig("msg")).to eq(/author could not be found/i)
+        end
       end
     end
   end

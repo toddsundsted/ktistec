@@ -9,6 +9,32 @@ Spectator.describe Ktistec::Util do
     end
   end
 
+  describe ".render_as_text" do
+    it "ignores empty content" do
+      expect(described_class.render_as_text("")).to eq("")
+    end
+
+    it "removes inline markup" do
+      content = "this is <span><strong>some</strong> <em>text</em></span>"
+      expect(described_class.render_as_text(content)).to eq("this is some text")
+    end
+
+    it "replaces block elements with newlines" do
+      content = "<p>foo</p><p>bar</p>"
+      expect(described_class.render_as_text(content)).to eq("foo\nbar\n")
+    end
+
+    it "leaves bare text alone" do
+      content = "some text"
+      expect(described_class.render_as_text(content)).to eq("some text")
+    end
+
+    it "leaves escaped content alone" do
+      content = "&lt;foo&gt;"
+      expect(described_class.render_as_text(content)).to eq("&lt;foo&gt;")
+    end
+  end
+
   describe ".sanitize" do
     it "ignores empty content" do
       expect(described_class.sanitize("")).to eq("")
@@ -60,6 +86,12 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("<span class='invisible'>a span</span>")
     end
 
+    # for presentation of mastodon compatible profile metadata
+    it "preserves 'ellipsis' in class attribute on span elements" do
+      content = "<span class='ellipsis foo bar'>a span</span>"
+      expect(described_class.sanitize(content)).to eq("<span class='ellipsis'>a span</span>")
+    end
+
     it "doesn't corrupt element order" do
       content = "<figure></figure><p></p>"
       expect(described_class.sanitize(content)).to eq("<figure></figure><p></p>")
@@ -103,6 +135,20 @@ Spectator.describe Ktistec::Util::PaginatedArray do
   describe ".more" do
     it "changes the indicator" do
       expect{subject.more = true}.to change{subject.more?}
+    end
+  end
+
+  describe "#map" do
+    it "returns a paginated array" do
+      expect(subject.map(&.-)).to be_a(Ktistec::Util::PaginatedArray(Int32))
+    end
+
+    it "returns a paginated array with the results of applying the supplied block" do
+      expect(subject.map(&.-)).to eq([0, -1, -2, -3, -4, -5, -6, -7, -8, -9])
+    end
+
+    it "returns an indication of whether there are more results" do
+      expect(subject.map(&.-).more?).to eq(false)
     end
   end
 end

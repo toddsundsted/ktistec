@@ -1,6 +1,21 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+### Added
+- Support manually fetching posts that are missing from threads.
+- Expose the /everything endpoint.
+- Add link to source/origin of post. (fixes [#42](https://github.com/toddsundsted/ktistec/issues/42))
+- Render to HTML posts when content is Markdown. Improves compatibility with Peertube.
+- In post details, include labels and links to internal hashtag and mention index pages.
+- Support following threads, hashtags and mentions.
+
+### Fixed
+- Add ellipsis to Mastodon marked-up URLs in content.
+- Make content clickable only on listing pages.
+- Call `after_save` lifecycle callback when save occurs.
+- Fix bug affecting nested objects during JSON-LD expansion.
+
 ## [v2.0.0-8]
 ### Added
 - Support content filtering.
@@ -116,7 +131,7 @@ All notable changes to this project are documented in this file.
 - No longer use Travis CI.
 - Remove Kilt.
 
-## [v2.0.0-1]
+## [v2.0.0-1] - 2023-01-24
 ### Added
 - Add `include_deleted` support.
 - Add `include_undone` support.
@@ -147,6 +162,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[Unreleased]: https://github.com/toddsundsted/ktistec/compare/4d9094fa...main
 [v2.0.0-8]: https://github.com/toddsundsted/ktistec/compare/b3ce035d...cde86283
 [v2.0.0-7]: https://github.com/toddsundsted/ktistec/compare/9a05dced...7d189bd0
 [v2.0.0-6]: https://github.com/toddsundsted/ktistec/compare/c71f3ad9...a71ebfda

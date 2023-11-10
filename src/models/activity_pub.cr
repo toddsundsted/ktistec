@@ -32,7 +32,9 @@ module ActivityPub
 
   def self.from_json_ld?(json, **options)
     from_json_ld(json, **options)
-  rescue NotImplementedError
+  rescue ex : NotImplementedError | TypeCastError
+    # log errors mapping JSON to a model for debugging purposes
+    Log.debug { ex.message }
     nil
   end
 
@@ -43,7 +45,6 @@ module ActivityPub
 
     def self.from_json_ld?(json, **options)
       ActivityPub.from_json_ld?(json, **options.merge({default: self})).as(self?)
-    rescue TypeCastError
     end
   end
 end

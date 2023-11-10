@@ -14,6 +14,48 @@ module Ktistec
       Random::Secure.urlsafe_base64(8)
     end
 
+    # Renders content as simple text.
+    #
+    def render_as_text(content)
+      return "" if content.nil? || content.empty?
+      String.build do |build|
+        render_as_text(XML.parse_html("<div>#{content}</div>",
+          XML::HTMLParserOptions::RECOVER |
+          XML::HTMLParserOptions::NODEFDTD |
+          XML::HTMLParserOptions::NOIMPLIED |
+          XML::HTMLParserOptions::NOERROR |
+          XML::HTMLParserOptions::NOWARNING |
+          XML::HTMLParserOptions::NONET
+        ), build)
+      end.chomp
+    end
+
+    # not strictly block elements (`br` is inline), these are elements
+    # that should be replaced with a newline.
+
+    private BLOCK = [
+      "p",
+      "h1", "h2", "h3", "h4", "h5", "h6",
+      "ul", "ol", "li",
+      "dl", "dt", "dd",
+      "div", "figure",
+      "blockquote",
+      "pre",
+      "br"
+    ]
+
+    private def render_as_text(html, build)
+      name = html.name.downcase
+      if html.element? && name.in?(BLOCK)
+        html.children.each { |child| render_as_text(child, build) }
+        build << "\n"
+      elsif html.element? || html.document?
+        html.children.each { |child| render_as_text(child, build) }
+      elsif html.text?
+        html.to_s(build)
+      end
+    end
+
     # Cleans up the content we receive from others.
     #
     def sanitize(content)
@@ -56,7 +98,7 @@ module Ktistec
         all: [{"class", "ui image"}, {"loading", "lazy"}]
       },
       span: {
-        class: ["invisible"]
+        class: ["invisible", "ellipsis"]
       }
     }
 
@@ -128,9 +170,22 @@ module Ktistec
     end
 
     class PaginatedArray(T)
-      @array = [] of T
+      def initialize
+        @array = Array(T).new
+      end
 
-      delegate :<<, :each, :each_with_index, :empty?, :first, :map, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
+      def initialize(size : Int)
+        @array = Array(T).new(size)
+      end
+
+      delegate :<<, :each, :each_with_index, :empty?, :first, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
+
+      def map(&block : T -> U) : PaginatedArray(U) forall U
+        PaginatedArray(U).new(size).tap do |array|
+          each { |t| array << yield t }
+          array.more = more?
+        end
+      end
 
       property? more : Bool = false
     end

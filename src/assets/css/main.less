@@ -12,8 +12,12 @@ body { display: flex; flex-direction: column; }
 /* remove visible outlines on focused menu items */
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 
+/* compact menus should be flex, too */
+.ui > .compact.menu { display: flex; }
+
 /** menu **/
 .ui.secondary.menu {
+    margin-bottom: 0;
     .item {
         height: 2.5em;
         > a { color: inherit; }
@@ -121,6 +125,11 @@ body { display: flex; flex-direction: column; }
     }
     @media screen and (min-width: 1800px) {          /* wide desktops & larger */
     }
+}
+
+/** thread page **/
+.ui.thread.segments {
+    margin-top: 1rem !important;
 }
 
 /** large actor partial **/
@@ -313,4 +322,15 @@ trix-editor {
     display: inline-block;
     width: 0;
     height: 0;
+}
+
+.truncated {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+}
+
+.ellipsis::after {
+    content: "…";
 }

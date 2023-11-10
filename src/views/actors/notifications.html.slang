@@ -1,6 +1,6 @@
 - content_for "title" do
   | Notifications
-- if activities.empty?
+- if notifications.empty?
   .ui.basic.very.padded.center.aligned.segment
     .ui.icon.header
       i.exclamation.icon
@@ -10,9 +10,10 @@
 - else
   h1 Notifications
   section.ui.feed
-    - activities.each do |activity|
+    - notifications.each do |notification|
       article.event
-        - if activity.is_a?(ActivityPub::Activity::Announce)
+        - if notification.is_a?(Relationship::Content::Notification::Announce)
+          - activity = notification.activity.as(ActivityPub::Activity::Announce)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -24,7 +25,11 @@
               | shared
               a< href=remote_object_path(activity.object) your post
               | .
-        - elsif activity.is_a?(ActivityPub::Activity::Like)
+            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+              .extra.meta.truncated
+                == content
+        - elsif notification.is_a?(Relationship::Content::Notification::Like)
+          - activity = notification.activity.as(ActivityPub::Activity::Like)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -36,7 +41,11 @@
               | liked
               a< href=remote_object_path(activity.object) your post
               | .
-        - elsif activity.is_a?(ActivityPub::Activity::Create)
+            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+              .extra.meta.truncated
+                == content
+        - elsif notification.is_a?(Relationship::Content::Notification::Reply)
+          - activity = notification.activity.as(ActivityPub::Activity::Create)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -44,16 +53,84 @@
               i.user.icon
           .content
             .summary
-              - if (in_reply_to = activity.object.in_reply_to?) && in_reply_to.attributed_to? == account.actor
-                a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-                a> href=remote_object_path(activity.object) replied to
-                a< href=remote_object_path(in_reply_to) your post
-                | .
-              - else
-                a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-                a<> href=remote_object_path(activity.object) mentioned
+              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a> href=remote_object_path(activity.object) replied to
+              a< href=remote_object_path(activity.object.in_reply_to) your post
+              | .
+            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+              .extra.meta.truncated
+                == content
+        - elsif notification.is_a?(Relationship::Content::Notification::Hashtag)
+          crystal:
+            activity = notification.activity
+            object = ActivityPub::Object.find(activity.object_iri)
+            content = Ktistec::Util.render_as_text(object.content).presence
+            attributed_to = object.attributed_to
+          .label
+            - if (icon = attributed_to.icon)
+              img data-actor-id=attributed_to.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              crystal:
+                ht1 = object.hashtags.map(&.name)
+                ht2 = Relationship::Content::Follow::Hashtag.where(actor: actor).map(&.name)
+                ht3 = (ht1 & ht2)
+                ht4 = (ht1 - ht2)
+              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+              | tagged
+              a<> href=remote_object_path(object) a post
+              | with
+              - ht3.each do |hashtag|
+                a< href=hashtag_path(hashtag) ##{hashtag}
+              - if ht3.presence && ht4.presence
+                = " and"
+              - ht4.each do |hashtag|
+                a< href=hashtag_path(hashtag) ##{hashtag}
+              | .
+            - if content
+              .extra.meta.truncated
+                == content
+        - elsif notification.is_a?(Relationship::Content::Notification::Mention)
+          crystal:
+            activity = notification.activity
+            object = ActivityPub::Object.find(activity.object_iri)
+            content = Ktistec::Util.render_as_text(object.content).presence
+            attributed_to = object.attributed_to
+          .label
+            - if (icon = attributed_to.icon)
+              img data-actor-id=attributed_to.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              crystal:
+                mn1 = object.mentions.map(&.name)
+                mn2 = Relationship::Content::Follow::Mention.where(actor: actor).map(&.name)
+                mn3 = (mn1 & mn2)
+                mn4 = (mn1 - mn2)
+              - if mn1.includes?(actor.account_uri)
+                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+                a> href=remote_object_path(object) mentioned
                 | you.
-        - elsif activity.is_a?(ActivityPub::Activity::Follow)
+              - else
+                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+                | tagged
+                a<> href=remote_object_path(object) a post
+                | with
+                - mn3.each do |mention|
+                  a< href=mention_path(mention) @#{mention.split("@").first}
+                - if mn3.presence && mn4.presence
+                  = " and"
+                - mn4.each do |mention|
+                  a< href=mention_path(mention) @#{mention.split("@").first}
+                | .
+            - if content
+              .extra.meta.truncated
+                == content
+        - elsif notification.is_a?(Relationship::Content::Notification::Follow)
+          - activity = notification.activity.as(ActivityPub::Activity::Follow)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -76,8 +153,28 @@
             - elsif response.is_a?(ActivityPub::Activity::Reject)
               .extra.meta
                 | Rejected #{ response.short_date }.
+        - elsif notification.is_a?(Relationship::Content::Notification::Thread)
+          crystal:
+            activity = notification.activity
+            object = ActivityPub::Object.find(activity.object_iri)
+            content = Ktistec::Util.render_as_text(object.content).presence
+            attributed_to = object.attributed_to
+          .label
+            - if (icon = attributed_to.icon)
+              img data-actor-id=attributed_to.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+              a> href=remote_object_path(object) replied to a thread
+              | you follow.
+            - if content
+              .extra.meta.truncated
+                == content
         - else
+          - activity = notification.activity
           .content
             .meta
               a href=activity.iri
-  == paginate(env, activities)
+  == paginate(env, notifications)

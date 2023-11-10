@@ -576,6 +576,39 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "params_to_inputs", tag: :tag do
+    let(params) { URI::Params.parse("one=1&two=2") }
+    let(exclude_list) { nil }
+    let(include_list) { nil }
+
+    subject do
+      XML.parse_html(params_to_inputs(params, exclude: exclude_list, include: include_list)).document
+    end
+
+    it "emits hidden fields" do
+      expect(subject.xpath_nodes("//input[@type='hidden']/@name")).to contain_exactly("one", "two")
+      expect(subject.xpath_nodes("//input[@type='hidden']/@value")).to contain_exactly("1", "2")
+    end
+
+    context "emits hidden field" do
+      let(exclude_list) { ["one"] }
+
+      it "emits hidden field" do
+        expect(subject.xpath_nodes("//input[@type='hidden']/@name")).to contain_exactly("two")
+        expect(subject.xpath_nodes("//input[@type='hidden']/@value")).to contain_exactly("2")
+      end
+    end
+
+    context "emits hidden field" do
+      let(include_list) { ["one"] }
+
+      it "emits hidden field" do
+        expect(subject.xpath_nodes("//input[@type='hidden']/@name")).to contain_exactly("one")
+        expect(subject.xpath_nodes("//input[@type='hidden']/@value")).to contain_exactly("1")
+      end
+    end
+  end
+
   ## JSON helpers
 
   describe "error_block" do

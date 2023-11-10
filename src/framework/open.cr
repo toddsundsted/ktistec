@@ -4,13 +4,13 @@ module Ktistec
   module Open
     extend self
 
-    def open(url, headers = HTTP::Headers.new, attempts = 10, &)
+    def open(url, headers = HTTP::Headers.new, attempts = 10)
       was = url
       attempts.times do
         response = HTTP::Client.get(url, headers)
         case response.status_code
         when 200
-          return yield response
+          return response
         when 301, 302, 303, 307, 308
           if (tmp = response.headers["Location"]?) && (url = tmp)
             next
@@ -30,21 +30,18 @@ module Ktistec
       raise Error.new(message)
     end
 
-    def open(url, headers = HTTP::Headers.new, attempts = 10)
-      open(url, headers, attempts) do |response|
-        response
-      end
+    def open(url, headers = HTTP::Headers.new, attempts = 10, &)
+      yield open(url, headers, attempts)
+    end
+
+    def open?(url, headers = HTTP::Headers.new, attempts = 10)
+      open(url, headers, attempts)
+    rescue Error
     end
 
     def open?(url, headers = HTTP::Headers.new, attempts = 10, &)
       yield open(url, headers, attempts)
     rescue Error
-    end
-
-    def open?(url, headers = HTTP::Headers.new, attempts = 10)
-      open?(url, headers, attempts) do |response|
-        response
-      end
     end
 
     class Error < Exception

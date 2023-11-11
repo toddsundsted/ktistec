@@ -68,6 +68,6 @@ class Session
 
   def self.clean_up_stale_sessions(time = 1.day.ago)
     delete = "DELETE FROM sessions WHERE account_id IS NULL AND updated_at < ?"
-    Ktistec.database.exec(delete, time)
+    exec(delete, time)
   end
 end

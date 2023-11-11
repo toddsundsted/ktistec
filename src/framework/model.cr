@@ -845,14 +845,14 @@ module Ktistec
       getter? destroyed = false
 
       def _update_property(property, value)
-        Ktistec.database.exec("UPDATE #{table_name} SET #{property} = ? WHERE id = ?", value, @id)
+        self.class.exec("UPDATE #{table_name} SET #{property} = ? WHERE id = ?", value, @id)
       end
 
       # Destroys the instance.
       #
       def destroy
         self.before_destroy if self.responds_to?(:before_destroy)
-        Ktistec.database.exec("DELETE FROM #{table_name} WHERE id = ?", @id)
+        self.class.exec("DELETE FROM #{table_name} WHERE id = ?", @id)
         self.after_destroy if self.responds_to?(:after_destroy)
         @destroyed = true
         @id = nil

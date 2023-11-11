@@ -193,53 +193,17 @@ module ActivityPub
     end
 
     def all_following(page = 1, size = 10, public = true)
-      {% begin %}
-        {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-        Ktistec::Util::PaginatedArray(Actor).new.tap do |array|
-          Ktistec.database.query(
-            query(Relationship::Social::Follow, :to_iri, :from_iri, public),
-            self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
-          ) do |rs|
-            rs.each do
-              array <<
-                Actor.new(
-                 {% for v in vs %}
-                   {{v}}: rs.read({{v.type}}),
-                 {% end %}
-                )
-            end
-          end
-          if array.size > size
-            array.more = true
-            array.pop
-          end
-        end
-      {% end %}
+      Actor.query_and_paginate(
+        query(Relationship::Social::Follow, :to_iri, :from_iri, public),
+        self.iri, self.iri, page: page, size: size
+      )
     end
 
     def all_followers(page = 1, size = 10, public = false)
-      {% begin %}
-        {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-        Ktistec::Util::PaginatedArray(Actor).new.tap do |array|
-          Ktistec.database.query(
-            query(Relationship::Social::Follow, :from_iri, :to_iri, public),
-            self.iri, self.iri, ((page - 1) * size).to_i, size.to_i + 1
-          ) do |rs|
-            rs.each do
-              array <<
-                Actor.new(
-                 {% for v in vs %}
-                   {{v}}: rs.read({{v.type}}),
-                 {% end %}
-                )
-            end
-          end
-          if array.size > size
-            array.more = true
-            array.pop
-          end
-        end
-      {% end %}
+      Actor.query_and_paginate(
+        query(Relationship::Social::Follow, :from_iri, :to_iri, public),
+        self.iri, self.iri, page: page, size: size
+      )
     end
 
     def drafts(page = 1, size = 10)
@@ -382,7 +346,7 @@ module ActivityPub
             AND obj.blocked_at is NULL
             AND a.undone_at IS NULL
       QUERY
-      Ktistec.database.scalar(query, self.iri, object.iri).as(Int64) > 0
+      Activity.scalar(query, self.iri, object.iri).as(Int64) > 0
     end
 
     def in_outbox(page = 1, size = 10, public = true)
@@ -682,7 +646,7 @@ module ActivityPub
              AND c.blocked_at IS NULL
              AND t.created_at > ?
       QUERY
-      Ktistec.database.scalar(query, iri, since).as(Int64)
+      Timeline.scalar(query, iri, since).as(Int64)
     end
 
     private alias Notification = Relationship::Content::Notification
@@ -765,7 +729,7 @@ module ActivityPub
             AND a.undone_at IS null
             AND n.created_at > ?
       QUERY
-      Ktistec.database.scalar(query, iri, since).as(Int64)
+      Notification.scalar(query, iri, since).as(Int64)
     end
 
     def approve(object)

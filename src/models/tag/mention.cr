@@ -66,7 +66,7 @@ class Tag
            AND a.deleted_at IS NULL
            AND a.blocked_at IS NULL
       QUERY
-      Ktistec.database.scalar(query, name).as(Int64)
+      ActivityPub::Object.scalar(query, name).as(Int64)
     end
   end
 end

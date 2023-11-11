@@ -296,6 +296,40 @@ module Ktistec
 
       # Runs the query.
       #
+      # Returns the result.
+      #
+      def scalar(query : String, *args_)
+        Ktistec.database.scalar(query, *args_)
+      end
+
+      # Runs the query.
+      #
+      # Returns the result.
+      #
+      def scalar(query : String, args : Array? = nil)
+        Ktistec.database.scalar(query, args: args)
+      end
+
+      # Runs the query.
+      #
+      # Returns the number of rows affected.
+      #
+      def exec(query : String, *args_)
+        Ktistec.database.exec(query, *args_).rows_affected
+      end
+
+      # Runs the query.
+      #
+      # Returns the number of rows affected.
+      #
+      def exec(query : String, args : Array? = nil)
+        Ktistec.database.exec(query, args: args).rows_affected
+      end
+
+      # Runs the query.
+      #
+      # Returns saved instances.
+      #
       def sql(query : String, *arguments)
         query_all(query, *arguments)
       end

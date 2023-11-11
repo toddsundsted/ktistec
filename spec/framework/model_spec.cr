@@ -526,6 +526,38 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe ".scalar" do
+    let!(saved_model) { NotNilModel.new(val: "Val").save }
+
+    it "returns the count of saved instances" do
+      expect(NotNilModel.scalar("SELECT count(*) FROM #{NotNilModel.table_name} WHERE val = ?", "Val")).to eq(1)
+    end
+
+    it "returns the count of saved instances" do
+      expect(NotNilModel.scalar("SELECT count(*) FROM #{NotNilModel.table_name} WHERE val = ?", ["Val"])).to eq(1)
+    end
+  end
+
+  describe ".exec" do
+    let!(saved_model) { NotNilModel.new(val: "Val").save }
+
+    it "deletes the saved instances" do
+      expect{NotNilModel.exec("DELETE FROM #{NotNilModel.table_name} WHERE val = ?", "Val")}.to change{NotNilModel.count}.by(-1)
+    end
+
+    it "deletes the saved instances" do
+      expect{NotNilModel.exec("DELETE FROM #{NotNilModel.table_name} WHERE val = ?", ["Val"])}.to change{NotNilModel.count}.by(-1)
+    end
+
+    it "returns the count of rows affected" do
+      expect(NotNilModel.exec("DELETE FROM #{NotNilModel.table_name} WHERE val = ?", "Val")).to eq(1)
+    end
+
+    it "returns the count of rows affected" do
+      expect(NotNilModel.exec("DELETE FROM #{NotNilModel.table_name} WHERE val = ?", ["Val"])).to eq(1)
+    end
+  end
+
   describe ".sql" do
     context "given a saved instance" do
       let!(saved_model) { NotNilModel.new(val: "Val").save }

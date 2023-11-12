@@ -105,20 +105,57 @@ module Ktistec
         {{(@type.all_subclasses << @type).map(&.stringify)}}
       end
 
+      # Logs query performance.
+      #
+      # Times a database call and result processing and selectively
+      # emits a log message. The severity is based on the total
+      # duration.
+      #
+      protected def log_query(query, args)
+        start = Time.monotonic
+        result = yield
+        finish = Time.monotonic
+        delta = (finish - start).total_milliseconds
+        if delta > 50
+          Log.warn { |log| format_message("Slow query", log, delta, query, args) }
+        else
+          Log.debug { |log| format_message("Query", log, delta, query, args) }
+        end
+        result
+      end
+
+      private def format_message(message, log, delta, query, args)
+        delta = sprintf("%10.3fms", delta)
+        query = query.each_line.map(&.strip).join(" ")
+        args = DB::MetadataValueConverter.arg_to_log(args)
+        log.emit(
+          "#{message} [#{delta}] -- #{query}",
+          args: args
+        )
+      end
+
       # Returns the count of saved instances.
       #
       def count(include_deleted : Bool = false, include_undone : Bool = false, **options)
-        Ktistec.database.scalar(
-          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(**options)
-        ).as(Int)
+        query = "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}"
+        args = values(**options)
+        log_query(query, args) do
+          Ktistec.database.scalar(
+            query, args: args
+          ).as(Int)
+        end
       end
 
       # Returns the count of saved instances.
       #
       def count(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
-        Ktistec.database.scalar(
-          "SELECT COUNT(id) FROM #{table} WHERE #{conditions(options: options, include_deleted: include_deleted, include_undone: include_undone)}", args: values(options: options)
-        ).as(Int)
+        query = "SELECT COUNT(id) FROM #{table} WHERE #{conditions(options: options, include_deleted: include_deleted, include_undone: include_undone)}"
+        args = values(options: options)
+        log_query(query, args) do
+          Ktistec.database.scalar(
+            query, args: args
+          ).as(Int)
+        end
       end
 
       def persistent_columns
@@ -165,15 +202,17 @@ module Ktistec
       end
 
       protected def query_and_paginate(query, *args, additional_columns = NamedTuple.new, page = 1, size = 10)
-        Ktistec::Util::PaginatedArray(self).new.tap do |array|
-          Ktistec.database.query(
-            query, *args, ((page - 1) * size).to_i, size.to_i + 1
-          ) do |rs|
-            rs.each { array << compose(rs, **persistent_columns.merge(additional_columns)) }
-          end
-          if array.size > size
-            array.more = true
-            array.pop
+        log_query(query, args) do
+          Ktistec::Util::PaginatedArray(self).new.tap do |array|
+            Ktistec.database.query(
+              query, *args, ((page - 1) * size).to_i, size.to_i + 1
+            ) do |rs|
+              rs.each { array << compose(rs, **persistent_columns.merge(additional_columns)) }
+            end
+            if array.size > size
+              array.more = true
+              array.pop
+            end
           end
         end
       end
@@ -182,34 +221,42 @@ module Ktistec
       # see: https://github.com/crystal-lang/crystal/issues/7164
 
       protected def query_all(query, *args_, additional_columns = NamedTuple.new)
-        Ktistec.database.query_all(
-          query, *args_,
-        ) do |rs|
-          compose(rs, **persistent_columns.merge(additional_columns))
+        log_query(query, args_) do
+          Ktistec.database.query_all(
+            query, *args_
+          ) do |rs|
+            compose(rs, **persistent_columns.merge(additional_columns))
+          end
         end
       end
 
       protected def query_all(query, args : Array? = nil, additional_columns = NamedTuple.new)
-        Ktistec.database.query_all(
-          query, args: args,
-        ) do |rs|
-          compose(rs, **persistent_columns.merge(additional_columns))
+        log_query(query, args) do
+          Ktistec.database.query_all(
+            query, args: args
+          ) do |rs|
+            compose(rs, **persistent_columns.merge(additional_columns))
+          end
         end
       end
 
       protected def query_one(query, *args_, additional_columns = NamedTuple.new)
-        Ktistec.database.query_one(
-          query, *args_,
-        ) do |rs|
-          compose(rs, **persistent_columns.merge(additional_columns))
+        log_query(query, args_) do
+          Ktistec.database.query_one(
+            query, *args_
+          ) do |rs|
+            compose(rs, **persistent_columns.merge(additional_columns))
+          end
         end
       end
 
       protected def query_one(query, args : Array? = nil, additional_columns = NamedTuple.new)
-        Ktistec.database.query_one(
-          query, args: args,
-        ) do |rs|
-          compose(rs, **persistent_columns.merge(additional_columns))
+        log_query(query, args) do
+          Ktistec.database.query_one(
+            query, args: args
+          ) do |rs|
+            compose(rs, **persistent_columns.merge(additional_columns))
+          end
         end
       end
 
@@ -299,7 +346,9 @@ module Ktistec
       # Returns the result.
       #
       def scalar(query : String, *args_)
-        Ktistec.database.scalar(query, *args_)
+        log_query(query, args_) do
+          Ktistec.database.scalar(query, *args_)
+        end
       end
 
       # Runs the query.
@@ -307,7 +356,9 @@ module Ktistec
       # Returns the result.
       #
       def scalar(query : String, args : Array? = nil)
-        Ktistec.database.scalar(query, args: args)
+        log_query(query, args) do
+          Ktistec.database.scalar(query, args: args)
+        end
       end
 
       # Runs the query.
@@ -315,7 +366,9 @@ module Ktistec
       # Returns the number of rows affected.
       #
       def exec(query : String, *args_)
-        Ktistec.database.exec(query, *args_).rows_affected
+        log_query(query, args_) do
+          Ktistec.database.exec(query, *args_).rows_affected
+        end
       end
 
       # Runs the query.
@@ -323,7 +376,9 @@ module Ktistec
       # Returns the number of rows affected.
       #
       def exec(query : String, args : Array? = nil)
-        Ktistec.database.exec(query, args: args).rows_affected
+        log_query(query, args) do
+          Ktistec.database.exec(query, args: args).rows_affected
+        end
       end
 
       # Runs the query.

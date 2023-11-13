@@ -75,11 +75,11 @@ class TaskWorker
 
   def self.destroy_old_tasks
     delete = "DELETE FROM tasks WHERE (complete = 1 OR backtrace IS NOT NULL) AND created_at < date('now', '-1 month')"
-    Ktistec.database.exec(delete)
+    Task.exec(delete)
   end
 
   def self.clean_up_running_tasks
     update = "UPDATE tasks SET running = 0 WHERE running = 1"
-    Ktistec.database.exec(update)
+    Task.exec(update)
   end
 end

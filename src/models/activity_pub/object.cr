@@ -295,7 +295,7 @@ module ActivityPub
              AND t.blocked_at IS NULL
              AND a.undone_at IS NULL
       QUERY
-      Ktistec.database.scalar(query).as(Int64)
+      Object.scalar(query).as(Int64)
     end
 
     @[Assignable]
@@ -347,9 +347,7 @@ module ActivityPub
         FROM objects AS o, replies_to AS r
        WHERE o.iri IN (r.iri)
       QUERY
-      Ktistec.database.query_one(query, iri) do |rs|
-        rs.read(Int64?).try { |replies_count| self.replies_count = replies_count }
-      end
+      Object.scalar(query, iri).as(Int64?).try { |replies_count| self.replies_count = replies_count }
       self
     end
 
@@ -365,9 +363,7 @@ module ActivityPub
             AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
-      Ktistec.database.query_one(query, iri, from_iri) do |rs|
-        rs.read(Int64?).try { |replies_count| self.replies_count = replies_count }
-      end
+      Object.scalar(query, iri, from_iri).as(Int64?).try { |replies_count| self.replies_count = replies_count }
       self
     end
 

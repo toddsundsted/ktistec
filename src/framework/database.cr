@@ -74,7 +74,7 @@ module Ktistec
       @@migrations[version]
     end
 
-    # Perform an operation on a migration.
+    # Performs an operation on a migration.
     #
     def self.do_operation(operation, version)
       migration = find_migration(version)

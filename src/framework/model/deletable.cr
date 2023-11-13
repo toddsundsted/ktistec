@@ -9,7 +9,7 @@ module Ktistec
 
       def delete
         self.before_delete if self.responds_to?(:before_delete)
-        Ktistec.database.exec("UPDATE #{table_name} SET deleted_at = ? WHERE id = ?", @deleted_at = Time.utc, @id)
+        self.class.exec("UPDATE #{table_name} SET deleted_at = ? WHERE id = ?", @deleted_at = Time.utc, @id)
         self.after_delete if self.responds_to?(:after_delete)
         self
       end

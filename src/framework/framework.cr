@@ -5,12 +5,6 @@ require "uri"
 require "./database"
 
 module Ktistec
-  # Check the SQLite3 version.
-  if LibSQLite3.libversion < 3035000
-    puts "Ktistec requires SQLite3 version 3.35.0 or later"
-    Process.exit(-1)
-  end
-
   # always run database migrations when we boot up the framework
   Ktistec::Database.all_pending_versions.each do |version|
     puts Ktistec::Database.do_operation(:apply, version)

@@ -2,6 +2,11 @@ require "json"
 require "xml"
 require "sqlite3"
 
+if LibSQLite3.libversion < 3035000
+  Log.fatal { "Ktistec requires SQLite3 version 3.35.0 or later" }
+  exit -1
+end
+
 module DB
   abstract class Statement
     protected def emit_log(args : Enumerable)

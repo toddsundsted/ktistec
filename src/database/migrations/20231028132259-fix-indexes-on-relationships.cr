@@ -2,6 +2,13 @@ require "../../framework/database"
 
 extend Ktistec::Database::Migration
 
+# Historical Note: This migration did the wrong thing. It was
+# introduced to improve a slow query (the followed tag relationship)
+# on the notifications page, but reduced the performance of the
+# notifications query itself, as well as other similar queries
+# (timeline, inbox, etc.) ordered by `created_at`. Both indexes are
+# required!
+
 up do |db|
   db.exec <<-STR
     CREATE INDEX idx_relationships_type_from_iri_created_at ON relationships (type ASC, from_iri ASC, created_at DESC)

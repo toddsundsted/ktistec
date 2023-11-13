@@ -12,6 +12,7 @@ INSERT INTO migrations VALUES(6,'create-activities');
 INSERT INTO migrations VALUES(7,'create-tasks');
 INSERT INTO migrations VALUES(8,'create-tags');
 INSERT INTO migrations VALUES(9,'create-tag-statistics');
+INSERT INTO migrations VALUES(10,'update-timeline-and-notifications');
 INSERT INTO migrations VALUES(11,'create-points');
 INSERT INTO migrations VALUES(12,'add-timezone');
 INSERT INTO migrations VALUES(13,'add-state');
@@ -20,9 +21,21 @@ INSERT INTO migrations VALUES(15,'add-blocked-at-to-objects');
 INSERT INTO migrations VALUES(16,'add-name-to-objects');
 INSERT INTO migrations VALUES(17,'add-undone-at-to-activities');
 INSERT INTO migrations VALUES(18,'add-index-on-attributed-to-iri-to-activities');
+INSERT INTO migrations VALUES(19,'update-timeline-and-notifications');
 INSERT INTO migrations VALUES(20,'add-indexes-on-actor-iri-and-target-iri-to-activities');
 INSERT INTO migrations VALUES(21,'add-unique-indexes-on-actors-and-objects');
 INSERT INTO migrations VALUES(22,'add-attachments-to-actors');
+INSERT INTO migrations VALUES(20230108194422,'create-filter-terms');
+INSERT INTO migrations VALUES(20230220152701,'add-thread-to-objects');
+INSERT INTO migrations VALUES(20230227140933,'migrate-notification-types');
+INSERT INTO migrations VALUES(20230227145139,'migrate-timeline-types');
+INSERT INTO migrations VALUES(20230228185154,'fix-index-on-relationships');
+INSERT INTO migrations VALUES(20230408122302,'rename-columns-on-collections');
+INSERT INTO migrations VALUES(20231028132259,'fix-indexes-on-relationships');
+INSERT INTO migrations VALUES(20231112092830,'fix-indexes-on-relationships');
+INSERT INTO migrations VALUES(20231112170935,'fix-indexes-on-tasks');
+INSERT INTO migrations VALUES(20231112173913,'add-index-on-sessions');
+INSERT INTO migrations VALUES(20231112212330,'add-index-to-relationships');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -80,11 +93,11 @@ CREATE TABLE collections (
     iri varchar(255) NOT NULL COLLATE NOCASE,
     items_iris text,
     total_items integer,
-    first varchar(255),
-    last varchar(255),
-    prev varchar(255),
-    next varchar(255),
-    current varchar(255)
+    first_iri varchar(255),
+    last_iri varchar(255),
+    prev_iri varchar(255),
+    next_iri varchar(255),
+    current_iri varchar(255)
   );
 CREATE TABLE objects (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -107,7 +120,8 @@ CREATE TABLE objects (
     "urls" text,
     "deleted_at" datetime,
     "blocked_at" datetime,
-    "name" text
+    "name" text,
+    "thread" text COLLATE NOCASE
   );
 CREATE TABLE activities (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -161,32 +175,49 @@ CREATE TABLE points (
     "timestamp" datetime NOT NULL,
     "value" integer NOT NULL
   );
+CREATE TABLE filter_terms (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL,
+    "actor_id" integer,
+    "term" text NOT NULL
+  );
 CREATE UNIQUE INDEX idx_accounts_username
     ON accounts (username ASC);
 CREATE UNIQUE INDEX idx_sessions_session_key
     ON sessions (session_key ASC);
 CREATE INDEX idx_sessions_account_id
     ON sessions (account_id ASC);
+CREATE INDEX idx_sessions_updated_at
+    ON sessions (updated_at DESC);
 CREATE INDEX idx_actors_username
     ON actors (username ASC);
-CREATE INDEX idx_relationships_from_iri_type_created_at
-    ON relationships (from_iri ASC, type ASC, created_at DESC);
+CREATE INDEX idx_relationships_type_from_iri_created_at
+    ON relationships (type ASC, from_iri ASC, created_at DESC);
+CREATE INDEX idx_relationships_from_iri_created_at_type
+    ON relationships (from_iri ASC, created_at DESC, type ASC);
+CREATE INDEX idx_relationships_type_to_iri
+    ON relationships (type ASC, to_iri ASC);
 CREATE INDEX idx_relationships_to_iri_type
     ON relationships (to_iri ASC, type ASC);
+CREATE INDEX idx_relationships_type_id
+    ON relationships (type ASC, id ASC);
 CREATE UNIQUE INDEX idx_collections_iri
     ON collections (iri ASC);
 CREATE INDEX idx_objects_in_reply_to_iri
     ON objects (in_reply_to_iri ASC);
 CREATE INDEX idx_objects_published
     ON objects (published ASC);
+CREATE INDEX idx_objects_thread
+    ON objects (thread ASC);
 CREATE UNIQUE INDEX idx_activities_iri
     ON activities (iri ASC);
 CREATE INDEX idx_activities_object_iri
     ON activities (object_iri ASC);
-CREATE INDEX idx_tasks_type
-    ON tasks (type ASC);
-CREATE INDEX idx_tasks_type_running_complete_backtrace_next_attempt_at_created_at
-    ON tasks (type ASC, running ASC, complete ASC, backtrace ASC, next_attempt_at ASC, created_at ASC);
+CREATE INDEX idx_tasks_created_at
+    ON tasks (created_at DESC);
+CREATE INDEX idx_tasks_running_complete_backtrace
+    ON tasks (running ASC, complete ASC, backtrace ASC);
 CREATE INDEX idx_tags_type_subject_iri
     ON tags (type ASC, subject_iri ASC);
 CREATE INDEX idx_tags_type_name
@@ -203,4 +234,6 @@ CREATE UNIQUE INDEX idx_actors_iri
     ON actors (iri ASC);
 CREATE UNIQUE INDEX idx_objects_iri
     ON objects (iri ASC);
+CREATE INDEX idx_filter_terms_actor_id
+    ON filter_terms (actor_id ASC);
 COMMIT;

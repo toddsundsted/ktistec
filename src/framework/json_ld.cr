@@ -16,7 +16,7 @@ module Ktistec
     #
     def self.expand(body, loader = Loader.new)
       body = JSON.parse(body) if body.is_a?(String | IO)
-      Log.info { body }
+      Log.debug { body }
       expand(
         body,
         context(body["@context"]?, loader),

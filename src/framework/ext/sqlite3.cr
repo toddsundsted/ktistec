@@ -15,6 +15,23 @@ module DB
   end
 end
 
+{% if flag?(:"ktistec:experimental") %}
+  require "benchmark"
+
+  # See: https://www.sqlite.org/lang_analyze.html
+
+  module SQLite3
+    class Connection
+      def do_close
+        time = Benchmark.realtime { check LibSQLite3.exec(self, "PRAGMA analysis_limit=400; PRAGMA optimize;", nil, nil, nil) }
+        Log.info { "Updating statistics: #{sprintf("%.3fms", time.total_milliseconds)}" }
+      ensure
+        previous_def
+      end
+    end
+  end
+{% end %}
+
 private alias Supported = JSON::Serializable | Array(JSON::Serializable) | Array(String)
 
 class SQLite3::ResultSet

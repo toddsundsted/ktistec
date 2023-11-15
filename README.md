@@ -144,7 +144,8 @@ by (and content is addressed to) a hostname and a username.
 
 You must compile the Ktistec server executable from its source code.
 You will need to install a recent release of the [Crystal programming
-language](https://crystal-lang.org/install/).
+language](https://crystal-lang.org/install/). Ktistec also requires
+SQLite3 version 3.35.0 or later.
 
 To obtain the source code, clone the [Ktistec Github
 repo](https://github.com/toddsundsted/ktistec).

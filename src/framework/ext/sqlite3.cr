@@ -2,6 +2,11 @@ require "json"
 require "xml"
 require "sqlite3"
 
+if LibSQLite3.libversion < 3035000
+  Log.fatal { "Ktistec requires SQLite3 version 3.35.0 or later" }
+  exit -1
+end
+
 module DB
   abstract class Statement
     protected def emit_log(args : Enumerable)
@@ -9,6 +14,23 @@ module DB
     end
   end
 end
+
+{% if flag?(:"ktistec:experimental") %}
+  require "benchmark"
+
+  # See: https://www.sqlite.org/lang_analyze.html
+
+  module SQLite3
+    class Connection
+      def do_close
+        time = Benchmark.realtime { check LibSQLite3.exec(self, "PRAGMA analysis_limit=400; PRAGMA optimize;", nil, nil, nil) }
+        Log.info { "Updating statistics: #{sprintf("%.3fms", time.total_milliseconds)}" }
+      ensure
+        previous_def
+      end
+    end
+  end
+{% end %}
 
 private alias Supported = JSON::Serializable | Array(JSON::Serializable) | Array(String)
 

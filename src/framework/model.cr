@@ -89,7 +89,12 @@ module Ktistec
           {% if @type < Undoable %}
             conditions << %Q|"undone_at" IS NULL| unless include_undone
           {% end %}
-          {% if @type < Polymorphic %}
+          # by convention, a class that inherits directly from
+          # `Reference` is the *base class* of a class hierarchy.
+          # therefore, it isn't necessary to restrict rows to specific
+          # subclasses, since all rows and all subclasses should
+          # belong to the hierarchy and should be included.
+          {% if @type < Polymorphic && @type.superclass != Reference %}
             conditions << %Q|"type" IN (%s)| % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}}
           {% end %}
           conditions += terms.to_a

@@ -3,18 +3,28 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 ### Added
-- Support manually fetching posts that are missing from threads.
 - Expose the /everything endpoint.
+- Support manually fetching posts that are missing from threads.
 - Add link to source/origin of post. (fixes [#42](https://github.com/toddsundsted/ktistec/issues/42))
 - Render to HTML posts when content is Markdown. Improves compatibility with Peertube.
 - In post details, include labels and links to internal hashtag and mention index pages.
 - Support following threads, hashtags and mentions.
+- Support pragmas using database connection query params.
+- Include short summary of object content in notifications page.
+- Check the SQLite3 version.
+- Support logging of query times.
 
 ### Fixed
 - Add ellipsis to Mastodon marked-up URLs in content.
 - Make content clickable only on listing pages.
 - Call `after_save` lifecycle callback when save occurs.
 - Fix bug affecting nested objects during JSON-LD expansion.
+- Keep the task worker alive in the face of database problems.
+- Set application name in webmanifest. (see [#78](https://github.com/toddsundsted/ktistec/pull/78))
+- Update Dockerfile to latest Crystal Alpine. (fixes [#79](https://github.com/toddsundsted/ktistec/issues/79))
+
+### Changed
+- Log JSON-LD at `debug` severity.
 
 ## [v2.0.0-8]
 ### Added
@@ -162,7 +172,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
-[Unreleased]: https://github.com/toddsundsted/ktistec/compare/4d9094fa...main
+[v2.0.0-9]: https://github.com/toddsundsted/ktistec/compare/4d9094fa...a5fc68f0
 [v2.0.0-8]: https://github.com/toddsundsted/ktistec/compare/b3ce035d...cde86283
 [v2.0.0-7]: https://github.com/toddsundsted/ktistec/compare/9a05dced...7d189bd0
 [v2.0.0-6]: https://github.com/toddsundsted/ktistec/compare/c71f3ad9...a71ebfda

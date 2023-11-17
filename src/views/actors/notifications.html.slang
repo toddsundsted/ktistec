@@ -13,7 +13,9 @@
     - notifications.each do |notification|
       article.event
         - if notification.is_a?(Relationship::Content::Notification::Announce)
-          - activity = notification.activity.as(ActivityPub::Activity::Announce)
+          crystal:
+            activity = notification.activity.as(ActivityPub::Activity::Announce)
+            activities = activity.object.activities(inclusion: activity.type)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -22,14 +24,19 @@
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-              | shared
+              - if activities.size > 1
+                | and #{pluralize(activities.size - 1, "other")} shared
+              - else
+                | shared
               a< href=remote_object_path(activity.object) your post
               | .
             - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
               .extra.meta.truncated
                 == content
         - elsif notification.is_a?(Relationship::Content::Notification::Like)
-          - activity = notification.activity.as(ActivityPub::Activity::Like)
+          crystal:
+            activity = notification.activity.as(ActivityPub::Activity::Like)
+            activities = activity.object.activities(inclusion: activity.type)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -38,7 +45,10 @@
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-              | liked
+              - if activities.size > 1
+                | and #{pluralize(activities.size - 1, "other")} liked
+              - else
+                | liked
               a< href=remote_object_path(activity.object) your post
               | .
             - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)

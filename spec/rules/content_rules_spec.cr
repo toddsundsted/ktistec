@@ -472,7 +472,7 @@ Spectator.describe ContentRules do
       end
     end
 
-    context "given notifictions with announce already added" do
+    context "given notifictions with an announce already added" do
       before_each do
         undo.assign(object: announce).save
         put_in_notifications(owner, announce)
@@ -496,7 +496,28 @@ Spectator.describe ContentRules do
       end
     end
 
-    context "given notifictions with like already added" do
+    context "given notifications with another announce for the same object" do
+      let_create(:announce, named: another, object: object)
+
+      before_each do
+        Factory.create(:notification_announce, owner: owner, activity: another)
+        object.assign(attributed_to: owner)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.activity)).to eq([another]) }
+
+      it "adds the announce to the notifications" do
+        run(owner, announce)
+        expect(owner.notifications.map(&.activity)).to have(announce)
+      end
+
+      it "removes the previous announce from the notifications" do
+        run(owner, announce)
+        expect(owner.notifications.map(&.activity)).not_to have(another)
+      end
+    end
+
+    context "given notifictions with a like already added" do
       before_each do
         undo.assign(object: like).save
         put_in_notifications(owner, like)
@@ -517,6 +538,27 @@ Spectator.describe ContentRules do
       it "does not remove the like from the notifications" do
         run(owner, delete)
         expect(owner.notifications.map(&.activity)).to eq([like])
+      end
+    end
+
+    context "given notifications with another like for the same object" do
+      let_create(:like, named: another, object: object)
+
+      before_each do
+        Factory.create(:notification_like, owner: owner, activity: another)
+        object.assign(attributed_to: owner)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.activity)).to eq([another]) }
+
+      it "adds the like to the notifications" do
+        run(owner, like)
+        expect(owner.notifications.map(&.activity)).to have(like)
+      end
+
+      it "removes the previous like from the notifications" do
+        run(owner, like)
+        expect(owner.notifications.map(&.activity)).not_to have(another)
       end
     end
 

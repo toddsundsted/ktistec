@@ -154,7 +154,17 @@ rule "create/reply"
   assert NotificationReply, owner: actor, activity: activity
 end
 
-rule "announce"
+rule "announce, step 1"
+  condition activity, InMailboxOf, actor
+  condition AnnounceActivity, activity, object: object
+  condition Object, object, attributed_to: actor
+  # remove any previous notifications about this object
+  condition AnnounceActivity, previous, object: object
+  condition NotificationAnnounce, owner: actor, activity: previous
+  retract NotificationAnnounce, owner: actor, activity: previous
+end
+
+rule "announce, step 2"
   condition activity, InMailboxOf, actor
   condition AnnounceActivity, activity, object: object
   condition Object, object, attributed_to: actor
@@ -162,7 +172,17 @@ rule "announce"
   assert NotificationAnnounce, owner: actor, activity: activity
 end
 
-rule "like"
+rule "like, step 1"
+  condition activity, InMailboxOf, actor
+  condition LikeActivity, activity, object: object
+  condition Object, object, attributed_to: actor
+  # remove any previous notifications about this object
+  condition LikeActivity, previous, object: object
+  condition NotificationLike, owner: actor, activity: previous
+  retract NotificationLike, owner: actor, activity: previous
+end
+
+rule "like, step 2"
   condition activity, InMailboxOf, actor
   condition LikeActivity, activity, object: object
   condition Object, object, attributed_to: actor

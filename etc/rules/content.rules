@@ -222,54 +222,27 @@ rule "notification exists for object"
   assert NotificationFor, object
 end
 
-rule "create/follow/hashtag"
+rule "follow/hashtag"
   condition Incoming, actor, activity
-  condition CreateActivity, activity, object: object
+  condition ObjectActivity, activity, object: object
   none NotificationFor, object
   condition Hashtag, subject: object, name: name
   any FollowHashtag, actor: actor, name: name
   assert NotificationHashtag, owner: actor, activity: activity
 end
 
-rule "announce/follow/hashtag"
+rule "follow/mention"
   condition Incoming, actor, activity
-  condition AnnounceActivity, activity, object: object
-  none NotificationFor, object
-  condition Hashtag, subject: object, name: name
-  any FollowHashtag, actor: actor, name: name
-  assert NotificationHashtag, owner: actor, activity: activity
-end
-
-rule "create/follow/mention"
-  condition Incoming, actor, activity
-  condition CreateActivity, activity, object: object
+  condition ObjectActivity, activity, object: object
   none NotificationFor, object
   condition Mention, subject: object, name: name
   any FollowMention, actor: actor, name: name
   assert NotificationMention, owner: actor, activity: activity
 end
 
-rule "announce/follow/mention"
+rule "follow/thread"
   condition Incoming, actor, activity
-  condition AnnounceActivity, activity, object: object
-  none NotificationFor, object
-  condition Mention, subject: object, name: name
-  any FollowMention, actor: actor, name: name
-  assert NotificationMention, owner: actor, activity: activity
-end
-
-rule "create/follow/thread"
-  condition Incoming, actor, activity
-  condition CreateActivity, activity, object: object
-  none NotificationFor, object
-  condition Object, object, thread: thread
-  condition FollowThread, actor: actor, thread: thread
-  assert NotificationThread, owner: actor, activity: activity
-end
-
-rule "announce/follow/thread"
-  condition Incoming, actor, activity
-  condition AnnounceActivity, activity, object: object
+  condition ObjectActivity, activity, object: object
   none NotificationFor, object
   condition Object, object, thread: thread
   condition FollowThread, actor: actor, thread: thread

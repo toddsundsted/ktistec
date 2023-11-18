@@ -87,16 +87,11 @@
                 ht1 = object.hashtags.map(&.name)
                 ht2 = Relationship::Content::Follow::Hashtag.where(actor: actor).map(&.name)
                 ht3 = (ht1 & ht2)
-                ht4 = (ht1 - ht2)
               a> href=remote_actor_path(attributed_to) = attributed_to.display_name
               | tagged
               a<> href=remote_object_path(object) a post
               | with
               - ht3.each do |hashtag|
-                a< href=hashtag_path(hashtag) ##{hashtag}
-              - if ht3.presence && ht4.presence
-                = " and"
-              - ht4.each do |hashtag|
                 a< href=hashtag_path(hashtag) ##{hashtag}
               | .
             - if content
@@ -119,7 +114,6 @@
                 mn1 = object.mentions.map(&.name)
                 mn2 = Relationship::Content::Follow::Mention.where(actor: actor).map(&.name)
                 mn3 = (mn1 & mn2)
-                mn4 = (mn1 - mn2)
               - if mn1.includes?(actor.account_uri)
                 a> href=remote_actor_path(attributed_to) = attributed_to.display_name
                 a> href=remote_object_path(object) mentioned
@@ -130,10 +124,6 @@
                 a<> href=remote_object_path(object) a post
                 | with
                 - mn3.each do |mention|
-                  a< href=mention_path(mention) @#{mention.split("@").first}
-                - if mn3.presence && mn4.presence
-                  = " and"
-                - mn4.each do |mention|
                   a< href=mention_path(mention) @#{mention.split("@").first}
                 | .
             - if content

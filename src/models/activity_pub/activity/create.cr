@@ -2,9 +2,7 @@ require "../activity"
 require "../object"
 
 class ActivityPub::Activity
-  class Create < ActivityPub::Activity
-    belongs_to object, class_name: ActivityPub::Object, foreign_key: object_iri, primary_key: iri
-
+  class Create < ActivityPub::Activity::ObjectActivity
     def valid_for_send?
       valid?
       messages = [] of String

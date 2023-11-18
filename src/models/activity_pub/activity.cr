@@ -32,6 +32,10 @@ module ActivityPub
     property actor_iri : String?
     belongs_to actor, class_name: ActivityPub::Actor, foreign_key: actor_iri, primary_key: iri
 
+    class ObjectActivity < Activity
+      belongs_to object, class_name: ActivityPub::Object, foreign_key: object_iri, primary_key: iri
+    end
+
     @[Persistent]
     property object_iri : String?
 

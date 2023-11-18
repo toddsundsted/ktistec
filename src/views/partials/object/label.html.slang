@@ -1,4 +1,4 @@
-.label data-controller="icon-load-error"
+.label
   - if author != actor
     - if (icon = actor.icon)
       img data-actor-id=actor.id src=icon

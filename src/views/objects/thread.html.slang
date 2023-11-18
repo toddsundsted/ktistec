@@ -20,7 +20,7 @@
         == form_button "Follow", follow_thread_path(thread.first), button_class: "ui button primary"
       - else
         == form_button "Unfollow", unfollow_thread_path(thread.first)
-section.ui.feed
+section.ui.feed data-controller="icon-load-error"
   - if env.account? && (iri = thread.first.in_reply_to_iri.presence)
     - message = nil
     == render "#{__DIR__}/partials/fetch.html.slang"

@@ -9,11 +9,13 @@
       | This page lists notifications about mentions, replies, follows, etc. that you've received.
 - else
   h1 Notifications
-  section.ui.feed
+  section.ui.feed data-controller="icon-load-error"
     - notifications.each do |notification|
       article.event
         - if notification.is_a?(Relationship::Content::Notification::Announce)
-          - activity = notification.activity.as(ActivityPub::Activity::Announce)
+          crystal:
+            activity = notification.activity.as(ActivityPub::Activity::Announce)
+            activities = activity.object.activities(inclusion: activity.type)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -22,14 +24,19 @@
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-              | shared
+              - if activities.size > 1
+                | and #{pluralize(activities.size - 1, "other")} shared
+              - else
+                | shared
               a< href=remote_object_path(activity.object) your post
               | .
             - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
               .extra.meta.truncated
                 == content
         - elsif notification.is_a?(Relationship::Content::Notification::Like)
-          - activity = notification.activity.as(ActivityPub::Activity::Like)
+          crystal:
+            activity = notification.activity.as(ActivityPub::Activity::Like)
+            activities = activity.object.activities(inclusion: activity.type)
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -38,7 +45,10 @@
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-              | liked
+              - if activities.size > 1
+                | and #{pluralize(activities.size - 1, "other")} liked
+              - else
+                | liked
               a< href=remote_object_path(activity.object) your post
               | .
             - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
@@ -77,16 +87,11 @@
                 ht1 = object.hashtags.map(&.name)
                 ht2 = Relationship::Content::Follow::Hashtag.where(actor: actor).map(&.name)
                 ht3 = (ht1 & ht2)
-                ht4 = (ht1 - ht2)
               a> href=remote_actor_path(attributed_to) = attributed_to.display_name
               | tagged
               a<> href=remote_object_path(object) a post
               | with
               - ht3.each do |hashtag|
-                a< href=hashtag_path(hashtag) ##{hashtag}
-              - if ht3.presence && ht4.presence
-                = " and"
-              - ht4.each do |hashtag|
                 a< href=hashtag_path(hashtag) ##{hashtag}
               | .
             - if content
@@ -109,7 +114,6 @@
                 mn1 = object.mentions.map(&.name)
                 mn2 = Relationship::Content::Follow::Mention.where(actor: actor).map(&.name)
                 mn3 = (mn1 & mn2)
-                mn4 = (mn1 - mn2)
               - if mn1.includes?(actor.account_uri)
                 a> href=remote_actor_path(attributed_to) = attributed_to.display_name
                 a> href=remote_object_path(object) mentioned
@@ -120,10 +124,6 @@
                 a<> href=remote_object_path(object) a post
                 | with
                 - mn3.each do |mention|
-                  a< href=mention_path(mention) @#{mention.split("@").first}
-                - if mn3.presence && mn4.presence
-                  = " and"
-                - mn4.each do |mention|
                   a< href=mention_path(mention) @#{mention.split("@").first}
                 | .
             - if content

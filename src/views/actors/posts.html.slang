@@ -10,7 +10,7 @@
         You should go to <a href="#{actor_path}">your home page</a> and write something.
 - else
   h1 Posts
-  section.ui.feed
+  section.ui.feed data-controller="icon-load-error"
     - objects.each do |object|
       crystal:
         activity = object.activities.find do |activity|

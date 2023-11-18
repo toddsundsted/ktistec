@@ -2,7 +2,7 @@
 - content_for "title" do
   = title
 h1= title
-section.ui.feed
+section.ui.feed data-controller="icon-load-error"
   - activities.each do |activity|
     - if activity.is_a?(ActivityPub::Activity::Announce)
       == render "src/views/partials/activity/create.html.slang"

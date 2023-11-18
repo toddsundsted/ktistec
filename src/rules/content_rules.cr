@@ -22,6 +22,7 @@ class ContentRules
 
   Ktistec::Rule.make_pattern(Actor, ActivityPub::Actor, properties: [:iri, :followers, :following])
   Ktistec::Rule.make_pattern(Activity, ActivityPub::Activity, associations: [:actor])
+  Ktistec::Rule.make_pattern(ObjectActivity, ActivityPub::Activity::ObjectActivity, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(Object, ActivityPub::Object, associations: [:in_reply_to, :attributed_to], properties: [:content, :thread])
   Ktistec::Rule.make_pattern(Hashtag, Tag::Hashtag, associations: [subject], properties: [name, href])
   Ktistec::Rule.make_pattern(Mention, Tag::Mention, associations: [subject], properties: [name, href])
@@ -54,9 +55,11 @@ class ContentRules
   class Incoming < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
   class InMailboxOf < School::Relationship(ActivityPub::Activity, ActivityPub::Actor) end
   class IsRecipient < School::Property(String) end
+  class NotificationFor < School::Property(ActivityPub::Object) end
 
   Ktistec::Compiler.register_constant(ContentRules::Actor)
   Ktistec::Compiler.register_constant(ContentRules::Activity)
+  Ktistec::Compiler.register_constant(ContentRules::ObjectActivity)
   Ktistec::Compiler.register_constant(ContentRules::Object)
   Ktistec::Compiler.register_constant(ContentRules::Hashtag)
   Ktistec::Compiler.register_constant(ContentRules::Mention)
@@ -88,6 +91,7 @@ class ContentRules
   Ktistec::Compiler.register_constant(ContentRules::Outgoing)
   Ktistec::Compiler.register_constant(ContentRules::InMailboxOf)
   Ktistec::Compiler.register_constant(ContentRules::IsRecipient)
+  Ktistec::Compiler.register_constant(ContentRules::NotificationFor)
 
   Ktistec::Compiler.register_accessor(iri)
   Ktistec::Compiler.register_accessor(content)

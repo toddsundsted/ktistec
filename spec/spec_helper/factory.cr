@@ -186,6 +186,26 @@ def notification_factory(clazz = Relationship::Content::Notification, owner_iri 
   relationship_factory(clazz, **{from_iri: owner_iri, owner: owner, to_iri: activity_iri, activity: activity}.merge(options))
 end
 
+def notification_announce_factory(**options)
+  notification_factory(Relationship::Content::Notification::Announce, **options)
+end
+
+def notification_like_factory(**options)
+  notification_factory(Relationship::Content::Notification::Like, **options)
+end
+
+def notification_hashtag_factory(**options)
+  notification_factory(Relationship::Content::Notification::Hashtag, **options)
+end
+
+def notification_mention_factory(**options)
+  notification_factory(Relationship::Content::Notification::Mention, **options)
+end
+
+def notification_thread_factory(**options)
+  notification_factory(Relationship::Content::Notification::Thread, **options)
+end
+
 def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   object = object_factory(attributed_to_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, attributed_to: owner) unless object_iri || object.nil? || object

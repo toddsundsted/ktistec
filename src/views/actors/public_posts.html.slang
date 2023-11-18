@@ -1,4 +1,4 @@
-section.ui.feed
+section.ui.feed data-controller="icon-load-error"
   - objects.each do |object|
     crystal:
       activity = object.activities.find do |activity|

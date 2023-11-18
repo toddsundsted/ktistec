@@ -9,7 +9,7 @@
       | This page lists notifications about mentions, replies, follows, etc. that you've received.
 - else
   h1 Notifications
-  section.ui.feed
+  section.ui.feed data-controller="icon-load-error"
     - notifications.each do |notification|
       article.event
         - if notification.is_a?(Relationship::Content::Notification::Announce)

@@ -1,4 +1,4 @@
-section.ui.feed
+section.ui.feed data-controller="icon-load-error"
   - timeline.each do |entry|
     crystal:
       object = entry.object

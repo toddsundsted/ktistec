@@ -1,6 +1,6 @@
 - accounts.map(&.actor).each do |actor|
   == render "src/views/partials/actor-panel.html.slang"
-section.ui.feed
+section.ui.feed data-controller="icon-load-error"
   - objects.each do |object|
     crystal:
       activity = object.activities.first?

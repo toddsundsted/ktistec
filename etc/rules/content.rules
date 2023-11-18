@@ -79,7 +79,7 @@
 # executed for each such instance of class Object. Bound values for
 # actor and object would be available to each action invocation.
 
-# Outbox
+## Outbox
 
 rule "outbox"
   condition Outgoing, actor, activity
@@ -88,7 +88,7 @@ rule "outbox"
   assert activity, InMailboxOf, actor
 end
 
-# Filter Incoming Content
+## Filter Incoming Content
 
 rule "filter content/create"
   condition Incoming, actor, activity
@@ -104,7 +104,7 @@ rule "filter content/announce"
   retract Incoming, actor, activity
 end
 
-# Inbox
+## Inbox
 
 rule "inbox"
   condition Incoming, actor, activity
@@ -135,7 +135,7 @@ rule "inbox"
   assert activity, InMailboxOf, actor
 end
 
-# Mailbox Notifications
+## Mailbox Notifications
 
 rule "create/mention"
   condition activity, InMailboxOf, actor
@@ -212,63 +212,71 @@ rule "undo"
   retract Notification, owner: actor, activity: activity
 end
 
-# Follow Notifications
+## Follow Notifications
+
+rule "notification exists for object"
+  condition Incoming, actor, activity
+  condition ObjectActivity, activity, object: object
+  condition ObjectActivity, another, object: object
+  condition Notification, activity: another
+  assert NotificationFor, object
+end
 
 rule "create/follow/hashtag"
   condition Incoming, actor, activity
   condition CreateActivity, activity, object: object
+  none NotificationFor, object
   condition Hashtag, subject: object, name: name
   any FollowHashtag, actor: actor, name: name
-  none Notification, owner: actor, activity: activity
   assert NotificationHashtag, owner: actor, activity: activity
 end
 
 rule "announce/follow/hashtag"
   condition Incoming, actor, activity
   condition AnnounceActivity, activity, object: object
+  none NotificationFor, object
   condition Hashtag, subject: object, name: name
   any FollowHashtag, actor: actor, name: name
-  none Notification, owner: actor, activity: activity
   assert NotificationHashtag, owner: actor, activity: activity
 end
 
 rule "create/follow/mention"
   condition Incoming, actor, activity
   condition CreateActivity, activity, object: object
+  none NotificationFor, object
   condition Mention, subject: object, name: name
   any FollowMention, actor: actor, name: name
-  none Notification, owner: actor, activity: activity
   assert NotificationMention, owner: actor, activity: activity
 end
 
 rule "announce/follow/mention"
   condition Incoming, actor, activity
   condition AnnounceActivity, activity, object: object
+  none NotificationFor, object
   condition Mention, subject: object, name: name
   any FollowMention, actor: actor, name: name
-  none Notification, owner: actor, activity: activity
   assert NotificationMention, owner: actor, activity: activity
 end
 
 rule "create/follow/thread"
   condition Incoming, actor, activity
   condition CreateActivity, activity, object: object
+  none NotificationFor, object
   condition Object, object, thread: thread
   condition FollowThread, actor: actor, thread: thread
-  none Notification, owner: actor, activity: activity
   assert NotificationThread, owner: actor, activity: activity
 end
 
 rule "announce/follow/thread"
   condition Incoming, actor, activity
   condition AnnounceActivity, activity, object: object
+  none NotificationFor, object
   condition Object, object, thread: thread
   condition FollowThread, actor: actor, thread: thread
-  none Notification, owner: actor, activity: activity
   assert NotificationThread, owner: actor, activity: activity
 end
 
-# Timeline
+## Timeline
 
 # the first two rules would be one rule if "or" was supported.
 # notify if there are either no replies and no mentions, or the

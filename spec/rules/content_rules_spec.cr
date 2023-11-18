@@ -436,6 +436,74 @@ Spectator.describe ContentRules do
       end
     end
 
+    context "given notifications with a hashtag already added" do
+      let_build(:announce, named: another, object: object)
+
+      let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "hashtag")
+
+      before_each do
+        Factory.create(:notification_hashtag, owner: owner, activity: another)
+        Factory.create(:hashtag, name: "hashtag", subject: object)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.activity)).to eq([another]) }
+
+      it "does not add create to the notifications" do
+        run(owner, create)
+        expect(owner.notifications.map(&.activity)).not_to have(create)
+      end
+
+      it "does not add announce to the notifications" do
+        run(owner, announce)
+        expect(owner.notifications.map(&.activity)).not_to have(announce)
+      end
+    end
+
+    context "given notifications with a mention already added" do
+      let_build(:announce, named: another, object: object)
+
+      let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "mention")
+
+      before_each do
+        Factory.create(:notification_mention, owner: owner, activity: another)
+        Factory.create(:mention, name: "mention", subject: object)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.activity)).to eq([another]) }
+
+      it "does not add create to the notifications" do
+        run(owner, create)
+        expect(owner.notifications.map(&.activity)).not_to have(create)
+      end
+
+      it "does not add announce to the notifications" do
+        run(owner, announce)
+        expect(owner.notifications.map(&.activity)).not_to have(announce)
+      end
+    end
+
+    context "given notifications with a thread reply already added" do
+      let_build(:announce, named: another, object: object)
+
+      before_each do
+        object.assign(in_reply_to: Factory.build(:object, attributed_to: other))
+        Factory.create(:follow_thread_relationship, actor: owner, thread: object.in_reply_to_iri)
+        Factory.create(:notification_thread, owner: owner, activity: another)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.activity)).to eq([another]) }
+
+      it "does not add create to the notifications" do
+        run(owner, create)
+        expect(owner.notifications.map(&.activity)).not_to have(create)
+      end
+
+      it "does not add announce to the notifications" do
+        run(owner, announce)
+        expect(owner.notifications.map(&.activity)).not_to have(announce)
+      end
+    end
+
     context "given notifictions with create already added" do
       before_each do
         put_in_notifications(owner, create)

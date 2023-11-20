@@ -444,6 +444,14 @@ module Ktistec
               end
             end
           {% end %}
+          {% for v in vs %}
+            key = {{v.stringify}}
+            {% unless v.has_default_value? || v.type.nilable? || v.type.struct? %}
+              unless {{v.symbolize}}.in?(@changed)
+                raise TypeError.new("#{self.class}.new: property '#{key}' is not nilable and must be assigned")
+              end
+            {% end %}
+          {% end %}
         {% end %}
         super()
         # dup but don't maintain a linked list of previously saved records
@@ -470,6 +478,14 @@ module Ktistec
                 raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
+          {% end %}
+          {% for v in vs %}
+            key = {{v.stringify}}
+            {% unless v.has_default_value? || v.type.nilable? || v.type.struct? %}
+              unless {{v.symbolize}}.in?(@changed)
+                raise TypeError.new("#{self.class}.new: property '#{key}' is not nilable and must be assigned")
+              end
+            {% end %}
           {% end %}
         {% end %}
         super()

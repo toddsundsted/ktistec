@@ -7,6 +7,9 @@ require "../../../spec_helper/network"
 
 class FooBarTransfer < Task
   include Task::Transfer
+
+  @source_iri = ""
+  @subject_iri  = ""
 end
 
 class Regex

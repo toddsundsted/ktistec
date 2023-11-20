@@ -6,10 +6,10 @@ class RenderableModel
   include Ktistec::Model(Renderable)
 
   @[Persistent]
-  property content : String
+  property content : String?
 
   @[Persistent]
-  property media_type : String
+  property media_type : String?
 end
 
 Spectator.describe Ktistec::Model::Renderable do

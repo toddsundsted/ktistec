@@ -211,7 +211,7 @@ Spectator.describe Ktistec::Model do
     let(not_nil) { NotNilModel.new(val: "Val").save }
 
     it "assigns belongs_to associations" do
-      expect(NotNilModel.new(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
+      expect(NotNilModel.new(val: "Val", foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
     end
 
     it "assigns belongs_to associations" do
@@ -263,7 +263,7 @@ Spectator.describe Ktistec::Model do
     let(foo_bar) { FooBarModel.new.save }
 
     it "assigns belongs_to associations" do
-      expect(NotNilModel.new.assign(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
+      expect(NotNilModel.new(val: "Val").assign(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
     end
 
     let(not_nil) { NotNilModel.new(val: "Val").save }
@@ -1096,11 +1096,11 @@ Spectator.describe Ktistec::Model do
       pre_condition { expect(foo_bar_model.changed?).to be_false }
 
       it "does not mark inverse record as changed" do
-        expect{NotNilModel.new(foo_bar_models: [foo_bar_model])}.not_to change{foo_bar_model.changed?}
+        expect{NotNilModel.new(val: "Val", foo_bar_models: [foo_bar_model])}.not_to change{foo_bar_model.changed?}
       end
 
       it "does not mark inverse record as changed" do
-        expect{NotNilModel.new(foo_bar: foo_bar_model)}.not_to change{foo_bar_model.changed?}
+        expect{NotNilModel.new(val: "Val", foo_bar: foo_bar_model)}.not_to change{foo_bar_model.changed?}
       end
     end
 

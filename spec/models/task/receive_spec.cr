@@ -55,7 +55,12 @@ Spectator.describe Task::Receive do
   end
 
   describe "#deliver_to=" do
-    subject { described_class.new }
+    subject do
+      described_class.new(
+        receiver: receiver,
+        activity: activity
+      )
+    end
 
     it "updates state" do
       expect{subject.deliver_to = ["https://recipient"]}.to change{subject.state}

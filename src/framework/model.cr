@@ -419,6 +419,10 @@ module Ktistec
         @saved_record = self.dup.clear_saved_record
       end
 
+      private def to_sentence(type)
+        Util.to_sentence(type.to_s.strip("()").split("|").map(&.strip), last_word_connector: " or ")
+      end
+
       # Initializes the new instance.
       #
       def initialize(options : Hash(String, Any)) forall Any
@@ -436,7 +440,7 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
           {% end %}
@@ -463,7 +467,7 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
           {% end %}
@@ -489,7 +493,7 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}#assign: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
           {% end %}
@@ -513,7 +517,7 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}#assign: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
           {% end %}

@@ -215,11 +215,11 @@ Spectator.describe Ktistec::Model do
     end
 
     it "raises an error if property type is wrong" do
-      expect{NotNilModel.new(val: 1)}.to raise_error(Ktistec::Model::TypeError)
+      expect{NotNilModel.new(val: 1)}.to raise_error(Ktistec::Model::TypeError, /is not a String/)
     end
 
     it "raises an error if property type is wrong" do
-      expect{FooBarModel.new({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError)
+      expect{FooBarModel.new({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError, /is not a String or Nil/)
     end
   end
 
@@ -257,11 +257,11 @@ Spectator.describe Ktistec::Model do
     end
 
     it "raises an error if property type is wrong" do
-      expect{NotNilModel.new(val: "").assign(val: 1)}.to raise_error(Ktistec::Model::TypeError)
+      expect{NotNilModel.new(val: "").assign(val: 1)}.to raise_error(Ktistec::Model::TypeError, /is not a String/)
     end
 
     it "raises an error if property type is wrong" do
-      expect{FooBarModel.new(foo: "").assign({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError)
+      expect{FooBarModel.new(foo: "").assign({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError, /is not a String or Nil/)
     end
   end
 

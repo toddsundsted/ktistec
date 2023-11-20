@@ -108,6 +108,32 @@ Spectator.describe Ktistec::Util do
     end
   end
 
+  describe ".to_sentence" do
+    it "returns an empty string" do
+      expect(described_class.to_sentence([] of String)).to eq("")
+    end
+
+    it "returns the word" do
+      expect(described_class.to_sentence(["one"])).to eq("one")
+    end
+
+    it "returns the words in sentence form" do
+      expect(described_class.to_sentence(["one", "two"])).to eq("one and two")
+    end
+
+    it "returns the words in sentence form" do
+      expect(described_class.to_sentence(["one", "two", "three"])).to eq("one, two and three")
+    end
+
+    it "uses the specified words connector" do
+      expect(described_class.to_sentence(["one", "two", "three"], words_connector: " and ")).to eq("one and two and three")
+    end
+
+    it "uses the specified last word connector" do
+      expect(described_class.to_sentence(["one", "two", "three"], last_word_connector: " or ")).to eq("one, two or three")
+    end
+  end
+
   describe ".pluralize" do
     it "pluralizes the noun" do
       ["fox", "fish", "dress", "bus", "inch", "fez"].each do |noun|

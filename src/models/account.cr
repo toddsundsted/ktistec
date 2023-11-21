@@ -50,9 +50,17 @@ class Account
     Crypto::Bcrypt::Password.new(encrypted_password).verify(password)
   end
 
+  # handle two use cases common in bulk assignment: 1) account
+  # creation, in which it should accept *and validate* any value
+  # including a blank string (the user just hits submit on the form),
+  # 2) account update, in which it should *ignore* a blank value (the
+  # user left the field empty and did not intend to change the
+  # password).
+
   def password=(password)
-    if (password = password.presence)
+    if (password && new_record?) || (password = password.presence)
       @encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
+      changed!(:encrypted_password)
       @password = password
     end
   end

@@ -23,27 +23,24 @@ class Task
     class State
       include JSON::Serializable
 
-      property deliver_to : Array(String)
+      property deliver_to : Array(String)?
 
       def initialize(@deliver_to = [] of String)
       end
     end
 
+    @[Persistent]
+    property state : State { State.new }
+
     @[Assignable]
     @deliver_to : Array(String)?
 
     def deliver_to
-      @deliver_to ||=
-        if (state = self.state)
-          State.from_json(state).deliver_to
-        end
+      state.deliver_to
     end
 
     def deliver_to=(@deliver_to : Array(String)?)
-      state = (temp = self.state) ? State.from_json(temp) : State.new
-      state.deliver_to = deliver_to if deliver_to
-      self.state = state.to_json
-      @deliver_to
+      state.deliver_to = deliver_to
     end
 
     private def ancestors(object)

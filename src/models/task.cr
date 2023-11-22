@@ -114,6 +114,6 @@ class Task
     raise NotImplementedError.new("Task#perform must be implemented in each subclass")
   end
 
-  @[Persistent]
-  property state : String?
+  # The table includes a column named "state" that subclasses can
+  # define and use to serialize information about task state.
 end

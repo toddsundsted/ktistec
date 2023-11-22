@@ -9,7 +9,7 @@ class Task
   class UpdateMetrics < Task
     include Singleton
 
-    private class State
+    class State
       include JSON::Serializable
 
       property last_id : Int64?
@@ -18,23 +18,15 @@ class Task
       end
     end
 
-    private def state_or_new
-      if (state = self.state)
-        State.from_json(state)
-      else
-        State.new
-      end
-    end
+    @[Persistent]
+    property state : State { State.new }
 
     def last_id
-      state_or_new.last_id
+      state.last_id
     end
 
     def last_id=(last_id)
-      state_or_new.tap do |state|
-        state.last_id = last_id
-        self.state = state.to_json
-      end.last_id
+      state.last_id = last_id
     end
 
     alias Key = Tuple(String, Time)

@@ -40,16 +40,17 @@ Spectator.describe Task::Receive do
     subject do
       described_class.new(
         receiver: receiver,
-        activity: activity,
-        state: %Q|{"deliver_to":[]}|
+        activity: activity
       )
     end
 
-    it "returns an array of strings" do
+    it "retrieves the deliver to value from the state" do
+      subject.state = Task::Receive::State.new([] of String)
       expect(subject.deliver_to).to be_a(Array(String))
     end
 
-    it "returns an empty array" do
+    it "retrieves the deliver to value from the state" do
+      subject.state = Task::Receive::State.new([] of String)
       expect(subject.deliver_to).to be_empty
     end
   end
@@ -62,8 +63,9 @@ Spectator.describe Task::Receive do
       )
     end
 
-    it "updates state" do
-      expect{subject.deliver_to = ["https://recipient"]}.to change{subject.state}
+    it "stores the deliver to value in the state" do
+      subject.deliver_to = ["https://recipient"]
+      expect(subject.state.deliver_to).to eq(["https://recipient"])
     end
   end
 

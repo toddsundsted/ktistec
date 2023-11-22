@@ -38,7 +38,7 @@ Spectator.describe Ktistec::JSON_LD do
   end
 
   double loader do
-    stub load(url) do
+    stub def load(url)
       case url
       when "https://vocab"
         JSON.parse(<<-JSON

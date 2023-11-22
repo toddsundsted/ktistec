@@ -28,7 +28,7 @@ class Account
   # This constructor is used to create new accounts (which must have a
   # valid username and password).
   #
-  def self.new(user username : String, pass password : String, **options)
+  def self.new(_username username : String, _password password : String, **options)
     new(**options.merge({
       username: username,
       password: password
@@ -44,32 +44,29 @@ class Account
   @[Assignable]
   @password : String?
 
-  # Validates the given password.
+  # Checks the given password against the encrypted password.
   #
-  def valid_password?(password)
+  def check_password(password)
     Crypto::Bcrypt::Password.new(encrypted_password).verify(password)
   end
 
+  # handle two use cases common in bulk assignment: 1) account
+  # creation, in which it should accept *and validate* any value
+  # including a blank string (the user just hits submit on the form),
+  # 2) account update, in which it should *ignore* a blank value (the
+  # user left the field empty and did not intend to change the
+  # password).
+
   def password=(password)
-    if (password = password.presence)
+    if (password && new_record?) || (password = password.presence)
       @encrypted_password = Crypto::Bcrypt::Password.create(password, self.cost).to_s
+      changed!(:encrypted_password)
       @password = password
     end
   end
 
   def password
     @password
-  end
-
-  def before_save
-    if changed?(:actor)
-      clear!(:actor)
-      if (actor = self.actor?) && actor.pem_public_key.nil? && actor.pem_private_key.nil?
-        keypair = OpenSSL::RSA.generate(2048, 17)
-        actor.pem_public_key = keypair.public_key.to_pem
-        actor.pem_private_key = keypair.to_pem
-      end
-    end
   end
 
   def before_validate
@@ -96,6 +93,21 @@ class Account
       messages << "is weak" unless password =~ /[^a-zA-Z0-9]/ && password =~ /[a-zA-Z]/ && password =~ /[0-9]/
       errors["password"] = messages unless messages.empty?
     end
+  end
+
+  def before_save
+    if changed?(:actor)
+      clear!(:actor)
+      if (actor = self.actor?) && actor.pem_public_key.nil? && actor.pem_private_key.nil?
+        keypair = OpenSSL::RSA.generate(2048, 17)
+        actor.pem_public_key = keypair.public_key.to_pem
+        actor.pem_private_key = keypair.to_pem
+      end
+    end
+  end
+
+  def after_save
+    @password = nil
   end
 
   @[Persistent]

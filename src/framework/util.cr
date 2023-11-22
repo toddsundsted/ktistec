@@ -157,6 +157,23 @@ module Ktistec
       end
     end
 
+    # Converts the array of words to comma-separated sentence form
+    # where the last word is joined by a connector word (by default
+    # "and").
+    #
+    def to_sentence(array, *, words_connector = ", ", last_word_connector = " and ")
+      case array.size
+      when 0
+        ""
+      when 1
+        array[0].to_s
+      when 2
+        "#{array[0]}#{last_word_connector}#{array[1]}"
+      else
+        "#{array[0...-1].join(words_connector)}#{last_word_connector}#{array[-1]}"
+      end
+    end
+
     # Pluralizes a singular noun.
     #
     def pluralize(noun)

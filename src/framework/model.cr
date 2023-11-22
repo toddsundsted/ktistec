@@ -419,6 +419,10 @@ module Ktistec
         @saved_record = self.dup.clear_saved_record
       end
 
+      private def to_sentence(type)
+        Util.to_sentence(type.to_s.strip("()").split("|").map(&.strip), last_word_connector: " or ")
+      end
+
       # Initializes the new instance.
       #
       def initialize(options : Hash(String, Any)) forall Any
@@ -436,9 +440,17 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
+          {% end %}
+          {% for v in vs %}
+            key = {{v.stringify}}
+            {% unless v.has_default_value? || v.type.nilable? || v.type.struct? %}
+              unless {{v.symbolize}}.in?(@changed)
+                raise TypeError.new("#{self.class}.new: property '#{key}' is not nilable and must be assigned")
+              end
+            {% end %}
           {% end %}
         {% end %}
         super()
@@ -463,9 +475,17 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
+          {% end %}
+          {% for v in vs %}
+            key = {{v.stringify}}
+            {% unless v.has_default_value? || v.type.nilable? || v.type.struct? %}
+              unless {{v.symbolize}}.in?(@changed)
+                raise TypeError.new("#{self.class}.new: property '#{key}' is not nilable and must be assigned")
+              end
+            {% end %}
           {% end %}
         {% end %}
         super()
@@ -489,7 +509,7 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}#assign: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
           {% end %}
@@ -513,7 +533,7 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}#assign: #{o.inspect} (#{o.class}) is not a #{typeof(self.{{v}})} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
           {% end %}
@@ -559,6 +579,8 @@ module Ktistec
         @{{decl.var}} : {{decl.type}}?
         def {{decl.var}}=({{decl.var}} : {{decl.type}}) : {{decl.type}}
           @{{decl.var}} = @{{aliased_to}} = {{decl.var}}
+          changed!({{decl.var.symbolize}}, {{aliased_to.symbolize}})
+          {{decl.var}}
         end
         def {{decl.var}} : {{decl.type}}
           @{{decl.var}} = @{{aliased_to}}
@@ -580,7 +602,7 @@ module Ktistec
           _belongs_to_setter_for_{{name}}({{name}})
         end
         def _belongs_to_setter_for_{{name}}(@{{name}} : {{class_name}}, update_associations = true) : {{class_name}}
-          changed!({{name.symbolize}})
+          changed!({{name.symbolize}}, {{foreign_key.symbolize}})
           self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
           {% if inverse_of %}
             if update_associations
@@ -635,7 +657,7 @@ module Ktistec
             {% if inverse_of %}
               if update_associations
                 n._belongs_to_setter_for_{{inverse_of}}(self, false)
-                n.clear!({{inverse_of.symbolize}})
+                n.clear!({{inverse_of.symbolize}}, {{foreign_key.symbolize}})
               end
             {% end %}
           end
@@ -670,7 +692,7 @@ module Ktistec
           {% if inverse_of %}
             if update_associations
               {{name}}._belongs_to_setter_for_{{inverse_of}}(self, false)
-              {{name}}.clear!({{inverse_of.symbolize}})
+              {{name}}.clear!({{inverse_of.symbolize}}, {{foreign_key.symbolize}})
             end
           {% end %}
           {{name}}
@@ -948,16 +970,24 @@ module Ktistec
         @id.nil?
       end
 
-      def changed!(property : Symbol)
-        @changed << property
+      def changed!(*properties : Symbol)
+        properties.each { |property| @changed << property }
       end
 
-      def changed?(property : Symbol? = nil)
-        new_record? || (property ? @changed.includes?(property) : !@changed.empty?)
+      def changed?
+        new_record? || !@changed.empty?
       end
 
-      def clear!(property : Symbol? = nil)
-        property ? @changed.delete(property) : @changed.clear
+      def changed?(*properties : Symbol)
+        new_record? || properties.any?(&.in?(@changed))
+      end
+
+      def clear!
+        @changed.clear
+      end
+
+      def clear!(*properties : Symbol)
+        @changed -= properties
       end
 
       protected def clear_saved_record

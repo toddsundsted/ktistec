@@ -23,6 +23,20 @@ class Task
       !where(EXISTS_QUERY, iri).empty?
     end
 
+    class Failure
+      include JSON::Serializable
+
+      property description : String
+
+      property timestamp : Time
+
+      def initialize(@description, @timestamp = Time.utc)
+      end
+    end
+
+    @[Persistent]
+    property failures : Array(Failure) { [] of Failure }
+
     def perform
       if (instance = ActivityPub::Actor.dereference?(source, actor.iri, ignore_cached: true))
         instance.save

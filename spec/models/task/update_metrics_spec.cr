@@ -10,7 +10,7 @@ Spectator.describe Task::UpdateMetrics do
     subject { described_class.new }
 
     it "retrieves the last id value from the state" do
-      subject.state = %Q|{"last_id":99}|
+      subject.state = Task::UpdateMetrics::State.new(99_i64)
       expect(subject.last_id).to eq(99_i64)
     end
   end
@@ -20,7 +20,7 @@ Spectator.describe Task::UpdateMetrics do
 
     it "stores the last id value in the state" do
       subject.last_id = 99_i64
-      expect(subject.state).to eq(%Q|{"last_id":99}|)
+      expect(subject.state.last_id).to eq(99_i64)
     end
   end
 

@@ -24,20 +24,6 @@ class Task
   property subject_iri : String
 
   @[Persistent]
-  property failures : Array(Failure) { [] of Failure }
-
-  struct Failure
-    include JSON::Serializable
-
-    property description : String
-
-    property timestamp : Time
-
-    def initialize(@description, @timestamp = Time.utc)
-    end
-  end
-
-  @[Persistent]
   @[Insignificant]
   property running : Bool { false }
 
@@ -114,6 +100,9 @@ class Task
     raise NotImplementedError.new("Task#perform must be implemented in each subclass")
   end
 
-  @[Persistent]
-  property state : String?
+  # The table includes a column named "failures" that subclasses can
+  # define and use to serialize information about task failures.
+
+  # The table includes a column named "state" that subclasses can
+  # define and use to serialize information about task state.
 end

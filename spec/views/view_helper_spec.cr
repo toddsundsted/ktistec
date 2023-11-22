@@ -672,8 +672,13 @@ Spectator.describe "helpers" do
   ## Path helpers
 
   double :path_double do
-    stub id { 42 }
-    stub uid { "xyz" }
+    stub def id
+      42
+    end
+
+    stub def uid
+      "xyz"
+    end
   end
 
   describe "back_path" do

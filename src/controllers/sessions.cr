@@ -46,7 +46,7 @@ class SessionsController
   end
 
   private def self.account?(username, password)
-    if (account = Account.find?(username: username)) && account.valid_password?(password)
+    if (account = Account.find?(username: username)) && account.check_password(password)
       account
     end
   end

@@ -57,19 +57,23 @@ class DerivedModel < FooBarModel
   @@table_name = "foo_bar_models"
 
   derived index : Int64?, aliased_to: not_nil_model_id
+
+  derived name : String?, aliased_to: bar
 end
 
 class AnotherModel < NotNilModel
   @@table_name = "not_nil_models"
 
   derived index : Int64?, aliased_to: foo_bar_model_id
+
+  derived name : String, aliased_to: val
 end
 
 class UnionAssociationModel
   include Ktistec::Model(Nil)
 
   @[Assignable]
-  property model_id : Int64?
+  property model_id : Int64
   belongs_to model, class_name: FooBarModel | NotNilModel
 end
 
@@ -207,7 +211,7 @@ Spectator.describe Ktistec::Model do
     let(not_nil) { NotNilModel.new(val: "Val").save }
 
     it "assigns belongs_to associations" do
-      expect(NotNilModel.new(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
+      expect(NotNilModel.new(val: "Val", foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
     end
 
     it "assigns belongs_to associations" do
@@ -215,11 +219,27 @@ Spectator.describe Ktistec::Model do
     end
 
     it "raises an error if property type is wrong" do
-      expect{NotNilModel.new(val: 1)}.to raise_error(Ktistec::Model::TypeError)
+      expect{NotNilModel.new(val: 1)}.to raise_error(Ktistec::Model::TypeError, /is not a String/)
     end
 
     it "raises an error if property type is wrong" do
-      expect{FooBarModel.new({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError)
+      expect{FooBarModel.new({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError, /is not a String or Nil/)
+    end
+
+    it "raises an error if a non-nilable property is not assigned" do
+      expect{NotNilModel.new(key: "Key")}.to raise_error(Ktistec::Model::TypeError, /must be assigned/)
+    end
+
+    it "raises an error if a non-nilable property is not assigned" do
+      expect{NotNilModel.new({"key" => "Key"})}.to raise_error(Ktistec::Model::TypeError, /must be assigned/)
+    end
+
+    it "does not raise an error if the non-nilable property is assigned via an alias" do
+      expect{AnotherModel.new(name: "Name")}.not_to raise_error(Ktistec::Model::TypeError)
+    end
+
+    it "does not raise an error if the non-nilable property is assigned via an association" do
+      expect{UnionAssociationModel.new(model: foo_bar)}.not_to raise_error(Ktistec::Model::TypeError)
     end
   end
 
@@ -243,7 +263,7 @@ Spectator.describe Ktistec::Model do
     let(foo_bar) { FooBarModel.new.save }
 
     it "assigns belongs_to associations" do
-      expect(NotNilModel.new.assign(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
+      expect(NotNilModel.new(val: "Val").assign(foo_bar: foo_bar).foo_bar_model_id).to eq(foo_bar.id)
     end
 
     let(not_nil) { NotNilModel.new(val: "Val").save }
@@ -257,11 +277,11 @@ Spectator.describe Ktistec::Model do
     end
 
     it "raises an error if property type is wrong" do
-      expect{NotNilModel.new(val: "").assign(val: 1)}.to raise_error(Ktistec::Model::TypeError)
+      expect{NotNilModel.new(val: "").assign(val: 1)}.to raise_error(Ktistec::Model::TypeError, /is not a String/)
     end
 
     it "raises an error if property type is wrong" do
-      expect{FooBarModel.new(foo: "").assign({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError)
+      expect{FooBarModel.new(foo: "").assign({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError, /is not a String or Nil/)
     end
   end
 
@@ -581,8 +601,8 @@ Spectator.describe Ktistec::Model do
   end
 
   describe "#serialize_graph" do
-    let(foo_bar) { FooBarModel.new }
-    let(not_nil) { NotNilModel.new(val: "Val") }
+    let(foo_bar) { FooBarModel.new.save }
+    let(not_nil) { NotNilModel.new(val: "Val").save }
     let(graph) do
       foo_bar.assign(not_nil: not_nil)
       not_nil.assign(foo_bar: foo_bar)
@@ -1076,11 +1096,11 @@ Spectator.describe Ktistec::Model do
       pre_condition { expect(foo_bar_model.changed?).to be_false }
 
       it "does not mark inverse record as changed" do
-        expect{NotNilModel.new(foo_bar_models: [foo_bar_model])}.not_to change{foo_bar_model.changed?}
+        expect{NotNilModel.new(val: "Val", foo_bar_models: [foo_bar_model])}.not_to change{foo_bar_model.changed?}
       end
 
       it "does not mark inverse record as changed" do
-        expect{NotNilModel.new(foo_bar: foo_bar_model)}.not_to change{foo_bar_model.changed?}
+        expect{NotNilModel.new(val: "Val", foo_bar: foo_bar_model)}.not_to change{foo_bar_model.changed?}
       end
     end
 
@@ -1159,7 +1179,6 @@ Spectator.describe Ktistec::Model do
   context "associations" do
     let(foo_bar) { FooBarModel.new(id: 13_i64) }
     let(not_nil) { NotNilModel.new(id: 17_i64, val: "Val") }
-    let(union) { UnionAssociationModel.new }
 
     pre_condition do
       expect(foo_bar.not_nil?).to be_nil
@@ -1358,6 +1377,18 @@ Spectator.describe Ktistec::Model do
       end
     end
 
+    let(union) { UnionAssociationModel.new(model_id: 999999_i64) }
+
+    it "returns the correct instance" do
+      not_nil.save
+      expect(union.assign(model_id: not_nil.id).model).to eq(not_nil)
+    end
+
+    it "returns the correct instance" do
+      foo_bar.save
+      expect(union.assign(model_id: foo_bar.id).model).to eq(foo_bar)
+    end
+
     it "returns nil" do
       (foo_bar.not_nil_model_id = 999999) && foo_bar.save
       expect(foo_bar.not_nil_model?).to be_nil
@@ -1368,16 +1399,6 @@ Spectator.describe Ktistec::Model do
       (not_nil.foo_bar_model_id = 999999) && not_nil.save
       expect(not_nil.foo_bar?).to be_nil
       expect(foo_bar.not_nil?).to be_nil
-    end
-
-    it "returns the correct instance" do
-      not_nil.save
-      expect(union.assign(model_id: not_nil.id).model).to eq(not_nil)
-    end
-
-    it "returns the correct instance" do
-      foo_bar.save
-      expect(union.assign(model_id: foo_bar.id).model).to eq(foo_bar)
     end
   end
 end

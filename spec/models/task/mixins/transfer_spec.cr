@@ -13,7 +13,7 @@ class FooBarTransfer < Task
 end
 
 class Regex
-  def ===(other : Task::Failure)
+  def ===(other : Task::Transfer::Failure)
     other.description =~ self
   end
 end

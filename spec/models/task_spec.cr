@@ -5,8 +5,8 @@ require "../spec_helper/base"
 Spectator.describe Task do
   setup_spec
 
-  mock Task do
-    stub perform do
+  class Task < ::Task
+    def perform
       # no-op
     end
   end

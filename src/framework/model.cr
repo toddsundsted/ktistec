@@ -420,7 +420,9 @@ module Ktistec
       end
 
       private def to_sentence(type)
-        Util.to_sentence(type.to_s.strip("()").split("|").map(&.strip), last_word_connector: " or ")
+        type = type.to_s
+        types = (type.match(/^\((.+)\)$/).try(&.[1]) || type).split("|").map(&.strip)
+        Util.to_sentence(types, last_word_connector: " or ")
       end
 
       # Initializes the new instance.

@@ -380,6 +380,30 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#down?" do
+    let_build(:actor)
+
+    it "indicates that the actor is down" do
+      expect(actor.assign(down_at: Time.utc).down?).to be_true
+    end
+
+    it "indicates that the actor is not down" do
+      expect(actor.assign(down_at: nil).down?).to be_false
+    end
+  end
+
+  describe "#up?" do
+    let_build(:actor)
+
+    it "indicates that the actor is not up" do
+      expect(actor.assign(down_at: Time.utc).up?).to be_false
+    end
+
+    it "indicates that the actor is up" do
+      expect(actor.assign(down_at: nil).up?).to be_true
+    end
+  end
+
   describe "#follow" do
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 

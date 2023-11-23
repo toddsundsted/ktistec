@@ -113,6 +113,10 @@ module ActivityPub
     @[Persistent]
     property attachments : Array(Attachment)?
 
+    @[Persistent]
+    @[Insignificant]
+    property down_at : Time?
+
     def before_validate
       if changed?(:username)
         clear!(:username)
@@ -152,6 +156,14 @@ module ActivityPub
           end
         end
       end
+    end
+
+    def down?
+      !!down_at
+    end
+
+    def up?
+      !down_at
     end
 
     def follow(other : Actor, **options)

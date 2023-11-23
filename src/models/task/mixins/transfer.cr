@@ -31,6 +31,9 @@ class Task
           Log.info { message }
           next
         end
+
+        next if actor.down?
+
         if transferer == actor
           # no-op
         elsif (inbox = actor.inbox)

@@ -91,5 +91,16 @@ Spectator.describe Task::Transfer do
         expect(subject.failures).to have(/Socket::Error: .* #{local_recipient.inbox}/)
       end
     end
+
+    context "when the recipient is down" do
+      before_each do
+        remote_recipient.assign(down_at: Time.utc).save
+      end
+
+      it "does not send the activity to the recipient" do
+        subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(HTTP::Client.requests).to be_empty
+      end
+    end
   end
 end

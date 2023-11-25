@@ -73,6 +73,11 @@ Spectator.describe Task::Transfer do
         subject.transfer(activity, from: transferer, to: [local_recipient.iri])
         expect(subject.failures).to have(/OpenSSL::Error: .* #{local_recipient.inbox}/)
       end
+
+      it "does not mark the recipient as down" do
+        expect{subject.transfer(activity, from: transferer, to: [local_recipient.iri])}.
+          not_to change{local_recipient.down?}
+      end
     end
 
     context "given a Socket error" do
@@ -89,6 +94,65 @@ Spectator.describe Task::Transfer do
       it "stores the failure reason" do
         subject.transfer(activity, from: transferer, to: [local_recipient.iri])
         expect(subject.failures).to have(/Socket::Error: .* #{local_recipient.inbox}/)
+      end
+
+      it "does not mark the recipient as down" do
+        expect{subject.transfer(activity, from: transferer, to: [local_recipient.iri])}.
+          not_to change{local_recipient.down?}
+      end
+    end
+
+    def failed_transfer_factory(recipient_iri = nil, recipient = false, **options)
+      recipient = actor_factory unless recipient_iri || recipient.nil? || recipient
+      failure = Task::Transfer::Failure.new(recipient.as(ActivityPub::Actor).iri, "failure")
+      FooBarTransfer.new(**{running: false, complete: true, failures: [failure]}.merge(options))
+    end
+
+    context "given three errors for the same recipient within the last ten days" do
+      let_create!(:failed_transfer, named: nil, recipient: remote_recipient, created_at: 7.days.ago)
+      let_create!(:failed_transfer, named: nil, recipient: remote_recipient, created_at: 4.days.ago)
+      let_create!(:failed_transfer, named: nil, recipient: remote_recipient, created_at: 1.day.ago)
+
+      before_each do
+        # simulate an error
+        remote_recipient.assign(inbox: "https://remote/openssl-error").save
+      end
+
+      it "marks the recipient as down" do
+        expect{subject.transfer(activity, from: transferer, to: [remote_recipient.iri])}.
+          to change{remote_recipient.reload!.down?}.to(true)
+      end
+    end
+
+    context "given only two errors for the same recipient" do
+      let_create!(:failed_transfer, named: nil, recipient: local_recipient, created_at: 6.days.ago)
+      let_create!(:failed_transfer, named: nil, recipient: remote_recipient, created_at: 4.days.ago)
+      let_create!(:failed_transfer, named: nil, recipient: remote_recipient, created_at: 1.day.ago)
+
+      before_each do
+        # simulate an error
+        remote_recipient.assign(inbox: "https://remote/openssl-error").save
+      end
+
+      it "does not mark the recipient as down" do
+        expect{subject.transfer(activity, from: transferer, to: [remote_recipient.iri])}.
+          not_to change{remote_recipient.reload!.down?}.from(false)
+      end
+    end
+
+    context "given only two errors within the last ten days" do
+      let_create!(:failed_transfer, named: nil, recipient: remote_recipient, created_at: 12.days.ago)
+      let_create!(:failed_transfer, named: nil, recipient: remote_recipient, created_at: 4.days.ago)
+      let_create!(:failed_transfer, named: nil, recipient: remote_recipient, created_at: 1.day.ago)
+
+      before_each do
+        # simulate an error
+        remote_recipient.assign(inbox: "https://remote/openssl-error").save
+      end
+
+      it "does not mark the recipient as down" do
+        expect{subject.transfer(activity, from: transferer, to: [remote_recipient.iri])}.
+          not_to change{remote_recipient.reload!.down?}.from(false)
       end
     end
 

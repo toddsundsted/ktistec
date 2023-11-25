@@ -146,6 +146,15 @@ Spectator.describe "partials" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
         end
       end
+
+      context "and actor is down" do
+        before_each { actor.down! }
+
+        it "does not render a down warning message" do
+          expect(subject.xpath_nodes("//div[contains(@class,'message')][contains(@class,'warning')]//text()")).
+            to be_empty
+        end
+      end
     end
 
     context "if authenticated" do
@@ -157,7 +166,7 @@ Spectator.describe "partials" do
         expect(subject.xpath_nodes("//a/@href")).to have("/remote/actors/#{actor.id}")
       end
 
-      context "if account actor is actor" do
+      context "and account actor is actor" do
         let(actor) { account.actor }
 
         it "does not render buttons" do
@@ -165,7 +174,7 @@ Spectator.describe "partials" do
         end
       end
 
-      context "if following actor" do
+      context "and following actor" do
         follow(account.actor, actor)
 
         it "renders a button to unfollow" do
@@ -181,7 +190,7 @@ Spectator.describe "partials" do
         expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
       end
 
-      context "if actor is blocked" do
+      context "and actor is blocked" do
         before_each { actor.block }
 
         it "renders a button to unblock" do
@@ -203,6 +212,15 @@ Spectator.describe "partials" do
 
       it "renders a button to block" do
         expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+      end
+
+      context "and actor is down" do
+        before_each { actor.down! }
+
+        it "renders a down warning message" do
+          expect(subject.xpath_nodes("//div[contains(@class,'message')][contains(@class,'warning')]//text()")).
+            to have(/actor is marked as down/)
+        end
       end
     end
   end

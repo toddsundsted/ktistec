@@ -8,12 +8,20 @@
   - else
     - image = actor.image.presence
     - style = image ? "background-image: url(#{actor.image});" : nil
-    .ui.segment class=(!image ? "placeholder" : nil) style=style
+    .ui.attached.segment class=(!image ? "placeholder" : nil) style=style
       - if actor.icon.presence
         img src=actor.icon
       - else
         i.user.icon
-    .ui.segment
+    - if _account && actor.down?
+      .ui.attached.tiny.warning.icon.message
+        i.cloud.icon
+        .content
+          p
+            | Due to failures to deliver posts to this actor, the
+              actor is marked as down. There will be no further
+              delivery attempts.
+    .ui.basic.segment
       - if _account
         a href=remote_actor_path(actor) = actor.display_name
       - else

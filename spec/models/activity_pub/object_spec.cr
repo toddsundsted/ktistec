@@ -259,22 +259,22 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "filters out deleted posts" do
-      post5.delete
+      post5.delete!
       expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
     end
 
     it "filters out blocked posts" do
-      post5.block
+      post5.block!
       expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
     end
 
     it "filters out posts by deleted actors" do
-      actor5.delete
+      actor5.delete!
       expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
     end
 
     it "filters out posts by blocked actors" do
-      actor5.block
+      actor5.block!
       expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
     end
 
@@ -314,22 +314,22 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "filters out deleted posts" do
-      post5.delete
+      post5.delete!
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
     it "filters out blocked posts" do
-      post5.block
+      post5.block!
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
     it "filters out posts by deleted actors" do
-      actor5.delete
+      actor5.delete!
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
     it "filters out posts by blocked actors" do
-      actor5.block
+      actor5.block!
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
@@ -344,7 +344,7 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "filters out objects belonging to undone activities" do
-      activity5.undo
+      activity5.undo!
       expect(described_class.public_posts(1, 2)).to eq([post4, post3])
     end
 
@@ -388,22 +388,22 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "filters out deleted posts" do
-      post5.delete
+      post5.delete!
       expect(described_class.public_posts_count).to eq(4)
     end
 
     it "filters out blocked posts" do
-      post5.block
+      post5.block!
       expect(described_class.public_posts_count).to eq(4)
     end
 
     it "filters out posts by deleted actors" do
-      actor5.delete
+      actor5.delete!
       expect(described_class.public_posts_count).to eq(4)
     end
 
     it "filters out posts by blocked actors" do
-      actor5.block
+      actor5.block!
       expect(described_class.public_posts_count).to eq(4)
     end
 
@@ -418,7 +418,7 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "filters out objects belonging to undone activities" do
-      activity5.undo
+      activity5.undo!
       expect(described_class.public_posts_count).to eq(4)
     end
 
@@ -463,12 +463,12 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "filters out undone announces" do
-      announce.save.undo
+      announce.save.undo!
       expect(object.with_statistics!.announces_count).to eq(0)
     end
 
     it "filters out undone likes" do
-      like.save.undo
+      like.save.undo!
       expect(object.with_statistics!.likes_count).to eq(0)
     end
   end
@@ -585,12 +585,12 @@ Spectator.describe ActivityPub::Object do
       end
 
       it "omits deleted replies and their children" do
-        object4.delete
+        object4.delete!
         expect(subject.with_replies_count!.replies_count).to eq(3)
       end
 
       it "omits blocked replies and their children" do
-        object4.block
+        object4.block!
         expect(subject.with_replies_count!.replies_count).to eq(3)
       end
 
@@ -600,12 +600,12 @@ Spectator.describe ActivityPub::Object do
       end
 
       it "omits replies with deleted attributed to actors" do
-        actor4.delete
+        actor4.delete!
         expect(subject.with_replies_count!.replies_count).to eq(3)
       end
 
       it "omits replies with blocked attributed to actors" do
-        actor4.block
+        actor4.block!
         expect(subject.with_replies_count!.replies_count).to eq(3)
       end
 
@@ -646,12 +646,12 @@ Spectator.describe ActivityPub::Object do
       end
 
       it "omits deleted replies and their children" do
-        object4.delete
+        object4.delete!
         expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits blocked replies and their children" do
-        object4.block
+        object4.block!
         expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
@@ -661,12 +661,12 @@ Spectator.describe ActivityPub::Object do
       end
 
       it "omits replies with deleted attributed to actors" do
-        actor4.delete
+        actor4.delete!
         expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
       it "omits replies with blocked attributed to actors" do
-        actor4.block
+        actor4.block!
         expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
@@ -707,12 +707,12 @@ Spectator.describe ActivityPub::Object do
       end
 
       it "omits deleted replies and their parents" do
-        object1.delete
+        object1.delete!
         expect(object3.ancestors).to eq([object3, object2])
       end
 
       it "omits blocked replies and their parents" do
-        object1.block
+        object1.block!
         expect(object3.ancestors).to eq([object3, object2])
       end
 
@@ -722,12 +722,12 @@ Spectator.describe ActivityPub::Object do
       end
 
       it "omits replies with deleted attributed to actors" do
-        actor1.delete
+        actor1.delete!
         expect(object3.ancestors).to eq([object3, object2])
       end
 
       it "omits replies with blocked attributed to actors" do
-        actor1.block
+        actor1.block!
         expect(object3.ancestors).to eq([object3, object2])
       end
 
@@ -802,17 +802,17 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "filters out undone activities" do
-      activity1.undo
+      activity1.undo!
       expect(subject.activities).to eq([activity2, activity3])
     end
 
     it "filters out activities of deleted actors" do
-      actor1.delete
+      actor1.delete!
       expect(subject.activities).to eq([activity2, activity3])
     end
 
     it "filters out activities of blocked actors" do
-      actor1.block
+      actor1.block!
       expect(subject.activities).to eq([activity2, activity3])
     end
   end
@@ -957,7 +957,7 @@ Spectator.describe ActivityPub::Object do
       before_each { canonical.save }
 
       it "destroys the associated canonical path" do
-        expect{subject.delete}.to change{subject.canonical_path}
+        expect{subject.delete!}.to change{subject.canonical_path}
       end
     end
 

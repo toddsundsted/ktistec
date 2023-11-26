@@ -7,7 +7,7 @@ module Ktistec
       @[Insignificant]
       property undone_at : Time?
 
-      def undo
+      def undo!
         self.before_undo if self.responds_to?(:before_undo)
         @undone_at = Time.utc
         update_property(:undone_at, @undone_at) unless new_record?

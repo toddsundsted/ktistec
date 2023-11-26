@@ -437,21 +437,21 @@ Spectator.describe ActivityPub::Actor do
 
     it "does not display a deleted following actor" do
       foo_bar.follow(other, confirmed: true, visible: true).save
-      other.delete
+      other.delete!
       expect(foo_bar.all_following(public: true)).to be_empty
       expect(foo_bar.all_following(public: false)).to be_empty
     end
 
     it "does not display a blocked following actor" do
       foo_bar.follow(other, confirmed: true, visible: true).save
-      other.block
+      other.block!
       expect(foo_bar.all_following(public: true)).to be_empty
       expect(foo_bar.all_following(public: false)).to be_empty
     end
 
     it "does not display a deleted followers actor" do
       other.follow(foo_bar, confirmed: true, visible: true).save
-      other.delete
+      other.delete!
       expect(foo_bar.all_followers(public: true)).to be_empty
       expect(foo_bar.all_followers(public: false)).to be_empty
     end
@@ -473,12 +473,12 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "returns falsey for deleted actors" do
-      other.delete
+      other.delete!
       expect(foo_bar.follows?(other)).to be_falsey
     end
 
     it "returns falsey for blocked actors" do
-      other.block
+      other.block!
       expect(foo_bar.follows?(other)).to be_falsey
     end
   end
@@ -502,12 +502,12 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out deleted posts" do
-      note5.delete
+      note5.delete!
       expect(subject.drafts(1, 2)).to eq([note4, note3])
     end
 
     it "filters out blocked posts" do
-      note5.block
+      note5.block!
       expect(subject.drafts(1, 2)).to eq([note4, note3])
     end
 
@@ -530,8 +530,8 @@ Spectator.describe ActivityPub::Actor do
 
   context "for outbox" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
-    let(deleted) { described_class.new(iri: "https://test.test/#{random_string}").save.delete }
-    let(blocked) { described_class.new(iri: "https://test.test/#{random_string}").save.block }
+    let(deleted) { described_class.new(iri: "https://test.test/#{random_string}").save.delete! }
+    let(blocked) { described_class.new(iri: "https://test.test/#{random_string}").save.block! }
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_outbox(index)
@@ -566,12 +566,12 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "filters out deleted posts" do
-        note5.delete
+        note5.delete!
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
       it "filters out blocked posts" do
-        note5.block
+        note5.block!
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
@@ -586,7 +586,7 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "filters out undone activities" do
-        activity5.undo
+        activity5.undo!
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
@@ -610,12 +610,12 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "returns false if object has been deleted" do
-        note1.delete
+        note1.delete!
         expect(subject.in_outbox?(note1)).to be_falsey
       end
 
       it "returns false if object has been blocked" do
-        note1.block
+        note1.block!
         expect(subject.in_outbox?(note1)).to be_falsey
       end
 
@@ -630,7 +630,7 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "returns false if activity has been undone" do
-        activity5.undo
+        activity5.undo!
         expect(subject.in_outbox?(note5)).to be_falsey
       end
 
@@ -642,8 +642,8 @@ Spectator.describe ActivityPub::Actor do
 
   context "for inbox" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
-    let(deleted) { described_class.new(iri: "https://test.test/#{random_string}").save.delete }
-    let(blocked) { described_class.new(iri: "https://test.test/#{random_string}").save.block }
+    let(deleted) { described_class.new(iri: "https://test.test/#{random_string}").save.delete! }
+    let(blocked) { described_class.new(iri: "https://test.test/#{random_string}").save.block! }
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_inbox(index)
@@ -678,12 +678,12 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "filters out deleted posts" do
-        note5.delete
+        note5.delete!
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
       it "filters out blocked posts" do
-        note5.block
+        note5.block!
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
@@ -698,7 +698,7 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "filters out undone activities" do
-        activity5.undo
+        activity5.undo!
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
       end
 
@@ -722,12 +722,12 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "returns false if object has been deleted" do
-        note1.delete
+        note1.delete!
         expect(subject.in_inbox?(note1)).to be_falsey
       end
 
       it "returns false if object has been blocked" do
-        note1.block
+        note1.block!
         expect(subject.in_inbox?(note1)).to be_falsey
       end
 
@@ -742,7 +742,7 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "returns false if activity has been undone" do
-        activity5.undo
+        activity5.undo!
         expect(subject.in_inbox?(note5)).to be_falsey
       end
 
@@ -767,27 +767,27 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out deleted posts" do
-      note1.delete
+      note1.delete!
       expect(subject.find_activity_for(note1)).to be_nil
     end
 
     it "filters out blocked posts" do
-      note1.block
+      note1.block!
       expect(subject.find_activity_for(note1)).to be_nil
     end
 
     it "filters out posts by deleted actors" do
-      subject.delete
+      subject.delete!
       expect(subject.find_activity_for(note1)).to be_nil
     end
 
     it "filters out posts by blocked actors" do
-      subject.block
+      subject.block!
       expect(subject.find_activity_for(note1)).to be_nil
     end
 
     it "filters out undone activities" do
-      activity1.undo
+      activity1.undo!
       expect(subject.find_activity_for(note1)).to be_nil
     end
 
@@ -832,12 +832,12 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out deleted posts" do
-      post5.delete
+      post5.delete!
       expect(subject.known_posts(1, 2)).to eq([post3, post1])
     end
 
     it "filters out blocked posts" do
-      post5.block
+      post5.block!
       expect(subject.known_posts(1, 2)).to eq([post3, post1])
     end
 
@@ -869,22 +869,22 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out deleted posts" do
-      object5.delete
+      object5.delete!
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
     it "filters out blocked posts" do
-      object5.block
+      object5.block!
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
     it "filters out posts by deleted actors" do
-      actor5.delete
+      actor5.delete!
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
     it "filters out posts by blocked actors" do
-      actor5.block
+      actor5.block!
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
@@ -899,7 +899,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out objects belonging to undone activities" do
-      activity5.undo
+      activity5.undo!
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
@@ -939,22 +939,22 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out deleted posts" do
-      object5.delete
+      object5.delete!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
     end
 
     it "filters out blocked posts" do
-      object5.block
+      object5.block!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
     end
 
     it "filters out posts by deleted actors" do
-      actor5.delete
+      actor5.delete!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
     end
 
     it "filters out posts by blocked actors" do
-      actor5.block
+      actor5.block!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
     end
 
@@ -969,7 +969,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out objects belonging to undone activities" do
-      activity5.undo
+      activity5.undo!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
     end
 
@@ -1016,25 +1016,25 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out deleted posts" do
-      object5.delete
+      object5.delete!
       expect(subject.timeline(page: 1, size: 2)).to eq([timeline4, timeline3])
       expect(subject.timeline(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
-      object5.block
+      object5.block!
       expect(subject.timeline(page: 1, size: 2)).to eq([timeline4, timeline3])
       expect(subject.timeline(since: since)).to eq(4)
     end
 
     it "filters out posts by deleted actors" do
-      actor5.delete
+      actor5.delete!
       expect(subject.timeline(page: 1, size: 2)).to eq([timeline4, timeline3])
       expect(subject.timeline(since: since)).to eq(4)
     end
 
     it "filters out posts by blocked actors" do
-      actor5.block
+      actor5.block!
       expect(subject.timeline(page: 1, size: 2)).to eq([timeline4, timeline3])
       expect(subject.timeline(since: since)).to eq(4)
     end
@@ -1142,7 +1142,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "filters out undone activities" do
-      activity5.undo
+      activity5.undo!
       expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
       expect(subject.notifications(since: since)).to eq(4)
     end
@@ -1153,26 +1153,26 @@ Spectator.describe ActivityPub::Actor do
       before_each { activity5.assign(object_iri: object.iri).save }
 
       it "filters out activities with deleted objects" do
-        object.delete
+        object.delete!
         expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
         expect(subject.notifications(since: since)).to eq(4)
       end
 
       it "filters out activities with blocked objects" do
-        object.block
+        object.block!
         expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
         expect(subject.notifications(since: since)).to eq(4)
       end
     end
 
     it "filters out activities from deleted actors" do
-      actor5.delete
+      actor5.delete!
       expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
       expect(subject.notifications(since: since)).to eq(4)
     end
 
     it "filters out activities from blocked actors" do
-      actor5.block
+      actor5.block!
       expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
       expect(subject.notifications(since: since)).to eq(4)
     end

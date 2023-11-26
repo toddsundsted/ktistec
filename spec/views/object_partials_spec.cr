@@ -204,7 +204,7 @@ Spectator.describe "object partials" do
         end
 
         context "if object is blocked" do
-          before_each { object.block }
+          before_each { object.block! }
 
           it "does not render a button to block" do
             expect(subject.xpath_nodes("//button/text()")).not_to have("Block")

@@ -191,7 +191,7 @@ Spectator.describe "partials" do
       end
 
       context "and actor is blocked" do
-        before_each { actor.block }
+        before_each { actor.block! }
 
         it "renders a button to unblock" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unblock")

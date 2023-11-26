@@ -383,6 +383,8 @@ Spectator.describe ActivityPub::Actor do
   describe "#down?" do
     let_build(:actor)
 
+    before_each { actor.up! }
+
     it "indicates that the actor is down" do
       expect(actor.assign(down_at: Time.utc).down?).to be_true
     end
@@ -394,6 +396,8 @@ Spectator.describe ActivityPub::Actor do
 
   describe "#up?" do
     let_build(:actor)
+
+    before_each { actor.down! }
 
     it "indicates that the actor is not up" do
       expect(actor.assign(down_at: Time.utc).up?).to be_false

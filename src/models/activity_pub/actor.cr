@@ -162,8 +162,20 @@ module ActivityPub
       !!down_at
     end
 
+    def down!
+      @down_at = Time.local
+      update_property(:down_at, @down_at) unless new_record?
+      self
+    end
+
     def up?
       !down_at
+    end
+
+    def up!
+      @down_at = nil
+      update_property(:down_at, @down_at) unless new_record?
+      self
     end
 
     def follow(other : Actor, **options)

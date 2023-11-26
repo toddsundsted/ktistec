@@ -31,6 +31,8 @@ class SearchesController
     when ActivityPub::Actor
       actor = actor_or_object.save
 
+      actor_or_object.up!
+
       ok "searches/actor"
     when ActivityPub::Object
       actor_or_object.attributed_to?(env.account.actor, dereference: true)

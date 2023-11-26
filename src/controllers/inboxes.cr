@@ -104,6 +104,8 @@ class RelationshipsController
 
     # 4
 
+    actor.up!
+
     activity.actor = actor
 
     case activity

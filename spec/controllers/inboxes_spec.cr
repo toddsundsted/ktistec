@@ -357,6 +357,19 @@ Spectator.describe RelationshipsController do
       end
     end
 
+    context "when the other actor is down" do
+      let_build(:activity, actor: other, to: [actor.iri])
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", activity.to_json_ld(true), "application/json") }
+
+      before_each { other.down! }
+
+      it "marks the actor as up" do
+        expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(true)}.
+          to change{other.reload!.up?}.to(true)
+      end
+    end
+
     alias Notification = Relationship::Content::Notification
     alias Timeline = Relationship::Content::Timeline
 

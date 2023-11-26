@@ -61,6 +61,8 @@ Spectator.describe SettingsController do
     context "when authorized" do
       sign_in(as: actor.username)
 
+      let(account) { Global.account.not_nil! }
+
       context "and posting form data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
 
@@ -71,51 +73,51 @@ Spectator.describe SettingsController do
 
         it "updates the name" do
           post "/settings/actor", headers, "name=Foo+Bar&summary="
-          expect(ActivityPub::Actor.find(actor.id).name).to eq("Foo Bar")
+          expect(actor.reload!.name).to eq("Foo Bar")
         end
 
         it "updates the summary" do
           post "/settings/actor", headers, "name=&summary=Foo+Bar"
-          expect(ActivityPub::Actor.find(actor.id).summary).to eq("Foo Bar")
+          expect(actor.reload!.summary).to eq("Foo Bar")
         end
 
         it "updates the timezone" do
           post "/settings/actor", headers, "name=&summary=&timezone=Etc/GMT"
-          expect(Account.find(Global.account.not_nil!.id).timezone).to eq("Etc/GMT")
+          expect(account.reload!.timezone).to eq("Etc/GMT")
         end
 
         context "given an account with a timezone" do
-          before_each { Global.account.not_nil!.assign(timezone: "Etc/UTC").save }
+          before_each { account.assign(timezone: "Etc/UTC").save }
 
           it "does not updates the timezone if blank" do
             expect{post "/settings/actor", headers, "timezone="}.
-              not_to change{Account.find(Global.account.not_nil!.id).timezone}
+              not_to change{account.reload!.timezone}
           end
         end
 
         it "updates the password" do
           expect{post "/settings/actor", headers, "password=foobarbaz1!"}.
-            to change{Account.find(Global.account.not_nil!.id).encrypted_password}
+            to change{account.reload!.encrypted_password}
         end
 
         it "does not update the password if blank" do
           expect{post "/settings/actor", headers, "password="}.
-            not_to change{Account.find(Global.account.not_nil!.id).encrypted_password}
+            not_to change{account.reload!.encrypted_password}
         end
 
         it "does not update the password if empty" do
           expect{post "/settings/actor", headers, "password=%20"}.
-            not_to change{Account.find(Global.account.not_nil!.id).encrypted_password}
+            not_to change{account.reload!.encrypted_password}
         end
 
         it "updates the image" do
           post "/settings/actor", headers, "image=%2Ffoo%2Fbar%2Fbaz"
-          expect(ActivityPub::Actor.find(actor.id).image).to eq("https://test.test/foo/bar/baz")
+          expect(actor.reload!.image).to eq("https://test.test/foo/bar/baz")
         end
 
         it "updates the icon" do
           post "/settings/actor", headers, "icon=%2Ffoo%2Fbar%2Fbaz"
-          expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
+          expect(actor.reload!.icon).to eq("https://test.test/foo/bar/baz")
         end
 
         context "given an actor with an image and an icon" do
@@ -123,18 +125,18 @@ Spectator.describe SettingsController do
 
           it "removes the image" do
             post "/settings/actor", headers, "image="
-            expect(ActivityPub::Actor.find(actor.id).image).to be_nil
+            expect(actor.reload!.image).to be_nil
           end
 
           it "removes the icon" do
             post "/settings/actor", headers, "icon="
-            expect(ActivityPub::Actor.find(actor.id).icon).to be_nil
+            expect(actor.reload!.icon).to be_nil
           end
         end
 
         it "updates the attachments" do
           post "/settings/actor", headers, "attachment_0_name=Blog&attachment_0_value=https://beowulf.example.com"
-          attachments = ActivityPub::Actor.find(actor.id).attachments.not_nil!
+          attachments = actor.reload!.attachments.not_nil!
           expect(attachments.size).to eq(1)
           expect(attachments.first.name).to eq("Blog")
           expect(attachments.first.value).to eq("https://beowulf.example.com")
@@ -151,51 +153,51 @@ Spectator.describe SettingsController do
 
         it "updates the name" do
           post "/settings/actor", headers, %q|{"name":"Foo Bar","summary":""}|
-          expect(ActivityPub::Actor.find(actor.id).name).to eq("Foo Bar")
+          expect(actor.reload!.name).to eq("Foo Bar")
         end
 
         it "updates the summary" do
           post "/settings/actor", headers, %q|{"name":"","summary":"Foo Bar"}|
-          expect(ActivityPub::Actor.find(actor.id).summary).to eq("Foo Bar")
+          expect(actor.reload!.summary).to eq("Foo Bar")
         end
 
         it "updates the timezone" do
           post "/settings/actor", headers, %q|{"name":"","summary":"","timezone":"Etc/GMT"}|
-          expect(Account.find(Global.account.not_nil!.id).timezone).to eq("Etc/GMT")
+          expect(account.reload!.timezone).to eq("Etc/GMT")
         end
 
         context "given an account with a timezone" do
-          before_each { Global.account.not_nil!.assign(timezone: "Etc/UTC").save }
+          before_each { account.assign(timezone: "Etc/UTC").save }
 
           it "does not updates the timezone if blank" do
             expect{post "/settings/actor", headers, %q|{"timezone":""}|}.
-              not_to change{Account.find(Global.account.not_nil!.id).timezone}
+              not_to change{account.reload!.timezone}
           end
         end
 
         it "updates the password" do
           expect{post "/settings/actor", headers, %q|{"password":"foobarbaz1!"}|}.
-            to change{Account.find(Global.account.not_nil!.id).encrypted_password}
+            to change{account.reload!.encrypted_password}
         end
 
         it "does not update the password if blank" do
           expect{post "/settings/actor", headers, %q|{"password":""}|}.
-            not_to change{Account.find(Global.account.not_nil!.id).encrypted_password}
+            not_to change{account.reload!.encrypted_password}
         end
 
         it "does not update the password if null" do
           expect{post "/settings/actor", headers, %q|{"password":null}|}.
-            not_to change{Account.find(Global.account.not_nil!.id).encrypted_password}
+            not_to change{account.reload!.encrypted_password}
         end
 
         it "updates the image" do
           post "/settings/actor", headers, %q|{"image":"/foo/bar/baz"}|
-          expect(ActivityPub::Actor.find(actor.id).image).to eq("https://test.test/foo/bar/baz")
+          expect(actor.reload!.image).to eq("https://test.test/foo/bar/baz")
         end
 
         it "updates the icon" do
           post "/settings/actor", headers, %q|{"icon":"/foo/bar/baz"}|
-          expect(ActivityPub::Actor.find(actor.id).icon).to eq("https://test.test/foo/bar/baz")
+          expect(actor.reload!.icon).to eq("https://test.test/foo/bar/baz")
         end
 
         context "given an actor with an image and an icon" do
@@ -203,18 +205,18 @@ Spectator.describe SettingsController do
 
           it "removes the image" do
             post "/settings/actor", headers, %q|{"image":null}|
-            expect(ActivityPub::Actor.find(actor.id).image).to be_nil
+            expect(actor.reload!.image).to be_nil
           end
 
           it "removes the icon" do
             post "/settings/actor", headers, %q|{"icon":null}|
-            expect(ActivityPub::Actor.find(actor.id).icon).to be_nil
+            expect(actor.reload!.icon).to be_nil
           end
         end
 
         it "updates the attachments" do
           post "/settings/actor", headers, %q|{"attachment_0_name":"Blog","attachment_0_value":"https://beowulf.example.com"}|
-          attachments = ActivityPub::Actor.find(actor.id).attachments.not_nil!
+          attachments = actor.reload!.attachments.not_nil!
           expect(attachments.size).to eq(1)
           expect(attachments.first.name).to eq("Blog")
           expect(attachments.first.value).to eq("https://beowulf.example.com")

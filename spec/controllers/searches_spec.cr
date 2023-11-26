@@ -92,12 +92,12 @@ Spectator.describe SearchesController do
 
           it "updates the actor" do
             expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
+            expect(other.reload!.username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             expect{get "/search?query=foo_bar@remote", JSON_HEADERS}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
+            expect(other.reload!.username).to eq("foo_bar")
           end
 
           it "presents a follow button" do
@@ -121,7 +121,7 @@ Spectator.describe SearchesController do
             end
 
             it "doesn't nuke the public key" do
-              expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{ActivityPub::Actor.find(other.iri).pem_public_key}
+              expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{other.reload!.pem_public_key}
             end
           end
         end
@@ -162,12 +162,12 @@ Spectator.describe SearchesController do
 
           it "updates the actor" do
             expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
+            expect(other.reload!.username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             expect{get "/search?query=https://remote/actors/foo_bar", JSON_HEADERS}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
+            expect(other.reload!.username).to eq("foo_bar")
           end
 
           it "presents a follow button" do
@@ -191,7 +191,7 @@ Spectator.describe SearchesController do
             end
 
             it "doesn't nuke the public key" do
-              expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.find(other.iri).pem_public_key}
+              expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{other.reload!.pem_public_key}
             end
           end
         end
@@ -232,12 +232,12 @@ Spectator.describe SearchesController do
 
           it "updates the object" do
             expect{get "/search?query=https://remote/objects/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Object.count}
-            expect(ActivityPub::Object.find("https://remote/objects/foo_bar").content).to eq("foo bar")
+            expect(object.reload!.content).to eq("foo bar")
           end
 
           it "updates the object" do
             expect{get "/search?query=https://remote/objects/foo_bar", JSON_HEADERS}.not_to change{ActivityPub::Object.count}
-            expect(ActivityPub::Object.find("https://remote/objects/foo_bar").content).to eq("foo bar")
+            expect(object.reload!.content).to eq("foo bar")
           end
 
           it "presents a like button" do

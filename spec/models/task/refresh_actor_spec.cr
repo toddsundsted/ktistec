@@ -128,7 +128,7 @@ Spectator.describe Task::RefreshActor do
 
     it "updates the actor" do
       expect{subject.perform}.
-        to change{ActivityPub::Actor.find(actor.iri).username}
+        to change{actor.reload!.username}
     end
 
     it "documents the error if fetch fails" do

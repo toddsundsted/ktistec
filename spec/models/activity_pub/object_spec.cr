@@ -519,7 +519,7 @@ Spectator.describe ActivityPub::Object do
         before_each { object.assign(in_reply_to_iri: "https://anywhere", thread: "https://anywhere") }
 
         it "sets reply's thread to object's thread" do
-          expect{object.save}.to change{ActivityPub::Object.find(reply.id).thread}.to("https://anywhere")
+          expect{object.save}.to change{reply.reload!.thread}.to("https://anywhere")
         end
       end
     end
@@ -903,7 +903,7 @@ Spectator.describe ActivityPub::Object do
       describe "#save" do
         it "doesn't destroy the canonical path" do
           subject.save
-          expect(described_class.find(subject.id).canonical_path).not_to be_nil
+          expect(subject.reload!.canonical_path).not_to be_nil
         end
       end
     end
@@ -911,12 +911,12 @@ Spectator.describe ActivityPub::Object do
     describe "#canonical_path=" do
       it "assigns a new canonical path" do
         subject.assign(canonical_path: "/foo/bar/baz").save
-        expect(described_class.find(subject.id).canonical_path).to eq("/foo/bar/baz")
+        expect(subject.reload!.canonical_path).to eq("/foo/bar/baz")
       end
 
       it "adds the canonical path to urls" do
         subject.assign(canonical_path: "/foo/bar/baz").save
-        expect(described_class.find(subject.id).urls).to eq(["https://test.test/foo/bar/baz"])
+        expect(subject.reload!.urls).to eq(["https://test.test/foo/bar/baz"])
       end
 
       context "given an existing canonical relationship" do
@@ -924,22 +924,22 @@ Spectator.describe ActivityPub::Object do
 
         it "updates the canonical path" do
           subject.assign(canonical_path: "/blarg/blarg").save
-          expect(described_class.find(subject.id).canonical_path).to eq("/blarg/blarg")
+          expect(subject.reload!.canonical_path).to eq("/blarg/blarg")
         end
 
         it "adds the canonical path to urls" do
           subject.assign(canonical_path: "/blarg/blarg").save
-          expect(described_class.find(subject.id).urls).to eq(["https://test.test/blarg/blarg"])
+          expect(subject.reload!.urls).to eq(["https://test.test/blarg/blarg"])
         end
 
         it "removes the canonical path" do
           subject.assign(canonical_path: nil).save
-          expect(described_class.find(subject.id).canonical_path).to be_nil
+          expect(subject.reload!.canonical_path).to be_nil
         end
 
         it "removes the canonical path from urls" do
           subject.assign(canonical_path: nil).save
-          expect(described_class.find(subject.id).urls).to be_empty
+          expect(subject.reload!.urls).to be_empty
         end
       end
 
@@ -948,7 +948,7 @@ Spectator.describe ActivityPub::Object do
 
         it "adds the canonical URL to the urls" do
           subject.assign(canonical_path: "/foo/bar/baz").save
-          expect(described_class.find(subject.id).urls).to eq(["https://test.test/url", "https://test.test/foo/bar/baz"])
+          expect(subject.reload!.urls).to eq(["https://test.test/url", "https://test.test/foo/bar/baz"])
         end
       end
     end

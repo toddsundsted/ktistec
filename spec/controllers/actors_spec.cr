@@ -682,7 +682,7 @@ Spectator.describe ActorsController do
 
       it "blocks the actor" do
         expect{post "/remote/actors/#{actor.id}/block"}.
-          to change{ActivityPub::Actor.find(actor.id).blocked?}
+          to change{actor.reload!.blocked?}
       end
     end
   end
@@ -712,7 +712,7 @@ Spectator.describe ActorsController do
 
       it "unblocks the actor" do
         expect{post "/remote/actors/#{actor.id}/unblock"}.
-          to change{ActivityPub::Actor.find(actor.id).blocked?}
+          to change{actor.reload!.blocked?}
       end
     end
   end

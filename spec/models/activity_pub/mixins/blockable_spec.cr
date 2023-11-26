@@ -35,7 +35,7 @@ Spectator.describe Ktistec::Model::Blockable do
     end
 
     it "sets blocked_at" do
-      expect{blockable.block!}.to change{BlockableModel.find(blockable.id).blocked_at}
+      expect{blockable.block!}.to change{blockable.reload!.blocked_at}
     end
   end
 
@@ -49,7 +49,7 @@ Spectator.describe Ktistec::Model::Blockable do
     end
 
     it "clears blocked_at" do
-      expect{blockable.unblock!}.to change{BlockableModel.find(blockable.id).blocked_at}
+      expect{blockable.unblock!}.to change{blockable.reload!.blocked_at}
     end
   end
 end

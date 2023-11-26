@@ -86,40 +86,40 @@ Spectator.describe TaskWorker do
 
     it "ensures task is not left running" do
       described_class.new.work(now)
-      expect(Task.find(task5.id).running).to be_false
+      expect(task5.reload!.running).to be_false
     end
 
     it "stores the backtrace when task throws an uncaught exception" do
       task = ExceptionTask.new.schedule
       described_class.new.work(now)
-      expect(Task.find(task.id).backtrace.not_nil!).to have(/Nil assertion failed/)
+      expect(task.reload!.backtrace.not_nil!).to have(/Nil assertion failed/)
     end
 
     it "sets complete to true" do
       described_class.new.work(now)
-      expect(Task.find(task5.id).complete).to be_true
+      expect(task5.reload!.complete).to be_true
     end
 
     it "sets complete to true unless task wasn't scheduled" do
       described_class.new.work(now)
-      expect(Task.find(task1.id).complete).to be_false
+      expect(task1.reload!.complete).to be_false
     end
 
     it "sets complete to true unless task throws an uncaught exception" do
       task = ExceptionTask.new.schedule
       described_class.new.work(now)
-      expect(Task.find(task.id).complete).to be_false
+      expect(task.reload!.complete).to be_false
     end
 
     it "sets complete to true unless task is rescheduled" do
       task = RescheduleTask.new.schedule
       described_class.new.work(now)
-      expect(Task.find(task.id).complete).to be_false
+      expect(task.reload!.complete).to be_false
     end
 
     it "sets last_attempt_at" do
       described_class.new.work(now)
-      expect(Task.find(task5.id).last_attempt_at.not_nil!).to be_close(Time.utc, 10.seconds)
+      expect(task5.reload!.last_attempt_at.not_nil!).to be_close(Time.utc, 10.seconds)
     end
 
     it "returns true if work was done" do

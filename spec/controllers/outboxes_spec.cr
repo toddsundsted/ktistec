@@ -519,7 +519,7 @@ Spectator.describe RelationshipsController do
 
         it "confirms the follow relationship" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Accept&object=#{follow.iri}"}.
-            to change{Relationship.find(relationship.id).confirmed}
+            to change{relationship.reload!.confirmed}
         end
 
         it "creates an accept activity" do
@@ -561,7 +561,7 @@ Spectator.describe RelationshipsController do
 
         it "confirms the follow relationship" do
           expect{post "/actors/#{actor.username}/outbox", headers, "type=Reject&object=#{follow.iri}"}.
-            to change{Relationship.find(relationship.id).confirmed}
+            to change{relationship.reload!.confirmed}
         end
 
         it "creates a reject activity" do

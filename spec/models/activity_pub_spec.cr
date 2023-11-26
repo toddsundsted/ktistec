@@ -40,7 +40,7 @@ Spectator.describe ActivityPub do
 
     it "updates the instance if it already exists" do
       json = %Q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"#{subject.iri}","@type":"Activity","summary":"foo bar baz"}]
-      expect{described_class.from_json_ld(json).save}.to change{ActivityPub::Activity.find(subject.iri).summary}
+      expect{described_class.from_json_ld(json).save}.to change{subject.reload!.summary}
     end
   end
 

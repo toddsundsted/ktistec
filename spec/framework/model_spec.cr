@@ -969,6 +969,32 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe "#update_property" do
+    class UpdatePropertyModel < NotNilModel
+      @@table_name = "not_nil_models"
+
+      def update_property(property, value)
+        super(property, value)
+      end
+    end
+
+    context "given an instance" do
+      subject { UpdatePropertyModel.new(val: "Val") }
+
+      it "raises an error" do
+        expect{subject.update_property(:val, "Its")}.to raise_error(NilAssertionError)
+      end
+
+      context "that has been saved" do
+        before_each { subject.save }
+
+        it "updates the saved property" do
+          expect{subject.update_property(:val, "Its")}.to change{subject.reload!.val}.to("Its")
+        end
+      end
+    end
+  end
+
   describe "#destroy" do
     it "destroys the persisted instance" do
       saved_model = FooBarModel.new.save

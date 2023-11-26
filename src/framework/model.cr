@@ -886,15 +886,15 @@ module Ktistec
               {% name = method.name[13..-1] %}
               {% if method.body[0] == :has_one && method.body[1] == :id %}
                 if (model = {{method.body.last}})
-                  model._update_property({{method.body[2].id.stringify}}, @id)
                   model.{{method.body[2].id}} = @id
+                  model.update_property({{method.body[2].id.stringify}}, @id) unless model.new_record?
                   model.clear!({{method.body[2]}})
                 end
               {% elsif method.body[0] == :has_many && method.body[1] == :id %}
                 if (models = {{method.body.last}})
                   models.each do |model|
-                    model._update_property({{method.body[2].id.stringify}}, @id)
                     model.{{method.body[2].id}} = @id
+                    model.update_property({{method.body[2].id.stringify}}, @id) unless model.new_record?
                     model.clear!({{method.body[2]}})
                   end
                 end
@@ -926,11 +926,12 @@ module Ktistec
         clear!
       end
 
-      getter? destroyed = false
-
-      def _update_property(property, value)
+      protected def update_property(property, value)
+        raise NilAssertionError.new("#{self.class}: id can't be `nil`") if @id.nil?
         self.class.exec("UPDATE #{table_name} SET #{property} = ? WHERE id = ?", value, @id)
       end
+
+      getter? destroyed = false
 
       # Destroys the instance.
       #

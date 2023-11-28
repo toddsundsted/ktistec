@@ -178,15 +178,11 @@ module Ktistec
       # Invokes the protected __for_internal_use_only initializer to
       # instantiate the instance.
       #
-      private def compose(rs : DB::ResultSet, **types : **Type) : self forall Type
+      private def compose(rs : DB::ResultSet, **additional_columns) : self
         {% begin %}
-          options = {
-            {% for name, type in Type %}
-              {{name.stringify}} => rs.read({{type.instance}}),
-            {% end %}
-          }
+          options = rs.read(**persistent_columns.merge(additional_columns))
           {% if @type < Polymorphic %}
-            case options["type"]
+            case options[:type]
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
                 {{subclass}}.allocate.tap do |instance|
@@ -212,7 +208,7 @@ module Ktistec
             Ktistec.database.query(
               query, *args, ((page - 1) * size).to_i, size.to_i + 1
             ) do |rs|
-              rs.each { array << compose(rs, **persistent_columns.merge(additional_columns)) }
+              rs.each { array << compose(rs, **additional_columns) }
             end
             if array.size > size
               array.more = true
@@ -230,7 +226,7 @@ module Ktistec
           Ktistec.database.query_all(
             query, *args_
           ) do |rs|
-            compose(rs, **persistent_columns.merge(additional_columns))
+            compose(rs, **additional_columns)
           end
         end
       end
@@ -240,7 +236,7 @@ module Ktistec
           Ktistec.database.query_all(
             query, args: args
           ) do |rs|
-            compose(rs, **persistent_columns.merge(additional_columns))
+            compose(rs, **additional_columns)
           end
         end
       end
@@ -250,7 +246,7 @@ module Ktistec
           Ktistec.database.query_one(
             query, *args_
           ) do |rs|
-            compose(rs, **persistent_columns.merge(additional_columns))
+            compose(rs, **additional_columns)
           end
         end
       end
@@ -260,7 +256,7 @@ module Ktistec
           Ktistec.database.query_one(
             query, args: args
           ) do |rs|
-            compose(rs, **persistent_columns.merge(additional_columns))
+            compose(rs, **additional_columns)
           end
         end
       end
@@ -402,12 +398,12 @@ module Ktistec
       #
       # Sets instance variables directly to skip side effects.
       #
-      protected def __for_internal_use_only(options : Hash(String, Any)) forall Any
+      protected def __for_internal_use_only(options)
         @changed = Set(Symbol).new
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
-            key = {{v.stringify}}
+            key = {{v.symbolize}}
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(@{{v}}))
                 @{{v}} = o
@@ -959,7 +955,7 @@ module Ktistec
           ) do |rs|
             __for_internal_use_only({
               {% for v in vs %}
-                {{v.stringify}} => rs.read({{v.type}}),
+                {{v}}: rs.read({{v.type}}),
               {% end %}
             })
           end

@@ -31,16 +31,26 @@ module Ktistec
         count == 0
       end
 
+      # Returns table name in format suitable for building queries.
+      #
       def table(as_name = nil)
-        as_name = as_name ? " AS \"#{as_name}\"" : ""
-        "\"#{table_name}\"#{as_name}"
+        as_name = as_name ? %Q| AS "#{as_name}"| : ""
+        %Q|"#{table_name}"#{as_name}|
       end
 
+      # Returns table columns in format suitable for building queries.
+      #
       def columns(prefix = nil)
-        prefix = prefix ? "\"#{prefix}\"." : ""
+        prefix = prefix ? %Q|"#{prefix}".| : ""
         {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)).map(&.stringify.stringify) %}
-          {{vs}}.map { |v| "#{prefix}#{v}" }.join(",")
+          vs = {{ @type.instance_vars.select(&.annotation(Persistent)).map(&.stringify.stringify) }}
+          if self < Polymorphic
+            vs = [%q|"type"|] + vs
+          end
+          if (table_columns = @@table_columns)
+            vs = vs + table_columns.map(&.inspect)
+          end
+          vs.map { |v| "#{prefix}#{v}" }.join(",")
         {% end %}
       end
 
@@ -180,21 +190,42 @@ module Ktistec
       #
       private def compose(rs : DB::ResultSet, **additional_columns) : self
         {% begin %}
-          options = rs.read(**persistent_columns.merge(additional_columns))
+          # for polymorphic models, instantiate the correct subclass
+          # _and_ ensure that any properties defined _only_ on the
+          # subclass are populated.
           {% if @type < Polymorphic %}
-            case options[:type]
+            case rs.read(String) # type
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
+                options = rs.read(**self.persistent_columns.merge(additional_columns)).to_h
+                {% temp = @type.instance_vars.select(&.annotation(Persistent)).map(&.name) %}
+                {% vars = subclass.instance_vars.select(&.annotation(Persistent)).reject { |d| temp.includes?(d.name) } %}
+                {% unless vars.empty? %}
+                  if (table_columns = @@table_columns)
+                    table_columns.each do |column|
+                      case column
+                      {% for v in vars %}
+                      when {{v.stringify}}
+                        options = options.merge({ {{v.name.symbolize}} => rs.read({{v.type}}) })
+                      {% end %}
+                      else
+                        rs.read # discard, it's not a property
+                      end
+                    end
+                  end
+                {% end %}
                 {{subclass}}.allocate.tap do |instance|
                   instance.__for_internal_use_only(options).clear!
                 end
             {% end %}
             else
+              options = rs.read(**self.persistent_columns.merge(additional_columns))
               self.allocate.tap do |instance|
                 instance.__for_internal_use_only(options).clear!
               end
             end
           {% else %}
+            options = rs.read(**self.persistent_columns.merge(additional_columns))
             self.allocate.tap do |instance|
               instance.__for_internal_use_only(options).clear!
             end
@@ -1039,7 +1070,19 @@ module Ktistec
         {% end %}
       end
 
+      # Table name.
+      #
+      # Overrides the name derived from the class name.
+      #
       @@table_name : String?
+
+      # Table columns.
+      #
+      # Specifies columns that should be retrieved in queries by
+      # default that cannot be inferred from annotated instance
+      # variables.
+      #
+      @@table_columns : Array(String)?
     end
 
     macro included

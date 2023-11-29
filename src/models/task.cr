@@ -17,6 +17,14 @@ class Task
 
   @@table_name = "tasks"
 
+  # The table includes a column named "failures" that subclasses can
+  # define and use to serialize information about task failures.
+
+  # The table includes a column named "state" that subclasses can
+  # define and use to serialize information about task state.
+
+  @@table_columns = ["failures", "state"]
+
   @[Persistent]
   property source_iri : String
 
@@ -99,10 +107,4 @@ class Task
   def perform
     raise NotImplementedError.new("Task#perform must be implemented in each subclass")
   end
-
-  # The table includes a column named "failures" that subclasses can
-  # define and use to serialize information about task failures.
-
-  # The table includes a column named "state" that subclasses can
-  # define and use to serialize information about task state.
 end

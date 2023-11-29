@@ -4,9 +4,6 @@ class TaskWorker
   @@channel = Channel(Task).new
 
   def self.start
-    destroy_old_tasks
-    clean_up_running_tasks
-
     self.new.tap do |worker|
       loop do
         # try to keep the task worker alive in the face of critical,

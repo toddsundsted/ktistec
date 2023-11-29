@@ -7,13 +7,15 @@ module Ktistec
       @[Insignificant]
       property blocked_at : Time?
 
-      def block
-        self.class.exec("UPDATE #{table_name} SET blocked_at = ? WHERE id = ?", @blocked_at = Time.utc, @id)
+      def block!
+        @blocked_at = Time.utc
+        update_property(:blocked_at, @blocked_at) unless new_record?
         self
       end
 
-      def unblock
-        self.class.exec("UPDATE #{table_name} SET blocked_at = ? WHERE id = ?", @blocked_at = nil, @id)
+      def unblock!
+        @blocked_at = nil
+        update_property(:blocked_at, @blocked_at) unless new_record?
         self
       end
 

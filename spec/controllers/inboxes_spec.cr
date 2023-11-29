@@ -357,6 +357,19 @@ Spectator.describe RelationshipsController do
       end
     end
 
+    context "when the other actor is down" do
+      let_build(:activity, actor: other, to: [actor.iri])
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", activity.to_json_ld(true), "application/json") }
+
+      before_each { other.down! }
+
+      it "marks the actor as up" do
+        expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(true)}.
+          to change{other.reload!.up?}.to(true)
+      end
+    end
+
     alias Notification = Relationship::Content::Notification
     alias Timeline = Relationship::Content::Timeline
 
@@ -883,14 +896,14 @@ Spectator.describe RelationshipsController do
 
       it "accepts the relationship" do
         expect{post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld}.
-          to change{Relationship.find(relationship.id).confirmed}
+          to change{relationship.reload!.confirmed}
         expect(response.status_code).to eq(200)
       end
 
       it "accepts the relationship even if previously received" do
         accept.save
         expect{post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld}.
-          to change{Relationship.find(relationship.id).confirmed}
+          to change{relationship.reload!.confirmed}
         expect(response.status_code).to eq(200)
       end
     end
@@ -922,14 +935,14 @@ Spectator.describe RelationshipsController do
 
       it "rejects the relationship" do
         expect{post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld}.
-          to change{Relationship.find(relationship.id).confirmed}
+          to change{relationship.reload!.confirmed}
         expect(response.status_code).to eq(200)
       end
 
       it "rejects the relationship even if previously received" do
         reject.save
         expect{post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld}.
-          to change{Relationship.find(relationship.id).confirmed}
+          to change{relationship.reload!.confirmed}
         expect(response.status_code).to eq(200)
       end
     end
@@ -975,7 +988,7 @@ Spectator.describe RelationshipsController do
 
         it "marks the announce as undone" do
           expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
-            to change{UndoneActivity.find(announce.id).undone_at}
+            to change{announce.reload!.undone_at}
         end
 
         it "succeeds" do
@@ -1010,7 +1023,7 @@ Spectator.describe RelationshipsController do
 
         it "marks the like as undone" do
           expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
-            to change{UndoneActivity.find(like.id).undone_at}
+            to change{like.reload!.undone_at}
         end
 
         it "succeeds" do
@@ -1062,7 +1075,7 @@ Spectator.describe RelationshipsController do
 
         it "marks the follow as undone" do
           expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
-            to change{UndoneActivity.find(follow.id).undone_at}
+            to change{follow.reload!.undone_at}
         end
 
         it "succeeds" do
@@ -1102,7 +1115,7 @@ Spectator.describe RelationshipsController do
 
         it "marks the object as deleted" do
           expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
-            to change{DeletedObject.find(note.id).deleted_at}
+            to change{note.reload!.deleted_at}
         end
 
         it "succeeds" do
@@ -1119,7 +1132,7 @@ Spectator.describe RelationshipsController do
 
           it "marks the object as deleted" do
             expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)}.
-              to change{DeletedObject.find(note.id).deleted_at}
+              to change{note.reload!.deleted_at}
           end
 
           it "succeeds" do
@@ -1138,7 +1151,7 @@ Spectator.describe RelationshipsController do
 
           it "marks the object as deleted" do
             expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)}.
-              to change{DeletedObject.find(note.id).deleted_at}
+              to change{note.reload!.deleted_at}
           end
 
           it "succeeds" do
@@ -1176,7 +1189,7 @@ Spectator.describe RelationshipsController do
 
         it "marks the actor as deleted" do
           expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
-            to change{DeletedActor.find(other.id).deleted_at}
+            to change{other.reload!.deleted_at}
         end
 
         it "succeeds" do
@@ -1194,7 +1207,7 @@ Spectator.describe RelationshipsController do
 
           it "marks the actor as deleted" do
             expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
-              to change{DeletedActor.find(other.id).deleted_at}
+              to change{other.reload!.deleted_at}
           end
 
           it "succeeds" do

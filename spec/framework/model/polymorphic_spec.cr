@@ -6,6 +6,11 @@ class PolymorphicModel
   include Ktistec::Model(Polymorphic)
 
   @@table_name = "polymorphic_models"
+
+  @@table_columns = [
+    "state",
+    "stamp"
+  ]
 end
 
 class Subclass1 < PolymorphicModel
@@ -14,12 +19,54 @@ end
 class Subclass2 < PolymorphicModel
 end
 
+class Subclass3 < PolymorphicModel
+  class State
+    include JSON::Serializable
+
+    property id : Int64?
+
+    def_equals_and_hash(id)
+
+    def initialize(@id = nil)
+    end
+  end
+
+  @[Persistent]
+  @[Insignificant]
+  property state : State { State.new }
+end
+
+class Subclass4 < PolymorphicModel
+  class State
+    include JSON::Serializable
+
+    property str : String?
+
+    def_equals_and_hash(str)
+
+    def initialize(@str = nil)
+    end
+  end
+
+  @[Persistent]
+  @[Insignificant]
+  property state : State { State.new }
+end
+
+class Subclass5 < PolymorphicModel
+  @[Persistent]
+  @[Insignificant]
+  property stamp : Time { Time.utc }
+end
+
 Spectator.describe Ktistec::Model::Polymorphic do
   before_each do
     Ktistec.database.exec <<-SQL
       CREATE TABLE polymorphic_models (
         id integer PRIMARY KEY AUTOINCREMENT,
-        type varchar(32) NOT NULL
+        type varchar(32) NOT NULL,
+        state text,
+        stamp datetime
       )
     SQL
   end
@@ -35,12 +82,18 @@ Spectator.describe Ktistec::Model::Polymorphic do
     end
   end
 
+  let(state3) { Subclass3::State.new(9999_i64) }
+  let(state4) { Subclass4::State.new("test") }
+  let(stamp) { 5.days.ago.to_utc }
   let!(subclass1) { Subclass1.new.save }
   let!(subclass2) { Subclass2.new.save }
+  let!(subclass3) { Subclass3.new(state: state3).save }
+  let!(subclass4) { Subclass4.new(state: state4).save }
+  let!(subclass5) { Subclass5.new(stamp: stamp).save }
 
   describe ".count" do
     it "returns the count" do
-      expect(PolymorphicModel.count).to eq(2)
+      expect(PolymorphicModel.count).to eq(5)
       expect(PolymorphicModel.count(id: subclass2.id)).to eq(1)
     end
 
@@ -52,7 +105,7 @@ Spectator.describe Ktistec::Model::Polymorphic do
 
   describe ".all" do
     it "finds all instances" do
-      expect(PolymorphicModel.all).to eq([subclass1, subclass2])
+      expect(PolymorphicModel.all).to eq([subclass1, subclass2, subclass3, subclass4, subclass5])
     end
 
     it "finds all instances of subclass" do
@@ -61,24 +114,24 @@ Spectator.describe Ktistec::Model::Polymorphic do
   end
 
   describe ".where" do
-    it "finds all instances" do
+    it "finds all matching instances" do
       expect(PolymorphicModel.where(id: subclass2.id)).to eq([subclass2])
       expect(PolymorphicModel.where("id = ?", subclass2.id)).to eq([subclass2])
     end
 
-    it "finds all instances of subclass" do
+    it "does not find any matching instances of subclass" do
       expect(Subclass1.where(id: subclass2.id)).to be_empty
       expect(Subclass1.where("id = ?", subclass2.id)).to be_empty
     end
   end
 
   describe ".find" do
-    it "finds the instance" do
+    it "finds the matching instance" do
       expect(PolymorphicModel.find(subclass1.id)).to be_a(Subclass1)
       expect(PolymorphicModel.find(id: subclass1.id)).to be_a(Subclass1)
     end
 
-    it "finds the instance of subclass" do
+    it "finds the matching instance of subclass" do
       expect(Subclass1.find(subclass1.id)).to be_a(Subclass1)
       expect(Subclass1.find(id: subclass1.id)).to be_a(Subclass1)
     end
@@ -86,6 +139,21 @@ Spectator.describe Ktistec::Model::Polymorphic do
     it "returns the correct subclass" do
       expect(PolymorphicModel.find(subclass1.id, as: Subclass1)).to be_a(Subclass1)
       expect(PolymorphicModel.find(id: subclass1.id, as: Subclass1)).to be_a(Subclass1)
+    end
+
+    it "populates the uninherited properties of subclass" do
+      expect(PolymorphicModel.find(subclass3.id).as(Subclass3).state).to eq(state3)
+      expect(PolymorphicModel.find(id: subclass3.id).as(Subclass3).state).to eq(state3)
+    end
+
+    it "populates the uninherited properties of subclass" do
+      expect(PolymorphicModel.find(subclass4.id).as(Subclass4).state).to eq(state4)
+      expect(PolymorphicModel.find(id: subclass4.id).as(Subclass4).state).to eq(state4)
+    end
+
+    it "populates the uninherited properties of subclass" do
+      expect(PolymorphicModel.find(subclass5.id).as(Subclass5).stamp).to be_within(1.second).of(stamp)
+      expect(PolymorphicModel.find(id: subclass5.id).as(Subclass5).stamp).to be_within(1.second).of(stamp)
     end
 
     it "raises an error" do

@@ -47,7 +47,7 @@ Spectator.describe Relationship::Social::Follow do
       end
 
       context "that has been undone" do
-        before_each { follow.undo }
+        before_each { follow.undo! }
 
         it "returns nil" do
           expect(follow_relationship.activity?).to be_nil

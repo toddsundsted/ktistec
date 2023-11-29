@@ -49,22 +49,22 @@ Spectator.describe Tag::Mention do
     end
 
     it "filters out deleted objects" do
-      object5.delete
+      object5.delete!
       expect(described_class.all_objects("foo@remote")).not_to have(object5)
     end
 
     it "filters out blocked objects" do
-      object5.block
+      object5.block!
       expect(described_class.all_objects("foo@remote")).not_to have(object5)
     end
 
     it "filters out objects with deleted attributed to actors" do
-      author.delete
+      author.delete!
       expect(described_class.all_objects("foo@remote")).to be_empty
     end
 
     it "filters out objects with blocked attributed to actors" do
-      author.block
+      author.block!
       expect(described_class.all_objects("foo@remote")).to be_empty
     end
 
@@ -97,22 +97,22 @@ Spectator.describe Tag::Mention do
     end
 
     it "filters out deleted objects" do
-      object5.delete
+      object5.delete!
       expect(described_class.count_objects("foo@remote")).to eq(4)
     end
 
     it "filters out blocked objects" do
-      object5.block
+      object5.block!
       expect(described_class.count_objects("foo@remote")).to eq(4)
     end
 
     it "filters out objects with deleted attributed to actors" do
-      author.delete
+      author.delete!
       expect(described_class.count_objects("foo@remote")).to eq(0)
     end
 
     it "filters out objects with blocked attributed to actors" do
-      author.block
+      author.block!
       expect(described_class.count_objects("foo@remote")).to eq(0)
     end
 

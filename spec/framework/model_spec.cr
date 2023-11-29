@@ -190,6 +190,35 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe "#to_sentence" do
+    class ToSentence
+      include Ktistec::Model(Nil)
+
+      # override private visibility
+      def to_sentence(type)
+        super(type)
+      end
+    end
+
+    subject { ToSentence.new }
+
+    it "converts the type to a string" do
+      expect(subject.to_sentence(String)).to eq("String")
+    end
+
+    it "converts the type to a string" do
+      expect(subject.to_sentence(Array(String))).to eq("Array(String)")
+    end
+
+    it "converts the types to a string" do
+      expect(subject.to_sentence(String | Nil)).to match(/^\w+ or \w+$/)
+    end
+
+    it "converts the types to a string" do
+      expect(subject.to_sentence(String | Float64 | Int32 | Nil)).to match(/^\w+, \w+, \w+ or \w+$/)
+    end
+  end
+
   describe ".new" do
     it "creates a new instance" do
       expect(FooBarModel.new.foo).to eq("Foo")
@@ -940,6 +969,32 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe "#update_property" do
+    class UpdatePropertyModel < NotNilModel
+      @@table_name = "not_nil_models"
+
+      def update_property(property, value)
+        super(property, value)
+      end
+    end
+
+    context "given an instance" do
+      subject { UpdatePropertyModel.new(val: "Val") }
+
+      it "raises an error" do
+        expect{subject.update_property(:val, "Its")}.to raise_error(NilAssertionError)
+      end
+
+      context "that has been saved" do
+        before_each { subject.save }
+
+        it "updates the saved property" do
+          expect{subject.update_property(:val, "Its")}.to change{subject.reload!.val}.to("Its")
+        end
+      end
+    end
+  end
+
   describe "#destroy" do
     it "destroys the persisted instance" do
       saved_model = FooBarModel.new.save
@@ -1214,25 +1269,25 @@ Spectator.describe Ktistec::Model do
 
       it "finds a deleted instance if explicitly specified" do
         not_nil.assign(foo_bar: foo_bar).save
-        foo_bar.dup.delete
+        foo_bar.dup.delete!
         expect(NotNilModel.find(not_nil.id).foo_bar?(include_deleted: true)).to eq(foo_bar)
       end
 
       it "finds a deleted instance if explicitly specified" do
         not_nil.assign(foo_bar: foo_bar).save
-        foo_bar.dup.delete
+        foo_bar.dup.delete!
         expect(NotNilModel.find(not_nil.id).foo_bar(include_deleted: true)).to eq(foo_bar)
       end
 
       it "finds an undone instance if explicitly specified" do
         not_nil.assign(foo_bar: foo_bar).save
-        foo_bar.dup.undo
+        foo_bar.dup.undo!
         expect(NotNilModel.find(not_nil.id).foo_bar?(include_undone: true)).to eq(foo_bar)
       end
 
       it "finds an undone instance if explicitly specified" do
         not_nil.assign(foo_bar: foo_bar).save
-        foo_bar.dup.undo
+        foo_bar.dup.undo!
         expect(NotNilModel.find(not_nil.id).foo_bar(include_undone: true)).to eq(foo_bar)
       end
 
@@ -1289,20 +1344,20 @@ Spectator.describe Ktistec::Model do
       it "does not save through a deleted instance" do
         not_nil.assign(foo_bar_models: [foo_bar])
         new_foo_bar_model = FooBarModel.new(not_nil_model: not_nil).save
-        not_nil.delete
+        not_nil.delete!
         foo_bar.foo = "Changed"
         expect{new_foo_bar_model.save}.not_to change{FooBarModel.count(foo: "Changed")}
       end
 
       it "includes a deleted instance if explicitly specified" do
         not_nil.assign(foo_bar_models: [foo_bar]).save
-        foo_bar.dup.delete
+        foo_bar.dup.delete!
         expect(NotNilModel.find(not_nil.id).foo_bar_models(include_deleted: true)).to eq([foo_bar])
       end
 
       it "includes an undone instance if explicitly specified" do
         not_nil.assign(foo_bar_models: [foo_bar]).save
-        foo_bar.dup.undo
+        foo_bar.dup.undo!
         expect(NotNilModel.find(not_nil.id).foo_bar_models(include_undone: true)).to eq([foo_bar])
       end
     end
@@ -1347,32 +1402,32 @@ Spectator.describe Ktistec::Model do
       it "does not save through a deleted instance" do
         foo_bar.assign(not_nil: not_nil)
         new_not_nil_model = NotNilModel.new(val: "Val", foo_bar: foo_bar).save
-        foo_bar.delete
+        foo_bar.delete!
         not_nil.key = "Changed"
         expect{new_not_nil_model.save}.not_to change{NotNilModel.count(key: "Changed")}
       end
 
       it "finds a deleted instance if explicitly specified" do
         foo_bar.assign(not_nil_model: not_nil).save
-        not_nil.dup.delete
+        not_nil.dup.delete!
         expect(FooBarModel.find(foo_bar.id).not_nil_model?(include_deleted: true)).to eq(not_nil)
       end
 
       it "finds a deleted instance if explicitly specified" do
         foo_bar.assign(not_nil_model: not_nil).save
-        not_nil.dup.delete
+        not_nil.dup.delete!
         expect(FooBarModel.find(foo_bar.id).not_nil_model(include_deleted: true)).to eq(not_nil)
       end
 
       it "finds an undone instance if explicitly specified" do
         foo_bar.assign(not_nil_model: not_nil).save
-        not_nil.dup.undo
+        not_nil.dup.undo!
         expect(FooBarModel.find(foo_bar.id).not_nil_model?(include_undone: true)).to eq(not_nil)
       end
 
       it "finds an undone instance if explicitly specified" do
         foo_bar.assign(not_nil_model: not_nil).save
-        not_nil.dup.undo
+        not_nil.dup.undo!
         expect(FooBarModel.find(foo_bar.id).not_nil_model(include_undone: true)).to eq(not_nil)
       end
     end

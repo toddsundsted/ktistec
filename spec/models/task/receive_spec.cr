@@ -178,8 +178,8 @@ Spectator.describe Task::Receive do
 
             context "when followers have been deleted" do
               before_each do
-                local_recipient.delete
-                remote_recipient.delete
+                local_recipient.delete!
+                remote_recipient.delete!
               end
 
               it "does not include the recipients" do

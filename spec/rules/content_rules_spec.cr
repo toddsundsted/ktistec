@@ -661,7 +661,7 @@ Spectator.describe ContentRules do
       before_each do
         undo.assign(object: announce).save
         put_in_notifications(owner, announce)
-        announce.undo
+        announce.undo!
       end
 
       pre_condition do
@@ -879,7 +879,7 @@ Spectator.describe ContentRules do
             end
 
             context "that has been undone" do
-              before_each { another.undo }
+              before_each { another.undo! }
 
               it "removes the object from the timeline" do
                 run(owner, undo)
@@ -919,7 +919,7 @@ Spectator.describe ContentRules do
     context "given a timeline with an object that has been deleted" do
       before_each do
         put_in_timeline(owner, object)
-        object.delete
+        object.delete!
       end
 
       pre_condition do

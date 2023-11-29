@@ -454,22 +454,22 @@ Spectator.describe ObjectsController do
 
       it "changes the content" do
         expect{post "/objects/#{draft.uid}", FORM_DATA, "content=foo+bar"}.
-          to change{ActivityPub::Object.find(draft.id).content}
+          to change{draft.reload!.content}
       end
 
       it "changes the content" do
         expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar"}|}.
-          to change{ActivityPub::Object.find(draft.id).content}
+          to change{draft.reload!.content}
       end
 
       it "updates the canonical path" do
         expect{post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=%2Ffoo%2Fbar"}.
-          to change{ActivityPub::Object.find(draft.id).canonical_path}
+          to change{draft.reload!.canonical_path}
       end
 
       it "updates the canonical path" do
         expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"/foo/bar"}|}.
-          to change{ActivityPub::Object.find(draft.id).canonical_path}
+          to change{draft.reload!.canonical_path}
       end
 
       context "when validation fails" do
@@ -886,7 +886,7 @@ Spectator.describe ObjectsController do
 
       it "blocks the object" do
         expect{post "/remote/objects/#{remote.id}/block"}.
-          to change{ActivityPub::Object.find(remote.id).blocked?}
+          to change{remote.reload!.blocked?}
       end
 
       it "returns 404 if object does not exist" do
@@ -914,7 +914,7 @@ Spectator.describe ObjectsController do
 
       it "unblocks the object" do
         expect{post "/remote/objects/#{remote.id}/unblock"}.
-          to change{ActivityPub::Object.find(remote.id).blocked?}
+          to change{remote.reload!.blocked?}
       end
 
       it "returns 404 if object does not exist" do

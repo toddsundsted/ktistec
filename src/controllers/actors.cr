@@ -118,7 +118,7 @@ class ActorsController
       not_found
     end
 
-    actor.block
+    actor.block!
 
     redirect back_path
   end
@@ -128,7 +128,7 @@ class ActorsController
       not_found
     end
 
-    actor.unblock
+    actor.unblock!
 
     redirect back_path
   end

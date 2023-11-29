@@ -25,31 +25,31 @@ Spectator.describe Ktistec::Model::Blockable do
     end
   end
 
-  describe "#block" do
+  describe "#block!" do
     let!(blockable) { BlockableModel.new.save }
 
     pre_condition { expect(blockable.blocked?).to be_false }
 
     it "blocks the instance" do
-      expect{blockable.block}.to change{blockable.blocked?}
+      expect{blockable.block!}.to change{blockable.blocked?}
     end
 
     it "sets blocked_at" do
-      expect{blockable.block}.to change{BlockableModel.find(blockable.id).blocked_at}
+      expect{blockable.block!}.to change{blockable.reload!.blocked_at}
     end
   end
 
-  describe "#unblock" do
+  describe "#unblock!" do
     let!(blockable) { BlockableModel.new(blocked_at: Time.utc).save }
 
     pre_condition { expect(blockable.blocked?).to be_true }
 
     it "unblocks the instance" do
-      expect{blockable.unblock}.to change{blockable.blocked?}
+      expect{blockable.unblock!}.to change{blockable.blocked?}
     end
 
     it "clears blocked_at" do
-      expect{blockable.unblock}.to change{BlockableModel.find(blockable.id).blocked_at}
+      expect{blockable.unblock!}.to change{blockable.reload!.blocked_at}
     end
   end
 end

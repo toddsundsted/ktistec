@@ -7,9 +7,10 @@ module Ktistec
       @[Insignificant]
       property undone_at : Time?
 
-      def undo
+      def undo!
         self.before_undo if self.responds_to?(:before_undo)
-        self.class.exec("UPDATE #{table_name} SET undone_at = ? WHERE id = ?", @undone_at = Time.utc, @id)
+        @undone_at = Time.utc
+        update_property(:undone_at, @undone_at) unless new_record?
         self.after_undo if self.responds_to?(:after_undo)
         self
       end

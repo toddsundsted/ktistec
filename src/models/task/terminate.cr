@@ -38,12 +38,12 @@ class Task
           task = Task::Deliver.new(sender: subject, activity: object.make_delete_activity, running: true).save
           perform_once_now(task)
         end
-        object.delete
+        object.delete!
       else
         Log.info { "Task::Terminate: deleting #{subject.iri}" }
         task = Task::Deliver.new(sender: subject, activity: subject.make_delete_activity, running: true).save
         perform_once_now(task)
-        subject.delete
+        subject.delete!
       end
     end
   end

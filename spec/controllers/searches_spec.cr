@@ -50,7 +50,7 @@ Spectator.describe SearchesController do
 
       before_each { HTTP::Client.objects << object.assign(content: "foo bar") }
 
-      context "given a handle" do
+      context "given a handle to an actor" do
         it "retrieves and saves an actor" do
           expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
           expect(response.status_code).to eq(200)
@@ -87,17 +87,17 @@ Spectator.describe SearchesController do
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
 
-        context "of an existing actor" do
+        context "that already exists" do
           before_each { other.assign(username: "bar_foo").save }
 
           it "updates the actor" do
             expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
+            expect(other.reload!.username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             expect{get "/search?query=foo_bar@remote", JSON_HEADERS}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
+            expect(other.reload!.username).to eq("foo_bar")
           end
 
           it "presents a follow button" do
@@ -121,17 +121,25 @@ Spectator.describe SearchesController do
             end
 
             it "doesn't nuke the public key" do
-              expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{ActivityPub::Actor.find(other.iri).pem_public_key}
+              expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{other.reload!.pem_public_key}
             end
           end
         end
 
-        context "of a local actor" do
+        context "that is local" do
           before_each { other.assign(iri: "https://test.test/actors/foo_bar").save }
 
           it "doesn't fetch the actor" do
             expect{get "/search?query=foo_bar@test.test", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
             expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
+          end
+        end
+
+        context "that is down" do
+          before_each { other.save.down! }
+
+          it "marks the actor as up" do
+            expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.to change{other.reload!.up?}.to(true)
           end
         end
       end
@@ -149,17 +157,17 @@ Spectator.describe SearchesController do
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
 
-        context "of an existing actor" do
+        context "that already exists" do
           before_each { other.assign(username: "bar_foo").save }
 
           it "updates the actor" do
             expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
+            expect(other.reload!.username).to eq("foo_bar")
           end
 
           it "updates the actor" do
             expect{get "/search?query=https://remote/actors/foo_bar", JSON_HEADERS}.not_to change{ActivityPub::Actor.count}
-            expect(ActivityPub::Actor.find("https://remote/actors/foo_bar").username).to eq("foo_bar")
+            expect(other.reload!.username).to eq("foo_bar")
           end
 
           it "presents a follow button" do
@@ -183,17 +191,25 @@ Spectator.describe SearchesController do
             end
 
             it "doesn't nuke the public key" do
-              expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.find(other.iri).pem_public_key}
+              expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{other.reload!.pem_public_key}
             end
           end
         end
 
-        context "of a local actor" do
+        context "that is local" do
           before_each { other.assign(iri: "https://test.test/actors/foo_bar").save }
 
           it "doesn't fetch the actor" do
             expect{get "/search?query=https://test.test/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
             expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
+          end
+        end
+
+        context "that is down" do
+          before_each { other.save.down! }
+
+          it "marks the actor as up" do
+            expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.to change{other.reload!.up?}.to(true)
           end
         end
       end
@@ -216,12 +232,12 @@ Spectator.describe SearchesController do
 
           it "updates the object" do
             expect{get "/search?query=https://remote/objects/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Object.count}
-            expect(ActivityPub::Object.find("https://remote/objects/foo_bar").content).to eq("foo bar")
+            expect(object.reload!.content).to eq("foo bar")
           end
 
           it "updates the object" do
             expect{get "/search?query=https://remote/objects/foo_bar", JSON_HEADERS}.not_to change{ActivityPub::Object.count}
-            expect(ActivityPub::Object.find("https://remote/objects/foo_bar").content).to eq("foo bar")
+            expect(object.reload!.content).to eq("foo bar")
           end
 
           it "presents a like button" do

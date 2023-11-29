@@ -24,6 +24,8 @@ class Task
     property failures : Array(Failure) { [] of Failure }
 
     def transfer(activity, from transferer, to recipients)
+      actors = {} of String => ActivityPub::Actor
+
       recipients.each do |recipient|
         unless (actor = ActivityPub::Actor.dereference?(transferer, recipient))
           message = "recipient does not exist: #{recipient}"
@@ -31,6 +33,11 @@ class Task
           Log.info { message }
           next
         end
+
+        actors[recipient] = actor
+
+        next if actor.down?
+
         if transferer == actor
           # no-op
         elsif (inbox = actor.inbox)
@@ -52,6 +59,35 @@ class Task
           message = "recipient doesn't have an inbox: #{recipient}"
           failures << Failure.new(recipient, message)
           Log.info { message }
+        end
+      end
+
+      unless failures.empty? || actors.empty?
+        account = Account.find(iri: transferer.iri)
+        timezone = Time::Location.load(account.timezone)
+
+        conditions = "running = 0 AND complete = 1 AND failures != '[]' AND created_at > datetime('now', '-10 days')"
+
+        days = self.class.where(conditions)
+          .group_by do |task|
+            task.created_at.in(timezone).at_beginning_of_day
+          end
+
+        # for each recent failing recipient, count up the number of
+        # recent days past with failures for that recipient. if there
+        # are more than two, mark the recipient as down.
+
+        failures.map(&.recipient).each do |recipient|
+          count = days
+            .transform_values do |tasks|
+              tasks.any?(&.failures.any?(&.recipient.==(recipient)))
+            end
+            .reduce(0) do |count, (_, failure)|
+              failure ? count + 1 : count
+            end
+          if count > 2
+            actors[recipient]?.try(&.down!)
+          end
         end
       end
     end

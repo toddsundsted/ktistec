@@ -31,16 +31,26 @@ module Ktistec
         count == 0
       end
 
+      # Returns table name in format suitable for building queries.
+      #
       def table(as_name = nil)
-        as_name = as_name ? " AS \"#{as_name}\"" : ""
-        "\"#{table_name}\"#{as_name}"
+        as_name = as_name ? %Q| AS "#{as_name}"| : ""
+        %Q|"#{table_name}"#{as_name}|
       end
 
+      # Returns table columns in format suitable for building queries.
+      #
       def columns(prefix = nil)
-        prefix = prefix ? "\"#{prefix}\"." : ""
+        prefix = prefix ? %Q|"#{prefix}".| : ""
         {% begin %}
-          {% vs = @type.instance_vars.select(&.annotation(Persistent)).map(&.stringify.stringify) %}
-          {{vs}}.map { |v| "#{prefix}#{v}" }.join(",")
+          vs = {{ @type.instance_vars.select(&.annotation(Persistent)).map(&.stringify.stringify) }}
+          if self < Polymorphic
+            vs = [%q|"type"|] + vs
+          end
+          if (table_columns = @@table_columns)
+            vs = vs + table_columns.map(&.inspect)
+          end
+          vs.map { |v| "#{prefix}#{v}" }.join(",")
         {% end %}
       end
 
@@ -178,27 +188,44 @@ module Ktistec
       # Invokes the protected __for_internal_use_only initializer to
       # instantiate the instance.
       #
-      private def compose(rs : DB::ResultSet, **types : **Type) : self forall Type
+      private def compose(rs : DB::ResultSet, **additional_columns) : self
         {% begin %}
-          options = {
-            {% for name, type in Type %}
-              {{name.stringify}} => rs.read({{type.instance}}),
-            {% end %}
-          }
+          # for polymorphic models, instantiate the correct subclass
+          # _and_ ensure that any properties defined _only_ on the
+          # subclass are populated.
           {% if @type < Polymorphic %}
-            case options["type"]
+            case rs.read(String) # type
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
+                options = rs.read(**self.persistent_columns.merge(additional_columns)).to_h
+                {% temp = @type.instance_vars.select(&.annotation(Persistent)).map(&.name) %}
+                {% vars = subclass.instance_vars.select(&.annotation(Persistent)).reject { |d| temp.includes?(d.name) } %}
+                {% unless vars.empty? %}
+                  if (table_columns = @@table_columns)
+                    table_columns.each do |column|
+                      case column
+                      {% for v in vars %}
+                      when {{v.stringify}}
+                        options = options.merge({ {{v.name.symbolize}} => rs.read({{v.type}}) })
+                      {% end %}
+                      else
+                        rs.read # discard, it's not a property
+                      end
+                    end
+                  end
+                {% end %}
                 {{subclass}}.allocate.tap do |instance|
                   instance.__for_internal_use_only(options).clear!
                 end
             {% end %}
             else
+              options = rs.read(**self.persistent_columns.merge(additional_columns))
               self.allocate.tap do |instance|
                 instance.__for_internal_use_only(options).clear!
               end
             end
           {% else %}
+            options = rs.read(**self.persistent_columns.merge(additional_columns))
             self.allocate.tap do |instance|
               instance.__for_internal_use_only(options).clear!
             end
@@ -212,7 +239,7 @@ module Ktistec
             Ktistec.database.query(
               query, *args, ((page - 1) * size).to_i, size.to_i + 1
             ) do |rs|
-              rs.each { array << compose(rs, **persistent_columns.merge(additional_columns)) }
+              rs.each { array << compose(rs, **additional_columns) }
             end
             if array.size > size
               array.more = true
@@ -230,7 +257,7 @@ module Ktistec
           Ktistec.database.query_all(
             query, *args_
           ) do |rs|
-            compose(rs, **persistent_columns.merge(additional_columns))
+            compose(rs, **additional_columns)
           end
         end
       end
@@ -240,7 +267,7 @@ module Ktistec
           Ktistec.database.query_all(
             query, args: args
           ) do |rs|
-            compose(rs, **persistent_columns.merge(additional_columns))
+            compose(rs, **additional_columns)
           end
         end
       end
@@ -250,7 +277,7 @@ module Ktistec
           Ktistec.database.query_one(
             query, *args_
           ) do |rs|
-            compose(rs, **persistent_columns.merge(additional_columns))
+            compose(rs, **additional_columns)
           end
         end
       end
@@ -260,7 +287,7 @@ module Ktistec
           Ktistec.database.query_one(
             query, args: args
           ) do |rs|
-            compose(rs, **persistent_columns.merge(additional_columns))
+            compose(rs, **additional_columns)
           end
         end
       end
@@ -402,12 +429,12 @@ module Ktistec
       #
       # Sets instance variables directly to skip side effects.
       #
-      protected def __for_internal_use_only(options : Hash(String, Any)) forall Any
+      protected def __for_internal_use_only(options)
         @changed = Set(Symbol).new
         {% begin %}
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
-            key = {{v.stringify}}
+            key = {{v.symbolize}}
             if options.has_key?(key)
               if (o = options[key]).is_a?(typeof(@{{v}}))
                 @{{v}} = o
@@ -420,7 +447,9 @@ module Ktistec
       end
 
       private def to_sentence(type)
-        Util.to_sentence(type.to_s.strip("()").split("|").map(&.strip), last_word_connector: " or ")
+        type = type.to_s
+        types = (type.match(/^\((.+)\)$/).try(&.[1]) || type).split("|").map(&.strip)
+        Util.to_sentence(types, last_word_connector: " or ")
       end
 
       # Initializes the new instance.
@@ -884,15 +913,15 @@ module Ktistec
               {% name = method.name[13..-1] %}
               {% if method.body[0] == :has_one && method.body[1] == :id %}
                 if (model = {{method.body.last}})
-                  model._update_property({{method.body[2].id.stringify}}, @id)
                   model.{{method.body[2].id}} = @id
+                  model.update_property({{method.body[2].id.stringify}}, @id) unless model.new_record?
                   model.clear!({{method.body[2]}})
                 end
               {% elsif method.body[0] == :has_many && method.body[1] == :id %}
                 if (models = {{method.body.last}})
                   models.each do |model|
-                    model._update_property({{method.body[2].id.stringify}}, @id)
                     model.{{method.body[2].id}} = @id
+                    model.update_property({{method.body[2].id.stringify}}, @id) unless model.new_record?
                     model.clear!({{method.body[2]}})
                   end
                 end
@@ -924,11 +953,12 @@ module Ktistec
         clear!
       end
 
-      getter? destroyed = false
-
-      def _update_property(property, value)
+      protected def update_property(property, value)
+        raise NilAssertionError.new("#{self.class}: id can't be `nil`") if @id.nil?
         self.class.exec("UPDATE #{table_name} SET #{property} = ? WHERE id = ?", value, @id)
       end
+
+      getter? destroyed = false
 
       # Destroys the instance.
       #
@@ -956,7 +986,7 @@ module Ktistec
           ) do |rs|
             __for_internal_use_only({
               {% for v in vs %}
-                {{v.stringify}} => rs.read({{v.type}}),
+                {{v}}: rs.read({{v.type}}),
               {% end %}
             })
           end
@@ -1040,7 +1070,19 @@ module Ktistec
         {% end %}
       end
 
+      # Table name.
+      #
+      # Overrides the name derived from the class name.
+      #
       @@table_name : String?
+
+      # Table columns.
+      #
+      # Specifies columns that should be retrieved in queries by
+      # default that cannot be inferred from annotated instance
+      # variables.
+      #
+      @@table_columns : Array(String)?
     end
 
     macro included

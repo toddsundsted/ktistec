@@ -40,9 +40,14 @@ class Task
           Relationship.where("type IN (#{types}) ORDER BY id")
         end
 
-      counts = items.reduce(Hash(Key, Int32).new(0)) do |counts, relationship|
-        account = Account.find(iri: relationship.from_iri)
+      account_timezone_cache = Hash(String, {Account, Time::Location}).new do |hash, iri|
+        account = Account.find(iri: iri)
         timezone = Time::Location.load(account.timezone)
+        hash[iri] = {account, timezone}
+      end
+
+      counts = items.reduce(Hash(Key, Int32).new(0)) do |counts, relationship|
+        account, timezone = account_timezone_cache[relationship.from_iri]
         key = Key.new(
           "#{relationship.type.split("::").last.downcase}-#{account.username}",
           relationship.created_at.in(timezone).at_beginning_of_day

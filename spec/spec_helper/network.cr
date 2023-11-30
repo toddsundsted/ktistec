@@ -16,7 +16,7 @@ class HTTP::Client
   class Cache
     @cache = Hash(String, String).new
 
-    delegate :[]?, :[]=, :clear, to: @cache
+    delegate :[]?, :[]=, :clear, :delete, to: @cache
 
     def <<(object)
       if object.responds_to?(:iri) && object.responds_to?(:to_json_ld)

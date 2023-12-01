@@ -197,38 +197,51 @@ module Ktistec
             case rs.read(String) # type
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
-                options = rs.read(**self.persistent_columns.merge(additional_columns)).to_h
-                {% temp = @type.instance_vars.select(&.annotation(Persistent)).map(&.name) %}
-                {% vars = subclass.instance_vars.select(&.annotation(Persistent)).reject { |d| temp.includes?(d.name) } %}
-                {% unless vars.empty? %}
-                  if (table_columns = @@table_columns)
-                    table_columns.each do |column|
-                      case column
-                      {% for v in vars %}
-                      when {{v.stringify}}
-                        options = options.merge({ {{v.name.symbolize}} => rs.read({{v.type}}) })
-                      {% end %}
-                      else
-                        rs.read # discard, it's not a property
+                {% if subclass.abstract? %}
+                  raise TypeError.new("cannot instantiate abstract model {{subclass}}")
+                {% else %}
+                  options = rs.read(**self.persistent_columns.merge(additional_columns)).to_h
+                  {% temp = @type.instance_vars.select(&.annotation(Persistent)).map(&.name) %}
+                  {% vars = subclass.instance_vars.select(&.annotation(Persistent)).reject { |d| temp.includes?(d.name) } %}
+                  {% unless vars.empty? %}
+                    if (table_columns = @@table_columns)
+                      table_columns.each do |column|
+                        case column
+                        {% for v in vars %}
+                        when {{v.stringify}}
+                          options = options.merge({ {{v.name.symbolize}} => rs.read({{v.type}}) })
+                        {% end %}
+                        else
+                          rs.read # discard, it's not a property
+                        end
                       end
                     end
+                  {% end %}
+                  {{subclass}}.allocate.tap do |instance|
+                    instance.__for_internal_use_only(options).clear!
                   end
                 {% end %}
-                {{subclass}}.allocate.tap do |instance|
+            {% end %}
+            {% if @type.abstract? %}
+              else
+                raise TypeError.new("cannot instantiate abstract model {{@type}}")
+            {% else %}
+              else
+                options = rs.read(**self.persistent_columns.merge(additional_columns))
+                self.allocate.tap do |instance|
                   instance.__for_internal_use_only(options).clear!
                 end
             {% end %}
-            else
+            end
+          {% else %}
+            {% if @type.abstract? %}
+              raise TypeError.new("cannot instantiate abstract model {{@type}}")
+            {% else %}
               options = rs.read(**self.persistent_columns.merge(additional_columns))
               self.allocate.tap do |instance|
                 instance.__for_internal_use_only(options).clear!
               end
-            end
-          {% else %}
-            options = rs.read(**self.persistent_columns.merge(additional_columns))
-            self.allocate.tap do |instance|
-              instance.__for_internal_use_only(options).clear!
-            end
+            {% end %}
           {% end %}
         {% end %}
       end

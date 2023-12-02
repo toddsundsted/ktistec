@@ -147,6 +147,13 @@ Spectator.describe ContentRules do
       subject.run
     end
 
+    # temporary stub to make it easier to transition the tests that follow
+    class ::Relationship::Content::Notification
+      def activity
+        raise "#activity: unsupported"
+      end
+    end
+
     context "given no notifications" do
       pre_condition { expect(owner.notifications).to be_empty }
 

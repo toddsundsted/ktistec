@@ -141,8 +141,16 @@ rule "create/mention"
   condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
   any Mention, mention, subject: object, href: actor.iri
-  none Notification, owner: actor, activity: activity
+  none NotificationMention, owner: actor, activity: activity
   assert NotificationMention, owner: actor, activity: activity
+end
+
+rule "delete/mention"
+  condition delete, InMailboxOf, actor
+  condition DeleteActivity, delete, object: object
+  condition CreateActivity, activity, object: object
+  any NotificationMention, owner: actor, activity: activity
+  retract NotificationMention, owner: actor, activity: activity
 end
 
 rule "create/reply"
@@ -150,8 +158,16 @@ rule "create/reply"
   condition CreateActivity, activity, object: object
   condition Object, object, in_reply_to: other
   condition Object, other, attributed_to: actor
-  none Notification, owner: actor, activity: activity
+  none NotificationReply, owner: actor, activity: activity
   assert NotificationReply, owner: actor, activity: activity
+end
+
+rule "delete/reply"
+  condition delete, InMailboxOf, actor
+  condition DeleteActivity, delete, object: object
+  condition CreateActivity, activity, object: object
+  any NotificationReply, owner: actor, activity: activity
+  retract NotificationReply, owner: actor, activity: activity
 end
 
 rule "announce, step 1"
@@ -168,8 +184,15 @@ rule "announce, step 2"
   condition activity, InMailboxOf, actor
   condition AnnounceActivity, activity, object: object
   condition Object, object, attributed_to: actor
-  none Notification, owner: actor, activity: activity
+  none NotificationAnnounce, owner: actor, activity: activity
   assert NotificationAnnounce, owner: actor, activity: activity
+end
+
+rule "undo/announce"
+  condition undo, InMailboxOf, actor
+  condition UndoActivity, undo, object: activity
+  any NotificationAnnounce, owner: actor, activity: activity
+  retract NotificationAnnounce, owner: actor, activity: activity
 end
 
 rule "like, step 1"
@@ -186,39 +209,57 @@ rule "like, step 2"
   condition activity, InMailboxOf, actor
   condition LikeActivity, activity, object: object
   condition Object, object, attributed_to: actor
-  none Notification, owner: actor, activity: activity
+  none NotificationLike, owner: actor, activity: activity
   assert NotificationLike, owner: actor, activity: activity
+end
+
+rule "undo/like"
+  condition undo, InMailboxOf, actor
+  condition UndoActivity, undo, object: activity
+  any NotificationLike, owner: actor, activity: activity
+  retract NotificationLike, owner: actor, activity: activity
 end
 
 rule "follow"
   condition activity, InMailboxOf, actor
   condition FollowActivity, activity, object: actor
-  none Notification, owner: actor, activity: activity
+  none NotificationFollow, owner: actor, activity: activity
   assert NotificationFollow, owner: actor, activity: activity
 end
 
-rule "delete"
-  condition delete, InMailboxOf, actor
-  condition DeleteActivity, delete, object: object
-  condition CreateActivity, activity, object: object
-  any Notification, owner: actor, activity: activity
-  retract Notification, owner: actor, activity: activity
-end
-
-rule "undo"
+rule "undo/follow"
   condition undo, InMailboxOf, actor
   condition UndoActivity, undo, object: activity
-  any Notification, owner: actor, activity: activity
-  retract Notification, owner: actor, activity: activity
+  any NotificationFollow, owner: actor, activity: activity
+  retract NotificationFollow, owner: actor, activity: activity
 end
 
 ## Follow Notifications
 
-rule "notification exists for object"
+rule "notification exists for object 1"
   condition Incoming, actor, activity
   condition ObjectActivity, activity, object: object
+  none NotificationFor, object
   condition ObjectActivity, another, object: object
-  condition Notification, activity: another
+  condition NotificationHashtag, activity: another
+  assert NotificationFor, object
+end
+
+rule "notification exists for object 2"
+  condition Incoming, actor, activity
+  condition ObjectActivity, activity, object: object
+  none NotificationFor, object
+  condition ObjectActivity, another, object: object
+  condition NotificationMention, activity: another
+  assert NotificationFor, object
+end
+
+rule "notification exists for object 3"
+  condition Incoming, actor, activity
+  condition ObjectActivity, activity, object: object
+  none NotificationFor, object
+  condition ObjectActivity, another, object: object
+  condition NotificationThread, activity: another
   assert NotificationFor, object
 end
 

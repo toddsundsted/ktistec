@@ -35,10 +35,10 @@ module Ktistec
           Relationship.where(query, account.iri, last, limit).each do |relationship|
             done = false
             last = relationship.created_at
-            if relationship.responds_to?(:activity) && relationship.activity?
+            if relationship.responds_to?(:activity?) && (activity = relationship.activity?)
               begin
                 School::Fact.clear!
-                School::Fact.assert(ContentRules::InMailboxOf.new(relationship.activity, account.actor))
+                School::Fact.assert(ContentRules::InMailboxOf.new(activity, account.actor))
                 ContentRules.new.run
               rescue ex
                 puts "Exception while running rules: " + ex.inspect_with_backtrace
@@ -50,7 +50,7 @@ module Ktistec
 
         # adjust timestamps
         Relationship::Content::Notification.all.each do |notification|
-          if (created_at = notification.activity?.try(&.created_at))
+          if notification.responds_to?(:activity?) && (created_at = notification.activity?.try(&.created_at))
             notification.created_at = created_at
             notification.save
           end

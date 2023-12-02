@@ -29,6 +29,13 @@ Spectator.describe Ktistec::Database do
         put_in_inbox(owner, announce3)
       end
 
+      # temporary stub to make it easier to transition the tests that follow
+      class ::Relationship::Content::Notification
+        def activity
+          raise "#activity: unsupported"
+        end
+      end
+
       def notifications
         Notification.where(from_iri: owner.iri).map(&.activity)
       end

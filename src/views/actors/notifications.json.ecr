@@ -1,2 +1,5 @@
-<%- collection = notifications.map(&.activity) -%>
-<%= render "src/views/partials/collection.json.ecr" %>
+<%- activity_pub_collection(notifications) do |notification, i| -%>
+  <%- if notification.responds_to?(:activity) -%>
+  "<%= notification.activity.iri %>"<%= comma(notifications, i) %>
+  <%- end -%>
+<%- end -%>

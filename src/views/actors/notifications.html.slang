@@ -12,9 +12,10 @@
   section.ui.feed data-controller="icon-load-error"
     - notifications.each do |notification|
       article.event
-        - if notification.is_a?(Relationship::Content::Notification::Announce)
+        - case notification
+        - in Relationship::Content::Notification::Announce
           crystal:
-            activity = notification.activity.as(ActivityPub::Activity::Announce)
+            activity = notification.activity
             activities = activity.object.activities(inclusion: activity.type)
           .label
             - if (icon = activity.actor.icon)
@@ -33,9 +34,9 @@
             - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
               .extra.meta.truncated
                 == content
-        - elsif notification.is_a?(Relationship::Content::Notification::Like)
+        - in Relationship::Content::Notification::Like
           crystal:
-            activity = notification.activity.as(ActivityPub::Activity::Like)
+            activity = notification.activity
             activities = activity.object.activities(inclusion: activity.type)
           .label
             - if (icon = activity.actor.icon)
@@ -54,8 +55,8 @@
             - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
               .extra.meta.truncated
                 == content
-        - elsif notification.is_a?(Relationship::Content::Notification::Reply)
-          - activity = notification.activity.as(ActivityPub::Activity::Create)
+        - in Relationship::Content::Notification::Reply
+          - activity = notification.activity
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -70,10 +71,9 @@
             - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
               .extra.meta.truncated
                 == content
-        - elsif notification.is_a?(Relationship::Content::Notification::Hashtag)
+        - in Relationship::Content::Notification::Hashtag
           crystal:
-            activity = notification.activity
-            object = ActivityPub::Object.find(activity.object_iri)
+            object = notification.activity.object
             content = Ktistec::Util.render_as_text(object.content).presence
             attributed_to = object.attributed_to
           .label
@@ -97,10 +97,9 @@
             - if content
               .extra.meta.truncated
                 == content
-        - elsif notification.is_a?(Relationship::Content::Notification::Mention)
+        - in Relationship::Content::Notification::Mention
           crystal:
-            activity = notification.activity
-            object = ActivityPub::Object.find(activity.object_iri)
+            object = notification.activity.object
             content = Ktistec::Util.render_as_text(object.content).presence
             attributed_to = object.attributed_to
           .label
@@ -129,8 +128,8 @@
             - if content
               .extra.meta.truncated
                 == content
-        - elsif notification.is_a?(Relationship::Content::Notification::Follow)
-          - activity = notification.activity.as(ActivityPub::Activity::Follow)
+        - in Relationship::Content::Notification::Follow
+          - activity = notification.activity
           .label
             - if (icon = activity.actor.icon)
               img data-actor-id=activity.actor.id src=icon
@@ -153,10 +152,9 @@
             - elsif response.is_a?(ActivityPub::Activity::Reject)
               .extra.meta
                 | Rejected #{ response.short_date }.
-        - elsif notification.is_a?(Relationship::Content::Notification::Thread)
+        - in Relationship::Content::Notification::Thread
           crystal:
-            activity = notification.activity
-            object = ActivityPub::Object.find(activity.object_iri)
+            object = notification.activity.object
             content = Ktistec::Util.render_as_text(object.content).presence
             attributed_to = object.attributed_to
           .label
@@ -172,9 +170,6 @@
             - if content
               .extra.meta.truncated
                 == content
-        - else
-          - activity = notification.activity
-          .content
-            .meta
-              a href=activity.iri
+        - in Relationship::Content::Notification
+          / This can't happen!
   == paginate(env, notifications)

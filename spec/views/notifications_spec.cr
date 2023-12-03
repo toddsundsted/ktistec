@@ -104,4 +104,25 @@ Spectator.describe "notifications partial" do
       end
     end
   end
+
+  describe "notifications.json.ecr" do
+    let(env) { env_factory("GET", "/notifications") }
+
+    subject do
+      begin
+        JSON.parse(render "./src/views/actors/notifications.json.ecr")
+      rescue JSON::ParseException
+        JSON.parse("{}")
+      end
+    end
+
+    let(account) { register }
+    let(actor) { account.actor }
+
+    let(notifications) { actor.notifications }
+
+    it "renders an empty collection" do
+      expect(subject["first"]["orderedItems"].as_a).to be_empty
+    end
+  end
 end

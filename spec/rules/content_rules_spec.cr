@@ -149,8 +149,12 @@ Spectator.describe ContentRules do
 
     # temporary stub to make it easier to transition the tests that follow
     class ::Relationship::Content::Notification
-      def activity
-        raise "#activity: unsupported"
+      def object_or_activity
+        if self.responds_to?(:object)
+          self.object
+        elsif self.responds_to?(:activity)
+          self.activity
+        end
       end
     end
 
@@ -174,7 +178,7 @@ Spectator.describe ContentRules do
 
       it "adds the follow to the notifications" do
         run(owner, follow)
-        expect(owner.notifications.map(&.activity)).to eq([follow])
+        expect(owner.notifications.map(&.object_or_activity)).to eq([follow])
       end
 
       context "object mentions the owner" do
@@ -186,7 +190,7 @@ Spectator.describe ContentRules do
 
         it "adds the create to the notifications" do
           run(owner, create)
-          expect(owner.notifications.map(&.activity)).to eq([create])
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
       end
 
@@ -223,7 +227,7 @@ Spectator.describe ContentRules do
 
         it "adds the create to the notifications" do
           run(owner, create)
-          expect(owner.notifications.map(&.activity)).to eq([create])
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
       end
 
@@ -244,12 +248,12 @@ Spectator.describe ContentRules do
 
           it "adds the create to the notifications" do
             run(owner, create)
-            expect(owner.notifications.map(&.activity)).to eq([create])
+            expect(owner.notifications.map(&.object_or_activity)).to eq([object])
           end
 
           it "adds the announce to the notifications" do
             run(owner, announce)
-            expect(owner.notifications.map(&.activity)).to eq([announce])
+            expect(owner.notifications.map(&.object_or_activity)).to eq([object])
           end
         end
 
@@ -290,12 +294,12 @@ Spectator.describe ContentRules do
 
           it "adds the create to the notifications" do
             run(owner, create)
-            expect(owner.notifications.map(&.activity)).to eq([create])
+            expect(owner.notifications.map(&.object_or_activity)).to eq([object])
           end
 
           it "adds the announce to the notifications" do
             run(owner, announce)
-            expect(owner.notifications.map(&.activity)).to eq([announce])
+            expect(owner.notifications.map(&.object_or_activity)).to eq([object])
           end
 
           context "and 'bar' is followed by the owner" do
@@ -303,12 +307,12 @@ Spectator.describe ContentRules do
 
             it "adds a single create to the notifications" do
               run(owner, create)
-              expect(owner.notifications.map(&.activity)).to eq([create])
+              expect(owner.notifications.map(&.object_or_activity)).to eq([object])
             end
 
             it "adds a single announce to the notifications" do
               run(owner, announce)
-              expect(owner.notifications.map(&.activity)).to eq([announce])
+              expect(owner.notifications.map(&.object_or_activity)).to eq([object])
             end
           end
         end
@@ -353,12 +357,12 @@ Spectator.describe ContentRules do
 
           it "adds the create to the notifications" do
             run(owner, create)
-            expect(owner.notifications.map(&.activity)).to eq([create])
+            expect(owner.notifications.map(&.object_or_activity)).to eq([object])
           end
 
           it "adds the announce to the notifications" do
             run(owner, announce)
-            expect(owner.notifications.map(&.activity)).to eq([announce])
+            expect(owner.notifications.map(&.object_or_activity)).to eq([object])
           end
 
           context "and 'bar@remote.com' is followed by the owner" do
@@ -366,12 +370,12 @@ Spectator.describe ContentRules do
 
             it "adds a single create to the notifications" do
               run(owner, create)
-              expect(owner.notifications.map(&.activity)).to eq([create])
+              expect(owner.notifications.map(&.object_or_activity)).to eq([object])
             end
 
             it "adds a single announce to the notifications" do
               run(owner, announce)
-              expect(owner.notifications.map(&.activity)).to eq([announce])
+              expect(owner.notifications.map(&.object_or_activity)).to eq([object])
             end
           end
         end
@@ -410,12 +414,12 @@ Spectator.describe ContentRules do
 
         it "adds the announce to the notifications" do
           run(owner, announce)
-          expect(owner.notifications.map(&.activity)).to eq([announce])
+          expect(owner.notifications.map(&.object_or_activity)).to eq([announce])
         end
 
         it "adds the like to the notifications" do
           run(owner, like)
-          expect(owner.notifications.map(&.activity)).to eq([like])
+          expect(owner.notifications.map(&.object_or_activity)).to eq([like])
         end
       end
 
@@ -444,70 +448,64 @@ Spectator.describe ContentRules do
     end
 
     context "given notifications with a hashtag already added" do
-      let_build(:announce, named: another, object: object)
-
       let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "hashtag")
 
       before_each do
-        Factory.create(:notification_hashtag, owner: owner, activity: another)
+        Factory.create(:notification_hashtag, owner: owner, object: object)
         Factory.create(:hashtag, name: "hashtag", subject: object)
       end
 
-      pre_condition { expect(owner.notifications.map(&.activity)).to eq([another]) }
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
 
       it "does not add create to the notifications" do
         run(owner, create)
-        expect(owner.notifications.map(&.activity)).not_to have(create)
+        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
       end
 
       it "does not add announce to the notifications" do
         run(owner, announce)
-        expect(owner.notifications.map(&.activity)).not_to have(announce)
+        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
       end
     end
 
     context "given notifications with a mention already added" do
-      let_build(:announce, named: another, object: object)
-
       let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "mention")
 
       before_each do
-        Factory.create(:notification_mention, owner: owner, activity: another)
+        Factory.create(:notification_mention, owner: owner, object: object)
         Factory.create(:mention, name: "mention", subject: object)
       end
 
-      pre_condition { expect(owner.notifications.map(&.activity)).to eq([another]) }
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
 
       it "does not add create to the notifications" do
         run(owner, create)
-        expect(owner.notifications.map(&.activity)).not_to have(create)
+        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
       end
 
       it "does not add announce to the notifications" do
         run(owner, announce)
-        expect(owner.notifications.map(&.activity)).not_to have(announce)
+        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
       end
     end
 
     context "given notifications with a thread reply already added" do
-      let_build(:announce, named: another, object: object)
-
       before_each do
         object.assign(in_reply_to: Factory.build(:object, attributed_to: other))
         Factory.create(:follow_thread_relationship, actor: owner, thread: object.in_reply_to_iri)
-        Factory.create(:notification_thread, owner: owner, activity: another)
+        Factory.create(:notification_thread, owner: owner, object: object)
       end
 
-      pre_condition { expect(owner.notifications.map(&.activity)).to eq([another]) }
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
 
       it "does not add create to the notifications" do
         run(owner, create)
-        expect(owner.notifications.map(&.activity)).not_to have(create)
+        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
       end
 
       it "does not add announce to the notifications" do
         run(owner, announce)
-        expect(owner.notifications.map(&.activity)).not_to have(announce)
+        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
       end
     end
 
@@ -516,11 +514,11 @@ Spectator.describe ContentRules do
         put_in_notifications(owner, create)
       end
 
-      pre_condition { expect(owner.notifications.map(&.activity)).to eq([create]) }
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
 
       it "does not add the create to the notifications" do
         run(owner, create)
-        expect(owner.notifications.map(&.activity)).to eq([create])
+        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
       end
 
       it "removes the create from the notifications" do
@@ -533,7 +531,7 @@ Spectator.describe ContentRules do
 
         it "does not remove the create from the notifications" do
           run(owner, unrelated)
-          expect(owner.notifications.map(&.activity)).to eq([create])
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
       end
 
@@ -542,7 +540,7 @@ Spectator.describe ContentRules do
 
         it "does not remove the create from the notifications" do
           run(owner, undo)
-          expect(owner.notifications.map(&.activity)).to eq([create])
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
       end
     end
@@ -553,11 +551,11 @@ Spectator.describe ContentRules do
         put_in_notifications(owner, announce)
       end
 
-      pre_condition { expect(owner.notifications.map(&.activity)).to eq([announce]) }
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([announce]) }
 
       it "does not add the announce to the notifications" do
         run(owner, announce)
-        expect(owner.notifications.map(&.activity)).to eq([announce])
+        expect(owner.notifications.map(&.object_or_activity)).to eq([announce])
       end
 
       it "removes the announce from the notifications" do
@@ -567,7 +565,7 @@ Spectator.describe ContentRules do
 
       it "does not remove the announce from the notifications" do
         run(owner, delete)
-        expect(owner.notifications.map(&.activity)).to eq([announce])
+        expect(owner.notifications.map(&.object_or_activity)).to eq([announce])
       end
     end
 
@@ -579,16 +577,16 @@ Spectator.describe ContentRules do
         object.assign(attributed_to: owner)
       end
 
-      pre_condition { expect(owner.notifications.map(&.activity)).to eq([another]) }
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([another]) }
 
       it "adds the announce to the notifications" do
         run(owner, announce)
-        expect(owner.notifications.map(&.activity)).to have(announce)
+        expect(owner.notifications.map(&.object_or_activity)).to have(announce)
       end
 
       it "removes the previous announce from the notifications" do
         run(owner, announce)
-        expect(owner.notifications.map(&.activity)).not_to have(another)
+        expect(owner.notifications.map(&.object_or_activity)).not_to have(another)
       end
     end
 
@@ -598,11 +596,11 @@ Spectator.describe ContentRules do
         put_in_notifications(owner, like)
       end
 
-      pre_condition { expect(owner.notifications.map(&.activity)).to eq([like]) }
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([like]) }
 
       it "does not add the like to the notifications" do
         run(owner, like)
-        expect(owner.notifications.map(&.activity)).to eq([like])
+        expect(owner.notifications.map(&.object_or_activity)).to eq([like])
       end
 
       it "removes the like from the notifications" do
@@ -612,7 +610,7 @@ Spectator.describe ContentRules do
 
       it "does not remove the like from the notifications" do
         run(owner, delete)
-        expect(owner.notifications.map(&.activity)).to eq([like])
+        expect(owner.notifications.map(&.object_or_activity)).to eq([like])
       end
     end
 
@@ -624,16 +622,16 @@ Spectator.describe ContentRules do
         object.assign(attributed_to: owner)
       end
 
-      pre_condition { expect(owner.notifications.map(&.activity)).to eq([another]) }
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([another]) }
 
       it "adds the like to the notifications" do
         run(owner, like)
-        expect(owner.notifications.map(&.activity)).to have(like)
+        expect(owner.notifications.map(&.object_or_activity)).to have(like)
       end
 
       it "removes the previous like from the notifications" do
         run(owner, like)
-        expect(owner.notifications.map(&.activity)).not_to have(another)
+        expect(owner.notifications.map(&.object_or_activity)).not_to have(another)
       end
     end
 
@@ -643,11 +641,11 @@ Spectator.describe ContentRules do
         put_in_notifications(owner, follow)
       end
 
-      pre_condition { expect(owner.notifications.map(&.activity)).to eq([follow]) }
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([follow]) }
 
       it "does not add the follow to the notifications" do
         run(owner, follow)
-        expect(owner.notifications.map(&.activity)).to eq([follow])
+        expect(owner.notifications.map(&.object_or_activity)).to eq([follow])
       end
 
       it "removes the follow from the notifications" do
@@ -657,7 +655,7 @@ Spectator.describe ContentRules do
 
       it "does not remove the follow from the notifications" do
         run(owner, delete)
-        expect(owner.notifications.map(&.activity)).to eq([follow])
+        expect(owner.notifications.map(&.object_or_activity)).to eq([follow])
       end
     end
 

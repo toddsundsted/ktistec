@@ -141,16 +141,16 @@ rule "create/mention"
   condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
   any Mention, mention, subject: object, href: actor.iri
-  none NotificationMention, owner: actor, activity: activity
-  assert NotificationMention, owner: actor, activity: activity
+  none NotificationMention, owner: actor, object: object
+  assert NotificationMention, owner: actor, object: object
 end
 
 rule "delete/mention"
   condition delete, InMailboxOf, actor
   condition DeleteActivity, delete, object: object
   condition CreateActivity, activity, object: object
-  any NotificationMention, owner: actor, activity: activity
-  retract NotificationMention, owner: actor, activity: activity
+  any NotificationMention, owner: actor, object: object
+  retract NotificationMention, owner: actor, object: object
 end
 
 rule "create/reply"
@@ -158,16 +158,16 @@ rule "create/reply"
   condition CreateActivity, activity, object: object
   condition Object, object, in_reply_to: other
   condition Object, other, attributed_to: actor
-  none NotificationReply, owner: actor, activity: activity
-  assert NotificationReply, owner: actor, activity: activity
+  none NotificationReply, owner: actor, object: object
+  assert NotificationReply, owner: actor, object: object
 end
 
 rule "delete/reply"
   condition delete, InMailboxOf, actor
   condition DeleteActivity, delete, object: object
   condition CreateActivity, activity, object: object
-  any NotificationReply, owner: actor, activity: activity
-  retract NotificationReply, owner: actor, activity: activity
+  any NotificationReply, owner: actor, object: object
+  retract NotificationReply, owner: actor, object: object
 end
 
 rule "announce, step 1"
@@ -240,8 +240,7 @@ rule "notification exists for object 1"
   condition Incoming, actor, activity
   condition ObjectActivity, activity, object: object
   none NotificationFor, object
-  condition ObjectActivity, another, object: object
-  condition NotificationHashtag, activity: another
+  condition NotificationHashtag, object: object
   assert NotificationFor, object
 end
 
@@ -249,8 +248,7 @@ rule "notification exists for object 2"
   condition Incoming, actor, activity
   condition ObjectActivity, activity, object: object
   none NotificationFor, object
-  condition ObjectActivity, another, object: object
-  condition NotificationMention, activity: another
+  condition NotificationMention, object: object
   assert NotificationFor, object
 end
 
@@ -258,8 +256,7 @@ rule "notification exists for object 3"
   condition Incoming, actor, activity
   condition ObjectActivity, activity, object: object
   none NotificationFor, object
-  condition ObjectActivity, another, object: object
-  condition NotificationThread, activity: another
+  condition NotificationThread, object: object
   assert NotificationFor, object
 end
 
@@ -269,7 +266,7 @@ rule "follow/hashtag"
   none NotificationFor, object
   condition Hashtag, subject: object, name: name
   any FollowHashtag, actor: actor, name: name
-  assert NotificationHashtag, owner: actor, activity: activity
+  assert NotificationHashtag, owner: actor, object: object
 end
 
 rule "follow/mention"
@@ -278,7 +275,7 @@ rule "follow/mention"
   none NotificationFor, object
   condition Mention, subject: object, name: name
   any FollowMention, actor: actor, name: name
-  assert NotificationMention, owner: actor, activity: activity
+  assert NotificationMention, owner: actor, object: object
 end
 
 rule "follow/thread"
@@ -287,7 +284,7 @@ rule "follow/thread"
   none NotificationFor, object
   condition Object, object, thread: thread
   condition FollowThread, actor: actor, thread: thread
-  assert NotificationThread, owner: actor, activity: activity
+  assert NotificationThread, owner: actor, object: object
 end
 
 ## Timeline

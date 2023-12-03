@@ -56,24 +56,28 @@
               .extra.meta.truncated
                 == content
         - in Relationship::Content::Notification::Reply
-          - activity = notification.activity
+          crystal:
+            object = notification.object
+            content = Ktistec::Util.render_as_text(object.content).presence
+            attributed_to = object.attributed_to
+            in_reply_to = object.in_reply_to
           .label
-            - if (icon = activity.actor.icon)
-              img data-actor-id=activity.actor.id src=icon
+            - if (icon = attributed_to.icon)
+              img data-actor-id=attributed_to.id src=icon
             - else
               i.user.icon
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
-              a> href=remote_object_path(activity.object) replied to
-              a< href=remote_object_path(activity.object.in_reply_to) your post
+              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+              a> href=remote_object_path(object) replied to
+              a< href=remote_object_path(in_reply_to) your post
               | .
-            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+            - if content
               .extra.meta.truncated
                 == content
         - in Relationship::Content::Notification::Hashtag
           crystal:
-            object = notification.activity.object
+            object = notification.object
             content = Ktistec::Util.render_as_text(object.content).presence
             attributed_to = object.attributed_to
           .label
@@ -99,7 +103,7 @@
                 == content
         - in Relationship::Content::Notification::Mention
           crystal:
-            object = notification.activity.object
+            object = notification.object
             content = Ktistec::Util.render_as_text(object.content).presence
             attributed_to = object.attributed_to
           .label
@@ -154,7 +158,7 @@
                 | Rejected #{ response.short_date }.
         - in Relationship::Content::Notification::Thread
           crystal:
-            object = notification.activity.object
+            object = notification.object
             content = Ktistec::Util.render_as_text(object.content).presence
             attributed_to = object.attributed_to
           .label

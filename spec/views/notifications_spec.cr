@@ -70,8 +70,7 @@ Spectator.describe "notifications partial" do
 
     context "given a hashtag notification" do
       let_build(:object)
-      let_build(:announce, object: object)
-      let_create!(:notification_hashtag, owner: actor, activity: announce)
+      let_create!(:notification_hashtag, owner: actor, object: object)
 
       let_create!(:follow_hashtag_relationship, named: nil, actor: actor, name: "foo")
 
@@ -88,8 +87,7 @@ Spectator.describe "notifications partial" do
 
     context "given a mention notification" do
       let_build(:object)
-      let_build(:like, object: object)
-      let_create!(:notification_mention, owner: actor, activity: like)
+      let_create!(:notification_mention, owner: actor, object: object)
 
       let_create!(:follow_mention_relationship, named: nil, actor: actor, name: "foo")
 
@@ -101,6 +99,16 @@ Spectator.describe "notifications partial" do
       it "renders a tagged message" do
         expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
           to eq("#{object.attributed_to.display_name} tagged a post with @foo.")
+      end
+    end
+
+    context "given a thread notification" do
+      let_build(:object)
+      let_create!(:notification_thread, owner: actor, object: object)
+
+      it "renders a replied to message" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
+          to eq("#{object.attributed_to.display_name} replied to a thread you follow.")
       end
     end
   end

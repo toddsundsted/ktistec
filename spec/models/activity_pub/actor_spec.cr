@@ -1121,8 +1121,8 @@ Spectator.describe ActivityPub::Actor do
 
     macro notification(index)
       let_build(:actor, named: actor{{index}})
-      let_build(:activity, named: activity{{index}}, actor: actor{{index}})
-      let_create!(:notification, named: notification{{index}}, owner: subject, activity: activity{{index}})
+      let_build(:announce, named: activity{{index}}, actor: actor{{index}})
+      let_create!(:notification_announce, named: notification{{index}}, owner: subject, activity: activity{{index}})
     end
 
     notification(1)

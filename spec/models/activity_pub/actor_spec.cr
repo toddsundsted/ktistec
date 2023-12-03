@@ -1121,7 +1121,8 @@ Spectator.describe ActivityPub::Actor do
 
     macro notification(index)
       let_build(:actor, named: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: actor{{index}})
+      let_build(:object, named: object{{index}})
+      let_build(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
       let_create!(:notification_announce, named: notification{{index}}, owner: subject, activity: activity{{index}})
     end
 
@@ -1147,22 +1148,16 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.notifications(since: since)).to eq(4)
     end
 
-    context "given an associated object" do
-      let_create!(:object)
+    it "filters out activities with deleted objects" do
+      object5.delete!
+      expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
+      expect(subject.notifications(since: since)).to eq(4)
+    end
 
-      before_each { activity5.assign(object_iri: object.iri).save }
-
-      it "filters out activities with deleted objects" do
-        object.delete!
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
-        expect(subject.notifications(since: since)).to eq(4)
-      end
-
-      it "filters out activities with blocked objects" do
-        object.block!
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
-        expect(subject.notifications(since: since)).to eq(4)
-      end
+    it "filters out activities with blocked objects" do
+      object5.block!
+      expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
+      expect(subject.notifications(since: since)).to eq(4)
     end
 
     it "filters out activities from deleted actors" do
@@ -1177,10 +1172,38 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.notifications(since: since)).to eq(4)
     end
 
-    it "filters out activities from destroyed actors" do
-      actor5.destroy
-      expect(subject.notifications(page: 1, size: 2)).to eq([notification4, notification3])
-      expect(subject.notifications(since: since)).to eq(4)
+    context "given a hashtag notification" do
+      let_build(:actor)
+      let_build(:object, attributed_to: actor)
+      let_create!(:notification_hashtag, owner: subject, object: object)
+
+      it "includes the hashtag notification" do
+        expect(subject.notifications(page: 1, size: 2)).to eq([notification_hashtag, notification5])
+      end
+
+      it "returns the count" do
+        expect(subject.notifications(since: since)).to eq(6)
+      end
+
+      it "filters out deleted objects" do
+        object.delete!
+        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
+      end
+
+      it "filters out blocked objects" do
+        object.block!
+        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
+      end
+
+      it "filters out objects by deleted actors" do
+        actor.delete!
+        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
+      end
+
+      it "filters out objects by blocked actors" do
+        actor.block!
+        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
+      end
     end
 
     it "paginates the results" do

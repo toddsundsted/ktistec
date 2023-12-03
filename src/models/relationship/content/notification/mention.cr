@@ -5,8 +5,8 @@ class Relationship
   class Content
     class Notification < Relationship
       class Mention < Notification
-        belongs_to activity, class_name: ActivityPub::Activity::ObjectActivity, foreign_key: to_iri, primary_key: iri
-        validates(activity) { "missing: #{to_iri}" unless activity? }
+        belongs_to object, class_name: ActivityPub::Object, foreign_key: to_iri, primary_key: iri
+        validates(object) { "missing: #{to_iri}" unless object? }
       end
     end
   end

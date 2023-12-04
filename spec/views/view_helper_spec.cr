@@ -88,13 +88,8 @@ Spectator.describe "helpers" do
       end
     end
 
-    # note that the context block is required below in order to pick
-    # up the `embed` macro definition in the view helper module.
-
-    context "by default" do
-      it "does not render pagination controls" do
-        expect(subject.xpath_nodes("/nav[contains(@class,'pagination')]")).to be_empty
-      end
+    it "does not render pagination controls" do
+      expect(subject.xpath_nodes("/nav[contains(@class,'pagination')]")).to be_empty
     end
 
     context "with more pages" do

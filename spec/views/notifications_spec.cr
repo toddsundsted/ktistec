@@ -70,8 +70,7 @@ Spectator.describe "notifications partial" do
 
     context "given a hashtag notification" do
       let_build(:object)
-      let_build(:announce, object: object)
-      let_create!(:notification_hashtag, owner: actor, activity: announce)
+      let_create!(:notification_hashtag, owner: actor, object: object)
 
       let_create!(:follow_hashtag_relationship, named: nil, actor: actor, name: "foo")
 
@@ -88,8 +87,7 @@ Spectator.describe "notifications partial" do
 
     context "given a mention notification" do
       let_build(:object)
-      let_build(:like, object: object)
-      let_create!(:notification_mention, owner: actor, activity: like)
+      let_create!(:notification_mention, owner: actor, object: object)
 
       let_create!(:follow_mention_relationship, named: nil, actor: actor, name: "foo")
 
@@ -102,6 +100,37 @@ Spectator.describe "notifications partial" do
         expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
           to eq("#{object.attributed_to.display_name} tagged a post with @foo.")
       end
+    end
+
+    context "given a thread notification" do
+      let_build(:object)
+      let_create!(:notification_thread, owner: actor, object: object)
+
+      it "renders a replied to message" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
+          to eq("#{object.attributed_to.display_name} replied to a thread you follow.")
+      end
+    end
+  end
+
+  describe "notifications.json.ecr" do
+    let(env) { env_factory("GET", "/notifications") }
+
+    subject do
+      begin
+        JSON.parse(render "./src/views/actors/notifications.json.ecr")
+      rescue JSON::ParseException
+        JSON.parse("{}")
+      end
+    end
+
+    let(account) { register }
+    let(actor) { account.actor }
+
+    let(notifications) { actor.notifications }
+
+    it "renders an empty collection" do
+      expect(subject["first"]["orderedItems"].as_a).to be_empty
     end
   end
 end

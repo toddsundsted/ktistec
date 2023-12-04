@@ -210,6 +210,10 @@ def notification_thread_factory(**options)
   notification_factory(Relationship::Content::Notification::Thread, **options)
 end
 
+def notification_reply_factory(**options)
+  notification_factory(Relationship::Content::Notification::Reply, **options)
+end
+
 def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   object = object_factory(attributed_to_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, attributed_to: owner) unless object_iri || object.nil? || object
@@ -324,8 +328,12 @@ def put_in_outbox(owner : ActivityPub::Actor, object : ActivityPub::Object)
   Factory.create(:outbox_relationship, owner: owner, activity: activity)
 end
 
-def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Create)
-  Factory.create(:notification_mention, owner: owner, activity: activity)
+def put_in_notifications(owner : ActivityPub::Actor, *, mention : ActivityPub::Activity::Create)
+  Factory.create(:notification_mention, owner: owner, object: mention.object)
+end
+
+def put_in_notifications(owner : ActivityPub::Actor, *, reply : ActivityPub::Activity::Create)
+  Factory.create(:notification_reply, owner: owner, object: reply.object)
 end
 
 def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Announce)

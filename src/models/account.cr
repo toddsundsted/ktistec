@@ -4,6 +4,7 @@ require "openssl_ext"
 require "../framework/model"
 require "../framework/model/**"
 require "./activity_pub/actor"
+require "./last_time"
 require "./session"
 
 private def check_timezone?(timezone)
@@ -121,31 +122,38 @@ class Account
 
   has_many sessions
 
+  has_many last_times
+
   # permits an account to be used in path helpers in place of
   # an actor.
   def uid
     username
   end
 
-  struct State
-    include JSON::Serializable
+  private LAST_TIMELINE_CHECKED_AT = "last_timeline_checked_at"
+  private LAST_NOTIFICATIONS_CHECKED_AT = "last_notifications_checked_at"
 
-    property last_timeline_checked_at : Time { Time::UNIX_EPOCH }
-    property last_notifications_checked_at : Time { Time::UNIX_EPOCH }
+  def last_timeline_checked_at
+    LastTime.find?(account: self, name: LAST_TIMELINE_CHECKED_AT).try(&.timestamp) ||
+      Time::UNIX_EPOCH
   end
 
-  @[Persistent]
-  property state : State
-
-  delegate last_timeline_checked_at, last_notifications_checked_at, to: @state
+  def last_notifications_checked_at
+    LastTime.find?(account: self, name: LAST_NOTIFICATIONS_CHECKED_AT).try(&.timestamp) ||
+      Time::UNIX_EPOCH
+  end
 
   def update_last_timeline_checked_at(time = Time.utc)
-    state.last_timeline_checked_at = time
+    last_time = LastTime.find?(account: self, name: LAST_TIMELINE_CHECKED_AT) ||
+      LastTime.new(account: self, name: LAST_TIMELINE_CHECKED_AT)
+    last_time.assign(timestamp: time).save
     self
   end
 
   def update_last_notifications_checked_at(time = Time.utc)
-    state.last_notifications_checked_at = time
+    last_time = LastTime.find?(account: self, name: LAST_NOTIFICATIONS_CHECKED_AT) ||
+      LastTime.new(account: self, name: LAST_NOTIFICATIONS_CHECKED_AT)
+    last_time.assign(timestamp: time).save
     self
   end
 end

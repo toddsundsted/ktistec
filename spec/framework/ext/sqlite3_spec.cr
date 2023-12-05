@@ -5,30 +5,113 @@ require "../../spec_helper/base"
 Spectator.describe "SQLite3 extensions" do
   let(key) { random_string }
 
-  it "deserializes a read" do
-    r = nil
-    c = 0
-    Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, %Q<["one","two"]>)
-    rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
-    rs.each do
-      r = rs.read(Array(String))
-      c += 1
+  context "given an array" do
+    it "deserializes a read" do
+      Ktistec.database.exec(%Q|INSERT INTO options (key, value) VALUES ("#{key}", "[""one"",""two""]")|)
+      rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
+      r = Array(Array(String)).new.tap do |r|
+        rs.each do
+          r << rs.read(Array(String))
+        end
+      end
+      expect(r).to eq([["one", "two"]])
     end
-    expect(r).to eq(["one", "two"])
-    expect(c).to eq(1)
+
+    it "serializes a write" do
+      Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, ["one", "two"])
+      rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
+      r = Array(String).new.tap do |r|
+        rs.each do
+          r << rs.read(String)
+        end
+      end
+      expect(r).to eq([%q|["one","two"]|])
+    end
   end
 
-  it "serializes a write" do
-    r = nil
-    c = 0
-    Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, ["one", "two"])
-    rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
-    rs.each do
-      r = rs.read(String)
-      c += 1
+  class FooBar
+    include JSON::Serializable
+
+    property foo_bar = 1
+
+    def_equals_and_hash(:foo_bar)
+
+    def initialize
     end
-    expect(r).to eq(%Q<["one","two"]>)
-    expect(c).to eq(1)
+  end
+
+  subject { FooBar.new }
+
+  context "given JSON" do
+    it "deserializes a read" do
+      Ktistec.database.exec(%Q|INSERT INTO options (key, value) VALUES ("#{key}", "{""foo_bar"":1}")|)
+      rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
+      r = Array(FooBar).new.tap do |r|
+        rs.each do
+          r << rs.read(FooBar)
+        end
+      end
+      expect(r).to eq([subject])
+    end
+
+    it "serializes a write" do
+      Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, subject)
+      rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
+      r = Array(String).new.tap do |r|
+        rs.each do
+          r << rs.read(String)
+        end
+      end
+      expect(r).to eq([%q|{"foo_bar":1}|])
+    end
+  end
+
+  context "given JSON" do
+    it "deserializes a read" do
+      Ktistec.database.exec(%Q|INSERT INTO options (key, value) VALUES ("#{key}", "{""foo_bar"":1}")|)
+      rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
+      r = Array(FooBar?).new.tap do |r|
+        rs.each do
+          r << rs.read(FooBar?)
+        end
+      end
+      expect(r).to eq([subject])
+    end
+
+    it "serializes a write" do
+      Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, subject)
+      rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
+      r = Array(String?).new.tap do |r|
+        rs.each do
+          r << rs.read(String?)
+        end
+      end
+      expect(r).to eq([%q|{"foo_bar":1}|])
+    end
+  end
+
+  context "given JSON" do
+    it "deserializes a read" do
+      Ktistec.database.exec(%Q|INSERT INTO options (key, value) VALUES ("#{key}", NULL)|)
+      rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
+      r = Array(FooBar?).new.tap do |r|
+        rs.each do
+          r << rs.read(FooBar?)
+        end
+      end
+      expect(r).to eq([nil])
+    end
+
+    it "serializes a write" do
+      Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, nil)
+      rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
+      r = Array(String?).new.tap do |r|
+        rs.each do
+          r << rs.read(String?)
+        end
+      end
+      expect(r).to eq([nil])
+    end
   end
 
   context "strip" do

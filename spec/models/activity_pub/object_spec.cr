@@ -900,6 +900,26 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#root?" do
+    subject do
+      described_class.new(
+        iri: "https://test.test/objects/#{random_string}"
+      ).save
+    end
+
+    it "returns true if root" do
+      expect(subject.root?).to be_true
+    end
+
+    it "returns false if a reply" do
+      expect(subject.assign(in_reply_to_iri: "https://root").root?).to be_false
+    end
+
+    it "returns false if not root" do
+      expect(subject.assign(thread: "https://root").root?).to be_false
+    end
+  end
+
   describe "#draft?" do
     subject do
       described_class.new(

@@ -157,6 +157,10 @@ module ActivityPub
       @@external
     end
 
+    def root?
+      @iri == @thread && @in_reply_to_iri.nil?
+    end
+
     def draft?
       published.nil? && local?
     end

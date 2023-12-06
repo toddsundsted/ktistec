@@ -236,33 +236,33 @@ end
 
 ## Follow Notifications
 
-rule "notification exists for object 1"
+rule "incoming activity for object"
   condition Incoming, actor, activity
   condition ObjectActivity, activity, object: object
   none NotificationFor, object
+  assert CheckFollowFor, actor, object
+end
+
+rule "notification exists for object 1"
+  condition CheckFollowFor, actor, object
   condition NotificationHashtag, object: object
   assert NotificationFor, object
 end
 
 rule "notification exists for object 2"
-  condition Incoming, actor, activity
-  condition ObjectActivity, activity, object: object
-  none NotificationFor, object
+  condition CheckFollowFor, actor, object
   condition NotificationMention, object: object
   assert NotificationFor, object
 end
 
 rule "notification exists for object 3"
-  condition Incoming, actor, activity
-  condition ObjectActivity, activity, object: object
-  none NotificationFor, object
+  condition CheckFollowFor, actor, object
   condition NotificationThread, object: object
   assert NotificationFor, object
 end
 
 rule "follow/hashtag"
-  condition Incoming, actor, activity
-  condition ObjectActivity, activity, object: object
+  condition CheckFollowFor, actor, object
   none NotificationFor, object
   condition Hashtag, subject: object, name: name
   any FollowHashtag, actor: actor, name: name
@@ -270,8 +270,7 @@ rule "follow/hashtag"
 end
 
 rule "follow/mention"
-  condition Incoming, actor, activity
-  condition ObjectActivity, activity, object: object
+  condition CheckFollowFor, actor, object
   none NotificationFor, object
   condition Mention, subject: object, name: name
   any FollowMention, actor: actor, name: name
@@ -279,8 +278,7 @@ rule "follow/mention"
 end
 
 rule "follow/thread"
-  condition Incoming, actor, activity
-  condition ObjectActivity, activity, object: object
+  condition CheckFollowFor, actor, object
   none NotificationFor, object
   condition Object, object, thread: thread
   condition FollowThread, actor: actor, thread: thread

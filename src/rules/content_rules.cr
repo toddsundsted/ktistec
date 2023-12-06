@@ -164,6 +164,8 @@ class ContentRules
   end
 
   def run
+    School::Fact.clear!
+    with School::Fact yield
     self.class.domain.run
   end
 end

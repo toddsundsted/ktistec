@@ -51,9 +51,9 @@ Spectator.describe ContentRules do
 
   describe "#run" do
     def run(owner, activity)
-      School::Fact.clear!
-      School::Fact.assert(ContentRules::Outgoing.new(owner, activity))
-      subject.run
+      subject.run do
+        assert ContentRules::Outgoing.new(owner, activity)
+      end
     end
 
     context "given an empty outbox" do
@@ -72,10 +72,10 @@ Spectator.describe ContentRules do
     let(recipients) { [] of String }
 
     def run(owner, activity)
-      School::Fact.clear!
-      recipients.compact.each { |recipient| School::Fact.assert(ContentRules::IsRecipient.new(recipient)) }
-      School::Fact.assert(ContentRules::Incoming.new(owner, activity))
-      subject.run
+      subject.run do
+        recipients.compact.each { |recipient| assert ContentRules::IsRecipient.new(recipient) }
+        assert ContentRules::Incoming.new(owner, activity)
+      end
     end
 
     context "given an empty inbox" do
@@ -141,10 +141,10 @@ Spectator.describe ContentRules do
 
   describe "#run" do
     def run(owner, activity)
-      School::Fact.clear!
-      School::Fact.assert(ContentRules::Incoming.new(owner, activity))
-      School::Fact.assert(ContentRules::InMailboxOf.new(activity, owner))
-      subject.run
+      subject.run do
+        assert ContentRules::Incoming.new(owner, activity)
+        assert ContentRules::InMailboxOf.new(activity, owner)
+      end
     end
 
     # temporary stub to make it easier to transition the tests that follow
@@ -724,10 +724,10 @@ Spectator.describe ContentRules do
   describe "#run" do
     def run(owner, activity)
       put_in_inbox(owner, activity)
-      School::Fact.clear!
-      School::Fact.assert(ContentRules::Incoming.new(owner, activity))
-      School::Fact.assert(ContentRules::InMailboxOf.new(activity, owner))
-      subject.run
+      subject.run do
+        assert ContentRules::Incoming.new(owner, activity)
+        assert ContentRules::InMailboxOf.new(activity, owner)
+      end
     end
 
     context "given an empty timeline" do
@@ -981,9 +981,9 @@ Spectator.describe ContentRules do
 
   describe "#run" do
     def run(owner, activity)
-      School::Fact.clear!
-      School::Fact.assert(ContentRules::Outgoing.new(owner, activity))
-      subject.run
+      subject.run do
+        assert ContentRules::Outgoing.new(owner, activity)
+      end
     end
 
     before_each do
@@ -1046,10 +1046,10 @@ Spectator.describe ContentRules do
 
   describe "#run" do
     def run(owner, activity)
-      School::Fact.clear!
-      School::Fact.assert(ContentRules::IsRecipient.new(owner.iri))
-      School::Fact.assert(ContentRules::Incoming.new(owner, activity))
-      subject.run
+      subject.run do
+        assert ContentRules::IsRecipient.new(owner.iri)
+        assert ContentRules::Incoming.new(owner, activity)
+      end
     end
 
     pre_condition do

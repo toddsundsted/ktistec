@@ -239,9 +239,9 @@ class RelationshipsController
 
     activity.save
 
-    School::Fact.clear!
-    School::Fact.assert(ContentRules::Outgoing.new(account.actor, activity))
-    ContentRules.new.run
+    ContentRules.new.run do
+      assert ContentRules::Outgoing.new(account.actor, activity)
+    end
 
     # handle side-effects
 

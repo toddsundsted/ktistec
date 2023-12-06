@@ -37,9 +37,9 @@ module Ktistec
             last = relationship.created_at
             if relationship.responds_to?(:activity?) && (activity = relationship.activity?)
               begin
-                School::Fact.clear!
-                School::Fact.assert(ContentRules::InMailboxOf.new(activity, account.actor))
-                ContentRules.new.run
+                ContentRules.new.run do
+                  assert ContentRules::InMailboxOf.new(activity, account.actor)
+                end
               rescue ex
                 puts "Exception while running rules: " + ex.inspect_with_backtrace
               end

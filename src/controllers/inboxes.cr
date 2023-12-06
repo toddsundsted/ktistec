@@ -244,11 +244,11 @@ class RelationshipsController
 
     activity.save
 
-    School::Fact.clear!
-    recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq
-    recipients.each { |recipient| School::Fact.assert(ContentRules::IsRecipient.new(recipient)) }
-    School::Fact.assert(ContentRules::Incoming.new(account.actor, activity))
-    ContentRules.new.run
+    ContentRules.new.run do
+      recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq
+      recipients.each { |recipient| assert ContentRules::IsRecipient.new(recipient) }
+      assert ContentRules::Incoming.new(account.actor, activity)
+    end
 
     # handle side-effects
 

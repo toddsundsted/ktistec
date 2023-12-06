@@ -102,13 +102,28 @@ Spectator.describe "notifications partial" do
       end
     end
 
-    context "given a thread notification" do
+    context "given a thread notification for a reply" do
       let_build(:object)
-      let_create!(:notification_thread, owner: actor, object: object)
+      let_build(:object, named: reply, in_reply_to: object)
+      let_create!(:notification_thread, owner: actor, object: reply)
+
+      pre_condition { expect(reply.root?).to be_false }
 
       it "renders a replied to message" do
         expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-          to eq("#{object.attributed_to.display_name} replied to a thread you follow.")
+          to eq("#{reply.attributed_to.display_name} replied to a thread you follow.")
+      end
+    end
+
+    context "given a thread notification for the root" do
+      let_build(:object)
+      let_create!(:notification_thread, owner: actor, object: object)
+
+      pre_condition { expect(object.root?).to be_true }
+
+      it "renders a fetch the root of the thread message" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
+          to eq("There are replies to a thread you follow.")
       end
     end
   end

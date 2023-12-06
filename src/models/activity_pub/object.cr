@@ -6,8 +6,6 @@ require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
 require "../relationship/content/canonical"
-require "../relationship/content/follow/thread"
-require "../task/fetch/thread"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
@@ -617,10 +615,9 @@ module ActivityPub
           reply.save
         end
       end
-      # update thread in follow relationships
-      Relationship::Content::Follow::Thread.merge_into(self.iri, self.thread)
-      # update thread in fetch tasks
-      Task::Fetch::Thread.merge_into(self.iri, self.thread)
+      # see the source for Relationship::Content::Follow::Thread and
+      # Task::Fetch::Thread for additional after_save thread updating
+      # functionality
     end
 
     def after_delete

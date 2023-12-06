@@ -1,5 +1,6 @@
 require "../../../relationship"
 require "../../../activity_pub/actor"
+require "../../../activity_pub/object"
 
 class Relationship
   class Content
@@ -34,6 +35,19 @@ class Relationship
           end
         end
       end
+    end
+  end
+end
+
+# updates the `thread` property when an object is saved. patching
+# `Object` like this pulls the explicit dependency out of its source
+# code.
+
+module ActivityPub
+  class Object
+    def after_save
+      previous_def
+      Relationship::Content::Follow::Thread.merge_into(self.iri, self.thread)
     end
   end
 end

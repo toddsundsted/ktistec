@@ -1,5 +1,7 @@
 require "../framework/controller"
 require "../models/activity_pub/object/note"
+require "../models/relationship/content/follow/thread"
+require "../models/task/fetch/thread"
 
 class ObjectsController
   include Ktistec::Controller

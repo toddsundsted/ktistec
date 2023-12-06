@@ -1,6 +1,7 @@
 require "../../task"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
+require "../../../rules/content_rules"
 
 class Task
   # Fetch a thread.
@@ -38,10 +39,12 @@ class Task
     def perform(maximum = 10)
       count = 0
       none_fetched = true
+      last = nil
       maximum.times do
         count += 1
         object = fetch_one
         none_fetched = false if object
+        last = object if object
         break unless object
       end
     ensure
@@ -53,6 +56,11 @@ class Task
         else                             # maximum number fetched
           5.seconds.from_now
         end
+      if last && last.root?
+        ContentRules.new.run do
+          assert ContentRules::CheckFollowFor.new(source, last)
+        end
+      end
     end
 
     # Finds or fetches an object.

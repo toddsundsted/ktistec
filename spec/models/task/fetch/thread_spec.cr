@@ -146,6 +146,18 @@ Spectator.describe Task::Fetch::Thread do
         expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
       end
 
+      context "and a follow" do
+        let_create!(:follow_thread_relationship, actor: source, thread: origin.iri)
+
+        it "does not create a notification" do
+          expect{subject.perform(1)}.not_to change{source.notifications.size}
+        end
+
+        it "creates a notification" do
+          expect{subject.perform}.to change{source.notifications.size}.by(1)
+        end
+      end
+
       context "and uncached authors" do
         before_each do
           HTTP::Client.actors << origin.attributed_to

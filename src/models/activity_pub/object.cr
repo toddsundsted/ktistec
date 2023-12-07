@@ -1,6 +1,7 @@
 require "json"
 
 require "./actor"
+require "./collection"
 require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
@@ -657,7 +658,11 @@ module ActivityPub
         "published" => (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
         "attributed_to_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
         "in_reply_to_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
-        "replies_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#replies"),
+        # either pick up the collection's id or the embedded collection
+        "replies_iri" => json.dig?("https://www.w3.org/ns/activitystreams#replies").try(&.as_s?),
+        "replies" => if (replies = json.dig?("https://www.w3.org/ns/activitystreams#replies")) && replies.as_h?
+          Collection.from_json_ld(replies)
+        end,
         "to" => to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
         "cc" => cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
         "name" => dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),

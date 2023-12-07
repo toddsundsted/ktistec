@@ -43,10 +43,11 @@ module ActivityPub
     belongs_to in_reply_to, class_name: ActivityPub::Object, foreign_key: in_reply_to_iri, primary_key: iri
 
     @[Persistent]
-    property thread : String?
+    property replies_iri : String?
+    belongs_to replies, class_name: ActivityPub::Collection, foreign_key: replies_iri, primary_key: iri
 
     @[Persistent]
-    property replies : String?
+    property thread : String?
 
     @[Persistent]
     property to : Array(String)?
@@ -656,7 +657,7 @@ module ActivityPub
         "published" => (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
         "attributed_to_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
         "in_reply_to_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
-        "replies" => dig_id?(json, "https://www.w3.org/ns/activitystreams#replies"),
+        "replies_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#replies"),
         "to" => to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
         "cc" => cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
         "name" => dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),

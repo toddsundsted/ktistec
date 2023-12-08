@@ -67,7 +67,8 @@ Spectator.describe Ktistec::Model::Linked do
   describe "the generated accessor" do
     let(subject) do
       LinkedModel.new(
-        iri: "https://test.test/objects/subject"
+        iri: "https://test.test/objects/subject",
+        linked_model_iri: "https://remote/objects/object"
       )
     end
     let(object) do
@@ -79,83 +80,118 @@ Spectator.describe Ktistec::Model::Linked do
       KeyPair.new("https://key_pair")
     end
 
-    # linked object is not dereferenced.
+    it "does not fetch and does not return the object" do
+      expect(subject.linked_model?(key_pair, dereference: false)).to be_nil
+      expect(HTTP::Client.last?).to be_nil
+    end
+
+    it "fetches but does not return the object" do
+      expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: false)).to be_nil
+      expect(HTTP::Client.last?).to match("GET #{object.iri}")
+    end
+
+    it "fetches but does not return the object" do
+      expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: true)).to be_nil
+      expect(HTTP::Client.last?).to match("GET #{object.iri}")
+    end
 
     context "when linked object is local" do
-      before_each { subject.linked_model_iri = "https://test.test/objects/object" }
+      before_each do
+        object.assign(iri: "https://test.test/objects/object").save
+        subject.linked_model_iri = object.iri
+      end
 
-      it "does not fetch the linked model instance" do
-        subject.linked_model?(key_pair, dereference: false)
+      it "returns but does not fetch the object" do
+        expect(subject.linked_model?(key_pair, dereference: false)).not_to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
 
-      it "does not fetch the linked model instance" do
-        subject.linked_model?(key_pair, dereference: true)
+      it "returns but does not fetch the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: false)).not_to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "returns but does not fetch the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: true)).not_to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
     end
 
     context "when linked object is remote" do
       before_each do
-        subject.linked_model_iri = "https://remote/objects/object"
         HTTP::Client.objects << object
+        subject.linked_model_iri = object.iri
       end
 
-      it "does not fetch the linked model instance" do
-        subject.linked_model?(key_pair, dereference: false)
+      it "does not fetch and does not return the object" do
+        expect(subject.linked_model?(key_pair, dereference: false)).to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
 
-      it "fetches the linked model instance" do
-        subject.linked_model?(key_pair, dereference: true)
+      it "fetches and returns the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: false)).not_to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+
+      it "fetches and returns the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: false)).not_to be_nil
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
 
       context "when object is cached" do
         before_each { object.save }
 
-        it "does not fetch the linked model instance" do
-          subject.linked_model?(key_pair, dereference: true, ignore_cached: false)
+        it "returns but does not fetch the object" do
+          expect(subject.linked_model?(key_pair, dereference: false)).not_to be_nil
           expect(HTTP::Client.last?).to be_nil
         end
 
-        it "fetches the linked model instance" do
-          subject.linked_model?(key_pair, dereference: true, ignore_cached: true)
+        it "returns but does not fetch the object" do
+          expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: false)).not_to be_nil
+          expect(HTTP::Client.last?).to be_nil
+        end
+
+        it "fetches and returns the object" do
+          expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: true)).not_to be_nil
           expect(HTTP::Client.last?).to match("GET #{object.iri}")
         end
       end
     end
 
-    # linked object is already dereferenced.
-
     context "when linked object is cached and unchanged" do
-      before_each { subject.linked_model = object.save }
+      before_each do
+        HTTP::Client.objects << object
+        subject.linked_model = object.save
+      end
 
       pre_condition { expect(object.changed?).to be_false }
 
-      it "does not fetch the linked model instance" do
-        subject.linked_model?(key_pair, dereference: true, ignore_cached: false)
+      it "returns but does not fetch the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: false)).not_to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
 
-      it "fetches the linked model instance" do
-        subject.linked_model?(key_pair, dereference: true, ignore_cached: true)
+      it "fetches and returns the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: true)).not_to be_nil
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
 
     context "when linked object is changed" do
-      before_each { subject.linked_model = object }
+      before_each do
+        HTTP::Client.objects << object
+        subject.linked_model = object
+      end
 
       pre_condition { expect(object.changed?).to be_true }
 
-      it "does not fetch the linked model instance" do
-        subject.linked_model?(key_pair, dereference: true, ignore_changed: false)
+      it "returns but does not fetch the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, ignore_changed: false)).not_to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
 
-      it "fetches the linked model instance" do
-        subject.linked_model?(key_pair, dereference: true, ignore_changed: true)
+      it "fetches and returns the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, ignore_changed: true)).not_to be_nil
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
@@ -174,34 +210,54 @@ Spectator.describe Ktistec::Model::Linked do
       KeyPair.new("https://key_pair")
     end
 
-    context "when linked object is local" do
-      let(object_iri) { "https://test.test/objects/object" }
+    it "fetches but does not return the object" do
+      expect(subject.dereference?(key_pair, object.iri, ignore_cached: false)).to be_nil
+      expect(HTTP::Client.last?).to match("GET #{object.iri}")
+    end
 
-      it "does not fetch the object" do
-        subject.dereference?(key_pair, object_iri)
+    it "fetches but does not return the object" do
+      expect(subject.dereference?(key_pair, object.iri, ignore_cached: true)).to be_nil
+      expect(HTTP::Client.last?).to match("GET #{object.iri}")
+    end
+
+    context "when linked object is local" do
+      before_each { object.assign(iri: "https://test.test/objects/object").save }
+
+      it "returns but does not fetch the object" do
+        expect(subject.dereference?(key_pair, object.iri, ignore_cached: false)).not_to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "returns but does not fetch the object" do
+        expect(subject.dereference?(key_pair, object.iri, ignore_cached: true)).not_to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
     end
 
     context "when linked object is remote" do
-      let(object_iri) { "https://remote/objects/object" }
+      before_each { HTTP::Client.objects << object }
 
-      it "fetches the object" do
-        subject.dereference?(key_pair, object_iri)
-        expect(HTTP::Client.last?).to match("GET #{object_iri}")
+      it "fetches and returns the object" do
+        expect(subject.dereference?(key_pair, object.iri, ignore_cached: false)).not_to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+
+      it "fetches and returns the object" do
+        expect(subject.dereference?(key_pair, object.iri, ignore_cached: true)).not_to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
 
       context "when object is cached" do
         before_each { object.save }
 
-        it "does not fetch the object" do
-          subject.dereference?(key_pair, object_iri, ignore_cached: false)
+        it "returns but does not fetch the object" do
+          expect(subject.dereference?(key_pair, object.iri, ignore_cached: false)).not_to be_nil
           expect(HTTP::Client.last?).to be_nil
         end
 
-        it "fetches the object" do
-          subject.dereference?(key_pair, object_iri, ignore_cached: true)
-          expect(HTTP::Client.last?).to match("GET #{object_iri}")
+        it "fetches and returns the object" do
+          expect(subject.dereference?(key_pair, object.iri, ignore_cached: true)).not_to be_nil
+          expect(HTTP::Client.last?).to match("GET #{object.iri}")
         end
       end
     end

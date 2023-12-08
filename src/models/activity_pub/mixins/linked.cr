@@ -57,9 +57,15 @@ module Ktistec
           find?(iri: iri, include_deleted: include_deleted, include_undone: include_undone)
         end
 
+        # find local objects if even `ignore_cached` is `true`,
+        # because they *do* exist and returning `nil` implies they do
+        # not.
+
         def self.dereference?(key_pair, iri, *, ignore_cached = false, **options) : self?
-          unless !ignore_cached && (instance = self.find?(iri))
-            unless iri.starts_with?(Ktistec.host)
+          if ignore_cached || (instance = self.find?(iri)).nil?
+            if iri.starts_with?(Ktistec.host)
+              instance = self.find?(iri)
+            else
               headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
               headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
               Ktistec::Open.open?(iri, headers) do |response|
@@ -86,22 +92,26 @@ module Ktistec
                   {% name = method.name[13..-1] %}
                   class ::{{type}}
                     def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, **options)
-                      {{name}} = self.{{name}}?
                       if dereference && ({{name}}_iri = self.{{name}}_iri)
-                        if {{name}}.nil? || (ignore_cached && !{{name}}.changed?) || ignore_changed
-                          unless {{name}}_iri.starts_with?(Ktistec.host)
+                        if ignore_changed || ({{name}} = self.{{name}}?).nil? || (ignore_cached && !{{name}}.changed?)
+                          if {{name}}_iri.starts_with?(Ktistec.host)
+                            {{name}} = self.{{name}}?
+                          else
                             headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
                             headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
                             Ktistec::Open.open?({{name}}_iri, headers) do |response|
-                              {{name}} = ActivityPub.from_json_ld(response.body, **options).as({{method.body[3].id}})
-                              return self.{{name}} = {{name}}
+                              self.{{name}} = {{name}} = ActivityPub.from_json_ld(response.body, **options).as({{method.body[3].id}})
                             rescue ex : NotImplementedError | TypeCastError
                               # log errors when mapping JSON to a model since `open?`
                               # otherwise silently swallows those errors!
                               Log.debug { ex.message }
                             end
                           end
+                        else
+                          {{name}} = self.{{name}}?
                         end
+                      else
+                        {{name}} = self.{{name}}?
                       end
                       {{name}}
                     end

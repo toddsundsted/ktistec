@@ -89,18 +89,20 @@ module Ktistec
             {% for type in @type.all_subclasses << @type %}
               {% for method in type.methods.select { |d| d.name.starts_with?("_association_") } %}
                 {% if method.body.first == :belongs_to %}
-                  {% name = method.name[13..-1] %}
+                  {% name = method.name[13..-1].id %}
+                  {% foreign_key = method.body[2].id %}
+                  {% clazz = method.body[3].id %}
                   class ::{{type}}
                     def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, **options)
-                      if dereference && ({{name}}_iri = self.{{name}}_iri)
+                      if dereference && ({{foreign_key}} = self.{{foreign_key}})
                         if ignore_changed || ({{name}} = self.{{name}}?).nil? || (ignore_cached && !{{name}}.changed?)
-                          if {{name}}_iri.starts_with?(Ktistec.host)
+                          if {{foreign_key}}.starts_with?(Ktistec.host)
                             {{name}} = self.{{name}}?
                           else
-                            headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
+                            headers = Ktistec::Signature.sign(key_pair, {{foreign_key}}, method: :get)
                             headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-                            Ktistec::Open.open?({{name}}_iri, headers) do |response|
-                              self.{{name}} = {{name}} = ActivityPub.from_json_ld(response.body, **options).as({{method.body[3].id}})
+                            Ktistec::Open.open?({{foreign_key}}, headers) do |response|
+                              self.{{name}} = {{name}} = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
                             rescue ex : NotImplementedError | TypeCastError
                               # log errors when mapping JSON to a model since `open?`
                               # otherwise silently swallows those errors!

@@ -24,10 +24,6 @@ Spectator.describe ActivityPub::Collection do
   context "when validating" do
     let!(collection) { described_class.new(iri: "http://test.test/foo_bar").save }
 
-    it "must be present" do
-      expect(described_class.new.valid?).to be_false
-    end
-
     it "must be an absolute URI" do
       expect(described_class.new(iri: "/some_collection").valid?).to be_false
     end

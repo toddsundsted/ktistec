@@ -1,26 +1,26 @@
 {
   "@context":"https://www.w3.org/ns/activitystreams",
-  <%- if recursive == true && (first = collection.first) -%>
+  <%- if recursive == true && (first = collection.first?) -%>
   "first":<%= first.to_json_ld %>,
   <%- elsif (first_iri = collection.first_iri) -%>
   "first":<%= first_iri.inspect %>,
   <%- end -%>
-  <%- if recursive == true && (last = collection.last) -%>
+  <%- if recursive == true && (last = collection.last?) -%>
   "last":<%= last.to_json_ld %>,
   <%- elsif (last_iri = collection.last_iri) -%>
   "last":<%= last_iri.inspect %>,
   <%- end -%>
-  <%- if recursive == true && (prev = collection.prev) -%>
+  <%- if recursive == true && (prev = collection.prev?) -%>
   "prev":<%= prev.to_json_ld %>,
   <%- elsif (prev_iri = collection.prev_iri) -%>
   "prev":<%= prev_iri.inspect %>,
   <%- end -%>
-  <%- if recursive == true && (_next = collection.next) -%>
+  <%- if recursive == true && (_next = collection.next?) -%>
   "next":<%= _next.to_json_ld %>,
   <%- elsif (next_iri = collection.next_iri) -%>
   "next":<%= next_iri.inspect %>,
   <%- end -%>
-  <%- if recursive == true && (current = collection.current) -%>
+  <%- if recursive == true && (current = collection.current?) -%>
   "current":<%= current.to_json_ld %>,
   <%- elsif (current_iri = collection.current_iri) -%>
   "current":<%= current_iri.inspect %>,
@@ -31,7 +31,7 @@
   <%- if recursive == true && (items = collection.items) -%>
   "items":[
   <%- items.each.with_index do |item, i| -%>
-  <%- if item.responds_to?(:local?) && item.responds_to?(:to_json_ld) && item.local? -%>
+  <%- if item.responds_to?(:to_json_ld) && item.responds_to?(:local?) && item.local? -%>
   <%= item.to_json_ld %>
   <%- elsif item.responds_to?(:iri) -%>
   <%= item.iri.inspect %>

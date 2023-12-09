@@ -4,26 +4,28 @@ require "../../../spec_helper/base"
 require "../../../spec_helper/key_pair"
 require "../../../spec_helper/network"
 
-class LinkedModel
-  include Ktistec::Model(Linked)
-  include ActivityPub
-
-  @[Persistent]
-  property linked_model_iri : String?
-
-  belongs_to linked_model, foreign_key: linked_model_iri, primary_key: iri
-
-  def to_json_ld(**options)
-    %Q|{"@type":"LinkedModel","@id":"#{iri}"}|
-  end
-
-  def self.map(json, **options)
-    Hash(String, String).new
-  end
-end
-
 Spectator.describe Ktistec::Model::Linked do
   setup_spec
+
+  class LinkedModel
+    include Ktistec::Model(Linked)
+    include ActivityPub
+
+    @@table_name = "linked_models"
+
+    @[Persistent]
+    property linked_model_iri : String?
+
+    belongs_to linked_model, class_name: {{@type}}, foreign_key: linked_model_iri, primary_key: iri
+
+    def to_json_ld(**options)
+      %Q|{"@type":"LinkedModel","@id":"#{iri}"}|
+    end
+
+    def self.map(json, **options)
+      Hash(String, String).new
+    end
+  end
 
   before_each do
     Ktistec.database.exec <<-SQL
@@ -45,7 +47,17 @@ Spectator.describe Ktistec::Model::Linked do
   end
 
   describe "validation" do
-    subject! { LinkedModel.new(iri: "http://test.test/linked").save }
+    class BlankModel
+      include Ktistec::Model(Linked)
+
+      @@required_iri = false
+    end
+
+    it "may be absent" do
+      expect(BlankModel.new.valid?).to be_true
+    end
+
+    before_each { LinkedModel.new(iri: "http://test.test/linked").save }
 
     it "must be present" do
       expect(LinkedModel.new.valid?).to be_false

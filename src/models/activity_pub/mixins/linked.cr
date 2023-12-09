@@ -35,9 +35,15 @@ module Ktistec
       end
 
       macro included
+        # permits models to have a missing/blank IRI. this is useful
+        # for ActivityPub objects that are, for example, sometimes
+        # embedded and aren't dereferenceable.
+
+        @@required_iri : Bool = true
+
         @[Persistent]
         property iri : String { "" }
-        validates(iri) { unique_absolute_uri?(iri) }
+        validates(iri) { unique_absolute_uri?(iri) if @@required_iri || iri.presence }
 
         private def unique_absolute_uri?(iri)
           if iri.blank?

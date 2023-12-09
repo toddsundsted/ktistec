@@ -95,14 +95,14 @@ module Ktistec
                   class ::{{type}}
                     def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, **options)
                       if dereference && ({{foreign_key}} = self.{{foreign_key}})
-                        if ignore_changed || ({{name}} = self.{{name}}?).nil? || (ignore_cached && !{{name}}.changed?)
+                        if ignore_changed || ({{name}}_ = self.{{name}}?).nil? || (ignore_cached && !{{name}}_.changed?)
                           if {{foreign_key}}.starts_with?(Ktistec.host)
-                            {{name}} = self.{{name}}?
+                            {{name}}_ = self.{{name}}?
                           else
                             headers = Ktistec::Signature.sign(key_pair, {{foreign_key}}, method: :get)
                             headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
                             Ktistec::Open.open?({{foreign_key}}, headers) do |response|
-                              self.{{name}} = {{name}} = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
+                              self.{{name}} = {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
                             rescue ex : NotImplementedError | TypeCastError
                               # log errors when mapping JSON to a model since `open?`
                               # otherwise silently swallows those errors!
@@ -110,12 +110,12 @@ module Ktistec
                             end
                           end
                         else
-                          {{name}} = self.{{name}}?
+                          {{name}}_ = self.{{name}}?
                         end
                       else
-                        {{name}} = self.{{name}}?
+                        {{name}}_ = self.{{name}}?
                       end
-                      {{name}}
+                      {{name}}_
                     end
                   end
                 {% end %}

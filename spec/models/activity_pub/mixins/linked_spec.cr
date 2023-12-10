@@ -8,7 +8,7 @@ Spectator.describe Ktistec::Model::Linked do
   setup_spec
 
   class LinkedModel
-    include Ktistec::Model(Linked)
+    include Ktistec::Model(Linked, Deletable)
     include ActivityPub
 
     @@table_name = "linked_models"
@@ -32,7 +32,8 @@ Spectator.describe Ktistec::Model::Linked do
       CREATE TABLE linked_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         iri varchar(255) NOT NULL,
-        linked_model_iri text
+        linked_model_iri text,
+        deleted_at datetime
       )
     SQL
   end
@@ -244,6 +245,20 @@ Spectator.describe Ktistec::Model::Linked do
         expect(subject.dereference?(key_pair, object.iri, ignore_cached: true)).not_to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
+
+      context "when object is deleted" do
+        before_each { object.delete! }
+
+        it "does not return and does not fetch the object" do
+          expect(subject.dereference?(key_pair, object.iri, include_deleted: false)).to be_nil
+          expect(HTTP::Client.last?).to be_nil
+        end
+
+        it "returns but does not fetch the object" do
+          expect(subject.dereference?(key_pair, object.iri, include_deleted: true)).not_to be_nil
+          expect(HTTP::Client.last?).to be_nil
+        end
+      end
     end
 
     context "when linked object is remote" do
@@ -270,6 +285,20 @@ Spectator.describe Ktistec::Model::Linked do
         it "fetches and returns the object" do
           expect(subject.dereference?(key_pair, object.iri, ignore_cached: true)).not_to be_nil
           expect(HTTP::Client.last?).to match("GET #{object.iri}")
+        end
+
+        context "when object is deleted" do
+          before_each { object.delete! }
+
+          it "fetches and returns the object" do
+            expect(subject.dereference?(key_pair, object.iri, include_deleted: false)).not_to be_nil
+            expect(HTTP::Client.last?).to match("GET #{object.iri}")
+          end
+
+          it "returns but does not fetch the object" do
+            expect(subject.dereference?(key_pair, object.iri, include_deleted: true)).not_to be_nil
+            expect(HTTP::Client.last?).to be_nil
+          end
         end
       end
     end

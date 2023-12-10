@@ -67,10 +67,10 @@ module Ktistec
         # because they *do* exist and returning `nil` implies they do
         # not.
 
-        def self.dereference?(key_pair, iri, *, ignore_cached = false, **options) : self?
-          if ignore_cached || (instance = self.find?(iri)).nil?
+        def self.dereference?(key_pair, iri, *, ignore_cached = false, include_deleted = false, **options) : self?
+          if ignore_cached || (instance = self.find?(iri, include_deleted: include_deleted)).nil?
             if iri.starts_with?(Ktistec.host)
-              instance = self.find?(iri)
+              instance = self.find?(iri, include_deleted: include_deleted)
             else
               headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
               headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER

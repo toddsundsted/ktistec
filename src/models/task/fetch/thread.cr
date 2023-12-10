@@ -85,7 +85,7 @@ class Task
       last = nil
       100.times do # for safety, cap loops
         fetched, object = find_or_fetch_object(self.thread)
-        break if object.nil? || object == last
+        break if object.nil? || (object.root? && !fetched) || object == last
         self.thread = object.thread.not_nil!
         return object if fetched
         last = object

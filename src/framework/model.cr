@@ -86,7 +86,7 @@ module Ktistec
               {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
               {% for method in methods %}
                 elsif "_association_#{o}" == {{method.name.stringify}}
-                  c << %Q|"#{{{method.body[2]}}}" = ?|
+                  c << %Q|"{{method.body[2].id}}" = ?|
               {% end %}
               else
                 raise ColumnError.new("no such column: #{o}")
@@ -780,7 +780,7 @@ module Ktistec
           {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
           unless skip_associated
             {% for method in methods %}
-              if (%body = {{method.body}}.last)
+              if (%body = {{method.body.last}})
                 if %body.responds_to?(:each_with_index)
                   %body.each_with_index do |model, i|
                     unless nodes.any? { |node| model == node.model }

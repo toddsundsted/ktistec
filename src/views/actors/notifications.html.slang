@@ -88,8 +88,8 @@
           .content
             .summary
               crystal:
-                ht1 = object.hashtags.map(&.name)
-                ht2 = Relationship::Content::Follow::Hashtag.where(actor: actor).map(&.name)
+                ht1 = object.hashtags.map(&.name.downcase)
+                ht2 = Relationship::Content::Follow::Hashtag.where(actor: actor).map(&.name.downcase)
                 ht3 = (ht1 & ht2)
               a> href=remote_actor_path(attributed_to) = attributed_to.display_name
               | tagged
@@ -114,8 +114,8 @@
           .content
             .summary
               crystal:
-                mn1 = object.mentions.map(&.name)
-                mn2 = Relationship::Content::Follow::Mention.where(actor: actor).map(&.name)
+                mn1 = object.mentions.map(&.name.downcase)
+                mn2 = Relationship::Content::Follow::Mention.where(actor: actor).map(&.name.downcase)
                 mn3 = (mn1 & mn2)
               - if mn1.includes?(actor.account_uri)
                 a> href=remote_actor_path(attributed_to) = attributed_to.display_name

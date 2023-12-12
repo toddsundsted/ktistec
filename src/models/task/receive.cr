@@ -30,6 +30,7 @@ class Task
     end
 
     @[Persistent]
+    @[Insignificant]
     property state : State { State.new }
 
     @[Assignable]

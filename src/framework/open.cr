@@ -36,12 +36,14 @@ module Ktistec
 
     def open?(url, headers = HTTP::Headers.new, attempts = 10)
       open(url, headers, attempts)
-    rescue Error
+    rescue ex : Error
+      Log.warn { "#{self}.open? - #{ex.message}" }
     end
 
     def open?(url, headers = HTTP::Headers.new, attempts = 10, &)
       yield open(url, headers, attempts)
-    rescue Error
+    rescue ex : Error
+      Log.warn { "#{self}.open? - #{ex.message}" }
     end
 
     class Error < Exception

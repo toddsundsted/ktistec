@@ -77,9 +77,7 @@ module Ktistec
               Ktistec::Open.open?(iri, headers) do |response|
                 instance = self.from_json_ld(response.body, **options)
               rescue ex : NotImplementedError | TypeCastError
-                # log errors when mapping JSON to a model since `open?`
-                # otherwise silently swallows those errors!
-                Log.debug { ex.message }
+                Log.warn { "#{self}.dereference? - #{ex.message}" }
               end
             end
           end
@@ -110,9 +108,7 @@ module Ktistec
                             Ktistec::Open.open?({{foreign_key}}, headers) do |response|
                               self.{{name}} = {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
                             rescue ex : NotImplementedError | TypeCastError
-                              # log errors when mapping JSON to a model since `open?`
-                              # otherwise silently swallows those errors!
-                              Log.debug { ex.message }
+                              Log.warn { "#{self.class}##{{{name.stringify}}}? - #{ex.message}" }
                             end
                           end
                         else

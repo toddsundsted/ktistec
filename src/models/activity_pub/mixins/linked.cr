@@ -35,9 +35,15 @@ module Ktistec
       end
 
       macro included
+        # permits models to have a missing/blank IRI. this is useful
+        # for ActivityPub objects that are, for example, sometimes
+        # embedded and aren't dereferenceable.
+
+        @@required_iri : Bool = true
+
         @[Persistent]
         property iri : String { "" }
-        validates(iri) { unique_absolute_uri?(iri) }
+        validates(iri) { unique_absolute_uri?(iri) if @@required_iri || iri.presence }
 
         private def unique_absolute_uri?(iri)
           if iri.blank?
@@ -57,17 +63,21 @@ module Ktistec
           find?(iri: iri, include_deleted: include_deleted, include_undone: include_undone)
         end
 
-        def self.dereference?(key_pair, iri, *, ignore_cached = false, **options) : self?
-          unless !ignore_cached && (instance = self.find?(iri))
-            unless iri.starts_with?(Ktistec.host)
+        # find local objects if even `ignore_cached` is `true`,
+        # because they *do* exist and returning `nil` implies they do
+        # not.
+
+        def self.dereference?(key_pair, iri, *, ignore_cached = false, include_deleted = false, **options) : self?
+          if ignore_cached || (instance = self.find?(iri, include_deleted: include_deleted)).nil?
+            if iri.starts_with?(Ktistec.host)
+              instance = self.find?(iri, include_deleted: include_deleted)
+            else
               headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
               headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
               Ktistec::Open.open?(iri, headers) do |response|
                 instance = self.from_json_ld(response.body, **options)
               rescue ex : NotImplementedError | TypeCastError
-                # log errors when mapping JSON to a model since `open?`
-                # otherwise silently swallows those errors!
-                Log.debug { ex.message }
+                Log.warn { "#{self}.dereference? - #{ex.message}" }
               end
             end
           end
@@ -83,27 +93,31 @@ module Ktistec
             {% for type in @type.all_subclasses << @type %}
               {% for method in type.methods.select { |d| d.name.starts_with?("_association_") } %}
                 {% if method.body.first == :belongs_to %}
-                  {% name = method.name[13..-1] %}
+                  {% name = method.name[13..-1].id %}
+                  {% foreign_key = method.body[2].id %}
+                  {% clazz = method.body[3].id %}
                   class ::{{type}}
                     def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, **options)
-                      {{name}} = self.{{name}}?
-                      if dereference && ({{name}}_iri = self.{{name}}_iri)
-                        if {{name}}.nil? || (ignore_cached && !{{name}}.changed?) || ignore_changed
-                          unless {{name}}_iri.starts_with?(Ktistec.host)
-                            headers = Ktistec::Signature.sign(key_pair, {{name}}_iri, method: :get)
+                      if dereference && ({{foreign_key}} = self.{{foreign_key}})
+                        if ignore_changed || ({{name}}_ = self.{{name}}?).nil? || (ignore_cached && !{{name}}_.changed?)
+                          if {{foreign_key}}.starts_with?(Ktistec.host)
+                            {{name}}_ = self.{{name}}?
+                          else
+                            headers = Ktistec::Signature.sign(key_pair, {{foreign_key}}, method: :get)
                             headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-                            Ktistec::Open.open?({{name}}_iri, headers) do |response|
-                              {{name}} = ActivityPub.from_json_ld(response.body, **options).as({{method.body[3].id}})
-                              return self.{{name}} = {{name}}
+                            Ktistec::Open.open?({{foreign_key}}, headers) do |response|
+                              self.{{name}} = {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
                             rescue ex : NotImplementedError | TypeCastError
-                              # log errors when mapping JSON to a model since `open?`
-                              # otherwise silently swallows those errors!
-                              Log.debug { ex.message }
+                              Log.warn { "#{self.class}##{{{name.stringify}}}? - #{ex.message}" }
                             end
                           end
+                        else
+                          {{name}}_ = self.{{name}}?
                         end
+                      else
+                        {{name}}_ = self.{{name}}?
                       end
-                      {{name}}
+                      {{name}}_
                     end
                   end
                 {% end %}

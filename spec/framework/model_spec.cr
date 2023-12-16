@@ -99,6 +99,12 @@ class QueryModel
   end
 end
 
+abstract class AbstractModel
+  include Ktistec::Model(Nil)
+
+  @@table_name = "models"
+end
+
 Spectator.describe Ktistec::Model do
   before_each do
     Ktistec.database.exec <<-SQL
@@ -121,10 +127,16 @@ Spectator.describe Ktistec::Model do
         val text NOT NULL
       )
     SQL
+    Ktistec.database.exec <<-SQL
+      CREATE TABLE models (
+        id integer PRIMARY KEY AUTOINCREMENT
+      )
+    SQL
   end
   after_each do
     Ktistec.database.exec "DROP TABLE foo_bar_models"
     Ktistec.database.exec "DROP TABLE not_nil_models"
+    Ktistec.database.exec "DROP TABLE models"
   end
 
   describe ".table_name" do
@@ -412,7 +424,7 @@ Spectator.describe Ktistec::Model do
         expect(NotNilModel.find(saved_model.id)).to eq(saved_model)
       end
 
-      it "raises an exception" do
+      it "raises an error" do
         expect{NotNilModel.find(999999)}.to raise_error(Ktistec::Model::NotFound)
       end
     end
@@ -448,7 +460,7 @@ Spectator.describe Ktistec::Model do
         expect(NotNilModel.find({"val" => "Val"})).to eq(saved_model)
       end
 
-      it "raises an exception" do
+      it "raises an error" do
         expect{NotNilModel.find(val: "Baz")}.to raise_error(Ktistec::Model::NotFound)
       end
     end
@@ -471,6 +483,19 @@ Spectator.describe Ktistec::Model do
 
       it "finds the saved instance using the association" do
         expect(FooBarModel.find({"not_nil" => not_nil_model})).to eq(foo_bar_model)
+      end
+    end
+
+    context "when instantiating an abstract model" do
+      before_each do
+        Ktistec.database.exec <<-SQL
+          INSERT INTO models (id) VALUES (9999)
+        SQL
+      end
+
+      it "raises an error" do
+        expect{AbstractModel.find(9999_i64)}.
+          to raise_error(Ktistec::Model::TypeError, /cannot instantiate abstract model/)
       end
     end
   end

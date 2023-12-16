@@ -194,6 +194,10 @@ def notification_like_factory(**options)
   notification_factory(Relationship::Content::Notification::Like, **options)
 end
 
+def notification_follow_factory(**options)
+  notification_factory(Relationship::Content::Notification::Follow, **options)
+end
+
 def notification_hashtag_factory(**options)
   notification_factory(Relationship::Content::Notification::Hashtag, **options)
 end
@@ -204,6 +208,10 @@ end
 
 def notification_thread_factory(**options)
   notification_factory(Relationship::Content::Notification::Thread, **options)
+end
+
+def notification_reply_factory(**options)
+  notification_factory(Relationship::Content::Notification::Reply, **options)
 end
 
 def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
@@ -320,8 +328,24 @@ def put_in_outbox(owner : ActivityPub::Actor, object : ActivityPub::Object)
   Factory.create(:outbox_relationship, owner: owner, activity: activity)
 end
 
-def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity)
-  Factory.create(:notification, owner: owner, activity: activity)
+def put_in_notifications(owner : ActivityPub::Actor, *, mention : ActivityPub::Activity::Create)
+  Factory.create(:notification_mention, owner: owner, object: mention.object)
+end
+
+def put_in_notifications(owner : ActivityPub::Actor, *, reply : ActivityPub::Activity::Create)
+  Factory.create(:notification_reply, owner: owner, object: reply.object)
+end
+
+def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Announce)
+  Factory.create(:notification_announce, owner: owner, activity: activity)
+end
+
+def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Like)
+  Factory.create(:notification_like, owner: owner, activity: activity)
+end
+
+def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Follow)
+  Factory.create(:notification_follow, owner: owner, activity: activity)
 end
 
 def put_in_timeline(owner : ActivityPub::Actor, object : ActivityPub::Object)

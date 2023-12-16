@@ -21,6 +21,7 @@ class Task
     end
 
     @[Persistent]
+    @[Insignificant]
     property failures : Array(Failure) { [] of Failure }
 
     def transfer(activity, from transferer, to recipients)

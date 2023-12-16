@@ -679,47 +679,55 @@ module ActivityPub
     #
     # Meant to be called on local (not cached) actors.
     #
-    # Filters out notifications for activities that have associated
-    # objects that have been deleted. Does not filter out activities
-    # that are not associated with an object since some activities,
-    # like follows, are associated with actors. Doesn't consider
-    # actors that have been deleted, since follows -- the activities
-    # we care about in that case -- are associated with the actor on
-    # which this method is called.
-    #
     def notifications(page = 1, size = 10)
       query = <<-QUERY
          SELECT #{Notification.columns(prefix: "n")}
            FROM relationships AS n
-           JOIN activities AS a
+      LEFT JOIN activities AS a
              ON a.iri = n.to_iri
-           JOIN actors AS c
+      LEFT JOIN actors AS c
              ON c.iri = a.actor_iri
       LEFT JOIN objects AS o
              ON o.iri = a.object_iri
+      LEFT JOIN objects AS e
+             ON e.iri = n.to_iri
+      LEFT JOIN actors AS t
+             ON t.iri = e.attributed_to_iri
           WHERE n.from_iri = ?
             AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
-            AND c.deleted_at IS null
-            AND c.blocked_at IS null
-            AND o.deleted_at IS null
-            AND o.blocked_at IS null
-            AND a.undone_at IS null
+            AND a.undone_at IS NULL
+            AND c.deleted_at IS NULL
+            AND c.blocked_at IS NULL
+            AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
+            AND e.deleted_at IS NULL
+            AND e.blocked_at IS NULL
+            AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND n.id NOT IN (
                SELECT n.id
                  FROM relationships AS n
-                 JOIN activities AS a
+            LEFT JOIN activities AS a
                    ON a.iri = n.to_iri
-                 JOIN actors AS c
+            LEFT JOIN actors AS c
                    ON c.iri = a.actor_iri
             LEFT JOIN objects AS o
                    ON o.iri = a.object_iri
+            LEFT JOIN objects AS e
+                   ON e.iri = n.to_iri
+            LEFT JOIN actors AS t
+                   ON t.iri = e.attributed_to_iri
                 WHERE n.from_iri = ?
                   AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
-                  AND c.deleted_at IS null
-                  AND c.blocked_at IS null
-                  AND o.deleted_at IS null
-                  AND o.blocked_at IS null
-                  AND a.undone_at IS null
+                  AND a.undone_at IS NULL
+                  AND c.deleted_at IS NULL
+                  AND c.blocked_at IS NULL
+                  AND o.deleted_at IS NULL
+                  AND o.blocked_at IS NULL
+                  AND e.deleted_at IS NULL
+                  AND e.blocked_at IS NULL
+                  AND t.deleted_at IS NULL
+                  AND t.blocked_at IS NULL
              ORDER BY n.created_at DESC
                 LIMIT ?
             )
@@ -738,19 +746,27 @@ module ActivityPub
       query = <<-QUERY
          SELECT count(*)
            FROM relationships AS n
-           JOIN activities AS a
+      LEFT JOIN activities AS a
              ON a.iri = n.to_iri
-           JOIN actors AS c
+      LEFT JOIN actors AS c
              ON c.iri = a.actor_iri
       LEFT JOIN objects AS o
              ON o.iri = a.object_iri
+      LEFT JOIN objects AS e
+             ON e.iri = n.to_iri
+      LEFT JOIN actors AS t
+             ON t.iri = e.attributed_to_iri
           WHERE n.from_iri = ?
             AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
-            AND c.deleted_at IS null
-            AND c.blocked_at IS null
-            AND o.deleted_at IS null
-            AND o.blocked_at IS null
-            AND a.undone_at IS null
+            AND a.undone_at IS NULL
+            AND c.deleted_at IS NULL
+            AND c.blocked_at IS NULL
+            AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
+            AND e.deleted_at IS NULL
+            AND e.blocked_at IS NULL
+            AND t.deleted_at IS NULL
+            AND t.blocked_at IS NULL
             AND n.created_at > ?
       QUERY
       Notification.scalar(query, iri, since).as(Int64)

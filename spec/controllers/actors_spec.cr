@@ -540,17 +540,14 @@ Spectator.describe ActorsController do
           to change{Account.find(username: actor.username).last_notifications_checked_at}
       end
 
-      let_build(:activity, actor_iri: actor.iri)
-      let_create!(:notification, named: :notification, owner: actor, activity: activity)
-
-      it "renders the collection" do
+      it "renders an empty collection" do
         get "/actors/#{actor.username}/notifications", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]//a/@href")).to contain_exactly(activity.iri)
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]")).to be_empty
       end
 
-      it "renders the collection" do
+      it "renders an empty collection" do
         get "/actors/#{actor.username}/notifications", ACCEPT_JSON
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(activity.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
       end
     end
   end

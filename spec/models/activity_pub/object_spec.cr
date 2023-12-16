@@ -71,6 +71,43 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  context "given embedded objects" do
+    let(json) do
+      <<-JSON
+        {
+          "@context":[
+            "https://www.w3.org/ns/activitystreams",
+            {"Hashtag":"as:Hashtag"}
+          ],
+          "@id":"https://remote/foo_bar",
+          "@type":"FooBarObject",
+          "attributedTo":{
+            "id":"attributed to link"
+          },
+          "inReplyTo":{
+            "id":"in reply to link"
+          },
+          "replies":{
+            "id":"replies link",
+            "type":"Collection"
+          }
+        }
+      JSON
+    end
+
+    it "gets the ids" do
+      object = described_class.from_json_ld(json)
+      expect(object.attributed_to_iri).to eq("attributed to link")
+      expect(object.in_reply_to_iri).to eq("in reply to link")
+    end
+
+    it "caches the replies" do
+      object = described_class.from_json_ld(json)
+      expect(object.replies).to be_a(ActivityPub::Collection)
+      expect(object.replies.iri).to eq("replies link")
+    end
+  end
+
   let(json) do
     <<-JSON
       {
@@ -81,13 +118,9 @@ Spectator.describe ActivityPub::Object do
         "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",
         "published":"2016-02-15T10:20:30Z",
-        "attributedTo":{
-          "id":"attributed to link"
-        },
+        "attributedTo":"attributed to link",
         "inReplyTo":"in reply to link",
-        "replies":{
-          "id":"replies link"
-        },
+        "replies":"replies link",
         "to":"to link",
         "cc":["cc link"],
         "name":"123",
@@ -130,7 +163,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
-      expect(object.replies).to eq("replies link")
+      expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
       expect(object.name).to eq("123")
@@ -159,7 +192,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
-      expect(object.replies).to eq("replies link")
+      expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
       expect(object.name).to eq("123")

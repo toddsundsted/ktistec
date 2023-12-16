@@ -23,6 +23,8 @@ module ActivityPub
 
     @@table_name = "collections"
 
+    @@required_iri = false
+
     @[Persistent]
     property items_iris : Array(String)?
 
@@ -34,33 +36,23 @@ module ActivityPub
 
     @[Persistent]
     property first_iri : String?
-
-    @[Assignable]
-    property first : Collection?
+    belongs_to :first, class_name: {{@type}}, foreign_key: first_iri, primary_key: iri
 
     @[Persistent]
     property last_iri : String?
-
-    @[Assignable]
-    property last : Collection?
+    belongs_to :last, class_name: {{@type}}, foreign_key: last_iri, primary_key: iri
 
     @[Persistent]
     property prev_iri : String?
-
-    @[Assignable]
-    property prev : Collection?
+    belongs_to :prev, class_name: {{@type}}, foreign_key: prev_iri, primary_key: iri
 
     @[Persistent]
     property next_iri : String?
-
-    @[Assignable]
-    property next : Collection?
+    belongs_to :next, class_name: {{@type}}, foreign_key: next_iri, primary_key: iri
 
     @[Persistent]
     property current_iri : String?
-
-    @[Assignable]
-    property current : Collection?
+    belongs_to :current, class_name: {{@type}}, foreign_key: current_iri, primary_key: iri
 
     def to_json_ld(recursive = true)
       CollectionModelRenderer.to_json_ld(self, recursive)

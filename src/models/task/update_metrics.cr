@@ -19,6 +19,7 @@ class Task
     end
 
     @[Persistent]
+    @[Insignificant]
     property state : State { State.new }
 
     def last_id

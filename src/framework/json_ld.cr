@@ -143,7 +143,7 @@ module Ktistec
         end
         CONTEXTS.dig("#{uri.host}#{uri.path}/context.jsonld", "@context")
       rescue KeyError
-        Log.info { "uncached external context not loaded: #{url}" }
+        Log.warn { "uncached external context not loaded: #{url}" }
         empty
       end
     end

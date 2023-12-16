@@ -86,7 +86,7 @@ module Ktistec
               {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
               {% for method in methods %}
                 elsif "_association_#{o}" == {{method.name.stringify}}
-                  c << %Q|"#{{{method.body[2]}}}" = ?|
+                  c << %Q|"{{method.body[2].id}}" = ?|
               {% end %}
               else
                 raise ColumnError.new("no such column: #{o}")
@@ -197,38 +197,51 @@ module Ktistec
             case rs.read(String) # type
             {% for subclass in @type.all_subclasses %}
               when {{subclass.stringify}}
-                options = rs.read(**self.persistent_columns.merge(additional_columns)).to_h
-                {% temp = @type.instance_vars.select(&.annotation(Persistent)).map(&.name) %}
-                {% vars = subclass.instance_vars.select(&.annotation(Persistent)).reject { |d| temp.includes?(d.name) } %}
-                {% unless vars.empty? %}
-                  if (table_columns = @@table_columns)
-                    table_columns.each do |column|
-                      case column
-                      {% for v in vars %}
-                      when {{v.stringify}}
-                        options = options.merge({ {{v.name.symbolize}} => rs.read({{v.type}}) })
-                      {% end %}
-                      else
-                        rs.read # discard, it's not a property
+                {% if subclass.abstract? %}
+                  raise TypeError.new("cannot instantiate abstract model {{subclass}}")
+                {% else %}
+                  options = rs.read(**self.persistent_columns.merge(additional_columns)).to_h
+                  {% temp = @type.instance_vars.select(&.annotation(Persistent)).map(&.name) %}
+                  {% vars = subclass.instance_vars.select(&.annotation(Persistent)).reject { |d| temp.includes?(d.name) } %}
+                  {% unless vars.empty? %}
+                    if (table_columns = @@table_columns)
+                      table_columns.each do |column|
+                        case column
+                        {% for v in vars %}
+                        when {{v.stringify}}
+                          options = options.merge({ {{v.name.symbolize}} => rs.read({{v.type}}) })
+                        {% end %}
+                        else
+                          rs.read # discard, it's not a property
+                        end
                       end
                     end
+                  {% end %}
+                  {{subclass}}.allocate.tap do |instance|
+                    instance.__for_internal_use_only(options).clear!
                   end
                 {% end %}
-                {{subclass}}.allocate.tap do |instance|
+            {% end %}
+            {% if @type.abstract? %}
+              else
+                raise TypeError.new("cannot instantiate abstract model {{@type}}")
+            {% else %}
+              else
+                options = rs.read(**self.persistent_columns.merge(additional_columns))
+                self.allocate.tap do |instance|
                   instance.__for_internal_use_only(options).clear!
                 end
             {% end %}
-            else
+            end
+          {% else %}
+            {% if @type.abstract? %}
+              raise TypeError.new("cannot instantiate abstract model {{@type}}")
+            {% else %}
               options = rs.read(**self.persistent_columns.merge(additional_columns))
               self.allocate.tap do |instance|
                 instance.__for_internal_use_only(options).clear!
               end
-            end
-          {% else %}
-            options = rs.read(**self.persistent_columns.merge(additional_columns))
-            self.allocate.tap do |instance|
-              instance.__for_internal_use_only(options).clear!
-            end
+            {% end %}
           {% end %}
         {% end %}
       end
@@ -622,85 +635,86 @@ module Ktistec
       # Specifies a one-to-one association with another model.
       #
       macro belongs_to(name, primary_key = id, foreign_key = nil, class_name = nil, inverse_of = nil)
-        {% foreign_key = foreign_key || "#{name}_id".id %}
-        {% class_name = class_name ? class_name.id : name.stringify.camelcase.id %}
+        {% foreign_key = foreign_key || "#{name.id}_id".id %}
+        {% class_name = class_name ? class_name.id : name.id.stringify.camelcase.id %}
         {% union_types = class_name.split("|").map(&.strip.id) %}
         @[Assignable]
-        @{{name}} : {{class_name}}?
-        def {{name}}=(@{{name}} : {{class_name}}) : {{class_name}}
-          _belongs_to_setter_for_{{name}}({{name}})
+        @{{name.id}} : {{class_name}}?
+        def {{name.id}}=({{name.id}}_ : {{class_name}}) : {{class_name}}
+          _belongs_to_setter_for_{{name.id}}({{name.id}}_)
         end
-        def _belongs_to_setter_for_{{name}}(@{{name}} : {{class_name}}, update_associations = true) : {{class_name}}
-          changed!({{name.symbolize}}, {{foreign_key.symbolize}})
-          self.{{foreign_key}} = {{name}}.{{primary_key}}.as(typeof(self.{{foreign_key}}))
+        def _belongs_to_setter_for_{{name.id}}({{name.id}}_ : {{class_name}}, update_associations = true) : {{class_name}}
+          @{{name.id}} = {{name.id}}_
+          changed!({{name.id.symbolize}}, {{foreign_key.id.symbolize}})
+          self.{{foreign_key.id}} = {{name.id}}_.{{primary_key.id}}.as(typeof(self.{{foreign_key.id}}))
           {% if inverse_of %}
             if update_associations
-              if {{name}}.responds_to?(:_has_one_setter_for_{{inverse_of}})
-                {{name}}._has_one_setter_for_{{inverse_of}}(self, false)
-              elsif {{name}}.responds_to?(:_has_many_setter_for_{{inverse_of}})
-                {{name}}._has_many_setter_for_{{inverse_of}}({{name}}.{{inverse_of}} << self, false)
+              if {{name.id}}_.responds_to?(:_has_one_setter_for_{{inverse_of.id}})
+                {{name.id}}_._has_one_setter_for_{{inverse_of.id}}(self, false)
+              elsif {{name.id}}_.responds_to?(:_has_many_setter_for_{{inverse_of.id}})
+                {{name.id}}_._has_many_setter_for_{{inverse_of.id}}({{name.id}}_.{{inverse_of.id}} << self, false)
               end
-              {{name}}.clear!({{inverse_of.symbolize}})
+              {{name.id}}_.clear!({{inverse_of.id.symbolize}})
             end
           {% end %}
-          {{name}}
+          {{name.id}}_
         end
-        def {{name}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
-          @{{name}} ||= begin
+        def {{name.id}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
+          @{{name.id}} ||= begin
             {% for union_type in union_types %}
-              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}, include_deleted: include_deleted, include_undone: include_undone) ||
+              {{union_type}}.find?({{primary_key.id}}: self.{{foreign_key.id}}, include_deleted: include_deleted, include_undone: include_undone) ||
             {% end %}
             nil
           end
         end
-        def {{name}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
-          @{{name}} ||= begin
+        def {{name.id}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
+          @{{name.id}} ||= begin
             {% for union_type in union_types %}
-              {{union_type}}.find?({{primary_key}}: self.{{foreign_key}}, include_deleted: include_deleted, include_undone: include_undone) ||
+              {{union_type}}.find?({{primary_key.id}}: self.{{foreign_key.id}}, include_deleted: include_deleted, include_undone: include_undone) ||
             {% end %}
-            raise NotFound.new("#{self.class} {{name}} {{primary_key}}=#{self.{{foreign_key}}}: not found")
+            raise NotFound.new("#{self.class} {{name.id}} {{primary_key.id}}=#{self.{{foreign_key.id}}}: not found")
           end
         end
-        def _association_{{name}}
-          {:belongs_to, {{primary_key.symbolize}}, {{foreign_key.symbolize}}, {{class_name}}, @{{name}}}
+        def _association_{{name.id}}
+          {:belongs_to, {{primary_key.id.symbolize}}, {{foreign_key.id.symbolize}}, {{class_name}}, @{{name.id}}}
         end
       end
 
       # Specifies a one-to-many association with another model.
       #
       macro has_many(name, primary_key = id, foreign_key = nil, class_name = nil, inverse_of = nil)
-        {% singular = name.stringify %}
+        {% singular = name.id.stringify %}
         {% singular = singular =~ /(ses|sses|shes|ches|xes|zes)$/ ? singular[0..-3] : singular[0..-2] %}
         {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
         {% class_name = class_name || singular.camelcase.id %}
         @[Assignable]
-        @{{name}} : Array({{class_name}})?
-        def {{name}}=({{name}} : Enumerable({{class_name}})) : Enumerable({{class_name}})
-          _has_many_setter_for_{{name}}({{name}})
+        @{{name.id}} : Array({{class_name}})?
+        def {{name.id}}=({{name.id}}_ : Enumerable({{class_name}})) : Enumerable({{class_name}})
+          _has_many_setter_for_{{name.id}}({{name.id}}_)
         end
-        def _has_many_setter_for_{{name}}({{name}} : Enumerable({{class_name}}), update_associations = true) : Enumerable({{class_name}})
-          @{{name}} = {{name}}.to_a
-          changed!({{name.symbolize}})
-          {{name}}.each do |n|
-            n.{{foreign_key}} = self.{{primary_key}}.as(typeof(n.{{foreign_key}}))
+        def _has_many_setter_for_{{name.id}}({{name.id}}_ : Enumerable({{class_name}}), update_associations = true) : Enumerable({{class_name}})
+          @{{name.id}} = {{name.id}}_.to_a
+          changed!({{name.id.symbolize}})
+          {{name.id}}_.each do |n|
+            n.{{foreign_key.id}} = self.{{primary_key.id}}.as(typeof(n.{{foreign_key.id}}))
             {% if inverse_of %}
               if update_associations
-                n._belongs_to_setter_for_{{inverse_of}}(self, false)
-                n.clear!({{inverse_of.symbolize}}, {{foreign_key.symbolize}})
+                n._belongs_to_setter_for_{{inverse_of.id}}(self, false)
+                n.clear!({{inverse_of.id.symbolize}}, {{foreign_key.id.symbolize}})
               end
             {% end %}
           end
-          {{name}}
+          {{name.id}}_
         end
-        def {{name}}(include_deleted : Bool = false, include_undone : Bool = false) : Enumerable({{class_name}})
-          {{name}} = @{{name}}
-          if {{name}}.nil? || {{name}}.empty?
-            @{{name}} = {{class_name}}.where({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
+        def {{name.id}}(include_deleted : Bool = false, include_undone : Bool = false) : Enumerable({{class_name}})
+          {{name.id}} = @{{name.id}}
+          if {{name.id}}.nil? || {{name.id}}.empty?
+            @{{name.id}} = {{class_name}}.where({{foreign_key.id}}: self.{{primary_key.id}}, include_deleted: include_deleted, include_undone: include_undone)
           end
-          @{{name}}.not_nil!
+          @{{name.id}}.not_nil!
         end
-        def _association_{{name}}
-          {:has_many, {{primary_key.symbolize}}, {{foreign_key.symbolize}}, Enumerable({{class_name}}), @{{name}}}
+        def _association_{{name.id}}
+          {:has_many, {{primary_key.id.symbolize}}, {{foreign_key.id.symbolize}}, Enumerable({{class_name}}), @{{name.id}}}
         end
       end
 
@@ -708,32 +722,32 @@ module Ktistec
       #
       macro has_one(name, primary_key = id, foreign_key = nil, class_name = nil, inverse_of = nil)
         {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
-        {% class_name = class_name || name.stringify.camelcase.id %}
+        {% class_name = class_name || name.id.stringify.camelcase.id %}
         @[Assignable]
-        @{{name}} : {{class_name}}?
-        def {{name}}=({{name}} : {{class_name}}) : {{class_name}}
-          _has_one_setter_for_{{name}}({{name}})
+        @{{name.id}} : {{class_name}}?
+        def {{name.id}}=({{name.id}}_ : {{class_name}}) : {{class_name}}
+          _has_one_setter_for_{{name.id}}({{name.id}}_)
         end
-        def _has_one_setter_for_{{name}}({{name}} : {{class_name}}, update_associations = true) : {{class_name}}
-          @{{name}} = {{name}}
-          changed!({{name.symbolize}})
-          {{name}}.{{foreign_key}} = self.{{primary_key}}.as(typeof({{name}}.{{foreign_key}}))
+        def _has_one_setter_for_{{name.id}}({{name.id}}_ : {{class_name}}, update_associations = true) : {{class_name}}
+          @{{name.id}} = {{name.id}}_
+          changed!({{name.id.symbolize}})
+          {{name.id}}_.{{foreign_key.id}} = self.{{primary_key.id}}.as(typeof({{name.id}}_.{{foreign_key.id}}))
           {% if inverse_of %}
             if update_associations
-              {{name}}._belongs_to_setter_for_{{inverse_of}}(self, false)
-              {{name}}.clear!({{inverse_of.symbolize}}, {{foreign_key.symbolize}})
+              {{name.id}}_._belongs_to_setter_for_{{inverse_of.id}}(self, false)
+              {{name.id}}_.clear!({{inverse_of.id.symbolize}}, {{foreign_key.id.symbolize}})
             end
           {% end %}
-          {{name}}
+          {{name.id}}_
         end
-        def {{name}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
-          @{{name}} ||= {{class_name}}.find?({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
+        def {{name.id}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
+          @{{name.id}} ||= {{class_name}}.find?({{foreign_key.id}}: self.{{primary_key.id}}, include_deleted: include_deleted, include_undone: include_undone)
         end
-        def {{name}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
-          @{{name}} ||= {{class_name}}.find({{foreign_key}}: self.{{primary_key}}, include_deleted: include_deleted, include_undone: include_undone)
+        def {{name.id}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
+          @{{name.id}} ||= {{class_name}}.find({{foreign_key.id}}: self.{{primary_key.id}}, include_deleted: include_deleted, include_undone: include_undone)
         end
-        def _association_{{name}}
-          {:has_one, {{primary_key.symbolize}}, {{foreign_key.symbolize}}, {{class_name}}, @{{name}}}
+        def _association_{{name.id}}
+          {:has_one, {{primary_key.id.symbolize}}, {{foreign_key.id.symbolize}}, {{class_name}}, @{{name.id}}}
         end
       end
 
@@ -766,7 +780,7 @@ module Ktistec
           {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
           unless skip_associated
             {% for method in methods %}
-              if (%body = {{method.body}}.last)
+              if (%body = {{method.body.last}})
                 if %body.responds_to?(:each_with_index)
                   %body.each_with_index do |model, i|
                     unless nodes.any? { |node| model == node.model }

@@ -29,8 +29,19 @@ Spectator.describe Ktistec::Database do
         put_in_inbox(owner, announce3)
       end
 
+      # temporary stub to make it easier to transition the tests that follow
+      class ::Relationship::Content::Notification
+        def object_or_activity
+          if self.responds_to?(:object)
+            self.object
+          elsif self.responds_to?(:activity)
+            self.activity
+          end
+        end
+      end
+
       def notifications
-        Notification.where(from_iri: owner.iri).map(&.activity)
+        Notification.where(from_iri: owner.iri).map(&.object_or_activity)
       end
 
       pre_condition { expect(notifications).to contain_exactly(announce1, announce2).in_any_order }

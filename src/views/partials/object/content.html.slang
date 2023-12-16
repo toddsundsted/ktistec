@@ -67,8 +67,8 @@ crystal:
         == s object.to_html
     - if with_detail && account
       crystal:
-        hashtags = object.hashtags.map(&.name)
-        mentions = object.mentions.map(&.name)
+        hashtags = object.hashtags.map(&.name.downcase)
+        mentions = object.mentions.map(&.name.downcase)
       - unless hashtags.empty? && mentions.empty?
         .extra.detail
           .ui.labels

@@ -59,6 +59,9 @@ class Subclass5 < PolymorphicModel
   property stamp : Time { Time.utc }
 end
 
+abstract class Subclass6 < PolymorphicModel
+end
+
 Spectator.describe Ktistec::Model::Polymorphic do
   before_each do
     Ktistec.database.exec <<-SQL
@@ -165,6 +168,25 @@ Spectator.describe Ktistec::Model::Polymorphic do
       expect{PolymorphicModel.find(subclass2.id, as: Subclass1)}.to raise_error(Ktistec::Model::NotFound)
       expect{PolymorphicModel.find(id: subclass2.id, as: Subclass1)}.to raise_error(Ktistec::Model::NotFound)
     end
+
+    context "when instantiating an abstract model" do
+      before_each do
+        Ktistec.database.exec <<-SQL
+          INSERT INTO polymorphic_models (id, type) VALUES (9999, "Subclass6")
+        SQL
+      end
+
+      it "raises an error" do
+        expect{PolymorphicModel.find(9999_i64)}.
+          to raise_error(Ktistec::Model::TypeError, /cannot instantiate abstract model/)
+      end
+
+      it "raises an error" do
+        expect{Subclass6.find(9999_i64)}.
+          to raise_error(Ktistec::Model::TypeError, /cannot instantiate abstract model/)
+      end
+    end
+
   end
 
   describe "#as_a" do

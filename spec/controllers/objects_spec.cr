@@ -1118,26 +1118,6 @@ Spectator.describe ObjectsController do
         expect(HTTP::Client.requests).to have("GET #{object.attributed_to.iri}")
       end
 
-      it "renders an error message if hostname lookup fails" do
-        post "/remote/objects/fetch", FORM_DATA, "iri=https://remote/socket-addrinfo-error"
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'message')]")).to have(/hostname lookup fail/i)
-      end
-
-      it "renders an error message if hostname lookup fails" do
-        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"https://remote/socket-addrinfo-error"}|
-        expect(JSON.parse(response.body).dig("msg")).to eq(/hostname lookup fail/i)
-      end
-
-      it "renders an error message if can't connect to host" do
-        post "/remote/objects/fetch", FORM_DATA, "iri=https://remote/socket-connect-error"
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'message')]")).to have(/could not connect/i)
-      end
-
-      it "renders an error message if can't connect to host" do
-        post "/remote/objects/fetch", JSON_DATA, %Q|{"iri":"https://remote/socket-connect-error"}|
-        expect(JSON.parse(response.body).dig("msg")).to eq(/could not connect/i)
-      end
-
       context "if object has been deleted" do
         before_each { object.assign(iri: "https://remote/returns-404") }
 

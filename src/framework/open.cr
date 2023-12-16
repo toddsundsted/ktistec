@@ -6,26 +6,39 @@ module Ktistec
 
     def open(url, headers = HTTP::Headers.new, attempts = 10)
       was = url
+      message = nil
       attempts.times do
-        response = HTTP::Client.get(url, headers)
-        case response.status_code
-        when 200
-          return response
-        when 301, 302, 303, 307, 308
-          if (tmp = response.headers["Location"]?) && (url = tmp)
-            next
+        begin
+          response = HTTP::Client.get(url, headers)
+          case response.status_code
+          when 200
+            return response
+          when 301, 302, 303, 307, 308
+            if (tmp = response.headers["Location"]?) && (url = tmp)
+              next
+            else
+              break
+            end
+          when 401, 403
+            message = "Access denied: #{was}"
+            break
+          when 500
+            message = "Server error: #{was}"
+            break
           else
             break
           end
-        else
-          break
+        rescue Socket::Addrinfo::Error
+          message = "Hostname lookup failure: #{was}"
+        rescue Socket::ConnectError
+          message = "Connection failure: #{was}"
         end
       end
-      message =
+      message ||=
         if was != url
-          "Open failed: #{was} [from #{url}]"
+          "Failed: #{was} [from #{url}]"
         else
-          "Open failed: #{was}"
+          "Failed: #{was}"
         end
       raise Error.new(message)
     end

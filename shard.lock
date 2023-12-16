@@ -42,11 +42,11 @@ shards:
 
   slang:
     git: https://github.com/toddsundsted/slang.git
-    version: 1.7.1+git.commit.35149a3c293dfa8428f1fcb02612994a6a29acef
+    version: 1.7.1+git.commit.8f8ad8272e5f1297f98e4f3d4bab905a62286ab2
 
   spectator:
     git: https://gitlab.com/arctic-fox/spectator.git
-    version: 0.10.6
+    version: 0.11.7
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git

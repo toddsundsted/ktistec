@@ -36,6 +36,8 @@ class Task
 
       property nodes : Array(Node)
 
+      property root_object : Int64?
+
       def initialize(@nodes = [] of Node)
       end
 
@@ -146,10 +148,11 @@ class Task
           end
       end
 
-      root = ActivityPub::Object.find?(thread)
-      if root && root.root? && ((count < 1 && continuation) || (count > 0 && count < maximum))
-        ContentRules.new.run do
-          assert ContentRules::CheckFollowFor.new(source, root)
+      if (root = ActivityPub::Object.find?(thread)) && root.root?
+        if (count < 1 && continuation) || (count > 0 && count < maximum)
+          ContentRules.new.run do
+            assert ContentRules::CheckFollowFor.new(source, root)
+          end
         end
       end
     end
@@ -174,22 +177,22 @@ class Task
       {fetched, object}
     end
 
-    # Fetches one new object in the thread.
+    # Fetches up toward the root.
     #
-    # Explores the thread, and fetches and returns a new object or
-    # `nil` if no new object is fetched.
-    #
-    private def fetch_one(horizon)
-      ## toward the root
+    private def fetch_up
       100.times do # for safety, cap loops
         fetched, object = find_or_fetch_object(self.thread)
+        state.root_object = object.id if object && object.root?
         break if object.nil? || (object.root? && !fetched)
         self.thread = object.thread.not_nil!
         state << State::Node.new(object.id.not_nil!)
         return object if fetched
       end
+    end
 
-      ## explore the tree
+    # Fetches out through the tree.
+    #
+    private def fetch_out(horizon)
       100.times do # for safety, cap loops
         break if horizon.empty?
         node = horizon.shift
@@ -258,6 +261,15 @@ class Task
             end
         end
       end
+    end
+
+    # Fetches one new object in the thread.
+    #
+    # Explores the thread, and fetches and returns a new object or
+    # `nil` if no new object is fetched.
+    #
+    private def fetch_one(horizon)
+      (!state.root_object && fetch_up) || fetch_out(horizon)
     end
 
     # Merges tasks.

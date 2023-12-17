@@ -483,6 +483,11 @@ Spectator.describe Task::Fetch::Thread do
         expect{subject.perform(1)}.to change{subject.thread}.to(reply3.in_reply_to_iri)
       end
 
+      it "does not set the root object" do
+        subject.perform(1)
+        expect(subject.state.root_object).to be_nil
+      end
+
       it "sets the next attempt in the immediate future" do
         subject.perform(1)
         expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
@@ -504,6 +509,11 @@ Spectator.describe Task::Fetch::Thread do
 
       it "updates the thread value" do
         expect{subject.perform}.to change{subject.thread}.to(origin.iri)
+      end
+
+      it "sets the root object" do
+        subject.perform
+        expect(subject.state.root_object).to eq(find(origin.iri).id)
       end
 
       it "sets the next attempt in the near future" do

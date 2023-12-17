@@ -57,10 +57,23 @@ Spectator.describe Task::Fetch::Thread do
     end
 
     context "given an existing task" do
-      subject! { described_class.new(**options).save }
+      let!(existing) { described_class.new(**options).save }
 
       it "finds the existing task" do
-        expect(described_class.find_or_new(**options)).to eq(subject)
+        expect(described_class.find_or_new(**options)).to eq(existing)
+      end
+
+      context "for the root of the thread" do
+        let_create!(:object, named: :origin)
+        let_create!(:object, named: :reply, iri: options[:subject_iri], in_reply_to_iri: origin.iri)
+
+        before_each do
+          existing.assign(thread: origin.thread).save
+        end
+
+        it "finds the existing task" do
+          expect(described_class.find_or_new(**options)).to eq(existing)
+        end
       end
     end
   end
@@ -88,26 +101,368 @@ Spectator.describe Task::Fetch::Thread do
       expect(subject.next_attempt_at).not_to be_nil
     end
 
-    def find_object?(iri)
-      ActivityPub::Object.find?(iri)
+    def find(iri)
+      case iri
+      when /objects/
+        ActivityPub::Object.find(iri)
+      when /actors/
+        ActivityPub::Actor.find(iri)
+      else
+        raise "unsupported"
+      end
     end
 
-    def find_actor?(iri)
-      ActivityPub::Actor.find?(iri)
+    def find?(iri)
+      case iri
+      when /objects/
+        ActivityPub::Object.find?(iri)
+      when /actors/
+        ActivityPub::Actor.find?(iri)
+      else
+        raise "unsupported"
+      end
     end
 
-    context "a thread with uncached parents" do
+    context "given a thread with no replies" do
+      before_each do
+        HTTP::Client.objects << object
+      end
+
+      let(node) { subject.state.nodes.first }
+
+      pre_condition { expect(node.id).to eq(object.id) }
+
+      it "changes time of last attempt" do
+        expect{subject.perform}.to change{node.last_attempt_at}
+      end
+
+      it "does not change time of last success" do
+        expect{subject.perform}.not_to change{node.last_success_at}
+      end
+    end
+
+    context "given a thread with one reply" do
+      let_build(:object, named: :reply, in_reply_to_iri: object.iri)
+      let_build(:collection, named: :replies, items_iris: [reply.iri])
+
+      before_each do
+        HTTP::Client.objects << reply
+        HTTP::Client.objects << object.assign(replies: replies).save # embedded
+      end
+
+      it "does not fetch the replies collection" do
+        subject.perform
+        expect(HTTP::Client.requests).not_to have("GET #{replies.iri}")
+      end
+
+      let(node) { subject.state.nodes.first }
+
+      pre_condition { expect(node.id).to eq(object.id) }
+
+      it "changes time of last attempt" do
+        expect{subject.perform}.to change{node.last_attempt_at}
+      end
+
+      it "changes time of last success" do
+        expect{subject.perform}.to change{node.last_success_at}
+      end
+    end
+
+    context "given a thread with one reply" do
+      let_build(:object, named: :reply, in_reply_to_iri: object.iri)
+      let_build(:collection, named: :replies, iri: "#{object.iri}/replies", items_iris: [reply.iri])
+
+      before_each do
+        HTTP::Client.objects << reply
+        HTTP::Client.objects << object.assign(replies_iri: replies.iri).save # linked
+        HTTP::Client.collections << replies
+      end
+
+      it "fetches the replies collection" do
+        subject.perform
+        expect(HTTP::Client.requests).to have("GET #{replies.iri}")
+      end
+
+      let(node) { subject.state.nodes.first }
+
+      pre_condition { expect(node.id).to eq(object.id) }
+
+      it "changes time of last attempt" do
+        expect{subject.perform}.to change{node.last_attempt_at}
+      end
+
+      it "changes time of last success" do
+        expect{subject.perform}.to change{node.last_success_at}
+      end
+    end
+
+    def horizon(task)
+      task.state.nodes.map(&.id)
+    end
+
+    context "given a thread with a local reply" do
+      let_build(:object, named: :origin)
+      let_create(:object, named: :reply1, in_reply_to_iri: origin.iri)
+      let_create(:object, local: true, in_reply_to_iri: reply1.iri) # shadows earlier definition
+      let_create(:object, named: :reply2, in_reply_to_iri: object.iri)
+      let_build(:collection, named: :replies, iri: "#{reply2.iri}/replies", items_iris: [reply3.iri])
+      let_build(:object, named: :reply3, in_reply_to_iri: reply2.iri)
+
+      before_each do
+        HTTP::Client.objects << origin
+        HTTP::Client.objects << reply1
+        HTTP::Client.objects << reply2.assign(replies_iri: replies.iri)
+        HTTP::Client.objects << reply3
+        HTTP::Client.collections << replies
+        object.assign(replies_iri: "#{object.iri}/replies").save
+      end
+
+      it "starts with cached objects in the horizon" do
+        expect(horizon(subject)).to contain(reply1.id, object.id, reply2.id)
+      end
+
+      it "fetches all the uncached objects" do
+        subject.perform
+        expect(HTTP::Client.requests).to have("GET #{origin.iri}", "GET #{reply3.iri}")
+      end
+
+      it "persists all the uncached objects" do
+        expect{subject.perform}.to change{ {find?(origin.iri), find?(reply3.iri)} }
+      end
+
+      it "does not fetch the local object replies collection" do
+        subject.perform
+        expect(HTTP::Client.requests).not_to have("GET #{object.replies_iri}")
+      end
+
+      it "fetches the remote object replies collection" do
+        subject.perform
+        expect(HTTP::Client.requests).to have("GET #{reply2.replies_iri}")
+      end
+
+      let(node) { subject.state.nodes.find! { |node| node.id == object.id } }
+
+      it "changes time of last attempt" do
+        expect{subject.perform}.to change{node.last_attempt_at}
+      end
+
+      it "does not change time of last success" do
+        expect{subject.perform}.not_to change{node.last_success_at}
+      end
+
+      context "and a later reply" do
+        let_create(:object, named: :reply4, in_reply_to_iri: object.iri)
+
+        before_each { subject.perform }
+
+        pre_condition { expect(horizon(subject)).not_to have(reply4.id) }
+
+        it "adds the later reply to the horizon" do
+          subject.perform
+          expect(horizon(subject)).to have(reply4.id)
+        end
+
+        it "changes time of last attempt" do
+          expect{subject.perform}.to change{node.last_attempt_at}
+        end
+
+        it "changes time of last success" do
+          expect{subject.perform}.to change{node.last_success_at}
+        end
+      end
+    end
+
+    context "given a thread with many replies" do
+      let_build(:object, named: :reply1, in_reply_to_iri: object.iri)
+      let_build(:object, named: :reply2, in_reply_to_iri: object.iri)
+      let_build(:object, named: :reply3, in_reply_to_iri: object.iri)
+      let_build(:collection, named: :replies, iri: "#{object.iri}/replies", items_iris: [reply3.iri, reply2.iri, reply1.iri])
+
+      before_each do
+        HTTP::Client.objects << reply1
+        HTTP::Client.objects << reply2
+        HTTP::Client.objects << reply3
+        HTTP::Client.objects << object.assign(replies_iri: replies.iri).save
+        HTTP::Client.collections << replies
+      end
+
+      it "starts with cached objects in the horizon" do
+        expect(horizon(subject)).to contain(object.id)
+      end
+
+      it "fetches the collection" do
+        subject.perform(1)
+        expect(HTTP::Client.requests).to have("GET #{replies.iri}")
+      end
+
+      it "fetches a reply from the collection" do
+        subject.perform(1)
+        expect(HTTP::Client.requests).to have("GET #{reply3.iri}")
+      end
+
+      it "persists a reply from the collection" do
+        expect{subject.perform(1)}.to change{find?(reply3.iri)}
+      end
+
+      it "does not change the thread value" do
+        expect{subject.perform(1)}.not_to change{subject.thread}
+      end
+
+      it "adds a reply to the horizon" do
+        subject.perform(1)
+        expect(horizon(subject)).to contain(find(reply3.iri).id)
+      end
+
+      it "sets the next attempt in the immediate future" do
+        subject.perform(1)
+        expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+      end
+
+      it "fetches the collection" do
+        subject.perform
+        expect(HTTP::Client.requests).to have("GET #{replies.iri}")
+      end
+
+      it "fetches all the replies from the collection" do
+        subject.perform
+        expect(HTTP::Client.requests).to have("GET #{reply3.iri}", "GET #{reply2.iri}", "GET #{reply1.iri}")
+      end
+
+      it "persists all the replies from the collection" do
+        expect{subject.perform}.to change{ {find?(reply3.iri), find?(reply2.iri), find?(reply1.iri)} }
+      end
+
+      it "does not change the thread value" do
+        expect{subject.perform}.not_to change{subject.thread}
+      end
+
+      it "adds all the replies to the horizon" do
+        subject.perform
+        expect(horizon(subject)).to contain(find(reply3.iri).id, find(reply2.iri).id, find(reply1.iri).id)
+      end
+
+      it "sets the next attempt in the near future" do
+        subject.perform
+        expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+      end
+
+      context "and a follow" do
+        let_create!(:follow_thread_relationship, actor: source, thread: object.iri)
+
+        it "does not create a notification" do
+          expect{subject.perform(1)}.not_to change{source.notifications.size}
+        end
+
+        it "does not create a notification" do
+          expect{subject.perform(2)}.not_to change{source.notifications.size}
+        end
+
+        it "does not create a notification" do
+          expect{subject.perform(3)}.not_to change{source.notifications.size}
+        end
+
+        context "on the next run" do
+          before_each do
+            subject.perform(3)
+            subject.assign(last_attempt_at: 10.seconds.ago) # normally set by the task worker
+          end
+
+          pre_condition { expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now }
+
+          it "does not fetch any new replies" do
+            expect{subject.perform(1)}.not_to change{ActivityPub::Object.count}
+          end
+
+          it "sets the next attempt in the near future" do
+            subject.perform(1)
+            expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+          end
+
+          it "creates a notification" do
+            expect{subject.perform(1)}.to change{source.notifications.size}
+          end
+        end
+
+        it "creates a notification" do
+          expect{subject.perform(4)}.to change{source.notifications.size}
+        end
+
+        it "creates a notification" do
+          expect{subject.perform}.to change{source.notifications.size}
+        end
+      end
+
+      context "with all replies fetched" do
+        before_each { subject.perform }
+
+        it "sets the next attempt in the far future" do
+          subject.perform
+          expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+        end
+
+        context "and a later reply" do
+          # an uncached reply
+          let_build(:object, named: :reply4, in_reply_to_iri: object.iri)
+
+          before_each do
+            HTTP::Client.objects << reply4
+            HTTP::Client.collections << replies.assign(items_iris: [reply4.iri, reply3.iri, reply2.iri, reply1.iri])
+          end
+
+          pre_condition { expect(horizon(subject)).not_to have(reply4.id) }
+
+          it "adds the later reply to the horizon" do
+            subject.perform
+            expect(horizon(subject)).to contain(find(reply4.iri).id)
+          end
+
+          it "sets the next attempt in the near future" do
+            subject.perform
+            expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+          end
+
+        end
+
+        context "and a later reply" do
+          # a reply, but dereferenced and cached via some other process
+          let_create(:object, named: :reply4, in_reply_to_iri: object.iri)
+
+          before_each do
+            HTTP::Client.objects << reply4
+            HTTP::Client.collections << replies.assign(items_iris: [reply4.iri, reply3.iri, reply2.iri, reply1.iri])
+          end
+
+          pre_condition { expect(horizon(subject)).not_to have(reply4.id) }
+
+          it "adds the later reply to the horizon" do
+            subject.perform
+            expect(horizon(subject)).to contain(find(reply4.iri).id)
+          end
+
+          it "sets the next attempt in the far future" do
+            subject.perform
+            expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+          end
+        end
+      end
+    end
+
+    context "given a thread with uncached parents" do
       let_build(:object, named: :origin)
       let_build(:object, named: :reply1, in_reply_to_iri: origin.iri)
       let_build(:object, named: :reply2, in_reply_to_iri: reply1.iri)
       let_build(:object, named: :reply3, in_reply_to_iri: reply2.iri)
+      let_create(:object, in_reply_to_iri: reply3.iri) # shadows earlier definition
 
       before_each do
         HTTP::Client.objects << origin
         HTTP::Client.objects << reply1
         HTTP::Client.objects << reply2
         HTTP::Client.objects << reply3
-        object.assign(in_reply_to_iri: reply3.iri).save
+      end
+
+      it "starts with cached objects in the horizon" do
+        expect(horizon(subject)).to contain(object.id)
       end
 
       it "fetches the nearest uncached object" do
@@ -116,7 +471,12 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists the nearest uncached object" do
-        expect{subject.perform(1)}.to change{find_object?(reply3.iri)}
+        expect{subject.perform(1)}.to change{find?(reply3.iri)}
+      end
+
+      it "adds the nearest uncached object to the horizon" do
+        subject.perform(1)
+        expect(horizon(subject)).to contain(find(reply3.iri).id)
       end
 
       it "updates the thread value" do
@@ -134,7 +494,12 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists all the uncached objects" do
-        expect{subject.perform}.to change{ {find_object?(reply3.iri), find_object?(reply2.iri), find_object?(reply1.iri), find_object?(origin.iri)} }
+        expect{subject.perform}.to change{ {find?(reply3.iri), find?(reply2.iri), find?(reply1.iri), find?(origin.iri)} }
+      end
+
+      it "adds all the uncached objects to the horizon" do
+        subject.perform
+        expect(horizon(subject)).to contain(find(reply3.iri).id, find(reply2.iri).id, find(reply1.iri).id, find(origin.iri).id)
       end
 
       it "updates the thread value" do
@@ -159,24 +524,29 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       context "and uncached authors" do
+        let(actor) { origin.attributed_to }
+        let(actor1) { reply1.attributed_to }
+        let(actor2) { reply2.attributed_to }
+        let(actor3) { reply3.attributed_to }
+
         before_each do
-          HTTP::Client.actors << origin.attributed_to
-          HTTP::Client.actors << reply1.attributed_to
-          HTTP::Client.actors << reply2.attributed_to
-          HTTP::Client.actors << reply3.attributed_to
+          HTTP::Client.actors << actor
+          HTTP::Client.actors << actor1
+          HTTP::Client.actors << actor2
+          HTTP::Client.actors << actor3
         end
 
         it "fetches all the uncached authors" do
           subject.perform
-          expect(HTTP::Client.requests).to have("GET #{reply3.attributed_to_iri}", "GET #{reply2.attributed_to_iri}", "GET #{reply1.attributed_to_iri}", "GET #{origin.attributed_to_iri}")
+          expect(HTTP::Client.requests).to have("GET #{actor3.iri}", "GET #{actor2.iri}", "GET #{actor1.iri}", "GET #{actor.iri}")
         end
 
         it "persists all the uncached authors" do
-          expect{subject.perform}.to change{ {find_actor?(reply3.attributed_to_iri), find_actor?(reply2.attributed_to_iri), find_actor?(reply1.attributed_to_iri), find_actor?(origin.attributed_to_iri)} }
+          expect{subject.perform}.to change{ {find?(actor3.iri), find?(actor2.iri), find?(actor1.iri), find?(actor.iri)} }
         end
       end
 
-      context "given an existing object" do
+      context "with an existing object" do
         before_each { reply2.save }
 
         it "does not fetch the object" do
@@ -218,7 +588,7 @@ Spectator.describe Task::Fetch::Thread do
         end
       end
 
-      context "given an unfetchable object" do
+      context "with an unfetchable object" do
         before_each { HTTP::Client.objects.delete(reply2.iri) }
 
         it "fetches the object" do
@@ -237,9 +607,168 @@ Spectator.describe Task::Fetch::Thread do
         end
       end
 
-      it "does not raise an error" do
+      context "with all replies fetched" do
+        before_each { subject.perform }
+
+        it "sets the next attempt in the far future" do
+          subject.perform
+          expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+        end
+      end
+    end
+
+    context "given a thread with pages of replies" do
+      let_build(:object, named: :reply1, in_reply_to_iri: object.iri)
+      let_build(:object, named: :reply2, in_reply_to_iri: object.iri)
+      let_build(:object, named: :reply3, in_reply_to_iri: object.iri)
+
+      before_each do
+        HTTP::Client.objects << reply1
+        HTTP::Client.objects << reply2
+        HTTP::Client.objects << reply3
+        HTTP::Client.objects << object.assign(replies_iri: "#{object.iri}/replies").save
+      end
+
+      context "organized by first and next" do
+        let_build(:collection, named: :page2, iri: "#{object.iri}/replies?page=2", items_iris: [reply3.iri])
+        let_build(:collection, named: :page1, iri: "#{object.iri}/replies?page=1", next_iri: "#{object.iri}/replies?page=2", items_iris: [reply2.iri, reply1.iri])
+        let_build(:collection, iri: "#{object.iri}/replies", first_iri: "#{object.iri}/replies?page=1")
+
+        before_each do
+          HTTP::Client.collections << page2
+          HTTP::Client.collections << page1
+          HTTP::Client.collections << collection
+        end
+
+        it "fetches the collections" do
+          subject.perform
+          expect(HTTP::Client.requests).to have("GET #{collection.iri}", "GET #{page1.iri}", "GET #{page2.iri}")
+        end
+
+        it "fetches the replies from the collections" do
+          subject.perform
+          expect(HTTP::Client.requests).to have("GET #{reply2.iri}", "GET #{reply1.iri}", "GET #{reply3.iri}")
+        end
+
+        it "persists the replies" do
+          expect{subject.perform}.to change{ {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri)} }
+        end
+
+        it "adds the replies to the horizon" do
+          subject.perform
+          expect(horizon(subject)).to contain(find(reply2.iri).id, find(reply1.iri).id, find(reply3.iri).id)
+        end
+
+        it "sets the next attempt in the near future" do
+          subject.perform
+          expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+        end
+      end
+
+      context "organized by last and prev" do
+        let_build(:collection, named: :page2, iri: "#{object.iri}/replies?page=2", items_iris: [reply3.iri])
+        let_build(:collection, named: :page1, iri: "#{object.iri}/replies?page=1", prev_iri: "#{object.iri}/replies?page=2", items_iris: [reply2.iri, reply1.iri])
+        let_build(:collection, iri: "#{object.iri}/replies", last_iri: "#{object.iri}/replies?page=1")
+
+        before_each do
+          HTTP::Client.collections << page2
+          HTTP::Client.collections << page1
+          HTTP::Client.collections << collection
+        end
+
+        it "fetches the collections" do
+          subject.perform
+          expect(HTTP::Client.requests).to have("GET #{collection.iri}", "GET #{page1.iri}", "GET #{page2.iri}")
+        end
+
+        it "fetches the replies from the collections" do
+          subject.perform
+          expect(HTTP::Client.requests).to have("GET #{reply2.iri}", "GET #{reply1.iri}", "GET #{reply3.iri}")
+        end
+
+        it "persists the replies" do
+          expect{subject.perform}.to change{ {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri)} }
+        end
+
+        it "adds the replies to the horizon" do
+          subject.perform
+          expect(horizon(subject)).to contain(find(reply2.iri).id, find(reply1.iri).id, find(reply3.iri).id)
+        end
+
+        it "sets the next attempt in the near future" do
+          subject.perform
+          expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+        end
+      end
+    end
+
+    context "given a thread with Mastodon-style paging" do
+      let_build(:object, named: :reply1, in_reply_to_iri: object.iri)
+      let_build(:object, named: :reply2, in_reply_to_iri: object.iri)
+      let_build(:object, named: :reply3, in_reply_to_iri: object.iri)
+      let_build(:object, named: :reply4, in_reply_to_iri: reply1.iri)
+      let_build(:object, named: :reply5, in_reply_to_iri: reply1.iri)
+      let_build(:collection, named: :last_page1, iri: "#{object.iri}/replies?only_other_accounts=true&page=true", items_iris: [reply3.iri])
+      let_build(:collection, named: :next_page1, iri: "#{object.iri}/replies?min_id=111535982952207180&page=true", next_iri: last_page1.iri, items_iris: [reply2.iri])
+      let_build(:collection, named: :first_page1, items_iris: [reply1.iri], next_iri: next_page1.iri)
+      let_build(:collection, named: :replies1, iri: "#{object.iri}/replies", first: first_page1)
+      let_build(:collection, named: :next_page2, iri: "#{reply1.iri}/replies?only_other_accounts=true&page=true", items_iris: [reply5.iri])
+      let_build(:collection, named: :first_page2, items_iris: [reply4.iri], next_iri: next_page2.iri)
+      let_build(:collection, named: :replies2, iri: "#{reply1.iri}/replies", first: first_page2)
+
+      before_each do
+        HTTP::Client.objects << object.assign(replies_iri: replies1.iri).save
+        HTTP::Client.objects << reply1.assign(replies_iri: replies2.iri)
+        HTTP::Client.objects << reply2
+        HTTP::Client.objects << reply3
+        HTTP::Client.objects << reply4
+        HTTP::Client.objects << reply5
+        HTTP::Client.collections << last_page1
+        HTTP::Client.collections << next_page1
+        HTTP::Client.collections << replies1
+        HTTP::Client.collections << next_page2
+        HTTP::Client.collections << replies2
+      end
+
+      it "starts with cached objects in the horizon" do
+        expect(horizon(subject)).to contain(object.id)
+      end
+
+      it "fetches the collections" do
         subject.perform
+        expect(HTTP::Client.requests).to have("GET #{replies1.iri}", "GET #{next_page1.iri}", "GET #{last_page1.iri}", "GET #{replies2.iri}", "GET #{next_page2.iri}")
+      end
+
+      it "fetches the replies from the collections" do
         subject.perform
+        expect(HTTP::Client.requests).to have("GET #{reply2.iri}", "GET #{reply1.iri}", "GET #{reply3.iri}", "GET #{reply4.iri}", "GET #{reply5.iri}")
+      end
+
+      it "persists the replies from the collections" do
+        expect{subject.perform}.to change{ {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri), find?(reply4.iri), find?(reply5.iri)} }
+      end
+
+      it "adds the replies from the collections to the horizon" do
+        subject.perform
+        expect(horizon(subject)).to contain(find(reply2.iri).id, find(reply1.iri).id, find(reply3.iri).id, find(reply4.iri).id)
+      end
+
+      it "does not update the thread value" do
+        expect{subject.perform}.not_to change{subject.thread}
+      end
+
+      it "sets the next attempt in the near future" do
+        subject.perform
+        expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+      end
+
+      context "with all replies fetched" do
+        before_each { subject.perform}
+
+        it "sets the next attempt in the far future" do
+          subject.perform
+          expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+        end
       end
     end
   end
@@ -251,16 +780,97 @@ Spectator.describe Task::Fetch::Thread do
       expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{subject.reload!.thread}.to("https://new_thread")
     end
 
-    context "given another task for thread" do
-      let_create!(:fetch_thread_task, source: subject.source, thread: "https://new_thread")
+    context "given an existing task for thread" do
+      let_create!(:fetch_thread_task, named: existing, source: subject.source, thread: "https://new_thread")
 
       it "merges the tasks" do
-        expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{described_class.count}.by(-1)
+        expect{described_class.merge_into(subject.thread, existing.thread)}.to change{described_class.count}.by(-1)
       end
 
-      it "destroys the task which would be changed" do
-        expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{described_class.find?(subject.id)}.to(nil)
+      it "destroys the task which is merged from" do
+        expect{described_class.merge_into(subject.thread, existing.thread)}.to change{described_class.find?(subject.id)}.to(nil)
       end
+
+      it "does not destroy the task which is merged to" do
+        expect{described_class.merge_into(subject.thread, existing.thread)}.not_to change{described_class.find?(existing.id)}
+      end
+
+      context "with state" do
+        let(node1) { Task::Fetch::Thread::State::Node.new(id: 1) }
+        let(node2) { Task::Fetch::Thread::State::Node.new(id: 2) }
+
+        before_each do
+          subject.state.nodes << node1
+          existing.state.nodes << node2
+          subject.save
+          existing.save
+        end
+
+        it "merges the state" do
+          expect{described_class.merge_into(subject.thread, existing.thread)}.to change{existing.reload!.state.nodes}.to([node2, node1])
+        end
+      end
+    end
+  end
+end
+
+Spectator.describe Task::Fetch::Thread::State do
+  subject { described_class.new }
+
+  alias Node = Task::Fetch::Thread::State::Node
+  alias DuplicateNodeError = Task::Fetch::Thread::State::DuplicateNodeError
+
+  let(node1) { Node.new(id: 1, last_attempt_at: 10.minutes.ago, last_success_at: 30.minutes.ago) }
+  let(node2) { Node.new(id: 2, last_attempt_at: 10.minutes.ago, last_success_at: 40.minutes.ago) }
+  let(node3) { Node.new(id: 3, last_attempt_at: 15.minutes.ago, last_success_at: 10.minutes.ago) }
+  let(node4) { Node.new(id: 4, last_attempt_at: 15.minutes.ago, last_success_at: 20.minutes.ago) }
+
+  before_each do
+    subject.nodes = [node1, node2, node3, node4]
+  end
+
+  describe "#<<" do
+    let(node) { Node.new(id: 0) }
+
+    it "returns the state instance" do
+      expect(subject << node).to eq(subject)
+    end
+
+    it "appends the node" do
+      expect((subject << node).nodes).to contain_exactly(node1, node2, node3, node4, node).in_any_order
+    end
+
+    it "raises an error" do
+      expect{subject << node << node}.to raise_error(DuplicateNodeError)
+    end
+  end
+
+  describe "#+" do
+    let(other) { described_class.new }
+
+    let(node5) { Node.new(id: 5) }
+    let(node6) { Node.new(id: 6) }
+
+    before_each do
+      other.nodes = [node5, node6]
+    end
+
+    it "returns a new state instance" do
+      expect(subject + other).not_to be_within([subject, other])
+    end
+
+    it "concatenates the nodes" do
+      expect((subject + other).nodes).to contain_exactly(node1, node2, node3, node4, node5, node6).in_any_order
+    end
+
+    it "raises an error" do
+      expect{subject + subject}.to raise_error(DuplicateNodeError)
+    end
+  end
+
+  describe "#prioritize!" do
+    it "sorts objects by difference between last success and last attempt" do
+      expect(subject.prioritize!).to eq([node3, node4, node1, node2])
     end
   end
 end

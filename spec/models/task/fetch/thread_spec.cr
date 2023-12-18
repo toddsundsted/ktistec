@@ -290,6 +290,11 @@ Spectator.describe Task::Fetch::Thread do
         expect(horizon(subject)).to contain(object.id)
       end
 
+      it "fetches the object" do
+        subject.perform(1)
+        expect(HTTP::Client.requests).to have("GET #{object.iri}")
+      end
+
       it "fetches the collection" do
         subject.perform(1)
         expect(HTTP::Client.requests).to have("GET #{replies.iri}")
@@ -316,6 +321,11 @@ Spectator.describe Task::Fetch::Thread do
       it "sets the next attempt in the immediate future" do
         subject.perform(1)
         expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+      end
+
+      it "fetches the object" do
+        subject.perform
+        expect(HTTP::Client.requests).to have("GET #{object.iri}")
       end
 
       it "fetches the collection" do
@@ -443,6 +453,37 @@ Spectator.describe Task::Fetch::Thread do
             subject.perform
             expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
           end
+        end
+      end
+
+      context "with some replies fetched" do
+        subject do
+          # test caching.
+          # run and clear requests for that run.
+          # return a wholly new instance!
+          super.perform(1)
+          super.save
+          HTTP::Client.requests.clear
+          described_class.find(super.id)
+        end
+
+        it "does not fetch the object" do
+          subject.perform(2)
+          expect(HTTP::Client.requests).not_to have("GET #{object.iri}")
+        end
+
+        it "does not fetch the collection" do
+          subject.perform(2)
+          expect(HTTP::Client.requests).not_to have("GET #{replies.iri}")
+        end
+
+        it "fetches the remaining replies from the collection" do
+          subject.perform(2)
+          expect(HTTP::Client.requests).to have("GET #{reply2.iri}", "GET #{reply1.iri}")
+        end
+
+        it "persists the remaining replies from the collection" do
+          expect{subject.perform(2)}.to change{ {find?(reply2.iri), find?(reply1.iri)} }
         end
       end
     end

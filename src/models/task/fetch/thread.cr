@@ -38,6 +38,10 @@ class Task
 
       property root_object : Int64?
 
+      property cached_object : Int64?
+
+      property cache : Array(String)?
+
       def initialize(@nodes = [] of Node)
       end
 
@@ -190,7 +194,7 @@ class Task
       end
     end
 
-    # Fetches out through the tree.
+    # Fetches out through the horizon.
     #
     private def fetch_out(horizon)
       100.times do # for safety, cap loops
@@ -198,60 +202,72 @@ class Task
         node = horizon.shift
         object = ActivityPub::Object.find?(node.id)
         now = Time.utc
-        if object && object.local?
-          node.last_attempt_at = now
-          ids = state.nodes.map(&.id)
-          ActivityPub::Object.where(in_reply_to_iri: object.iri)
-            .each do |reply|
-              unless reply.id.in?(ids)
-                node.last_success_at = now
-                state << State::Node.new(reply.id.not_nil!)
-              end
-            end
-        elsif object && (object = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))
-          node.last_attempt_at = now
-          ids = state.nodes.map(&.id)
-          Array(String).new
-            .tap do |items|
-              if (replies = object.replies?(source, dereference: true))
-                if (iris = replies.items_iris)
-                  items.concat(iris)
+        if object
+          if object.local?
+            node.last_attempt_at = now
+            ids = state.nodes.map(&.id)
+            ActivityPub::Object.where(in_reply_to_iri: object.iri)
+              .each do |reply|
+                unless reply.id.in?(ids)
+                  node.last_success_at = now
+                  state << State::Node.new(reply.id.not_nil!)
                 end
-                if (first = replies.first?(source, dereference: true))
-                  if (iris = first.items_iris)
-                    items.concat(iris)
-                  end
-                  this = first
-                  100.times do # for safety, cap loops
-                    if (that = this.next?(source, dereference: true))
-                      if (iris = that.items_iris)
+            end
+          else
+            node.last_attempt_at = now
+            ids = state.nodes.map(&.id)
+            if state.cache.presence && state.cached_object != node.id
+              state.cache = nil
+            end
+            if !state.cache.presence
+              state.cache = nil
+            end
+            state.cache || begin
+              state.cached_object = node.id
+              state.cache = Array(String).new.tap do |items|
+                if (temporary = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))
+                  if (replies = temporary.replies?(source, dereference: true))
+                    if (iris = replies.items_iris)
+                      items.concat(iris)
+                    end
+                    if (first = replies.first?(source, dereference: true))
+                      if (iris = first.items_iris)
                         items.concat(iris)
                       end
-                      this = that
-                    else
-                      break
-                    end
-                  end
-                elsif (last = replies.last?(source, dereference: true))
-                  if (iris = last.items_iris)
-                    items.concat(iris)
-                  end
-                  this = last
-                  100.times do # for safety, cap loops
-                    if (that = this.prev?(source, dereference: true))
-                      if (iris = that.items_iris)
+                      this = first
+                      100.times do # for safety, cap loops
+                        if (that = this.next?(source, dereference: true))
+                          if (iris = that.items_iris)
+                            items.concat(iris)
+                          end
+                          this = that
+                        else
+                          break
+                        end
+                      end
+                    elsif (last = replies.last?(source, dereference: true))
+                      if (iris = last.items_iris)
                         items.concat(iris)
                       end
-                      this = that
-                    else
-                      break
+                      this = last
+                      100.times do # for safety, cap loops
+                        if (that = this.prev?(source, dereference: true))
+                          if (iris = that.items_iris)
+                            items.concat(iris)
+                          end
+                          this = that
+                        else
+                          break
+                        end
+                      end
                     end
                   end
                 end
               end
             end
-            .each do |candidate|
-              fetched, object = find_or_fetch_object(candidate)
+            cache = state.cache.not_nil!
+            while (item = cache.shift?)
+              fetched, object = find_or_fetch_object(item)
               next if object.nil?
               unless object.id.in?(ids)
                 node.last_success_at = now
@@ -259,6 +275,7 @@ class Task
                 return object if fetched
               end
             end
+          end
         end
       end
     end

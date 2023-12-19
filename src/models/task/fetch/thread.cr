@@ -144,13 +144,14 @@ class Task
         end
       ensure
         Log.info { "perform [#{id}] - complete - #{count} fetched" }
+        random = Random::DEFAULT
         self.next_attempt_at =
-          if count < 1 && !continuation    # none fetched
-            4.hours.from_now               #  => far future
-          elsif count < maximum            # some fetched
-            1.hour.from_now                #  => near future
-          else                             # maximum number fetched
-            5.seconds.from_now             #  => immediate future
+          if count < 1 && !continuation              # none fetched
+            random.rand(3..5).hours.from_now         #  => far future
+          elsif count < maximum                      # some fetched
+            random.rand(45..90).minutes.from_now     #  => near future
+          else                                       # maximum number fetched
+            random.rand(4..6).seconds.from_now       #  => immediate future
           end
       end
 

@@ -137,11 +137,13 @@ class Task
       count = 0
       begin
         maximum.times do
+          Log.info { "perform [#{id}] - iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
           count += 1
         end
       ensure
+        Log.info { "perform [#{id}] - complete - #{count} fetched" }
         self.next_attempt_at =
           if count < 1 && !continuation    # none fetched
             4.hours.from_now               #  => far future
@@ -185,6 +187,7 @@ class Task
     #
     private def fetch_up
       100.times do # for safety, cap loops
+        Log.info { "fetch_up [#{id}] - iri: #{self.thread}" }
         fetched, object = find_or_fetch_object(self.thread)
         state.root_object = object.id if object && object.root?
         break if object.nil? || (object.root? && !fetched)
@@ -204,6 +207,7 @@ class Task
         now = Time.utc
         if object
           if object.local?
+            Log.info { "fetch_out (local) [#{id}] - iri: #{object.iri}" }
             node.last_attempt_at = now
             ids = state.nodes.map(&.id)
             ActivityPub::Object.where(in_reply_to_iri: object.iri)
@@ -214,9 +218,11 @@ class Task
                 end
             end
           else
+            Log.info { "fetch_out (remote) [#{id}] - iri: #{object.iri}" }
             node.last_attempt_at = now
             ids = state.nodes.map(&.id)
             if state.cache.presence && state.cached_object != node.id
+              Log.info { "fetch_out [#{id}] - cache invalidated - #{state.cache.try(&.size)} items remaining" }
               state.cache = nil
             end
             if !state.cache.presence
@@ -263,6 +269,7 @@ class Task
                     end
                   end
                 end
+                Log.info { "fetch_out [#{id}] - #{items.size} items" }
               end
             end
             cache = state.cache.not_nil!

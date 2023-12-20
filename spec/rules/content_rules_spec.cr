@@ -289,6 +289,22 @@ Spectator.describe ContentRules do
           Factory.create(:hashtag, name: "bar", subject: object)
         end
 
+        context "where object is attributed to the owner" do
+          let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "foo")
+
+          before_each { object.assign(attributed_to: owner).save }
+
+          it "does not add the object to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
+          end
+
+          it "does not add the object to the notifications" do
+            run(owner, announce)
+            expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
+          end
+        end
+
         context "where 'foo' is followed by the owner" do
           let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "foo")
 
@@ -350,6 +366,22 @@ Spectator.describe ContentRules do
         before_each do
           Factory.create(:mention, name: "foo@remote.com", subject: object)
           Factory.create(:mention, name: "bar@remote.com", subject: object)
+        end
+
+        context "where object is attributed to the owner" do
+          let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "foo@remote.com")
+
+          before_each { object.assign(attributed_to: owner).save }
+
+          it "does not add the object to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
+          end
+
+          it "does not add the object to the notifications" do
+            run(owner, announce)
+            expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
+          end
         end
 
         context "where 'foo@remote.com' is followed by the owner" do
@@ -449,43 +481,75 @@ Spectator.describe ContentRules do
 
     context "given notifications with a followed hashtag already added" do
       let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "hashtag")
+      let_create!(:hashtag, name: "hashtag", subject: object)
 
-      before_each do
-        Factory.create(:notification_hashtag, owner: owner, object: object)
-        Factory.create(:hashtag, name: "hashtag", subject: object)
+      context "for the owner" do
+        let_create!(:notification_hashtag, owner: owner, object: object)
+
+        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+
+        it "does not add another object to the notifications" do
+          run(owner, create)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "does not add another object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
       end
 
-      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+      context "for other owner" do
+        let_create!(:notification_hashtag, owner: other, object: object)
 
-      it "does not add another object to the notifications" do
-        run(owner, create)
-        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
-      end
+        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to be_empty }
 
-      it "does not add another object to the notifications" do
-        run(owner, announce)
-        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        it "adds the object to the notifications" do
+          run(owner, create)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "adds the object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
       end
     end
 
     context "given notifications with a followed mention already added" do
       let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "mention")
+      let_create!(:mention, name: "mention", subject: object)
 
-      before_each do
-        Factory.create(:notification_mention, owner: owner, object: object)
-        Factory.create(:mention, name: "mention", subject: object)
+      context "for the owner" do
+        let_create!(:notification_mention, owner: owner, object: object)
+
+        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+
+        it "does not add another object to the notifications" do
+          run(owner, create)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "does not add another object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
       end
 
-      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+      context "for other owner" do
+        let_create!(:notification_mention, owner: other, object: object)
 
-      it "does not add another object to the notifications" do
-        run(owner, create)
-        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
-      end
+        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to be_empty }
 
-      it "does not add another object to the notifications" do
-        run(owner, announce)
-        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        it "adds the object to the notifications" do
+          run(owner, create)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "adds the object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
       end
     end
 

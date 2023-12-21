@@ -554,22 +554,51 @@ Spectator.describe ContentRules do
     end
 
     context "given notifications with a followed thread reply already added" do
-      before_each do
-        object.assign(in_reply_to: Factory.build(:object, attributed_to: other))
-        Factory.create(:follow_thread_relationship, actor: owner, thread: object.in_reply_to_iri)
-        Factory.create(:notification_thread, owner: owner, object: object)
+      let_create!(:follow_thread_relationship, actor: owner, thread: origin.iri)
+      let_build(:object, named: origin, attributed_to: other)
+
+      before_each { object.assign(in_reply_to: origin).save }
+
+      context "for the owner" do
+        let_create!(:notification_thread, owner: owner, object: object)
+
+        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+
+        it "removes the previous create from the notifications" do
+          run(owner, create)
+          expect(owner.notifications).not_to have(notification_thread)
+        end
+
+        it "does not add another object to the notifications" do
+          run(owner, create)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "removes the previous announce from the notifications" do
+          run(owner, announce)
+          expect(owner.notifications).not_to have(notification_thread)
+        end
+
+        it "does not add another object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
       end
 
-      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+      context "for other owner" do
+        let_create!(:notification_thread, owner: other, object: object)
 
-      it "does not add another object to the notifications" do
-        run(owner, create)
-        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
-      end
+        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to be_empty }
 
-      it "does not add another object to the notifications" do
-        run(owner, announce)
-        expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        it "adds the object to the notifications" do
+          run(owner, create)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "adds the object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
       end
     end
 

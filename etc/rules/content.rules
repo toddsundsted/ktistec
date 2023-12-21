@@ -257,7 +257,8 @@ end
 
 rule "notification exists for object 3"
   condition CheckFollowFor, actor, object
-  condition NotificationThread, object: object
+  condition NotificationThread, owner: actor, object: object
+  retract NotificationThread, owner: actor, object: object
   assert NotificationFor, object
 end
 
@@ -281,9 +282,9 @@ end
 
 rule "follow/thread"
   condition CheckFollowFor, actor, object
-  none NotificationFor, object
   condition Object, object, thread: thread
   condition FollowThread, actor: actor, thread: thread
+  none NotificationThread, owner: actor, object: object
   assert NotificationThread, owner: actor, object: object
 end
 

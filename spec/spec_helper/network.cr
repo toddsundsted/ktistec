@@ -110,6 +110,12 @@ class HTTP::Client
         headers: HTTP::Headers.new,
         body: collection
       )
+    when /objects\/([^\/]+)\/replies/
+      HTTP::Client::Response.new(
+        (collection = @@collections[url.to_s]?) ? 200 : 404,
+        headers: HTTP::Headers.new,
+        body: collection
+      )
     when /actors\/([^\/]+)/
       HTTP::Client::Response.new(
         (actor = @@actors[url.to_s]?) ? 200 : 404,

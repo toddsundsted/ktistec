@@ -15,6 +15,8 @@ class ObjectsController
     )
 
     unless object.assign(params(env)).valid?
+      recursive = false
+
       unprocessable_entity "objects/new"
     end
 
@@ -29,6 +31,8 @@ class ObjectsController
     end
 
     redirect edit_object_path if object.draft?
+
+    recursive = false
 
     ok "objects/object"
   end
@@ -52,6 +56,8 @@ class ObjectsController
       not_found
     end
 
+    recursive = false
+
     ok "objects/edit"
   end
 
@@ -61,6 +67,8 @@ class ObjectsController
     end
 
     unless object.assign(params(env)).valid?
+      recursive = false
+
       unprocessable_entity "objects/edit"
     end
 
@@ -83,6 +91,8 @@ class ObjectsController
     unless (object = get_remote_object(env, id_param(env)))
       not_found
     end
+
+    recursive = false
 
     ok "objects/object"
   end

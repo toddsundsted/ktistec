@@ -12,7 +12,9 @@
   <%- if (in_reply_to_iri = object.in_reply_to_iri) -%>
   "inReplyTo":<%= in_reply_to_iri.inspect %>,
   <%- end -%>
-  <%- if (replies_iri = object.replies_iri) -%>
+  <%- if recursive == true && (replies = object.replies?) -%>
+  "replies":<%= replies.to_json_ld %>,
+  <%- elsif (replies_iri = object.replies_iri) -%>
   "replies":<%= replies_iri.inspect %>,
   <%- end -%>
   <%- if (to = object.to) -%>

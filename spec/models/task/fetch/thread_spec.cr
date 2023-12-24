@@ -139,6 +139,28 @@ Spectator.describe Task::Fetch::Thread do
       it "does not change time of last success" do
         expect{subject.perform}.not_to change{node.last_success_at}
       end
+
+      it "increments the failures counter" do
+        expect{subject.perform}.to change{subject.state.failures}.to(1)
+      end
+
+      it "sets the next attempt in the far future" do
+        subject.perform
+        expect(subject.next_attempt_at.not_nil!).to be_between(3.hours.from_now, 5.hours.from_now)
+      end
+
+      context "and a prior failure" do
+        before_each { subject.state.failures = 1 }
+
+        it "increments the failures counter" do
+          expect{subject.perform}.to change{subject.state.failures}.to(2)
+        end
+
+        it "sets the next attempt in the far future" do
+          subject.perform
+          expect(subject.next_attempt_at.not_nil!).to be_between(6.hours.from_now, 10.hours.from_now)
+        end
+      end
     end
 
     context "given a thread with one reply" do
@@ -165,6 +187,14 @@ Spectator.describe Task::Fetch::Thread do
 
       it "changes time of last success" do
         expect{subject.perform}.to change{node.last_success_at}
+      end
+
+      context "and a prior failure" do
+        before_each { subject.state.failures = 1 }
+
+        it "resets the failures counter" do
+          expect{subject.perform}.to change{subject.state.failures}.to(0)
+        end
       end
     end
 
@@ -193,6 +223,14 @@ Spectator.describe Task::Fetch::Thread do
 
       it "changes time of last success" do
         expect{subject.perform}.to change{node.last_success_at}
+      end
+
+      context "and a prior failure" do
+        before_each { subject.state.failures = 1 }
+
+        it "resets the failures counter" do
+          expect{subject.perform}.to change{subject.state.failures}.to(0)
+        end
       end
     end
 

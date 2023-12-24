@@ -36,11 +36,17 @@ class Task
 
       property nodes : Array(Node)
 
+      # Root object of thread.
       property root_object : Int64?
 
+      # Object for which replies are cached.
       property cached_object : Int64?
 
+      # Cached replies.
       property cache : Array(String)?
+
+      # Count of successive failures to fetch new objects.
+      property failures : Int32 = 0
 
       def initialize(@nodes = [] of Node)
       end
@@ -146,12 +152,19 @@ class Task
         Log.info { "perform [#{id}] - complete - #{count} fetched" }
         random = Random::DEFAULT
         self.next_attempt_at =
-          if count < 1 && !continuation              # none fetched
-            random.rand(3..5).hours.from_now         #  => far future
-          elsif count < maximum                      # some fetched
-            random.rand(45..90).minutes.from_now     #  => near future
-          else                                       # maximum number fetched
-            random.rand(4..6).seconds.from_now       #  => immediate future
+          if count < 1 && !continuation              # none fetched => far future
+            state.failures += 1
+            base = 2 ** (state.failures + 1)
+            offset = base // 4
+            min = base - offset
+            max = base + offset
+            random.rand(min..max).hours.from_now
+          elsif count < maximum                      # some fetched => near future
+            state.failures = 0
+            random.rand(45..75).minutes.from_now
+          else                                       # maximum number fetched => immediate future
+            state.failures = 0
+            random.rand(4..6).seconds.from_now
           end
       end
 

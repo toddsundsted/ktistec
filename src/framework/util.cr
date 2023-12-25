@@ -174,6 +174,55 @@ module Ktistec
       end
     end
 
+    # Transforms the span of time between two different times into
+    # words.
+    #
+    def distance_of_time_in_words(from_time : Time, to_time : Time = Time.utc)
+      distance_of_time_in_words(from_time - to_time)
+    end
+
+    # :ditto:
+    def distance_of_time_in_words(distance : Time::Span)
+      distance = distance.abs
+      if distance <= 29.seconds
+        "less than a minute"
+      elsif distance <= 1.minute + 29.seconds
+        "1 minute"
+      elsif distance <= 2.minutes + 29.seconds
+        "2 minutes"
+      elsif distance <= 44.minutes + 59.seconds
+        "#{distance.minutes} minutes"
+      elsif distance <= 1.hour + 29.minutes + 59.seconds
+        "about 1 hour"
+      elsif distance <= 2.hour + 29.minutes + 59.seconds
+        "about 2 hours"
+      elsif distance <= 24.hours - 1.second
+        "#{distance.hours} hours"
+      elsif distance <= 36.hours - 1.second
+        "about 1 day"
+      elsif distance <= 60.hours - 1.second
+        "about 2 days"
+      elsif distance <= 30.days - 1.second
+        "#{distance.days} days"
+      elsif distance <= 46.days - 1.second
+        "about 1 month"
+      elsif distance <= 77.days - 1.second
+        "about 2 months"
+      elsif distance <= 365.days - 1.second
+        "#{distance.days // 31 + 1} months"
+      else
+        years = distance.days // 365
+        days = distance.days % 365
+        if days < 93
+          %Q|about #{years} #{years > 1 ? "years" : "year"}|
+        elsif days < 279
+          %Q|over #{years} #{years > 1 ? "years" : "year"}|
+        else
+          %Q|almost #{years + 1} years|
+        end
+      end
+    end
+
     # Pluralizes a singular noun.
     #
     def pluralize(noun)

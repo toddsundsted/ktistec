@@ -14,12 +14,13 @@
         a data-turbo-frame="_top" href=remote_actor_path(actor)
           - if (icon = actor.icon)
             img.ui.avatar.image data-actor-id=actor.id src=icon
-  turbo-frame#thread_page_thread_controls
-    .ui.basic.segment
-      - if follow.nil? || follow.new_record?
-        == form_button "Follow", follow_thread_path(thread.first), button_class: "ui button primary"
-      - else
-        == form_button "Unfollow", unfollow_thread_path(thread.first)
+  - if env.account?
+    turbo-frame#thread_page_thread_controls
+      .ui.basic.segment
+        - if follow.nil? || follow.new_record?
+          == form_button "Follow", follow_thread_path(thread.first), button_class: "ui button primary"
+        - else
+          == form_button "Unfollow", unfollow_thread_path(thread.first)
 section.ui.feed data-controller="icon-load-error"
   - if env.account? && (iri = thread.first.in_reply_to_iri.presence)
     - message = nil

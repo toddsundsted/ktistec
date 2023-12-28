@@ -28,12 +28,20 @@ Spectator.describe "object" do
 
     let(thread) { [object] }
 
+    it "does not render a button to follow the thread" do
+      expect(subject.xpath_nodes("//form[button[text()='Follow']]")).to be_empty
+    end
+
     it "does not render a button to dereference the link" do
       expect(subject.xpath_nodes("//form[input[@name='iri']]")).to be_empty
     end
 
     context "if authenticated" do
       before_each { env.account = account }
+
+      it "renders a button to follow the thread" do
+        expect(subject.xpath_nodes("//form[button[text()='Follow']]")).not_to be_empty
+      end
 
       it "renders a button to dereference the link" do
         expect(subject.xpath_nodes("//form[input[@name='iri']]")).not_to be_empty

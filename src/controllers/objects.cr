@@ -48,6 +48,8 @@ class ObjectsController
 
     follow = nil
 
+    task = nil
+
     ok "objects/thread"
   end
 
@@ -105,6 +107,8 @@ class ObjectsController
     thread = object.thread(for_actor: env.account.actor)
 
     follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
+
+    task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
 
     ok "objects/thread"
   end
@@ -172,7 +176,7 @@ class ObjectsController
 
     follow = Relationship::Content::Follow::Thread.new(actor: env.account.actor, thread: thread.first.thread).save
 
-    task = Task::Fetch::Thread.find_or_new(source: env.account.actor, thread: thread.first.thread).schedule
+    (task = Task::Fetch::Thread.find_or_new(source: env.account.actor, thread: thread.first.thread)).schedule
 
     if turbo_frame?
       ok "objects/thread"
@@ -190,7 +194,7 @@ class ObjectsController
 
     follow = Relationship::Content::Follow::Thread.find(actor: env.account.actor, thread: thread.first.thread).destroy
 
-    task = Task::Fetch::Thread.find(source: env.account.actor, thread: thread.first.thread).complete!
+    (task = Task::Fetch::Thread.find(source: env.account.actor, thread: thread.first.thread)).complete!
 
     if turbo_frame?
       ok "objects/thread"

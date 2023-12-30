@@ -6,7 +6,7 @@ require "../models/task/fetch/thread"
 class ObjectsController
   include Ktistec::Controller
 
-  skip_auth ["/objects/:id", "/objects/:id/thread"], GET
+  skip_auth ["/objects/:id", "/objects/:id/replies", "/objects/:id/thread"], GET
 
   post "/objects" do |env|
     object = ActivityPub::Object::Note.new(
@@ -35,6 +35,20 @@ class ObjectsController
     recursive = false
 
     ok "objects/object"
+  end
+
+  get "/objects/:id/replies" do |env|
+    unless (object = get_object(env, iri_param(env, "/objects")))
+      not_found
+    end
+
+    redirect edit_object_path if object.draft?
+
+    replies = object.replies(for_actor: object.attributed_to)
+
+    recursive = false
+
+    ok "objects/replies"
   end
 
   get "/objects/:id/thread" do |env|

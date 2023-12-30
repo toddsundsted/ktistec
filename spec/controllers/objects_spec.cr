@@ -184,6 +184,49 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "GET /objects/:id/replies" do
+    it "succeeds" do
+      get "/objects/#{visible.uid}/replies"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "renders an empty collection" do
+      get "/objects/#{visible.uid}/replies"
+      expect(JSON.parse(response.body).dig("orderedItems").as_a).to be_empty
+    end
+
+    context "with a reply" do
+      before_each do
+        notvisible.assign(in_reply_to: visible).save
+      end
+
+      it "renders the collection" do
+        get "/objects/#{visible.uid}/replies"
+        expect(JSON.parse(response.body).dig("orderedItems").as_a).to contain_exactly(notvisible.iri)
+      end
+    end
+
+    it "returns 404 if object is a draft" do
+      get "/objects/#{draft.uid}/replies"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if object is not visible" do
+      get "/objects/#{notvisible.uid}/replies"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if object is remote" do
+      get "/objects/#{remote.uid}/replies"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if object does not exist" do
+      get "/objects/000/replies"
+      expect(response.status_code).to eq(404)
+    end
+  end
+
   describe "GET /objects/:id/thread" do
     it "succeeds" do
       get "/objects/#{visible.uid}/thread", ACCEPT_HTML

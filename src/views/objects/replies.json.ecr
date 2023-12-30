@@ -1,0 +1,14 @@
+{
+  "@context":"https://www.w3.org/ns/activitystreams",
+  "type":"OrderedCollection",
+  "id":<%= (host + env.request.path).inspect %>,
+  "orderedItems":[
+    <%- replies.each_with_index do |reply, i| -%>
+    <%- if recursive -%>
+    <%= reply.to_json_ld %>
+    <%- else -%>
+    <%= reply.iri.inspect %>
+    <%- end -%><%= comma(replies, i) %>
+    <%- end -%>
+  ]
+}

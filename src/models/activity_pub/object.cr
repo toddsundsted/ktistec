@@ -372,6 +372,57 @@ module ActivityPub
       self
     end
 
+    # Returns all replies to this object.
+    #
+    # Intended for presenting an object's replies to an authorized
+    # user (one who may see all objects).
+    #
+    # The `for_actor` parameter must be specified to disambiguate this
+    # method from the `replies` property getter, but is not currently
+    # used.
+    #
+    def replies(*, for_actor)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS a
+             ON a.iri = o.attributed_to_iri
+          WHERE o.in_reply_to_iri = ?
+            AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
+            AND a.deleted_at IS NULL
+            AND a.blocked_at IS NULL
+       ORDER BY o.published DESC
+      QUERY
+      Object.query_all(query, iri)
+    end
+
+    # Returns all replies to this object which have been approved by
+    # `approved_by`.
+    #
+    # Intended for presenting an object's replies to an unauthorized
+    # user (one who may not see all objects e.g. an anonymous user).
+    #
+    def replies(*, approved_by)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS a
+             ON a.iri = o.attributed_to_iri
+           JOIN relationships AS r
+             ON r.type = "#{Relationship::Content::Approved}"
+            AND r.from_iri = ? AND r.to_iri = o.iri
+          WHERE o.in_reply_to_iri = ?
+            AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
+            AND a.deleted_at IS NULL
+            AND a.blocked_at IS NULL
+       ORDER BY o.published DESC
+      QUERY
+      from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
+      Object.query_all(query, from_iri, iri)
+    end
+
     @[Assignable]
     property depth : Int32 = 0
 

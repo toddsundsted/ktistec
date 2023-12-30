@@ -650,6 +650,88 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    describe "#replies" do
+      let_build(:actor)
+
+      it "returns replies" do
+        expect(subject.replies(for_actor: actor)).to eq([object1, object4])
+        expect(object1.replies(for_actor: actor)).to eq([object2])
+        expect(object5.replies(for_actor: actor)).to be_empty
+      end
+
+      it "omits deleted replies" do
+        object4.delete!
+        expect(subject.replies(for_actor: actor)).to eq([object1])
+      end
+
+      it "omits blocked replies" do
+        object4.block!
+        expect(subject.replies(for_actor: actor)).to eq([object1])
+      end
+
+      it "omits destroyed replies" do
+        object4.destroy
+        expect(subject.replies(for_actor: actor)).to eq([object1])
+      end
+
+      it "omits replies with deleted attributed to actors" do
+        actor4.delete!
+        expect(subject.replies(for_actor: actor)).to eq([object1])
+      end
+
+      it "omits replies with blocked attributed to actors" do
+        actor4.block!
+        expect(subject.replies(for_actor: actor)).to eq([object1])
+      end
+
+      it "omits replies with destroyed attributed to actors" do
+        actor4.destroy
+        expect(subject.replies(for_actor: actor)).to eq([object1])
+      end
+
+      it "omits unapproved replies" do
+        expect(subject.replies(approved_by: actor)).to be_empty
+      end
+
+      context "and an approved object" do
+        let_create!(:approved_relationship, named: :approved, actor: actor, object: object4)
+
+        it "returns approved replies" do
+          expect(subject.replies(approved_by: actor)).to eq([object4])
+        end
+
+        it "omits deleted replies" do
+          object4.delete!
+          expect(subject.replies(approved_by: actor)).to be_empty
+        end
+
+        it "omits blocked replies" do
+          object4.block!
+          expect(subject.replies(approved_by: actor)).to be_empty
+        end
+
+        it "omits destroyed replies" do
+          object4.destroy
+          expect(subject.replies(approved_by: actor)).to be_empty
+        end
+
+        it "omits replies with deleted attributed to actors" do
+          actor4.delete!
+          expect(subject.replies(approved_by: actor)).to be_empty
+        end
+
+        it "omits replies with blocked attributed to actors" do
+          actor4.block!
+          expect(subject.replies(approved_by: actor)).to be_empty
+        end
+
+        it "omits replies with destroyed attributed to actors" do
+          actor4.destroy
+          expect(subject.replies(approved_by: actor)).to be_empty
+        end
+      end
+    end
+
     describe "#thread" do
       let_build(:actor)
 

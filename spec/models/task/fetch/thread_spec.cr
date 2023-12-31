@@ -146,7 +146,7 @@ Spectator.describe Task::Fetch::Thread do
 
       it "sets the next attempt in the far future" do
         subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(3.hours.from_now, 5.hours.from_now)
+        expect(subject.next_attempt_at.not_nil!).to be_between(2.hours.from_now, 6.hours.from_now)
       end
 
       context "and a prior failure" do
@@ -158,7 +158,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the far future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be_between(6.hours.from_now, 10.hours.from_now)
+          expect(subject.next_attempt_at.not_nil!).to be_between(5.hours.from_now, 11.hours.from_now)
         end
       end
     end

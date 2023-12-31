@@ -47,4 +47,48 @@ Spectator.describe Relationship::Content::Follow::Thread do
       expect(subject.thread).to eq(subject.to_iri)
     end
   end
+
+  describe ".merge_into" do
+    subject { described_class.new(**options).save }
+
+    it "updates relationship if thread changes" do
+      expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{subject.reload!.thread}.to("https://new_thread")
+    end
+
+    context "given another relationship for thread" do
+      let_create!(:follow_thread_relationship, actor: subject.actor, thread: "https://new_thread")
+
+      it "merges the relationships" do
+        expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{described_class.count}.by(-1)
+      end
+
+      it "destroys the relationship which would be changed" do
+        expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{described_class.find?(subject.id)}.to(nil)
+      end
+    end
+  end
+end
+
+Spectator.describe ActivityPub::Object do
+  setup_spec
+
+  context "given a follow" do
+    let_build(:object)
+    let_build(:actor)
+    let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: object.save.thread)
+
+    def all_follows ; Relationship::Content::Follow::Thread.all end
+
+    it "updates follow relationships when thread changes" do
+      expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{all_follows.map(&.to_iri)}.to(["https://elsewhere"])
+    end
+
+    context "given an existing follow relationship" do
+      let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: "https://elsewhere")
+
+      it "updates follow relationships when thread changes" do
+        expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{all_follows.map(&.to_iri)}.to(["https://elsewhere"])
+      end
+    end
+  end
 end

@@ -16,7 +16,7 @@ class HTTP::Client
   class Cache
     @cache = Hash(String, String).new
 
-    delegate :[]?, :[]=, :clear, to: @cache
+    delegate :[]?, :[]=, :clear, :delete, to: @cache
 
     def <<(object)
       if object.responds_to?(:iri) && object.responds_to?(:to_json_ld)
@@ -105,6 +105,12 @@ class HTTP::Client
         body: activity
       )
     when /actors\/([^\/]+)\/([^\/]+)/
+      HTTP::Client::Response.new(
+        (collection = @@collections[url.to_s]?) ? 200 : 404,
+        headers: HTTP::Headers.new,
+        body: collection
+      )
+    when /objects\/([^\/]+)\/replies/
       HTTP::Client::Response.new(
         (collection = @@collections[url.to_s]?) ? 200 : 404,
         headers: HTTP::Headers.new,

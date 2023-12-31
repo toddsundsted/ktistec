@@ -134,6 +134,42 @@ Spectator.describe Ktistec::Util do
     end
   end
 
+  describe ",distance_of_time_in_words" do
+    def self.test_pairs
+      [
+        {14.seconds, "less than a minute"},
+        {45.seconds, "1 minute"},
+        {75.seconds, "1 minute"},
+        {95.seconds, "2 minutes"},
+        {14.minutes, "14 minutes"},
+        {45.minutes, "about 1 hour"},
+        {75.minutes, "about 1 hour"},
+        {95.minutes, "about 2 hours"},
+        {14.hours, "14 hours"},
+        {30.hours, "about 1 day"},
+        {40.hours, "about 2 days"},
+        {14.days, "14 days"},
+        {40.days, "about 1 month"},
+        {50.days, "about 2 months"},
+        {10.months, "10 months"},
+        {14.months, "about 1 year"},
+        {18.months, "over 1 year"},
+        {22.months, "almost 2 years"},
+        {26.months, "about 2 years"},
+        {30.months, "over 2 years"},
+        {34.months, "almost 3 years"}
+      ]
+    end
+
+    let(now) { Time.utc }
+
+    sample test_pairs do |span, words|
+      it "transforms the span of time into words" do
+        expect(described_class.distance_of_time_in_words(now + span, now)).to eq(words)
+      end
+    end
+  end
+
   describe ".pluralize" do
     it "pluralizes the noun" do
       ["fox", "fish", "dress", "bus", "inch", "fez"].each do |noun|

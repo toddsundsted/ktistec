@@ -168,9 +168,14 @@
               i.user.icon
           .content
             .summary
-              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
-              a> href=remote_object_path(object) replied to a thread
-              | you follow.
+              - if object.iri == object.thread
+                | There are replies to
+                a<> href=remote_thread_path(object) a thread
+                | you follow.
+              - else
+                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+                a> href=remote_object_path(object) replied to a thread
+                | you follow.
             - if content
               .extra.meta.truncated
                 == content

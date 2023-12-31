@@ -454,6 +454,16 @@ module Ktistec::ViewHelper
     Ktistec::Util.sanitize({{str}})
   end
 
+  # Transforms the span of time between two different times into
+  # words.
+  #
+  # For use in views:
+  #     <%= distance_of_time_in_words(from_time, to_time) %>
+  #
+  macro distance_of_time_in_words(*args)
+    Ktistec::Util.distance_of_time_in_words({{*args}})
+  end
+
   # Pluralizes the noun.
   #
   # Important note: if the count is zero, the noun is returned as is,

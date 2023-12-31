@@ -282,6 +282,14 @@ Spectator.describe Ktistec::Model do
     it "does not raise an error if the non-nilable property is assigned via an association" do
       expect{UnionAssociationModel.new(model: foo_bar)}.not_to raise_error(Ktistec::Model::TypeError)
     end
+
+    it "raises an error if strict is true and property is not a property" do
+      expect{NotNilModel.new(foo: "Foo", _strict: true)}.to raise_error(Ktistec::Model::TypeError, /is not a property/)
+    end
+
+    it "raises an error if strict is true and property is not a property" do
+      expect{FooBarModel.new({"key" => "Key"}, _strict: true)}.to raise_error(Ktistec::Model::TypeError, /is not a property/)
+    end
   end
 
   describe "#assign" do
@@ -323,6 +331,14 @@ Spectator.describe Ktistec::Model do
 
     it "raises an error if property type is wrong" do
       expect{FooBarModel.new(foo: "").assign({"foo" => 2})}.to raise_error(Ktistec::Model::TypeError, /is not a String or Nil/)
+    end
+
+    it "raises an error if strict is true and property is not a property" do
+      expect{NotNilModel.new(val: "").assign(foo: "Foo", _strict: true)}.to raise_error(Ktistec::Model::TypeError, /is not a property/)
+    end
+
+    it "raises an error if strict is true and property is not a property" do
+      expect{FooBarModel.new(foo: "").assign({"key" => "Key"}, _strict: true)}.to raise_error(Ktistec::Model::TypeError, /is not a property/)
     end
   end
 

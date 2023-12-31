@@ -465,16 +465,27 @@ module Ktistec
         Util.to_sentence(types, last_word_connector: " or ")
       end
 
-      # Initializes the new instance.
+      # Initializes a new instance.
       #
-      def initialize(options : Hash(String, Any)) forall Any
+      # Specified properties are assigned via setter methods. If a
+      # property lacks a setter the property is read-only and cannot
+      # be assigned. Non-nilable properties must be assigned.
+      #
+      # To allow initialization of multiple models from a single
+      # collection of properties, `initialize` ignores specified
+      # properties that do not exist on the model. Specify `_strict:
+      # true` to change this behavior to raise an error instead.
+      #
+      def initialize(properties : Hash(String, Any), *, _strict : Bool = false) forall Any
         @changed = Set(Symbol).new
         {% begin %}
+          options = properties.keys
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             key = {{v.stringify}}
-            if options.has_key?(key)
-              if (o = options[key]).is_a?(typeof(self.{{v}}))
+            if properties.has_key?(key)
+              options.delete(key)
+              if (o = properties[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 if self.responds_to?({{"#{v}=".id.symbolize}})
                   self.{{v}} = o.as(typeof(self.{{v}}))
@@ -486,6 +497,9 @@ module Ktistec
               end
             end
           {% end %}
+          unless !_strict || options.empty?
+            raise TypeError.new("#{self.class}.new: '#{key}' is not a property and may not be assigned")
+          end
           {% for v in vs %}
             key = {{v.stringify}}
             {% unless v.has_default_value? || v.type.nilable? || v.type.struct? %}
@@ -500,16 +514,17 @@ module Ktistec
         @saved_record = self.dup.clear_saved_record
       end
 
-      # Initializes the new instance.
-      #
-      def initialize(**options)
+      # :ditto:
+      def initialize(*, _strict : Bool = false, **properties)
         @changed = Set(Symbol).new
         {% begin %}
+          options = properties.keys.map(&.to_s).to_a
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             key = {{v.stringify}}
-            if options.has_key?(key)
-              if (o = options[key]).is_a?(typeof(self.{{v}}))
+            if properties.has_key?(key)
+              options.delete(key)
+              if (o = properties[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 if self.responds_to?({{"#{v}=".id.symbolize}})
                   self.{{v}} = o.as(typeof(self.{{v}}))
@@ -521,6 +536,9 @@ module Ktistec
               end
             end
           {% end %}
+          unless !_strict || options.empty?
+            raise TypeError.new("#{self.class}.new: '#{key}' is not a property and may not be assigned")
+          end
           {% for v in vs %}
             key = {{v.stringify}}
             {% unless v.has_default_value? || v.type.nilable? || v.type.struct? %}
@@ -537,13 +555,24 @@ module Ktistec
 
       # Bulk assigns properties.
       #
-      def assign(options : Hash(String, Any)) forall Any
+      # Specified properties are assigned via setter methods. If a
+      # property lacks a setter the property is read-only and cannot
+      # be assigned.
+      #
+      # To allow assignment of multiple models from a single
+      # collection of properties, `assign` ignores specified
+      # properties that do not exist on the model. Specify `_strict:
+      # true` to change this behavior to raise an error instead.
+      #
+      def assign(properties : Hash(String, Any), *, _strict : Bool = false) forall Any
         {% begin %}
+          options = properties.keys
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             key = {{v.stringify}}
-            if options.has_key?(key)
-              if (o = options[key]).is_a?(typeof(self.{{v}}))
+            if properties.has_key?(key)
+              options.delete(key)
+              if (o = properties[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 if self.responds_to?({{"#{v}=".id.symbolize}})
                   self.{{v}} = o.as(typeof(self.{{v}}))
@@ -555,19 +584,23 @@ module Ktistec
               end
             end
           {% end %}
+          unless !_strict || options.empty?
+            raise TypeError.new("#{self.class}.new: '#{key}' is not a property and may not be assigned")
+          end
         {% end %}
         self
       end
 
-      # Bulk assigns properties.
-      #
-      def assign(**options)
+      # :ditto:
+      def assign(*, _strict : Bool = false, **properties)
         {% begin %}
+          options = properties.keys.map(&.to_s).to_a
           {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
           {% for v in vs %}
             key = {{v.stringify}}
-            if options.has_key?(key)
-              if (o = options[key]).is_a?(typeof(self.{{v}}))
+            if properties.has_key?(key)
+              options.delete(key)
+              if (o = properties[key]).is_a?(typeof(self.{{v}}))
                 @changed << {{v.symbolize}}
                 if self.responds_to?({{"#{v}=".id.symbolize}})
                   self.{{v}} = o.as(typeof(self.{{v}}))
@@ -579,6 +612,9 @@ module Ktistec
               end
             end
           {% end %}
+          unless !_strict || options.empty?
+            raise TypeError.new("#{self.class}.new: '#{key}' is not a property and may not be assigned")
+          end
         {% end %}
         self
       end

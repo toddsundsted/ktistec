@@ -6,7 +6,7 @@ module Ktistec
 
     def open(url, headers = HTTP::Headers.new, attempts = 10)
       was = url
-      message = nil
+      message = "Failed"
       attempts.times do
         begin
           response = HTTP::Client.get(url, headers)
@@ -14,31 +14,37 @@ module Ktistec
           when 200
             return response
           when 301, 302, 303, 307, 308
-            if (tmp = response.headers["Location"]?) && (url = tmp)
+            if (tmp = response.headers["Location"]?) && (url = URI.parse(url).resolve(tmp).to_s)
               next
             else
+              message = "Could not redirect [#{response.status_code}] [#{tmp}]"
               break
             end
           when 401, 403
-            message = "Access denied: #{was}"
+            message = "Access denied [#{response.status_code}]"
+            break
+          when 404, 410
+            message = "Does not exist [#{response.status_code}]"
             break
           when 500
-            message = "Server error: #{was}"
+            message = "Server error [#{response.status_code}]"
             break
           else
             break
           end
         rescue Socket::Addrinfo::Error
-          message = "Hostname lookup failure: #{was}"
+          message = "Hostname lookup failure"
         rescue Socket::ConnectError
-          message = "Connection failure: #{was}"
+          message = "Connection failure"
+        rescue IO::Error
+          message = "I/O error"
         end
       end
-      message ||=
+      message =
         if was != url
-          "Failed: #{was} [from #{url}]"
+          "#{message}: #{was} [from #{url}]"
         else
-          "Failed: #{was}"
+          "#{message}: #{was}"
         end
       raise Error.new(message)
     end

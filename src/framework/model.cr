@@ -964,14 +964,14 @@ module Ktistec
               {% if method.body[0] == :has_one && method.body[1] == :id %}
                 if (model = {{method.body.last}})
                   model.{{method.body[2].id}} = @id
-                  model.update_property({{method.body[2].id.stringify}}, @id) unless model.new_record?
+                  model.update_property({{method.body[2].id.symbolize}}, @id) unless model.new_record?
                   model.clear!({{method.body[2]}})
                 end
               {% elsif method.body[0] == :has_many && method.body[1] == :id %}
                 if (models = {{method.body.last}})
                   models.each do |model|
                     model.{{method.body[2].id}} = @id
-                    model.update_property({{method.body[2].id.stringify}}, @id) unless model.new_record?
+                    model.update_property({{method.body[2].id.symbolize}}, @id) unless model.new_record?
                     model.clear!({{method.body[2]}})
                   end
                 end
@@ -1003,8 +1003,15 @@ module Ktistec
         clear!
       end
 
-      protected def update_property(property, value)
-        raise NilAssertionError.new("#{self.class}: id can't be `nil`") if @id.nil?
+      # Updates and persists property value.
+      #
+      # This method is meant for simple state changes -- it does not
+      # validate model state or run before and after actions! Prefer
+      # `assign/save` methods.
+      #
+      def update_property(property, value)
+        raise NilAssertionError.new("#{self.class}: 'id' can't be `nil`") if @id.nil?
+        self.assign({property.to_s => value}, _strict: true)
         self.class.exec("UPDATE #{table_name} SET #{property} = ? WHERE id = ?", value, @id)
       end
 

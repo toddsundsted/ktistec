@@ -1011,27 +1011,25 @@ Spectator.describe Ktistec::Model do
   end
 
   describe "#update_property" do
-    class UpdatePropertyModel < NotNilModel
-      @@table_name = "not_nil_models"
+    subject { NotNilModel.new(val: "Val") }
 
-      def update_property(property, value)
-        super(property, value)
-      end
+    it "raises an error if model is unsaved" do
+      expect{subject.update_property(:val, "Its")}.to raise_error(NilAssertionError)
     end
 
-    context "given an instance" do
-      subject { UpdatePropertyModel.new(val: "Val") }
+    context "given a saved instance" do
+      before_each { subject.save }
 
-      it "raises an error" do
-        expect{subject.update_property(:val, "Its")}.to raise_error(NilAssertionError)
+      it "updates the property" do
+        expect{subject.update_property(:val, "Its")}.to change{subject.val}.to("Its")
       end
 
-      context "that has been saved" do
-        before_each { subject.save }
+      it "updates the saved property" do
+        expect{subject.update_property(:val, "Its")}.to change{subject.reload!.val}.to("Its")
+      end
 
-        it "updates the saved property" do
-          expect{subject.update_property(:val, "Its")}.to change{subject.reload!.val}.to("Its")
-        end
+      it "raises an error if property does not exist" do
+        expect{subject.update_property(:foo, "Foo")}.to raise_error(Ktistec::Model::TypeError)
       end
     end
   end

@@ -214,9 +214,7 @@ class Task
     # Fetches out through the horizon.
     #
     private def fetch_out(horizon)
-      100.times do # for safety, cap loops
-        break if horizon.empty?
-        node = horizon.shift
+      while (node = horizon.shift?)
         object = ActivityPub::Object.find?(node.id)
         now = Time.utc
         if object

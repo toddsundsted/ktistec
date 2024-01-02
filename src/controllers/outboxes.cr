@@ -99,11 +99,13 @@ class RelationshipsController
       end
       canonical_path = activity["canonical_path"]?.try(&.presence)
       activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
-      object ||= ActivityPub::Object::Note.new(iri: "#{host}/objects/#{id}")
+      iri = "#{host}/objects/#{id}"
+      object ||= ActivityPub::Object::Note.new(iri: iri)
       object.assign(
         source: ActivityPub::Object::Source.new(content, "text/html; editor=trix"),
         attributed_to_iri: account.iri,
         in_reply_to_iri: in_reply_to_iri,
+        replies_iri: "#{iri}/replies",
         canonical_path: canonical_path,
         visible: visible,
         to: to,

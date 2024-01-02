@@ -375,6 +375,11 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).in_reply_to_iri).to eq(topic.iri)
         end
 
+        it "sets the IRI of the replies collection" do
+          post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test"
+          expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).replies_iri).not_to be_nil
+        end
+
         it "returns 400 if the replied to object does not exist" do
           post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=test&in-reply-to=https%3A%2F%2Fremote%2Fpost"
           expect(response.status_code).to eq(400)

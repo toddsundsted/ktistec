@@ -16,7 +16,7 @@ class HTTP::Client
   class Cache
     @cache = Hash(String, String).new
 
-    delegate :[]?, :[]=, :clear, to: @cache
+    delegate :[]?, :[]=, :clear, :delete, to: @cache
 
     def <<(object)
       if object.responds_to?(:iri) && object.responds_to?(:to_json_ld)
@@ -69,61 +69,85 @@ class HTTP::Client
   def self.get(url : String, headers : HTTP::Headers? = nil)
     @@requests << HTTP::Request.new("GET", url, headers)
     url = URI.parse(url)
-    case url.path
-    when /bad-json/
-      HTTP::Client::Response.new(
-        200,
-        headers: HTTP::Headers.new,
-        body: "bad json"
-      )
-    when /specified-page/
-      HTTP::Client::Response.new(
-        200,
-        headers: HTTP::Headers.new,
-        body: "content"
-      )
-    when /redirected-page/
-      HTTP::Client::Response.new(
-        301,
-        headers: HTTP::Headers{"Location" => "https://#{url.host}/specified-page"},
-        body: ""
-      )
-    when /socket-addrinfo-error/
-      raise Socket::Addrinfo::Error.from_os_error(nil, nil)
-    when /socket-connect-error/
-      raise Socket::ConnectError.from_os_error(nil, nil)
-    when /returns-([0-9]{3})/
-      HTTP::Client::Response.new(
-        $1.to_i,
-        headers: HTTP::Headers.new,
-        body: $1
-      )
-    when /activities\/([^\/]+)/
-      HTTP::Client::Response.new(
-        (activity = @@activities[url.to_s]?) ? 200 : 404,
-        headers: HTTP::Headers.new,
-        body: activity
-      )
-    when /actors\/([^\/]+)\/([^\/]+)/
-      HTTP::Client::Response.new(
-        (collection = @@collections[url.to_s]?) ? 200 : 404,
-        headers: HTTP::Headers.new,
-        body: collection
-      )
-    when /actors\/([^\/]+)/
-      HTTP::Client::Response.new(
-        (actor = @@actors[url.to_s]?) ? 200 : 404,
-        headers: HTTP::Headers.new,
-        body: actor
-      )
-    when /objects\/([^\/]+)/
-      HTTP::Client::Response.new(
-        (object = @@objects.[url.to_s]?) ? 200 : 404,
-        headers: HTTP::Headers.new,
-        body: object
-      )
+    if url.scheme && url.authority && url.path
+      case url.path
+      when /bad-json/
+        HTTP::Client::Response.new(
+          200,
+          headers: HTTP::Headers.new,
+          body: "bad json"
+        )
+      when /specified-page/
+        HTTP::Client::Response.new(
+          200,
+          headers: HTTP::Headers.new,
+          body: "content"
+        )
+      when /redirected-page-absolute/
+        HTTP::Client::Response.new(
+          301,
+          headers: HTTP::Headers{"Location" => "https://#{url.host}/specified-page"},
+          body: ""
+        )
+      when /redirected-page-relative/
+        HTTP::Client::Response.new(
+          301,
+          headers: HTTP::Headers{"Location" => "/specified-page"},
+          body: ""
+        )
+      when /redirected-no-location/
+        HTTP::Client::Response.new(
+          301,
+          headers: HTTP::Headers.new,
+          body: ""
+        )
+      when /socket-addrinfo-error/
+        raise Socket::Addrinfo::Error.from_os_error(nil, nil)
+      when /socket-connect-error/
+        raise Socket::ConnectError.from_os_error(nil, nil)
+      when /io-error/
+        raise IO::Error.new
+      when /returns-([0-9]{3})/
+        HTTP::Client::Response.new(
+          $1.to_i,
+          headers: HTTP::Headers.new,
+          body: $1
+        )
+      when /activities\/([^\/]+)/
+        HTTP::Client::Response.new(
+          (activity = @@activities[url.to_s]?) ? 200 : 404,
+          headers: HTTP::Headers.new,
+          body: activity
+        )
+      when /actors\/([^\/]+)\/([^\/]+)/
+        HTTP::Client::Response.new(
+          (collection = @@collections[url.to_s]?) ? 200 : 404,
+          headers: HTTP::Headers.new,
+          body: collection
+        )
+      when /objects\/([^\/]+)\/replies/
+        HTTP::Client::Response.new(
+          (collection = @@collections[url.to_s]?) ? 200 : 404,
+          headers: HTTP::Headers.new,
+          body: collection
+        )
+      when /actors\/([^\/]+)/
+        HTTP::Client::Response.new(
+          (actor = @@actors[url.to_s]?) ? 200 : 404,
+          headers: HTTP::Headers.new,
+          body: actor
+        )
+      when /objects\/([^\/]+)/
+        HTTP::Client::Response.new(
+          (object = @@objects.[url.to_s]?) ? 200 : 404,
+          headers: HTTP::Headers.new,
+          body: object
+        )
+      else
+        HTTP::Client::Response.new(404)
+      end
     else
-      HTTP::Client::Response.new(404)
+      HTTP::Client::Response.new(500)
     end
   end
 

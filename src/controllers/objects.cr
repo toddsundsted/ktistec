@@ -1,10 +1,12 @@
 require "../framework/controller"
 require "../models/activity_pub/object/note"
+require "../models/relationship/content/follow/thread"
+require "../models/task/fetch/thread"
 
 class ObjectsController
   include Ktistec::Controller
 
-  skip_auth ["/objects/:id", "/objects/:id/thread"], GET
+  skip_auth ["/objects/:id", "/objects/:id/replies", "/objects/:id/thread"], GET
 
   post "/objects" do |env|
     object = ActivityPub::Object::Note.new(
@@ -13,6 +15,8 @@ class ObjectsController
     )
 
     unless object.assign(params(env)).valid?
+      recursive = false
+
       unprocessable_entity "objects/new"
     end
 
@@ -28,7 +32,23 @@ class ObjectsController
 
     redirect edit_object_path if object.draft?
 
+    recursive = false
+
     ok "objects/object"
+  end
+
+  get "/objects/:id/replies" do |env|
+    unless (object = get_object(env, iri_param(env, "/objects")))
+      not_found
+    end
+
+    redirect edit_object_path if object.draft?
+
+    replies = object.replies(for_actor: object.attributed_to)
+
+    recursive = false
+
+    ok "objects/replies"
   end
 
   get "/objects/:id/thread" do |env|
@@ -42,6 +62,8 @@ class ObjectsController
 
     follow = nil
 
+    task = nil
+
     ok "objects/thread"
   end
 
@@ -49,6 +71,8 @@ class ObjectsController
     unless (object = get_editable(env, iri_param(env, "/objects")))
       not_found
     end
+
+    recursive = false
 
     ok "objects/edit"
   end
@@ -59,6 +83,8 @@ class ObjectsController
     end
 
     unless object.assign(params(env)).valid?
+      recursive = false
+
       unprocessable_entity "objects/edit"
     end
 
@@ -82,6 +108,8 @@ class ObjectsController
       not_found
     end
 
+    recursive = false
+
     ok "objects/object"
   end
 
@@ -93,6 +121,8 @@ class ObjectsController
     thread = object.thread(for_actor: env.account.actor)
 
     follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
+
+    task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
 
     ok "objects/thread"
   end
@@ -160,6 +190,8 @@ class ObjectsController
 
     follow = Relationship::Content::Follow::Thread.new(actor: env.account.actor, thread: thread.first.thread).save
 
+    (task = Task::Fetch::Thread.find_or_new(source: env.account.actor, thread: thread.first.thread)).schedule
+
     if turbo_frame?
       ok "objects/thread"
     else
@@ -175,6 +207,8 @@ class ObjectsController
     thread = object.thread(for_actor: env.account.actor)
 
     follow = Relationship::Content::Follow::Thread.find(actor: env.account.actor, thread: thread.first.thread).destroy
+
+    (task = Task::Fetch::Thread.find(source: env.account.actor, thread: thread.first.thread)).complete!
 
     if turbo_frame?
       ok "objects/thread"

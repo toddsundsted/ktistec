@@ -74,19 +74,15 @@ class Task
               end
             end
           end
-        # 3. receiver is a follower and the recipinet is either the
-        # public collection or the sender's followers collection.
-        # replace with the receiver.
+        # 3. receiver is a follower of the sender and the recipinet is
+        # either the public collection or the sender's followers
+        # collection.  replace with the receiver.
         elsif (sender = activity.actor?(receiver, dereference: true))
           if receiver.follows?(sender, confirmed: true)
             if recipient == PUBLIC
               receiver.iri
-            elsif recipient
-              unless (target = ActivityPub::Actor.find?(recipient))
-                if (target = ActivityPub::Collection.dereference?(receiver, recipient)) && target.iri == sender.followers
-                  receiver.iri
-                end
-              end
+            elsif recipient && recipient == sender.followers
+              receiver.iri
             end
           end
         end

@@ -6,7 +6,6 @@ require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
 require "../relationship/content/canonical"
-require "../relationship/content/follow/thread"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
@@ -154,6 +153,10 @@ module ActivityPub
 
     def external?
       @@external
+    end
+
+    def root?
+      @iri == @thread && @in_reply_to_iri.nil?
     end
 
     def draft?
@@ -367,6 +370,57 @@ module ActivityPub
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Object.scalar(query, iri, from_iri).as(Int64?).try { |replies_count| self.replies_count = replies_count }
       self
+    end
+
+    # Returns all replies to this object.
+    #
+    # Intended for presenting an object's replies to an authorized
+    # user (one who may see all objects).
+    #
+    # The `for_actor` parameter must be specified to disambiguate this
+    # method from the `replies` property getter, but is not currently
+    # used.
+    #
+    def replies(*, for_actor)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS a
+             ON a.iri = o.attributed_to_iri
+          WHERE o.in_reply_to_iri = ?
+            AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
+            AND a.deleted_at IS NULL
+            AND a.blocked_at IS NULL
+       ORDER BY o.published DESC
+      QUERY
+      Object.query_all(query, iri)
+    end
+
+    # Returns all replies to this object which have been approved by
+    # `approved_by`.
+    #
+    # Intended for presenting an object's replies to an unauthorized
+    # user (one who may not see all objects e.g. an anonymous user).
+    #
+    def replies(*, approved_by)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS a
+             ON a.iri = o.attributed_to_iri
+           JOIN relationships AS r
+             ON r.type = "#{Relationship::Content::Approved}"
+            AND r.from_iri = ? AND r.to_iri = o.iri
+          WHERE o.in_reply_to_iri = ?
+            AND o.deleted_at IS NULL
+            AND o.blocked_at IS NULL
+            AND a.deleted_at IS NULL
+            AND a.blocked_at IS NULL
+       ORDER BY o.published DESC
+      QUERY
+      from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
+      Object.query_all(query, from_iri, iri)
     end
 
     @[Assignable]
@@ -612,16 +666,9 @@ module ActivityPub
           reply.save
         end
       end
-      # update thread in follow relationships
-      if self.iri != self.thread
-        Relationship::Content::Follow::Thread.where(thread: self.iri).each do |follow|
-          unless Relationship::Content::Follow::Thread.find?(actor: follow.actor, thread: self.thread)
-            follow.assign(thread: self.thread).save
-          else
-            follow.destroy
-          end
-        end
-      end
+      # see the source for Relationship::Content::Follow::Thread and
+      # Task::Fetch::Thread for additional after_save thread updating
+      # functionality
     end
 
     def after_delete

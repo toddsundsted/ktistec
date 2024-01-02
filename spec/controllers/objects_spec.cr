@@ -184,6 +184,49 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "GET /objects/:id/replies" do
+    it "succeeds" do
+      get "/objects/#{visible.uid}/replies"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "renders an empty collection" do
+      get "/objects/#{visible.uid}/replies"
+      expect(JSON.parse(response.body).dig("orderedItems").as_a).to be_empty
+    end
+
+    context "with a reply" do
+      before_each do
+        notvisible.assign(in_reply_to: visible).save
+      end
+
+      it "renders the collection" do
+        get "/objects/#{visible.uid}/replies"
+        expect(JSON.parse(response.body).dig("orderedItems").as_a).to contain_exactly(notvisible.iri)
+      end
+    end
+
+    it "returns 404 if object is a draft" do
+      get "/objects/#{draft.uid}/replies"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if object is not visible" do
+      get "/objects/#{notvisible.uid}/replies"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if object is remote" do
+      get "/objects/#{remote.uid}/replies"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if object does not exist" do
+      get "/objects/000/replies"
+      expect(response.status_code).to eq(404)
+    end
+  end
+
   describe "GET /objects/:id/thread" do
     it "succeeds" do
       get "/objects/#{visible.uid}/thread", ACCEPT_HTML
@@ -947,6 +990,11 @@ Spectator.describe ObjectsController do
         expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.iri)
       end
 
+      it "fetches the thread" do
+        post "/remote/objects/#{remote.id}/follow"
+        expect(Task::Fetch::Thread.where(complete: false).map(&.subject_iri)).to contain_exactly(remote.iri)
+      end
+
       context "within a turbo-frame" do
         it "succeeds" do
           post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
@@ -970,6 +1018,11 @@ Spectator.describe ObjectsController do
         it "follows the root object of the thread" do
           post "/remote/objects/#{reply.id}/follow"
           expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.iri)
+        end
+
+        it "fetches the root object of the thread" do
+          post "/remote/objects/#{reply.id}/follow"
+          expect(Task::Fetch::Thread.where(complete: false).map(&.subject_iri)).to contain_exactly(remote.iri)
         end
 
         context "within a turbo-frame" do
@@ -1011,6 +1064,8 @@ Spectator.describe ObjectsController do
 
         let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: reply.thread)
 
+        let_create!(:fetch_thread_task, named: nil, source: actor, thread: reply.thread)
+
         it "succeeds" do
           post "/remote/objects/#{remote.id}/unfollow"
           expect(response.status_code).to eq(302)
@@ -1019,6 +1074,11 @@ Spectator.describe ObjectsController do
         it "unfollows the thread" do
           post "/remote/objects/#{remote.id}/unfollow"
           expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+        end
+
+        it "stops fetching the thread" do
+          post "/remote/objects/#{remote.id}/unfollow"
+          expect(Task::Fetch::Thread.where(complete: true).map(&.subject_iri)).to eq([remote.iri])
         end
 
         context "within a turbo-frame" do
@@ -1044,6 +1104,11 @@ Spectator.describe ObjectsController do
           it "unfollows the root object of the thread" do
             post "/remote/objects/#{reply.id}/unfollow"
             expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+          end
+
+          it "stops fetching the root object of the thread" do
+            post "/remote/objects/#{reply.id}/unfollow"
+            expect(Task::Fetch::Thread.where(complete: true).map(&.subject_iri)).to eq([remote.iri])
           end
 
           context "within a turbo-frame" do

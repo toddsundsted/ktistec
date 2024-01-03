@@ -137,24 +137,6 @@ end
 
 ## Mailbox Notifications
 
-rule "create/mention"
-  condition activity, InMailboxOf, actor
-  condition CreateActivity, activity, object: object
-  condition Object, object, attributed_to: not actor
-  any Mention, mention, subject: object, href: actor.iri
-  none NotificationMention, owner: actor, object: object
-  none NotificationReply, owner: actor, object: object
-  assert NotificationMention, owner: actor, object: object
-end
-
-rule "delete/mention"
-  condition delete, InMailboxOf, actor
-  condition DeleteActivity, delete, object: object
-  condition CreateActivity, activity, object: object
-  any NotificationMention, owner: actor, object: object
-  retract NotificationMention, owner: actor, object: object
-end
-
 rule "create/reply"
   condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
@@ -172,6 +154,24 @@ rule "delete/reply"
   condition CreateActivity, activity, object: object
   any NotificationReply, owner: actor, object: object
   retract NotificationReply, owner: actor, object: object
+end
+
+rule "create/mention"
+  condition activity, InMailboxOf, actor
+  condition CreateActivity, activity, object: object
+  condition Object, object, attributed_to: not actor
+  any Mention, mention, subject: object, href: actor.iri
+  none NotificationMention, owner: actor, object: object
+  none NotificationReply, owner: actor, object: object
+  assert NotificationMention, owner: actor, object: object
+end
+
+rule "delete/mention"
+  condition delete, InMailboxOf, actor
+  condition DeleteActivity, delete, object: object
+  condition CreateActivity, activity, object: object
+  any NotificationMention, owner: actor, object: object
+  retract NotificationMention, owner: actor, object: object
 end
 
 rule "announce, step 1"

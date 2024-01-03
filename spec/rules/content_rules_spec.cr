@@ -301,19 +301,24 @@ Spectator.describe ContentRules do
         end
       end
 
-      context "object both mentions the owner and is in reply to an object attributed to the owner" do
+      context "object both is in reply to an object attributed to the owner and mentions the owner" do
         before_each do
           object.assign(
+            in_reply_to: Factory.build(:object, attributed_to: owner),
             mentions: [
               Factory.build(:mention, name: owner.iri, href: owner.iri)
-            ],
-            in_reply_to: Factory.build(:object, attributed_to: owner)
+            ]
           )
         end
 
         it "adds the object to the notifications" do
           run(owner, create)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "gives preference to the reply notification" do
+          run(owner, create)
+          expect(owner.notifications.map(&.class)).to eq([Relationship::Content::Notification::Reply])
         end
       end
 

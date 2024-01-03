@@ -192,6 +192,15 @@ Spectator.describe ContentRules do
           run(owner, create)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
+
+        context "and is attributed to the owner" do
+          before_each { object.assign(attributed_to: owner) }
+
+          it "does not add the object to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.object_or_activity)).to be_empty
+          end
+        end
       end
 
       context "object mentions another actor" do
@@ -228,6 +237,15 @@ Spectator.describe ContentRules do
         it "adds the reply to the notifications" do
           run(owner, create)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        context "and is attributed to the owner" do
+          before_each { object.assign(attributed_to: owner) }
+
+          it "does not add the object to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.object_or_activity)).to be_empty
+          end
         end
       end
 

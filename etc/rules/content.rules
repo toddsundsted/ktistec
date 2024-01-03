@@ -140,6 +140,7 @@ end
 rule "create/mention"
   condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
+  condition Object, object, attributed_to: not actor
   any Mention, mention, subject: object, href: actor.iri
   none NotificationMention, owner: actor, object: object
   assert NotificationMention, owner: actor, object: object
@@ -156,6 +157,7 @@ end
 rule "create/reply"
   condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
+  condition Object, object, attributed_to: not actor
   condition Object, object, in_reply_to: other
   condition Object, other, attributed_to: actor
   none NotificationReply, owner: actor, object: object

@@ -301,6 +301,22 @@ Spectator.describe ContentRules do
         end
       end
 
+      context "object both mentions the owner and is in reply to an object attributed to the owner" do
+        before_each do
+          object.assign(
+            mentions: [
+              Factory.build(:mention, name: owner.iri, href: owner.iri)
+            ],
+            in_reply_to: Factory.build(:object, attributed_to: owner)
+          )
+        end
+
+        it "adds the object to the notifications" do
+          run(owner, create)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+      end
+
       context "object is tagged with hashtags" do
         before_each do
           Factory.create(:hashtag, name: "foo", subject: object)

@@ -143,6 +143,7 @@ rule "create/mention"
   condition Object, object, attributed_to: not actor
   any Mention, mention, subject: object, href: actor.iri
   none NotificationMention, owner: actor, object: object
+  none NotificationReply, owner: actor, object: object
   assert NotificationMention, owner: actor, object: object
 end
 
@@ -160,6 +161,7 @@ rule "create/reply"
   condition Object, object, attributed_to: not actor
   condition Object, object, in_reply_to: other
   condition Object, other, attributed_to: actor
+  none NotificationMention, owner: actor, object: object
   none NotificationReply, owner: actor, object: object
   assert NotificationReply, owner: actor, object: object
 end

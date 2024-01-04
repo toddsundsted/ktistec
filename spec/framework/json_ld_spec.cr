@@ -10,10 +10,24 @@ Spectator.describe Ktistec::JSON_LD do
   end
 
   describe ".expand" do
-    let(json) { JSON.parse(%({"name":"Foo Bar"})) }
+    it "returns a JSON document" do
+      json = %|{"name":"Foo Bar"}|
+      expect(described_class.expand(json)).to be_a(JSON::Any)
+    end
 
     it "returns a JSON document" do
+      json = IO::Memory.new(%|{"name":"Foo Bar"}|)
       expect(described_class.expand(json)).to be_a(JSON::Any)
+    end
+
+    it "returns a JSON document" do
+      json = JSON.parse(%|{"name":"Foo Bar"}|)
+      expect(described_class.expand(json)).to be_a(JSON::Any)
+    end
+
+    it "raises an error" do
+      json = "[]"
+      expect{described_class.expand(json)}.to raise_error(Ktistec::JSON_LD::Error)
     end
   end
 

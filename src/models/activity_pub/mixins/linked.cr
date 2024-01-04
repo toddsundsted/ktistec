@@ -76,8 +76,8 @@ module Ktistec
               headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
               Ktistec::Open.open?(iri, headers) do |response|
                 instance = self.from_json_ld(response.body, **options)
-              rescue ex : NotImplementedError | TypeCastError
-                Log.warn { "#{self}.dereference? - #{ex.message}" }
+              rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+                Log.warn { "#{self}.dereference? - #{iri} - #{ex.message}" }
               end
             end
           end
@@ -107,8 +107,8 @@ module Ktistec
                             headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
                             Ktistec::Open.open?({{foreign_key}}, headers) do |response|
                               self.{{name}} = {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
-                            rescue ex : NotImplementedError | TypeCastError
-                              Log.warn { "#{self.class}##{{{name.stringify}}}? - #{ex.message}" }
+                            rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+                              Log.warn { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} -- #{ex.message}" }
                             end
                           end
                         else

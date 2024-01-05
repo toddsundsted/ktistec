@@ -143,6 +143,15 @@ class Task
       count = 0
       begin
         maximum.times do
+          # It's possible to have two tasks following two parts of a
+          # (currently) disconnected thread (the joint root has not
+          # yet been discovered/fetched). As soon as one task
+          # discovers the root it destroys the other task. If this
+          # task was the one destroyed, stop working.
+          if gone?
+            Log.info { "perform [#{id}] - gone - stopping task" }
+            break
+          end
           Log.info { "perform [#{id}] - iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object

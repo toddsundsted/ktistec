@@ -93,7 +93,7 @@ Spectator.describe Task::Fetch::Thread do
       described_class.new(
         source: source,
         thread: object.thread
-      )
+      ).save
     end
 
     it "sets the next attempt at" do

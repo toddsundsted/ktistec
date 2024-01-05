@@ -19,6 +19,23 @@ class FooBarTask < Task
   end
 end
 
+class DestroyTask < Task
+  def initialize(options = Hash(String, String).new)
+    options = {
+      "source_iri" => "https://test.test/source",
+      "subject_iri" => "https://test.test/subject"
+    }.merge(options)
+    super(options)
+  end
+
+  # destroy the saved record, but intentionally do not change the
+  # instance, itself.
+
+  def perform
+    self.class.find(@id).destroy
+  end
+end
+
 class ExceptionTask < Task
   def initialize(options = Hash(String, String).new)
     options = {
@@ -81,6 +98,12 @@ Spectator.describe TaskWorker do
     it "ensures task is not left running" do
       described_class.new.work(now)
       expect(task5.reload!.running).to be_false
+    end
+
+    it "does not resurrect a task that has been destroyed" do
+      task = DestroyTask.new.save
+      described_class.new.work(now)
+      expect(task.gone?).to be_true
     end
 
     it "stores the backtrace when task throws an uncaught exception" do

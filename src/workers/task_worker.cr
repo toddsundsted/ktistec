@@ -67,7 +67,14 @@ class TaskWorker
     task.running = false
     task.complete = true unless (task.next_attempt_at != next_attempt_at) || task.backtrace
     task.last_attempt_at = Time.utc
-    task.save(skip_validation: true, skip_associated: true)
+    # destroying a running task is a lightweight signal that a task
+    # should terminate itself, so don't save the task -- that will
+    # resurrect it!
+    if !task.gone?
+      task.save(skip_validation: true, skip_associated: true)
+    else
+      Log.info { "TaskWorker#perform task #{task.id} is gone" }
+    end
   end
 
   def self.destroy_old_tasks

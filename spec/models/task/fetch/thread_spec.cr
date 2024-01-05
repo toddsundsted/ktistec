@@ -883,22 +883,6 @@ Spectator.describe Task::Fetch::Thread do
       it "does not destroy the task which is merged to" do
         expect{described_class.merge_into(subject.thread, existing.thread)}.not_to change{described_class.find?(existing.id)}
       end
-
-      context "with state" do
-        let(node1) { Task::Fetch::Thread::State::Node.new(id: 1) }
-        let(node2) { Task::Fetch::Thread::State::Node.new(id: 2) }
-
-        before_each do
-          subject.state.nodes << node1
-          existing.state.nodes << node2
-          subject.save
-          existing.save
-        end
-
-        it "merges the state" do
-          expect{described_class.merge_into(subject.thread, existing.thread)}.to change{existing.reload!.state.nodes}.to([node2, node1])
-        end
-      end
     end
   end
 end
@@ -931,29 +915,6 @@ Spectator.describe Task::Fetch::Thread::State do
 
     it "raises an error" do
       expect{subject << node << node}.to raise_error(DuplicateNodeError)
-    end
-  end
-
-  describe "#+" do
-    let(other) { described_class.new }
-
-    let(node5) { Node.new(id: 5) }
-    let(node6) { Node.new(id: 6) }
-
-    before_each do
-      other.nodes = [node5, node6]
-    end
-
-    it "returns a new state instance" do
-      expect(subject + other).not_to be_within([subject, other])
-    end
-
-    it "concatenates the nodes" do
-      expect((subject + other).nodes).to contain_exactly(node1, node2, node3, node4, node5, node6).in_any_order
-    end
-
-    it "raises an error" do
-      expect{subject + subject}.to raise_error(DuplicateNodeError)
     end
   end
 

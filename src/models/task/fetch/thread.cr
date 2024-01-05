@@ -59,13 +59,6 @@ class Task
         self
       end
 
-      def +(other : self)
-        unless (duplicates = self.nodes & other.nodes).empty?
-          raise DuplicateNodeError.new(%Q|Duplicate nodes: #{duplicates.map(&.id).join(" ")}|)
-        end
-        self.class.new(self.nodes + other.nodes)
-      end
-
       def prioritize!
         nodes.sort_by!(&.delta).dup
       end
@@ -324,12 +317,11 @@ class Task
     #
     def self.merge_into(from, into)
       if from != into
-        where(thread: from).each do |task1|
-          if (task2 = find?(source: task1.source, thread: into))
-            task2.assign(state: task2.state + task1.state).save
-            task1.destroy
+        where(thread: from).each do |task|
+          unless find?(source: task.source, thread: into)
+            task.assign(thread: into).save
           else
-            task1.assign(thread: into).save
+            task.destroy
           end
         end
       end

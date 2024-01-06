@@ -48,6 +48,33 @@ Spectator.describe Relationship::Content::Follow::Thread do
     end
   end
 
+  describe ".find_or_new" do
+    it "instantiates a new follow" do
+      expect(described_class.find_or_new(**options).new_record?).to be_true
+    end
+
+    context "given an existing follow" do
+      let!(existing) { described_class.new(**options).save }
+
+      it "finds the existing follow" do
+        expect(described_class.find_or_new(**options)).to eq(existing)
+      end
+
+      context "for the root of the thread" do
+        let_create!(:object, named: :origin)
+        let_create!(:object, named: :reply, iri: options[:to_iri], in_reply_to_iri: origin.iri)
+
+        before_each do
+          existing.assign(thread: origin.thread).save
+        end
+
+        it "finds the existing follow" do
+          expect(described_class.find_or_new(**options)).to eq(existing)
+        end
+      end
+    end
+  end
+
   describe ".merge_into" do
     subject { described_class.new(**options).save }
 

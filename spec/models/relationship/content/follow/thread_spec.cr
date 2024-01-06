@@ -82,15 +82,19 @@ Spectator.describe Relationship::Content::Follow::Thread do
       expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{subject.reload!.thread}.to("https://new_thread")
     end
 
-    context "given another relationship for thread" do
-      let_create!(:follow_thread_relationship, actor: subject.actor, thread: "https://new_thread")
+    context "given an existing relationship for thread" do
+      let_create!(:follow_thread_relationship, named: existing, actor: subject.actor, thread: "https://new_thread")
 
       it "merges the relationships" do
-        expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{described_class.count}.by(-1)
+        expect{described_class.merge_into(subject.thread, existing.thread)}.to change{described_class.count}.by(-1)
       end
 
-      it "destroys the relationship which would be changed" do
-        expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{described_class.find?(subject.id)}.to(nil)
+      it "destroys the relationship which is merged from" do
+        expect{described_class.merge_into(subject.thread, existing.thread)}.to change{described_class.find?(subject.id)}.to(nil)
+      end
+
+      it "does not destroy the relationship which is merged to" do
+        expect{described_class.merge_into(subject.thread, existing.thread)}.not_to change{described_class.find?(existing.id)}
       end
     end
   end

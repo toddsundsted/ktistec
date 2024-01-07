@@ -5,7 +5,7 @@ require "../handlers/**"
 require "../workers/**"
 
 Ktistec::Server.run do
-  Log.setup_from_env
+  ::Log.setup_from_env
   spawn do
     TaskWorker.destroy_old_tasks
     TaskWorker.clean_up_running_tasks

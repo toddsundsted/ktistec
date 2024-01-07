@@ -130,3 +130,16 @@ end
 Kemal.config.env = ENV["KEMAL_ENV"]? || "test"
 
 Ktistec.settings.assign({"host" => "https://test.test", "site" => "Test"}).save
+
+# Spectator calls `setup_from_env` to set up logging. the dispatcher
+# default (`DispatchMode::Async`) does not work -- probably due to:
+# https://github.com/icy-arctic-fox/spectator/issues/27
+
+# and, even if this is fixed, we prefer synchronous output when
+# running specs.
+
+class Log
+  def self.setup_from_env(*, dispatcher : DispatchMode = DispatchMode::Sync, default_level : Severity = Severity::None)
+    previous_def(backend: IOBackend.new(dispatcher: dispatcher), default_level: default_level)
+  end
+end

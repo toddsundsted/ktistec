@@ -2,7 +2,6 @@ require "uri"
 
 require "../../../framework/model"
 require "../../../framework/open"
-require "../../../framework/signature"
 require "../../../framework/constants"
 require "../../activity_pub"
 
@@ -72,9 +71,8 @@ module Ktistec
             if iri.starts_with?(Ktistec.host)
               instance = self.find?(iri, include_deleted: include_deleted)
             else
-              headers = Ktistec::Signature.sign(key_pair, iri, method: :get)
-              headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-              Ktistec::Open.open?(iri, headers) do |response|
+              headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
+              Ktistec::Open.open?(key_pair, iri, headers) do |response|
                 instance = self.from_json_ld(response.body, **options)
               rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
                 Log.warn { "#{self}.dereference? - #{iri} - #{ex.message}" }
@@ -103,9 +101,8 @@ module Ktistec
                           if {{foreign_key}}.starts_with?(Ktistec.host)
                             {{name}}_ = self.{{name}}?
                           else
-                            headers = Ktistec::Signature.sign(key_pair, {{foreign_key}}, method: :get)
-                            headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-                            Ktistec::Open.open?({{foreign_key}}, headers) do |response|
+                            headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
+                            Ktistec::Open.open?(key_pair, {{foreign_key}}, headers) do |response|
                               self.{{name}} = {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
                             rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
                               Log.warn { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} -- #{ex.message}" }

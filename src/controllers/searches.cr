@@ -1,6 +1,6 @@
 require "../framework/controller"
 require "../framework/open"
-require "../framework/signature"
+require "../framework/constants"
 require "../utils/network"
 
 class SearchesController
@@ -19,9 +19,8 @@ class SearchesController
         elsif url.starts_with?("#{host}/objects/")
           ActivityPub::Object.find(url)
         else
-          headers = Ktistec::Signature.sign(env.account.actor, url, method: :get)
-          headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-          Ktistec::Open.open(url, headers) do |response|
+          headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
+          Ktistec::Open.open(env.account.actor, url, headers) do |response|
             ActivityPub.from_json_ld(response.body, include_key: true)
           end
         end

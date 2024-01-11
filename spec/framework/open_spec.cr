@@ -58,6 +58,10 @@ Spectator.describe Ktistec::Open do
     end
 
     it "fails on errors" do
+      expect{described_class.open(key_pair, "https://external/openssl-error")}.to raise_error(Ktistec::Open::Error, /Secure connection failure/)
+    end
+
+    it "fails on errors" do
       expect{described_class.open(key_pair, "https://external/io-error")}.to raise_error(Ktistec::Open::Error, /I\/O error/)
     end
   end

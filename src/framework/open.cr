@@ -46,6 +46,8 @@ module Ktistec
           message = "Hostname lookup failure"
         rescue Socket::ConnectError
           message = "Connection failure"
+        rescue OpenSSL::Error
+          message = "Secure connection failure"
         rescue IO::Error
           message = "I/O error"
         end

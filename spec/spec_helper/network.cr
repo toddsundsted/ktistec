@@ -99,6 +99,8 @@ class HTTP::Client
         raise Socket::Addrinfo::Error.from_os_error(nil, nil)
       when /socket-connect-error/
         raise Socket::ConnectError.from_os_error(nil, nil)
+      when /openssl-error/
+        raise OpenSSL::Error.new
       when /io-error/
         raise IO::Error.new
       when /returns-([0-9]{3})/

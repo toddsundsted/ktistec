@@ -1,5 +1,7 @@
 require "../../task"
 require "../../activity_pub/actor"
+require "../../activity_pub/object"
+require "../../../rules/content_rules"
 
 class Task
   # Fetch a hashtag.
@@ -133,6 +135,14 @@ class Task
             state.failures = 0
             random.rand(4..6).seconds.from_now
           end
+      end
+
+      if (hashtag = Tag::Hashtag.where("name = ? ORDER BY created_at DESC LIMIT 1", name).first?) && (recent = ActivityPub::Object.find?(hashtag.subject_iri))
+        if (count < 1 && continuation) || (count > 0 && count < maximum)
+          ContentRules.new.run do
+            assert ContentRules::CheckFollowFor.new(source, recent)
+          end
+        end
       end
     end
 

@@ -250,6 +250,7 @@ end
 rule "notification exists for object 1"
   condition CheckFollowFor, actor, object
   condition NotificationHashtag, owner: actor, object: object
+  retract NotificationHashtag, owner: actor, object: object
   assert NotificationFor, object
 end
 
@@ -268,7 +269,6 @@ end
 
 rule "follow/hashtag"
   condition CheckFollowFor, actor, object
-  none NotificationFor, object
   condition Object, object, attributed_to: not actor
   condition Hashtag, subject: object, name: name
   any FollowHashtag, actor: actor, name: name

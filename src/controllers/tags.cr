@@ -1,6 +1,7 @@
 require "../framework/controller"
 require "../models/tag/hashtag"
 require "../models/relationship/content/follow/hashtag"
+require "../models/task/fetch/hashtag"
 
 class TagsController
   include Ktistec::Controller
@@ -35,11 +36,11 @@ class TagsController
       not_found
     end
 
-    if Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
-      bad_request
-    end
+    follow = Relationship::Content::Follow::Hashtag.find_or_new(actor: env.account.actor, name: hashtag)
+    follow.save if follow.new_record?
 
-    follow = Relationship::Content::Follow::Hashtag.new(actor: env.account.actor, name: hashtag).save
+    task = Task::Fetch::Hashtag.find_or_new(source: env.account.actor, name: hashtag)
+    task.schedule if task.runnable? || task.complete
 
     if turbo_frame?
       ok "tags/index"
@@ -55,12 +56,11 @@ class TagsController
       not_found
     end
 
-    unless (follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag))
-      bad_request
-    end
+    follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
+    follow.destroy if follow
 
-    follow.destroy
-    follow = nil
+    task = Task::Fetch::Hashtag.find?(source: env.account.actor, name: hashtag)
+    task.complete! if task
 
     if turbo_frame?
       ok "tags/index"

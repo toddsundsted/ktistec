@@ -83,6 +83,18 @@ class Task
     derived name : String, aliased_to: subject_iri
     validates(name) { "must not be blank" if name.blank? }
 
+    # Finds an existing task or instantiates a new task.
+    #
+    def self.find_or_new(**options)
+      find?(**options) || new(**options)
+    end
+
+    # Sets the task to complete.
+    #
+    def complete!
+      update_property(:complete, true)
+    end
+
     # Fetches objects tagged with the hashtag `name`.
     #
     # On each invocation, performs at most `maximum` (default 10)

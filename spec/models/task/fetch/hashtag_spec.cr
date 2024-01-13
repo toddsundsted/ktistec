@@ -36,6 +36,28 @@ Spectator.describe Task::Fetch::Hashtag do
     end
   end
 
+  describe ".find_or_new" do
+    it "instantiates a new task" do
+      expect(described_class.find_or_new(**options).new_record?).to be_true
+    end
+
+    context "given an existing task" do
+      let!(existing) { described_class.new(**options).save }
+
+      it "finds the existing task" do
+        expect(described_class.find_or_new(**options)).to eq(existing)
+      end
+    end
+  end
+
+  describe "#complete!" do
+    subject { described_class.new(**options).save }
+
+    it "makes the task not runnable" do
+      expect{subject.complete!}.to change{subject.reload!.runnable?}.to(false)
+    end
+  end
+
   describe "#perform" do
     subject do
       described_class.new(

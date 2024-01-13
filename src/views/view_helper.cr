@@ -443,6 +443,38 @@ module Ktistec::ViewHelper
     %Q|"{{field.id}}":#{%value}#{%comma}|
   end
 
+  ## Task helpers
+
+  # Returns the fetch task status line.
+  #
+  # If `collection` is specified, also includes the most recent
+  # `published` date of posts in that collection.
+  #
+  macro fetch_task_status_line(task, collection = nil)
+    if !{{task}}.complete
+      if {{task}}.backtrace
+        "The task failed."
+      else
+        %now = Time.utc
+        if {{task}}.running
+          "Checking for new posts."
+        else
+          if (%next_attempt_at = {{task}}.next_attempt_at) && %next_attempt_at > %now
+            "The next check for new posts is in #{distance_of_time_in_words(%next_attempt_at, %now)}."
+          else
+            "The next check for new posts is imminent."
+          end
+        end.try do |%result|
+          if (%collection = {{collection}}) && (%published = %collection.map(&.published).compact.max?)
+            %result + " The most recent post was #{distance_of_time_in_words(%published, %now)} ago."
+          else
+            %result
+          end
+        end
+      end
+    end
+  end
+
   ## General purpose helpers
 
   # Sanitizes HTML.

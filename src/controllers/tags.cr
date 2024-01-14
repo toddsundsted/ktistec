@@ -24,6 +24,7 @@ class TagsController
 
     if env.account?
       follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
+      task = Task::Fetch::Hashtag.find?(source: env.account.actor, name: hashtag)
     end
 
     ok "tags/index"

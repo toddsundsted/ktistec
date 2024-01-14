@@ -124,7 +124,7 @@ class Task
       count = 0
       begin
         maximum.times do
-          Log.info { "perform [#{id}] - iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
+          Log.info { "perform [#{id}] - hashtag: #{name}, iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
           count += 1

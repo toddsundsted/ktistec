@@ -20,14 +20,15 @@ Spectator.describe Tag::Hashtag do
     let_create!(
       :object, named: object{{index}},
       attributed_to: author,
-      published: Time.utc(2016, 2, 15, 10, 20, {{index}})
+      published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+      local: true
     )
     before_each do
       {% for tag in tags %}
         described_class.new(
-        name: {{tag}},
-        subject: object{{index}}
-      ).save
+          name: {{tag}},
+          subject: object{{index}}
+        ).save
       {% end %}
     end
   end
@@ -107,7 +108,7 @@ Spectator.describe Tag::Hashtag do
     create_tagged_object(4, "foo")
     create_tagged_object(5, "foo", "quux")
 
-    it "returns count of objects with the mention" do
+    it "returns count of objects with the tag" do
       expect(described_class.count_all_objects("bar")).to eq(2)
     end
 
@@ -159,23 +160,6 @@ Spectator.describe Tag::Hashtag do
       it "filters out the older object" do
         expect(described_class.count_all_objects("foo", created_after: Time.utc(2016, 1, 1))).to eq(5)
       end
-    end
-  end
-
-  macro create_tagged_object(index, *tags)
-    let_create!(
-      :object, named: object{{index}},
-      attributed_to: author,
-      published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-      local: true
-    )
-    before_each do
-      {% for tag in tags %}
-        described_class.new(
-          name: {{tag}},
-          subject: object{{index}}
-        ).save
-      {% end %}
     end
   end
 

@@ -11,16 +11,15 @@ class TagsController
   get "/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
 
-    collection =
-      if env.account?
-        Tag::Hashtag.all_objects(hashtag, **pagination_params(env))
-      else
-        Tag::Hashtag.public_objects(hashtag, **pagination_params(env))
-      end
-
-    if collection.empty?
-      not_found
+    if env.account?
+      collection = Tag::Hashtag.all_objects(hashtag, **pagination_params(env))
+      count = Tag::Hashtag.count_all_objects(hashtag)
+    else
+      collection = Tag::Hashtag.public_objects(hashtag, **pagination_params(env))
+      count = Tag::Hashtag.count_public_objects(hashtag)
     end
+
+    not_found if collection.empty?
 
     if env.account?
       follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
@@ -33,9 +32,10 @@ class TagsController
   post "/tags/:hashtag/follow" do |env|
     hashtag = env.params.url["hashtag"]
 
-    if (collection = Tag::Hashtag.all_objects(hashtag)).empty?
-      not_found
-    end
+    collection = Tag::Hashtag.all_objects(hashtag)
+    count = Tag::Hashtag.count_all_objects(hashtag)
+
+    not_found if collection.empty?
 
     follow = Relationship::Content::Follow::Hashtag.find_or_new(actor: env.account.actor, name: hashtag)
     follow.save if follow.new_record?
@@ -53,9 +53,10 @@ class TagsController
   post "/tags/:hashtag/unfollow" do |env|
     hashtag = env.params.url["hashtag"]
 
-    if (collection = Tag::Hashtag.all_objects(hashtag)).empty?
-      not_found
-    end
+    collection = Tag::Hashtag.all_objects(hashtag)
+    count = Tag::Hashtag.count_all_objects(hashtag)
+
+    not_found if collection.empty?
 
     follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
     follow.destroy if follow

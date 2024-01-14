@@ -7,7 +7,7 @@ turbo-frame#tag_page_tag_controls
     .ui.segment
       p
         a href=hashtag_path ##{hashtag}
-        - if (count = Tag::Hashtag.count_all_objects(hashtag)) > 0
+        - if count > 0
           span< #{pluralize(count, "hashtag")}
       - if env.account?
         - if (_task = task) && (_status = fetch_task_status_line(_task))

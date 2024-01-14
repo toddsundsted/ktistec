@@ -527,9 +527,19 @@ Spectator.describe ContentRules do
 
         pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
 
+        it "removes the previous create from the notifications" do
+          run(owner, create)
+          expect(owner.notifications).not_to have(notification_hashtag)
+        end
+
         it "does not add another object to the notifications" do
           run(owner, create)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "removes the previous announce from the notifications" do
+          run(owner, announce)
+          expect(owner.notifications).not_to have(notification_hashtag)
         end
 
         it "does not add another object to the notifications" do

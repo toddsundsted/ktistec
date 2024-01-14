@@ -40,6 +40,16 @@ class Regex
   end
 end
 
+class HTTP::Request
+  def ===(other : String)
+    other == "#{self.method} #{self.resource}"
+  end
+
+  def ===(other : Regex)
+    other =~ "#{self.method} #{self.resource}"
+  end
+end
+
 class XML::Node
   def ==(other : String)
     other == self.content

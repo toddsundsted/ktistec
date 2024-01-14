@@ -69,7 +69,7 @@ Spectator.describe "notifications partial" do
     end
 
     context "given a hashtag notification" do
-      let_build(:object)
+      let_build(:object, published: Time.utc)
       let_create!(:notification_hashtag, owner: actor, object: object)
 
       let_create!(:follow_hashtag_relationship, named: nil, actor: actor, name: "foo")
@@ -82,6 +82,33 @@ Spectator.describe "notifications partial" do
       it "renders a tagged message" do
         expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
           to eq("#{object.attributed_to.display_name} tagged a post with #foo.")
+      end
+
+      context "and multiple objects with nearly the same created_at time" do
+        let_create!(:object, named: object1, published: Time.utc)
+        let_create!(:object, named: object2, published: Time.utc)
+
+        before_each do
+          Factory.create(:hashtag, name: "bar", subject: object1)
+          Factory.create(:hashtag, name: "bar", subject: object2)
+        end
+
+        it "renders a tagged message" do
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
+            to eq("#{object.attributed_to.display_name} tagged a post with #foo.")
+        end
+
+        context "with the same hashtag" do
+          before_each do
+            Factory.create(:hashtag, name: "foo", subject: object1)
+            Factory.create(:hashtag, name: "foo", subject: object2)
+          end
+
+          it "renders a different message" do
+            expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
+              to eq("There are new posts tagged with #foo.")
+          end
+        end
       end
     end
 

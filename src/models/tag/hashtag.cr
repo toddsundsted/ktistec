@@ -50,7 +50,7 @@ class Tag
 
     # Returns the count of objects with the given hashtag.
     #
-    def self.count_objects(name)
+    def self.count_all_objects(name)
       query = <<-QUERY
         SELECT count(*)
           FROM objects AS o

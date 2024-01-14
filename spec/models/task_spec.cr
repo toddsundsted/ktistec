@@ -18,6 +18,20 @@ Spectator.describe Task do
     )
   end
 
+  describe "#gone?" do
+    it "is false if the task is saved" do
+      expect(subject.save.gone?).to be_false
+    end
+
+    it "is true if the saved task is destroyed" do
+      expect(subject.save.tap(&.destroy).gone?).to be_true
+    end
+
+    it "is true if the task is not saved" do
+      expect(subject.gone?).to be_true
+    end
+  end
+
   describe "#runnable?" do
     it "is true if running is false, complete is false and backtrace is nil" do
       subject.assign(running: false, complete: false, backtrace: nil)

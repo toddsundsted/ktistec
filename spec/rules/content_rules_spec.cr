@@ -192,6 +192,15 @@ Spectator.describe ContentRules do
           run(owner, create)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
+
+        context "and is attributed to the owner" do
+          before_each { object.assign(attributed_to: owner) }
+
+          it "does not add the object to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.object_or_activity)).to be_empty
+          end
+        end
       end
 
       context "object mentions another actor" do
@@ -228,6 +237,15 @@ Spectator.describe ContentRules do
         it "adds the reply to the notifications" do
           run(owner, create)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        context "and is attributed to the owner" do
+          before_each { object.assign(attributed_to: owner) }
+
+          it "does not add the object to the notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.object_or_activity)).to be_empty
+          end
         end
       end
 
@@ -280,6 +298,27 @@ Spectator.describe ContentRules do
         it "does not add the reply to the notifications" do
           run(owner, create)
           expect(owner.notifications).to be_empty
+        end
+      end
+
+      context "object both is in reply to an object attributed to the owner and mentions the owner" do
+        before_each do
+          object.assign(
+            in_reply_to: Factory.build(:object, attributed_to: owner),
+            mentions: [
+              Factory.build(:mention, name: owner.iri, href: owner.iri)
+            ]
+          )
+        end
+
+        it "adds the object to the notifications" do
+          run(owner, create)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "gives preference to the reply notification" do
+          run(owner, create)
+          expect(owner.notifications.map(&.class)).to eq([Relationship::Content::Notification::Reply])
         end
       end
 
@@ -488,9 +527,19 @@ Spectator.describe ContentRules do
 
         pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
 
+        it "removes the previous create from the notifications" do
+          run(owner, create)
+          expect(owner.notifications).not_to have(notification_hashtag)
+        end
+
         it "does not add another object to the notifications" do
           run(owner, create)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "removes the previous announce from the notifications" do
+          run(owner, announce)
+          expect(owner.notifications).not_to have(notification_hashtag)
         end
 
         it "does not add another object to the notifications" do

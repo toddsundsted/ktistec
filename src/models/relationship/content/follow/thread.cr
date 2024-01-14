@@ -17,6 +17,25 @@ class Relationship
         derived thread : String, aliased_to: to_iri
         validates(thread) { "must not be blank" if thread.blank? }
 
+        # Finds an existing relationship or instantiates a new
+        # relationship.
+        #
+        # If `thread` (or `to_iri`) is passed as an option, search for
+        # the root of the thread, and use that value. This ensures
+        # that new relationships always point at roots.
+        #
+        def self.find_or_new(**options)
+          if (thread = options[:thread]?) && (ephemeral = ActivityPub::Object.new(iri: thread).ancestors.last?)
+            options = options.merge({thread: ephemeral.thread})
+            find?(**options) || new(**options)
+          elsif (to_iri = options[:to_iri]?) && (ephemeral = ActivityPub::Object.new(iri: to_iri).ancestors.last?)
+            options = options.merge({to_iri: ephemeral.thread})
+            find?(**options) || new(**options)
+          else
+            find?(**options) || new(**options)
+          end
+        end
+
         # Merges relationships.
         #
         # Should be used in places where an object's thread property

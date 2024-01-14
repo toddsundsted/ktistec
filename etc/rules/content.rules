@@ -137,27 +137,13 @@ end
 
 ## Mailbox Notifications
 
-rule "create/mention"
-  condition activity, InMailboxOf, actor
-  condition CreateActivity, activity, object: object
-  any Mention, mention, subject: object, href: actor.iri
-  none NotificationMention, owner: actor, object: object
-  assert NotificationMention, owner: actor, object: object
-end
-
-rule "delete/mention"
-  condition delete, InMailboxOf, actor
-  condition DeleteActivity, delete, object: object
-  condition CreateActivity, activity, object: object
-  any NotificationMention, owner: actor, object: object
-  retract NotificationMention, owner: actor, object: object
-end
-
 rule "create/reply"
   condition activity, InMailboxOf, actor
   condition CreateActivity, activity, object: object
+  condition Object, object, attributed_to: not actor
   condition Object, object, in_reply_to: other
   condition Object, other, attributed_to: actor
+  none NotificationMention, owner: actor, object: object
   none NotificationReply, owner: actor, object: object
   assert NotificationReply, owner: actor, object: object
 end
@@ -168,6 +154,24 @@ rule "delete/reply"
   condition CreateActivity, activity, object: object
   any NotificationReply, owner: actor, object: object
   retract NotificationReply, owner: actor, object: object
+end
+
+rule "create/mention"
+  condition activity, InMailboxOf, actor
+  condition CreateActivity, activity, object: object
+  condition Object, object, attributed_to: not actor
+  any Mention, mention, subject: object, href: actor.iri
+  none NotificationMention, owner: actor, object: object
+  none NotificationReply, owner: actor, object: object
+  assert NotificationMention, owner: actor, object: object
+end
+
+rule "delete/mention"
+  condition delete, InMailboxOf, actor
+  condition DeleteActivity, delete, object: object
+  condition CreateActivity, activity, object: object
+  any NotificationMention, owner: actor, object: object
+  retract NotificationMention, owner: actor, object: object
 end
 
 rule "announce, step 1"
@@ -246,6 +250,7 @@ end
 rule "notification exists for object 1"
   condition CheckFollowFor, actor, object
   condition NotificationHashtag, owner: actor, object: object
+  retract NotificationHashtag, owner: actor, object: object
   assert NotificationFor, object
 end
 
@@ -264,7 +269,6 @@ end
 
 rule "follow/hashtag"
   condition CheckFollowFor, actor, object
-  none NotificationFor, object
   condition Object, object, attributed_to: not actor
   condition Hashtag, subject: object, name: name
   any FollowHashtag, actor: actor, name: name

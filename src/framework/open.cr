@@ -1,15 +1,23 @@
 require "http"
 
+require "./signature"
+
 module Ktistec
   module Open
     extend self
 
-    def open(url, headers = HTTP::Headers.new, attempts = 10)
+    # Opens and reads from the specified URL.
+    #
+    # Uses `key_pair` to sign the request. Will automatically follow
+    # `attempts` redirects (default 10).
+    #
+    def open(key_pair, url, headers = HTTP::Headers.new, attempts = 10)
       was = url
       message = "Failed"
       attempts.times do
         begin
-          response = HTTP::Client.get(url, headers)
+          signed_headers = Ktistec::Signature.sign(key_pair, url, method: :get).merge!(headers)
+          response = HTTP::Client.get(url, signed_headers)
           case response.status_code
           when 200
             return response
@@ -32,10 +40,14 @@ module Ktistec
           else
             break
           end
+        rescue URI::Error
+          message = "Invalid URI"
         rescue Socket::Addrinfo::Error
           message = "Hostname lookup failure"
         rescue Socket::ConnectError
           message = "Connection failure"
+        rescue OpenSSL::Error
+          message = "Secure connection failure"
         rescue IO::Error
           message = "I/O error"
         end
@@ -49,18 +61,21 @@ module Ktistec
       raise Error.new(message)
     end
 
-    def open(url, headers = HTTP::Headers.new, attempts = 10, &)
-      yield open(url, headers, attempts)
+    # :ditto:
+    def open(key_pair, url, headers = HTTP::Headers.new, attempts = 10, &)
+      yield open(key_pair, url, headers, attempts)
     end
 
-    def open?(url, headers = HTTP::Headers.new, attempts = 10)
-      open(url, headers, attempts)
+    # :ditto:
+    def open?(key_pair, url, headers = HTTP::Headers.new, attempts = 10)
+      open(key_pair, url, headers, attempts)
     rescue ex : Error
       Log.warn { "#{self}.open? - #{ex.message}" }
     end
 
-    def open?(url, headers = HTTP::Headers.new, attempts = 10, &)
-      yield open(url, headers, attempts)
+    # :ditto:
+    def open?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, &)
+      yield open(key_pair, url, headers, attempts)
     rescue ex : Error
       Log.warn { "#{self}.open? - #{ex.message}" }
     end

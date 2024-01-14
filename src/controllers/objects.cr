@@ -188,9 +188,11 @@ class ObjectsController
 
     thread.first.save # lazy migration -- ensure the `thread` property is up to date
 
-    follow = Relationship::Content::Follow::Thread.new(actor: env.account.actor, thread: thread.first.thread).save
+    follow = Relationship::Content::Follow::Thread.find_or_new(actor: env.account.actor, thread: thread.first.thread)
+    follow.save if follow.new_record?
 
-    (task = Task::Fetch::Thread.find_or_new(source: env.account.actor, thread: thread.first.thread)).schedule
+    task = Task::Fetch::Thread.find_or_new(source: env.account.actor, thread: thread.first.thread)
+    task.schedule if task.runnable? || task.complete
 
     if turbo_frame?
       ok "objects/thread"
@@ -206,9 +208,11 @@ class ObjectsController
 
     thread = object.thread(for_actor: env.account.actor)
 
-    follow = Relationship::Content::Follow::Thread.find(actor: env.account.actor, thread: thread.first.thread).destroy
+    follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
+    follow.destroy if follow
 
-    (task = Task::Fetch::Thread.find(source: env.account.actor, thread: thread.first.thread)).complete!
+    task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
+    task.complete! if task
 
     if turbo_frame?
       ok "objects/thread"

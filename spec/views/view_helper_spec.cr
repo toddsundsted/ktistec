@@ -704,6 +704,88 @@ Spectator.describe "helpers" do
     end
   end
 
+  ## Task helpers
+
+  describe "fetch_task_status_line" do
+    def_double :fetch_task,
+      complete: false,
+      running: false,
+      backtrace: nil.as(Array(String)?),
+      next_attempt_at: nil.as(Time?)
+
+    def_double :published_object,
+      published: nil.as(Time?)
+
+    subject do
+      fetch_task_status_line(task)
+    end
+
+    context "given a task that is complete" do
+      let(task) { new_double(:fetch_task, complete: true) }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+
+    context "given a task that is running" do
+      let(task) { new_double(:fetch_task, running: true) }
+
+      it "returns the status" do
+        expect(subject).to eq("Checking for new posts.")
+      end
+
+      context "and a collection of published objects" do
+        let(collection) do
+          [
+            new_double(:published_object, published: 50.hours.ago),
+            new_double(:published_object, published: 70.hours.ago)
+          ]
+        end
+
+        subject do
+          fetch_task_status_line(task, collection)
+        end
+
+        it "includes status of most recent post" do
+          expect(subject).to eq("Checking for new posts. The most recent post was about 2 days ago.")
+        end
+      end
+    end
+
+    context "given a task that hasn't run" do
+      let(task) { new_double(:fetch_task) }
+
+      it "returns the status" do
+        expect(subject).to eq("The next check for new posts is imminent.")
+      end
+    end
+
+    context "given a task that is ready to run" do
+      let(task) { new_double(:fetch_task, next_attempt_at: 1.second.ago) }
+
+      it "returns the status" do
+        expect(subject).to eq("The next check for new posts is imminent.")
+      end
+    end
+
+    context "given a task that will run" do
+      let(task) { new_double(:fetch_task, next_attempt_at: 50.minutes.from_now) }
+
+      it "returns the status" do
+        expect(subject).to eq("The next check for new posts is in about 1 hour.")
+      end
+    end
+
+    context "given a task that has failed" do
+      let(task) { new_double(:fetch_task, backtrace: ["Runtime error"]) }
+
+      it "returns the status" do
+        expect(subject).to eq("The task failed.")
+      end
+    end
+  end
+
   ## General purpose helpers
 
   describe "sanitize" do

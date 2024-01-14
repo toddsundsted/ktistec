@@ -100,7 +100,6 @@ def env_factory(method, path)
 end
 
 Ktistec::Server.run do
-  Log.setup_from_env
   Kemal.config.port = Random.new.rand(49152..65535)
   Kemal.config.logging = false
 end

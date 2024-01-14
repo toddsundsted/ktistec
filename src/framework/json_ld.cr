@@ -2,19 +2,22 @@ require "json"
 require "log"
 require "uri"
 
-private def empty
-  wrap(Hash(String, JSON::Any).new)
-end
-
 private def wrap(value)
   JSON::Any.new(value)
 end
 
+private def empty
+  JSON::Any.new(Hash(String, JSON::Any).new)
+end
+
 module Ktistec
   module JSON_LD
+    class Error < Exception
+    end
+
     # Expands the JSON-LD document.
     #
-    def self.expand(body, loader = Loader.new)
+    def self.expand(body : JSON::Any | String | IO, loader = Loader.new)
       body = JSON.parse(body) if body.is_a?(String | IO)
       Log.debug { body }
       expand(
@@ -22,6 +25,12 @@ module Ktistec
         context(body["@context"]?, loader),
         loader
       )
+    rescue ex
+      # methods on JSON::Any raise the base class `Exception` which
+      # makes selective catching and handling of errors elsewhere more
+      # difficult. this is kludgey but catch those exceptions and
+      # raise something class specific, instead.
+      raise Error.new(ex.message)
     end
 
     private def self.expand(body, context, loader)
@@ -133,6 +142,8 @@ module Ktistec
     end
 
     # Loads context from cache.
+    #
+    # Exposed for testing. Should not be used directly.
     #
     class Loader
       def load(url)

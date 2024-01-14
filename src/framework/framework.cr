@@ -2,6 +2,8 @@ require "kemal"
 require "sqlite3"
 require "uri"
 
+require "./ext/array"
+require "./ext/hash"
 require "./database"
 
 module Ktistec

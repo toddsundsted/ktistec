@@ -17,21 +17,9 @@ turbo-frame#thread_page_thread_controls
             - if (icon = actor.icon)
               img.ui.avatar.image data-actor-id=actor.id src=icon
       - if env.account?
-        - if (_task = task) && !_task.complete
+        - if (_task = task) && (_status = fetch_task_status_line(_task, thread))
           p.task
-            - if (_backtrace = _task.backtrace)
-              em #{_backtrace.first?}
-            - else
-              - _now = Time.utc
-              - if _task.running
-                em Checking for new posts.
-              - elsif (_next_attempt_at = _task.next_attempt_at)
-                - if _next_attempt_at > _now
-                  em The next check for new posts is in #{distance_of_time_in_words(_next_attempt_at, _now)}.
-                - else
-                  em The next check for new posts is imminent.
-              - if (_most_recent = thread.map(&.published).compact.max?)
-                em< The most recent post was #{distance_of_time_in_words(_most_recent, _now)} ago.
+            em = _status
     - if env.account?
       .ui.basic.segment
         - if follow.nil? || follow.new_record?

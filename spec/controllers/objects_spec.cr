@@ -987,12 +987,12 @@ Spectator.describe ObjectsController do
 
       it "follows the thread" do
         post "/remote/objects/#{remote.id}/follow"
-        expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.iri)
+        expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
       end
 
-      it "fetches the thread" do
+      it "begins fetching the thread" do
         post "/remote/objects/#{remote.id}/follow"
-        expect(Task::Fetch::Thread.where(complete: false).map(&.subject_iri)).to contain_exactly(remote.iri)
+        expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
       end
 
       context "within a turbo-frame" do
@@ -1015,14 +1015,14 @@ Spectator.describe ObjectsController do
           expect(response.status_code).to eq(302)
         end
 
-        it "follows the root object of the thread" do
+        it "follows the thread" do
           post "/remote/objects/#{reply.id}/follow"
-          expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.iri)
+          expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
         end
 
-        it "fetches the root object of the thread" do
+        it "begins fetching the thread" do
           post "/remote/objects/#{reply.id}/follow"
-          expect(Task::Fetch::Thread.where(complete: false).map(&.subject_iri)).to contain_exactly(remote.iri)
+          expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
         end
 
         context "within a turbo-frame" do
@@ -1033,6 +1033,38 @@ Spectator.describe ObjectsController do
 
           it "renders an unfollow button" do
             post "/remote/objects/#{reply.id}/follow", TURBO_FRAME
+            expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Unfollow")
+          end
+        end
+      end
+
+      context "given an existing follow and fetch" do
+        let_create!(:follow_thread_relationship, actor: actor, thread: remote.thread)
+        let_create!(:fetch_thread_task, source: actor, thread: remote.thread)
+
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/follow"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "does not change the count of follow relationships" do
+          expect{post "/remote/objects/#{remote.id}/follow"}.
+            not_to change{Relationship::Content::Follow::Thread.count(thread: remote.iri)}
+        end
+
+        it "does not change the count of fetch tasks" do
+          expect{post "/remote/objects/#{remote.id}/follow"}.
+            not_to change{Task::Fetch::Thread.count(thread: remote.iri)}
+        end
+
+        context "within a turbo-frame" do
+          it "succeeds" do
+            post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+          end
+
+          it "renders an unfollow button" do
+            post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
             expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Unfollow")
           end
         end
@@ -1059,12 +1091,27 @@ Spectator.describe ObjectsController do
     context "when authorized" do
       sign_in(as: actor.username)
 
-      context "given a follow" do
+      it "succeeds" do
+        post "/remote/objects/#{remote.id}/unfollow"
+        expect(response.status_code).to eq(302)
+      end
+
+      context "within a turbo-frame" do
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
+          expect(response.status_code).to eq(200)
+        end
+
+        it "renders a follow button" do
+          post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
+          expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
+        end
+      end
+
+      context "given a follow and fetch" do
         let_create(:object, named: :reply, in_reply_to: remote)
-
-        let_create!(:follow_thread_relationship, named: nil, actor: actor, thread: reply.thread)
-
-        let_create!(:fetch_thread_task, named: nil, source: actor, thread: reply.thread)
+        let_create!(:follow_thread_relationship, actor: actor, thread: reply.thread)
+        let_create!(:fetch_thread_task, source: actor, thread: reply.thread)
 
         it "succeeds" do
           post "/remote/objects/#{remote.id}/unfollow"

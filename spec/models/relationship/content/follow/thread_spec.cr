@@ -48,6 +48,33 @@ Spectator.describe Relationship::Content::Follow::Thread do
     end
   end
 
+  describe ".find_or_new" do
+    it "instantiates a new follow" do
+      expect(described_class.find_or_new(**options).new_record?).to be_true
+    end
+
+    context "given an existing follow" do
+      let!(existing) { described_class.new(**options).save }
+
+      it "finds the existing follow" do
+        expect(described_class.find_or_new(**options)).to eq(existing)
+      end
+
+      context "for the root of the thread" do
+        let_create!(:object, named: :origin)
+        let_create!(:object, named: :reply, iri: options[:to_iri], in_reply_to_iri: origin.iri)
+
+        before_each do
+          existing.assign(thread: origin.thread).save
+        end
+
+        it "finds the existing follow" do
+          expect(described_class.find_or_new(**options)).to eq(existing)
+        end
+      end
+    end
+  end
+
   describe ".merge_into" do
     subject { described_class.new(**options).save }
 
@@ -55,15 +82,19 @@ Spectator.describe Relationship::Content::Follow::Thread do
       expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{subject.reload!.thread}.to("https://new_thread")
     end
 
-    context "given another relationship for thread" do
-      let_create!(:follow_thread_relationship, actor: subject.actor, thread: "https://new_thread")
+    context "given an existing relationship for thread" do
+      let_create!(:follow_thread_relationship, named: existing, actor: subject.actor, thread: "https://new_thread")
 
       it "merges the relationships" do
-        expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{described_class.count}.by(-1)
+        expect{described_class.merge_into(subject.thread, existing.thread)}.to change{described_class.count}.by(-1)
       end
 
-      it "destroys the relationship which would be changed" do
-        expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{described_class.find?(subject.id)}.to(nil)
+      it "destroys the relationship which is merged from" do
+        expect{described_class.merge_into(subject.thread, existing.thread)}.to change{described_class.find?(subject.id)}.to(nil)
+      end
+
+      it "does not destroy the relationship which is merged to" do
+        expect{described_class.merge_into(subject.thread, existing.thread)}.not_to change{described_class.find?(existing.id)}
       end
     end
   end

@@ -1,5 +1,7 @@
 require "../../src/workers/task_worker"
 
+# note: when writing tests, be aware that when running tests,
+# helper base extends `Task#schedule` to invoke `#perform`.
 require "../spec_helper/base"
 
 class TaskWorker
@@ -10,10 +12,27 @@ class TaskWorker
 end
 
 class FooBarTask < Task
-  class_property performed : Array(Int64) { [] of Int64 }
+  class_property performed = [] of Int64
 
   def perform
     FooBarTask.performed << self.id.not_nil!
+  end
+end
+
+class DestroyTask < Task
+  def initialize(options = Hash(String, String).new)
+    options = {
+      "source_iri" => "https://test.test/source",
+      "subject_iri" => "https://test.test/subject"
+    }.merge(options)
+    super(options)
+  end
+
+  # destroy the saved record, but intentionally do not change the
+  # instance, itself.
+
+  def perform
+    self.class.find(@id).destroy
   end
 end
 
@@ -26,15 +45,7 @@ class ExceptionTask < Task
     super(options)
   end
 
-  # raise an exception in `perform`. during tests, `schedule`
-  # immediately invokes `perform` so swallow that exception when
-  # scheduling.
-
-  def schedule
-    super
-  rescue NilAssertionError
-    self
-  end
+  # raise an exception.
 
   def perform
     nil.not_nil!
@@ -89,8 +100,14 @@ Spectator.describe TaskWorker do
       expect(task5.reload!.running).to be_false
     end
 
+    it "does not resurrect a task that has been destroyed" do
+      task = DestroyTask.new.save
+      described_class.new.work(now)
+      expect(task.gone?).to be_true
+    end
+
     it "stores the backtrace when task throws an uncaught exception" do
-      task = ExceptionTask.new.schedule
+      task = ExceptionTask.new.save
       described_class.new.work(now)
       expect(task.reload!.backtrace.not_nil!).to have(/Nil assertion failed/)
     end
@@ -106,13 +123,13 @@ Spectator.describe TaskWorker do
     end
 
     it "sets complete to true unless task throws an uncaught exception" do
-      task = ExceptionTask.new.schedule
+      task = ExceptionTask.new.save
       described_class.new.work(now)
       expect(task.reload!.complete).to be_false
     end
 
     it "sets complete to true unless task is rescheduled" do
-      task = RescheduleTask.new.schedule
+      task = RescheduleTask.new.save
       described_class.new.work(now)
       expect(task.reload!.complete).to be_false
     end

@@ -49,6 +49,16 @@ class Task
   @[Persistent]
   property last_attempt_at : Time?
 
+  # Indicates whether or not the task is gone.
+  #
+  # Typically, this means that the task was saved but has been
+  # destroyed. Destroying a running task is a lightweight signal that
+  # the task should terminate itself.
+  #
+  def gone?
+    !(@id && Task.find?(@id))
+  end
+
   def runnable?
     !running && !complete && !backtrace
   end

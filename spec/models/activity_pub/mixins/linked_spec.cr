@@ -19,11 +19,29 @@ Spectator.describe Ktistec::Model::Linked do
     belongs_to linked_model, class_name: {{@type}}, foreign_key: linked_model_iri, primary_key: iri
 
     def to_json_ld(**options)
-      %Q|{"@type":"LinkedModel","@id":"#{iri}"}|
+      JSON.build do |json|
+        json.object do
+          json.field "@id", iri
+          json.field "@type", "LinkedModel"
+          if (linked_model = self.linked_model?)
+            json.field "https://www.w3.org/ns/activitystreams#linked" { json.raw linked_model.to_json_ld }
+          elsif (linked_model_iri = self.linked_model_iri)
+            json.field "https://www.w3.org/ns/activitystreams#linked", linked_model_iri
+          end
+        end
+      end
     end
 
     def self.map(json, **options)
-      Hash(String, String).new
+      json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+      {
+        "iri" => json.dig?("@id").try(&.as_s),
+        "_type" => json.dig?("@type").try(&.as_s.split("#").last),
+        "linked_model_iri" => json.dig?("https://www.w3.org/ns/activitystreams#linked").try(&.as_s?),
+        "linked_model" => if (linked_model = json.dig?("https://www.w3.org/ns/activitystreams#linked")) && linked_model.as_h?
+          ActivityPub.from_json_ld(linked_model)
+        end
+      }.compact
     end
   end
 
@@ -208,6 +226,50 @@ Spectator.describe Ktistec::Model::Linked do
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
+
+    context "given bad JSON" do
+      before_each do
+        HTTP::Client.objects[object.iri] = "<html>"
+        subject.linked_model_iri = object.iri
+      end
+
+      it "does not raise an error" do
+        expect{subject.linked_model?(key_pair, dereference: true)}.not_to raise_error
+      end
+    end
+
+    context "given bad JSON-LD" do
+      before_each do
+        HTTP::Client.objects[object.iri] = "[]"
+        subject.linked_model_iri = object.iri
+      end
+
+      it "does not raise an error" do
+        expect{subject.linked_model?(key_pair, dereference: true)}.not_to raise_error
+      end
+    end
+
+    context "given a bad JSON-LD value" do
+      before_each do
+        HTTP::Client.objects[object.iri] = %Q|{"@type":5}|
+        subject.linked_model_iri = object.iri
+      end
+
+      it "does not raise an error" do
+        expect{subject.linked_model?(key_pair, dereference: true)}.not_to raise_error
+      end
+    end
+
+    context "given an unsupported type" do
+      before_each do
+        HTTP::Client.objects[object.iri] = %Q|{"as:linked":{"@type":"FooBarBaz"}}|
+        subject.linked_model_iri = object.iri
+      end
+
+      it "does not raise an error" do
+        expect{subject.linked_model?(key_pair, dereference: true)}.not_to raise_error
+      end
+    end
   end
 
   describe ".dereference?" do
@@ -300,6 +362,46 @@ Spectator.describe Ktistec::Model::Linked do
             expect(HTTP::Client.last?).to be_nil
           end
         end
+      end
+    end
+
+    context "given bad JSON" do
+      before_each do
+        HTTP::Client.objects[object.iri] = "<html>"
+      end
+
+      it "does not raise an error" do
+        expect{subject.dereference?(key_pair, object.iri)}.not_to raise_error
+      end
+    end
+
+    context "given bad JSON-LD" do
+      before_each do
+        HTTP::Client.objects[object.iri] = "[]"
+      end
+
+      it "does not raise an error" do
+        expect{subject.dereference?(key_pair, object.iri)}.not_to raise_error
+      end
+    end
+
+    context "given a bad JSON-LD value" do
+      before_each do
+        HTTP::Client.objects[object.iri] = %Q|{"@type":5}|
+      end
+
+      it "does not raise an error" do
+        expect{subject.dereference?(key_pair, object.iri)}.not_to raise_error
+      end
+    end
+
+    context "given an unsupported type" do
+      before_each do
+        HTTP::Client.objects[object.iri] = %Q|{"as:linked":{"@type":"FooBarBaz"}}|
+      end
+
+      it "does not raise an error" do
+        expect{subject.dereference?(key_pair, object.iri)}.not_to raise_error
       end
     end
   end

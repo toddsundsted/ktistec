@@ -16,7 +16,7 @@ class HTTP::Client
   class Cache
     @cache = Hash(String, String).new
 
-    delegate :[]?, :[]=, :clear, :delete, to: @cache
+    delegate :[], :[]?, :[]=, :clear, :delete, to: @cache
 
     def <<(object)
       if object.responds_to?(:iri) && object.responds_to?(:to_json_ld)
@@ -29,10 +29,7 @@ class HTTP::Client
 
   @@requests = [] of HTTP::Request
 
-  @@activities = Cache.new
-  @@collections = Cache.new
-  @@actors = Cache.new
-  @@objects = Cache.new
+  @@cache = Cache.new
 
   def self.last?
     @@requests.last?
@@ -43,27 +40,24 @@ class HTTP::Client
   end
 
   def self.activities
-    @@activities
+    @@cache
   end
 
   def self.collections
-    @@collections
+    @@cache
   end
 
   def self.actors
-    @@actors
+    @@cache
   end
 
   def self.objects
-    @@objects
+    @@cache
   end
 
   def self.reset
     @@requests.clear
-    @@activities.clear
-    @@collections.clear
-    @@actors.clear
-    @@objects.clear
+    @@cache.clear
   end
 
   def self.get(url : String, headers : HTTP::Headers? = nil)
@@ -105,6 +99,8 @@ class HTTP::Client
         raise Socket::Addrinfo::Error.from_os_error(nil, nil)
       when /socket-connect-error/
         raise Socket::ConnectError.from_os_error(nil, nil)
+      when /openssl-error/
+        raise OpenSSL::Error.new
       when /io-error/
         raise IO::Error.new
       when /returns-([0-9]{3})/
@@ -113,38 +109,16 @@ class HTTP::Client
           headers: HTTP::Headers.new,
           body: $1
         )
-      when /activities\/([^\/]+)/
-        HTTP::Client::Response.new(
-          (activity = @@activities[url.to_s]?) ? 200 : 404,
-          headers: HTTP::Headers.new,
-          body: activity
-        )
-      when /actors\/([^\/]+)\/([^\/]+)/
-        HTTP::Client::Response.new(
-          (collection = @@collections[url.to_s]?) ? 200 : 404,
-          headers: HTTP::Headers.new,
-          body: collection
-        )
-      when /objects\/([^\/]+)\/replies/
-        HTTP::Client::Response.new(
-          (collection = @@collections[url.to_s]?) ? 200 : 404,
-          headers: HTTP::Headers.new,
-          body: collection
-        )
-      when /actors\/([^\/]+)/
-        HTTP::Client::Response.new(
-          (actor = @@actors[url.to_s]?) ? 200 : 404,
-          headers: HTTP::Headers.new,
-          body: actor
-        )
-      when /objects\/([^\/]+)/
-        HTTP::Client::Response.new(
-          (object = @@objects.[url.to_s]?) ? 200 : 404,
-          headers: HTTP::Headers.new,
-          body: object
-        )
       else
-        HTTP::Client::Response.new(404)
+        if (json = @@cache[url.to_s]?)
+          HTTP::Client::Response.new(
+            200,
+            headers: HTTP::Headers.new,
+            body: json
+          )
+        else
+          HTTP::Client::Response.new(404)
+        end
       end
     else
       HTTP::Client::Response.new(500)

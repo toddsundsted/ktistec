@@ -272,6 +272,10 @@ def task_factory(clazz = Task, source_iri = "https://source/#{random_string}", s
   clazz.new({"source_iri" => source_iri, "subject_iri" => subject_iri}.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
+def fetch_hashtag_task_factory(**options)
+  task_factory(Task::Fetch::Hashtag, **options)
+end
+
 def fetch_thread_task_factory(**options)
   task_factory(Task::Fetch::Thread, **options)
 end

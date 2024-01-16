@@ -24,7 +24,7 @@ Spectator.describe "thread.html.slang" do
 
   let(account) { register }
 
-  let_create(:object, in_reply_to_iri: "not dereferenced link")
+  let_create(:object)
 
   let(thread) { [object] }
 
@@ -32,10 +32,6 @@ Spectator.describe "thread.html.slang" do
 
   it "does not render a button to follow the thread" do
     expect(subject.xpath_nodes("//form[button[text()='Follow']]")).to be_empty
-  end
-
-  it "does not render a button to dereference the link" do
-    expect(subject.xpath_nodes("//form[input[@name='iri']]")).to be_empty
   end
 
   it "does not render information about the task" do
@@ -55,18 +51,6 @@ Spectator.describe "thread.html.slang" do
 
     it "renders a button to follow the thread" do
       expect(subject.xpath_nodes("//form[button[text()='Follow']]")).not_to be_empty
-    end
-
-    it "renders a button to dereference the link" do
-      expect(subject.xpath_nodes("//form[input[@name='iri']]")).not_to be_empty
-    end
-
-    context "if not a reply" do
-      before_each { object.assign(in_reply_to_iri: nil).save }
-
-      it "does not render a button to dereference the link" do
-        expect(subject.xpath_nodes("//form[input[@name='iri']]")).to be_empty
-      end
     end
 
     it "does not render information about the task" do

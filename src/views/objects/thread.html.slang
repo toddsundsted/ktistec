@@ -27,8 +27,5 @@ turbo-frame#thread_page_thread_controls
         - else
           == form_button "Unfollow", unfollow_thread_path(thread.first)
 section.ui.feed data-controller="icon-load-error"
-  - if env.account? && (iri = thread.first.in_reply_to_iri.presence)
-    - message = nil
-    == render "#{__DIR__}/partials/fetch.html.slang"
   - thread.each do |object|
     == object_partial(env, object, for_thread: thread)

@@ -208,6 +208,9 @@ Spectator.describe Task::Fetch::Hashtag do
         HTTP::Client.objects << object1.save
         HTTP::Client.objects << object2
         HTTP::Client.objects << object3
+        HTTP::Client.actors << object1.attributed_to
+        HTTP::Client.actors << object2.attributed_to
+        HTTP::Client.actors << object3.attributed_to
         HTTP::Client.collections << hashtag.assign(items_iris: [object1.iri, object2.iri, object3.iri])
       end
 
@@ -309,6 +312,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
           before_each do
             HTTP::Client.objects << object4
+            HTTP::Client.actors << object4.attributed_to
             HTTP::Client.collections << hashtag.assign(items_iris: [object1.iri, object2.iri, object3.iri, object4.iri])
           end
 
@@ -329,6 +333,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
           before_each do
             HTTP::Client.objects << object4.save
+            HTTP::Client.actors << object4.attributed_to
             HTTP::Client.collections << hashtag.assign(items_iris: [object1.iri, object2.iri, object3.iri, object4.iri])
           end
 
@@ -353,6 +358,8 @@ Spectator.describe Task::Fetch::Hashtag do
             # cache the first
             HTTP::Client.objects << object4.save
             HTTP::Client.objects << object5
+            HTTP::Client.actors << object4.attributed_to
+            HTTP::Client.actors << object5.attributed_to
             HTTP::Client.collections << other.assign(items_iris: [object4.iri, object5.iri])
             subject.assign(last_attempt_at: 10.seconds.ago) # normally set by the task worker
           end
@@ -437,11 +444,6 @@ Spectator.describe Task::Fetch::Hashtag do
         let(actor2) { object2.attributed_to }
         let(actor3) { object3.attributed_to }
 
-        before_each do
-          HTTP::Client.actors << actor2
-          HTTP::Client.actors << actor3
-        end
-
         it "fetches all the uncached authors" do
           subject.perform
           expect(HTTP::Client.requests).to have("GET #{actor2.iri}", "GET #{actor3.iri}")
@@ -472,6 +474,9 @@ Spectator.describe Task::Fetch::Hashtag do
         HTTP::Client.objects << object1.save
         HTTP::Client.objects << object2
         HTTP::Client.objects << object3
+        HTTP::Client.actors << object1.attributed_to
+        HTTP::Client.actors << object2.attributed_to
+        HTTP::Client.actors << object3.attributed_to
         HTTP::Client.collections << hashtag # intentionally empty
         HTTP::Client.collections["#{object1.origin}/api/v1/timelines/tag/hashtag"] = %Q|[{"uri": "#{object1.iri}"},{"uri": "#{object2.iri}"},{"uri": "#{object3.iri}"}]|
       end
@@ -574,6 +579,9 @@ Spectator.describe Task::Fetch::Hashtag do
         HTTP::Client.objects << object1.save
         HTTP::Client.objects << object2
         HTTP::Client.objects << object3
+        HTTP::Client.actors << object1.attributed_to
+        HTTP::Client.actors << object2.attributed_to
+        HTTP::Client.actors << object3.attributed_to
         HTTP::Client.collections << collection1.assign(items_iris: [object1.iri, object2.iri])
         HTTP::Client.collections << collection2.assign(items_iris: [object2.iri, object3.iri])
         HTTP::Client.collections << collection3.assign(items_iris: [object3.iri])
@@ -643,6 +651,9 @@ Spectator.describe Task::Fetch::Hashtag do
         HTTP::Client.objects << object1.save
         HTTP::Client.objects << object2
         HTTP::Client.objects << object3
+        HTTP::Client.actors << object1.attributed_to
+        HTTP::Client.actors << object2.attributed_to
+        HTTP::Client.actors << object3.attributed_to
         HTTP::Client.collections << collection1 # intentionally empty
         HTTP::Client.collections << collection2 # intentionally empty
         HTTP::Client.collections << collection3 # intentionally empty

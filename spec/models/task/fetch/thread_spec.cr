@@ -169,6 +169,7 @@ Spectator.describe Task::Fetch::Thread do
 
       before_each do
         HTTP::Client.objects << reply
+        HTTP::Client.actors << reply.attributed_to
         HTTP::Client.objects << object.assign(replies: replies).save # embedded
       end
 
@@ -204,6 +205,7 @@ Spectator.describe Task::Fetch::Thread do
 
       before_each do
         HTTP::Client.objects << reply
+        HTTP::Client.actors << reply.attributed_to
         HTTP::Client.objects << object.assign(replies_iri: replies.iri).save # linked
         HTTP::Client.collections << replies
       end
@@ -251,6 +253,10 @@ Spectator.describe Task::Fetch::Thread do
         HTTP::Client.objects << reply1
         HTTP::Client.objects << reply2.assign(replies_iri: replies.iri)
         HTTP::Client.objects << reply3
+        HTTP::Client.actors << origin.attributed_to
+        HTTP::Client.actors << reply1.attributed_to
+        HTTP::Client.actors << reply2.attributed_to
+        HTTP::Client.actors << reply3.attributed_to
         HTTP::Client.collections << replies
         object.assign(replies_iri: "#{object.iri}/replies").save
       end
@@ -320,6 +326,9 @@ Spectator.describe Task::Fetch::Thread do
         HTTP::Client.objects << reply1
         HTTP::Client.objects << reply2
         HTTP::Client.objects << reply3
+        HTTP::Client.actors << reply1.attributed_to
+        HTTP::Client.actors << reply2.attributed_to
+        HTTP::Client.actors << reply3.attributed_to
         HTTP::Client.objects << object.assign(replies_iri: replies.iri).save
         HTTP::Client.collections << replies
       end
@@ -454,6 +463,7 @@ Spectator.describe Task::Fetch::Thread do
 
           before_each do
             HTTP::Client.objects << reply4
+            HTTP::Client.actors << reply4.attributed_to
             HTTP::Client.collections << replies.assign(items_iris: [reply4.iri, reply3.iri, reply2.iri, reply1.iri])
           end
 
@@ -476,6 +486,7 @@ Spectator.describe Task::Fetch::Thread do
 
           before_each do
             HTTP::Client.objects << reply4
+            HTTP::Client.actors << reply4.attributed_to
             HTTP::Client.collections << replies.assign(items_iris: [reply4.iri, reply3.iri, reply2.iri, reply1.iri])
           end
 
@@ -537,6 +548,10 @@ Spectator.describe Task::Fetch::Thread do
         HTTP::Client.objects << reply1
         HTTP::Client.objects << reply2
         HTTP::Client.objects << reply3
+        HTTP::Client.actors << origin.attributed_to
+        HTTP::Client.actors << reply1.attributed_to
+        HTTP::Client.actors << reply2.attributed_to
+        HTTP::Client.actors << reply3.attributed_to
       end
 
       it "starts with cached objects in the horizon" do
@@ -616,13 +631,6 @@ Spectator.describe Task::Fetch::Thread do
         let(actor1) { reply1.attributed_to }
         let(actor2) { reply2.attributed_to }
         let(actor3) { reply3.attributed_to }
-
-        before_each do
-          HTTP::Client.actors << actor
-          HTTP::Client.actors << actor1
-          HTTP::Client.actors << actor2
-          HTTP::Client.actors << actor3
-        end
 
         it "fetches all the uncached authors" do
           subject.perform
@@ -715,6 +723,10 @@ Spectator.describe Task::Fetch::Thread do
         HTTP::Client.objects << reply2
         HTTP::Client.objects << reply3
         HTTP::Client.objects << object.assign(replies_iri: "#{object.iri}/replies").save
+        HTTP::Client.actors << reply1.attributed_to
+        HTTP::Client.actors << reply2.attributed_to
+        HTTP::Client.actors << reply3.attributed_to
+        HTTP::Client.actors << object.attributed_to
       end
 
       context "organized by first and next" do
@@ -811,6 +823,12 @@ Spectator.describe Task::Fetch::Thread do
         HTTP::Client.objects << reply3
         HTTP::Client.objects << reply4
         HTTP::Client.objects << reply5
+        HTTP::Client.actors << object.attributed_to
+        HTTP::Client.actors << reply1.attributed_to
+        HTTP::Client.actors << reply2.attributed_to
+        HTTP::Client.actors << reply3.attributed_to
+        HTTP::Client.actors << reply4.attributed_to
+        HTTP::Client.actors << reply5.attributed_to
         HTTP::Client.collections << last_page1
         HTTP::Client.collections << next_page1
         HTTP::Client.collections << replies1

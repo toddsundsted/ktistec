@@ -1,4 +1,5 @@
 require "../../task"
+require "./mixins/fetcher"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
 require "../../../rules/content_rules"
@@ -8,6 +9,7 @@ class Task
   #
   class Fetch::Hashtag < Task
     include Task::ConcurrentTask
+    include Fetcher
 
     # Implements a prioritized queue of nodes on the search horizon.
     #
@@ -156,36 +158,6 @@ class Task
           end
         end
       end
-    end
-
-    # Temporary cache of undereferenceable object IRIs. The same
-    # object is often found in more than one (sometimes all) hashtag
-    # collections. This prevents spending resources on an object when
-    # it has failed once and is likely to fail again. The cache is not
-    # persisted across invocations of `perform`.
-    #
-    @bad_object_iris = [] of String
-
-    # Finds or fetches an object.
-    #
-    # Returns an indicator of whether the object was fetched or not,
-    # and the object.
-    #
-    # Saves/caches fetched objects.
-    #
-    private def find_or_fetch_object(iri)
-      fetched = false
-      if !iri.in?(@bad_object_iris) && (object = ActivityPub::Object.dereference?(source, iri, include_deleted: true))
-        if object.new_record?
-          fetched = true
-          # fetch the author, too
-          object.attributed_to?(source, dereference: true)
-          object.save
-        end
-      else
-        @bad_object_iris << iri
-      end
-      {fetched, object}
     end
 
     # Fetches one new object tagged with the hashtag.

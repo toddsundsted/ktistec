@@ -1,4 +1,5 @@
 require "../../task"
+require "./mixins/fetcher"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
 require "../../activity_pub/collection"
@@ -9,6 +10,7 @@ class Task
   #
   class Fetch::Thread < Task
     include Task::ConcurrentTask
+    include Fetcher
 
     # Implements a prioritized queue of nodes on the thread horizon.
     #
@@ -177,26 +179,6 @@ class Task
           end
         end
       end
-    end
-
-    # Finds or fetches an object.
-    #
-    # Returns an indicator of whether the object was fetched or not,
-    # and the object.
-    #
-    # Saves/caches fetched objects.
-    #
-    private def find_or_fetch_object(iri)
-      fetched = false
-      if (object = ActivityPub::Object.dereference?(source, iri, include_deleted: true))
-        if object.new_record?
-          fetched = true
-          # fetch the author, too
-          object.attributed_to?(source, dereference: true)
-          object.save
-        end
-      end
-      {fetched, object}
     end
 
     # Fetches up toward the root.

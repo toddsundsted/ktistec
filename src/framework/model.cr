@@ -122,30 +122,43 @@ module Ktistec
 
       # Logs query performance.
       #
-      # Times a database call and result processing and selectively
-      # emits a log message. The severity is based on the total
-      # duration.
+      # Times a database call and selectively emits a log message. The
+      # severity of the log message is based on the duration of the
+      # query. A slow query is any query that takes longer than
+      # 50ms. Slow queries include the query plan.
       #
-      protected def log_query(query, args)
+      protected def log_query(query, args, &)
         start = Time.monotonic
         result = yield
         finish = Time.monotonic
         delta = (finish - start).total_milliseconds
         if delta > 50
-          Log.warn { |log| format_message("Slow query", log, delta, query, args) }
+          Log.warn { |log| log_query_message(log, "Slow query", delta, query, args) }
+          Log.warn { |log| log_query_plan(log, query, args) }
         else
-          Log.debug { |log| format_message("Query", log, delta, query, args) }
+          Log.debug { |log| log_query_message(log, "Query", delta, query, args) }
         end
         result
       end
 
-      private def format_message(message, log, delta, query, args)
+      private def log_query_message(log, message, delta, query, args)
         delta = sprintf("%10.3fms", delta)
         query = query.each_line.map(&.strip).join(" ")
         args = DB::MetadataValueConverter.arg_to_log(args)
         log.emit(
           "#{message} [#{delta}] -- #{query}",
           args: args
+        )
+      end
+
+      private def log_query_plan(log, query, args)
+        results =
+          Ktistec.database.query_all("EXPLAIN QUERY PLAN #{query}") do |rs|
+            _, order, _, detail = rs.read(Int64, Int64, Int64, String)
+            {order, detail}
+          end
+        log.emit(
+          results.inspect
         )
       end
 

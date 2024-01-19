@@ -180,11 +180,6 @@ module ActivityPub
       (published || created_at).in(timezone)
     end
 
-    # NOTE: in the following three queries, the query planner does not
-    # always pick the optimal query plan. use cross joins to force
-    # sqlite to use a plan that has been seen to work well in
-    # practice.
-
     # Returns federated posts.
     #
     # Includes local posts. Does not include private (not visible)
@@ -194,7 +189,7 @@ module ActivityPub
       query = <<-QUERY
           SELECT #{Object.columns(prefix: "o")}
             FROM objects AS o
-      CROSS JOIN actors AS t
+            JOIN actors AS t
               ON t.iri = o.attributed_to_iri
            WHERE o.visible = 1
              AND o.deleted_at is NULL
@@ -204,7 +199,7 @@ module ActivityPub
              AND o.id NOT IN (
                 SELECT o.id
                   FROM objects AS o
-            CROSS JOIN actors AS t
+                  JOIN actors AS t
                     ON t.iri = o.attributed_to_iri
                  WHERE o.visible = 1
                    AND o.deleted_at is NULL
@@ -228,13 +223,13 @@ module ActivityPub
       query = <<-QUERY
           SELECT #{Object.columns(prefix: "o")}
             FROM accounts AS c
-      CROSS JOIN relationships AS r
+            JOIN relationships AS r
               ON r.from_iri = c.iri
              AND r.type = "#{Relationship::Content::Outbox}"
-      CROSS JOIN activities AS a
+            JOIN activities AS a
               ON a.iri = r.to_iri
              AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
-      CROSS JOIN objects AS o
+            JOIN objects AS o
               ON o.iri = a.object_iri
             JOIN actors AS t
               ON t.iri = o.attributed_to_iri
@@ -248,13 +243,13 @@ module ActivityPub
              AND o.id NOT IN (
                 SELECT o.id
                   FROM accounts AS c
-            CROSS JOIN relationships AS r
+                  JOIN relationships AS r
                     ON r.from_iri = c.iri
                    AND r.type = "#{Relationship::Content::Outbox}"
-            CROSS JOIN activities AS a
+                  JOIN activities AS a
                     ON a.iri = r.to_iri
                    AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
-            CROSS JOIN objects AS o
+                  JOIN objects AS o
                     ON o.iri = a.object_iri
                   JOIN actors AS t
                     ON t.iri = o.attributed_to_iri
@@ -282,13 +277,13 @@ module ActivityPub
       query = <<-QUERY
           SELECT COUNT(o.id)
             FROM accounts AS c
-      CROSS JOIN relationships AS r
+            JOIN relationships AS r
               ON r.from_iri = c.iri
              AND r.type = "#{Relationship::Content::Outbox}"
-      CROSS JOIN activities AS a
+            JOIN activities AS a
               ON a.iri = r.to_iri
              AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
-      CROSS JOIN objects AS o
+            JOIN objects AS o
               ON o.iri = a.object_iri
             JOIN actors AS t
               ON t.iri = o.attributed_to_iri

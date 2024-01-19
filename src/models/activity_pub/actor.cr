@@ -568,11 +568,6 @@ module ActivityPub
 
     private alias Timeline = Relationship::Content::Timeline
 
-    # NOTE: in the following two queries, the query planner does not
-    # always pick the optimal query plan. use cross joins to force
-    # sqlite to use a plan that has been seen to work well in
-    # practice.
-
     # Returns entries in the actor's timeline.
     #
     # Meant to be called on local (not cached) actors.
@@ -601,9 +596,9 @@ module ActivityPub
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
             FROM relationships AS t
-      CROSS JOIN objects AS o
+            JOIN objects AS o
               ON o.iri = t.to_iri
-      CROSS JOIN actors AS c
+            JOIN actors AS c
               ON c.iri = o.attributed_to_iri
            WHERE t.from_iri = ?
              #{inclusion}
@@ -615,9 +610,9 @@ module ActivityPub
              AND t.id NOT IN (
                 SELECT t.id
                   FROM relationships AS t
-            CROSS JOIN objects AS o
+                  JOIN objects AS o
                     ON o.iri = t.to_iri
-            CROSS JOIN actors AS c
+                  JOIN actors AS c
                     ON c.iri = o.attributed_to_iri
                  WHERE t.from_iri = ?
                    #{inclusion}
@@ -657,10 +652,10 @@ module ActivityPub
       query = <<-QUERY
           SELECT count(t.id)
             FROM relationships AS t
-      CROSS JOIN objects AS o
+            JOIN objects AS o
               ON o.iri = t.to_iri
               #{exclude_replies}
-      CROSS JOIN actors AS c
+            JOIN actors AS c
               ON c.iri = o.attributed_to_iri
            WHERE t.from_iri = ?
              #{inclusion}

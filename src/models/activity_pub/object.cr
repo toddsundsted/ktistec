@@ -226,7 +226,7 @@ module ActivityPub
     #
     def self.public_posts(page = 1, size = 10)
       query = <<-QUERY
-          SELECT DISTINCT #{Object.columns(prefix: "o")}
+          SELECT #{Object.columns(prefix: "o")}
             FROM accounts AS c
       CROSS JOIN relationships AS r
               ON r.from_iri = c.iri
@@ -246,7 +246,7 @@ module ActivityPub
              AND t.blocked_at IS NULL
              AND a.undone_at IS NULL
              AND o.id NOT IN (
-                SELECT DISTINCT o.id
+                SELECT o.id
                   FROM accounts AS c
             CROSS JOIN relationships AS r
                     ON r.from_iri = c.iri
@@ -280,7 +280,7 @@ module ActivityPub
     #
     def self.public_posts_count
       query = <<-QUERY
-          SELECT COUNT(DISTINCT o.id)
+          SELECT COUNT(o.id)
             FROM accounts AS c
       CROSS JOIN relationships AS r
               ON r.from_iri = c.iri

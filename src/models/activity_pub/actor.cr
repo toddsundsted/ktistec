@@ -470,7 +470,7 @@ module ActivityPub
     #
     def public_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
+         SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -489,7 +489,7 @@ module ActivityPub
             AND t.blocked_at IS NULL
             AND a.undone_at IS NULL
             AND o.id NOT IN (
-               SELECT DISTINCT o.id
+               SELECT o.id
                  FROM objects AS o
                  JOIN actors AS t
                    ON t.iri = o.attributed_to_iri
@@ -524,7 +524,7 @@ module ActivityPub
     #
     def all_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
+         SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -541,7 +541,7 @@ module ActivityPub
             AND t.blocked_at IS NULL
             AND a.undone_at IS NULL
             AND o.id NOT IN (
-               SELECT DISTINCT o.id
+               SELECT o.id
                  FROM objects AS o
                  JOIN actors AS t
                    ON t.iri = o.attributed_to_iri

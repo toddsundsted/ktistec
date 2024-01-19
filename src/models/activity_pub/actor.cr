@@ -482,7 +482,7 @@ module ActivityPub
             AND r.type = "#{Relationship::Content::Outbox}"
           WHERE r.from_iri = ?
             AND o.visible = 1
-            AND o.in_reply_to_iri IS NULL
+            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
             AND t.deleted_at IS NULL
@@ -501,7 +501,7 @@ module ActivityPub
                   AND r.type = "#{Relationship::Content::Outbox}"
                 WHERE r.from_iri = ?
                   AND o.visible = 1
-                  AND o.in_reply_to_iri IS NULL
+                  AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
                   AND o.deleted_at IS NULL
                   AND o.blocked_at IS NULL
                   AND t.deleted_at IS NULL
@@ -582,16 +582,16 @@ module ActivityPub
     def timeline(exclude_replies = false, inclusion = nil, page = 1, size = 10)
       exclude_replies =
         exclude_replies ?
-        "AND o.in_reply_to_iri IS NULL" :
+        "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" :
         ""
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND t.type = "#{inclusion}"|
+          %Q|AND +t.type = "#{inclusion}"|
         when Array
-          %Q|AND t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
         else
-          %Q|AND t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
@@ -638,16 +638,16 @@ module ActivityPub
     def timeline(since : Time, exclude_replies = false, inclusion = nil)
       exclude_replies =
         exclude_replies ?
-        "AND o.in_reply_to_iri IS NULL" :
+        "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" :
         ""
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND t.type = "#{inclusion}"|
+          %Q|AND +t.type = "#{inclusion}"|
         when Array
-          %Q|AND t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
         else
-          %Q|AND t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
           SELECT count(t.id)
@@ -688,7 +688,7 @@ module ActivityPub
              ON e.iri = n.to_iri
       LEFT JOIN actors AS t
              ON t.iri = e.attributed_to_iri
-          WHERE n.from_iri = ?
+          WHERE +n.from_iri = ?
             AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
             AND a.undone_at IS NULL
             AND c.deleted_at IS NULL
@@ -712,7 +712,7 @@ module ActivityPub
                    ON e.iri = n.to_iri
             LEFT JOIN actors AS t
                    ON t.iri = e.attributed_to_iri
-                WHERE n.from_iri = ?
+                WHERE +n.from_iri = ?
                   AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
                   AND a.undone_at IS NULL
                   AND c.deleted_at IS NULL
@@ -751,7 +751,7 @@ module ActivityPub
              ON e.iri = n.to_iri
       LEFT JOIN actors AS t
              ON t.iri = e.attributed_to_iri
-          WHERE n.from_iri = ?
+          WHERE +n.from_iri = ?
             AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
             AND a.undone_at IS NULL
             AND c.deleted_at IS NULL

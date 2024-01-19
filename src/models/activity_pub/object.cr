@@ -224,7 +224,7 @@ module ActivityPub
           SELECT #{Object.columns(prefix: "o")}
             FROM accounts AS c
             JOIN relationships AS r
-              ON r.from_iri = c.iri
+              ON likelihood(r.from_iri = c.iri, 0.99)
              AND r.type = "#{Relationship::Content::Outbox}"
             JOIN activities AS a
               ON a.iri = r.to_iri
@@ -234,7 +234,7 @@ module ActivityPub
             JOIN actors AS t
               ON t.iri = o.attributed_to_iri
            WHERE o.visible = 1
-             AND o.in_reply_to_iri IS NULL
+             AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
              AND o.deleted_at IS NULL
              AND o.blocked_at IS NULL
              AND t.deleted_at IS NULL
@@ -244,7 +244,7 @@ module ActivityPub
                 SELECT o.id
                   FROM accounts AS c
                   JOIN relationships AS r
-                    ON r.from_iri = c.iri
+                    ON likelihood(r.from_iri = c.iri, 0.99)
                    AND r.type = "#{Relationship::Content::Outbox}"
                   JOIN activities AS a
                     ON a.iri = r.to_iri
@@ -254,7 +254,7 @@ module ActivityPub
                   JOIN actors AS t
                     ON t.iri = o.attributed_to_iri
                  WHERE o.visible = 1
-                   AND o.in_reply_to_iri IS NULL
+                   AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
                    AND o.deleted_at IS NULL
                    AND o.blocked_at IS NULL
                    AND t.deleted_at IS NULL
@@ -278,7 +278,7 @@ module ActivityPub
           SELECT COUNT(o.id)
             FROM accounts AS c
             JOIN relationships AS r
-              ON r.from_iri = c.iri
+              ON likelihood(r.from_iri = c.iri, 0.99)
              AND r.type = "#{Relationship::Content::Outbox}"
             JOIN activities AS a
               ON a.iri = r.to_iri
@@ -288,7 +288,7 @@ module ActivityPub
             JOIN actors AS t
               ON t.iri = o.attributed_to_iri
            WHERE o.visible = 1
-             AND o.in_reply_to_iri IS NULL
+             AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
              AND o.deleted_at IS NULL
              AND o.blocked_at IS NULL
              AND t.deleted_at IS NULL

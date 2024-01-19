@@ -265,10 +265,10 @@ module ActivityPub
                    AND t.deleted_at IS NULL
                    AND t.blocked_at IS NULL
                    AND a.undone_at IS NULL
-              ORDER BY r.created_at DESC
+              ORDER BY r.id DESC
                  LIMIT ?
              )
-          ORDER BY r.created_at DESC
+          ORDER BY r.id DESC
              LIMIT ?
       QUERY
       Object.query_and_paginate(query, page: page, size: size)
@@ -586,7 +586,7 @@ module ActivityPub
             AND t.deleted_at IS NULL
             AND t.blocked_at IS NULL
             AND a.undone_at IS NULL
-       ORDER BY a.created_at ASC
+       ORDER BY a.id ASC
       QUERY
       Activity.query_all(query, iri)
     end

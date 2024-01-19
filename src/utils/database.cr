@@ -17,8 +17,8 @@ module Ktistec
       query = <<-QUERY
         type IN ("#{Relationship::Content::Inbox}","#{Relationship::Content::Outbox}")
         AND from_iri = ?
-        AND created_at > ?
-        ORDER BY created_at ASC
+        AND id > ?
+        ORDER BY id ASC
         LIMIT ?
       QUERY
 
@@ -28,13 +28,13 @@ module Ktistec
       Account.all.each do |account|
         i = 0
         done = false
-        last = Time::UNIX_EPOCH
+        last = 0
         while !done
           i += 1
           done = true
           Relationship.where(query, account.iri, last, limit).each do |relationship|
             done = false
-            last = relationship.created_at
+            last = relationship.id
             if relationship.responds_to?(:activity?) && (activity = relationship.activity?)
               begin
                 ContentRules.new.run do

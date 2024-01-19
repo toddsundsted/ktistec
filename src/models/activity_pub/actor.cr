@@ -208,10 +208,10 @@ module ActivityPub
                  AND r.type = "#{type}"
                  AND r.#{dest} = ?
                  #{public}
-            ORDER BY r.created_at DESC
+            ORDER BY r.id DESC
                LIMIT ?
            )
-      ORDER BY r.created_at DESC
+      ORDER BY r.id DESC
          LIMIT ?
       QUERY
     end
@@ -245,10 +245,10 @@ module ActivityPub
                   AND o.published IS NULL
                   AND o.deleted_at is NULL
                   AND o.blocked_at is NULL
-             ORDER BY o.created_at DESC
+             ORDER BY o.id DESC
                 LIMIT ?
             )
-       ORDER BY o.created_at DESC
+       ORDER BY o.id DESC
           LIMIT ?
       QUERY
       Object.query_and_paginate(query, iri, iri, page: page, size: size)
@@ -318,10 +318,10 @@ module ActivityPub
                   AND a.undone_at IS NULL
              #{public ? %Q|AND a.visible = 1| : nil}
              #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
-             ORDER BY r.created_at DESC
+             ORDER BY r.id DESC
                 LIMIT ?
             )
-       ORDER BY r.created_at DESC
+       ORDER BY r.id DESC
           LIMIT ?
       QUERY
       Activity.query_and_paginate(query, iri, iri, page: page, size: size)
@@ -507,10 +507,10 @@ module ActivityPub
                   AND t.deleted_at IS NULL
                   AND t.blocked_at IS NULL
                   AND a.undone_at IS NULL
-             ORDER BY r.created_at DESC
+             ORDER BY r.id DESC
                 LIMIT ?
             )
-       ORDER BY r.created_at DESC
+       ORDER BY r.id DESC
           LIMIT ?
       QUERY
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
@@ -557,10 +557,10 @@ module ActivityPub
                   AND t.deleted_at IS NULL
                   AND t.blocked_at IS NULL
                   AND a.undone_at IS NULL
-             ORDER BY r.created_at DESC
+             ORDER BY r.id DESC
                 LIMIT ?
             )
-       ORDER BY r.created_at DESC
+       ORDER BY r.id DESC
           LIMIT ?
       QUERY
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
@@ -626,10 +626,10 @@ module ActivityPub
                    AND o.blocked_at IS NULL
                    AND c.deleted_at IS NULL
                    AND c.blocked_at IS NULL
-              ORDER BY t.created_at DESC
+              ORDER BY t.id DESC
                  LIMIT ?
              )
-        ORDER BY t.created_at DESC
+        ORDER BY t.id DESC
            LIMIT ?
       QUERY
       Timeline.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
@@ -728,10 +728,10 @@ module ActivityPub
                   AND e.blocked_at IS NULL
                   AND t.deleted_at IS NULL
                   AND t.blocked_at IS NULL
-             ORDER BY n.created_at DESC
+             ORDER BY n.id DESC
                 LIMIT ?
             )
-       ORDER BY n.created_at DESC
+       ORDER BY n.id DESC
           LIMIT ?
       QUERY
       Notification.query_and_paginate(query, iri, iri, page: page, size: size)

@@ -263,7 +263,7 @@ module Ktistec
         log_query(query, args) do
           Ktistec::Util::PaginatedArray(self).new.tap do |array|
             Ktistec.database.query(
-              query, *args, ((page - 1) * size).to_i, size.to_i + 1
+              query, *args, size.to_i + 1, ((page - 1) * size).to_i
             ) do |rs|
               rs.each { array << compose(rs, **additional_columns) }
             end

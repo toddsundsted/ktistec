@@ -196,21 +196,8 @@ module ActivityPub
              AND o.blocked_at is NULL
              AND t.deleted_at IS NULL
              AND t.blocked_at IS NULL
-             AND o.id NOT IN (
-                SELECT o.id
-                  FROM objects AS o
-                  JOIN actors AS t
-                    ON t.iri = o.attributed_to_iri
-                 WHERE o.visible = 1
-                   AND o.deleted_at is NULL
-                   AND o.blocked_at is NULL
-                   AND t.deleted_at IS NULL
-                   AND t.blocked_at IS NULL
-              ORDER BY o.published DESC
-                 LIMIT ?
-             )
         ORDER BY o.published DESC
-           LIMIT ?
+           LIMIT ? OFFSET ?
       QUERY
       Object.query_and_paginate(query, page: page, size: size)
     end
@@ -240,31 +227,8 @@ module ActivityPub
              AND t.deleted_at IS NULL
              AND t.blocked_at IS NULL
              AND a.undone_at IS NULL
-             AND o.id NOT IN (
-                SELECT o.id
-                  FROM accounts AS c
-                  JOIN relationships AS r
-                    ON likelihood(r.from_iri = c.iri, 0.99)
-                   AND r.type = "#{Relationship::Content::Outbox}"
-                  JOIN activities AS a
-                    ON a.iri = r.to_iri
-                   AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
-                  JOIN objects AS o
-                    ON o.iri = a.object_iri
-                  JOIN actors AS t
-                    ON t.iri = o.attributed_to_iri
-                 WHERE o.visible = 1
-                   AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
-                   AND o.deleted_at IS NULL
-                   AND o.blocked_at IS NULL
-                   AND t.deleted_at IS NULL
-                   AND t.blocked_at IS NULL
-                   AND a.undone_at IS NULL
-              ORDER BY r.id DESC
-                 LIMIT ?
-             )
           ORDER BY r.id DESC
-             LIMIT ?
+             LIMIT ? OFFSET ?
       QUERY
       Object.query_and_paginate(query, page: page, size: size)
     end

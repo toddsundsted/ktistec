@@ -2,11 +2,6 @@ require "json"
 require "xml"
 require "sqlite3"
 
-if LibSQLite3.libversion < 3035000
-  Log.fatal { "Ktistec requires SQLite3 version 3.35.0 or later" }
-  exit -1
-end
-
 module DB
   abstract class Statement
     protected def emit_log(args : Enumerable)
@@ -57,7 +52,8 @@ lib LibSQLite3
   fun config = sqlite3_config(Int32, ...) : Code
   fun memory_used = sqlite3_memory_used() : Int64
   fun result_text = sqlite3_result_text(SQLite3Context, UInt8*, Int32, Void*) : Nil
-  fun libversion = sqlite3_libversion_number() : Int32
+  fun version_number = sqlite3_libversion_number() : Int32
+  fun version = sqlite3_libversion() : UInt8*
 end
 
 module Ktistec
@@ -93,6 +89,16 @@ module Ktistec
 
     Ktistec.database.setup_connection do |connection|
       LibSQLite3.create_function(connection, "strip", 1, UTF8 | DETERMINISTIC | DIRECTONLY, nil, ->strip_fn, nil, nil)
+    end
+
+    LibSQLite3.version.tap do |version|
+      version = String.new(version)
+      if LibSQLite3.version_number < 3035000
+        puts "Ktistec requires SQLite3 version 3.35.0 or later (linked version is #{version})."
+        exit -1
+      else
+        puts "SQLite3 version #{version}"
+      end
     end
   end
 end

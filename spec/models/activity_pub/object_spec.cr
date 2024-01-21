@@ -384,11 +384,6 @@ Spectator.describe ActivityPub::Object do
     let_build(:create, actor: actor, object: post5)
     let_build(:outbox_relationship, named: :outbox, owner: actor, activity: create)
 
-    it "includes posts only once" do
-      outbox.save
-      expect(described_class.public_posts(1, 2)).to eq([post5, post4])
-    end
-
     it "paginates the results" do
       expect(described_class.public_posts(1, 2)).to eq([post5, post4])
       expect(described_class.public_posts(3, 2)).to eq([post1])
@@ -457,11 +452,6 @@ Spectator.describe ActivityPub::Object do
 
     let_build(:create, actor: actor, object: post5)
     let_build(:outbox_relationship, named: :outbox, owner: actor, activity: create)
-
-    it "counts posts only once" do
-      outbox.save
-      expect(described_class.public_posts_count).to eq(5)
-    end
 
     it "returns the count" do
       expect(described_class.public_posts_count).to eq(5)

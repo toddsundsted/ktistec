@@ -151,7 +151,7 @@ class Task
           end
       end
 
-      if (hashtag = Tag::Hashtag.where("name = ? ORDER BY created_at DESC LIMIT 1", name).first?) && (recent = ActivityPub::Object.find?(hashtag.subject_iri))
+      if (hashtag = Tag::Hashtag.where("name = ? ORDER BY id DESC LIMIT 1", name).first?) && (recent = ActivityPub::Object.find?(hashtag.subject_iri))
         if (count < 1 && continuation) || (count > 0 && count < maximum)
           ContentRules.new.run do
             assert ContentRules::CheckFollowFor.new(source, recent)

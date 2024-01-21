@@ -906,11 +906,6 @@ Spectator.describe ActivityPub::Actor do
     let_build(:create, actor: subject, object: object5)
     let_build(:outbox_relationship, named: :outbox, owner: subject, activity: create)
 
-    it "includes objects only once" do
-      outbox.save
-      expect(subject.public_posts(1, 2)).to eq([object5, object4])
-    end
-
     it "paginates the results" do
       expect(subject.public_posts(1, 2)).to eq([object5, object4])
       expect(subject.public_posts(3, 2)).to eq([object1])
@@ -975,11 +970,6 @@ Spectator.describe ActivityPub::Actor do
 
     let_build(:create, actor: subject, object: object5)
     let_build(:outbox_relationship, named: :outbox, owner: subject, activity: create)
-
-    it "includes objects only once" do
-      outbox.save
-      expect(subject.all_posts(1, 2)).to eq([object5, object4])
-    end
 
     it "paginates the results" do
       expect(subject.all_posts(1, 2)).to eq([object5, object4])

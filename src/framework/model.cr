@@ -262,7 +262,7 @@ module Ktistec
       end
 
       protected def query_and_paginate(query, *args, additional_columns = NamedTuple.new, page = 1, size = 10)
-        log_query(query, args) do
+        log_query(query, {*args, size.to_i + 1, ((page - 1) * size).to_i}) do
           Ktistec::Util::PaginatedArray(self).new.tap do |array|
             Ktistec.database.query(
               query, *args, size.to_i + 1, ((page - 1) * size).to_i

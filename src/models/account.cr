@@ -19,11 +19,6 @@ end
 class Account
   include Ktistec::Model(Common)
 
-  # :nodoc:
-  private def cost
-    12
-  end
-
   # Allocates a new account.
   #
   # This constructor is used to create new accounts (which must have a
@@ -44,6 +39,21 @@ class Account
 
   @[Assignable]
   @password : String?
+
+  # Password encryption and key generation should be expensive
+  # operations in normal use cases. Parameterize `cost` and `size` so
+  # that they can be redefined in test, where the expense just makes
+  # the tests run more slowly.
+
+  # :nodoc:
+  private def cost
+    12
+  end
+
+  # :nodoc:
+  private def size
+    2048
+  end
 
   # Checks the given password against the encrypted password.
   #
@@ -100,7 +110,7 @@ class Account
     if changed?(:actor)
       clear!(:actor)
       if (actor = self.actor?) && actor.pem_public_key.nil? && actor.pem_private_key.nil?
-        keypair = OpenSSL::RSA.generate(2048, 17)
+        keypair = OpenSSL::RSA.generate(self.size, 17)
         actor.pem_public_key = keypair.public_key.to_pem
         actor.pem_private_key = keypair.to_pem
       end

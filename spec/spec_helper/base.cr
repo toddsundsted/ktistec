@@ -72,6 +72,10 @@ class Account
   private def cost
     4 # reduce the cost of computing a bcrypt hash
   end
+
+  private def size
+    512 # reduce the size of the generated rsa key
+  end
 end
 
 class Task

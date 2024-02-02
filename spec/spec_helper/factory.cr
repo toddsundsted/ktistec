@@ -56,7 +56,7 @@ def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **
   iri = local ? "https://test.test/actors/#{username}" : "https://remote/actors/#{username}"
   pem_public_key, pem_private_key =
     if with_keys
-      keypair = OpenSSL::RSA.generate(2048, 17)
+      keypair = OpenSSL::RSA.generate(512, 17)
       {keypair.public_key.to_pem, keypair.to_pem}
     else
       {nil, nil}

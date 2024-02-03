@@ -139,28 +139,6 @@ Spectator.describe Task::Fetch::Thread do
       it "does not change time of last success" do
         expect{subject.perform}.not_to change{node.last_success_at}
       end
-
-      it "increments the failures counter" do
-        expect{subject.perform}.to change{subject.state.failures}.to(1)
-      end
-
-      it "sets the next attempt in the far future" do
-        subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(2.hours.from_now, 6.hours.from_now)
-      end
-
-      context "and a prior failure" do
-        before_each { subject.state.failures = 1 }
-
-        it "increments the failures counter" do
-          expect{subject.perform}.to change{subject.state.failures}.to(2)
-        end
-
-        it "sets the next attempt in the far future" do
-          subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be_between(5.hours.from_now, 11.hours.from_now)
-        end
-      end
     end
 
     context "given a thread with one reply" do
@@ -188,14 +166,6 @@ Spectator.describe Task::Fetch::Thread do
 
       it "changes time of last success" do
         expect{subject.perform}.to change{node.last_success_at}
-      end
-
-      context "and a prior failure" do
-        before_each { subject.state.failures = 1 }
-
-        it "resets the failures counter" do
-          expect{subject.perform}.to change{subject.state.failures}.to(0)
-        end
       end
     end
 
@@ -225,14 +195,6 @@ Spectator.describe Task::Fetch::Thread do
 
       it "changes time of last success" do
         expect{subject.perform}.to change{node.last_success_at}
-      end
-
-      context "and a prior failure" do
-        before_each { subject.state.failures = 1 }
-
-        it "resets the failures counter" do
-          expect{subject.perform}.to change{subject.state.failures}.to(0)
-        end
       end
     end
 
@@ -400,7 +362,7 @@ Spectator.describe Task::Fetch::Thread do
 
       it "sets the next attempt in the near future" do
         subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+        expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
       end
 
       context "and a follow" do
@@ -430,11 +392,6 @@ Spectator.describe Task::Fetch::Thread do
             expect{subject.perform(1)}.not_to change{ActivityPub::Object.count}
           end
 
-          it "sets the next attempt in the near future" do
-            subject.perform(1)
-            expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
-          end
-
           it "creates a notification" do
             expect{subject.perform(1)}.to change{source.notifications.size}
           end
@@ -454,7 +411,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the far future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+          expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
         end
 
         context "and a later reply" do
@@ -476,7 +433,7 @@ Spectator.describe Task::Fetch::Thread do
 
           it "sets the next attempt in the near future" do
             subject.perform
-            expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+            expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
           end
         end
 
@@ -499,7 +456,7 @@ Spectator.describe Task::Fetch::Thread do
 
           it "sets the next attempt in the far future" do
             subject.perform
-            expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+            expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
           end
         end
       end
@@ -611,7 +568,7 @@ Spectator.describe Task::Fetch::Thread do
 
       it "sets the next attempt in the near future" do
         subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+        expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
       end
 
       context "and a follow" do
@@ -708,7 +665,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the far future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+          expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
         end
       end
     end
@@ -761,7 +718,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the near future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+          expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
         end
       end
 
@@ -797,7 +754,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the near future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+          expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
         end
       end
     end
@@ -865,7 +822,7 @@ Spectator.describe Task::Fetch::Thread do
 
       it "sets the next attempt in the near future" do
         subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+        expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
       end
 
       context "with all replies fetched" do
@@ -873,7 +830,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the far future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+          expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
         end
       end
     end

@@ -1,10 +1,10 @@
 abstract class Factory
   macro build(type, **options)
-    {{type.id}}_factory({{**options}})
+    {{type.id}}_factory({{options.double_splat}})
   end
 
   macro create(type, **options)
-    {{type.id}}_factory({{**options}}).save
+    {{type.id}}_factory({{options.double_splat}}).save
   end
 end
 
@@ -14,22 +14,22 @@ KTISTEC_FACTORY_STATE = {:nonce => 0, :moment => 0}
 
 macro let_build(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{**options}}) }
+  let({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
 end
 
 macro let_build!(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let!({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{**options}}) }
+  let!({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
 end
 
 macro let_create(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{**options}}) }
+  let({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
 end
 
 macro let_create!(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let!({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{**options}}) }
+  let!({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
 end
 
 def base_url(iri, thing, local = nil)

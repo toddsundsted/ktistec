@@ -33,6 +33,48 @@ Spectator.describe Tag::Hashtag do
     end
   end
 
+  describe ".most_recent_object" do
+    create_tagged_object(1, "foo", "bar")
+    create_tagged_object(2, "foo")
+    create_tagged_object(3, "foo", "bar")
+    create_tagged_object(4, "foo")
+    create_tagged_object(5, "foo", "quux")
+
+    it "returns the most recent object with the tag" do
+      expect(described_class.most_recent_object("bar")).to eq(object3)
+    end
+
+    it "does not return draft objects" do
+      object5.assign(published: nil).save
+      expect(described_class.most_recent_object("foo")).to eq(object4)
+    end
+
+    it "does not return deleted objects" do
+      object5.delete!
+      expect(described_class.most_recent_object("foo")).to eq(object4)
+    end
+
+    it "does not return blocked objects" do
+      object5.block!
+      expect(described_class.most_recent_object("foo")).to eq(object4)
+    end
+
+    it "does not return objects with deleted attributed to actors" do
+      author.delete!
+      expect(described_class.most_recent_object("foo")).to be_nil
+    end
+
+    it "does not return objects with blocked attributed to actors" do
+      author.block!
+      expect(described_class.most_recent_object("foo")).to be_nil
+    end
+
+    it "does not return objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.most_recent_object("foo")).to be_nil
+    end
+  end
+
   describe ".all_objects" do
     create_tagged_object(1, "foo", "bar")
     create_tagged_object(2, "foo")

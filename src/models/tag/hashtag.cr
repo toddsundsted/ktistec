@@ -6,6 +6,33 @@ class Tag
     belongs_to subject, class_name: ActivityPub::Object, foreign_key: subject_iri, primary_key: iri
     validates(subject) { "missing: #{subject_iri}" unless subject? }
 
+    # Returns the most recent object with the given hashtag.
+    #
+    # Orders objects by `id` (not `published`).
+    #
+    # Includes private (not visible) objects.
+    #
+    def self.most_recent_object(name)
+      query = <<-QUERY
+        SELECT #{ActivityPub::Object.columns(prefix: "o")}
+          FROM objects AS o
+          JOIN tags AS t
+            ON t.subject_iri = o.iri
+           AND t.type = "#{Tag::Hashtag}"
+          JOIN actors AS a
+            ON a.iri = o.attributed_to_iri
+         WHERE t.name = ?
+           AND o.published IS NOT NULL
+           AND o.deleted_at IS NULL
+           AND o.blocked_at IS NULL
+           AND a.deleted_at IS NULL
+           AND a.blocked_at IS NULL
+      ORDER BY o.id DESC
+         LIMIT 1
+      QUERY
+      ActivityPub::Object.query_all(query, name).first?
+    end
+
     # Returns the objects with the given hashtag.
     #
     # Includes private (not visible) objects.

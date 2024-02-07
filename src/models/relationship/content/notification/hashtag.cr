@@ -5,8 +5,10 @@ class Relationship
   class Content
     class Notification < Relationship
       class Hashtag < Notification
-        belongs_to object, class_name: ActivityPub::Object, foreign_key: to_iri, primary_key: iri
-        validates(object) { "missing: #{to_iri}" unless object? }
+        # Name of the hashtag.
+        #
+        derived name : String, aliased_to: to_iri
+        validates(name) { "must not be blank" if name.blank? }
       end
     end
   end

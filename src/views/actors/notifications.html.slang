@@ -77,36 +77,20 @@
                 == content
         - in Relationship::Content::Notification::Hashtag
           crystal:
-            object = notification.object
-            content = Ktistec::Util.render_as_text(object.content).presence
-            attributed_to = object.attributed_to
+            name = notification.name
+            object = Tag::Hashtag.most_recent_object(name)
+            content = object ? Ktistec::Util.render_as_text(object.content).presence : nil
+            attributed_to = object.try(&.attributed_to)
           .label
-            - if (icon = attributed_to.icon)
+            - if attributed_to && (icon = attributed_to.icon)
               img data-actor-id=attributed_to.id src=icon
             - else
               i.user.icon
           .content
             .summary
-              crystal:
-                ht1 = object.hashtags.map(&.name.downcase)
-                ht2 = Relationship::Content::Follow::Hashtag.where(actor: actor).map(&.name.downcase)
-                ht3 = (ht1 & ht2)
-                ht4 = ht3.select do |ht|
-                  Tag::Hashtag.count_all_objects(ht, created_after: object.created_at - 1.minute) > 1
-                end
-              - if ht4.empty?
-                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
-                | tagged
-                a<> href=remote_object_path(object) a post
-                | with
-                - ht3.each do |hashtag|
-                  a< href=hashtag_path(hashtag) ##{hashtag}
-                | .
-              - else
-                | There are new posts tagged with
-                - ht4.each do |hashtag|
-                  a< href=hashtag_path(hashtag) ##{hashtag}
-                | .
+              | There are new posts tagged with
+              a< href=hashtag_path(name) ##{name}
+              | .
             - if content
               .extra.meta.truncated
                 == content

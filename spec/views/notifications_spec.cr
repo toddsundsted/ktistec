@@ -69,45 +69,39 @@ Spectator.describe "notifications partial" do
     end
 
     context "given a hashtag notification" do
-      let_build(:object, published: Time.utc)
-      let_create!(:notification_hashtag, owner: actor, object: object)
-
-      let_create!(:follow_hashtag_relationship, named: nil, actor: actor, name: "foo")
+      let_build(:object, content: "This is the content.", published: Time.utc)
+      let_create!(:notification_hashtag, owner: actor, name: "foo")
 
       before_each do
         Factory.create(:hashtag, name: "foo", subject: object)
         Factory.create(:hashtag, name: "bar", subject: object)
       end
 
-      it "renders a tagged message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-          to eq("#{object.attributed_to.display_name} tagged a post with #foo.")
+      it "renders a message" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
+          to have("There are new posts tagged with ", "#foo", ".")
       end
 
-      context "and multiple objects with nearly the same created_at time" do
-        let_create!(:object, named: object1, published: Time.utc)
-        let_create!(:object, named: object2, published: Time.utc)
+      it "renders the content" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
+          to have("This is the content.")
+      end
 
-        before_each do
-          Factory.create(:hashtag, name: "bar", subject: object1)
-          Factory.create(:hashtag, name: "bar", subject: object2)
+      context "given a deleted object" do
+        before_each { object.delete! }
+
+        it "does not render the content" do
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
+            not_to have("This is the content.")
         end
+      end
 
-        it "renders a tagged message" do
-          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-            to eq("#{object.attributed_to.display_name} tagged a post with #foo.")
-        end
+      context "given a blocked object" do
+        before_each { object.block! }
 
-        context "with the same hashtag" do
-          before_each do
-            Factory.create(:hashtag, name: "foo", subject: object1)
-            Factory.create(:hashtag, name: "foo", subject: object2)
-          end
-
-          it "renders a different message" do
-            expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-              to eq("There are new posts tagged with #foo.")
-          end
+        it "does not render the content" do
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
+            not_to have("This is the content.")
         end
       end
     end

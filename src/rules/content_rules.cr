@@ -37,7 +37,7 @@ class ContentRules
   Ktistec::Rule.make_pattern(NotificationLike, Relationship::Content::Notification::Like, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationAnnounce, Relationship::Content::Notification::Announce, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationFollow, Relationship::Content::Notification::Follow, associations: [:owner, :activity])
-  Ktistec::Rule.make_pattern(NotificationHashtag, Relationship::Content::Notification::Hashtag, associations: [:owner, :object])
+  Ktistec::Rule.make_pattern(NotificationHashtag, Relationship::Content::Notification::Hashtag, associations: [:owner], properties: [:name])
   Ktistec::Rule.make_pattern(NotificationMention, Relationship::Content::Notification::Mention, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(NotificationReply, Relationship::Content::Notification::Reply, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(NotificationThread, Relationship::Content::Notification::Thread, associations: [:owner, :object])

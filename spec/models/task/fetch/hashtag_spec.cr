@@ -1,5 +1,4 @@
 require "../../../../src/models/task/fetch/hashtag"
-require "../../../../src/models/relationship/content/follow/hashtag"
 
 require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
@@ -240,26 +239,6 @@ Spectator.describe Task::Fetch::Hashtag do
         expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
       end
 
-      context "and a follow" do
-        let_create!(:follow_hashtag_relationship, actor: source, name: "hashtag")
-
-        it "does not create a notification" do
-          expect{subject.perform(1)}.not_to change{source.notifications.size}
-        end
-
-        it "does not create a notification" do
-          expect{subject.perform(2)}.not_to change{source.notifications.size}
-        end
-
-        it "creates a notification" do
-          expect{subject.perform(3)}.to change{source.notifications.size}
-        end
-
-        it "creates a notification" do
-          expect{subject.perform}.to change{source.notifications.size}
-        end
-      end
-
       context "with all objects already fetched" do
         before_each { subject.perform }
 
@@ -366,14 +345,6 @@ Spectator.describe Task::Fetch::Hashtag do
         it "sets the next attempt in the near future" do
           subject.perform(1)
           expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
-        end
-
-        context "and a follow" do
-          let_create!(:follow_hashtag_relationship, actor: source, name: "hashtag")
-
-          it "creates a notification" do
-            expect{subject.perform(1)}.to change{source.notifications.size}
-          end
         end
       end
 

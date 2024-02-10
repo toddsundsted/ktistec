@@ -129,6 +129,9 @@ class Task
           Log.info { "perform [#{id}] - hashtag: #{name}, iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
+          ContentRules.new.run do
+            assert ContentRules::CheckFollowFor.new(source, object)
+          end
           count += 1
         end
       ensure
@@ -141,14 +144,6 @@ class Task
           else                                       # maximum number fetched
             calculate_next_attempt_at(Horizon::ImmediateFuture)
           end
-      end
-
-      if (hashtag = Tag::Hashtag.where("name = ? ORDER BY id DESC LIMIT 1", name).first?) && (recent = ActivityPub::Object.find?(hashtag.subject_iri))
-        if (count < 1 && continuation) || (count > 0 && count < maximum)
-          ContentRules.new.run do
-            assert ContentRules::CheckFollowFor.new(source, recent)
-          end
-        end
       end
     end
 

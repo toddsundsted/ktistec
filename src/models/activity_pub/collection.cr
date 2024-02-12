@@ -54,6 +54,53 @@ module ActivityPub
     property current_iri : String?
     belongs_to :current, class_name: {{@type}}, foreign_key: current_iri, primary_key: iri
 
+    # Traverses the collection and returns IRIs of all items.
+    #
+    # Returns `nil` if `items_iris`, `first_iri` and `last_iri` are
+    # all `nil`. This is how ActivityPub hashtag collections on
+    # Mastodon are represented -- the items are retrieved via the
+    # Mastodon API.
+    #
+    def all_item_iris(source, maximum_depth = 10)
+      items_iris || begin
+        if (first = self.first?(source, dereference: true))
+          Array(String).new.tap do |items|
+            if (iris = first.items_iris)
+              items.concat(iris)
+            end
+            collection = first
+            maximum_depth.times do # cap depth
+              if (temporary = collection.next?(source, dereference: true))
+                if (iris = temporary.items_iris)
+                  items.concat(iris)
+                end
+                collection = temporary
+              else
+                break
+              end
+            end
+          end
+        elsif (last = self.last?(source, dereference: true))
+          Array(String).new.tap do |items|
+            if (iris = last.items_iris)
+              items.concat(iris)
+            end
+            collection = last
+            maximum_depth.times do # cap depth
+              if (temporary = collection.prev?(source, dereference: true))
+                if (iris = temporary.items_iris)
+                  items.concat(iris)
+                end
+                collection = temporary
+              else
+                break
+              end
+            end
+          end
+        end
+      end
+    end
+
     def to_json_ld(recursive = true)
       CollectionModelRenderer.to_json_ld(self, recursive)
     end

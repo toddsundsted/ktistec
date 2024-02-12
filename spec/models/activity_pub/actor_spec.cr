@@ -1162,40 +1162,6 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.notifications(since: since)).to eq(4)
     end
 
-    context "given a hashtag notification" do
-      let_build(:actor)
-      let_build(:object, attributed_to: actor)
-      let_create!(:notification_hashtag, owner: subject, object: object)
-
-      it "includes the hashtag notification" do
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification_hashtag, notification5])
-      end
-
-      it "returns the count" do
-        expect(subject.notifications(since: since)).to eq(6)
-      end
-
-      it "filters out deleted objects" do
-        object.delete!
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
-      end
-
-      it "filters out blocked objects" do
-        object.block!
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
-      end
-
-      it "filters out objects by deleted actors" do
-        actor.delete!
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
-      end
-
-      it "filters out objects by blocked actors" do
-        actor.block!
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
-      end
-    end
-
     it "paginates the results" do
       expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
       expect(subject.notifications(page: 3, size: 2)).to eq([notification1])

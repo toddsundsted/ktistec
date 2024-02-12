@@ -216,52 +216,20 @@ class Task
             if !state.cache.presence
               state.cache = nil
             end
-            state.cache || begin
+            state.cache.presence || begin
               state.cached_object = node.id
-              state.cache = Array(String).new.tap do |items|
+              state.cache =
                 if (temporary = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))
                   if (replies = temporary.replies?(source, dereference: true))
-                    if (iris = replies.items_iris)
-                      items.concat(iris)
-                    end
-                    if (first = replies.first?(source, dereference: true))
-                      if (iris = first.items_iris)
-                        items.concat(iris)
-                      end
-                      this = first
-                      100.times do # for safety, cap loops
-                        if (that = this.next?(source, dereference: true))
-                          if (iris = that.items_iris)
-                            items.concat(iris)
-                          end
-                          this = that
-                        else
-                          break
-                        end
-                      end
-                    elsif (last = replies.last?(source, dereference: true))
-                      if (iris = last.items_iris)
-                        items.concat(iris)
-                      end
-                      this = last
-                      100.times do # for safety, cap loops
-                        if (that = this.prev?(source, dereference: true))
-                          if (iris = that.items_iris)
-                            items.concat(iris)
-                          end
-                          this = that
-                        else
-                          break
-                        end
-                      end
+                    if (iris = replies.all_item_iris(source))
+                      iris
                     end
                   end
                 end
-                Log.info { "fetch_out [#{id}] - #{items.size} items" }
-              end
+              size = state.cache.try(&.size) || 0
+              Log.info { "fetch_out [#{id}] - #{size} items" }
             end
-            cache = state.cache.not_nil!
-            while (item = cache.shift?)
+            while (cache = state.cache) && (item = cache.shift?)
               fetched, object = find_or_fetch_object(item)
               next if object.nil?
               unless object.id.in?(ids)

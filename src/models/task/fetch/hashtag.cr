@@ -162,43 +162,42 @@ class Task
         end
         state.cache.presence || begin
           state.cached_collection = node.href
-          state.cache = Array(String).new.tap do |items|
+          state.cache =
             if (collection = ActivityPub::Collection.dereference?(source, node.href))
-              if (iris = collection.items_iris)
+              if (iris = collection.all_item_iris(source))
                 Log.info { "fetch_one [#{id}] - iri: #{collection.iri}" }
-                items.concat(iris)
+                iris
               elsif (uri = URI.parse(node.href)).path =~ %r|^/tags/([^/]+)$|
                 url = uri.resolve("/api/v1/timelines/tag/#{$1}").to_s
                 headers = HTTP::Headers{"Accept" => "application/json"}
                 Ktistec::Open.open?(source, url, headers) do |response|
                   Log.info { "fetch_one (API) [#{id}] - iri: #{url}" }
-                  Array(JSON::Any).from_json(response.body).each do |item|
+                  Array(JSON::Any).from_json(response.body).reduce([] of String) do |items, item|
                     if (item = item.as_h?) && (item = item.dig?("uri")) && (item = item.as_s?)
                       items << item
                     end
+                    items
                   end
                 rescue JSON::Error
                   Log.warn { "fetch_one (API) [#{id}] - JSON response parse error" }
                 end
               end
             end
-            Log.info { "fetch_one [#{id}] - #{items.size} items" }
-          end
+          size = state.cache.try(&.size) || 0
+          Log.info { "fetch_one [#{id}] - #{size} items" }
         end
-        if (cache = state.cache.presence)
-          while (item = cache.shift?)
-            fetched, object = find_or_fetch_object(item)
-            next if object.nil?
-            if (hashtags = object.hashtags)
-              hashtags.select{ |h| h.name.downcase == name }.map(&.href).compact.each do |href|
-                new = State::Node.new(href)
-                state << new unless state.includes?(new)
-              end
+        while (cache = state.cache) && (item = cache.shift?)
+          fetched, object = find_or_fetch_object(item)
+          next if object.nil?
+          if (hashtags = object.hashtags)
+            hashtags.select{ |h| h.name.downcase == name }.map(&.href).compact.each do |href|
+              new = State::Node.new(href)
+              state << new unless state.includes?(new)
             end
-            if fetched
-              node.last_success_at = now
-              return object
-            end
+          end
+          if fetched
+            node.last_success_at = now
+            return object
           end
         end
       end

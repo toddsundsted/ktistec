@@ -264,9 +264,11 @@ end
 
 rule "notification exists for object 3"
   condition CheckFollowFor, actor, object
-  condition NotificationThread, owner: actor, object: object
-  retract NotificationThread, owner: actor, object: object
-  assert NotificationFor, object
+  condition Object, object, thread: thread
+  condition Object, root, iri: thread
+  condition NotificationThread, owner: actor, object: root
+  retract NotificationThread, owner: actor, object: root
+  assert NotificationFor, root
 end
 
 rule "follow/hashtag"
@@ -290,8 +292,9 @@ rule "follow/thread"
   condition CheckFollowFor, actor, object
   condition Object, object, thread: thread
   condition FollowThread, actor: actor, thread: thread
-  none NotificationThread, owner: actor, object: object
-  assert NotificationThread, owner: actor, object: object
+  condition Object, root, iri: thread
+  none NotificationThread, owner: actor, object: root
+  assert NotificationThread, owner: actor, object: root
 end
 
 ## Timeline

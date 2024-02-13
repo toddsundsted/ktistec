@@ -266,12 +266,26 @@ Spectator.describe ContentRules do
 
           it "adds the reply to the notifications" do
             run(owner, create)
-            expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+            expect(owner.notifications.map(&.object_or_activity)).to eq([object.in_reply_to])
           end
 
           it "adds the reply to the notifications" do
             run(owner, announce)
-            expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+            expect(owner.notifications.map(&.object_or_activity)).to eq([object.in_reply_to])
+          end
+
+          context "but object is not the root of the thread" do
+            before_each { object.assign(in_reply_to_iri: "https://remote/uncached") }
+
+            it "does not add the reply to the notifications" do
+              run(owner, create)
+              expect(owner.notifications).to be_empty
+            end
+
+            it "does not add the reply to the notifications" do
+              run(owner, announce)
+              expect(owner.notifications).to be_empty
+            end
           end
         end
 
@@ -609,9 +623,9 @@ Spectator.describe ContentRules do
       before_each { object.assign(in_reply_to: origin).save }
 
       context "for the owner" do
-        let_create!(:notification_thread, owner: owner, object: object)
+        let_create!(:notification_thread, owner: owner, object: origin)
 
-        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([origin]) }
 
         it "removes the previous create from the notifications" do
           run(owner, create)
@@ -620,7 +634,7 @@ Spectator.describe ContentRules do
 
         it "does not add another object to the notifications" do
           run(owner, create)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+          expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
         end
 
         it "removes the previous announce from the notifications" do
@@ -630,23 +644,23 @@ Spectator.describe ContentRules do
 
         it "does not add another object to the notifications" do
           run(owner, announce)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+          expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
         end
       end
 
       context "for other owner" do
-        let_create!(:notification_thread, owner: other, object: object)
+        let_create!(:notification_thread, owner: other, object: origin)
 
         pre_condition { expect(owner.notifications.map(&.object_or_activity)).to be_empty }
 
         it "adds the object to the notifications" do
           run(owner, create)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+          expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
         end
 
         it "adds the object to the notifications" do
           run(owner, announce)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+          expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
         end
       end
     end

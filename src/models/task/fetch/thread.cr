@@ -150,6 +150,9 @@ class Task
           Log.info { "perform [#{id}] - iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
+          ContentRules.new.run do
+            assert ContentRules::CheckFollowFor.new(source, object)
+          end
           count += 1
         end
       ensure
@@ -162,14 +165,6 @@ class Task
           else                                       # maximum number fetched
             calculate_next_attempt_at(Horizon::ImmediateFuture)
           end
-      end
-
-      if (root = ActivityPub::Object.find?(thread)) && root.root?
-        if (count < 1 && continuation) || (count > 0 && count < maximum)
-          ContentRules.new.run do
-            assert ContentRules::CheckFollowFor.new(source, root)
-          end
-        end
       end
     end
 
@@ -249,7 +244,11 @@ class Task
     # `nil` if no new object is fetched.
     #
     private def fetch_one(horizon)
-      (!state.root_object && fetch_up) || fetch_out(horizon)
+      if !state.root_object && (object = fetch_up)
+        object
+      else
+        fetch_out(horizon)
+      end
     end
 
     # Merges tasks.

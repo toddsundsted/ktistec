@@ -198,16 +198,16 @@ def notification_follow_factory(**options)
   notification_factory(Relationship::Content::Notification::Follow, **options)
 end
 
-def notification_hashtag_factory(**options)
-  notification_factory(Relationship::Content::Notification::Hashtag, **options)
+def notification_follow_hashtag_factory(**options)
+  notification_factory(Relationship::Content::Notification::Follow::Hashtag, **options)
 end
 
 def notification_mention_factory(**options)
   notification_factory(Relationship::Content::Notification::Mention, **options)
 end
 
-def notification_thread_factory(**options)
-  notification_factory(Relationship::Content::Notification::Thread, **options)
+def notification_follow_thread_factory(**options)
+  notification_factory(Relationship::Content::Notification::Follow::Thread, **options)
 end
 
 def notification_reply_factory(**options)

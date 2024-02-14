@@ -251,8 +251,8 @@ rule "notification exists for object 1"
   condition CheckFollowFor, actor, object
   condition Object, object, attributed_to: not actor
   condition Hashtag, subject: object, name: name
-  condition NotificationHashtag, owner: actor, name: name
-  retract NotificationHashtag, owner: actor, name: name
+  condition NotificationFollowHashtag, owner: actor, name: name
+  retract NotificationFollowHashtag, owner: actor, name: name
   assert NotificationFor, object
 end
 
@@ -266,8 +266,8 @@ rule "notification exists for object 3"
   condition CheckFollowFor, actor, object
   condition Object, object, thread: thread
   condition Object, root, iri: thread
-  condition NotificationThread, owner: actor, object: root
-  retract NotificationThread, owner: actor, object: root
+  condition NotificationFollowThread, owner: actor, object: root
+  retract NotificationFollowThread, owner: actor, object: root
   assert NotificationFor, root
 end
 
@@ -276,7 +276,7 @@ rule "follow/hashtag"
   condition Object, object, attributed_to: not actor
   condition Hashtag, subject: object, name: name
   any FollowHashtag, actor: actor, name: name
-  assert NotificationHashtag, owner: actor, name: name
+  assert NotificationFollowHashtag, owner: actor, name: name
 end
 
 rule "follow/mention"
@@ -293,8 +293,8 @@ rule "follow/thread"
   condition Object, object, thread: thread
   condition FollowThread, actor: actor, thread: thread
   condition Object, root, iri: thread
-  none NotificationThread, owner: actor, object: root
-  assert NotificationThread, owner: actor, object: root
+  none NotificationFollowThread, owner: actor, object: root
+  assert NotificationFollowThread, owner: actor, object: root
 end
 
 ## Timeline

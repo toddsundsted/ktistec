@@ -75,7 +75,7 @@
             - if content
               .extra.meta.truncated
                 == content
-        - in Relationship::Content::Notification::Hashtag
+        - in Relationship::Content::Notification::Follow::Hashtag
           crystal:
             name = notification.name
             object = Tag::Hashtag.most_recent_object(name)
@@ -149,7 +149,7 @@
             - elsif response.is_a?(ActivityPub::Activity::Reject)
               .extra.meta
                 | Rejected #{ response.short_date }.
-        - in Relationship::Content::Notification::Thread
+        - in Relationship::Content::Notification::Follow::Thread
           crystal:
             object = notification.object
             content = Ktistec::Util.render_as_text(object.content).presence

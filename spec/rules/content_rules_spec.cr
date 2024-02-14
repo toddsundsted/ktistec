@@ -537,13 +537,13 @@ Spectator.describe ContentRules do
       let_create!(:hashtag, name: "hashtag", href: "https://test.test/tags/hashtag", subject: object)
 
       context "for the owner" do
-        let_create!(:notification_hashtag, owner: owner, name: "hashtag")
+        let_create!(:notification_follow_hashtag, owner: owner, name: "hashtag")
 
         pre_condition { expect(owner.notifications.map(&.to_iri)).to eq(["hashtag"]) }
 
         it "removes the previous notification from the notifications" do
           run(owner, create)
-          expect(owner.notifications).not_to have(notification_hashtag)
+          expect(owner.notifications).not_to have(notification_follow_hashtag)
         end
 
         it "does not add a duplicate hashtag to the notifications" do
@@ -553,7 +553,7 @@ Spectator.describe ContentRules do
 
         it "removes the previous notification from the notifications" do
           run(owner, announce)
-          expect(owner.notifications).not_to have(notification_hashtag)
+          expect(owner.notifications).not_to have(notification_follow_hashtag)
         end
 
         it "does not add a duplicate hashtag to the notifications" do
@@ -563,7 +563,7 @@ Spectator.describe ContentRules do
       end
 
       context "for other owner" do
-        let_create!(:notification_hashtag, owner: other, name: "hashtag")
+        let_create!(:notification_follow_hashtag, owner: other, name: "hashtag")
 
         pre_condition { expect(owner.notifications.map(&.to_iri)).to be_empty }
 
@@ -623,13 +623,13 @@ Spectator.describe ContentRules do
       before_each { object.assign(in_reply_to: origin).save }
 
       context "for the owner" do
-        let_create!(:notification_thread, owner: owner, object: origin)
+        let_create!(:notification_follow_thread, owner: owner, object: origin)
 
         pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([origin]) }
 
         it "removes the previous create from the notifications" do
           run(owner, create)
-          expect(owner.notifications).not_to have(notification_thread)
+          expect(owner.notifications).not_to have(notification_follow_thread)
         end
 
         it "does not add another object to the notifications" do
@@ -639,7 +639,7 @@ Spectator.describe ContentRules do
 
         it "removes the previous announce from the notifications" do
           run(owner, announce)
-          expect(owner.notifications).not_to have(notification_thread)
+          expect(owner.notifications).not_to have(notification_follow_thread)
         end
 
         it "does not add another object to the notifications" do
@@ -649,7 +649,7 @@ Spectator.describe ContentRules do
       end
 
       context "for other owner" do
-        let_create!(:notification_thread, owner: other, object: origin)
+        let_create!(:notification_follow_thread, owner: other, object: origin)
 
         pre_condition { expect(owner.notifications.map(&.object_or_activity)).to be_empty }
 

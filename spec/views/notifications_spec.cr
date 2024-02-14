@@ -68,9 +68,9 @@ Spectator.describe "notifications partial" do
       end
     end
 
-    context "given a hashtag notification" do
+    context "given a follow hashtag notification" do
       let_build(:object, content: "This is the content.", published: Time.utc)
-      let_create!(:notification_hashtag, owner: actor, name: "foo")
+      let_create!(:notification_follow_hashtag, owner: actor, name: "foo")
 
       before_each do
         Factory.create(:hashtag, name: "foo", subject: object)
@@ -123,10 +123,10 @@ Spectator.describe "notifications partial" do
       end
     end
 
-    context "given a thread notification for a reply" do
+    context "given a thread follow notification for a reply" do
       let_build(:object)
       let_build(:object, named: reply, in_reply_to: object)
-      let_create!(:notification_thread, owner: actor, object: reply)
+      let_create!(:notification_follow_thread, owner: actor, object: reply)
 
       pre_condition { expect(reply.root?).to be_false }
 
@@ -136,9 +136,9 @@ Spectator.describe "notifications partial" do
       end
     end
 
-    context "given a thread notification for the root" do
+    context "given a thread thread notification for the root" do
       let_build(:object)
-      let_create!(:notification_thread, owner: actor, object: object)
+      let_create!(:notification_follow_thread, owner: actor, object: object)
 
       pre_condition { expect(object.root?).to be_true }
 

@@ -1,9 +1,9 @@
-require "../../../../../src/models/relationship/content/notification/hashtag"
+require "../../../../../../src/models/relationship/content/notification/follow/hashtag"
 
-require "../../../../spec_helper/base"
-require "../../../../spec_helper/factory"
+require "../../../../../spec_helper/base"
+require "../../../../../spec_helper/factory"
 
-Spectator.describe Relationship::Content::Notification::Hashtag do
+Spectator.describe Relationship::Content::Notification::Follow::Hashtag do
   setup_spec
 
   let(options) do

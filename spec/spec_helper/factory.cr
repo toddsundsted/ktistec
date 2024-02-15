@@ -202,8 +202,8 @@ def notification_follow_hashtag_factory(**options)
   notification_factory(Relationship::Content::Notification::Follow::Hashtag, **options)
 end
 
-def notification_mention_factory(**options)
-  notification_factory(Relationship::Content::Notification::Mention, **options)
+def notification_follow_mention_factory(**options)
+  notification_factory(Relationship::Content::Notification::Follow::Mention, **options)
 end
 
 def notification_follow_thread_factory(**options)
@@ -212,6 +212,10 @@ end
 
 def notification_reply_factory(**options)
   notification_factory(Relationship::Content::Notification::Reply, **options)
+end
+
+def notification_mention_factory(**options)
+  notification_factory(Relationship::Content::Notification::Mention, **options)
 end
 
 def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)

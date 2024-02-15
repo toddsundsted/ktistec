@@ -32,6 +32,48 @@ Spectator.describe Tag::Mention do
     end
   end
 
+  describe ".most_recent_object" do
+    create_object_with_mentions(1, "foo@remote", "bar@remote")
+    create_object_with_mentions(2, "foo@remote")
+    create_object_with_mentions(3, "foo@remote", "bar@remote")
+    create_object_with_mentions(4, "foo@remote")
+    create_object_with_mentions(5, "foo@remote", "quux@remote")
+
+    it "returns the most recent object with the mention" do
+      expect(described_class.most_recent_object("bar@remote")).to eq(object3)
+    end
+
+    it "does not return draft objects" do
+      object5.assign(published: nil).save
+      expect(described_class.most_recent_object("foo@remote")).to eq(object4)
+    end
+
+    it "does not return deleted objects" do
+      object5.delete!
+      expect(described_class.most_recent_object("foo@remote")).to eq(object4)
+    end
+
+    it "does not return blocked objects" do
+      object5.block!
+      expect(described_class.most_recent_object("foo@remote")).to eq(object4)
+    end
+
+    it "does not return objects with deleted attributed to actors" do
+      author.delete!
+      expect(described_class.most_recent_object("foo@remote")).to be_nil
+    end
+
+    it "does not return objects with blocked attributed to actors" do
+      author.block!
+      expect(described_class.most_recent_object("foo@remote")).to be_nil
+    end
+
+    it "does not return objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.most_recent_object("foo@remote")).to be_nil
+    end
+  end
+
   describe ".all_objects" do
     create_object_with_mentions(1, "foo@remote", "bar@remote")
     create_object_with_mentions(2, "foo@remote")

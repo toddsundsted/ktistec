@@ -1,5 +1,8 @@
 require "../../src/models/relationship/content/follow/hashtag"
 require "../../src/models/relationship/content/follow/mention"
+require "../../src/models/relationship/content/notification/follow/hashtag"
+require "../../src/models/relationship/content/notification/follow/mention"
+require "../../src/models/relationship/content/notification/follow/thread"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"
@@ -68,6 +71,16 @@ Spectator.describe "notifications partial" do
       end
     end
 
+    context "given a mention notification" do
+      let_build(:object)
+      let_create!(:notification_mention, owner: actor, object: object)
+
+      it "renders a message" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
+          to have("#{object.attributed_to.display_name} mentioned you.")
+      end
+    end
+
     context "given a follow hashtag notification" do
       let_build(:object, content: "This is the content.", published: Time.utc)
       let_create!(:notification_follow_hashtag, owner: actor, name: "foo")
@@ -106,20 +119,43 @@ Spectator.describe "notifications partial" do
       end
     end
 
-    context "given a mention notification" do
-      let_build(:object)
-      let_create!(:notification_mention, owner: actor, object: object)
+    context "given a follow mention notification" do
+      let_build(:object, content: "This is the content.", published: Time.utc)
+      let_create!(:notification_follow_mention, owner: actor, name: "foo@bar")
 
-      let_create!(:follow_mention_relationship, named: nil, actor: actor, name: "foo")
+      let_create!(:follow_mention_relationship, named: nil, actor: actor, name: "foo@bar")
 
       before_each do
-        Factory.create(:mention, name: "foo", subject: object)
-        Factory.create(:mention, name: "bar", subject: object)
+        Factory.create(:mention, name: "foo@bar", subject: object)
+        Factory.create(:mention, name: "bar@foo", subject: object)
       end
 
-      it "renders a tagged message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-          to eq("#{object.attributed_to.display_name} tagged a post with @foo.")
+      it "renders a message" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
+          to have("There are new posts that mention ", "@foo@bar", ".")
+      end
+
+      it "renders the content" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
+          to have("This is the content.")
+      end
+
+      context "given a deleted object" do
+        before_each { object.delete! }
+
+        it "does not render the content" do
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
+            not_to have("This is the content.")
+        end
+      end
+
+      context "given a blocked object" do
+        before_each { object.block! }
+
+        it "does not render the content" do
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
+            not_to have("This is the content.")
+        end
       end
     end
 

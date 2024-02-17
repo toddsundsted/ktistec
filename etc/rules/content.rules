@@ -258,7 +258,10 @@ end
 
 rule "notification exists for object 2"
   condition CheckFollowFor, actor, object
-  condition NotificationMention, owner: actor, object: object
+  condition Object, object, attributed_to: not actor
+  condition Mention, subject: object, name: name
+  condition NotificationFollowMention, owner: actor, name: name
+  retract NotificationFollowMention, owner: actor, name: name
   assert NotificationFor, object
 end
 
@@ -281,11 +284,10 @@ end
 
 rule "follow/mention"
   condition CheckFollowFor, actor, object
-  none NotificationFor, object
   condition Object, object, attributed_to: not actor
   condition Mention, subject: object, name: name
   any FollowMention, actor: actor, name: name
-  assert NotificationMention, owner: actor, object: object
+  assert NotificationFollowMention, owner: actor, name: name
 end
 
 rule "follow/thread"

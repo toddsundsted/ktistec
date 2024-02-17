@@ -38,6 +38,7 @@ class ContentRules
   Ktistec::Rule.make_pattern(NotificationAnnounce, Relationship::Content::Notification::Announce, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationFollow, Relationship::Content::Notification::Follow, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationFollowHashtag, Relationship::Content::Notification::Follow::Hashtag, associations: [:owner], properties: [:name])
+  Ktistec::Rule.make_pattern(NotificationFollowMention, Relationship::Content::Notification::Follow::Mention, associations: [:owner], properties: [:name])
   Ktistec::Rule.make_pattern(NotificationMention, Relationship::Content::Notification::Mention, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(NotificationReply, Relationship::Content::Notification::Reply, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(NotificationFollowThread, Relationship::Content::Notification::Follow::Thread, associations: [:owner, :object])
@@ -75,6 +76,7 @@ class ContentRules
   Ktistec::Compiler.register_constant(ContentRules::NotificationAnnounce)
   Ktistec::Compiler.register_constant(ContentRules::NotificationFollow)
   Ktistec::Compiler.register_constant(ContentRules::NotificationFollowHashtag)
+  Ktistec::Compiler.register_constant(ContentRules::NotificationFollowMention)
   Ktistec::Compiler.register_constant(ContentRules::NotificationMention)
   Ktistec::Compiler.register_constant(ContentRules::NotificationReply)
   Ktistec::Compiler.register_constant(ContentRules::NotificationFollowThread)
@@ -133,27 +135,27 @@ class ContentRules
     end
   end
 
-  class NotificationMention
+  class NotificationFollowMention
     def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)
-      unless ::Relationship::Content::Notification::Mention.find?(**options)
-        ::Relationship::Content::Notification::Mention.new(**options).save
+      unless ::Relationship::Content::Notification::Follow::Mention.find?(**options)
+        ::Relationship::Content::Notification::Follow::Mention.new(**options).save
       end
     end
 
     def self.assert(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-      unless ::Relationship::Content::Notification::Mention.find?(options)
-        ::Relationship::Content::Notification::Mention.new(options).save
+      unless ::Relationship::Content::Notification::Follow::Mention.find?(options)
+        ::Relationship::Content::Notification::Follow::Mention.new(options).save
       end
     end
 
     def self.retract(target : School::DomainTypes?, **options : School::DomainTypes)
-      if (instance = ::Relationship::Content::Notification::Mention.find?(**options))
+      if (instance = ::Relationship::Content::Notification::Follow::Mention.find?(**options))
         instance.destroy
       end
     end
 
     def self.retract(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-      if (instance = ::Relationship::Content::Notification::Mention.find?(options))
+      if (instance = ::Relationship::Content::Notification::Follow::Mention.find?(options))
         instance.destroy
       end
     end

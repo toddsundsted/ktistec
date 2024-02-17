@@ -190,7 +190,7 @@ Spectator.describe ContentRules do
 
         it "adds the object to the notifications" do
           run(owner, create)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+          expect(owner.notifications.map(&.object_or_activity)).to have(object)
         end
 
         context "and is attributed to the owner" do
@@ -198,7 +198,7 @@ Spectator.describe ContentRules do
 
           it "does not add the object to the notifications" do
             run(owner, create)
-            expect(owner.notifications.map(&.object_or_activity)).to be_empty
+            expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
           end
         end
       end
@@ -212,7 +212,7 @@ Spectator.describe ContentRules do
 
         it "does not add the object to the notifications" do
           run(owner, create)
-          expect(owner.notifications).to be_empty
+          expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
         end
       end
 
@@ -223,7 +223,7 @@ Spectator.describe ContentRules do
 
         it "does not add the object to the notifications" do
           run(owner, create)
-          expect(owner.notifications).to be_empty
+          expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
         end
       end
 
@@ -325,7 +325,7 @@ Spectator.describe ContentRules do
           )
         end
 
-        it "adds the object to the notifications" do
+        it "adds the object to the notifications once" do
           run(owner, create)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
@@ -442,12 +442,12 @@ Spectator.describe ContentRules do
 
           it "adds the object to the notifications" do
             run(owner, create)
-            expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+            expect(owner.notifications.map(&.to_iri)).to have("foo@remote.com")
           end
 
           it "adds the object to the notifications" do
             run(owner, announce)
-            expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+            expect(owner.notifications.map(&.to_iri)).to have("foo@remote.com")
           end
 
           context "and 'bar@remote.com' is followed by the owner" do
@@ -455,12 +455,12 @@ Spectator.describe ContentRules do
 
             it "adds a single object to the notifications" do
               run(owner, create)
-              expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+              expect(owner.notifications.map(&.to_iri)).to have("foo@remote.com", "bar@remote.com")
             end
 
             it "adds a single object to the notifications" do
               run(owner, announce)
-              expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+              expect(owner.notifications.map(&.to_iri)).to have("foo@remote.com", "bar@remote.com")
             end
           end
         end
@@ -580,38 +580,48 @@ Spectator.describe ContentRules do
     end
 
     context "given notifications with a followed mention already added" do
-      let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "mention")
-      let_create!(:mention, name: "mention", subject: object)
+      let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "mention@remote.com")
+      let_create!(:mention, name: "mention@remote.com", subject: object)
 
       context "for the owner" do
-        let_create!(:notification_mention, owner: owner, object: object)
+        let_create!(:notification_follow_mention, owner: owner, name: "mention@remote.com")
 
-        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+        pre_condition { expect(owner.notifications.map(&.to_iri)).to eq(["mention@remote.com"]) }
 
-        it "does not add another object to the notifications" do
+        it "removes the previous notification from the notifications" do
           run(owner, create)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+          expect(owner.notifications).not_to have(notification_follow_mention)
         end
 
-        it "does not add another object to the notifications" do
+        it "does not add a duplicate mention to the notifications" do
+          run(owner, create)
+          expect(owner.notifications.map(&.to_iri)).to eq(["mention@remote.com"])
+        end
+
+        it "removes the previous notification from the notifications" do
           run(owner, announce)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+          expect(owner.notifications).not_to have(notification_follow_mention)
+        end
+
+        it "does not add a duplicate mention to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.to_iri)).to eq(["mention@remote.com"])
         end
       end
 
       context "for other owner" do
-        let_create!(:notification_mention, owner: other, object: object)
+        let_create!(:notification_follow_mention, owner: other, name: "mention@remote.com")
 
         pre_condition { expect(owner.notifications.map(&.object_or_activity)).to be_empty }
 
         it "adds the object to the notifications" do
           run(owner, create)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+          expect(owner.notifications.map(&.to_iri)).to have("mention@remote.com")
         end
 
         it "adds the object to the notifications" do
           run(owner, announce)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+          expect(owner.notifications.map(&.to_iri)).to have("mention@remote.com")
         end
       end
     end

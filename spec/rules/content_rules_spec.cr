@@ -494,6 +494,32 @@ Spectator.describe ContentRules do
         end
       end
 
+      context "object is tagged with a hashtag and a mention and is a reply" do
+        let_build(:object, named: origin, attributed_to: other)
+
+        before_each do
+          Factory.create(:hashtag, name: "foo", href: "https://remote/tags/foo", subject: object)
+          Factory.create(:mention, name: "bar@remote.com", subject: object)
+          object.assign(in_reply_to: origin).save
+        end
+
+        it "does add any notifications" do
+          run(owner, create)
+          expect(owner.notifications).to be_empty
+        end
+
+        context "and all three are followed by owner" do
+          let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "foo")
+          let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "bar@remote.com")
+          let_create!(:follow_thread_relationship, actor: owner, thread: origin.iri)
+
+          it "adds three notifications" do
+            run(owner, create)
+            expect(owner.notifications.map(&.to_iri)).to have("foo", "bar@remote.com", origin.iri)
+          end
+        end
+      end
+
       context "object is attributed to the owner" do
         before_each { object.assign(attributed_to: owner) }
 

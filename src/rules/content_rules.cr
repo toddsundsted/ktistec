@@ -56,7 +56,6 @@ class ContentRules
   class InMailboxOf < School::Relationship(ActivityPub::Activity, ActivityPub::Actor) end
   class IsRecipient < School::Property(String) end
   class CheckFollowFor < School::Relationship(ActivityPub::Actor, ActivityPub::Object) end
-  class NotificationFor < School::Property(ActivityPub::Object) end
 
   Ktistec::Compiler.register_constant(ContentRules::Actor)
   Ktistec::Compiler.register_constant(ContentRules::Activity)
@@ -93,73 +92,11 @@ class ContentRules
   Ktistec::Compiler.register_constant(ContentRules::InMailboxOf)
   Ktistec::Compiler.register_constant(ContentRules::IsRecipient)
   Ktistec::Compiler.register_constant(ContentRules::CheckFollowFor)
-  Ktistec::Compiler.register_constant(ContentRules::NotificationFor)
 
   Ktistec::Compiler.register_accessor(iri)
   Ktistec::Compiler.register_accessor(content)
   Ktistec::Compiler.register_accessor(following)
   Ktistec::Compiler.register_accessor(followers)
-
-  # Exceptions
-
-  # note: given the way rules are currently evaluated (for a rule,
-  # first find all matches, then perform all actions), a condition
-  # like `none Notification, owner: actor, activity: activity` will
-  # *not* prevent a subsequent assert from attempting to create more
-  # than one notification, assuming more than one match. the following
-  # adds a check inside `assert` and `retract` for two special cases.
-
-  class NotificationFollowHashtag
-    def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)
-      unless ::Relationship::Content::Notification::Follow::Hashtag.find?(**options)
-        ::Relationship::Content::Notification::Follow::Hashtag.new(**options).save
-      end
-    end
-
-    def self.assert(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-      unless ::Relationship::Content::Notification::Follow::Hashtag.find?(options)
-        ::Relationship::Content::Notification::Follow::Hashtag.new(options).save
-      end
-    end
-
-    def self.retract(target : School::DomainTypes?, **options : School::DomainTypes)
-      if (instance = ::Relationship::Content::Notification::Follow::Hashtag.find?(**options))
-        instance.destroy
-      end
-    end
-
-    def self.retract(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-      if (instance = ::Relationship::Content::Notification::Follow::Hashtag.find?(options))
-        instance.destroy
-      end
-    end
-  end
-
-  class NotificationFollowMention
-    def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)
-      unless ::Relationship::Content::Notification::Follow::Mention.find?(**options)
-        ::Relationship::Content::Notification::Follow::Mention.new(**options).save
-      end
-    end
-
-    def self.assert(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-      unless ::Relationship::Content::Notification::Follow::Mention.find?(options)
-        ::Relationship::Content::Notification::Follow::Mention.new(options).save
-      end
-    end
-
-    def self.retract(target : School::DomainTypes?, **options : School::DomainTypes)
-      if (instance = ::Relationship::Content::Notification::Follow::Mention.find?(**options))
-        instance.destroy
-      end
-    end
-
-    def self.retract(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-      if (instance = ::Relationship::Content::Notification::Follow::Mention.find?(options))
-        instance.destroy
-      end
-    end
-  end
 
   class_property domain : School::Domain do
     definition = File.read(File.join(Dir.current, "etc", "rules", "content.rules"))

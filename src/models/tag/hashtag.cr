@@ -8,6 +8,10 @@ class Tag
 
     validates(name) { "is blank" if name.blank? }
 
+    def before_save
+      self.name = self.name.lstrip('#')
+    end
+
     # Returns the most recent object with the given hashtag.
     #
     # Orders objects by `id` (not `published`).

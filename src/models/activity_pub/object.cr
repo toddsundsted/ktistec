@@ -677,13 +677,13 @@ module ActivityPub
         "media_type" => dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
         "hashtags" => dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
           next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Hashtag"
-          name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").try(&.lstrip('#'))
+          name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und")
           href = dig?(tag, "https://www.w3.org/ns/activitystreams#href")
           Tag::Hashtag.new(name: name, href: href)
         end,
         "mentions" => dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
           next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Mention"
-          name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").try(&.lstrip('@'))
+          name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und")
           href = dig?(tag, "https://www.w3.org/ns/activitystreams#href")
           Tag::Mention.new(name: name, href: href)
         end,

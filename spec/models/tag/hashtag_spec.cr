@@ -20,6 +20,15 @@ Spectator.describe Tag::Hashtag do
     end
   end
 
+  describe "#save" do
+    let_build(:object)
+
+    it "strips the leading #" do
+      new_tag = described_class.new(subject: object, name: "#foo")
+      expect{new_tag.save}.to change{new_tag.name}.from("#foo").to("foo")
+    end
+  end
+
   let_build(:actor, named: :author)
 
   macro create_tagged_object(index, *tags)

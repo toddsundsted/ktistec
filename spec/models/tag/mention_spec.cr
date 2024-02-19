@@ -20,6 +20,15 @@ Spectator.describe Tag::Mention do
     end
   end
 
+  describe "#save" do
+    let_build(:object)
+
+    it "strips the leading @" do
+      new_tag = described_class.new(subject: object, name: "@foo@remote")
+      expect{new_tag.save}.to change{new_tag.name}.from("@foo@remote").to("foo@remote")
+    end
+  end
+
   let_build(:actor, named: :author)
 
   macro create_object_with_mentions(index, *mentions)

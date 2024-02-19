@@ -6,6 +6,8 @@ class Tag
     belongs_to subject, class_name: ActivityPub::Object, foreign_key: subject_iri, primary_key: iri
     validates(subject) { "missing: #{subject_iri}" unless subject? }
 
+    validates(name) { "is blank" if name.blank? }
+
     # Returns the most recent objects with the given mention.
     #
     # Orders objects by `id` (not `published`).

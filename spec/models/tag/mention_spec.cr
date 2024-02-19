@@ -12,6 +12,12 @@ Spectator.describe Tag::Mention do
       expect(new_tag.valid?).to be_false
       expect(new_tag.errors.keys).to contain("subject")
     end
+
+    it "rejects blank name" do
+      new_tag = described_class.new(name: "")
+      expect(new_tag.valid?).to be_false
+      expect(new_tag.errors.keys).to contain("name")
+    end
   end
 
   let_build(:actor, named: :author)

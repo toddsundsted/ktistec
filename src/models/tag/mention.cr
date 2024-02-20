@@ -10,6 +10,13 @@ class Tag
 
     def before_save
       self.name = self.name.lstrip("@")
+      # The host part of a handle is not always present. If it is
+      # missing, use the host part of the mention's `href` property.
+      unless self.name.includes?("@")
+        if (href = self.href) && (host = URI.parse(href).host)
+          self.name += "@#{host}"
+        end
+      end
     end
 
     # Returns the most recent objects with the given mention.

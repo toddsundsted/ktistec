@@ -27,6 +27,16 @@ Spectator.describe Tag::Mention do
       new_tag = described_class.new(subject: object, name: "@foo@remote")
       expect{new_tag.save}.to change{new_tag.name}.from("@foo@remote").to("foo@remote")
     end
+
+    it "adds the host if missing" do
+      new_tag = described_class.new(subject: object, href: "http://example.com/foo", name: "foo")
+      expect{new_tag.save}.to change{new_tag.name}.from("foo").to("foo@example.com")
+    end
+
+    it "does not change the host if present" do
+      new_tag = described_class.new(subject: object, href: "http://example.com/foo", name: "foo@remote")
+      expect{new_tag.save}.not_to change{new_tag.name}
+    end
   end
 
   let_build(:actor, named: :author)

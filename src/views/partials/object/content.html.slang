@@ -17,20 +17,20 @@ crystal:
     - else
       - if account
         - if author != actor
-          a.user> data-turbo-frame="_top" title=actor.account_uri href=remote_actor_path(actor) = actor.display_name
+          a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = actor.display_name
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.account_uri href=remote_actor_path(author) = author.display_name
+          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
         - else
-          a.user> data-turbo-frame="_top" title=author.account_uri href=remote_actor_path(author) = author.display_name
+          a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
           | posted
         a.date data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
       - else
         - if author != actor
-          a.user> data-turbo-frame="_top" title=actor.account_uri href=actor.display_link = actor.display_name
+          a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = actor.display_name
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name
+          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
         - else
-          a.user> data-turbo-frame="_top" title=author.account_uri href=author.display_link = author.display_name
+          a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
           | posted
         a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
   - if object.blocked?

@@ -141,7 +141,7 @@ module ActivityPub
       urls.try(&.first?) || iri
     end
 
-    def account_uri
+    def handle
       %Q|#{username}@#{URI.parse(iri).host}|
     end
 

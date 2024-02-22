@@ -1218,10 +1218,10 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
-  describe "#account_uri" do
-    it "returns the webfinger account uri" do
-      expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar").account_uri).to eq("foobar@test.test")
-      expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar").account_uri).to eq("foobar@remote")
+  describe "#handle" do
+    it "returns the handle" do
+      expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar").handle).to eq("foobar@test.test")
+      expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar").handle).to eq("foobar@remote")
     end
   end
 end

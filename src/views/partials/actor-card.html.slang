@@ -23,7 +23,7 @@
         .meta= actor.display_name
     br
     a.left.floated href=actor.iri
-      .meta= actor.account_uri
+      .meta= actor.handle
     - if _account && _account.actor != actor
       - if env.request.path =~ /followers$/ && actor.follows?(_account.actor, confirmed: false) && (_follow = actor.follows?(_account.actor).try(&.activity?))
         == form_button "Block", block_actor_path(actor), form_class: "ui form right floated", button_class: "ui button dangerous", button_data: {"modal": "block.actor", "controller": "modal-action", "action": "click->modal-action#show"}

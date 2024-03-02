@@ -3,7 +3,7 @@
   - if actor.blocked?
     .ui.blocked.segment
       = actor.display_name
-      br: a href=actor.display_link = actor.account_uri
+      br: a href=actor.display_link = actor.handle
       br: em This actor is blocked!
   - else
     - image = actor.image.presence
@@ -26,7 +26,7 @@
         a href=remote_actor_path(actor) = actor.display_name
       - else
         span = actor.display_name
-      br: a href=actor.display_link = actor.account_uri
+      br: a href=actor.display_link = actor.handle
       - if (summary = actor.summary.presence)
         br: == s summary
       - if (attachments = actor.attachments.presence)

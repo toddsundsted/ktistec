@@ -177,10 +177,47 @@ Spectator.describe ActivityPub::Object do
     end
 
     context "when addressed to the public collection" do
+      let(json) { super.gsub("to link", "https://www.w3.org/ns/activitystreams#Public") }
+
       it "is visible" do
-        json = self.json.gsub("to link", "https://www.w3.org/ns/activitystreams#Public")
         object = described_class.from_json_ld(json).save
         expect(object.visible).to be_true
+      end
+    end
+
+    context "when hashtag name is null" do
+      let(json) { super.gsub(%q|"name":"#hashtag"|, %q|"name":null|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.hashtags).to be_empty
+      end
+    end
+
+    context "when hashtag name is blank" do
+      let(json) { super.gsub(%q|"name":"#hashtag"|, %q|"name":""|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.hashtags).to be_empty
+      end
+    end
+
+    context "when mention name is null" do
+      let(json) { super.gsub(%q|"name":"@mention"|, %q|"name":null|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.mentions).to be_empty
+      end
+    end
+
+    context "when mention name is blank" do
+      let(json) { super.gsub(%q|"name":"@mention"|, %q|"name":""|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.mentions).to be_empty
       end
     end
   end
@@ -206,10 +243,47 @@ Spectator.describe ActivityPub::Object do
     end
 
     context "when addressed to the public collection" do
+      let(json) { super.gsub("cc link", "https://www.w3.org/ns/activitystreams#Public") }
+
       it "is visible" do
-        json = self.json.gsub("cc link", "https://www.w3.org/ns/activitystreams#Public")
         object = described_class.new.from_json_ld(json).save
         expect(object.visible).to be_true
+      end
+    end
+
+    context "when hashtag name is null" do
+      let(json) { super.gsub(%q|"name":"#hashtag"|, %q|"name":null|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.hashtags).to be_empty
+      end
+    end
+
+    context "when hashtag name is blank" do
+      let(json) { super.gsub(%q|"name":"#hashtag"|, %q|"name":""|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.hashtags).to be_empty
+      end
+    end
+
+    context "when mention name is null" do
+      let(json) { super.gsub(%q|"name":"@mention"|, %q|"name":null|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.mentions).to be_empty
+      end
+    end
+
+    context "when mention name is blank" do
+      let(json) { super.gsub(%q|"name":"@mention"|, %q|"name":""|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.mentions).to be_empty
       end
     end
   end
@@ -384,11 +458,6 @@ Spectator.describe ActivityPub::Object do
     let_build(:create, actor: actor, object: post5)
     let_build(:outbox_relationship, named: :outbox, owner: actor, activity: create)
 
-    it "includes posts only once" do
-      outbox.save
-      expect(described_class.public_posts(1, 2)).to eq([post5, post4])
-    end
-
     it "paginates the results" do
       expect(described_class.public_posts(1, 2)).to eq([post5, post4])
       expect(described_class.public_posts(3, 2)).to eq([post1])
@@ -457,11 +526,6 @@ Spectator.describe ActivityPub::Object do
 
     let_build(:create, actor: actor, object: post5)
     let_build(:outbox_relationship, named: :outbox, owner: actor, activity: create)
-
-    it "counts posts only once" do
-      outbox.save
-      expect(described_class.public_posts_count).to eq(5)
-    end
 
     it "returns the count" do
       expect(described_class.public_posts_count).to eq(5)

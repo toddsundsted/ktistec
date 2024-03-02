@@ -518,7 +518,7 @@ Spectator.describe "partials" do
 
       it "prepopulates editor with mentions" do
         expect(subject.xpath_nodes("//input[@name='content']/@value").first).
-          to eq("@#{actor2.account_uri} @#{actor1.account_uri} ")
+          to eq("@#{actor2.handle} @#{actor1.handle} ")
       end
     end
   end

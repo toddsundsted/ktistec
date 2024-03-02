@@ -51,7 +51,7 @@ module Ktistec
     end
 
     macro accepts?(*mime_type)
-      env.accepts?({{*mime_type}})
+      env.accepts?({{mime_type.splat}})
     end
 
     macro turbo_frame?

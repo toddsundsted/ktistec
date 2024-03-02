@@ -102,7 +102,7 @@ class Task
           FROM tasks
          WHERE running = 0 AND complete = 0 AND backtrace IS NULL
            AND (next_attempt_at IS NULL OR next_attempt_at < ?)
-      ORDER BY next_attempt_at, created_at
+      ORDER BY next_attempt_at, id
       SQL
       query_all(query, now)
     end

@@ -23,7 +23,7 @@ class ContentRules
   Ktistec::Rule.make_pattern(Actor, ActivityPub::Actor, properties: [:iri, :followers, :following])
   Ktistec::Rule.make_pattern(Activity, ActivityPub::Activity, associations: [:actor])
   Ktistec::Rule.make_pattern(ObjectActivity, ActivityPub::Activity::ObjectActivity, associations: [:actor, :object])
-  Ktistec::Rule.make_pattern(Object, ActivityPub::Object, associations: [:in_reply_to, :attributed_to], properties: [:content, :thread])
+  Ktistec::Rule.make_pattern(Object, ActivityPub::Object, associations: [:in_reply_to, :attributed_to], properties: [:iri, :content, :thread])
   Ktistec::Rule.make_pattern(Hashtag, Tag::Hashtag, associations: [subject], properties: [name, href])
   Ktistec::Rule.make_pattern(Mention, Tag::Mention, associations: [subject], properties: [name, href])
   Ktistec::Rule.make_pattern(CreateActivity, ActivityPub::Activity::Create, associations: [:actor, :object])
@@ -37,10 +37,11 @@ class ContentRules
   Ktistec::Rule.make_pattern(NotificationLike, Relationship::Content::Notification::Like, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationAnnounce, Relationship::Content::Notification::Announce, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationFollow, Relationship::Content::Notification::Follow, associations: [:owner, :activity])
-  Ktistec::Rule.make_pattern(NotificationHashtag, Relationship::Content::Notification::Hashtag, associations: [:owner, :object])
+  Ktistec::Rule.make_pattern(NotificationFollowHashtag, Relationship::Content::Notification::Follow::Hashtag, associations: [:owner], properties: [:name])
+  Ktistec::Rule.make_pattern(NotificationFollowMention, Relationship::Content::Notification::Follow::Mention, associations: [:owner], properties: [:name])
   Ktistec::Rule.make_pattern(NotificationMention, Relationship::Content::Notification::Mention, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(NotificationReply, Relationship::Content::Notification::Reply, associations: [:owner, :object])
-  Ktistec::Rule.make_pattern(NotificationThread, Relationship::Content::Notification::Thread, associations: [:owner, :object])
+  Ktistec::Rule.make_pattern(NotificationFollowThread, Relationship::Content::Notification::Follow::Thread, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(Timeline, Relationship::Content::Timeline, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(TimelineAnnounce, Relationship::Content::Timeline::Announce, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(TimelineCreate, Relationship::Content::Timeline::Create, associations: [:owner, :object])
@@ -55,7 +56,6 @@ class ContentRules
   class InMailboxOf < School::Relationship(ActivityPub::Activity, ActivityPub::Actor) end
   class IsRecipient < School::Property(String) end
   class CheckFollowFor < School::Relationship(ActivityPub::Actor, ActivityPub::Object) end
-  class NotificationFor < School::Property(ActivityPub::Object) end
 
   Ktistec::Compiler.register_constant(ContentRules::Actor)
   Ktistec::Compiler.register_constant(ContentRules::Activity)
@@ -74,10 +74,11 @@ class ContentRules
   Ktistec::Compiler.register_constant(ContentRules::NotificationLike)
   Ktistec::Compiler.register_constant(ContentRules::NotificationAnnounce)
   Ktistec::Compiler.register_constant(ContentRules::NotificationFollow)
-  Ktistec::Compiler.register_constant(ContentRules::NotificationHashtag)
+  Ktistec::Compiler.register_constant(ContentRules::NotificationFollowHashtag)
+  Ktistec::Compiler.register_constant(ContentRules::NotificationFollowMention)
   Ktistec::Compiler.register_constant(ContentRules::NotificationMention)
   Ktistec::Compiler.register_constant(ContentRules::NotificationReply)
-  Ktistec::Compiler.register_constant(ContentRules::NotificationThread)
+  Ktistec::Compiler.register_constant(ContentRules::NotificationFollowThread)
   Ktistec::Compiler.register_constant(ContentRules::Timeline)
   Ktistec::Compiler.register_constant(ContentRules::TimelineAnnounce)
   Ktistec::Compiler.register_constant(ContentRules::TimelineCreate)
@@ -91,73 +92,11 @@ class ContentRules
   Ktistec::Compiler.register_constant(ContentRules::InMailboxOf)
   Ktistec::Compiler.register_constant(ContentRules::IsRecipient)
   Ktistec::Compiler.register_constant(ContentRules::CheckFollowFor)
-  Ktistec::Compiler.register_constant(ContentRules::NotificationFor)
 
   Ktistec::Compiler.register_accessor(iri)
   Ktistec::Compiler.register_accessor(content)
   Ktistec::Compiler.register_accessor(following)
   Ktistec::Compiler.register_accessor(followers)
-
-  # Exceptions
-
-  # note: given the way rules are currently evaluated (for a rule,
-  # first find all matches, then perform all actions), a condition
-  # like `none Notification, owner: actor, activity: activity` will
-  # *not* prevent a subsequent assert from attempting to create more
-  # than one notification, assuming more than one match. the following
-  # adds a check inside `assert` and `retract` for two special cases.
-
-  class NotificationHashtag
-    def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)
-      unless ::Relationship::Content::Notification::Hashtag.find?(**options)
-        ::Relationship::Content::Notification::Hashtag.new(**options).save
-      end
-    end
-
-    def self.assert(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-      unless ::Relationship::Content::Notification::Hashtag.find?(options)
-        ::Relationship::Content::Notification::Hashtag.new(options).save
-      end
-    end
-
-    def self.retract(target : School::DomainTypes?, **options : School::DomainTypes)
-      if (instance = ::Relationship::Content::Notification::Hashtag.find?(**options))
-        instance.destroy
-      end
-    end
-
-    def self.retract(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-      if (instance = ::Relationship::Content::Notification::Hashtag.find?(options))
-        instance.destroy
-      end
-    end
-  end
-
-  class NotificationMention
-    def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)
-      unless ::Relationship::Content::Notification::Mention.find?(**options)
-        ::Relationship::Content::Notification::Mention.new(**options).save
-      end
-    end
-
-    def self.assert(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-      unless ::Relationship::Content::Notification::Mention.find?(options)
-        ::Relationship::Content::Notification::Mention.new(options).save
-      end
-    end
-
-    def self.retract(target : School::DomainTypes?, **options : School::DomainTypes)
-      if (instance = ::Relationship::Content::Notification::Mention.find?(**options))
-        instance.destroy
-      end
-    end
-
-    def self.retract(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-      if (instance = ::Relationship::Content::Notification::Mention.find?(options))
-        instance.destroy
-      end
-    end
-  end
 
   class_property domain : School::Domain do
     definition = File.read(File.join(Dir.current, "etc", "rules", "content.rules"))

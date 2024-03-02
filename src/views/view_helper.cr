@@ -493,7 +493,7 @@ module Ktistec::ViewHelper
   #     <%= distance_of_time_in_words(from_time, to_time) %>
   #
   macro distance_of_time_in_words(*args)
-    Ktistec::Util.distance_of_time_in_words({{*args}})
+    Ktistec::Util.distance_of_time_in_words({{args.splat}})
   end
 
   # Pluralizes the noun.

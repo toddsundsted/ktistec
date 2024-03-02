@@ -6,7 +6,7 @@ p You can follow #{actor.display_name} two ways:
 ol
   li
     | Navigate back to <em>your server</em> and search for
-      <strong>#{actor.account_uri}</strong> there. You should
+      <strong>#{actor.handle}</strong> there. You should
       be able to find #{actor.display_name}'s profile and
       follow them.
   li

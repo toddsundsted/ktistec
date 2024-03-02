@@ -75,41 +75,6 @@
             - if content
               .extra.meta.truncated
                 == content
-        - in Relationship::Content::Notification::Hashtag
-          crystal:
-            object = notification.object
-            content = Ktistec::Util.render_as_text(object.content).presence
-            attributed_to = object.attributed_to
-          .label
-            - if (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
-          .content
-            .summary
-              crystal:
-                ht1 = object.hashtags.map(&.name.downcase)
-                ht2 = Relationship::Content::Follow::Hashtag.where(actor: actor).map(&.name.downcase)
-                ht3 = (ht1 & ht2)
-                ht4 = ht3.select do |ht|
-                  Tag::Hashtag.count_all_objects(ht, created_after: object.created_at - 1.minute) > 1
-                end
-              - if ht4.empty?
-                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
-                | tagged
-                a<> href=remote_object_path(object) a post
-                | with
-                - ht3.each do |hashtag|
-                  a< href=hashtag_path(hashtag) ##{hashtag}
-                | .
-              - else
-                | There are new posts tagged with
-                - ht4.each do |hashtag|
-                  a< href=hashtag_path(hashtag) ##{hashtag}
-                | .
-            - if content
-              .extra.meta.truncated
-                == content
         - in Relationship::Content::Notification::Mention
           crystal:
             object = notification.object
@@ -122,22 +87,47 @@
               i.user.icon
           .content
             .summary
-              crystal:
-                mn1 = object.mentions.map(&.name.downcase)
-                mn2 = Relationship::Content::Follow::Mention.where(actor: actor).map(&.name.downcase)
-                mn3 = (mn1 & mn2)
-              - if mn1.includes?(actor.account_uri)
-                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
-                a> href=remote_object_path(object) mentioned
-                | you.
-              - else
-                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
-                | tagged
-                a<> href=remote_object_path(object) a post
-                | with
-                - mn3.each do |mention|
-                  a< href=mention_path(mention) @#{mention.split("@").first}
-                | .
+              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+              a> href=remote_object_path(object) mentioned
+              | you.
+            - if content
+              .extra.meta.truncated
+                == content
+        - in Relationship::Content::Notification::Follow::Hashtag
+          crystal:
+            name = notification.name
+            object = Tag::Hashtag.most_recent_object(name)
+            content = object ? Ktistec::Util.render_as_text(object.content).presence : nil
+            attributed_to = object.try(&.attributed_to)
+          .label
+            - if attributed_to && (icon = attributed_to.icon)
+              img data-actor-id=attributed_to.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              | There are new posts tagged with
+              a< href=hashtag_path(name) ##{name}
+              | .
+            - if content
+              .extra.meta.truncated
+                == content
+        - in Relationship::Content::Notification::Follow::Mention
+          crystal:
+            name = notification.name
+            object = Tag::Mention.most_recent_object(name)
+            content = object ? Ktistec::Util.render_as_text(object.content).presence : nil
+            attributed_to = object.try(&.attributed_to)
+          .label
+            - if attributed_to && (icon = attributed_to.icon)
+              img data-actor-id=attributed_to.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              | There are new posts that mention
+              a< href=mention_path(name) @#{name}
+              | .
             - if content
               .extra.meta.truncated
                 == content
@@ -165,7 +155,7 @@
             - elsif response.is_a?(ActivityPub::Activity::Reject)
               .extra.meta
                 | Rejected #{ response.short_date }.
-        - in Relationship::Content::Notification::Thread
+        - in Relationship::Content::Notification::Follow::Thread
           crystal:
             object = notification.object
             content = Ktistec::Util.render_as_text(object.content).presence

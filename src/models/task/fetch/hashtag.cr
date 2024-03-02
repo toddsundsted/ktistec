@@ -1,4 +1,5 @@
 require "../../task"
+require "./mixins/fetcher"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
 require "../../../rules/content_rules"
@@ -8,6 +9,7 @@ class Task
   #
   class Fetch::Hashtag < Task
     include Task::ConcurrentTask
+    include Fetcher
 
     # Implements a prioritized queue of nodes on the search horizon.
     #
@@ -127,65 +129,22 @@ class Task
           Log.info { "perform [#{id}] - hashtag: #{name}, iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
+          ContentRules.new.run do
+            assert ContentRules::CheckFollowFor.new(source, object)
+          end
           count += 1
         end
       ensure
         Log.info { "perform [#{id}] - complete - #{count} fetched" }
-        random = Random::DEFAULT
         self.next_attempt_at =
-          if count < 1 && !continuation              # none fetched => far future
-            state.failures += 1
-            base = 2 ** (state.failures + 1)
-            offset = base // 4
-            min = base - offset
-            max = base + offset
-            random.rand(min..max).hours.from_now
-          elsif count < maximum                      # some fetched => near future
-            state.failures = 0
-            random.rand(45..75).minutes.from_now
-          else                                       # maximum number fetched => immediate future
-            state.failures = 0
-            random.rand(4..6).seconds.from_now
+          if count < 1 && !continuation              # none fetched
+            calculate_next_attempt_at(Horizon::FarFuture)
+          elsif count < maximum                      # some fetched
+            calculate_next_attempt_at(Horizon::NearFuture)
+          else                                       # maximum number fetched
+            calculate_next_attempt_at(Horizon::ImmediateFuture)
           end
       end
-
-      if (hashtag = Tag::Hashtag.where("name = ? ORDER BY created_at DESC LIMIT 1", name).first?) && (recent = ActivityPub::Object.find?(hashtag.subject_iri))
-        if (count < 1 && continuation) || (count > 0 && count < maximum)
-          ContentRules.new.run do
-            assert ContentRules::CheckFollowFor.new(source, recent)
-          end
-        end
-      end
-    end
-
-    # Temporary cache of undereferenceable object IRIs. The same
-    # object is often found in more than one (sometimes all) hashtag
-    # collections. This prevents spending resources on an object when
-    # it has failed once and is likely to fail again. The cache is not
-    # persisted across invocations of `perform`.
-    #
-    @bad_object_iris = [] of String
-
-    # Finds or fetches an object.
-    #
-    # Returns an indicator of whether the object was fetched or not,
-    # and the object.
-    #
-    # Saves/caches fetched objects.
-    #
-    private def find_or_fetch_object(iri)
-      fetched = false
-      if !iri.in?(@bad_object_iris) && (object = ActivityPub::Object.dereference?(source, iri, include_deleted: true))
-        if object.new_record?
-          fetched = true
-          # fetch the author, too
-          object.attributed_to?(source, dereference: true)
-          object.save
-        end
-      else
-        @bad_object_iris << iri
-      end
-      {fetched, object}
     end
 
     # Fetches one new object tagged with the hashtag.
@@ -203,43 +162,42 @@ class Task
         end
         state.cache.presence || begin
           state.cached_collection = node.href
-          state.cache = Array(String).new.tap do |items|
+          state.cache =
             if (collection = ActivityPub::Collection.dereference?(source, node.href))
-              if (iris = collection.items_iris)
+              if (iris = collection.all_item_iris(source))
                 Log.info { "fetch_one [#{id}] - iri: #{collection.iri}" }
-                items.concat(iris)
+                iris
               elsif (uri = URI.parse(node.href)).path =~ %r|^/tags/([^/]+)$|
                 url = uri.resolve("/api/v1/timelines/tag/#{$1}").to_s
                 headers = HTTP::Headers{"Accept" => "application/json"}
                 Ktistec::Open.open?(source, url, headers) do |response|
                   Log.info { "fetch_one (API) [#{id}] - iri: #{url}" }
-                  Array(JSON::Any).from_json(response.body).each do |item|
+                  Array(JSON::Any).from_json(response.body).reduce([] of String) do |items, item|
                     if (item = item.as_h?) && (item = item.dig?("uri")) && (item = item.as_s?)
                       items << item
                     end
+                    items
                   end
                 rescue JSON::Error
                   Log.warn { "fetch_one (API) [#{id}] - JSON response parse error" }
                 end
               end
             end
-            Log.info { "fetch_one [#{id}] - #{items.size} items" }
-          end
+          size = state.cache.try(&.size) || 0
+          Log.info { "fetch_one [#{id}] - #{size} items" }
         end
-        if (cache = state.cache.presence)
-          while (item = cache.shift?)
-            fetched, object = find_or_fetch_object(item)
-            next if object.nil?
-            if (hashtags = object.hashtags)
-              hashtags.select{ |h| h.name.downcase == name }.map(&.href).compact.each do |href|
-                new = State::Node.new(href)
-                state << new unless state.includes?(new)
-              end
+        while (cache = state.cache) && (item = cache.shift?)
+          fetched, object = find_or_fetch_object(item)
+          next if object.nil?
+          if (hashtags = object.hashtags)
+            hashtags.select{ |h| h.name.downcase == name }.map(&.href).compact.each do |href|
+              new = State::Node.new(href)
+              state << new unless state.includes?(new)
             end
-            if fetched
-              node.last_success_at = now
-              return object
-            end
+          end
+          if fetched
+            node.last_success_at = now
+            return object
           end
         end
       end

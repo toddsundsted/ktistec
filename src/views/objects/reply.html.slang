@@ -4,7 +4,7 @@ section.ui.feed data-controller="icon-load-error"
   crystal:
     author = object.attributed_to
     ancestors = object.ancestors
-    mentions = (ancestors.map(&.attributed_to.account_uri).compact.uniq - [actor.account_uri]).map { |a| "@#{a} " }.join
+    mentions = (ancestors.map(&.attributed_to.handle).compact.uniq - [actor.handle]).map { |a| "@#{a} " }.join
   form.ui.form data-controller="has-content multi-action" data-action="submit->multi-action#squelch" method="POST"
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Publish"

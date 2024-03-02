@@ -139,28 +139,6 @@ Spectator.describe Task::Fetch::Thread do
       it "does not change time of last success" do
         expect{subject.perform}.not_to change{node.last_success_at}
       end
-
-      it "increments the failures counter" do
-        expect{subject.perform}.to change{subject.state.failures}.to(1)
-      end
-
-      it "sets the next attempt in the far future" do
-        subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(2.hours.from_now, 6.hours.from_now)
-      end
-
-      context "and a prior failure" do
-        before_each { subject.state.failures = 1 }
-
-        it "increments the failures counter" do
-          expect{subject.perform}.to change{subject.state.failures}.to(2)
-        end
-
-        it "sets the next attempt in the far future" do
-          subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be_between(5.hours.from_now, 11.hours.from_now)
-        end
-      end
     end
 
     context "given a thread with one reply" do
@@ -169,6 +147,7 @@ Spectator.describe Task::Fetch::Thread do
 
       before_each do
         HTTP::Client.objects << reply
+        HTTP::Client.actors << reply.attributed_to
         HTTP::Client.objects << object.assign(replies: replies).save # embedded
       end
 
@@ -188,14 +167,6 @@ Spectator.describe Task::Fetch::Thread do
       it "changes time of last success" do
         expect{subject.perform}.to change{node.last_success_at}
       end
-
-      context "and a prior failure" do
-        before_each { subject.state.failures = 1 }
-
-        it "resets the failures counter" do
-          expect{subject.perform}.to change{subject.state.failures}.to(0)
-        end
-      end
     end
 
     context "given a thread with one reply" do
@@ -204,6 +175,7 @@ Spectator.describe Task::Fetch::Thread do
 
       before_each do
         HTTP::Client.objects << reply
+        HTTP::Client.actors << reply.attributed_to
         HTTP::Client.objects << object.assign(replies_iri: replies.iri).save # linked
         HTTP::Client.collections << replies
       end
@@ -224,14 +196,6 @@ Spectator.describe Task::Fetch::Thread do
       it "changes time of last success" do
         expect{subject.perform}.to change{node.last_success_at}
       end
-
-      context "and a prior failure" do
-        before_each { subject.state.failures = 1 }
-
-        it "resets the failures counter" do
-          expect{subject.perform}.to change{subject.state.failures}.to(0)
-        end
-      end
     end
 
     def horizon(task)
@@ -251,6 +215,10 @@ Spectator.describe Task::Fetch::Thread do
         HTTP::Client.objects << reply1
         HTTP::Client.objects << reply2.assign(replies_iri: replies.iri)
         HTTP::Client.objects << reply3
+        HTTP::Client.actors << origin.attributed_to
+        HTTP::Client.actors << reply1.attributed_to
+        HTTP::Client.actors << reply2.attributed_to
+        HTTP::Client.actors << reply3.attributed_to
         HTTP::Client.collections << replies
         object.assign(replies_iri: "#{object.iri}/replies").save
       end
@@ -320,6 +288,9 @@ Spectator.describe Task::Fetch::Thread do
         HTTP::Client.objects << reply1
         HTTP::Client.objects << reply2
         HTTP::Client.objects << reply3
+        HTTP::Client.actors << reply1.attributed_to
+        HTTP::Client.actors << reply2.attributed_to
+        HTTP::Client.actors << reply3.attributed_to
         HTTP::Client.objects << object.assign(replies_iri: replies.iri).save
         HTTP::Client.collections << replies
       end
@@ -391,53 +362,7 @@ Spectator.describe Task::Fetch::Thread do
 
       it "sets the next attempt in the near future" do
         subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
-      end
-
-      context "and a follow" do
-        let_create!(:follow_thread_relationship, actor: source, thread: object.iri)
-
-        it "does not create a notification" do
-          expect{subject.perform(1)}.not_to change{source.notifications.size}
-        end
-
-        it "does not create a notification" do
-          expect{subject.perform(2)}.not_to change{source.notifications.size}
-        end
-
-        it "does not create a notification" do
-          expect{subject.perform(3)}.not_to change{source.notifications.size}
-        end
-
-        context "on the next run" do
-          before_each do
-            subject.perform(3)
-            subject.assign(last_attempt_at: 10.seconds.ago) # normally set by the task worker
-          end
-
-          pre_condition { expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now }
-
-          it "does not fetch any new replies" do
-            expect{subject.perform(1)}.not_to change{ActivityPub::Object.count}
-          end
-
-          it "sets the next attempt in the near future" do
-            subject.perform(1)
-            expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
-          end
-
-          it "creates a notification" do
-            expect{subject.perform(1)}.to change{source.notifications.size}
-          end
-        end
-
-        it "creates a notification" do
-          expect{subject.perform(4)}.to change{source.notifications.size}
-        end
-
-        it "creates a notification" do
-          expect{subject.perform}.to change{source.notifications.size}
-        end
+        expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
       end
 
       context "with all replies fetched" do
@@ -445,7 +370,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the far future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+          expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
         end
 
         context "and a later reply" do
@@ -454,6 +379,7 @@ Spectator.describe Task::Fetch::Thread do
 
           before_each do
             HTTP::Client.objects << reply4
+            HTTP::Client.actors << reply4.attributed_to
             HTTP::Client.collections << replies.assign(items_iris: [reply4.iri, reply3.iri, reply2.iri, reply1.iri])
           end
 
@@ -466,7 +392,7 @@ Spectator.describe Task::Fetch::Thread do
 
           it "sets the next attempt in the near future" do
             subject.perform
-            expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+            expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
           end
         end
 
@@ -476,6 +402,7 @@ Spectator.describe Task::Fetch::Thread do
 
           before_each do
             HTTP::Client.objects << reply4
+            HTTP::Client.actors << reply4.attributed_to
             HTTP::Client.collections << replies.assign(items_iris: [reply4.iri, reply3.iri, reply2.iri, reply1.iri])
           end
 
@@ -488,7 +415,7 @@ Spectator.describe Task::Fetch::Thread do
 
           it "sets the next attempt in the far future" do
             subject.perform
-            expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+            expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
           end
         end
       end
@@ -537,6 +464,10 @@ Spectator.describe Task::Fetch::Thread do
         HTTP::Client.objects << reply1
         HTTP::Client.objects << reply2
         HTTP::Client.objects << reply3
+        HTTP::Client.actors << origin.attributed_to
+        HTTP::Client.actors << reply1.attributed_to
+        HTTP::Client.actors << reply2.attributed_to
+        HTTP::Client.actors << reply3.attributed_to
       end
 
       it "starts with cached objects in the horizon" do
@@ -596,19 +527,7 @@ Spectator.describe Task::Fetch::Thread do
 
       it "sets the next attempt in the near future" do
         subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
-      end
-
-      context "and a follow" do
-        let_create!(:follow_thread_relationship, actor: source, thread: origin.iri)
-
-        it "does not create a notification" do
-          expect{subject.perform(1)}.not_to change{source.notifications.size}
-        end
-
-        it "creates a notification" do
-          expect{subject.perform}.to change{source.notifications.size}.by(1)
-        end
+        expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
       end
 
       context "and uncached authors" do
@@ -616,13 +535,6 @@ Spectator.describe Task::Fetch::Thread do
         let(actor1) { reply1.attributed_to }
         let(actor2) { reply2.attributed_to }
         let(actor3) { reply3.attributed_to }
-
-        before_each do
-          HTTP::Client.actors << actor
-          HTTP::Client.actors << actor1
-          HTTP::Client.actors << actor2
-          HTTP::Client.actors << actor3
-        end
 
         it "fetches all the uncached authors" do
           subject.perform
@@ -700,7 +612,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the far future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+          expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
         end
       end
     end
@@ -715,6 +627,10 @@ Spectator.describe Task::Fetch::Thread do
         HTTP::Client.objects << reply2
         HTTP::Client.objects << reply3
         HTTP::Client.objects << object.assign(replies_iri: "#{object.iri}/replies").save
+        HTTP::Client.actors << reply1.attributed_to
+        HTTP::Client.actors << reply2.attributed_to
+        HTTP::Client.actors << reply3.attributed_to
+        HTTP::Client.actors << object.attributed_to
       end
 
       context "organized by first and next" do
@@ -749,7 +665,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the near future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+          expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
         end
       end
 
@@ -785,7 +701,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the near future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+          expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
         end
       end
     end
@@ -811,6 +727,12 @@ Spectator.describe Task::Fetch::Thread do
         HTTP::Client.objects << reply3
         HTTP::Client.objects << reply4
         HTTP::Client.objects << reply5
+        HTTP::Client.actors << object.attributed_to
+        HTTP::Client.actors << reply1.attributed_to
+        HTTP::Client.actors << reply2.attributed_to
+        HTTP::Client.actors << reply3.attributed_to
+        HTTP::Client.actors << reply4.attributed_to
+        HTTP::Client.actors << reply5.attributed_to
         HTTP::Client.collections << last_page1
         HTTP::Client.collections << next_page1
         HTTP::Client.collections << replies1
@@ -847,7 +769,7 @@ Spectator.describe Task::Fetch::Thread do
 
       it "sets the next attempt in the near future" do
         subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+        expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
       end
 
       context "with all replies fetched" do
@@ -855,7 +777,7 @@ Spectator.describe Task::Fetch::Thread do
 
         it "sets the next attempt in the far future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+          expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
         end
       end
     end

@@ -1,5 +1,4 @@
 require "../../../../src/models/task/fetch/hashtag"
-require "../../../../src/models/relationship/content/follow/hashtag"
 
 require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
@@ -79,28 +78,6 @@ Spectator.describe Task::Fetch::Hashtag do
       it "has an empty horizon" do
         expect(horizon(subject)).to be_empty
       end
-
-      it "increments the failures counter" do
-        expect{subject.perform}.to change{subject.state.failures}.to(1)
-      end
-
-      it "sets the next attempt in the far future" do
-        subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(2.hours.from_now, 6.hours.from_now)
-      end
-
-      context "and a prior failure" do
-        before_each { subject.state.failures = 1 }
-
-        it "increments the failures counter" do
-          expect{subject.perform}.to change{subject.state.failures}.to(2)
-        end
-
-        it "sets the next attempt in the far future" do
-          subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be_between(5.hours.from_now, 11.hours.from_now)
-        end
-      end
     end
 
     macro let_build_object(index, *tags)
@@ -146,10 +123,6 @@ Spectator.describe Task::Fetch::Hashtag do
       it "does not change time of last success" do
         expect{subject.perform}.not_to change{node.last_success_at}
       end
-
-      it "increments the failures counter" do
-        expect{subject.perform}.to change{subject.state.failures}.to(1)
-      end
     end
 
     context "given a hashtag with one tagged object" do
@@ -180,10 +153,6 @@ Spectator.describe Task::Fetch::Hashtag do
       it "does not change time of last success" do
         expect{subject.perform}.not_to change{node.last_success_at}
       end
-
-      it "increments the failures counter" do
-        expect{subject.perform}.to change{subject.state.failures}.to(1)
-      end
     end
 
     def find?(iri)
@@ -208,6 +177,9 @@ Spectator.describe Task::Fetch::Hashtag do
         HTTP::Client.objects << object1.save
         HTTP::Client.objects << object2
         HTTP::Client.objects << object3
+        HTTP::Client.actors << object1.attributed_to
+        HTTP::Client.actors << object2.attributed_to
+        HTTP::Client.actors << object3.attributed_to
         HTTP::Client.collections << hashtag.assign(items_iris: [object1.iri, object2.iri, object3.iri])
       end
 
@@ -233,10 +205,6 @@ Spectator.describe Task::Fetch::Hashtag do
 
       it "changes time of last success" do
         expect{subject.perform(1)}.to change{node.last_success_at}
-      end
-
-      it "does not increment the failures counter" do
-        expect{subject.perform(1)}.not_to change{subject.state.failures}
       end
 
       it "sets the next attempt in the immediate future" do
@@ -266,33 +234,9 @@ Spectator.describe Task::Fetch::Hashtag do
         expect{subject.perform}.to change{node.last_success_at}
       end
 
-      it "does not increment the failures counter" do
-        expect{subject.perform}.not_to change{subject.state.failures}
-      end
-
       it "sets the next attempt in the near future" do
         subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
-      end
-
-      context "and a follow" do
-        let_create!(:follow_hashtag_relationship, actor: source, name: "hashtag")
-
-        it "does not create a notification" do
-          expect{subject.perform(1)}.not_to change{source.notifications.size}
-        end
-
-        it "does not create a notification" do
-          expect{subject.perform(2)}.not_to change{source.notifications.size}
-        end
-
-        it "creates a notification" do
-          expect{subject.perform(3)}.to change{source.notifications.size}
-        end
-
-        it "creates a notification" do
-          expect{subject.perform}.to change{source.notifications.size}
-        end
+        expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
       end
 
       context "with all objects already fetched" do
@@ -300,7 +244,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
         it "sets the next attempt in the far future" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+          expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
         end
 
         context "and a later object" do
@@ -309,6 +253,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
           before_each do
             HTTP::Client.objects << object4
+            HTTP::Client.actors << object4.attributed_to
             HTTP::Client.collections << hashtag.assign(items_iris: [object1.iri, object2.iri, object3.iri, object4.iri])
           end
 
@@ -319,7 +264,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
           it "sets the next attempt in the near future" do
             subject.perform
-            expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+            expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
           end
         end
 
@@ -329,6 +274,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
           before_each do
             HTTP::Client.objects << object4.save
+            HTTP::Client.actors << object4.attributed_to
             HTTP::Client.collections << hashtag.assign(items_iris: [object1.iri, object2.iri, object3.iri, object4.iri])
           end
 
@@ -339,7 +285,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
           it "sets the next attempt in the far future" do
             subject.perform
-            expect(subject.next_attempt_at.not_nil!).to be > 2.hours.from_now
+            expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
           end
         end
 
@@ -353,6 +299,8 @@ Spectator.describe Task::Fetch::Hashtag do
             # cache the first
             HTTP::Client.objects << object4.save
             HTTP::Client.objects << object5
+            HTTP::Client.actors << object4.attributed_to
+            HTTP::Client.actors << object5.attributed_to
             HTTP::Client.collections << other.assign(items_iris: [object4.iri, object5.iri])
             subject.assign(last_attempt_at: 10.seconds.ago) # normally set by the task worker
           end
@@ -377,7 +325,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
           it "sets the next attempt in the near future" do
             subject.perform
-            expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+            expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
           end
         end
       end
@@ -396,15 +344,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
         it "sets the next attempt in the near future" do
           subject.perform(1)
-          expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
-        end
-
-        context "and a follow" do
-          let_create!(:follow_hashtag_relationship, actor: source, name: "hashtag")
-
-          it "creates a notification" do
-            expect{subject.perform(1)}.to change{source.notifications.size}
-          end
+          expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
         end
       end
 
@@ -437,11 +377,6 @@ Spectator.describe Task::Fetch::Hashtag do
         let(actor2) { object2.attributed_to }
         let(actor3) { object3.attributed_to }
 
-        before_each do
-          HTTP::Client.actors << actor2
-          HTTP::Client.actors << actor3
-        end
-
         it "fetches all the uncached authors" do
           subject.perform
           expect(HTTP::Client.requests).to have("GET #{actor2.iri}", "GET #{actor3.iri}")
@@ -449,14 +384,6 @@ Spectator.describe Task::Fetch::Hashtag do
 
         it "persists all the uncached authors" do
           expect{subject.perform}.to change{ {find?(actor2.iri), find?(actor3.iri)}.any?(&.nil?) }.to(false)
-        end
-      end
-
-      context "and a prior failure" do
-        before_each { subject.state.failures = 1 }
-
-        it "resets the failures counter" do
-          expect{subject.perform}.to change{subject.state.failures}.to(0)
         end
       end
     end
@@ -472,6 +399,9 @@ Spectator.describe Task::Fetch::Hashtag do
         HTTP::Client.objects << object1.save
         HTTP::Client.objects << object2
         HTTP::Client.objects << object3
+        HTTP::Client.actors << object1.attributed_to
+        HTTP::Client.actors << object2.attributed_to
+        HTTP::Client.actors << object3.attributed_to
         HTTP::Client.collections << hashtag # intentionally empty
         HTTP::Client.collections["#{object1.origin}/api/v1/timelines/tag/hashtag"] = %Q|[{"uri": "#{object1.iri}"},{"uri": "#{object2.iri}"},{"uri": "#{object3.iri}"}]|
       end
@@ -503,10 +433,6 @@ Spectator.describe Task::Fetch::Hashtag do
 
       it "changes time of last success" do
         expect{subject.perform(1)}.to change{node.last_success_at}
-      end
-
-      it "does not increment the failures counter" do
-        expect{subject.perform(1)}.not_to change{subject.state.failures}
       end
 
       it "sets the next attempt in the immediate future" do
@@ -541,13 +467,9 @@ Spectator.describe Task::Fetch::Hashtag do
         expect{subject.perform}.to change{node.last_success_at}
       end
 
-      it "does not increment the failures counter" do
-        expect{subject.perform}.not_to change{subject.state.failures}
-      end
-
       it "sets the next attempt in the near future" do
         subject.perform
-        expect(subject.next_attempt_at.not_nil!).to be_between(10.minutes.from_now, 2.hours.from_now)
+        expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
       end
 
       it "does not raise an error" do
@@ -574,6 +496,9 @@ Spectator.describe Task::Fetch::Hashtag do
         HTTP::Client.objects << object1.save
         HTTP::Client.objects << object2
         HTTP::Client.objects << object3
+        HTTP::Client.actors << object1.attributed_to
+        HTTP::Client.actors << object2.attributed_to
+        HTTP::Client.actors << object3.attributed_to
         HTTP::Client.collections << collection1.assign(items_iris: [object1.iri, object2.iri])
         HTTP::Client.collections << collection2.assign(items_iris: [object2.iri, object3.iri])
         HTTP::Client.collections << collection3.assign(items_iris: [object3.iri])
@@ -643,6 +568,9 @@ Spectator.describe Task::Fetch::Hashtag do
         HTTP::Client.objects << object1.save
         HTTP::Client.objects << object2
         HTTP::Client.objects << object3
+        HTTP::Client.actors << object1.attributed_to
+        HTTP::Client.actors << object2.attributed_to
+        HTTP::Client.actors << object3.attributed_to
         HTTP::Client.collections << collection1 # intentionally empty
         HTTP::Client.collections << collection2 # intentionally empty
         HTTP::Client.collections << collection3 # intentionally empty

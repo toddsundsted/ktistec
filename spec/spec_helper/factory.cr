@@ -1,10 +1,10 @@
 abstract class Factory
   macro build(type, **options)
-    {{type.id}}_factory({{**options}})
+    {{type.id}}_factory({{options.double_splat}})
   end
 
   macro create(type, **options)
-    {{type.id}}_factory({{**options}}).save
+    {{type.id}}_factory({{options.double_splat}}).save
   end
 end
 
@@ -14,22 +14,22 @@ KTISTEC_FACTORY_STATE = {:nonce => 0, :moment => 0}
 
 macro let_build(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{**options}}) }
+  let({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
 end
 
 macro let_build!(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let!({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{**options}}) }
+  let!({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
 end
 
 macro let_create(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{**options}}) }
+  let({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
 end
 
 macro let_create!(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let!({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{**options}}) }
+  let!({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
 end
 
 def base_url(iri, thing, local = nil)
@@ -56,7 +56,7 @@ def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **
   iri = local ? "https://test.test/actors/#{username}" : "https://remote/actors/#{username}"
   pem_public_key, pem_private_key =
     if with_keys
-      keypair = OpenSSL::RSA.generate(2048, 17)
+      keypair = OpenSSL::RSA.generate(512, 17)
       {keypair.public_key.to_pem, keypair.to_pem}
     else
       {nil, nil}
@@ -198,20 +198,24 @@ def notification_follow_factory(**options)
   notification_factory(Relationship::Content::Notification::Follow, **options)
 end
 
-def notification_hashtag_factory(**options)
-  notification_factory(Relationship::Content::Notification::Hashtag, **options)
+def notification_follow_hashtag_factory(**options)
+  notification_factory(Relationship::Content::Notification::Follow::Hashtag, **options)
 end
 
-def notification_mention_factory(**options)
-  notification_factory(Relationship::Content::Notification::Mention, **options)
+def notification_follow_mention_factory(**options)
+  notification_factory(Relationship::Content::Notification::Follow::Mention, **options)
 end
 
-def notification_thread_factory(**options)
-  notification_factory(Relationship::Content::Notification::Thread, **options)
+def notification_follow_thread_factory(**options)
+  notification_factory(Relationship::Content::Notification::Follow::Thread, **options)
 end
 
 def notification_reply_factory(**options)
   notification_factory(Relationship::Content::Notification::Reply, **options)
+end
+
+def notification_mention_factory(**options)
+  notification_factory(Relationship::Content::Notification::Mention, **options)
 end
 
 def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)

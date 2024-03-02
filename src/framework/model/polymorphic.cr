@@ -10,7 +10,7 @@ module Ktistec
 
       macro find(*, as _as, **options)
         {% raise "can't convert #{@type} to #{_as}" unless _as.resolve < @type %}
-        {{_as}}.find({{**options}})
+        {{_as}}.find({{options.double_splat}})
       end
 
       def as_a(as _as : T.class) : T forall T

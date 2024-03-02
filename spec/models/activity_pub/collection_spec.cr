@@ -1,6 +1,8 @@
 require "../../../src/models/activity_pub/collection"
 
 require "../../spec_helper/base"
+require "../../spec_helper/factory"
+require "../../spec_helper/network"
 
 Spectator.describe ActivityPub::Collection do
   class ActivityPubModel
@@ -431,6 +433,66 @@ Spectator.describe ActivityPub::Collection do
     it "links item" do
       subject.items_iris = ["https://remote/item"]
       expect(JSON.parse(subject.to_json_ld).dig("items", 0)).to eq("https://remote/item")
+    end
+  end
+
+  describe "#all_item_iris" do
+    let_create(:actor, named: :source, with_keys: true)
+
+    it "returns nil" do
+      expect(described_class.new.all_item_iris(source)).to be_nil
+    end
+
+    context "given a collection with items" do
+      subject { described_class.new(items_iris: ["https://remote/item"]) }
+
+      it "returns the items" do
+        expect(subject.all_item_iris(source)).to eq(["https://remote/item"])
+      end
+    end
+
+    context "given a collection paginated with first and next" do
+      let(next2) { described_class.new(iri: "https://remote/next2", items_iris: ["https://remote/item3"]) }
+      let(next1) { described_class.new(iri: "https://remote/next1", next_iri: next2.iri, items_iris: ["https://remote/item2"]) }
+      let(first) { described_class.new(iri: "https://remote/first", next_iri: next1.iri, items_iris: ["https://remote/item1"]) }
+      subject { described_class.new(first_iri: first.iri) }
+
+      before_each do
+        HTTP::Client.collections << next2
+        HTTP::Client.collections << next1
+        HTTP::Client.collections << first
+      end
+
+      it "fetches the collections" do
+        subject.all_item_iris(source)
+        expect(HTTP::Client.requests).to have("GET #{first.iri}", "GET #{next1.iri}", "GET #{next2.iri}")
+      end
+
+      it "returns the items" do
+        expect(subject.all_item_iris(source).as(Array(String))).to have("https://remote/item1", "https://remote/item2", "https://remote/item3")
+      end
+    end
+
+    context "given a collection paginated with last and prev" do
+      let(prev2) { described_class.new(iri: "https://remote/prev2", items_iris: ["https://remote/item3"]) }
+      let(prev1) { described_class.new(iri: "https://remote/prev1", prev_iri: prev2.iri, items_iris: ["https://remote/item2"]) }
+      let(last) { described_class.new(iri: "https://remote/last", prev_iri: prev1.iri, items_iris: ["https://remote/item1"]) }
+      subject { described_class.new(last_iri: last.iri) }
+
+      before_each do
+        HTTP::Client.collections << prev2
+        HTTP::Client.collections << prev1
+        HTTP::Client.collections << last
+      end
+
+      it "fetches the collections" do
+        subject.all_item_iris(source)
+        expect(HTTP::Client.requests).to have("GET #{last.iri}", "GET #{prev1.iri}", "GET #{prev2.iri}")
+      end
+
+      it "returns the items" do
+        expect(subject.all_item_iris(source).as(Array(String))).to have("https://remote/item1", "https://remote/item2", "https://remote/item3")
+      end
     end
   end
 end

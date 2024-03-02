@@ -1,4 +1,5 @@
 require "../../task"
+require "./mixins/fetcher"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
 require "../../activity_pub/collection"
@@ -9,6 +10,7 @@ class Task
   #
   class Fetch::Thread < Task
     include Task::ConcurrentTask
+    include Fetcher
 
     # Implements a prioritized queue of nodes on the thread horizon.
     #
@@ -148,55 +150,22 @@ class Task
           Log.info { "perform [#{id}] - iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
+          ContentRules.new.run do
+            assert ContentRules::CheckFollowFor.new(source, object)
+          end
           count += 1
         end
       ensure
         Log.info { "perform [#{id}] - complete - #{count} fetched" }
-        random = Random::DEFAULT
         self.next_attempt_at =
-          if count < 1 && !continuation              # none fetched => far future
-            state.failures += 1
-            base = 2 ** (state.failures + 1)
-            offset = base // 4
-            min = base - offset
-            max = base + offset
-            random.rand(min..max).hours.from_now
-          elsif count < maximum                      # some fetched => near future
-            state.failures = 0
-            random.rand(45..75).minutes.from_now
-          else                                       # maximum number fetched => immediate future
-            state.failures = 0
-            random.rand(4..6).seconds.from_now
+          if count < 1 && !continuation              # none fetched
+            calculate_next_attempt_at(Horizon::FarFuture)
+          elsif count < maximum                      # some fetched
+            calculate_next_attempt_at(Horizon::NearFuture)
+          else                                       # maximum number fetched
+            calculate_next_attempt_at(Horizon::ImmediateFuture)
           end
       end
-
-      if (root = ActivityPub::Object.find?(thread)) && root.root?
-        if (count < 1 && continuation) || (count > 0 && count < maximum)
-          ContentRules.new.run do
-            assert ContentRules::CheckFollowFor.new(source, root)
-          end
-        end
-      end
-    end
-
-    # Finds or fetches an object.
-    #
-    # Returns an indicator of whether the object was fetched or not,
-    # and the object.
-    #
-    # Saves/caches fetched objects.
-    #
-    private def find_or_fetch_object(iri)
-      fetched = false
-      if (object = ActivityPub::Object.dereference?(source, iri, include_deleted: true))
-        if object.new_record?
-          fetched = true
-          # fetch the author, too
-          object.attributed_to?(source, dereference: true)
-          object.save
-        end
-      end
-      {fetched, object}
     end
 
     # Fetches up toward the root.
@@ -242,52 +211,20 @@ class Task
             if !state.cache.presence
               state.cache = nil
             end
-            state.cache || begin
+            state.cache.presence || begin
               state.cached_object = node.id
-              state.cache = Array(String).new.tap do |items|
+              state.cache =
                 if (temporary = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))
                   if (replies = temporary.replies?(source, dereference: true))
-                    if (iris = replies.items_iris)
-                      items.concat(iris)
-                    end
-                    if (first = replies.first?(source, dereference: true))
-                      if (iris = first.items_iris)
-                        items.concat(iris)
-                      end
-                      this = first
-                      100.times do # for safety, cap loops
-                        if (that = this.next?(source, dereference: true))
-                          if (iris = that.items_iris)
-                            items.concat(iris)
-                          end
-                          this = that
-                        else
-                          break
-                        end
-                      end
-                    elsif (last = replies.last?(source, dereference: true))
-                      if (iris = last.items_iris)
-                        items.concat(iris)
-                      end
-                      this = last
-                      100.times do # for safety, cap loops
-                        if (that = this.prev?(source, dereference: true))
-                          if (iris = that.items_iris)
-                            items.concat(iris)
-                          end
-                          this = that
-                        else
-                          break
-                        end
-                      end
+                    if (iris = replies.all_item_iris(source))
+                      iris
                     end
                   end
                 end
-                Log.info { "fetch_out [#{id}] - #{items.size} items" }
-              end
+              size = state.cache.try(&.size) || 0
+              Log.info { "fetch_out [#{id}] - #{size} items" }
             end
-            cache = state.cache.not_nil!
-            while (item = cache.shift?)
+            while (cache = state.cache) && (item = cache.shift?)
               fetched, object = find_or_fetch_object(item)
               next if object.nil?
               unless object.id.in?(ids)
@@ -307,7 +244,11 @@ class Task
     # `nil` if no new object is fetched.
     #
     private def fetch_one(horizon)
-      (!state.root_object && fetch_up) || fetch_out(horizon)
+      if !state.root_object && (object = fetch_up)
+        object
+      else
+        fetch_out(horizon)
+      end
     end
 
     # Merges tasks.

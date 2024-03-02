@@ -141,7 +141,7 @@ module ActivityPub
       urls.try(&.first?) || iri
     end
 
-    def account_uri
+    def handle
       %Q|#{username}@#{URI.parse(iri).host}|
     end
 
@@ -199,34 +199,22 @@ module ActivityPub
            AND r.type = "#{type}"
            AND r.#{dest} = ?
            #{public}
-           AND a.id NOT IN (
-              SELECT a.id
-                FROM actors AS a, relationships AS r
-               WHERE a.iri = r.#{orig}
-                 AND a.deleted_at IS NULL
-                 AND a.blocked_at IS NULL
-                 AND r.type = "#{type}"
-                 AND r.#{dest} = ?
-                 #{public}
-            ORDER BY r.created_at DESC
-               LIMIT ?
-           )
-      ORDER BY r.created_at DESC
-         LIMIT ?
+      ORDER BY r.id DESC
+         LIMIT ? OFFSET ?
       QUERY
     end
 
     def all_following(page = 1, size = 10, public = true)
       Actor.query_and_paginate(
         query(Relationship::Social::Follow, :to_iri, :from_iri, public),
-        self.iri, self.iri, page: page, size: size
+        self.iri, page: page, size: size
       )
     end
 
     def all_followers(page = 1, size = 10, public = false)
       Actor.query_and_paginate(
         query(Relationship::Social::Follow, :from_iri, :to_iri, public),
-        self.iri, self.iri, page: page, size: size
+        self.iri, page: page, size: size
       )
     end
 
@@ -238,20 +226,10 @@ module ActivityPub
             AND o.published IS NULL
             AND o.deleted_at is NULL
             AND o.blocked_at is NULL
-            AND o.id NOT IN (
-               SELECT o.id
-                 FROM objects AS o
-                WHERE o.attributed_to_iri = ?
-                  AND o.published IS NULL
-                  AND o.deleted_at is NULL
-                  AND o.blocked_at is NULL
-             ORDER BY o.created_at DESC
-                LIMIT ?
-            )
-       ORDER BY o.created_at DESC
-          LIMIT ?
+       ORDER BY o.id DESC
+          LIMIT ? OFFSET ?
       QUERY
-      Object.query_and_paginate(query, iri, iri, page: page, size: size)
+      Object.query_and_paginate(query, iri, page: page, size: size)
     end
 
     protected def self.content(iri, mailbox, inclusion = nil, exclusion = nil, page = 1, size = 10, public = true, replies = true)
@@ -297,34 +275,10 @@ module ActivityPub
             AND a.undone_at IS NULL
        #{public ? %Q|AND a.visible = 1| : nil}
        #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
-            AND a.id NOT IN (
-               SELECT a.id
-                 FROM activities AS a
-                 JOIN relationships AS r
-                   ON r.to_iri = a.iri
-            LEFT JOIN actors AS act
-                   ON act.iri = a.actor_iri
-            LEFT JOIN objects AS obj
-                   ON obj.iri = a.object_iri
-                WHERE r.from_iri LIKE ?
-                  #{mailbox}
-                  AND r.confirmed = 1
-                  #{inclusion}
-                  #{exclusion}
-                  AND act.deleted_at is NULL
-                  AND act.blocked_at is NULL
-                  AND obj.deleted_at is NULL
-                  AND obj.blocked_at is NULL
-                  AND a.undone_at IS NULL
-             #{public ? %Q|AND a.visible = 1| : nil}
-             #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
-             ORDER BY r.created_at DESC
-                LIMIT ?
-            )
-       ORDER BY r.created_at DESC
-          LIMIT ?
+       ORDER BY r.id DESC
+          LIMIT ? OFFSET ?
       QUERY
-      Activity.query_and_paginate(query, iri, iri, page: page, size: size)
+      Activity.query_and_paginate(query, iri, page: page, size: size)
     end
 
     private def find_in?(object, mailbox, inclusion = nil, exclusion = nil)
@@ -446,20 +400,10 @@ module ActivityPub
             AND o.visible = 1
             AND o.deleted_at is NULL
             AND o.blocked_at is NULL
-            AND o.id NOT IN (
-               SELECT o.id
-                 FROM objects AS o
-                WHERE o.attributed_to_iri = ?
-                  AND o.visible = 1
-                  AND o.deleted_at is NULL
-                  AND o.blocked_at is NULL
-             ORDER BY o.published DESC
-                LIMIT ?
-            )
        ORDER BY o.published DESC
-          LIMIT ?
+          LIMIT ? OFFSET ?
       QUERY
-      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+      Object.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
     # Returns the actor's public posts.
@@ -470,7 +414,7 @@ module ActivityPub
     #
     def public_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
+         SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -482,38 +426,16 @@ module ActivityPub
             AND r.type = "#{Relationship::Content::Outbox}"
           WHERE r.from_iri = ?
             AND o.visible = 1
-            AND o.in_reply_to_iri IS NULL
+            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
             AND t.deleted_at IS NULL
             AND t.blocked_at IS NULL
             AND a.undone_at IS NULL
-            AND o.id NOT IN (
-               SELECT DISTINCT o.id
-                 FROM objects AS o
-                 JOIN actors AS t
-                   ON t.iri = o.attributed_to_iri
-                 JOIN activities AS a
-                   ON a.object_iri = o.iri
-                  AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
-                 JOIN relationships AS r
-                   ON r.to_iri = a.iri
-                  AND r.type = "#{Relationship::Content::Outbox}"
-                WHERE r.from_iri = ?
-                  AND o.visible = 1
-                  AND o.in_reply_to_iri IS NULL
-                  AND o.deleted_at IS NULL
-                  AND o.blocked_at IS NULL
-                  AND t.deleted_at IS NULL
-                  AND t.blocked_at IS NULL
-                  AND a.undone_at IS NULL
-             ORDER BY r.created_at DESC
-                LIMIT ?
-            )
-       ORDER BY r.created_at DESC
-          LIMIT ?
+       ORDER BY r.id DESC
+          LIMIT ? OFFSET ?
       QUERY
-      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+      Object.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
     # Returns an actor's own posts
@@ -524,7 +446,7 @@ module ActivityPub
     #
     def all_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
+         SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -540,38 +462,13 @@ module ActivityPub
             AND t.deleted_at IS NULL
             AND t.blocked_at IS NULL
             AND a.undone_at IS NULL
-            AND o.id NOT IN (
-               SELECT DISTINCT o.id
-                 FROM objects AS o
-                 JOIN actors AS t
-                   ON t.iri = o.attributed_to_iri
-                 JOIN activities AS a
-                   ON a.object_iri = o.iri
-                  AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
-                 JOIN relationships AS r
-                   ON r.to_iri = a.iri
-                  AND r.type = "#{Relationship::Content::Outbox}"
-                WHERE r.from_iri = ?
-                  AND o.deleted_at IS NULL
-                  AND o.blocked_at IS NULL
-                  AND t.deleted_at IS NULL
-                  AND t.blocked_at IS NULL
-                  AND a.undone_at IS NULL
-             ORDER BY r.created_at DESC
-                LIMIT ?
-            )
-       ORDER BY r.created_at DESC
-          LIMIT ?
+       ORDER BY r.id DESC
+          LIMIT ? OFFSET ?
       QUERY
-      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+      Object.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
     private alias Timeline = Relationship::Content::Timeline
-
-    # NOTE: in the following two queries, the query planner does not
-    # always pick the optimal query plan. use cross joins to force
-    # sqlite to use a plan that has been seen to work well in
-    # practice.
 
     # Returns entries in the actor's timeline.
     #
@@ -587,23 +484,23 @@ module ActivityPub
     def timeline(exclude_replies = false, inclusion = nil, page = 1, size = 10)
       exclude_replies =
         exclude_replies ?
-        "AND o.in_reply_to_iri IS NULL" :
+        "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" :
         ""
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND t.type = "#{inclusion}"|
+          %Q|AND +t.type = "#{inclusion}"|
         when Array
-          %Q|AND t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
         else
-          %Q|AND t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
             FROM relationships AS t
-      CROSS JOIN objects AS o
+            JOIN objects AS o
               ON o.iri = t.to_iri
-      CROSS JOIN actors AS c
+            JOIN actors AS c
               ON c.iri = o.attributed_to_iri
            WHERE t.from_iri = ?
              #{inclusion}
@@ -612,27 +509,10 @@ module ActivityPub
              AND o.blocked_at IS NULL
              AND c.deleted_at IS NULL
              AND c.blocked_at IS NULL
-             AND t.id NOT IN (
-                SELECT t.id
-                  FROM relationships AS t
-            CROSS JOIN objects AS o
-                    ON o.iri = t.to_iri
-            CROSS JOIN actors AS c
-                    ON c.iri = o.attributed_to_iri
-                 WHERE t.from_iri = ?
-                   #{inclusion}
-                   #{exclude_replies}
-                   AND o.deleted_at IS NULL
-                   AND o.blocked_at IS NULL
-                   AND c.deleted_at IS NULL
-                   AND c.blocked_at IS NULL
-              ORDER BY t.created_at DESC
-                 LIMIT ?
-             )
-        ORDER BY t.created_at DESC
-           LIMIT ?
+        ORDER BY t.id DESC
+           LIMIT ? OFFSET ?
       QUERY
-      Timeline.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+      Timeline.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
     # Returns the count of entries in the actor's timeline since the
@@ -643,27 +523,27 @@ module ActivityPub
     def timeline(since : Time, exclude_replies = false, inclusion = nil)
       exclude_replies =
         exclude_replies ?
-        "AND o.in_reply_to_iri IS NULL" :
+        "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" :
         ""
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND t.type = "#{inclusion}"|
+          %Q|AND +t.type = "#{inclusion}"|
         when Array
-          %Q|AND t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
         else
-          %Q|AND t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
         end
       query = <<-QUERY
           SELECT count(t.id)
             FROM relationships AS t
-      CROSS JOIN objects AS o
+            JOIN objects AS o
               ON o.iri = t.to_iri
-              #{exclude_replies}
-      CROSS JOIN actors AS c
+            JOIN actors AS c
               ON c.iri = o.attributed_to_iri
            WHERE t.from_iri = ?
              #{inclusion}
+             #{exclude_replies}
              AND o.deleted_at IS NULL
              AND o.blocked_at IS NULL
              AND c.deleted_at IS NULL
@@ -693,7 +573,7 @@ module ActivityPub
              ON e.iri = n.to_iri
       LEFT JOIN actors AS t
              ON t.iri = e.attributed_to_iri
-          WHERE n.from_iri = ?
+          WHERE +n.from_iri = ?
             AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
             AND a.undone_at IS NULL
             AND c.deleted_at IS NULL
@@ -704,37 +584,10 @@ module ActivityPub
             AND e.blocked_at IS NULL
             AND t.deleted_at IS NULL
             AND t.blocked_at IS NULL
-            AND n.id NOT IN (
-               SELECT n.id
-                 FROM relationships AS n
-            LEFT JOIN activities AS a
-                   ON a.iri = n.to_iri
-            LEFT JOIN actors AS c
-                   ON c.iri = a.actor_iri
-            LEFT JOIN objects AS o
-                   ON o.iri = a.object_iri
-            LEFT JOIN objects AS e
-                   ON e.iri = n.to_iri
-            LEFT JOIN actors AS t
-                   ON t.iri = e.attributed_to_iri
-                WHERE n.from_iri = ?
-                  AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
-                  AND a.undone_at IS NULL
-                  AND c.deleted_at IS NULL
-                  AND c.blocked_at IS NULL
-                  AND o.deleted_at IS NULL
-                  AND o.blocked_at IS NULL
-                  AND e.deleted_at IS NULL
-                  AND e.blocked_at IS NULL
-                  AND t.deleted_at IS NULL
-                  AND t.blocked_at IS NULL
-             ORDER BY n.created_at DESC
-                LIMIT ?
-            )
-       ORDER BY n.created_at DESC
-          LIMIT ?
+       ORDER BY n.id DESC
+          LIMIT ? OFFSET ?
       QUERY
-      Notification.query_and_paginate(query, iri, iri, page: page, size: size)
+      Notification.query_and_paginate(query, iri, page: page, size: size)
     end
 
     # Returns the count of notifications for the actor since the given
@@ -756,7 +609,7 @@ module ActivityPub
              ON e.iri = n.to_iri
       LEFT JOIN actors AS t
              ON t.iri = e.attributed_to_iri
-          WHERE n.from_iri = ?
+          WHERE +n.from_iri = ?
             AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
             AND a.undone_at IS NULL
             AND c.deleted_at IS NULL
@@ -793,17 +646,10 @@ module ActivityPub
          SELECT #{FilterTerm.columns(prefix: "f")}
            FROM filter_terms AS f
           WHERE f.actor_id = ?
-            AND f.id NOT IN (
-               SELECT f.id
-                 FROM filter_terms AS f
-                WHERE f.actor_id = ?
-             ORDER BY f.id ASC
-                LIMIT ?
-            )
        ORDER BY f.id ASC
-          LIMIT ?
+          LIMIT ? OFFSET ?
       QUERY
-      FilterTerm.query_and_paginate(query, id, id, page: page, size: size)
+      FilterTerm.query_and_paginate(query, id, page: page, size: size)
     end
 
     def to_json_ld(recursive = true)

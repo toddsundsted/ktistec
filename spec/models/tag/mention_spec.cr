@@ -12,6 +12,31 @@ Spectator.describe Tag::Mention do
       expect(new_tag.valid?).to be_false
       expect(new_tag.errors.keys).to contain("subject")
     end
+
+    it "rejects blank name" do
+      new_tag = described_class.new(name: "")
+      expect(new_tag.valid?).to be_false
+      expect(new_tag.errors.keys).to contain("name")
+    end
+  end
+
+  describe "#save" do
+    let_build(:object)
+
+    it "strips the leading @" do
+      new_tag = described_class.new(subject: object, name: "@foo@remote")
+      expect{new_tag.save}.to change{new_tag.name}.from("@foo@remote").to("foo@remote")
+    end
+
+    it "adds the host if missing" do
+      new_tag = described_class.new(subject: object, href: "http://example.com/foo", name: "foo")
+      expect{new_tag.save}.to change{new_tag.name}.from("foo").to("foo@example.com")
+    end
+
+    it "does not change the host if present" do
+      new_tag = described_class.new(subject: object, href: "http://example.com/foo", name: "foo@remote")
+      expect{new_tag.save}.not_to change{new_tag.name}
+    end
   end
 
   let_build(:actor, named: :author)
@@ -29,6 +54,48 @@ Spectator.describe Tag::Mention do
         subject: object{{index}}
       ).save
       {% end %}
+    end
+  end
+
+  describe ".most_recent_object" do
+    create_object_with_mentions(1, "foo@remote", "bar@remote")
+    create_object_with_mentions(2, "foo@remote")
+    create_object_with_mentions(3, "foo@remote", "bar@remote")
+    create_object_with_mentions(4, "foo@remote")
+    create_object_with_mentions(5, "foo@remote", "quux@remote")
+
+    it "returns the most recent object with the mention" do
+      expect(described_class.most_recent_object("bar@remote")).to eq(object3)
+    end
+
+    it "does not return draft objects" do
+      object5.assign(published: nil).save
+      expect(described_class.most_recent_object("foo@remote")).to eq(object4)
+    end
+
+    it "does not return deleted objects" do
+      object5.delete!
+      expect(described_class.most_recent_object("foo@remote")).to eq(object4)
+    end
+
+    it "does not return blocked objects" do
+      object5.block!
+      expect(described_class.most_recent_object("foo@remote")).to eq(object4)
+    end
+
+    it "does not return objects with deleted attributed to actors" do
+      author.delete!
+      expect(described_class.most_recent_object("foo@remote")).to be_nil
+    end
+
+    it "does not return objects with blocked attributed to actors" do
+      author.block!
+      expect(described_class.most_recent_object("foo@remote")).to be_nil
+    end
+
+    it "does not return objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.most_recent_object("foo@remote")).to be_nil
     end
   end
 

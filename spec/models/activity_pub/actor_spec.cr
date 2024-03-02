@@ -906,11 +906,6 @@ Spectator.describe ActivityPub::Actor do
     let_build(:create, actor: subject, object: object5)
     let_build(:outbox_relationship, named: :outbox, owner: subject, activity: create)
 
-    it "includes objects only once" do
-      outbox.save
-      expect(subject.public_posts(1, 2)).to eq([object5, object4])
-    end
-
     it "paginates the results" do
       expect(subject.public_posts(1, 2)).to eq([object5, object4])
       expect(subject.public_posts(3, 2)).to eq([object1])
@@ -975,11 +970,6 @@ Spectator.describe ActivityPub::Actor do
 
     let_build(:create, actor: subject, object: object5)
     let_build(:outbox_relationship, named: :outbox, owner: subject, activity: create)
-
-    it "includes objects only once" do
-      outbox.save
-      expect(subject.all_posts(1, 2)).to eq([object5, object4])
-    end
 
     it "paginates the results" do
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
@@ -1172,40 +1162,6 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.notifications(since: since)).to eq(4)
     end
 
-    context "given a hashtag notification" do
-      let_build(:actor)
-      let_build(:object, attributed_to: actor)
-      let_create!(:notification_hashtag, owner: subject, object: object)
-
-      it "includes the hashtag notification" do
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification_hashtag, notification5])
-      end
-
-      it "returns the count" do
-        expect(subject.notifications(since: since)).to eq(6)
-      end
-
-      it "filters out deleted objects" do
-        object.delete!
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
-      end
-
-      it "filters out blocked objects" do
-        object.block!
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
-      end
-
-      it "filters out objects by deleted actors" do
-        actor.delete!
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
-      end
-
-      it "filters out objects by blocked actors" do
-        actor.block!
-        expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
-      end
-    end
-
     it "paginates the results" do
       expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
       expect(subject.notifications(page: 3, size: 2)).to eq([notification1])
@@ -1262,10 +1218,10 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
-  describe "#account_uri" do
-    it "returns the webfinger account uri" do
-      expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar").account_uri).to eq("foobar@test.test")
-      expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar").account_uri).to eq("foobar@remote")
+  describe "#handle" do
+    it "returns the handle" do
+      expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar").handle).to eq("foobar@test.test")
+      expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar").handle).to eq("foobar@remote")
     end
   end
 end

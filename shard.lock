@@ -42,7 +42,7 @@ shards:
 
   slang:
     git: https://github.com/toddsundsted/slang.git
-    version: 1.7.1+git.commit.8f8ad8272e5f1297f98e4f3d4bab905a62286ab2
+    version: 1.7.1+git.commit.4f10ecd93070b4996a40f8f0679cf903d6f62898
 
   spectator:
     git: https://gitlab.com/arctic-fox/spectator.git

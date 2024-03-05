@@ -1,7 +1,7 @@
 {
   "@context":"https://www.w3.org/ns/activitystreams",
   "type":"Collection",
-  "id":<%= (host + env.request.path).inspect %>,
+  "id":<%= (host + env.request.path).to_json %>,
   "items":[
     <%- drafts.each_with_index do |reply, i| -%>
     <%= reply.to_json_ld %><%= comma(drafts, i) %>

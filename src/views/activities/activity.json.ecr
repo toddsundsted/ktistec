@@ -1,22 +1,22 @@
 {
   "@context":["https://www.w3.org/ns/activitystreams"],
   <%- if (published = activity.published) -%>
-  "published":<%= published.to_rfc3339(fraction_digits: 3).inspect %>,
+  "published":<%= published.to_rfc3339(fraction_digits: 3).to_json %>,
   <%- end -%>
   <%- if recursive == true && (actor = activity.actor?) -%>
   "actor":<%= actor.to_json_ld %>,
   <%- elsif (actor_iri = activity.actor_iri) -%>
-  "actor":<%= actor_iri.inspect %>,
+  "actor":<%= actor_iri.to_json %>,
   <%- end -%>
   <%- if recursive && activity.responds_to?(:object) && (object = activity.object?) -%>
   "object":<%= object.to_json_ld %>,
   <%- elsif (object_iri = activity.object_iri) -%>
-  "object":<%= object_iri.inspect %>,
+  "object":<%= object_iri.to_json %>,
   <%- end -%>
   <%- if recursive && activity.responds_to?(:target) && (target = activity.target?) -%>
   "target":<%= target.to_json_ld %>,
   <%- elsif (target_iri = activity.target_iri) -%>
-  "target":<%= target_iri.inspect %>,
+  "target":<%= target_iri.to_json %>,
   <%- end -%>
   <%- if (to = activity.to) -%>
   "to":<%= to.to_json %>,
@@ -25,8 +25,8 @@
   "cc":<%= cc.to_json %>,
   <%- end -%>
   <%- if (summary = activity.summary) -%>
-  "summary":<%= summary.inspect %>,
+  "summary":<%= summary.to_json %>,
   <%- end -%>
-  "type":<%= activity.type.split("::").last.inspect %>,
-  "id":<%= activity.iri.inspect %>
+  "type":<%= activity.type.split("::").last.to_json %>,
+  "id":<%= activity.iri.to_json %>
 }

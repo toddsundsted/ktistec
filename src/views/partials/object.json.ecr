@@ -4,18 +4,18 @@
     {"Hashtag":"as:Hashtag"}
   ],
   <%- if (published = object.published) -%>
-  "published":<%= published.to_rfc3339(fraction_digits: 3).inspect %>,
+  "published":<%= published.to_rfc3339(fraction_digits: 3).to_json %>,
   <%- end -%>
   <%- if (attributed_to_iri = object.attributed_to_iri) -%>
-  "attributedTo":<%= attributed_to_iri.inspect %>,
+  "attributedTo":<%= attributed_to_iri.to_json %>,
   <%- end -%>
   <%- if (in_reply_to_iri = object.in_reply_to_iri) -%>
-  "inReplyTo":<%= in_reply_to_iri.inspect %>,
+  "inReplyTo":<%= in_reply_to_iri.to_json %>,
   <%- end -%>
   <%- if recursive == true && (replies = object.replies?) -%>
   "replies":<%= replies.to_json_ld %>,
   <%- elsif (replies_iri = object.replies_iri) -%>
-  "replies":<%= replies_iri.inspect %>,
+  "replies":<%= replies_iri.to_json %>,
   <%- end -%>
   <%- if (to = object.to) -%>
   "to":<%= to.to_json %>,
@@ -24,16 +24,16 @@
   "cc":<%= cc.to_json %>,
   <%- end -%>
   <%- if (name = object.name) -%>
-  "name":<%= name.inspect %>,
+  "name":<%= name.to_json %>,
   <%- end -%>
   <%- if (summary = object.summary) -%>
-  "summary":<%= summary.inspect %>,
+  "summary":<%= summary.to_json %>,
   <%- end -%>
   <%- if (content = object.content) -%>
-  "content":<%= content.inspect %>,
+  "content":<%= content.to_json %>,
   <%- end -%>
   <%- if (media_type = object.media_type) -%>
-  "mediaType":<%= media_type.inspect %>,
+  "mediaType":<%= media_type.to_json %>,
   <%- end -%>
   <%- if (attachments = object.attachments) -%>
   "attachment":<%= attachments.to_json %>,
@@ -52,6 +52,6 @@
   <%- if (urls = object.urls) -%>
   "url":<%= urls.to_json %>,
   <%- end -%>
-  "type":<%= object.type.split("::").last.inspect %>,
-  "id":<%= object.iri.inspect %>
+  "type":<%= object.type.split("::").last.to_json %>,
+  "id":<%= object.iri.to_json %>
 }

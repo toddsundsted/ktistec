@@ -9,13 +9,13 @@
     }
   ],
   <%- if (username = actor.username) -%>
-  "preferredUsername":<%= username.inspect %>,
+  "preferredUsername":<%= username.to_json %>,
   <%- end -%>
   <%- if (pem_public_key = actor.pem_public_key) -%>
   "publicKey":{
     "id":"<%= actor.iri %>#main-key",
     "owner":"<%= actor.iri %>",
-    "publicKeyPem":<%= pem_public_key.inspect %>
+    "publicKeyPem":<%= pem_public_key.to_json %>
   },
   <%- end -%>
   <%- if (inbox = actor.inbox) -%>
@@ -23,44 +23,44 @@
   <%# proffer the actor's inbox %>
   <%- if actor.local? -%>
   "endpoints": {
-    "sharedInbox": <%= inbox.inspect %>
+    "sharedInbox": <%= inbox.to_json %>
   },
   <%- end -%>
-  "inbox":<%= inbox.inspect %>,
+  "inbox":<%= inbox.to_json %>,
   <%- end -%>
   <%- if (outbox = actor.outbox) -%>
-  "outbox":<%= outbox.inspect %>,
+  "outbox":<%= outbox.to_json %>,
   <%- end -%>
   <%- if (following = actor.following) -%>
-  "following":<%= following.inspect %>,
+  "following":<%= following.to_json %>,
   <%- end -%>
   <%- if (followers = actor.followers) -%>
-  "followers":<%= followers.inspect %>,
+  "followers":<%= followers.to_json %>,
   <%- end -%>
   <%- if (name = actor.name) -%>
-  "name":<%= name.inspect %>,
+  "name":<%= name.to_json %>,
   <%- end -%>
   <%- if (summary = actor.summary) -%>
-  "summary":<%= summary.inspect %>,
+  "summary":<%= summary.to_json %>,
   <%- end -%>
   <%- if (icon = actor.icon) -%>
   "icon":{
     "type":"Image",
-    "url":<%= icon.inspect %>
+    "url":<%= icon.to_json %>
   },
   <%- end -%>
   <%- if (image = actor.image) -%>
   "image":{
     "type":"Image",
-    "url":<%= image.inspect %>
+    "url":<%= image.to_json %>
   },
   <%- end -%>
   <%- if (attachments = actor.attachments) -%>
   "attachment":[
     <%- attachments.each.with_index do |attachment, i| %> {
-    "type":<%= attachment.type.inspect %>,
-    "name":<%= attachment.name.inspect %>,
-    "value":<%= maybe_wrap_link(attachment.value).inspect %>
+    "type":<%= attachment.type.to_json %>,
+    "name":<%= attachment.name.to_json %>,
+    "value":<%= maybe_wrap_link(attachment.value).to_json %>
     }<%= comma(attachments, i) %><%- end -%>
   ],
   <%- end -%>
@@ -68,9 +68,9 @@
   <%- if urls.size > 1 -%>
   "url":<%= urls.to_json %>,
   <%- elsif urls.size > 0 -%>
-  "url":<%= urls.first.inspect %>,
+  "url":<%= urls.first.to_json %>,
   <%- end -%>
   <%- end -%>
-  "type":<%= actor.type.split("::").last.inspect %>,
-  "id":<%= actor.iri.inspect %>
+  "type":<%= actor.type.split("::").last.to_json %>,
+  "id":<%= actor.iri.to_json %>
 }

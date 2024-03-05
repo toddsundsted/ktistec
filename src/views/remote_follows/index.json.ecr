@@ -1,6 +1,6 @@
 {
   <%- if error -%>
-  "msg":<%= error.capitalize.inspect %>,
+  "msg":<%= error.capitalize.to_json %>,
   <%- end -%>
-  "account":<%= account.try(&.inspect) || "null" %>
+  "account":<%= account.try(&.to_json) || "null" %>
 }

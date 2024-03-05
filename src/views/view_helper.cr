@@ -1,6 +1,14 @@
 require "ecr"
 require "slang"
 
+def _view___generic_html_slang__default_html_ecr(env, _message)
+  Ktistec::ViewHelper.render "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr"
+end
+
+def _view___generic_html_slang(env, _message)
+  Ktistec::ViewHelper.render "src/views/pages/generic.html.slang"
+end
+
 module Ktistec::ViewHelper
   module ClassMethods
     def depth(object)
@@ -74,12 +82,12 @@ module Ktistec::ViewHelper
     __content_filename__ = {{content}}
 
     content_io = IO::Memory.new
-    embed {{content}}, content_io
+    Ktistec::ViewHelper.embed {{content}}, content_io
     content = content_io.to_s
 
     {% if layout %}
       layout_io = IO::Memory.new
-      embed {{layout}}, layout_io
+      Ktistec::ViewHelper.embed {{layout}}, layout_io
       layout_io.to_s
     {% else %}
       content

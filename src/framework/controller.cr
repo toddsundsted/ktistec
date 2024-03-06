@@ -119,13 +119,13 @@ module Ktistec
           \{% if layout %}
             if accepts?("text/html")
               _message = \{{message}} || {{message}}
-              halt env, status_code: \{{code}} || {{code}}, response: _view___generic_html_slang__default_html_ecr(env, _message)
+              halt env, status_code: \{{code}} || {{code}}, response: Ktistec::ViewHelper._view___generic_html_slang__default_html_ecr(env, _message)
             end
           \{% end %}
           \{% if operation && target %}
             if accepts?("text/vnd.turbo-stream.html")
               _message = \{{message}} || {{message}}
-              %body = _view___generic_html_slang(env, _message)
+              %body = Ktistec::ViewHelper._view___generic_html_slang(env, _message)
               %body = %Q|<turbo-stream action="\{{operation.id}}" target="\{{target.id}}"><template>#{%body}</template></turbo-stream>|
               halt env, status_code: \{{code}} || {{code}}, response: %body
             end

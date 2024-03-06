@@ -1,6 +1,37 @@
 require "ecr"
 require "slang"
 
+# the following two macros were copied from kemal and kilt.
+# copying them here was necessary because kilt was removed from
+# kemal. we depended on kilt for rendering slang templates. see:
+# https://github.com/kemalcr/kemal/pull/618
+
+# Render a view with a layout as the superview.
+#
+macro render(content, layout)
+  __content_filename__ = {{content}}
+
+  content_io = IO::Memory.new
+  Ktistec::ViewHelper.embed {{content}}, content_io
+  content = content_io.to_s
+
+  {% if layout %}
+    layout_io = IO::Memory.new
+    Ktistec::ViewHelper.embed {{layout}}, layout_io
+    layout_io.to_s
+  {% else %}
+    content
+  {% end %}
+end
+
+# Render a view with the given filename.
+#
+macro render(content)
+  String.build do |content_io|
+    Ktistec::ViewHelper.embed {{content}}, content_io
+  end
+end
+
 module Ktistec::ViewHelper
   module ClassMethods
     def depth(object)
@@ -61,37 +92,6 @@ module Ktistec::ViewHelper
 
   macro included
     extend ClassMethods
-  end
-
-  # the following two macros were copied from kemal and kilt.
-  # copying them here was necessary because kilt was removed from
-  # kemal. we depended on kilt for rendering slang templates. see:
-  # https://github.com/kemalcr/kemal/pull/618
-
-  # Render a view with a layout as the superview.
-  #
-  macro render(content, layout)
-    __content_filename__ = {{content}}
-
-    content_io = IO::Memory.new
-    embed {{content}}, content_io
-    content = content_io.to_s
-
-    {% if layout %}
-      layout_io = IO::Memory.new
-      embed {{layout}}, layout_io
-      layout_io.to_s
-    {% else %}
-      content
-    {% end %}
-  end
-
-  # Render a view with the given filename.
-  #
-  macro render(content)
-    String.build do |content_io|
-      embed {{content}}, content_io
-    end
   end
 
   # Embed a view with the given filename.
@@ -526,6 +526,24 @@ module Ktistec::ViewHelper
   #
   macro id
     Ktistec::Util.id
+  end
+
+  ## View helpers
+
+  def self._view___generic_html_slang__default_html_ecr(env, _message)
+    render "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr"
+  end
+
+  def self._view___generic_html_slang(env, _message)
+    render "src/views/pages/generic.html.slang"
+  end
+
+  def self._view___content_html_slang(env, object, author, actor, with_detail, for_thread)
+    render "src/views/partials/object/content.html.slang"
+  end
+
+  def self._view___label_html_slang(env, author, actor)
+    render "src/views/partials/object/label.html.slang"
   end
 
   ## Path helpers

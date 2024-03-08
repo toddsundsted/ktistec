@@ -46,10 +46,6 @@ module Ktistec
       include Ktistec::ViewHelper
     end
 
-    macro host
-      Ktistec.host
-    end
-
     macro accepts?(*mime_type)
       env.accepts?({{mime_type.splat}})
     end

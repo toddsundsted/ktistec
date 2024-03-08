@@ -477,6 +477,12 @@ module Ktistec::ViewHelper
 
   ## General purpose helpers
 
+  # Returns the host.
+  #
+  macro host
+    Ktistec.host
+  end
+
   # Sanitizes HTML.
   #
   # For use in views:

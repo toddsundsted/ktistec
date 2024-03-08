@@ -788,6 +788,12 @@ Spectator.describe "helpers" do
 
   ## General purpose helpers
 
+  describe "host" do
+    it "returns the host" do
+      expect(host).to eq("https://test.test")
+    end
+  end
+
   describe "sanitize" do
     it "sanitizes HTML" do
       expect(s("<body>Foo Bar</body>")).to eq("Foo Bar")

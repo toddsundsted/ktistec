@@ -7,19 +7,23 @@ require "kemal"
 # Render a view with a layout as the superview.
 #
 macro render(content, layout)
+  # Note: `__content_filename__` and `content_io` are magic variables
+  # used by Kemal's implementation of "content_for" and must be in
+  # scope for `yield_content` to work.
+
   __content_filename__ = {{content}}
 
   content_io = IO::Memory.new
   Ktistec::ViewHelper.embed {{content}}, content_io
-  content = content_io.to_s
+  %content = content_io.to_s
 
-  {% if layout %}
-    layout_io = IO::Memory.new
-    Ktistec::ViewHelper.embed {{layout}}, layout_io
-    layout_io.to_s
-  {% else %}
-    content
-  {% end %}
+  {% layout = "_layout_#{layout.gsub(%r[\/|\.], "_").id}" %}
+  Ktistec::ViewHelper.{{layout.id}}(
+    env,
+    yield_content("title"),
+    yield_content("head"),
+    %content
+  )
 end
 
 # Render a view with the given filename.
@@ -535,6 +539,10 @@ module Ktistec::ViewHelper
   end
 
   ## View helpers
+
+  def self._layout_src_views_layouts_default_html_ecr(env, title, head, content)
+    render "src/views/layouts/default.html.ecr"
+  end
 
   def self._view___content_html_slang(env, object, author, actor, with_detail, for_thread)
     render "src/views/partials/object/content.html.slang"

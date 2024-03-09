@@ -1,10 +1,8 @@
 require "ecr"
 require "slang"
+require "kemal"
 
-# the following two macros were copied from kemal and kilt.
-# copying them here was necessary because kilt was removed from
-# kemal. we depended on kilt for rendering slang templates. see:
-# https://github.com/kemalcr/kemal/pull/618
+# Redefine the `render` macros provided by Kemal.
 
 # Render a view with a layout as the superview.
 #
@@ -535,14 +533,6 @@ module Ktistec::ViewHelper
   end
 
   ## View helpers
-
-  def self._view___generic_html_slang__default_html_ecr(env, _message)
-    render "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr"
-  end
-
-  def self._view___generic_html_slang(env, _message)
-    render "src/views/pages/generic.html.slang"
-  end
 
   def self._view___content_html_slang(env, object, author, actor, with_detail, for_thread)
     render "src/views/partials/object/content.html.slang"

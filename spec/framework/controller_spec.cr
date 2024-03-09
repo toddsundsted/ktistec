@@ -41,7 +41,7 @@ class FooBarController
   end
 
   get "/foo/bar/ok" do |env|
-    ok "views/index", basedir: "spec/spec_helper"
+    ok "views/index", _basedir: "spec/spec_helper", env: env
   end
 end
 

@@ -10,9 +10,7 @@ class ActivitiesController
       not_found
     end
 
-    recursive = true
-
-    ok "activities/activity", activity: activity, recursive: recursive
+    ok "activities/activity", activity: activity, recursive: true
   end
 
   get "/remote/activities/:id" do |env|
@@ -20,9 +18,7 @@ class ActivitiesController
       not_found
     end
 
-    recursive = true
-
-    ok "activities/activity", activity: activity, recursive: recursive
+    ok "activities/activity", activity: activity, recursive: true
   end
 
   private def self.get_activity(env, iri_or_id)

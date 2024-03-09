@@ -15,9 +15,7 @@ class ObjectsController
     )
 
     unless object.assign(params(env)).valid?
-      recursive = false
-
-      unprocessable_entity "objects/new", env: env, object: object, recursive: recursive
+      unprocessable_entity "objects/new", env: env, object: object, recursive: false
     end
 
     object.save
@@ -32,9 +30,7 @@ class ObjectsController
 
     redirect edit_object_path if object.draft?
 
-    recursive = false
-
-    ok "objects/object", env: env, object: object, recursive: recursive
+    ok "objects/object", env: env, object: object, recursive: false
   end
 
   get "/objects/:id/replies" do |env|
@@ -46,9 +42,7 @@ class ObjectsController
 
     replies = object.replies(for_actor: object.attributed_to)
 
-    recursive = false
-
-    ok "objects/replies", env: env, object: object, replies: replies, recursive: recursive
+    ok "objects/replies", env: env, object: object, replies: replies, recursive: false
   end
 
   get "/objects/:id/thread" do |env|
@@ -60,11 +54,7 @@ class ObjectsController
 
     thread = object.thread(approved_by: object.attributed_to)
 
-    follow = nil
-
-    task = nil
-
-    ok "objects/thread", env: env, object: object, thread: thread, follow: follow, task: task
+    ok "objects/thread", env: env, object: object, thread: thread, follow: nil, task: nil
   end
 
   get "/objects/:id/edit" do |env|
@@ -72,9 +62,7 @@ class ObjectsController
       not_found
     end
 
-    recursive = false
-
-    ok "objects/edit", env: env, object: object, recursive: recursive
+    ok "objects/edit", env: env, object: object, recursive: false
   end
 
   post "/objects/:id" do |env|
@@ -83,9 +71,7 @@ class ObjectsController
     end
 
     unless object.assign(params(env)).valid?
-      recursive = false
-
-      unprocessable_entity "objects/edit", env: env, object: object, recursive: recursive
+      unprocessable_entity "objects/edit", env: env, object: object, recursive: false
     end
 
     object.save
@@ -108,9 +94,7 @@ class ObjectsController
       not_found
     end
 
-    recursive = false
-
-    ok "objects/object", env: env, object: object, recursive: recursive
+    ok "objects/object", env: env, object: object, recursive: false
   end
 
   get "/remote/objects/:id/thread" do |env|

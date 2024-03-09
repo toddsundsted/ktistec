@@ -16,10 +16,7 @@ class RemoteFollowsController
       not_found
     end
 
-    error = nil
-    account = ""
-
-    ok "remote_follows/index", env: env, error: error, account: account, actor: actor
+    ok "remote_follows/index", env: env, error: nil, account: nil, actor: actor
   end
 
   post "/actors/:username/remote-follow" do |env|
@@ -32,9 +29,7 @@ class RemoteFollowsController
     account = account(env)
 
     if !account.presence
-      error = "the address must not be blank"
-
-      unprocessable_entity "remote_follows/index", env: env, error: error, account: account, actor: actor
+      unprocessable_entity "remote_follows/index", env: env, error: "the address must not be blank", account: account, actor: actor
     else
       begin
         location = lookup(account).gsub("{uri}", URI.encode_path(actor.iri))
@@ -45,9 +40,7 @@ class RemoteFollowsController
           {location: location}.to_json
         end
       rescue ex : HostMeta::Error | WebFinger::Error | NilAssertionError | KeyError
-        error = ex.message
-
-        bad_request "remote_follows/index", env: env, error: error, account: account, actor: actor
+        bad_request "remote_follows/index", env: env, error: ex.message, account: account, actor: actor
       end
     end
   end

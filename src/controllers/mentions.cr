@@ -51,10 +51,9 @@ class MentionsController
     end
 
     follow.destroy
-    follow = nil
 
     if turbo_frame?
-      ok "mentions/index", env: env, mention: mention, collection: collection, follow: follow
+      ok "mentions/index", env: env, mention: mention, collection: collection, follow: nil
     else
       redirect back_path
     end

@@ -6,9 +6,7 @@ class SessionsController
   skip_auth ["/sessions"], GET, POST
 
   get "/sessions" do |env|
-    message = username = password = nil
-
-    ok "sessions/new", env: env, message: message, username: username, password: password
+    ok "sessions/new", env: env, message: nil, username: nil, password: nil
   end
 
   post "/sessions" do |env|
@@ -25,9 +23,7 @@ class SessionsController
         {jwt: jwt}.to_json
       end
     else
-      message = "invalid username or password"
-
-      forbidden "sessions/new", env: env, message: message, username: username, password: password
+      forbidden "sessions/new", env: env, message: "invalid username or password", username: username, password: password
     end
   rescue KeyError
     redirect sessions_path

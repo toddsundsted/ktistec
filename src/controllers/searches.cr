@@ -42,9 +42,7 @@ class SearchesController
       ok "searches/form", env: env, message: message, query: query
     end
   rescue ex : Errors
-    message = ex.message
-
-    bad_request "searches/form", env: env, message: message, query: query
+    bad_request "searches/form", env: env, message: ex.message, query: query
   end
 
   private alias Errors = Socket::Addrinfo::Error | JSON::ParseException |

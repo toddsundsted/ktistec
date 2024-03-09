@@ -540,6 +540,10 @@ module Ktistec::ViewHelper
 
   ## View helpers
 
+  # The naming below matches the format of automatically generated
+  # view helpers. View helpers for partial are *not* automatically
+  # generated.
+
   def self._layout_src_views_layouts_default_html_ecr(env, title, head, content)
     render "src/views/layouts/default.html.ecr"
   end
@@ -552,11 +556,11 @@ module Ktistec::ViewHelper
     render "src/views/partials/collection.json.ecr"
   end
 
-  def self._view___content_html_slang(env, object, author, actor, with_detail, for_thread)
+  def self._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, for_thread)
     render "src/views/partials/object/content.html.slang"
   end
 
-  def self._view___label_html_slang(env, author, actor)
+  def self._view_src_views_partials_object_label_html_slang(env, author, actor)
     render "src/views/partials/object/label.html.slang"
   end
 

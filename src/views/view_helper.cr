@@ -544,6 +544,10 @@ module Ktistec::ViewHelper
     render "src/views/layouts/default.html.ecr"
   end
 
+  def self._view_src_views_partials_actor_panel_html_slang(env, actor)
+    render "src/views/partials/actor-panel.html.slang"
+  end
+
   def self._view_src_views_partials_collection_json_ecr(env, collection)
     render "src/views/partials/collection.json.ecr"
   end

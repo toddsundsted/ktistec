@@ -19,7 +19,7 @@ class RemoteFollowsController
     error = nil
     account = ""
 
-    ok "remote_follows/index"
+    ok "remote_follows/index", env: env, error: error, account: account, actor: actor
   end
 
   post "/actors/:username/remote-follow" do |env|
@@ -34,7 +34,7 @@ class RemoteFollowsController
     if !account.presence
       error = "the address must not be blank"
 
-      unprocessable_entity "remote_follows/index"
+      unprocessable_entity "remote_follows/index", env: env, error: error, account: account, actor: actor
     else
       begin
         location = lookup(account).gsub("{uri}", URI.encode_path(actor.iri))
@@ -47,7 +47,7 @@ class RemoteFollowsController
       rescue ex : HostMeta::Error | WebFinger::Error | NilAssertionError | KeyError
         error = ex.message
 
-        bad_request "remote_follows/index"
+        bad_request "remote_follows/index", env: env, error: error, account: account, actor: actor
       end
     end
   end
@@ -70,7 +70,7 @@ class RemoteFollowsController
       bad_request("Can't Dereference URI")
     end
 
-    ok "actors/remote"
+    ok "actors/remote", env: env, actor: actor
   end
 
   private def self.lookup(account)

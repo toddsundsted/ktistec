@@ -88,6 +88,8 @@ module Ktistec::ViewHelper
     end
   end
 
+  extend ClassMethods
+
   macro included
     extend ClassMethods
   end
@@ -300,7 +302,7 @@ module Ktistec::ViewHelper
           "field error" :
           "field"
       %name = {{field.id.stringify}}
-      %value = {{model}}.{{field.id}}.try { |string| HTML.escape(string) }
+      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
     {% else %}
       %classes = "field"
       %name = {{field.id.stringify}}

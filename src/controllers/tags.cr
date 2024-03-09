@@ -26,7 +26,7 @@ class TagsController
       task = Task::Fetch::Hashtag.find?(source: env.account.actor, name: hashtag)
     end
 
-    ok "tags/index"
+    ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, follow: follow, task: task
   end
 
   post "/tags/:hashtag/follow" do |env|
@@ -44,7 +44,7 @@ class TagsController
     task.schedule if task.runnable? || task.complete
 
     if turbo_frame?
-      ok "tags/index"
+      ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, follow: follow, task: task
     else
       redirect back_path
     end
@@ -65,7 +65,7 @@ class TagsController
     task.complete! if task
 
     if turbo_frame?
-      ok "tags/index"
+      ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, follow: follow, task: task
     else
       redirect back_path
     end

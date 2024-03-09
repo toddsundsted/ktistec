@@ -32,19 +32,19 @@ class SearchesController
 
       actor_or_object.up!
 
-      ok "searches/actor"
+      ok "searches/actor", env: env, actor: actor, message: message, query: query
     when ActivityPub::Object
       actor_or_object.attributed_to?(env.account.actor, dereference: true)
       object = actor_or_object.save
 
-      ok "searches/object"
+      ok "searches/object", env: env, object: object, message: message, query: query
     else
-      ok "searches/form"
+      ok "searches/form", env: env, message: message, query: query
     end
   rescue ex : Errors
     message = ex.message
 
-    bad_request "searches/form"
+    bad_request "searches/form", env: env, message: message, query: query
   end
 
   private alias Errors = Socket::Addrinfo::Error | JSON::ParseException |

@@ -113,7 +113,7 @@ class RelationshipsController
       )
       # validate ensures properties are populated from source
       unless object.valid?
-        unprocessable_entity "partials/editor"
+        unprocessable_entity "partials/editor", env: env, object: object
       end
       # hack to sidestep typing of unions as their nearest common ancestor
       if activity.responds_to?(:actor=) && activity.responds_to?(:object=)
@@ -305,7 +305,7 @@ class RelationshipsController
     end
     activities = account.actor.in_outbox(**pagination_params(env), public: env.account? != account)
 
-    ok "relationships/outbox"
+    ok "relationships/outbox", env: env, activities: activities
   end
 
   private def self.get_account(env)

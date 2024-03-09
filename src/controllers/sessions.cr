@@ -8,7 +8,7 @@ class SessionsController
   get "/sessions" do |env|
     message = username = password = nil
 
-    ok "sessions/new"
+    ok "sessions/new", env: env, message: message, username: username, password: password
   end
 
   post "/sessions" do |env|
@@ -27,7 +27,7 @@ class SessionsController
     else
       message = "invalid username or password"
 
-      forbidden "sessions/new"
+      forbidden "sessions/new", env: env, message: message, username: username, password: password
     end
   rescue KeyError
     redirect sessions_path

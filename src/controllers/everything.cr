@@ -6,6 +6,6 @@ class EverythingController
   get "/everything" do |env|
     collection = ActivityPub::Object.federated_posts(**pagination_params(env))
 
-    ok "everything/index"
+    ok "everything/index", env: env, collection: collection
   end
 end

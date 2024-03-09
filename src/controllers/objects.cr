@@ -17,7 +17,7 @@ class ObjectsController
     unless object.assign(params(env)).valid?
       recursive = false
 
-      unprocessable_entity "objects/new"
+      unprocessable_entity "objects/new", env: env, object: object, recursive: recursive
     end
 
     object.save
@@ -34,7 +34,7 @@ class ObjectsController
 
     recursive = false
 
-    ok "objects/object"
+    ok "objects/object", env: env, object: object, recursive: recursive
   end
 
   get "/objects/:id/replies" do |env|
@@ -48,7 +48,7 @@ class ObjectsController
 
     recursive = false
 
-    ok "objects/replies"
+    ok "objects/replies", env: env, object: object, replies: replies, recursive: recursive
   end
 
   get "/objects/:id/thread" do |env|
@@ -64,7 +64,7 @@ class ObjectsController
 
     task = nil
 
-    ok "objects/thread"
+    ok "objects/thread", env: env, object: object, thread: thread, follow: follow, task: task
   end
 
   get "/objects/:id/edit" do |env|
@@ -74,7 +74,7 @@ class ObjectsController
 
     recursive = false
 
-    ok "objects/edit"
+    ok "objects/edit", env: env, object: object, recursive: recursive
   end
 
   post "/objects/:id" do |env|
@@ -85,7 +85,7 @@ class ObjectsController
     unless object.assign(params(env)).valid?
       recursive = false
 
-      unprocessable_entity "objects/edit"
+      unprocessable_entity "objects/edit", env: env, object: object, recursive: recursive
     end
 
     object.save
@@ -110,7 +110,7 @@ class ObjectsController
 
     recursive = false
 
-    ok "objects/object"
+    ok "objects/object", env: env, object: object, recursive: recursive
   end
 
   get "/remote/objects/:id/thread" do |env|
@@ -124,7 +124,7 @@ class ObjectsController
 
     task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
 
-    ok "objects/thread"
+    ok "objects/thread", env: env, object: object, thread: thread, follow: follow, task: task
   end
 
   get "/remote/objects/:id/reply" do |env|
@@ -132,7 +132,7 @@ class ObjectsController
       not_found
     end
 
-    ok "objects/reply"
+    ok "objects/reply", env: env, object: object
   end
 
   post "/remote/objects/:id/approve" do |env|
@@ -195,7 +195,7 @@ class ObjectsController
     task.schedule if task.runnable? || task.complete
 
     if turbo_frame?
-      ok "objects/thread"
+      ok "objects/thread", env: env, object: object, thread: thread, follow: follow, task: task
     else
       redirect back_path
     end
@@ -215,7 +215,7 @@ class ObjectsController
     task.complete! if task
 
     if turbo_frame?
-      ok "objects/thread"
+      ok "objects/thread", env: env, object: object, thread: thread, follow: follow, task: task
     else
       redirect back_path
     end

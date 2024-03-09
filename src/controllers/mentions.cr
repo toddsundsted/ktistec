@@ -16,7 +16,7 @@ class MentionsController
 
     follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
 
-    ok "mentions/index"
+    ok "mentions/index", env: env, mention: mention, collection: collection, follow: follow
   end
 
   post "/mentions/:mention/follow" do |env|
@@ -33,7 +33,7 @@ class MentionsController
     follow = Relationship::Content::Follow::Mention.new(actor: env.account.actor, name: mention).save
 
     if turbo_frame?
-      ok "mentions/index"
+      ok "mentions/index", env: env, mention: mention, collection: collection, follow: follow
     else
       redirect back_path
     end
@@ -54,7 +54,7 @@ class MentionsController
     follow = nil
 
     if turbo_frame?
-      ok "mentions/index"
+      ok "mentions/index", env: env, mention: mention, collection: collection, follow: follow
     else
       redirect back_path
     end

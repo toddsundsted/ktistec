@@ -132,8 +132,8 @@ module Ktistec
           end
           if accepts?("text/html")
             \{% key = "_view_src_views_pages_generic_html_slang_layout_src_views_layouts_default_html_ecr" %}
-            register_view(\{{key}}, "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr", env: env, _message: \{{_message}})
-            halt env, status_code: \{{_status_code}}, response: Ktistec::ViewHelper.\{{key.id}}(env: env, _message: \{{_message}})
+            register_view(\{{key}}, "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr", env: env, message: \{{_message}})
+            halt env, status_code: \{{_status_code}}, response: Ktistec::ViewHelper.\{{key.id}}(env: env, message: \{{_message}})
           end
           accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
           halt env, status_code: \{{_status_code}}, response: ({msg: \{{_message}}.downcase}.to_json)

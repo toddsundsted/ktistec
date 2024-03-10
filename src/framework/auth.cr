@@ -12,7 +12,7 @@ module Ktistec
       return call_next(env) unless env.route_lookup.found?
       return call_next(env) if env.session.account? || exclude_match?(env)
 
-      _message = "Unauthorized"
+      message = "Unauthorized"
       if env.accepts?("text/html")
         env.response.status_code = 401
         env.response.headers["Content-Type"] = "text/html"
@@ -20,7 +20,7 @@ module Ktistec
       else
         env.response.status_code = 401
         env.response.headers["Content-Type"] = "application/json"
-        env.response.print %<{"msg":"#{_message}"}>
+        env.response.print %<{"msg":"#{message}"}>
       end
     end
   end

@@ -178,7 +178,7 @@ Spectator.describe ActivityPub::Actor do
         },
         "url":"url link",
         "attachment": [
-          {"name": "Blog", "type": "PropertyValue", "value": "https://somewhere.example.com"},
+          {"name": "Blog", "type": "PropertyValue", "value": "https://somewhere.example.com/this-is-a-long-url-that-should-be-truncated"},
           {"name": "Website", "type": "PropertyValue", "value": "http://site.example.com"},
           {"name": "", "type": "invalid entry", "value": "http://site.example.com"}
         ]
@@ -258,7 +258,7 @@ Spectator.describe ActivityPub::Actor do
       expect(attachments.size).to eq(2)
       expect(attachments.all? { |a| a.type == "http://schema.org#PropertyValue" }).to be_true
       expect(attachments.first.name).to eq("Blog")
-      expect(attachments.first.value).to eq("https://somewhere.example.com")
+      expect(attachments.first.value).to eq("https://somewhere.example.com/this-is-a-long-url-that-should-be-truncated")
       expect(attachments.last.name).to eq("Website")
       expect(attachments.last.value).to eq("http://site.example.com")
     end
@@ -299,7 +299,7 @@ Spectator.describe ActivityPub::Actor do
       expect(attachments.size).to eq(2)
       expect(attachments.all? { |a| a.type == "http://schema.org#PropertyValue" }).to be_true
       expect(attachments.first.name).to eq("Blog")
-      expect(attachments.first.value).to eq("https://somewhere.example.com")
+      expect(attachments.first.value).to eq("https://somewhere.example.com/this-is-a-long-url-that-should-be-truncated")
       expect(attachments.last.name).to eq("Website")
       expect(attachments.last.value).to eq("http://site.example.com")
     end
@@ -345,7 +345,8 @@ Spectator.describe ActivityPub::Actor do
     context "given an array of attachments" do
       it "renders the array of attachments, with html links" do
         expect(actor.to_json_ld).to match(/"attachment":\[[^\]]+\]/)
-        expect(actor.to_json_ld).to match(%r{"value\":\"<a href=\\\"https://somewhere.example.com\\\" target=\\\"_blank\\\" rel=\\\"nofollow noopener noreferrer me\\\"><span class=\\\"invisible\\\">https://</span><span class=\\\"\\\">somewhere.example.com</span><span class=\\\"invisible\\\"></span></a>\"})
+        expect(actor.to_json_ld).to match(%r{"value\":\"<a href=\\\"https://somewhere.example.com/this-is-a-long-url-that-should-be-truncated\\\" target=\\\"_blank\\\" rel=\\\"ugc\\\"><span class=\\\"invisible\\\">https://</span><span class=\\\"ellipsis\\\">somewhere.example.com/this-is-</span><span class=\\\"invisible\\\">a-long-url-that-should-be-truncated</span></a>\"})
+        expect(actor.to_json_ld).to match(%r{"value\":\"<a href=\\\"http://site.example.com\\\" target=\\\"_blank\\\" rel=\\\"ugc\\\"><span class=\\\"invisible\\\">http://</span><span>site.example.com</span></a>\"})
       end
     end
   end

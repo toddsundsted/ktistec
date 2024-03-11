@@ -484,6 +484,106 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#likes" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_like(index)
+      let_create!(:note, named: note{{index}})
+      let_create!(:like, named: like{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_like(1)
+    create_like(2)
+    create_like(3)
+    create_like(4)
+    create_like(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.likes(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.likes(1, 2)).to eq([note4, note3])
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.likes(1, 2)).to eq([note4, note3])
+    end
+
+    it "filters out posts by deleted actors" do
+      note5.attributed_to.delete!
+      expect(subject.likes(1, 2)).to eq([note4, note3])
+    end
+
+    it "filters out posts by blocked actors" do
+      note5.attributed_to.block!
+      expect(subject.likes(1, 2)).to eq([note4, note3])
+    end
+
+    it "filters out posts if the like has been undone" do
+      like5.undo!
+      expect(subject.likes(1, 2)).to eq([note4, note3])
+    end
+
+    it "paginates the results" do
+      expect(subject.likes(1, 2)).to eq([note5, note4])
+      expect(subject.likes(2, 2)).to eq([note3, note2])
+      expect(subject.likes(2, 2).more?).to be_true
+    end
+  end
+
+  describe "#announces" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_announce(index)
+      let_create!(:note, named: note{{index}})
+      let_create!(:announce, named: announce{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_announce(1)
+    create_announce(2)
+    create_announce(3)
+    create_announce(4)
+    create_announce(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.announces(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.announces(1, 2)).to eq([note4, note3])
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.announces(1, 2)).to eq([note4, note3])
+    end
+
+    it "filters out posts by deleted actors" do
+      note5.attributed_to.delete!
+      expect(subject.announces(1, 2)).to eq([note4, note3])
+    end
+
+    it "filters out posts by blocked actors" do
+      note5.attributed_to.block!
+      expect(subject.announces(1, 2)).to eq([note4, note3])
+    end
+
+    it "filters out posts if the announce has been undone" do
+      announce5.undo!
+      expect(subject.announces(1, 2)).to eq([note4, note3])
+    end
+
+    it "paginates the results" do
+      expect(subject.announces(1, 2)).to eq([note5, note4])
+      expect(subject.announces(2, 2)).to eq([note3, note2])
+      expect(subject.announces(2, 2).more?).to be_true
+    end
+  end
+
   describe "#drafts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }

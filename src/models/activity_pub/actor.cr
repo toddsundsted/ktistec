@@ -188,7 +188,7 @@ module ActivityPub
         nil
     end
 
-    private def query(type, orig, dest, public = true)
+    private def social_query(type, orig, dest, public = true)
       public = public ? "AND r.confirmed = 1 AND r.visible = 1" : nil
       query = <<-QUERY
         SELECT #{Actor.columns(prefix: "a")}
@@ -206,14 +206,54 @@ module ActivityPub
 
     def all_following(page = 1, size = 10, public = true)
       Actor.query_and_paginate(
-        query(Relationship::Social::Follow, :to_iri, :from_iri, public),
+        social_query(Relationship::Social::Follow, :to_iri, :from_iri, public),
         self.iri, page: page, size: size
       )
     end
 
     def all_followers(page = 1, size = 10, public = false)
       Actor.query_and_paginate(
-        query(Relationship::Social::Follow, :from_iri, :to_iri, public),
+        social_query(Relationship::Social::Follow, :from_iri, :to_iri, public),
+        self.iri, page: page, size: size
+      )
+    end
+
+    macro common_filters(object_prefix, actor_prefix, activity_prefix)
+      <<-QUERY
+        AND {{object_prefix}}.deleted_at IS NULL
+        AND {{object_prefix}}.blocked_at IS NULL
+        AND {{actor_prefix}}.deleted_at IS NULL
+        AND {{actor_prefix}}.blocked_at IS NULL
+        AND {{activity_prefix}}.undone_at IS NULL
+      QUERY
+    end
+
+    private def activity_query(type)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS c
+             ON c.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+          WHERE a.actor_iri = ?
+            AND a.type = "#{type}"
+            #{common_filters("o", "c", "a")}
+       ORDER BY o.id DESC
+          LIMIT ? OFFSET ?
+      QUERY
+    end
+
+    def likes(page = 1, size = 10)
+      Object.query_and_paginate(
+        activity_query(ActivityPub::Activity::Like),
+        self.iri, page: page, size: size
+      )
+    end
+
+    def announces(page = 1, size = 10)
+      Object.query_and_paginate(
+        activity_query(ActivityPub::Activity::Announce),
         self.iri, page: page, size: size
       )
     end

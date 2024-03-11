@@ -60,7 +60,7 @@
     <%- attachments.each.with_index do |attachment, i| %> {
     "type":<%= attachment.type.to_json %>,
     "name":<%= attachment.name.to_json %>,
-    "value":<%= maybe_wrap_link(attachment.value).to_json %>
+    "value":<%= wrap_link(attachment.value).to_json %>
     }<%= comma(attachments, i) %><%- end -%>
   ],
   <%- end -%>

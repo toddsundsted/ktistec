@@ -35,7 +35,7 @@
           - attachments.each do |attachment|
             tr
               th.name = attachment.name
-              td.value == s maybe_wrap_link(attachment.value)
+              td.value == s wrap_link(attachment.value, length: 50)
   - if _account && _account.actor != actor
     .ui.basic.segment
       - if (_follow = _account.actor.follows?(actor).try(&.activity?))

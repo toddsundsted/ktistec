@@ -303,7 +303,7 @@ class RelationshipsController
     end
     activities = account.actor.in_inbox(**pagination_params(env), public: env.account? != account)
 
-    ok "relationships/inbox"
+    ok "relationships/inbox", env: env, account: account, activities: activities
   end
 
   private def self.get_account(env)

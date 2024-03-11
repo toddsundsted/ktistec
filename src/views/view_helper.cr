@@ -1,27 +1,29 @@
 require "ecr"
 require "slang"
+require "kemal"
 
-# the following two macros were copied from kemal and kilt.
-# copying them here was necessary because kilt was removed from
-# kemal. we depended on kilt for rendering slang templates. see:
-# https://github.com/kemalcr/kemal/pull/618
+# Redefine the `render` macros provided by Kemal.
 
 # Render a view with a layout as the superview.
 #
 macro render(content, layout)
+  # Note: `__content_filename__` and `content_io` are magic variables
+  # used by Kemal's implementation of "content_for" and must be in
+  # scope for `yield_content` to work.
+
   __content_filename__ = {{content}}
 
   content_io = IO::Memory.new
   Ktistec::ViewHelper.embed {{content}}, content_io
-  content = content_io.to_s
+  %content = content_io.to_s
 
-  {% if layout %}
-    layout_io = IO::Memory.new
-    Ktistec::ViewHelper.embed {{layout}}, layout_io
-    layout_io.to_s
-  {% else %}
-    content
-  {% end %}
+  {% layout = "_layout_#{layout.gsub(%r[\/|\.], "_").id}" %}
+  Ktistec::ViewHelper.{{layout.id}}(
+    env,
+    yield_content("title"),
+    yield_content("head"),
+    %content
+  )
 end
 
 # Render a view with the given filename.
@@ -65,20 +67,36 @@ module Ktistec::ViewHelper
       render "./src/views/partials/paginator.html.slang"
     end
 
-    def maybe_wrap_link(str)
-      if str =~ %r{^[a-zA-Z0-9]+://}
-        uri = URI.parse(str)
-        port = uri.port.nil? ? "" : ":" + uri.port.to_s
-        path = uri.path.nil? ? "" : uri.path.to_s
-
-        # match the weird format used by mastodon
-        # see: https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb#L72
-        <<-LINK.gsub(/(\n|^ +)/, "")
-        <a href="#{str}" target="_blank" rel="nofollow noopener noreferrer me">
-        <span class="invisible">#{uri.scheme}://</span><span class="">#{uri.host}#{port}#{path}</span>
-        <span class="invisible"></span>
-        </a>
-        LINK
+    # Wraps a string in a link if it is a URL.
+    #
+    # By default, matches the weird format used by Mastodon:
+    # https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb
+    #
+    def wrap_link(str, include_scheme = false, length = 30, tag = :a)
+      uri = URI.parse(str)
+      if (scheme = uri.scheme) && (host = uri.host) && (path = uri.path)
+        first = include_scheme ? "#{scheme}://#{host}#{path}" : "#{host}#{path}"
+        rest = ""
+        if first.size > length
+          first, rest = first[0...length], first[length..-1]
+        end
+        String.build do |io|
+          if tag == :a
+            io << %Q|<a href="#{str}" target="_blank" rel="ugc">|
+          else
+            io << %Q|<#{tag}>|
+          end
+          unless include_scheme
+            io << %Q|<span class="invisible">#{scheme}://</span>|
+          end
+          if rest.presence
+            io << %Q|<span class="ellipsis">#{first}</span>|
+            io << %Q|<span class="invisible">#{rest}</span>|
+          else
+            io << %Q|<span>#{first}</span>|
+          end
+          io << %Q|</#{tag}>|
+        end
       else
         str
       end
@@ -89,6 +107,8 @@ module Ktistec::ViewHelper
       %Q|<span class="ui filter term">#{str}</span>|
     end
   end
+
+  extend ClassMethods
 
   macro included
     extend ClassMethods
@@ -302,7 +322,7 @@ module Ktistec::ViewHelper
           "field error" :
           "field"
       %name = {{field.id.stringify}}
-      %value = {{model}}.{{field.id}}.try { |string| HTML.escape(string) }
+      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
     {% else %}
       %classes = "field"
       %name = {{field.id.stringify}}
@@ -477,6 +497,12 @@ module Ktistec::ViewHelper
 
   ## General purpose helpers
 
+  # Returns the host.
+  #
+  macro host
+    Ktistec.host
+  end
+
   # Sanitizes HTML.
   #
   # For use in views:
@@ -530,19 +556,27 @@ module Ktistec::ViewHelper
 
   ## View helpers
 
-  def self._view___generic_html_slang__default_html_ecr(env, _message)
-    render "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr"
+  # The naming below matches the format of automatically generated
+  # view helpers. View helpers for partial are *not* automatically
+  # generated.
+
+  def self._layout_src_views_layouts_default_html_ecr(env, title, head, content)
+    render "src/views/layouts/default.html.ecr"
   end
 
-  def self._view___generic_html_slang(env, _message)
-    render "src/views/pages/generic.html.slang"
+  def self._view_src_views_partials_actor_panel_html_slang(env, actor)
+    render "src/views/partials/actor-panel.html.slang"
   end
 
-  def self._view___content_html_slang(env, object, author, actor, with_detail, for_thread)
+  def self._view_src_views_partials_collection_json_ecr(env, collection)
+    render "src/views/partials/collection.json.ecr"
+  end
+
+  def self._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, for_thread)
     render "src/views/partials/object/content.html.slang"
   end
 
-  def self._view___label_html_slang(env, author, actor)
+  def self._view_src_views_partials_object_label_html_slang(env, author, actor)
     render "src/views/partials/object/label.html.slang"
   end
 

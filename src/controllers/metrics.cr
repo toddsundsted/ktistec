@@ -107,7 +107,7 @@ class MetricsController
 
     labels = Chart.labels(*range, granularity: granularity)
 
-    ok "metrics/metrics"
+    ok "metrics/metrics", env: env, charts: charts, range: range, granularity: granularity, labels: labels
   end
 
   private def self.get_range(env)

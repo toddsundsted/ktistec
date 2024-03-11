@@ -32,7 +32,7 @@ crystal:
   datasets = charts.select(&.name.starts_with?(/heap-|free-|sqlite-/)).map do |chart|
     {
       label: chart.name,
-      data: chart.data(*range, granularity: granularity, predicate: Predicate::Average),
+      data: chart.data(*range, granularity: granularity, predicate: MetricsController::Chart::Predicate::Average),
       borderColor: (color = colors.next.to_s),
       backgroundColor: "#{color}80",
       type: "line",
@@ -43,7 +43,7 @@ crystal:
   datasets += charts.select(&.name.starts_with?(/server-/)).map do |chart|
     {
       label: chart.name,
-      data: chart.data(*range, granularity: granularity, predicate: Predicate::Summate),
+      data: chart.data(*range, granularity: granularity, predicate: MetricsController::Chart::Predicate::Summate),
       borderColor: (color = colors.next.to_s),
       backgroundColor: "#{color}80",
       type: "scatter",

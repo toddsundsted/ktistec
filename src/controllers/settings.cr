@@ -10,7 +10,7 @@ class SettingsController
 
     settings = Ktistec.settings
 
-    ok "settings/settings"
+    ok "settings/settings", env: env, account: account, actor: actor, settings: settings
   end
 
   get "/settings/actor" do |env|
@@ -35,7 +35,7 @@ class SettingsController
 
       redirect settings_path
     else
-      unprocessable_entity "settings/settings"
+      unprocessable_entity "settings/settings", env: env, account: account, actor: actor, settings: settings
     end
   end
 
@@ -52,7 +52,7 @@ class SettingsController
 
       redirect settings_path
     else
-      unprocessable_entity "settings/settings"
+      unprocessable_entity "settings/settings", env: env, account: account, actor: actor, settings: settings
     end
   end
 

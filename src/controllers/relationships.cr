@@ -16,7 +16,7 @@ class RelationshipsController
       bad_request
     end
 
-    ok "relationships/index"
+    ok "relationships/index", env: env, related: related
   end
 
   private def self.get_account(env)

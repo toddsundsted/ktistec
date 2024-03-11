@@ -109,6 +109,76 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".wrap_link" do
+    let(link) { "https://example.com/this-is-a-url" }
+
+    subject { XML.parse_html(self.class.wrap_link(link), PARSER_OPTIONS) }
+
+    it "wraps the link in an anchor" do
+      expect(subject.xpath_nodes("/a/@href")).to contain(link)
+    end
+
+    it "wraps the scheme in an invisible span" do
+      expect(subject.xpath_nodes("/a/span[contains(@class,'invisible')]/text()")).to contain("https://")
+    end
+
+    it "does not include the host and path in an ellipsis span" do
+      expect(subject.xpath_nodes("/a/span[not(contains(@class,'ellipsis'))]/text()")).to contain("example.com/this-is-a-url")
+    end
+
+    context "given a very long link" do
+      let(link) { "https://example.com/this-is-a-very-long-url" }
+
+      it "wraps the truncated host and path in an ellipsis span" do
+        expect(subject.xpath_nodes("/a/span[contains(@class,'ellipsis')]/text()")).to contain("example.com/this-is-a-very-lon")
+      end
+
+      it "wraps the remainder in an invisible span" do
+        expect(subject.xpath_nodes("/a/span[contains(@class,'invisible')]/text()")).to contain("g-url")
+      end
+
+      context "with length specified" do
+        subject { XML.parse_html(self.class.wrap_link(link, length: 20), PARSER_OPTIONS) }
+
+        it "wraps the truncated host and path in an ellipsis span" do
+          expect(subject.xpath_nodes("/a/span[contains(@class,'ellipsis')]/text()")).to contain("example.com/this-is-")
+        end
+
+        it "wraps the remainder in an invisible span" do
+          expect(subject.xpath_nodes("/a/span[contains(@class,'invisible')]/text()")).to contain("a-very-long-url")
+        end
+      end
+    end
+
+    context "with scheme included" do
+      subject { XML.parse_html(self.class.wrap_link(link, include_scheme: true), PARSER_OPTIONS) }
+
+      it "does not wrap the scheme in an invisible span" do
+        expect(subject.xpath_nodes("/a/span[contains(@class,'invisible')]/text()")).not_to contain("https://")
+      end
+
+      it "includes the scheme with the host and path" do
+        expect(subject.xpath_nodes("/a/span/text()")).to contain("https://example.com/this-is-a-")
+      end
+    end
+
+    context "with tag specified" do
+      subject { XML.parse_html(self.class.wrap_link(link, tag: :td), PARSER_OPTIONS) }
+
+      it "wraps the link in the tag" do
+        expect(subject.xpath_nodes("/td/span/text()")).to contain_exactly("https://", "example.com/this-is-a-url")
+      end
+    end
+
+    context "given a string" do
+      let(link) { "this is a string" }
+
+      it "returns the string" do
+        expect(self.class.wrap_link(link)).to eq(link)
+      end
+    end
+  end
+
   describe ".wrap_filter_term" do
     let(term) { "%f\\%o\\_o_" }
 
@@ -787,6 +857,12 @@ Spectator.describe "helpers" do
   end
 
   ## General purpose helpers
+
+  describe "host" do
+    it "returns the host" do
+      expect(host).to eq("https://test.test")
+    end
+  end
 
   describe "sanitize" do
     it "sanitizes HTML" do

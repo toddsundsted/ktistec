@@ -3,6 +3,9 @@ require "../models/task/refresh_actor"
 
 require "../models/relationship/content/follow/hashtag"
 require "../models/relationship/content/follow/mention"
+require "../models/relationship/content/notification/follow/hashtag"
+require "../models/relationship/content/notification/follow/mention"
+require "../models/relationship/content/notification/follow/thread"
 
 class ActorsController
   include Ktistec::Controller
@@ -18,7 +21,7 @@ class ActorsController
 
     actor = account.actor
 
-    ok "actors/actor"
+    ok "actors/actor", env: env, actor: actor
   end
 
   get "/actors/:username/public-posts" do |env|
@@ -32,7 +35,7 @@ class ActorsController
 
     objects = actor.public_posts(**pagination_params(env))
 
-    ok "actors/public_posts"
+    ok "actors/public_posts", env: env, actor: actor, objects: objects
   end
 
   get "/actors/:username/posts" do |env|
@@ -49,7 +52,7 @@ class ActorsController
 
     objects = actor.all_posts(**pagination_params(env))
 
-    ok "actors/posts"
+    ok "actors/posts", env: env, actor: actor, objects: objects
   end
 
   get "/actors/:username/timeline" do |env|
@@ -68,7 +71,7 @@ class ActorsController
 
     account.update_last_timeline_checked_at
 
-    ok "actors/timeline"
+    ok "actors/timeline", env: env, actor: actor, timeline: timeline
   end
 
   get "/actors/:username/notifications" do |env|
@@ -87,7 +90,7 @@ class ActorsController
 
     account.update_last_notifications_checked_at
 
-    ok "actors/notifications"
+    ok "actors/notifications", env: env, account: account, actor: actor, notifications: notifications
   end
 
   get "/actors/:username/drafts" do |env|
@@ -102,7 +105,7 @@ class ActorsController
 
     drafts = account.actor.drafts(**pagination_params(env))
 
-    ok "objects/index"
+    ok "objects/index", env: env, drafts: drafts ### wow, should this be called drafts instead of objects?
   end
 
   get "/remote/actors/:id" do |env|
@@ -110,7 +113,7 @@ class ActorsController
       not_found
     end
 
-    ok "actors/remote"
+    ok "actors/remote", env: env, actor: actor
   end
 
   post "/remote/actors/:id/block" do |env|

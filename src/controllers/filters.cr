@@ -9,7 +9,7 @@ class FiltersController
 
     terms = actor.terms(**pagination_params(env))
 
-    ok "filters/index"
+    ok "filters/index", env: env, terms: terms
   end
 
   post "/filters" do |env|
@@ -22,7 +22,7 @@ class FiltersController
 
       redirect filters_path
     else
-      unprocessable_entity "filters/form"
+      unprocessable_entity "filters/form", env: env, term: term
     end
   end
 

@@ -11,18 +11,18 @@ class HomeController
     if !Ktistec.settings.host.presence || !Ktistec.settings.site.presence
       settings = Ktistec.settings
 
-      ok "home/step_1"
+      ok "home/step_1", env: env, settings: settings
     elsif (accounts = Account.all).empty?
       account = Account.new("", "")
       actor = ActivityPub::Actor.new
 
       account.actor = actor
 
-      ok "home/step_2"
+      ok "home/step_2", env: env, account: account, actor: actor
     elsif (account = env.account?).nil?
       objects = ActivityPub::Object.public_posts(**pagination_params(env))
 
-      ok "home/index"
+      ok "home/index", env: env, accounts: accounts, objects: objects
     else
       redirect actor_path(account)
     end
@@ -37,7 +37,7 @@ class HomeController
 
         redirect home_path
       else
-        unprocessable_entity "home/step_1"
+        unprocessable_entity "home/step_1", env: env, settings: settings
       end
     elsif (accounts = Account.all).empty?
       params = step_2_params(env)
@@ -59,7 +59,7 @@ class HomeController
           {jwt: jwt}.to_json
         end
       else
-        unprocessable_entity "home/step_2"
+        unprocessable_entity "home/step_2", env: env, account: account, actor: actor
       end
     else
       not_found

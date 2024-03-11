@@ -36,8 +36,8 @@
   turbo-frame#main-timeline
     == render "src/views/actors/timeline.html.slang"
 - elsif !actor.blocked?
-  == render "src/views/partials/actor-panel.html.slang"
+  == Ktistec::ViewHelper._view_src_views_partials_actor_panel_html_slang(env, actor)
   - objects = actor.public_posts(**pagination_params(env))
   == render "src/views/actors/public_posts.html.slang"
 - else
-  == render "src/views/partials/actor-panel.html.slang"
+  == Ktistec::ViewHelper._view_src_views_partials_actor_panel_html_slang(env, actor)

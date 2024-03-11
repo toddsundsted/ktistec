@@ -6,17 +6,12 @@ class FooBarController
   include Ktistec::Controller
 
   skip_auth [
-    "/foo/bar/host",
     "/foo/bar/accepts",
     "/foo/bar/turbo-frame",
     "/foo/bar/created",
     "/foo/bar/redirect",
     "/foo/bar/ok"
   ]
-
-  get "/foo/bar/host" do |env|
-    {host: host}.to_json
-  end
 
   get "/foo/bar/accepts" do |env|
     if accepts?("text/html")
@@ -46,18 +41,11 @@ class FooBarController
   end
 
   get "/foo/bar/ok" do |env|
-    ok "views/index", basedir: "spec/spec_helper"
+    ok "views/index", _basedir: "spec/spec_helper", env: env
   end
 end
 
 Spectator.describe Ktistec::Controller do
-  describe "get /foo/bar/host" do
-    it "gets the host" do
-      get "/foo/bar/host"
-      expect(JSON.parse(response.body)["host"]).to eq("https://test.test")
-    end
-  end
-
   describe "get /foo/bar/accepts" do
     it "responds with html" do
       get "/foo/bar/accepts", HTTP::Headers{"Accept" => "text/html"}

@@ -46,10 +46,6 @@ module Ktistec
       include Ktistec::ViewHelper
     end
 
-    macro host
-      Ktistec.host
-    end
-
     macro accepts?(*mime_type)
       env.accepts?({{mime_type.splat}})
     end
@@ -70,68 +66,77 @@ module Ktistec
       next
     end
 
+    VIEWS = {} of String => {String, String, String?}
+
+    macro register_view(key, view, layout = nil, **opts)
+      {%
+        unless VIEWS[key]
+          VIEWS[key] = {opts.keys.splat, view, layout}
+        end
+      %}
+    end
+
+    macro finished
+      {% for name, options in VIEWS %}
+        {% opts, view, layout = options %}
+        {% if layout %}
+          def Ktistec::ViewHelper.{{name.id}}({{opts.id}})
+            render {{view}}, {{layout}}
+          end
+        {% else %}
+          def Ktistec::ViewHelper.{{name.id}}({{opts.id}})
+            render {{view}}
+          end
+        {% end %}
+      {% end %}
+    end
+
     # Define a simple response helper.
     #
-    macro def_response_helper(name, message, code)
-      macro {{name.id}}(message = nil, code = nil, basedir = "src/views", layout = nil, operation = nil, target = nil)
-        \{% if layout && (operation || target) %}
-          \{% raise "either layout may be specified, or operation and target" %}
-        \{% end %}
-        \{% if !layout && !operation && !target %}
-          \{% layout = "src/views/layouts/default.html.ecr" %}
-        \{% end %}
-        \{% if message.is_a?(StringLiteral) && message.includes?('/') %}
-          \{% if file_exists?("#{basedir.id}/#{message.id}.json.ecr") %}
+    macro def_response_helper(name, status_message, status_code)
+      macro {{name.id}}(_message = {{status_message}}, _status_code = {{status_code}}, _basedir = "src/views", **opts)
+        \{% if _message.is_a?(StringLiteral) && _message.includes?('/') %}
+          \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.json.ecr") %}
+            \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
+            register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
             if accepts?("application/ld+json", "application/activity+json", "application/json")
-              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.json.ecr"}}
+              halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
             end
           \{% end %}
-          \{% if file_exists?("#{basedir.id}/#{message.id}.text.ecr") %}
+          \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.text.ecr") %}
+            \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
+            register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
             if accepts?("text/plain")
-              halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.text.ecr"}}
+              halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
             end
           \{% end %}
-          \{% if file_exists?("#{basedir.id}/#{message.id}.html.slang") %}
-            \{% if layout %}
-              if accepts?("text/html")
-                halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.html.slang"}}, \{{layout}}
-              end
-            \{% end %}
-            \{% if operation && target %}
-              if accepts?("text/vnd.turbo-stream.html")
-                %body = render \{{"#{basedir.id}/#{message.id}.html.slang"}}
-                %body = %Q|<turbo-stream action="\{{operation.id}}" target="\{{target.id}}"><template>#{%body}</template></turbo-stream>|
-                halt env, status_code: \{{code}} || {{code}}, response: %body
-              end
-            \{% end %}
+          \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.html.slang") %}
+            \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}_layout_src_views_layouts_default_html_ecr" %}
+            register_view(\{{key}}, \{{view}}, "src/views/layouts/default.html.ecr", \{{opts.double_splat}})
+            if accepts?("text/html")
+              halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
+            end
           \{% end %}
-          \{% if file_exists?("#{basedir.id}/#{message.id}.json.ecr") %}
+          \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.json.ecr") %}
+            \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
+            register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
             accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
-            halt env, status_code: \{{code}} || {{code}}, response: render \{{"#{basedir.id}/#{message.id}.json.ecr"}}
+            halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
           \{% end %}
         \{% else %}
           if accepts?("application/ld+json", "application/activity+json", "application/json")
-            halt env, status_code: \{{code}} || {{code}}, response: ({msg: (\{{message}} || {{message}}).downcase}.to_json)
+            halt env, status_code: \{{_status_code}}, response: ({msg: \{{_message}}.downcase}.to_json)
           end
           if accepts?("text/plain")
-            halt env, status_code: \{{code}} || {{code}}, response: (\{{message}} || {{message}}).downcase
+            halt env, status_code: \{{_status_code}}, response: \{{_message}}.downcase
           end
-          \{% if layout %}
-            if accepts?("text/html")
-              _message = \{{message}} || {{message}}
-              halt env, status_code: \{{code}} || {{code}}, response: Ktistec::ViewHelper._view___generic_html_slang__default_html_ecr(env, _message)
-            end
-          \{% end %}
-          \{% if operation && target %}
-            if accepts?("text/vnd.turbo-stream.html")
-              _message = \{{message}} || {{message}}
-              %body = Ktistec::ViewHelper._view___generic_html_slang(env, _message)
-              %body = %Q|<turbo-stream action="\{{operation.id}}" target="\{{target.id}}"><template>#{%body}</template></turbo-stream>|
-              halt env, status_code: \{{code}} || {{code}}, response: %body
-            end
-          \{% end %}
+          if accepts?("text/html")
+            \{% key = "_view_src_views_pages_generic_html_slang_layout_src_views_layouts_default_html_ecr" %}
+            register_view(\{{key}}, "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr", env: env, message: \{{_message}})
+            halt env, status_code: \{{_status_code}}, response: Ktistec::ViewHelper.\{{key.id}}(env: env, message: \{{_message}})
+          end
           accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
-          halt env, status_code: \{{code}} || {{code}}, response: ({msg: (\{{message}} || {{message}}).downcase}.to_json)
+          halt env, status_code: \{{_status_code}}, response: ({msg: \{{_message}}.downcase}.to_json)
         \{% end %}
       end
     end

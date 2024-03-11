@@ -1,5 +1,6 @@
 .ui.basic.tiny.delete.modal
-  .header: i.trash.icon
+  .header
+    i.trash.icon
     | Delete This Post
   .content
     p
@@ -14,7 +15,8 @@
       i.checkmark.icon
       | Yes
 .ui.basic.tiny.block.actor.modal
-  .header: i.user.times.icon
+  .header
+    i.user.times.icon
     | Block This Actor
   .content
     p
@@ -29,7 +31,8 @@
       i.checkmark.icon
       | Yes
 .ui.basic.tiny.block.object.modal
-  .header: i.times.icon
+  .header
+    i.times.icon
     | Block This Object
   .content
     p

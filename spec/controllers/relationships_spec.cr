@@ -14,30 +14,12 @@ Spectator.describe RelationshipsController do
     let(other1) { register.actor }
     let(other2) { register.actor }
 
-    let_create!(
-      :follow_relationship, named: :relationship1,
-      actor: actor,
-      object: other1,
-      confirmed: true,
-      visible: true
-    )
-    let_create!(
-      :follow_relationship, named: :relationship2,
-      actor: actor,
-      object: other2
-    )
-    let_create!(
-      :follow_relationship, named: :relationship3,
-      actor: other1,
-      object: other2
-    )
-
-    it "returns 404 if not found" do
+    it "returns 404 if actor does not exist" do
       get "/actors/0/following", HTML_HEADERS
       expect(response.status_code).to eq(404)
     end
 
-    it "returns 404 if not found" do
+    it "returns 404 if actor does not exist" do
       get "/actors/0/following", JSON_HEADERS
       expect(response.status_code).to eq(404)
     end
@@ -52,47 +34,131 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(401)
     end
 
-    context "when unauthorized" do
-      it "renders only the related public actors" do
-        get "/actors/#{actor.username}/following", HTML_HEADERS
-        expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).to contain(other1.iri)
-        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).not_to contain(other2.iri)
+    context "when relationship is following" do
+      let_create!(
+        :follow_relationship, named: :relationship1,
+        actor: actor,
+        object: other1,
+        confirmed: true,
+        visible: true
+      )
+      let_create!(
+        :follow_relationship, named: :relationship2,
+        actor: actor,
+        object: other2
+      )
+      let_create!(
+        :follow_relationship, named: :relationship3,
+        actor: other1,
+        object: other2
+      )
+
+      context "when unauthorized" do
+        it "renders only the related public actors" do
+          get "/actors/#{actor.username}/following", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).to contain(other1.iri)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).not_to contain(other2.iri)
+        end
+
+        it "renders only the related public actors" do
+          get "/actors/#{actor.username}/following", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain(other1.iri)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).not_to contain(other2.iri)
+        end
       end
 
-      it "renders only the related public actors" do
-        get "/actors/#{actor.username}/following", JSON_HEADERS
-        expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain(other1.iri)
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).not_to contain(other2.iri)
+      context "when authorized" do
+        sign_in(as: actor.username)
+
+        it "renders all the related actors" do
+          get "/actors/#{actor.username}/following", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).to contain(other1.iri, other2.iri)
+        end
+
+        it "renders all the related actors" do
+          get "/actors/#{actor.username}/following", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain(other1.iri, other2.iri)
+        end
+
+        it "renders only the related public actors" do
+          get "/actors/#{other1.username}/following", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//li[@class='actor']//a/@href")).to be_empty
+        end
+
+        it "renders only the related public actors" do
+          get "/actors/#{other1.username}/following", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
+        end
       end
     end
 
-    context "when authorized" do
-      sign_in(as: actor.username)
+    context "when relationship is followers" do
+      let_create!(
+        :follow_relationship, named: :relationship1,
+        actor: other1,
+        object: actor,
+        confirmed: true,
+        visible: true
+      )
+      let_create!(
+        :follow_relationship, named: :relationship2,
+        actor: other2,
+        object: actor
+      )
+      let_create!(
+        :follow_relationship, named: :relationship3,
+        actor: other1,
+        object: other2
+      )
 
-      it "renders all the related actors" do
-        get "/actors/#{actor.username}/following", HTML_HEADERS
-        expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).to contain(other1.iri, other2.iri)
+      context "when unauthorized" do
+        it "renders only the related public actors" do
+          get "/actors/#{actor.username}/followers", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).to contain(other1.iri)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).not_to contain(other2.iri)
+        end
+
+        it "renders only the related public actors" do
+          get "/actors/#{actor.username}/followers", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain(other1.iri)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).not_to contain(other2.iri)
+        end
       end
 
-      it "renders all the related actors" do
-        get "/actors/#{actor.username}/following", JSON_HEADERS
-        expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain(other1.iri, other2.iri)
-      end
+      context "when authorized" do
+        sign_in(as: actor.username)
 
-      it "renders only the related public actors" do
-        get "/actors/#{other1.username}/following", HTML_HEADERS
-        expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("//li[@class='actor']//a/@href")).to be_empty
-      end
+        it "renders all the related actors" do
+          get "/actors/#{actor.username}/followers", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'card')]//@href")).to contain(other1.iri, other2.iri)
+        end
 
-      it "renders only the related public actors" do
-        get "/actors/#{other1.username}/following", JSON_HEADERS
-        expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
+        it "renders all the related actors" do
+          get "/actors/#{actor.username}/followers", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain(other1.iri, other2.iri)
+        end
+
+        it "renders only the related public actors" do
+          get "/actors/#{other1.username}/followers", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//li[@class='actor']//a/@href")).to be_empty
+        end
+
+        it "renders only the related public actors" do
+          get "/actors/#{other1.username}/followers", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
+        end
       end
     end
   end

@@ -6,11 +6,11 @@ shards:
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.12.0
+    version: 0.13.1
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
-    version: 0.3.0
+    version: 0.3.1
 
   host_meta:
     git: https://github.com/toddsundsted/host_meta.git
@@ -42,7 +42,7 @@ shards:
 
   slang:
     git: https://github.com/toddsundsted/slang.git
-    version: 1.7.1+git.commit.9adf14a5a1ca26c74df261d9a0e5e9a567f58566
+    version: 2.0.0
 
   spectator:
     git: https://gitlab.com/arctic-fox/spectator.git
@@ -50,7 +50,7 @@ shards:
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
-    version: 0.20.0
+    version: 0.21.0
 
   web_finger:
     git: https://github.com/toddsundsted/web_finger.git

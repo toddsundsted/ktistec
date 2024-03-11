@@ -161,5 +161,79 @@ Spectator.describe RelationshipsController do
         end
       end
     end
+
+    context "when relationship is likes" do
+      let_create!(:object, named: :object1, attributed_to: other1)
+      let_create!(:object, named: :object2, attributed_to: other2)
+      let_create!(:like, named: nil, actor: actor, object: object1)
+      let_create!(:like, named: nil, object: object2)
+
+      context "when unauthorized" do
+        it "returns 401" do
+          get "/actors/#{actor.username}/likes", HTML_HEADERS
+          expect(response.status_code).to eq(401)
+        end
+
+        it "returns 401" do
+          get "/actors/#{actor.username}/likes", JSON_HEADERS
+          expect(response.status_code).to eq(401)
+        end
+      end
+
+      context "when authorized" do
+        sign_in(as: actor.username)
+
+        it "renders all the related objects" do
+          get "/actors/#{actor.username}/likes", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain("object-#{object1.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).not_to contain("object-#{object2.id}")
+        end
+
+        it "renders all the related objects" do
+          get "/actors/#{actor.username}/likes", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain(object1.iri)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).not_to contain(object2.iri)
+        end
+      end
+    end
+
+    context "when relationship is shares" do
+      let_create!(:object, named: :object1, attributed_to: other1)
+      let_create!(:object, named: :object2, attributed_to: other2)
+      let_create!(:announce, named: nil, actor: actor, object: object1)
+      let_create!(:announce, named: nil, object: object2)
+
+      context "when unauthorized" do
+        it "returns 401" do
+          get "/actors/#{actor.username}/shares", HTML_HEADERS
+          expect(response.status_code).to eq(401)
+        end
+
+        it "returns 401" do
+          get "/actors/#{actor.username}/shares", JSON_HEADERS
+          expect(response.status_code).to eq(401)
+        end
+      end
+
+      context "when authorized" do
+        sign_in(as: actor.username)
+
+        it "renders all the related objects" do
+          get "/actors/#{actor.username}/shares", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain("object-#{object1.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).not_to contain("object-#{object2.id}")
+        end
+
+        it "renders all the related objects" do
+          get "/actors/#{actor.username}/shares", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain(object1.iri)
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).not_to contain(object2.iri)
+        end
+      end
+    end
   end
 end

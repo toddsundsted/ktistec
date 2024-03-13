@@ -64,7 +64,7 @@ module Ktistec::ViewHelper
     def paginate(env, collection)
       query = env.params.query
       page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1
-      render "./src/views/partials/paginator.html.slang"
+      render "src/views/partials/paginator.html.slang"
     end
 
     # Wraps a string in a link if it is a URL.

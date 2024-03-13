@@ -956,7 +956,7 @@ Spectator.describe ActivityPub::Actor do
       let_build(:actor, named: actor{{index}})
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
       let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(:outbox_relationship, named: nil, owner: subject, activity: activity{{index}})
+      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
     end
 
     post(1)
@@ -999,8 +999,14 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
-    it "filters out objects belonging to undone activities" do
+    it "filters out posts belonging to undone activities" do
       activity5.undo!
+      expect(subject.public_posts(1, 2)).to eq([object4, object3])
+    end
+
+    # only local (not cached) actors have an outbox
+    it "filters out posts that are not in an outbox" do
+      outbox5.destroy
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
@@ -1021,7 +1027,7 @@ Spectator.describe ActivityPub::Actor do
       let_build(:actor, named: actor{{index}})
       let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
       let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(:outbox_relationship, named: nil, owner: subject, activity: activity{{index}})
+      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
     end
 
     post(1)
@@ -1064,8 +1070,14 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
     end
 
-    it "filters out objects belonging to undone activities" do
+    it "filters out posts belonging to undone activities" do
       activity5.undo!
+      expect(subject.all_posts(1, 2)).to eq([object4, object3])
+    end
+
+    # only local (not cached) actors have an outbox
+    it "filters out posts that are not in an outbox" do
+      outbox5.destroy
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
     end
 

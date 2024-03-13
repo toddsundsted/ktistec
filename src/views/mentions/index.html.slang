@@ -5,7 +5,7 @@ turbo-frame#mention_page_mention_controls
     .ui.segment
       p
         a href=mention_path @#{mention}
-        - if (count = Tag::Mention.count_objects(mention)) > 0
+        - if count > 0
           span< #{pluralize(count, "mention")}
     - if env.account?
       .ui.basic.segment

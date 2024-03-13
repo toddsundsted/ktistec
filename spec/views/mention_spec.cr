@@ -19,13 +19,15 @@ Spectator.describe "index.html.slang" do
 
   let(follow) { nil }
 
-  private def render_index_html_slang(env, collection, follow)
+  let(count) { 0 }
+
+  private def render_index_html_slang(env, collection, follow, count)
     render "./src/views/mentions/index.html.slang"
   end
 
   subject do
     begin
-      XML.parse_html(render_index_html_slang(env, collection, follow))
+      XML.parse_html(render_index_html_slang(env, collection, follow, count))
     rescue XML::Error
       XML.parse_html("<div/>").document
     end

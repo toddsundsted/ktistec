@@ -39,6 +39,14 @@ Spectator.describe "thread.html.slang" do
     expect(subject.xpath_nodes("//form[button[text()='Follow']]")).to be_empty
   end
 
+  context "given a follow" do
+    let_create!(:follow_thread_relationship, named: follow, actor: account.actor, name: "https://remote/thread")
+
+    it "does not render a button to unfollow the thread" do
+      expect(subject.xpath_nodes("//form[button[text()='Unfollow']]")).to be_empty
+    end
+  end
+
   it "does not render information about the task" do
     expect(subject.xpath_nodes("//p[@class='task']")).to be_empty
   end
@@ -56,6 +64,14 @@ Spectator.describe "thread.html.slang" do
 
     it "renders a button to follow the thread" do
       expect(subject.xpath_nodes("//form[button[text()='Follow']]")).not_to be_empty
+    end
+
+    context "given a follow" do
+      let_create!(:follow_thread_relationship, named: follow, actor: account.actor, name: "https://remote/thread")
+
+      it "renders a button to unfollow the thread" do
+        expect(subject.xpath_nodes("//form[button[text()='Unfollow']]")).not_to be_empty
+      end
     end
 
     it "does not render information about the task" do

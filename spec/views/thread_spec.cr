@@ -13,22 +13,27 @@ Spectator.describe "thread.html.slang" do
 
   let(env) { env_factory("GET", "/objects/123/thread") }
 
+  let_create(:object)
+
+  let(thread) { [object] }
+
+  let(follow) { nil }
+
+  let(task) { nil }
+
+  private def render_thread_html_slang(env, thread, follow, task)
+    render "./src/views/objects/thread.html.slang"
+  end
+
   subject do
     begin
-      follow = nil
-      XML.parse_html(render "./src/views/objects/thread.html.slang")
+      XML.parse_html(render_thread_html_slang(env, thread, follow, task))
     rescue XML::Error
       XML.parse_html("<div/>").document
     end
   end
 
   let(account) { register }
-
-  let_create(:object)
-
-  let(thread) { [object] }
-
-  let(task) { nil }
 
   it "does not render a button to follow the thread" do
     expect(subject.xpath_nodes("//form[button[text()='Follow']]")).to be_empty

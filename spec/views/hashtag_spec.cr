@@ -18,16 +18,6 @@ Spectator.describe "index.html.slang" do
 
   before_each { env.params.url["hashtag"] = hashtag }
 
-  subject do
-    begin
-      XML.parse_html(render "./src/views/tags/index.html.slang")
-    rescue XML::Error
-      XML.parse_html("<div/>").document
-    end
-  end
-
-  let(account) { register }
-
   let(collection) { Ktistec::Util::PaginatedArray(ActivityPub::Object).new }
 
   let(follow) { nil }
@@ -35,6 +25,20 @@ Spectator.describe "index.html.slang" do
   let(task) { nil }
 
   let(count) { 0 }
+
+  private def render_index_html_slang(env, collection, follow, task, count)
+    render "./src/views/tags/index.html.slang"
+  end
+
+  subject do
+    begin
+      XML.parse_html(render_index_html_slang(env, collection, follow, task, count))
+    rescue XML::Error
+      XML.parse_html("<div/>").document
+    end
+  end
+
+  let(account) { register }
 
   it "does not render a button to follow the hashtag" do
     expect(subject.xpath_nodes("//form//button")).to be_empty

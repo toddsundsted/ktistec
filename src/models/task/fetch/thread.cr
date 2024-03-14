@@ -208,9 +208,6 @@ class Task
               Log.info { "fetch_out [#{id}] - cache invalidated - #{state.cache.try(&.size)} items remaining" }
               state.cache = nil
             end
-            if !state.cache.presence
-              state.cache = nil
-            end
             state.cache.presence || begin
               state.cached_object = node.id
               state.cache =

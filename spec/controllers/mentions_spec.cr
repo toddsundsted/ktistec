@@ -91,8 +91,6 @@ Spectator.describe MentionsController do
 
   TURBO_FRAME = HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "mention_page_mention_controls"}
 
-  alias Mention = Relationship::Content::Follow::Mention
-
   describe "POST /mentions/follow" do
     create_object_with_mentions(1, "foo@remote")
     create_object_with_mentions(2, "bar@remote")
@@ -112,16 +110,7 @@ Spectator.describe MentionsController do
 
       it "follows the mention" do
         post "/mentions/foo%40remote/follow"
-        expect(Mention.all.map(&.to_iri)).to contain_exactly("foo@remote")
-      end
-
-      context "given a follow" do
-        let_create!(:follow_mention_relationship, named: nil, actor: author, name: "foo@remote")
-
-        it "returns 400" do
-          post "/mentions/foo%40remote/follow"
-          expect(response.status_code).to eq(400)
-        end
+        expect(Relationship::Content::Follow::Mention.all.map(&.to_iri)).to contain_exactly("foo@remote")
       end
 
       context "within a turbo-frame" do
@@ -133,6 +122,32 @@ Spectator.describe MentionsController do
         it "renders an unfollow button" do
           post "/mentions/foo%40remote/follow", TURBO_FRAME
           expect(body.xpath_nodes("//*[@id='mention_page_mention_controls']//button")).to have("Unfollow")
+        end
+      end
+
+      context "given an existing follow" do
+        let_create!(:follow_mention_relationship, named: nil, actor: author, name: "foo@remote")
+
+        it "succeeds" do
+          post "/mentions/foo%40remote/follow"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "does not change the count of mention relationships" do
+          expect { post "/mentions/foo%40remote/follow" }.
+            not_to change { Relationship::Content::Follow::Mention.count(name: "foo@remote") }
+        end
+
+        context "within a turbo-frame" do
+          it "succeeds" do
+            post "/mentions/foo%40remote/follow", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+          end
+
+          it "renders an unfollow button" do
+            post "/mentions/foo%40remote/follow", TURBO_FRAME
+            expect(body.xpath_nodes("//*[@id='mention_page_mention_controls']//button")).to have("Unfollow")
+          end
         end
       end
 
@@ -155,12 +170,24 @@ Spectator.describe MentionsController do
     context "when authenticated" do
       sign_in(as: author.username)
 
-      it "returns 400" do
+      it "succeeds" do
         post "/mentions/foo%40remote/unfollow"
-        expect(response.status_code).to eq(400)
+        expect(response.status_code).to eq(302)
       end
 
-      context "given a follow" do
+      context "within a turbo-frame" do
+        it "succeeds" do
+          post "/mentions/foo%40remote/unfollow", TURBO_FRAME
+          expect(response.status_code).to eq(200)
+        end
+
+        it "renders a follow button" do
+          post "/mentions/foo%40remote/unfollow", TURBO_FRAME
+          expect(body.xpath_nodes("//*[@id='mention_page_mention_controls']//button")).to have("Follow")
+        end
+      end
+
+      context "given an existing follow" do
         let_create!(:follow_mention_relationship, named: nil, actor: author, name: "foo@remote")
 
         it "succeeds" do
@@ -170,7 +197,7 @@ Spectator.describe MentionsController do
 
         it "unfollows the mention" do
           post "/mentions/foo%40remote/unfollow"
-          expect(Mention.all.map(&.to_iri)).to be_empty
+          expect(Relationship::Content::Follow::Mention.all.map(&.to_iri)).to be_empty
         end
 
         context "within a turbo-frame" do

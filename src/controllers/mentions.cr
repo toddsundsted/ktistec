@@ -26,11 +26,8 @@ class MentionsController
 
     not_found if collection.empty?
 
-    if Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
-      bad_request
-    end
-
-    follow = Relationship::Content::Follow::Mention.new(actor: env.account.actor, name: mention).save
+    follow = Relationship::Content::Follow::Mention.find_or_new(actor: env.account.actor, name: mention)
+    follow.save if follow.new_record?
 
     if turbo_frame?
       ok "mentions/index", env: env, mention: mention, collection: collection, count: count, follow: follow
@@ -47,11 +44,8 @@ class MentionsController
 
     not_found if collection.empty?
 
-    unless (follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention))
-      bad_request
-    end
-
-    follow.destroy
+    follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
+    follow.destroy if follow
 
     if turbo_frame?
       ok "mentions/index", env: env, mention: mention, collection: collection, count: count, follow: nil

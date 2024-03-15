@@ -212,9 +212,9 @@ Spectator.describe Task::Fetch::Hashtag do
         expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
       end
 
-      it "fetches the hashtag collection" do
+      it "fetches the hashtag collection once" do
         subject.perform
-        expect(HTTP::Client.requests).to have("GET #{hashtag.iri}")
+        expect(HTTP::Client.requests.count { |request| request === "GET #{hashtag.iri}"}).to eq(1)
       end
 
       it "fetches all the objects from the collection" do
@@ -247,6 +247,11 @@ Spectator.describe Task::Fetch::Hashtag do
           expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
         end
 
+        # the following tests check to ensure prior behavior that was
+        # reverted is not reintroduced.  we _do not_ want to check
+        # collections more than once during a run, to avoid spamming
+        # other sites.
+
         context "and a later object" do
           # an uncached object
           let_build_object(4, "https://remote/tags/hashtag")
@@ -257,14 +262,14 @@ Spectator.describe Task::Fetch::Hashtag do
             HTTP::Client.collections << hashtag.assign(items_iris: [object1.iri, object2.iri, object3.iri, object4.iri])
           end
 
-          it "fetches the object" do
+          it "does not fetch the object" do
             subject.perform
-            expect(HTTP::Client.requests).to have("GET #{object4.iri}")
+            expect(HTTP::Client.requests).not_to have("GET #{object4.iri}")
           end
 
-          it "sets the next attempt in the near future" do
+          it "sets the next attempt in the far future" do
             subject.perform
-            expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
+            expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
           end
         end
 

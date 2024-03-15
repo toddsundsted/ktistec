@@ -124,6 +124,15 @@ class Task
     # fetches/network requests for new objects.
     #
     def perform(maximum = 10)
+      # look for replies that were added by some other means since
+      # the last run. handles the regular arrival of objects via
+      # ActivityPub.
+      if (last_attempt_at = self.last_attempt_at)
+        ActivityPub::Object.where("thread = ? AND created_at > ?", thread, last_attempt_at).each do |reply|
+          node = State::Node.new(reply.id.not_nil!)
+          state << node unless state.nodes.includes?(node)
+        end
+      end
       # if this task last ran in the immediate past, assume the
       # maximum number of objects were fetched and this is a
       # "continuation" of that run. this handles the edge case where
@@ -182,6 +191,8 @@ class Task
       end
     end
 
+    property been_fetched : Array(String) = [] of String
+
     # Fetches out through the horizon.
     #
     private def fetch_out(horizon)
@@ -209,6 +220,10 @@ class Task
               state.cache = nil
             end
             state.cache.presence || begin
+              # only fetch a collection once per run
+              next if been_fetched.includes?(object.iri)
+              been_fetched << object.iri
+
               state.cached_object = node.id
               state.cache =
                 if (temporary = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))

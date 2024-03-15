@@ -147,6 +147,8 @@ class Task
       end
     end
 
+    property been_fetched : Array(String) = [] of String
+
     # Fetches one new object tagged with the hashtag.
     #
     # Fetches and returns a new object or `nil` if no new object is
@@ -161,6 +163,10 @@ class Task
           state.cache = nil
         end
         state.cache.presence || begin
+          # only fetch a collection once per run
+          next if been_fetched.includes?(node.href)
+          been_fetched << node.href
+
           state.cached_collection = node.href
           state.cache =
             if (collection = ActivityPub::Collection.dereference?(source, node.href))

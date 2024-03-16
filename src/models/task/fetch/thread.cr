@@ -120,10 +120,10 @@ class Task
 
     # Fetches objects in the thread.
     #
-    # On each invocation, performs at most `maximum` (default 10)
+    # On each invocation, performs at most `maximum` (default 100)
     # fetches/network requests for new objects.
     #
-    def perform(maximum = 10)
+    def perform(maximum = 100)
       # look for replies that were added by some other means since
       # the last run. handles the regular arrival of objects via
       # ActivityPub.

@@ -688,4 +688,10 @@ Spectator.describe Task::Fetch::Hashtag::State do
       expect(subject.prioritize!).to eq([node3, node4, node1, node2])
     end
   end
+
+  describe "#last_success_at" do
+    it "returns the time of the most recent successful fetch" do
+      expect(subject.last_success_at).to eq(node3.last_success_at)
+    end
+  end
 end

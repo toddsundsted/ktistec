@@ -65,6 +65,10 @@ class Task
         nodes.sort_by!(&.delta).dup
       end
 
+      def last_success_at
+        nodes.map(&.last_success_at).max?
+      end
+
       class DuplicateNodeError < Exception
       end
     end

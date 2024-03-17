@@ -826,6 +826,30 @@ Spectator.describe Task::Fetch::Thread do
       end
     end
   end
+
+  describe "#best_root" do
+    let_build(:object, named: :root)
+    let_create(:object, in_reply_to_iri: root.iri)
+
+    subject do
+      described_class.new(
+        source: source,
+        thread: object.thread
+      ).save
+    end
+
+    it "returns the object" do
+      expect(subject.best_root).to eq(object)
+    end
+
+    context "when the root it cached" do
+      before_each { root.save }
+
+      it "returns the root" do
+        expect(subject.best_root).to eq(root)
+      end
+    end
+  end
 end
 
 Spectator.describe Task::Fetch::Thread::State do

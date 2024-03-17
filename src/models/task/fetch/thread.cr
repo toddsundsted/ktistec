@@ -98,6 +98,18 @@ class Task
     derived thread : String, aliased_to: subject_iri
     validates(thread) { "must not be blank" if thread.blank? }
 
+    # Finds the best root object.
+    #
+    # This will be the actual root object, if the root object has been
+    # fetched and is cached.  Otherwise, it will be an object in the
+    # incomplete thread.
+    #
+    def best_root
+      ActivityPub::Object.where("thread = ? AND in_reply_to_iri IS NULL LIMIT 1", thread).first? ||
+        ActivityPub::Object.where("thread = ? AND in_reply_to_iri = thread LIMIT 1", thread).first? ||
+        raise NotFound.new("ActivityPub::Object thread=#{thread}: not found")
+    end
+
     # Finds an existing task or instantiates a new task.
     #
     # If `thread` (or `subject_iri`) is passed as an option, search

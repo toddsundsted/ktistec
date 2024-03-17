@@ -166,7 +166,6 @@ class Task
           # only fetch a collection once per run
           next if been_fetched.includes?(node.href)
           been_fetched << node.href
-
           state.cached_collection = node.href
           state.cache =
             if (collection = ActivityPub::Collection.dereference?(source, node.href))
@@ -177,7 +176,7 @@ class Task
                 url = uri.resolve("/api/v1/timelines/tag/#{$1}").to_s
                 headers = HTTP::Headers{"Accept" => "application/json"}
                 Ktistec::Open.open?(source, url, headers) do |response|
-                  Log.info { "fetch_one (API) [#{id}] - iri: #{url}" }
+                  Log.info { "fetch_one [#{id}] - iri: #{url}" }
                   Array(JSON::Any).from_json(response.body).reduce([] of String) do |items, item|
                     if (item = item.as_h?) && (item = item.dig?("uri")) && (item = item.as_s?)
                       items << item
@@ -185,11 +184,14 @@ class Task
                     items
                   end
                 rescue JSON::Error
-                  Log.warn { "fetch_one (API) [#{id}] - JSON response parse error" }
+                  Log.warn { "fetch_one [#{id}] - JSON response parse error" }
                 end
               end
             end
-          size = state.cache.try(&.size) || 0
+          unless (size = state.cache.try(&.size))
+            Log.info { "fetch_one [#{id}] - iri: #{node.href}" }
+            size = 0
+          end
           Log.info { "fetch_one [#{id}] - #{size} items" }
         end
         while (cache = state.cache) && (item = cache.shift?)

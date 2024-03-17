@@ -201,18 +201,18 @@ class Task
         now = Time.utc
         if object
           if object.local?
-            Log.info { "fetch_out (local) [#{id}] - iri: #{object.iri}" }
+            Log.info { "fetch_out [#{id}] - iri: #{object.iri}" }
             node.last_attempt_at = now
             ids = state.nodes.map(&.id)
-            ActivityPub::Object.where(in_reply_to_iri: object.iri)
-              .each do |reply|
+            size =
+              ActivityPub::Object.where(in_reply_to_iri: object.iri).count do |reply|
                 unless reply.id.in?(ids)
                   node.last_success_at = now
                   state << State::Node.new(reply.id.not_nil!)
                 end
-            end
+              end
+            Log.info { "fetch_out [#{id}] - #{size} items" }
           else
-            Log.info { "fetch_out (remote) [#{id}] - iri: #{object.iri}" }
             node.last_attempt_at = now
             ids = state.nodes.map(&.id)
             if state.cache.presence && state.cached_object != node.id
@@ -223,17 +223,20 @@ class Task
               # only fetch a collection once per run
               next if been_fetched.includes?(object.iri)
               been_fetched << object.iri
-
               state.cached_object = node.id
               state.cache =
                 if (temporary = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))
+                  Log.info { "fetch_out [#{id}] - iri: #{object.iri}" }
                   if (replies = temporary.replies?(source, dereference: true))
                     if (iris = replies.all_item_iris(source))
                       iris
                     end
                   end
                 end
-              size = state.cache.try(&.size) || 0
+              unless (size = state.cache.try(&.size))
+                Log.info { "fetch_out [#{id}] - iri: #{object.iri}" }
+                size = 0
+              end
               Log.info { "fetch_out [#{id}] - #{size} items" }
             end
             while (cache = state.cache) && (item = cache.shift?)

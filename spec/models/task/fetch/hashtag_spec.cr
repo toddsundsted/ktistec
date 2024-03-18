@@ -635,6 +635,19 @@ Spectator.describe Task::Fetch::Hashtag do
       end
     end
   end
+
+  describe "#path_to" do
+    subject do
+      described_class.new(
+        source: source,
+        name: "hashtag"
+      ).save
+    end
+
+    it "returns the path to the hashtag page" do
+      expect(subject.path_to).to eq("/tags/hashtag")
+    end
+  end
 end
 
 Spectator.describe Task::Fetch::Hashtag::State::Node do

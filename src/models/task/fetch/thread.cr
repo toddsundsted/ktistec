@@ -4,6 +4,7 @@ require "../../activity_pub/actor"
 require "../../activity_pub/object"
 require "../../activity_pub/collection"
 require "../../../rules/content_rules"
+require "../../../views/view_helper"
 
 class Task
   # Fetch a thread.
@@ -297,6 +298,12 @@ class Task
           end
         end
       end
+    end
+
+    # Returns the path to the thread index page.
+    #
+    def path_to
+      Ktistec::ViewHelper.remote_thread_path(best_root, anchor: false)
     end
   end
 end

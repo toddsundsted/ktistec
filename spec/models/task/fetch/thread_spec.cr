@@ -850,6 +850,21 @@ Spectator.describe Task::Fetch::Thread do
       end
     end
   end
+
+  describe "#path_to" do
+    let_create(:object)
+
+    subject do
+      described_class.new(
+        source: source,
+        thread: object.thread
+      ).save
+    end
+
+    it "returns the path to the thread page" do
+      expect(subject.path_to).to eq("/remote/objects/#{object.id}/thread")
+    end
+  end
 end
 
 Spectator.describe Task::Fetch::Thread::State do

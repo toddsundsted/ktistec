@@ -3,6 +3,7 @@ require "./mixins/fetcher"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
 require "../../../rules/content_rules"
+require "../../../views/view_helper"
 
 class Task
   # Fetch a hashtag.
@@ -213,6 +214,12 @@ class Task
           end
         end
       end
+    end
+
+    # Returns the path to the hashtag index page.
+    #
+    def path_to
+      Ktistec::ViewHelper.hashtag_path(name)
     end
   end
 end

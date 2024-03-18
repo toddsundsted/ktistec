@@ -582,6 +582,14 @@ module Ktistec::ViewHelper
 
   ## Path helpers
 
+  # notes:
+  # 1) path helpers that use other path helpers should do so
+  # explicitly via `Ktistec::ViewHelper` so that they can be used
+  # without requiring the caller include the `Ktistec::ViewHelper`
+  # module.
+  # 2) macro conditionals should be used to sequester code paths that
+  # require `env` from code paths that do not.
+
   macro back_path
     env.request.headers.fetch("Referer", "/")
   end
@@ -611,7 +619,11 @@ module Ktistec::ViewHelper
   end
 
   macro filter_path(filter = nil)
-    "/filters/#{{{filter}}.try(&.id) || env.params.url["id"]}"
+    {% if filter %}
+      "/filters/#{{{filter}}.id}"
+    {% else %}
+      "/filters/#{env.params.url["id"]}"
+    {% end %}
   end
 
   macro metrics_path
@@ -619,15 +631,27 @@ module Ktistec::ViewHelper
   end
 
   macro remote_activity_path(activity = nil)
-    "/remote/activities/#{{{activity}}.try(&.id) || env.params.url["id"]}"
+    {% if activity %}
+      "/remote/activities/#{{{activity}}.id}"
+    {% else %}
+      "/remote/activities/#{env.params.url["id"]}"
+    {% end %}
   end
 
   macro activity_path(activity = nil)
-    "/activities/#{{{activity}}.try(&.uid) || env.params.url["id"]}"
+    {% if activity %}
+      "/activities/#{{{activity}}.uid}"
+    {% else %}
+      "/activities/#{env.params.url["id"]}"
+    {% end %}
   end
 
   macro anchor(object = nil)
-    "object-#{{{object}}.try(&.id) || env.params.url["id"]}"
+    {% if object %}
+      "object-#{{{object}}.id}"
+    {% else %}
+      "object-#{env.params.url["id"]}"
+    {% end %}
   end
 
   macro objects_path
@@ -635,106 +659,142 @@ module Ktistec::ViewHelper
   end
 
   macro remote_object_path(object = nil)
-    "/remote/objects/#{{{object}}.try(&.id) || env.params.url["id"]}"
+    {% if object %}
+      "/remote/objects/#{{{object}}.id}"
+    {% else %}
+      "/remote/objects/#{env.params.url["id"]}"
+    {% end %}
   end
 
   macro object_path(object = nil)
-    "/objects/#{{{object}}.try(&.uid) || env.params.url["id"]}"
+    {% if object %}
+      "/objects/#{{{object}}.uid}"
+    {% else %}
+      "/objects/#{env.params.url["id"]}"
+    {% end %}
   end
 
-  macro remote_thread_path(object = nil)
-    "#{remote_object_path({{object}})}/thread##{anchor({{object}})}"
+  macro remote_thread_path(object = nil, anchor = true)
+    {% if anchor %}
+      "#{Ktistec::ViewHelper.remote_object_path({{object}})}/thread##{Ktistec::ViewHelper.anchor({{object}})}"
+    {% else %}
+      "#{Ktistec::ViewHelper.remote_object_path({{object}})}/thread"
+    {% end %}
   end
 
-  macro thread_path(object = nil)
-    "#{object_path({{object}})}/thread##{anchor({{object}})}"
+  macro thread_path(object = nil, anchor = true)
+    {% if anchor %}
+      "#{Ktistec::ViewHelper.object_path({{object}})}/thread##{Ktistec::ViewHelper.anchor({{object}})}"
+    {% else %}
+      "#{Ktistec::ViewHelper.object_path({{object}})}/thread"
+    {% end %}
   end
 
   macro edit_object_path(object = nil)
-    "#{object_path({{object}})}/edit"
+    "#{Ktistec::ViewHelper.object_path({{object}})}/edit"
   end
 
   macro reply_path(object = nil)
-    "#{remote_object_path({{object}})}/reply"
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/reply"
   end
 
   macro approve_path(object = nil)
-    "#{remote_object_path({{object}})}/approve"
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/approve"
   end
 
   macro unapprove_path(object = nil)
-    "#{remote_object_path({{object}})}/unapprove"
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/unapprove"
   end
 
   macro block_object_path(object = nil)
-    "#{remote_object_path({{object}})}/block"
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/block"
   end
 
   macro unblock_object_path(object = nil)
-    "#{remote_object_path({{object}})}/unblock"
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/unblock"
   end
 
   macro follow_thread_path(object = nil)
-    "#{remote_object_path({{object}})}/follow"
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/follow"
   end
 
   macro unfollow_thread_path(object = nil)
-    "#{remote_object_path({{object}})}/unfollow"
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/unfollow"
   end
 
   macro remote_actor_path(actor = nil)
-    "/remote/actors/#{{{actor}}.try(&.id) || env.params.url["id"]}"
+    {% if actor %}
+      "/remote/actors/#{{{actor}}.id}"
+    {% else %}
+      "/remote/actors/#{env.params.url["id"]}"
+    {% end %}
   end
 
   macro actor_path(actor = nil)
-    "/actors/#{{{actor}}.try(&.uid) || env.params.url["username"]}"
+    {% if actor %}
+      "/actors/#{{{actor}}.uid}"
+    {% else %}
+      "/actors/#{env.params.url["username"]}"
+    {% end %}
   end
 
   macro block_actor_path(actor = nil)
-    "#{remote_actor_path({{actor}})}/block"
+    "#{Ktistec::ViewHelper.remote_actor_path({{actor}})}/block"
   end
 
   macro unblock_actor_path(actor = nil)
-    "#{remote_actor_path({{actor}})}/unblock"
+    "#{Ktistec::ViewHelper.remote_actor_path({{actor}})}/unblock"
   end
 
   macro actor_relationships_path(actor = nil, relationship = nil)
-    "#{actor_path({{actor}})}/#{{{relationship}} || env.params.url["relationship"]}"
+    {% if relationship %}
+      "#{Ktistec::ViewHelper.actor_path({{actor}})}/#{{{relationship}}}"
+    {% else %}
+      "#{Ktistec::ViewHelper.actor_path({{actor}})}/#{env.params.url["relationship"]}"
+    {% end %}
   end
 
   macro outbox_path(actor = nil)
-    actor_relationships_path({{actor}}, "outbox")
+    Ktistec::ViewHelper.actor_relationships_path({{actor}}, "outbox")
   end
 
   macro inbox_path(actor = nil)
-    actor_relationships_path({{actor}}, "inbox")
+    Ktistec::ViewHelper.actor_relationships_path({{actor}}, "inbox")
   end
 
   macro actor_remote_follow_path(actor = nil)
-    "#{actor_path({{actor}})}/remote-follow"
+    "#{Ktistec::ViewHelper.actor_path({{actor}})}/remote-follow"
   end
 
   macro hashtag_path(hashtag = nil)
-    "/tags/#{{{hashtag}} || env.params.url["hashtag"]}"
+    {% if hashtag %}
+      "/tags/#{{{hashtag}}}"
+    {% else %}
+      "/tags/#{env.params.url["hashtag"]}"
+    {% end %}
   end
 
   macro follow_hashtag_path(hashtag = nil)
-    "#{hashtag_path({{hashtag}})}/follow"
+    "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/follow"
   end
 
   macro unfollow_hashtag_path(hashtag = nil)
-    "#{hashtag_path({{hashtag}})}/unfollow"
+    "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/unfollow"
   end
 
   macro mention_path(mention = nil)
-    "/mentions/#{{{mention}} || env.params.url["mention"]}"
+    {% if mention %}
+      "/mentions/#{{{mention}}}"
+    {% else %}
+      "/mentions/#{env.params.url["mention"]}"
+    {% end %}
   end
 
   macro follow_mention_path(mention = nil)
-    "#{mention_path({{mention}})}/follow"
+    "#{Ktistec::ViewHelper.mention_path({{mention}})}/follow"
   end
 
   macro unfollow_mention_path(mention = nil)
-    "#{mention_path({{mention}})}/unfollow"
+    "#{Ktistec::ViewHelper.mention_path({{mention}})}/unfollow"
   end
 end

@@ -1407,4 +1407,44 @@ Spectator.describe "helpers" do
       expect(actor_remote_follow_path).to eq("/actors/abc/remote-follow")
     end
   end
+
+  describe "hashtag_path" do
+    let(env) do
+      env_factory("GET", "/tags/abc").tap do |env|
+        env.params.url["hashtag"] = "abc"
+      end
+    end
+
+    context "given a hashtag" do
+      let(hashtag) { "xyz" }
+
+      it "gets the hashtag path" do
+        expect(hashtag_path(hashtag)).to eq("/tags/xyz")
+      end
+    end
+
+    it "gets the hashtag path" do
+      expect(hashtag_path).to eq("/tags/abc")
+    end
+  end
+
+  describe "mention_path" do
+    let(env) do
+      env_factory("GET", "/mentions/abc").tap do |env|
+        env.params.url["mention"] = "abc"
+      end
+    end
+
+    context "given a mention" do
+      let(mention) { "xyz" }
+
+      it "gets the mention path" do
+        expect(mention_path(mention)).to eq("/mentions/xyz")
+      end
+    end
+
+    it "gets the mentions path" do
+      expect(mention_path).to eq("/mentions/abc")
+    end
+  end
 end

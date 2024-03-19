@@ -776,12 +776,89 @@ Spectator.describe "helpers" do
 
   ## Task helpers
 
+  describe "task_status_line" do
+    def_double :task,
+      complete: false,
+      running: false,
+      backtrace: nil.as(Array(String)?),
+      next_attempt_at: nil.as(Time?),
+      last_attempt_at: nil.as(Time?)
+
+    subject do
+      task_status_line(task)
+    end
+
+    context "given a task that is complete" do
+      let(task) { new_double(:task, complete: true) }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+
+    context "given a task that is running" do
+      let(task) { new_double(:task, running: true) }
+
+      it "returns the status" do
+        expect(subject).to match(/Running/)
+      end
+    end
+
+    context "given a task that hasn't run" do
+      let(task) { new_double(:task) }
+
+      it "returns the status" do
+        expect(subject).to match(/The next run is imminent./)
+      end
+    end
+
+    context "given a task that is ready to run" do
+      let(task) { new_double(:task, next_attempt_at: 1.second.ago) }
+
+      it "returns the status" do
+        expect(subject).to match(/The next run is imminent./)
+      end
+    end
+
+    context "given a task that will run" do
+      let(task) { new_double(:task, next_attempt_at: 50.minutes.from_now) }
+
+      it "returns the status" do
+        expect(subject).to match(/The next run is in about 1 hour./)
+      end
+    end
+
+    context "when detail is true" do
+      subject do
+        task_status_line(task, detail: true)
+      end
+
+      context "given a task that previously ran" do
+        let(task) { new_double(:task, last_attempt_at: 50.minutes.ago) }
+
+        it "returns the status" do
+          expect(subject).to match(/The last run was about 1 hour ago./)
+        end
+      end
+    end
+
+    context "given a task that has failed" do
+      let(task) { new_double(:task, backtrace: ["Runtime error"]) }
+
+      it "returns the status" do
+        expect(subject).to match(/The task failed./)
+      end
+    end
+  end
+
   describe "fetch_task_status_line" do
     def_double :fetch_task,
       complete: false,
       running: false,
       backtrace: nil.as(Array(String)?),
-      next_attempt_at: nil.as(Time?)
+      next_attempt_at: nil.as(Time?),
+      last_attempt_at: nil.as(Time?),
+      last_success_at: nil.as(Time?)
 
     def_double :published_object,
       published: nil.as(Time?)
@@ -802,7 +879,7 @@ Spectator.describe "helpers" do
       let(task) { new_double(:fetch_task, running: true) }
 
       it "returns the status" do
-        expect(subject).to eq("Checking for new posts.")
+        expect(subject).to match(/Checking for new posts./)
       end
 
       context "and a collection of published objects" do
@@ -818,7 +895,7 @@ Spectator.describe "helpers" do
         end
 
         it "includes status of most recent post" do
-          expect(subject).to eq("Checking for new posts. The most recent post was about 2 days ago.")
+          expect(subject).to match(/The most recent post was about 2 days ago./)
         end
       end
     end
@@ -827,7 +904,7 @@ Spectator.describe "helpers" do
       let(task) { new_double(:fetch_task) }
 
       it "returns the status" do
-        expect(subject).to eq("The next check for new posts is imminent.")
+        expect(subject).to match(/The next check for new posts is imminent./)
       end
     end
 
@@ -835,7 +912,7 @@ Spectator.describe "helpers" do
       let(task) { new_double(:fetch_task, next_attempt_at: 1.second.ago) }
 
       it "returns the status" do
-        expect(subject).to eq("The next check for new posts is imminent.")
+        expect(subject).to match(/The next check for new posts is imminent./)
       end
     end
 
@@ -843,7 +920,29 @@ Spectator.describe "helpers" do
       let(task) { new_double(:fetch_task, next_attempt_at: 50.minutes.from_now) }
 
       it "returns the status" do
-        expect(subject).to eq("The next check for new posts is in about 1 hour.")
+        expect(subject).to match(/The next check for new posts is in about 1 hour./)
+      end
+    end
+
+    context "when detail is true" do
+      subject do
+        fetch_task_status_line(task, detail: true)
+      end
+
+      context "given a task that previously ran" do
+        let(task) { new_double(:fetch_task, last_attempt_at: 50.minutes.ago) }
+
+        it "returns the status" do
+          expect(subject).to match(/The last check was about 1 hour ago./)
+        end
+      end
+
+      context "given a task with a successful fetch" do
+        let(task) { new_double(:fetch_task, last_success_at: 50.minutes.ago) }
+
+        it "returns the status" do
+          expect(subject).to match(/The last new post was fetched about 1 hour ago./)
+        end
       end
     end
 
@@ -851,7 +950,7 @@ Spectator.describe "helpers" do
       let(task) { new_double(:fetch_task, backtrace: ["Runtime error"]) }
 
       it "returns the status" do
-        expect(subject).to eq("The task failed.")
+        expect(subject).to match(/The task failed./)
       end
     end
   end

@@ -465,30 +465,77 @@ module Ktistec::ViewHelper
 
   ## Task helpers
 
-  # Returns the fetch task status line.
+  # Returns the task status line.
   #
-  # If `collection` is specified, also includes the most recent
-  # `published` date of posts in that collection.
-  #
-  macro fetch_task_status_line(task, collection = nil)
+  macro task_status_line(task, detail = false)
     if !{{task}}.complete
       if {{task}}.backtrace
         "The task failed."
       else
         %now = Time.utc
-        if {{task}}.running
-          "Checking for new posts."
-        else
-          if (%next_attempt_at = {{task}}.next_attempt_at) && %next_attempt_at > %now
-            "The next check for new posts is in #{distance_of_time_in_words(%next_attempt_at, %now)}."
+        String.build do |%io|
+          if {{task}}.running
+            %io << "Running."
           else
-            "The next check for new posts is imminent."
+            if (%next_attempt_at = {{task}}.next_attempt_at) && %next_attempt_at > %now
+              %io << "The next run is in "
+              %io << distance_of_time_in_words(%next_attempt_at, %now)
+              %io << "."
+            else
+              %io << "The next run is imminent."
+            end
+            if {{detail}}
+              if (%last_attempt_at = {{task}}.last_attempt_at) && %last_attempt_at < %now
+                %io << " The last run was "
+                %io << distance_of_time_in_words(%last_attempt_at, %now)
+                %io << " ago."
+              end
+            end
           end
-        end.try do |%result|
-          if (%collection = {{collection}}) && (%published = %collection.map(&.published).compact.max?)
-            %result + " The most recent post was #{distance_of_time_in_words(%published, %now)} ago."
+        end
+      end
+    end
+  end
+
+  # Returns the fetch task status line.
+  #
+  # If `collection` is specified, also includes the most recent
+  # `published` date of posts in that collection.
+  #
+  macro fetch_task_status_line(task, collection = nil, detail = false)
+    if !{{task}}.complete
+      if {{task}}.backtrace
+        "The task failed."
+      else
+        %now = Time.utc
+        String.build do |%io|
+          if {{task}}.running
+            %io << "Checking for new posts."
           else
-            %result
+            if (%next_attempt_at = {{task}}.next_attempt_at) && %next_attempt_at > %now
+              %io << "The next check for new posts is in "
+              %io << distance_of_time_in_words(%next_attempt_at, %now)
+              %io << "."
+            else
+              %io << "The next check for new posts is imminent."
+            end
+            if {{detail}}
+              if (%last_attempt_at = {{task}}.last_attempt_at) && %last_attempt_at < %now
+                %io << " The last check was "
+                %io << distance_of_time_in_words(%last_attempt_at, %now)
+                %io << " ago."
+              end
+              if (%last_success_at = {{task}}.last_success_at) && %last_success_at < %now
+                %io << " The last new post was fetched "
+                %io << distance_of_time_in_words(%last_success_at, %now)
+                %io << " ago."
+              end
+            end
+          end
+          if (%collection = {{collection}}) && (%published = %collection.map(&.published).compact.max?)
+            %io << " The most recent post was "
+            %io << distance_of_time_in_words(%published, %now)
+            %io << " ago."
           end
         end
       end

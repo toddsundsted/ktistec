@@ -12,6 +12,7 @@ nav.ui.top.fixed.inverted.navigation.menu
             a.item href=settings_path Settings
             a.item href=filters_path Filters
             a.item href=metrics_path Metrics
+            a.item href=tasks_path Tasks
       .right.menu
         == form_tag(nil, sessions_path, method: "DELETE", class: "form") do
           .ui.action.input

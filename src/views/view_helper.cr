@@ -677,6 +677,10 @@ module Ktistec::ViewHelper
     "/metrics"
   end
 
+  macro tasks_path
+    "/tasks"
+  end
+
   macro remote_activity_path(activity = nil)
     {% if activity %}
       "/remote/activities/#{{{activity}}.id}"

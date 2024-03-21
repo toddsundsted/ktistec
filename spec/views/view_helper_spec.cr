@@ -1079,6 +1079,12 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "tasks_path" do
+    it "gets the tasks path" do
+      expect(tasks_path).to eq("/tasks")
+    end
+  end
+
   describe "remote_activity_path" do
     let(env) do
       env_factory("GET", "/remote/activities/17").tap do |env|

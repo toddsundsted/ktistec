@@ -1,0 +1,20 @@
+{
+  "tasks":[
+    <%- tasks.each_with_index do |task, i| -%>
+      {
+        <%- if (subject_iri = task.subject_iri.presence) -%>
+          "subject":<%= subject_iri.to_json %>,
+        <%- end -%>
+        <%- if task.responds_to?(:path_to) -%>
+          "path":<%= task.path_to.to_json %>,
+        <%- end -%>
+        <%- if task.is_a?(Task::Fetch::Fetcher) -%>
+          "status":<%= fetch_task_status_line(task, detail: true).to_json %>,
+        <%- else -%>
+          "status":<%= task_status_line(task, detail: true).to_json %>,
+        <%- end -%>
+        "type":<%= task.type.to_json %>
+      }<%= comma(tasks, i) %>
+    <%- end -%>
+  ]
+}

@@ -871,7 +871,6 @@ Spectator.describe Task::Fetch::Thread::State do
   subject { described_class.new }
 
   alias Node = Task::Fetch::Thread::State::Node
-  alias DuplicateNodeError = Task::Fetch::Thread::State::DuplicateNodeError
 
   let(node1) { Node.new(id: 1, last_attempt_at: 10.minutes.ago, last_success_at: 30.minutes.ago) }
   let(node2) { Node.new(id: 2, last_attempt_at: 10.minutes.ago, last_success_at: 40.minutes.ago) }
@@ -885,6 +884,8 @@ Spectator.describe Task::Fetch::Thread::State do
   describe "#<<" do
     let(node) { Node.new(id: 0) }
 
+    pre_condition { expect(subject.nodes).to contain_exactly(node1, node2, node3, node4) }
+
     it "returns the state instance" do
       expect(subject << node).to eq(subject)
     end
@@ -892,9 +893,15 @@ Spectator.describe Task::Fetch::Thread::State do
     it "appends the node" do
       expect((subject << node).nodes).to contain_exactly(node1, node2, node3, node4, node).in_any_order
     end
+  end
 
-    it "raises an error" do
-      expect{subject << node << node}.to raise_error(DuplicateNodeError)
+  describe "#includes?" do
+    it "returns true if nodes includes node" do
+      expect(subject.includes?(Node.new(id: 1))).to be(true)
+    end
+
+    it "returns false if nodes does not include node" do
+      expect(subject.includes?(Node.new(id: 0))).to be(false)
     end
   end
 

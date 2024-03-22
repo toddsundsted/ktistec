@@ -55,11 +55,12 @@ class Task
       end
 
       def <<(node : Node)
-        if node.in?(nodes)
-          raise DuplicateNodeError.new(%Q|Duplicate node: #{node.id}|)
-        end
         nodes << node
         self
+      end
+
+      def includes?(node : Node)
+        nodes.includes?(node)
       end
 
       def prioritize!
@@ -68,9 +69,6 @@ class Task
 
       def last_success_at
         nodes.map(&.last_success_at).max?
-      end
-
-      class DuplicateNodeError < Exception
       end
     end
 
@@ -82,7 +80,8 @@ class Task
         # any already cached objects in the thread.
         ephemeral = ActivityPub::Object.new(iri: thread)
         ephemeral.thread(for_actor: source).each do |object|
-          state << State::Node.new(object.id.not_nil!)
+          node = State::Node.new(object.id.not_nil!)
+          state << node unless state.includes?(node)
         end
       end
     end
@@ -147,7 +146,7 @@ class Task
       if (last_attempt_at = self.last_attempt_at)
         ActivityPub::Object.where("thread = ? AND created_at > ?", thread, last_attempt_at).each do |reply|
           node = State::Node.new(reply.id.not_nil!)
-          state << node unless state.nodes.includes?(node)
+          state << node unless state.includes?(node)
         end
       end
       # if this task last ran in the immediate past, assume the
@@ -220,18 +219,17 @@ class Task
           if object.local?
             Log.info { "fetch_out [#{id}] - iri: #{object.iri}" }
             node.last_attempt_at = now
-            ids = state.nodes.map(&.id)
             size =
               ActivityPub::Object.where(in_reply_to_iri: object.iri).count do |reply|
-                unless reply.id.in?(ids)
+                new = State::Node.new(reply.id.not_nil!)
+                unless state.includes?(new)
                   node.last_success_at = now
-                  state << State::Node.new(reply.id.not_nil!)
+                  state << new
                 end
               end
             Log.info { "fetch_out [#{id}] - #{size} items" }
           else
             node.last_attempt_at = now
-            ids = state.nodes.map(&.id)
             if state.cache.presence && state.cached_object != node.id
               Log.info { "fetch_out [#{id}] - cache invalidated - #{state.cache.try(&.size)} items remaining" }
               state.cache = nil
@@ -259,9 +257,10 @@ class Task
             while (cache = state.cache) && (item = cache.shift?)
               fetched, object = find_or_fetch_object(item)
               next if object.nil?
-              unless object.id.in?(ids)
+              new = State::Node.new(object.id.not_nil!)
+              unless state.includes?(new)
                 node.last_success_at = now
-                state << State::Node.new(object.id.not_nil!)
+                state << new
                 return object if fetched
               end
             end

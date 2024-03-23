@@ -65,7 +65,7 @@ class Task
       end
 
       def last_success_at
-        nodes.map(&.last_success_at).max?
+        nodes.map(&.last_success_at).select(&.!=(Time::UNIX_EPOCH)).max?
       end
     end
 

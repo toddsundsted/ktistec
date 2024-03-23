@@ -706,5 +706,18 @@ Spectator.describe Task::Fetch::Hashtag::State do
     it "returns the time of the most recent successful fetch" do
       expect(subject.last_success_at).to eq(node3.last_success_at)
     end
+
+    context "when nodes have never succeeded" do
+      before_each do
+        node1.last_success_at = Time::UNIX_EPOCH
+        node2.last_success_at = Time::UNIX_EPOCH
+        node3.last_success_at = Time::UNIX_EPOCH
+        node4.last_success_at = Time::UNIX_EPOCH
+      end
+
+      it "returns nil" do
+        expect(subject.last_success_at).to be_nil
+      end
+    end
   end
 end

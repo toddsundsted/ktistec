@@ -337,9 +337,9 @@ Spectator.describe Task::Fetch::Thread do
         expect(HTTP::Client.requests).to have("GET #{object.iri}")
       end
 
-      it "fetches the collection" do
+      it "fetches the collection once" do
         subject.perform
-        expect(HTTP::Client.requests).to have("GET #{replies.iri}")
+        expect(HTTP::Client.requests.count { |request| request === "GET #{replies.iri}"}).to eq(1)
       end
 
       it "fetches all the replies from the collection" do
@@ -365,7 +365,7 @@ Spectator.describe Task::Fetch::Thread do
         expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
       end
 
-      context "with all replies fetched" do
+      context "with all replies already fetched" do
         before_each { subject.perform }
 
         it "sets the next attempt in the far future" do
@@ -373,44 +373,64 @@ Spectator.describe Task::Fetch::Thread do
           expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
         end
 
+        # the following tests check to ensure prior behavior that was
+        # reverted is not reintroduced.  we _do not_ want to check
+        # collections more than once during a run, to avoid spamming
+        # other sites. but, do ensure that new objects arriving via
+        # ActivityPub are added to the horizon.
+
         context "and a later reply" do
           # an uncached reply
-          let_build(:object, named: :reply4, in_reply_to_iri: object.iri)
+          let_build(:object, named: :reply4, id: 99999_i64, in_reply_to_iri: object.iri)
 
           before_each do
             HTTP::Client.objects << reply4
             HTTP::Client.actors << reply4.attributed_to
             HTTP::Client.collections << replies.assign(items_iris: [reply4.iri, reply3.iri, reply2.iri, reply1.iri])
+            # normally set by the task worker
+            subject.assign(last_attempt_at: reply4.created_at - 10.seconds)
           end
 
           pre_condition { expect(horizon(subject)).not_to have(reply4.id) }
 
-          it "adds the later reply to the horizon" do
+          it "does not fetch the later reply" do
             subject.perform
-            expect(horizon(subject)).to contain(find(reply4.iri).id)
+            expect(HTTP::Client.requests).not_to have("GET #{reply4.iri}")
           end
 
-          it "sets the next attempt in the near future" do
+          it "does not add the later reply to the horizon" do
             subject.perform
-            expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
+            expect(horizon(subject)).not_to contain(reply4.id)
+          end
+
+          it "sets the next attempt in the far future" do
+            subject.perform
+            expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
           end
         end
 
         context "and a later reply" do
           # a reply, but dereferenced and cached via some other process
-          let_create(:object, named: :reply4, in_reply_to_iri: object.iri)
+          let_build(:object, named: :reply4, id: 99999_i64, in_reply_to_iri: object.iri)
 
           before_each do
-            HTTP::Client.objects << reply4
+            HTTP::Client.objects << reply4.save
             HTTP::Client.actors << reply4.attributed_to
             HTTP::Client.collections << replies.assign(items_iris: [reply4.iri, reply3.iri, reply2.iri, reply1.iri])
+            # normally set by the task worker
+            subject.assign(last_attempt_at: reply4.created_at - 10.seconds)
           end
 
           pre_condition { expect(horizon(subject)).not_to have(reply4.id) }
 
+          it "fetches the later reply" do
+            subject.perform
+            expect(HTTP::Client.requests).to have("GET #{reply4.iri}")
+          end
+
           it "adds the later reply to the horizon" do
             subject.perform
-            expect(horizon(subject)).to contain(find(reply4.iri).id)
+            expect(horizon(subject)).to contain(reply4.id)
           end
 
           it "sets the next attempt in the far future" do
@@ -806,13 +826,51 @@ Spectator.describe Task::Fetch::Thread do
       end
     end
   end
+
+  describe "#best_root" do
+    let_build(:object, named: :root)
+    let_create(:object, in_reply_to_iri: root.iri)
+
+    subject do
+      described_class.new(
+        source: source,
+        thread: object.thread
+      ).save
+    end
+
+    it "returns the object" do
+      expect(subject.best_root).to eq(object)
+    end
+
+    context "when the root it cached" do
+      before_each { root.save }
+
+      it "returns the root" do
+        expect(subject.best_root).to eq(root)
+      end
+    end
+  end
+
+  describe "#path_to" do
+    let_create(:object)
+
+    subject do
+      described_class.new(
+        source: source,
+        thread: object.thread
+      ).save
+    end
+
+    it "returns the path to the thread page" do
+      expect(subject.path_to).to eq("/remote/objects/#{object.id}/thread")
+    end
+  end
 end
 
 Spectator.describe Task::Fetch::Thread::State do
   subject { described_class.new }
 
   alias Node = Task::Fetch::Thread::State::Node
-  alias DuplicateNodeError = Task::Fetch::Thread::State::DuplicateNodeError
 
   let(node1) { Node.new(id: 1, last_attempt_at: 10.minutes.ago, last_success_at: 30.minutes.ago) }
   let(node2) { Node.new(id: 2, last_attempt_at: 10.minutes.ago, last_success_at: 40.minutes.ago) }
@@ -826,6 +884,8 @@ Spectator.describe Task::Fetch::Thread::State do
   describe "#<<" do
     let(node) { Node.new(id: 0) }
 
+    pre_condition { expect(subject.nodes).to contain_exactly(node1, node2, node3, node4) }
+
     it "returns the state instance" do
       expect(subject << node).to eq(subject)
     end
@@ -833,15 +893,27 @@ Spectator.describe Task::Fetch::Thread::State do
     it "appends the node" do
       expect((subject << node).nodes).to contain_exactly(node1, node2, node3, node4, node).in_any_order
     end
+  end
 
-    it "raises an error" do
-      expect{subject << node << node}.to raise_error(DuplicateNodeError)
+  describe "#includes?" do
+    it "returns true if nodes includes node" do
+      expect(subject.includes?(Node.new(id: 1))).to be(true)
+    end
+
+    it "returns false if nodes does not include node" do
+      expect(subject.includes?(Node.new(id: 0))).to be(false)
     end
   end
 
   describe "#prioritize!" do
     it "sorts objects by difference between last success and last attempt" do
       expect(subject.prioritize!).to eq([node3, node4, node1, node2])
+    end
+  end
+
+  describe "#last_success_at" do
+    it "returns the time of the most recent successful fetch" do
+      expect(subject.last_success_at).to eq(node3.last_success_at)
     end
   end
 end

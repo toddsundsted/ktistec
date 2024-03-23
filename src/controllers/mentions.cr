@@ -9,31 +9,28 @@ class MentionsController
     mention = env.params.url["mention"]
 
     collection = Tag::Mention.all_objects(mention, **pagination_params(env))
+    count = Tag::Mention.count_objects(mention)
 
-    if collection.empty?
-      not_found
-    end
+    not_found if collection.empty?
 
     follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
 
-    ok "mentions/index", env: env, mention: mention, collection: collection, follow: follow
+    ok "mentions/index", env: env, mention: mention, collection: collection, count: count, follow: follow
   end
 
   post "/mentions/:mention/follow" do |env|
     mention = env.params.url["mention"]
 
-    if (collection = Tag::Mention.all_objects(mention)).empty?
-      not_found
-    end
+    collection = Tag::Mention.all_objects(mention)
+    count = Tag::Mention.count_objects(mention)
 
-    if Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
-      bad_request
-    end
+    not_found if collection.empty?
 
-    follow = Relationship::Content::Follow::Mention.new(actor: env.account.actor, name: mention).save
+    follow = Relationship::Content::Follow::Mention.find_or_new(actor: env.account.actor, name: mention)
+    follow.save if follow.new_record?
 
     if turbo_frame?
-      ok "mentions/index", env: env, mention: mention, collection: collection, follow: follow
+      ok "mentions/index", env: env, mention: mention, collection: collection, count: count, follow: follow
     else
       redirect back_path
     end
@@ -42,18 +39,16 @@ class MentionsController
   post "/mentions/:mention/unfollow" do |env|
     mention = env.params.url["mention"]
 
-    if (collection = Tag::Mention.all_objects(mention)).empty?
-      not_found
-    end
+    collection = Tag::Mention.all_objects(mention)
+    count = Tag::Mention.count_objects(mention)
 
-    unless (follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention))
-      bad_request
-    end
+    not_found if collection.empty?
 
-    follow.destroy
+    follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
+    follow.destroy if follow
 
     if turbo_frame?
-      ok "mentions/index", env: env, mention: mention, collection: collection, follow: nil
+      ok "mentions/index", env: env, mention: mention, collection: collection, count: count, follow: nil
     else
       redirect back_path
     end

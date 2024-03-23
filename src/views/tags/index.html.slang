@@ -1,5 +1,3 @@
-crystal:
-  _follow = follow
 - content_for "title" do
   | ##{hashtag}
 turbo-frame#tag_page_tag_controls
@@ -10,12 +8,12 @@ turbo-frame#tag_page_tag_controls
         - if count > 0
           span< #{pluralize(count, "hashtag")}
       - if env.account?
-        - if (_task = task) && (_status = fetch_task_status_line(_task))
+        - if task && (status = fetch_task_status_line(task))
           p.task
-            em = _status
+            em = status
     - if env.account?
       .ui.basic.segment
-        - if _follow.nil? || _follow.new_record?
+        - if follow.nil? || follow.new_record?
           == form_button "Follow", follow_hashtag_path, button_class: "ui button primary"
         - else
           == form_button "Unfollow", unfollow_hashtag_path

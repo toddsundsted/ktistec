@@ -64,7 +64,7 @@ class Task
 
     # Count of successive failures to fetch new objects.
     #
-    delegate :failures, to: state
+    delegate :failures, :last_success_at, to: state
 
     # Returns the time at which the next fetch should be attempted.
     #

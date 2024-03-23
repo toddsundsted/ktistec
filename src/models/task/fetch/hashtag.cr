@@ -3,6 +3,7 @@ require "./mixins/fetcher"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
 require "../../../rules/content_rules"
+require "../../../views/view_helper"
 
 class Task
   # Fetch a hashtag.
@@ -62,6 +63,10 @@ class Task
       def prioritize!
         nodes.sort_by!(&.delta).dup
       end
+
+      def last_success_at
+        nodes.map(&.last_success_at).max?
+      end
     end
 
     @[Persistent]
@@ -99,10 +104,10 @@ class Task
 
     # Fetches objects tagged with the hashtag `name`.
     #
-    # On each invocation, performs at most `maximum` (default 10)
+    # On each invocation, performs at most `maximum` (default 100)
     # fetches/network requests for new objects.
     #
-    def perform(maximum = 10)
+    def perform(maximum = 100)
       # look for hashtags that were added by some other means since
       # the last run. handles the regular arrival of objects via
       # ActivityPub.
@@ -147,6 +152,8 @@ class Task
       end
     end
 
+    property been_fetched : Array(String) = [] of String
+
     # Fetches one new object tagged with the hashtag.
     #
     # Fetches and returns a new object or `nil` if no new object is
@@ -161,6 +168,9 @@ class Task
           state.cache = nil
         end
         state.cache.presence || begin
+          # only fetch a collection once per run
+          next if been_fetched.includes?(node.href)
+          been_fetched << node.href
           state.cached_collection = node.href
           state.cache =
             if (collection = ActivityPub::Collection.dereference?(source, node.href))
@@ -171,7 +181,7 @@ class Task
                 url = uri.resolve("/api/v1/timelines/tag/#{$1}").to_s
                 headers = HTTP::Headers{"Accept" => "application/json"}
                 Ktistec::Open.open?(source, url, headers) do |response|
-                  Log.info { "fetch_one (API) [#{id}] - iri: #{url}" }
+                  Log.info { "fetch_one [#{id}] - iri: #{url}" }
                   Array(JSON::Any).from_json(response.body).reduce([] of String) do |items, item|
                     if (item = item.as_h?) && (item = item.dig?("uri")) && (item = item.as_s?)
                       items << item
@@ -179,11 +189,14 @@ class Task
                     items
                   end
                 rescue JSON::Error
-                  Log.warn { "fetch_one (API) [#{id}] - JSON response parse error" }
+                  Log.warn { "fetch_one [#{id}] - JSON response parse error" }
                 end
               end
             end
-          size = state.cache.try(&.size) || 0
+          unless (size = state.cache.try(&.size))
+            Log.info { "fetch_one [#{id}] - iri: #{node.href}" }
+            size = 0
+          end
           Log.info { "fetch_one [#{id}] - #{size} items" }
         end
         while (cache = state.cache) && (item = cache.shift?)
@@ -201,6 +214,12 @@ class Task
           end
         end
       end
+    end
+
+    # Returns the path to the hashtag index page.
+    #
+    def path_to
+      Ktistec::ViewHelper.hashtag_path(name)
     end
   end
 end

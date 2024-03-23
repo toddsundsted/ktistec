@@ -4,6 +4,7 @@ require "../../activity_pub/actor"
 require "../../activity_pub/object"
 require "../../activity_pub/collection"
 require "../../../rules/content_rules"
+require "../../../views/view_helper"
 
 class Task
   # Fetch a thread.
@@ -54,18 +55,20 @@ class Task
       end
 
       def <<(node : Node)
-        if node.in?(nodes)
-          raise DuplicateNodeError.new(%Q|Duplicate node: #{node.id}|)
-        end
         nodes << node
         self
+      end
+
+      def includes?(node : Node)
+        nodes.includes?(node)
       end
 
       def prioritize!
         nodes.sort_by!(&.delta).dup
       end
 
-      class DuplicateNodeError < Exception
+      def last_success_at
+        nodes.map(&.last_success_at).max?
       end
     end
 
@@ -77,7 +80,8 @@ class Task
         # any already cached objects in the thread.
         ephemeral = ActivityPub::Object.new(iri: thread)
         ephemeral.thread(for_actor: source).each do |object|
-          state << State::Node.new(object.id.not_nil!)
+          node = State::Node.new(object.id.not_nil!)
+          state << node unless state.includes?(node)
         end
       end
     end
@@ -93,6 +97,18 @@ class Task
     #
     derived thread : String, aliased_to: subject_iri
     validates(thread) { "must not be blank" if thread.blank? }
+
+    # Finds the best root object.
+    #
+    # This will be the actual root object, if the root object has been
+    # fetched and is cached.  Otherwise, it will be an object in the
+    # incomplete thread.
+    #
+    def best_root
+      ActivityPub::Object.where("thread = ? AND in_reply_to_iri IS NULL LIMIT 1", thread).first? ||
+        ActivityPub::Object.where("thread = ? AND in_reply_to_iri = thread LIMIT 1", thread).first? ||
+        raise NotFound.new("ActivityPub::Object thread=#{thread}: not found")
+    end
 
     # Finds an existing task or instantiates a new task.
     #
@@ -120,10 +136,19 @@ class Task
 
     # Fetches objects in the thread.
     #
-    # On each invocation, performs at most `maximum` (default 10)
+    # On each invocation, performs at most `maximum` (default 100)
     # fetches/network requests for new objects.
     #
-    def perform(maximum = 10)
+    def perform(maximum = 100)
+      # look for replies that were added by some other means since
+      # the last run. handles the regular arrival of objects via
+      # ActivityPub.
+      if (last_attempt_at = self.last_attempt_at)
+        ActivityPub::Object.where("thread = ? AND created_at > ?", thread, last_attempt_at).each do |reply|
+          node = State::Node.new(reply.id.not_nil!)
+          state << node unless state.includes?(node)
+        end
+      end
       # if this task last ran in the immediate past, assume the
       # maximum number of objects were fetched and this is a
       # "continuation" of that run. this handles the edge case where
@@ -182,6 +207,8 @@ class Task
       end
     end
 
+    property been_fetched : Array(String) = [] of String
+
     # Fetches out through the horizon.
     #
     private def fetch_out(horizon)
@@ -190,46 +217,50 @@ class Task
         now = Time.utc
         if object
           if object.local?
-            Log.info { "fetch_out (local) [#{id}] - iri: #{object.iri}" }
+            Log.info { "fetch_out [#{id}] - iri: #{object.iri}" }
             node.last_attempt_at = now
-            ids = state.nodes.map(&.id)
-            ActivityPub::Object.where(in_reply_to_iri: object.iri)
-              .each do |reply|
-                unless reply.id.in?(ids)
+            size =
+              ActivityPub::Object.where(in_reply_to_iri: object.iri).count do |reply|
+                new = State::Node.new(reply.id.not_nil!)
+                unless state.includes?(new)
                   node.last_success_at = now
-                  state << State::Node.new(reply.id.not_nil!)
+                  state << new
                 end
-            end
+              end
+            Log.info { "fetch_out [#{id}] - #{size} items" }
           else
-            Log.info { "fetch_out (remote) [#{id}] - iri: #{object.iri}" }
             node.last_attempt_at = now
-            ids = state.nodes.map(&.id)
             if state.cache.presence && state.cached_object != node.id
               Log.info { "fetch_out [#{id}] - cache invalidated - #{state.cache.try(&.size)} items remaining" }
               state.cache = nil
             end
-            if !state.cache.presence
-              state.cache = nil
-            end
             state.cache.presence || begin
+              # only fetch a collection once per run
+              next if been_fetched.includes?(object.iri)
+              been_fetched << object.iri
               state.cached_object = node.id
               state.cache =
                 if (temporary = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))
+                  Log.info { "fetch_out [#{id}] - iri: #{object.iri}" }
                   if (replies = temporary.replies?(source, dereference: true))
                     if (iris = replies.all_item_iris(source))
                       iris
                     end
                   end
                 end
-              size = state.cache.try(&.size) || 0
+              unless (size = state.cache.try(&.size))
+                Log.info { "fetch_out [#{id}] - iri: #{object.iri}" }
+                size = 0
+              end
               Log.info { "fetch_out [#{id}] - #{size} items" }
             end
             while (cache = state.cache) && (item = cache.shift?)
               fetched, object = find_or_fetch_object(item)
               next if object.nil?
-              unless object.id.in?(ids)
+              new = State::Node.new(object.id.not_nil!)
+              unless state.includes?(new)
                 node.last_success_at = now
-                state << State::Node.new(object.id.not_nil!)
+                state << new
                 return object if fetched
               end
             end
@@ -266,6 +297,12 @@ class Task
           end
         end
       end
+    end
+
+    # Returns the path to the thread index page.
+    #
+    def path_to
+      Ktistec::ViewHelper.remote_thread_path(best_root, anchor: false)
     end
   end
 end

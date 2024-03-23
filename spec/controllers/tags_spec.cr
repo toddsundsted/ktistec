@@ -102,8 +102,6 @@ Spectator.describe TagsController do
 
   TURBO_FRAME = HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "tag_page_tag_controls"}
 
-  alias Hashtag = Relationship::Content::Follow::Hashtag
-
   describe "POST /tags/:hashtag/follow" do
     create_tagged_object(1, :local, "foo")
     create_tagged_object(2, :remote, "bar")

@@ -10,8 +10,8 @@ struct Temp_20231204140457
   struct State
     include JSON::Serializable
 
-    property last_timeline_checked_at : Time
-    property last_notifications_checked_at : Time
+    property last_timeline_checked_at : Time?
+    property last_notifications_checked_at : Time?
   end
 
   property id : Int64
@@ -27,14 +27,18 @@ up do |db|
     end
   end
   results.each do |result|
-    db.exec(
-      %q|INSERT INTO "last_times" ("created_at", "updated_at", "account_id", "name", "timestamp") VALUES (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?, ?)|,
-      result.id, "last_timeline_checked_at", result.state.last_timeline_checked_at
-    )
-    db.exec(
-      %q|INSERT INTO "last_times" ("created_at", "updated_at", "account_id", "name", "timestamp") VALUES (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?, ?)|,
-      result.id, "last_notifications_checked_at", result.state.last_notifications_checked_at
-    )
+    if (last_timeline_checked_at = result.state.last_timeline_checked_at)
+      db.exec(
+        %q|INSERT INTO "last_times" ("created_at", "updated_at", "account_id", "name", "timestamp") VALUES (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?, ?)|,
+        result.id, "last_timeline_checked_at", last_timeline_checked_at
+      )
+    end
+    if (last_notifications_checked_at = result.state.last_notifications_checked_at)
+      db.exec(
+        %q|INSERT INTO "last_times" ("created_at", "updated_at", "account_id", "name", "timestamp") VALUES (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?, ?)|,
+        result.id, "last_notifications_checked_at", last_notifications_checked_at
+      )
+    end
   end
 end
 

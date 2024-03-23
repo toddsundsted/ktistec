@@ -17,9 +17,9 @@ turbo-frame#thread_page_thread_controls
             - if (icon = actor.icon)
               img.ui.avatar.image data-actor-id=actor.id src=icon
       - if env.account?
-        - if (_task = task) && (_status = fetch_task_status_line(_task, thread))
+        - if task && (status = fetch_task_status_line(task, thread))
           p.task
-            em = _status
+            em = status
     - if env.account?
       .ui.basic.segment
         - if follow.nil? || follow.new_record?

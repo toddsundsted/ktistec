@@ -60,6 +60,12 @@ class XML::Node
   end
 end
 
+struct JSON::Any
+  def empty?
+    as_a.empty?
+  end
+end
+
 class Array(T)
   def ==(other : Ktistec::Util::PaginatedArray(U)) forall U
     other.to_a == self

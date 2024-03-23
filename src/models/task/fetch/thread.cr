@@ -105,7 +105,7 @@ class Task
     # incomplete thread.
     #
     def best_root
-      ActivityPub::Object.where("thread = ? AND in_reply_to_iri IS NULL LIMIT 1", thread).first? ||
+      ActivityPub::Object.where("thread = ? AND likelihood(in_reply_to_iri IS NULL, 0.25) LIMIT 1", thread).first? ||
         ActivityPub::Object.where("thread = ? AND in_reply_to_iri = thread LIMIT 1", thread).first? ||
         raise NotFound.new("ActivityPub::Object thread=#{thread}: not found")
     end

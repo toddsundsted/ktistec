@@ -198,7 +198,7 @@ class Task
     private def fetch_up
       100.times do # for safety, cap loops
         Log.info { "fetch_up [#{id}] - iri: #{self.thread}" }
-        fetched, object = find_or_fetch_object(self.thread)
+        fetched, object = find_or_fetch_object(self.thread, include_deleted: true)
         state.root_object = object.id if object && object.root?
         break if object.nil? || (object.root? && !fetched)
         self.thread = object.thread.not_nil!

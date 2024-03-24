@@ -12,18 +12,20 @@ class Task
 
     # Finds or fetches an object.
     #
-    # Returns a tuple that indicaates whether the object was fetched
+    # Returns a tuple that indicates whether the object was fetched
     # or not, along with the object or `nil` if the object can't be
     # dereferenced.
     #
     # Saves/caches fetched objects.
     #
-    private def find_or_fetch_object(iri)
+    private def find_or_fetch_object(iri, *, include_deleted = false, include_blocked = false)
       fetched = false
       if (object = check_object(iri))
-        if object.new_record?
+        if (object.deleted? && !include_deleted) || (object.blocked? && !include_blocked)
+          object = nil
+        elsif object.new_record?
           if (attributed_to_iri = object.attributed_to_iri) && (attributed_to = check_actor(attributed_to_iri))
-            if !attributed_to.blocked?
+            if (!attributed_to.deleted? || include_deleted) && (!attributed_to.blocked? || include_blocked)
               fetched = true
               object.attributed_to = attributed_to
               object.save

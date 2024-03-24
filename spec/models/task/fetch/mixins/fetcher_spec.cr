@@ -23,8 +23,8 @@ Spectator.describe Task::Fetch::Fetcher do
     def initialize(@source)
     end
 
-    def find_or_fetch_object(*args)
-      super(*args)
+    def find_or_fetch_object(*args, **options)
+      super(*args, **options)
     end
 
     def calculate_next_attempt_at(*args)
@@ -171,23 +171,103 @@ Spectator.describe Task::Fetch::Fetcher do
         end
       end
 
-      context "from a blocked actor" do
-        before_each { object.attributed_to.save.block! }
-
-        it "does not persist the blocked object" do
-          expect{subject.find_or_fetch_object(object.iri)}.to_not change{object.class.find?(object.iri)}
-        end
-
-        it "does not persist the blocked actor" do
-          expect{subject.find_or_fetch_object(object.iri)}.to_not change{actor.class.find?(actor.iri)}
-        end
+      context "that is deleted" do
+        before_each { object.save.delete! }
 
         it "does not return the object" do
-          expect(subject.find_or_fetch_object(object.iri).last).to be_nil
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).last).
+            to be_nil
         end
 
         it "returns false" do
-          expect(subject.find_or_fetch_object(object.iri).first).to be_false
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).first).
+            to be_false
+        end
+
+        it "returns the object" do
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).last).
+            to eq(object.class.find(object.iri, include_deleted: true))
+        end
+
+        it "returns false" do
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).first).
+            to be_false
+        end
+      end
+
+      context "that is blocked" do
+        before_each { object.save.block! }
+
+        it "does not return the object" do
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).last).
+            to be_nil
+        end
+
+        it "returns false" do
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).first).
+            to be_false
+        end
+
+        it "returns the object" do
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).last).
+            to eq(object.class.find(object.iri, true))
+        end
+
+        it "returns false" do
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).first).
+            to be_false
+        end
+      end
+
+      context "from a deleted actor" do
+        before_each { object.attributed_to.save.delete! }
+
+        pre_condition { expect(object.class.find?(object.iri)).to be_nil }
+
+        it "does not return the object" do
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).last).
+            to be_nil
+        end
+
+        it "returns false" do
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).first).
+            to be_false
+        end
+
+        it "returns the object" do
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).last).
+            to eq(object.class.find(object.iri))
+        end
+
+        it "returns true" do
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).first).
+            to be_true
+        end
+      end
+
+      context "from a blocked actor" do
+        before_each { object.attributed_to.save.block! }
+
+        pre_condition { expect(object.class.find?(object.iri)).to be_nil }
+
+        it "does not return the object" do
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).last).
+            to be_nil
+        end
+
+        it "returns false" do
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).first).
+            to be_false
+        end
+
+        it "returns the object" do
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).last).
+            to eq(object.class.find(object.iri))
+        end
+
+        it "returns true" do
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).first).
+            to be_true
         end
       end
     end

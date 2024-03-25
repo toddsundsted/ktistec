@@ -1,5 +1,3 @@
-require "../../src/models/tag/hashtag"
-require "../../src/models/activity_pub/object"
 require "../../src/models/relationship/content/follow/hashtag"
 require "../../src/models/task/fetch/hashtag"
 

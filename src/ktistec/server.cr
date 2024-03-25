@@ -1,3 +1,4 @@
+require "../rules/**"
 require "../framework/**"
 require "../models/**"
 require "../controllers/**"

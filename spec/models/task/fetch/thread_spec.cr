@@ -906,7 +906,7 @@ Spectator.describe Task::Fetch::Thread::State do
   end
 
   describe "#prioritize!" do
-    it "sorts objects by difference between last success and last attempt" do
+    it "sorts nodes by difference between last success and last attempt" do
       expect(subject.prioritize!).to eq([node3, node4, node1, node2])
     end
   end

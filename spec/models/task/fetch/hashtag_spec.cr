@@ -74,7 +74,7 @@ Spectator.describe Task::Fetch::Hashtag do
       task.state.nodes.map(&.href)
     end
 
-    context "given a hashtag with no tagged objects" do
+    context "given no tagged object" do
       it "has an empty horizon" do
         expect(horizon(subject)).to be_empty
       end
@@ -95,7 +95,7 @@ Spectator.describe Task::Fetch::Hashtag do
       )
     end
 
-    context "given a hashtag with one tagged object" do
+    context "given one tagged object" do
       let_build_object(1, "https://remote/tags/hashtag") # remote collection
       let_build(:collection, named: :hashtag, iri: "https://remote/tags/hashtag")
 
@@ -125,7 +125,7 @@ Spectator.describe Task::Fetch::Hashtag do
       end
     end
 
-    context "given a hashtag with one tagged object" do
+    context "given one tagged object" do
       let_build_object(1, "https://test.test/tags/hashtag") # local collection
       let_build(:collection, named: :hashtag, iri: "https://test.test/tags/hashtag")
 
@@ -166,7 +166,7 @@ Spectator.describe Task::Fetch::Hashtag do
       end
     end
 
-    context "given a hashtag with many tagged objects" do
+    context "given many tagged objects" do
       let_build_object(1, "https://remote/tags/hashtag")
       let_build_object(2, "https://remote/tags/hashtag")
       let_build_object(3, "https://remote/tags/hashtag")
@@ -393,7 +393,7 @@ Spectator.describe Task::Fetch::Hashtag do
       end
     end
 
-    context "given a hashtag with many tagged objects, via the Mastodon API" do
+    context "given many tagged objects, via the Mastodon API" do
       let_build_object(1, "https://remote/tags/hashtag")
       let_build_object(2, "https://remote/tags/hashtag")
       let_build_object(3, "https://remote/tags/hashtag")
@@ -488,7 +488,7 @@ Spectator.describe Task::Fetch::Hashtag do
       end
     end
 
-    context "given a hashtag with tagged objects from more than one origin" do
+    context "given tagged objects from more than one origin" do
       let_build_object(1, "https://object1/tags/hashtag")
       let_build_object(2, "https://object2/tags/hashtag", "https://object2/tags/foobar")
       let_build_object(3, "https://object3/tags/hashtag")
@@ -560,7 +560,7 @@ Spectator.describe Task::Fetch::Hashtag do
       end
     end
 
-    context "given a hashtag with tagged objects from more than one origin, via the Mastodon API" do
+    context "given tagged objects from more than one origin, via the Mastodon API" do
       let_build_object(1, "https://object1/tags/hashtag")
       let_build_object(2, "https://object2/tags/hashtag", "https://object2/tags/foobar")
       let_build_object(3, "https://object3/tags/hashtag")

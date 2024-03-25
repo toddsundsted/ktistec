@@ -574,6 +574,7 @@ Spectator.describe RelationshipsController do
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", create.to_json_ld(true), "application/json") }
 
+      # it's a create so the note doesn't exist
       before_each { HTTP::Client.objects << note.assign(content: "content") }
 
       it "returns 400 if no object is included" do
@@ -723,6 +724,7 @@ Spectator.describe RelationshipsController do
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", update.to_json_ld(true), "application/json") }
 
+      # it's an update so the note already exists
       before_each { HTTP::Client.objects << note.save.assign(content: "content") }
 
       it "returns 400 if no object is included" do

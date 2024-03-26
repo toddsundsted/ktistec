@@ -11,7 +11,7 @@ Spectator.describe ObjectsController do
 
   let_create(
     :actor, named: :author,
-    iri: "https://nowhere/actor",
+    iri: "https://nowhere/actor/#{random_string}",
     username: "author"
   )
   let_create(

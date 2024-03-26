@@ -68,7 +68,7 @@ class Task
       end
 
       def last_success_at
-        nodes.map(&.last_success_at).max?
+        nodes.map(&.last_success_at).select(&.!=(Time::UNIX_EPOCH)).max?
       end
     end
 
@@ -105,7 +105,7 @@ class Task
     # incomplete thread.
     #
     def best_root
-      ActivityPub::Object.where("thread = ? AND in_reply_to_iri IS NULL LIMIT 1", thread).first? ||
+      ActivityPub::Object.where("thread = ? AND likelihood(in_reply_to_iri IS NULL, 0.25) LIMIT 1", thread).first? ||
         ActivityPub::Object.where("thread = ? AND in_reply_to_iri = thread LIMIT 1", thread).first? ||
         raise NotFound.new("ActivityPub::Object thread=#{thread}: not found")
     end
@@ -198,7 +198,7 @@ class Task
     private def fetch_up
       100.times do # for safety, cap loops
         Log.info { "fetch_up [#{id}] - iri: #{self.thread}" }
-        fetched, object = find_or_fetch_object(self.thread)
+        fetched, object = find_or_fetch_object(self.thread, include_deleted: true)
         state.root_object = object.id if object && object.root?
         break if object.nil? || (object.root? && !fetched)
         self.thread = object.thread.not_nil!

@@ -129,16 +129,18 @@ module Ktistec
       #
       protected def log_query(query, args, &)
         start = Time.monotonic
-        result = yield
-        finish = Time.monotonic
-        delta = (finish - start).total_milliseconds
-        if delta > 50
-          Log.warn { |log| log_query_message(log, "Slow query", delta, query, args) }
-          Log.warn { |log| log_query_plan(log, query, args) }
-        else
-          Log.debug { |log| log_query_message(log, "Query", delta, query, args) }
+        begin
+          yield
+        ensure
+          finish = Time.monotonic
+          delta = (finish - start).total_milliseconds
+          if delta > 50
+            Log.warn { |log| log_query_message(log, "Slow query", delta, query, args) }
+            Log.warn { |log| log_query_plan(log, query, args) }
+          else
+            Log.debug { |log| log_query_message(log, "Query", delta, query, args) }
+          end
         end
-        result
       end
 
       private def log_query_message(log, message, delta, query, args)
@@ -260,7 +262,7 @@ module Ktistec
       end
 
       protected def query_and_paginate(query, *args, additional_columns = NamedTuple.new, page = 1, size = 10)
-        log_query(query, args) do
+        log_query(query, {*args, size.to_i + 1, ((page - 1) * size).to_i}) do
           Ktistec::Util::PaginatedArray(self).new.tap do |array|
             Ktistec.database.query(
               query, *args, size.to_i + 1, ((page - 1) * size).to_i

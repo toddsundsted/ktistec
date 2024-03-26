@@ -906,7 +906,7 @@ Spectator.describe Task::Fetch::Thread::State do
   end
 
   describe "#prioritize!" do
-    it "sorts objects by difference between last success and last attempt" do
+    it "sorts nodes by difference between last success and last attempt" do
       expect(subject.prioritize!).to eq([node3, node4, node1, node2])
     end
   end
@@ -914,6 +914,19 @@ Spectator.describe Task::Fetch::Thread::State do
   describe "#last_success_at" do
     it "returns the time of the most recent successful fetch" do
       expect(subject.last_success_at).to eq(node3.last_success_at)
+    end
+
+    context "when nodes have never succeeded" do
+      before_each do
+        node1.last_success_at = Time::UNIX_EPOCH
+        node2.last_success_at = Time::UNIX_EPOCH
+        node3.last_success_at = Time::UNIX_EPOCH
+        node4.last_success_at = Time::UNIX_EPOCH
+      end
+
+      it "returns nil" do
+        expect(subject.last_success_at).to be_nil
+      end
     end
   end
 end

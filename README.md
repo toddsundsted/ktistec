@@ -12,7 +12,7 @@
     - [Blocking](#blocking)
     - [Metrics](#metrics)
   - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
+  - [Building](#building)
     - [Running Tests](#running-tests)
   - [Usage](#usage)
   - [Contributors](#contributors)
@@ -140,12 +140,12 @@ To run an instance of Ktistec as part of the Fediverse, you'll need a
 server with a fixed hostname. In the Fediverse, users are identified
 by (and content is addressed to) a hostname and a username.
 
-## Installation
+## Building
 
 You must compile the Ktistec server executable from its source code.
 You will need to install a recent release of the [Crystal programming
-language](https://crystal-lang.org/install/). Ktistec also requires
-SQLite3 version 3.35.0 or later.
+language](https://crystal-lang.org/install/). Ktistec requires at least
+SQLite3 version 3.35.0 (but see notes on [Sqlite3 compatibility](#sqlite3-compatibility)).
 
 To obtain the source code, clone the [Ktistec Github
 repo](https://github.com/toddsundsted/ktistec).
@@ -179,6 +179,16 @@ something like:
 `Ktistec is ready to lead at http://0.0.0.0:3000`
 
 You can now connect to and configure the server.
+
+### SQLite3 Compatibility
+
+The following SQLite3 versions are known to have bugs that cause
+problems for Ktistec:
+
+| Ktistec Version | Issue |
+|--|--|
+| 3.39.x | problems with bloom filters and recursive queries [link](https://sqlite.org/forum/forumpost/56de336385) |
+| 3.40.x | problems with bloom filters and recursive queries [link](https://sqlite.org/forum/forumpost/56de336385) |
 
 ### Running Tests
 
@@ -231,7 +241,7 @@ Once these steps are done, you're running!
 ## Copyright and License
 
 Ktistec ActivityPub Server
-Copyright (C) 2021, 2022, 2023 Todd Sundsted
+Copyright (C) 2021, 2022, 2023, 2024 Todd Sundsted
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as

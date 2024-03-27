@@ -11,6 +11,7 @@
     - [Content filtering](#content-filtering)
     - [Blocking](#blocking)
     - [Metrics](#metrics)
+    - [Tasks](#tasks)
   - [Prerequisites](#prerequisites)
   - [Building](#building)
     - [Running Tests](#running-tests)
@@ -103,11 +104,14 @@ used by Mastodon and others.
 
 In addition to following other users, you can follow threads, hashtags
 and even mentions. When posts arrive for content you follow, a
-notification is added to your notifications. To make navigation and
-discovery easier, post details pages now have labels with links to
-internal hashtag and mention index pages.
+notification is added to your notifications. Because running a single
+user instance can be lonely, Ktistec also proactively (and gently)
+fetches relevant content from other servers.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/d8kf0q.png" width=460>
+
+To make navigation and discovery easier, post details pages now have
+labels with links to internal hashtag and mention index pages.
 
 ### Content filtering
 
@@ -133,6 +137,14 @@ now, the only metric is inbox and outbox volume per account, but the
 machinery is in place to do much more.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/vrxnmg.png" width=460>
+
+### Tasks
+
+View currently running tasks. Tasks, in Ktistec, are background jobs
+that deliver content, fetch content, and perform other housekeeping
+chores.
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/h075mm.png" width=460>
 
 ## Prerequisites
 

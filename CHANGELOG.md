@@ -1,7 +1,32 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [v2.0.0-10]
+### Added
+- Automatically fetch followed threads.
+- Automatically fetch followed hashtags.
+- Add a system page that displays active tasks.
+- Include a replies collection on objects.
+- Log the query plan on slow queries.
+- Add pages for an actor's likes and shares. (see[#88](https://github.com/toddsundsted/ktistec/issues/88))
+
+### Fixed
+- Support actor icon load error handling on every timeline.
+- Don't attempt to deliver to actors that are consistently down.
+- Save objects even if associated hashtags or mentions don't validate.
+- Reduce font size of code in posts.
+
+### Changed
+- Display only the followed hashtags/mentions in notifications.
+- Aggregate past like/share activities and display a summary in notifications.
+- Present a single notification for followed hashtags/mentions/threads.
+
+### Other
+- Reduced compile size/time.
+- Improved query performance and reduced database size.
+- Improved performance of specs.
+
+## [v2.0.0-9]
 ### Added
 - Expose the /everything endpoint.
 - Support manually fetching posts that are missing from threads.
@@ -172,6 +197,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.0.0-10]: https://github.com/toddsundsted/ktistec/compare/0ae0dc26...9c480ed5
 [v2.0.0-9]: https://github.com/toddsundsted/ktistec/compare/4d9094fa...a5fc68f0
 [v2.0.0-8]: https://github.com/toddsundsted/ktistec/compare/b3ce035d...cde86283
 [v2.0.0-7]: https://github.com/toddsundsted/ktistec/compare/9a05dced...7d189bd0

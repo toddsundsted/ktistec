@@ -3,6 +3,8 @@ require "../activity_pub/actor"
 
 class Task
   class RefreshActor < Task
+    Log = ::Log.for(self)
+
     private EXISTS_QUERY = "subject_iri = ? AND complete = 0 AND backtrace IS NULL"
 
     belongs_to source, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri
@@ -44,7 +46,7 @@ class Task
       else
         message = "failed to dereference #{actor.iri}"
         failures << Failure.new(message)
-        Log.info { message }
+        Log.debug { message }
       end
     end
   end

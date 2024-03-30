@@ -3,6 +3,9 @@ require "./util"
 
 module Ktistec
   module Model(*T)
+    # logging in this module is related to database query performance.
+    Log = ::Log.for("database")
+
     # Marks properties as bulk assignable.
     #
     annotation Assignable
@@ -135,8 +138,8 @@ module Ktistec
           finish = Time.monotonic
           delta = (finish - start).total_milliseconds
           if delta > 50
-            Log.warn { |log| log_query_message(log, "Slow query", delta, query, args) }
-            Log.warn { |log| log_query_plan(log, query, args) }
+            Log.notice { |log| log_query_message(log, "Slow query", delta, query, args) }
+            Log.notice { |log| log_query_plan(log, query, args) }
           else
             Log.debug { |log| log_query_message(log, "Query", delta, query, args) }
           end

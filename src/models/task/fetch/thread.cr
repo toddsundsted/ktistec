@@ -13,6 +13,8 @@ class Task
     include Task::ConcurrentTask
     include Fetcher
 
+    Log = ::Log.for(self)
+
     # Implements a prioritized queue of nodes on the thread horizon.
     #
     class State
@@ -169,10 +171,10 @@ class Task
           # discovers the root it destroys the other task. If this
           # task was the one destroyed, stop working.
           if gone?
-            Log.info { "perform [#{id}] - gone - stopping task" }
+            Log.trace { "perform [#{id}] - gone - stopping task" }
             break
           end
-          Log.info { "perform [#{id}] - iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
+          Log.trace { "perform [#{id}] - iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
           ContentRules.new.run do
@@ -181,7 +183,7 @@ class Task
           count += 1
         end
       ensure
-        Log.info { "perform [#{id}] - complete - #{count} fetched" }
+        Log.trace { "perform [#{id}] - complete - #{count} fetched" }
         self.next_attempt_at =
           if count < 1 && !continuation              # none fetched
             calculate_next_attempt_at(Horizon::FarFuture)
@@ -197,7 +199,7 @@ class Task
     #
     private def fetch_up
       100.times do # for safety, cap loops
-        Log.info { "fetch_up [#{id}] - iri: #{self.thread}" }
+        Log.trace { "fetch_up [#{id}] - iri: #{self.thread}" }
         fetched, object = find_or_fetch_object(self.thread, include_deleted: true)
         state.root_object = object.id if object && object.root?
         break if object.nil? || (object.root? && !fetched)
@@ -217,7 +219,7 @@ class Task
         now = Time.utc
         if object
           if object.local?
-            Log.info { "fetch_out [#{id}] - iri: #{object.iri}" }
+            Log.trace { "fetch_out [#{id}] - iri: #{object.iri}" }
             node.last_attempt_at = now
             size =
               ActivityPub::Object.where(in_reply_to_iri: object.iri).count do |reply|
@@ -227,11 +229,11 @@ class Task
                   state << new
                 end
               end
-            Log.info { "fetch_out [#{id}] - #{size} items" }
+            Log.trace { "fetch_out [#{id}] - #{size} items" }
           else
             node.last_attempt_at = now
             if state.cache.presence && state.cached_object != node.id
-              Log.info { "fetch_out [#{id}] - cache invalidated - #{state.cache.try(&.size)} items remaining" }
+              Log.trace { "fetch_out [#{id}] - cache invalidated - #{state.cache.try(&.size)} items remaining" }
               state.cache = nil
             end
             state.cache.presence || begin
@@ -241,7 +243,7 @@ class Task
               state.cached_object = node.id
               state.cache =
                 if (temporary = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))
-                  Log.info { "fetch_out [#{id}] - iri: #{object.iri}" }
+                  Log.trace { "fetch_out [#{id}] - iri: #{object.iri}" }
                   if (replies = temporary.replies?(source, dereference: true))
                     if (iris = replies.all_item_iris(source))
                       iris
@@ -249,10 +251,10 @@ class Task
                   end
                 end
               unless (size = state.cache.try(&.size))
-                Log.info { "fetch_out [#{id}] - iri: #{object.iri}" }
+                Log.trace { "fetch_out [#{id}] - iri: #{object.iri}" }
                 size = 0
               end
-              Log.info { "fetch_out [#{id}] - #{size} items" }
+              Log.trace { "fetch_out [#{id}] - #{size} items" }
             end
             while (cache = state.cache) && (item = cache.shift?)
               fetched, object = find_or_fetch_object(item)

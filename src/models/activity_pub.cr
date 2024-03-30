@@ -5,6 +5,9 @@ require "../framework/model"
 require "./activity_pub/mixins/*"
 
 module ActivityPub
+  # the only logging in this module is related to mapping JSON-LD.
+  Log = ::Log.for("ktistec.json_ld")
+
   def self.from_json_ld(json, **options)
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
     {% begin %}
@@ -33,9 +36,7 @@ module ActivityPub
   def self.from_json_ld?(json, **options)
     from_json_ld(json, **options)
   rescue ex : NotImplementedError | TypeCastError
-    # log errors mapping JSON to a model for debugging purposes
     Log.debug { ex.message }
-    nil
   end
 
   macro included

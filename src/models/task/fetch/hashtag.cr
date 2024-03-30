@@ -12,6 +12,8 @@ class Task
     include Task::ConcurrentTask
     include Fetcher
 
+    Log = ::Log.for(self)
+
     # Implements a prioritized queue of nodes on the search horizon.
     #
     class State
@@ -131,7 +133,7 @@ class Task
       count = 0
       begin
         maximum.times do
-          Log.info { "perform [#{id}] - hashtag: #{name}, iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
+          Log.trace { "perform [#{id}] - hashtag: #{name}, iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
           ContentRules.new.run do
@@ -140,7 +142,7 @@ class Task
           count += 1
         end
       ensure
-        Log.info { "perform [#{id}] - complete - #{count} fetched" }
+        Log.trace { "perform [#{id}] - complete - #{count} fetched" }
         self.next_attempt_at =
           if count < 1 && !continuation              # none fetched
             calculate_next_attempt_at(Horizon::FarFuture)
@@ -164,7 +166,7 @@ class Task
         now = Time.utc
         node.last_attempt_at = now
         if state.cache.presence && state.cached_collection != node.href
-          Log.info { "fetch_one [#{id}] - cache invalidated - #{state.cache.try(&.size)} items remaining" }
+          Log.trace { "fetch_one [#{id}] - cache invalidated - #{state.cache.try(&.size)} items remaining" }
           state.cache = nil
         end
         state.cache.presence || begin
@@ -175,13 +177,13 @@ class Task
           state.cache =
             if (collection = ActivityPub::Collection.dereference?(source, node.href))
               if (iris = collection.all_item_iris(source))
-                Log.info { "fetch_one [#{id}] - iri: #{collection.iri}" }
+                Log.trace { "fetch_one [#{id}] - iri: #{collection.iri}" }
                 iris
               elsif (uri = URI.parse(node.href)).path =~ %r|^/tags/([^/]+)$|
                 url = uri.resolve("/api/v1/timelines/tag/#{$1}").to_s
                 headers = HTTP::Headers{"Accept" => "application/json"}
                 Ktistec::Open.open?(source, url, headers) do |response|
-                  Log.info { "fetch_one [#{id}] - iri: #{url}" }
+                  Log.trace { "fetch_one [#{id}] - iri: #{url}" }
                   Array(JSON::Any).from_json(response.body).reduce([] of String) do |items, item|
                     if (item = item.as_h?) && (item = item.dig?("uri")) && (item = item.as_s?)
                       items << item
@@ -189,15 +191,15 @@ class Task
                     items
                   end
                 rescue JSON::Error
-                  Log.warn { "fetch_one [#{id}] - JSON response parse error" }
+                  Log.debug { "fetch_one [#{id}] - JSON response parse error" }
                 end
               end
             end
           unless (size = state.cache.try(&.size))
-            Log.info { "fetch_one [#{id}] - iri: #{node.href}" }
+            Log.trace { "fetch_one [#{id}] - iri: #{node.href}" }
             size = 0
           end
-          Log.info { "fetch_one [#{id}] - #{size} items" }
+          Log.trace { "fetch_one [#{id}] - #{size} items" }
         end
         while (cache = state.cache) && (item = cache.shift?)
           fetched, object = find_or_fetch_object(item)

@@ -12,7 +12,7 @@ module Ktistec
     puts Ktistec::Database.do_operation(:apply, version)
   end
 
-  # Model-like class for managing settings.
+  # Model-like class for managing site settings.
   #
   class Settings
     property host : String?
@@ -52,18 +52,18 @@ module Ktistec
         uri = URI.parse(host)
         # `URI.parse` treats something like "ktistec.com" as a path
         # name and not a host name. users expectations differ.
-        if !present?(uri.host) && present?(uri.path)
+        if !uri.host.presence && uri.path.presence
           parts = uri.path.split('/', 2)
           unless parts.first.blank?
             uri.host = parts.first
             uri.path = parts.fetch(1, "")
           end
         end
-        host_errors << "must have a scheme" unless present?(uri.scheme)
-        host_errors << "must have a host name" unless present?(uri.host)
-        host_errors << "must not have a fragment" if present?(uri.fragment)
-        host_errors << "must not have a query" if present?(uri.query)
-        host_errors << "must not have a path" if present?(uri.path) && uri.path != "/"
+        host_errors << "must have a scheme" unless uri.scheme.presence
+        host_errors << "must have a host name" unless uri.host.presence
+        host_errors << "must not have a fragment" if uri.fragment.presence
+        host_errors << "must not have a query" if uri.query.presence
+        host_errors << "must not have a path" if uri.path.presence && uri.path != "/"
         if host_errors.empty? && uri.path == "/"
           uri.path = ""
           @host = uri.normalize.to_s
@@ -72,12 +72,8 @@ module Ktistec
         host_errors << "name must be present"
       end
       errors["host"] = host_errors unless host_errors.empty?
-      errors["site"] = ["name must be present"] unless present?(@site)
+      errors["site"] = ["name must be present"] unless @site.presence
       errors.empty?
-    end
-
-    private def present?(value)
-      !value.nil? && !value.empty?
     end
   end
 

@@ -4,7 +4,49 @@ require "../../src/framework"
 
 require "../spec_helper/base"
 
+Spectator.describe Ktistec::LogLevel do
+  setup_spec
+
+  describe "#save" do
+    let!(log_level) { described_class.new("foo.bar", :debug) }
+
+    pre_condition { expect(described_class.all_as_hash).to be_empty }
+
+    it "persists the instance to the database" do
+      log_level.save
+      expect(Ktistec::LogLevel.all_as_hash).to eq({"foo.bar" => log_level})
+    end
+  end
+
+  describe "#destroy" do
+    let!(log_level) { described_class.new("foo.bar", :debug).save }
+
+    pre_condition { expect(described_class.all_as_hash).to eq({"foo.bar" => log_level}) }
+
+    it "removes the instance from the database" do
+      log_level.destroy
+      expect(Ktistec::LogLevel.all_as_hash).to be_empty
+    end
+  end
+
+  describe "#all_as_hash" do
+    let!(bar) { described_class.new("foo.bar", :debug).save }
+    let!(baz) { described_class.new("foo.baz", :error).save }
+    let!(qux) { described_class.new("foo.qux", :fatal).save }
+
+    it "returns all log levels as a hash" do
+      expect(described_class.all_as_hash).to eq({
+        "foo.bar" => bar,
+        "foo.baz" => baz,
+        "foo.qux" => qux
+      })
+    end
+  end
+end
+
 Spectator.describe Ktistec::Settings do
+  setup_spec
+
   subject { Ktistec.settings }
 
   after_each do

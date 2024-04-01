@@ -4,12 +4,54 @@ require "uri"
 
 require "./ext/array"
 require "./ext/hash"
+require "./ext/log"
 require "./database"
 
 module Ktistec
   # always run database migrations when we boot up the framework
   Ktistec::Database.all_pending_versions.each do |version|
     puts Ktistec::Database.do_operation(:apply, version)
+  end
+
+  # Model-like class for managing log levels.
+  #
+  class LogLevel
+    property source : String
+    property severity : Log::Severity
+
+    def initialize(source, severity)
+      @source = source
+      @severity = severity
+    end
+
+    def save
+      Ktistec.database.exec(
+        "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)",
+        "log_level/#{@source}", @severity.to_s
+      )
+      self
+    end
+
+    def destroy
+      Ktistec.database.exec(
+        "DELETE FROM options WHERE key = ?",
+        "log_level/#{@source}"
+      )
+      self
+    end
+
+    def self.all_as_hash
+      Ktistec.database.query_all("SELECT key, value FROM options WHERE key LIKE 'log_level/%'", as: {String, String})
+        .reduce(Hash(String, LogLevel).new) do |log_levels, (key, value)|
+          key = key.lchop("log_level/")
+          log_levels[key] =  LogLevel.new(key, Log::Severity.parse(value))
+          log_levels
+        end
+    end
+
+    def ==(other)
+      other.is_a?(LogLevel) && @source == other.source && @severity == other.severity
+    end
   end
 
   # Model-like class for managing site settings.

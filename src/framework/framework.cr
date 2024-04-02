@@ -52,6 +52,12 @@ module Ktistec
     def ==(other)
       other.is_a?(LogLevel) && @source == other.source && @severity == other.severity
     end
+
+    # Returns the default severity.
+    #
+    def self.default
+      Log::Severity.parse(ENV.fetch("LOG_LEVEL", "INFO"))
+    end
   end
 
   # Model-like class for managing site settings.
@@ -148,6 +154,16 @@ module Ktistec
   #
   class Server
     def self.run
+      ::Log.setup do |c|
+        backend = ::Log::IOBackend.new
+        c.bind "*", LogLevel.default, backend
+        log_levels = LogLevel.all_as_hash
+        Log.builder.sources.each do |source|
+          if (log_level = log_levels[source]?)
+            c.bind log_level.source, log_level.severity, backend
+          end
+        end
+      end
       with new yield
       Kemal.config.app_name = "Ktistec"
       # work around Kemal's handling of the command line when running specs...

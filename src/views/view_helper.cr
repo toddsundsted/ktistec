@@ -673,6 +673,10 @@ module Ktistec::ViewHelper
     {% end %}
   end
 
+  macro system_path
+    "/system"
+  end
+
   macro metrics_path
     "/metrics"
   end

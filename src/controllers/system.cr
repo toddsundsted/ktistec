@@ -12,28 +12,21 @@ class SystemController
   end
 
   post "/system" do |env|
+    params = params(env)
+
     sources = Log.builder.sources
 
     log_levels = Ktistec::LogLevel.all_as_hash
 
-    params = params(env)
-
-    ::Log.setup do |c|
-      backend = ::Log::IOBackend.new
-      c.bind "*", Ktistec::LogLevel.default, backend
-      sources.each do |source|
-        unless (log_level = log_levels[source]?)
-          log_level = Ktistec::LogLevel.new(source, :none)
-        end
-        if params && (param = params[source]?.presence)
-          severity = log_level.severity = Log::Severity.parse(param)
-          c.bind source, severity, backend
-          log_level.save
-        else
-          log_level.destroy
-        end
+    sources.each do |source|
+      if params && (param = params[source]?.presence)
+        log_levels[source] = Ktistec::LogLevel.new(source, Log::Severity.parse(param)).save
+      else
+        log_levels.delete(source).try(&.destroy)
       end
     end
+
+    ::Log.setup log_levels.transform_values(&.severity)
 
     redirect system_path
   end

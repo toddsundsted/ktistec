@@ -1,7 +1,7 @@
 h1 Log Levels
 p
   | The default log level is
-  span.blue< = Ktistec::LogLevel.default
+  span.blue< = ::Log.default
   | .
 form.ui.form method="POST" action=system_path
   == authenticity_token(env)

@@ -75,7 +75,7 @@ class RelationshipsController
     # 2
 
     if signature
-      if actor && Ktistec::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers, body)
+      if Ktistec::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers, body)
         verified = true
       else
         Log.trace { "[#{request_id}] signature verification failed" }

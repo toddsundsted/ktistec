@@ -65,10 +65,11 @@ module Ktistec
 
     def initialize
       values =
-        Ktistec.database.query_all("SELECT key, value FROM options", as: {String, String?}).reduce(Hash(String, String?).new) do |values, (key, value)|
-          values[key] = value
-          values
-        end
+        Ktistec.database.query_all("SELECT key, value FROM options", as: {String, String?})
+          .reduce(Hash(String, String?).new) do |values, (key, value)|
+            values[key] = value
+            values
+          end
       assign(values)
     end
 
@@ -93,7 +94,7 @@ module Ktistec
       if (host = @host) && !host.empty?
         uri = URI.parse(host)
         # `URI.parse` treats something like "ktistec.com" as a path
-        # name and not a host name. users expectations differ.
+        # name and not a host name. users' expectations differ.
         if !uri.host.presence && uri.path.presence
           parts = uri.path.split('/', 2)
           unless parts.first.blank?

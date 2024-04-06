@@ -1,6 +1,8 @@
 require "../models/task"
 
 class TaskWorker
+  Log = ::Log.for(self)
+
   @@channel = Channel(Task).new
 
   def self.start
@@ -73,7 +75,7 @@ class TaskWorker
     if !task.gone?
       task.save(skip_validation: true, skip_associated: true)
     else
-      Log.info { "TaskWorker#perform task #{task.id} is gone" }
+      Log.debug { "TaskWorker#perform task #{task.id} is gone" }
     end
   end
 

@@ -9,6 +9,8 @@ class Task
   class Backup < Task
     include Singleton
 
+    Log = ::Log.for(self)
+
     def perform
       if Kemal.config.env == "production"
         perform_backup
@@ -20,7 +22,7 @@ class Task
       date = Time.local.to_s("%Y%m%d")
       backup = "#{name}.backup_#{date}"
 
-      Log.info { "database backup beginning" }
+      Log.trace { "database backup beginning" }
 
       times = Benchmark.measure("backup times") do
         DB.open(backup) do |db_backup|
@@ -32,7 +34,7 @@ class Task
         end
       end
 
-      Log.info { "#{times.label}: #{times.to_s}" }
+      Log.trace { "#{times.label}: #{times.to_s}" }
     ensure
       self.next_attempt_at = 1.day.from_now
     end

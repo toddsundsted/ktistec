@@ -7,6 +7,8 @@ module Ktistec
   module Signature
     extend self
 
+    Log = ::Log.for(self)
+
     class Error < Exception
     end
 
@@ -147,7 +149,7 @@ module Ktistec
     def verify?(key_pair, url, headers, *args, **opts)
       verify(key_pair, url, headers, *args, **opts)
     rescue ex : Error | OpenSSL::Error
-      Log.info { "verification failed: #{ex.message}" }
+      Log.debug { "verification failed: #{ex.message}" }
       false
     end
   end

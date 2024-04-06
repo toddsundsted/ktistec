@@ -3,6 +3,8 @@ require "../../../framework/signature"
 
 class Task
   module Transfer
+    Log = ::Log.for(self)
+
     class Failure
       include JSON::Serializable
 
@@ -31,7 +33,7 @@ class Task
         unless (actor = ActivityPub::Actor.dereference?(transferer, recipient))
           message = "recipient does not exist: #{recipient}"
           failures << Failure.new(recipient, message)
-          Log.info { message }
+          Log.debug { message }
           next
         end
 
@@ -49,17 +51,17 @@ class Task
             unless response.success?
               message = "failed to deliver to #{inbox}: [#{response.status_code}] #{response.body}"
               failures << Failure.new(recipient, message)
-              Log.info { message }
+              Log.debug { message }
             end
           rescue ex: OpenSSL::Error | Socket::Error
             message = "#{ex.class}: #{ex.message}: #{inbox}"
             failures << Failure.new(recipient, message)
-            Log.info { message }
+            Log.debug { message }
           end
         else
           message = "recipient doesn't have an inbox: #{recipient}"
           failures << Failure.new(recipient, message)
-          Log.info { message }
+          Log.debug { message }
         end
       end
 

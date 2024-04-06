@@ -1,0 +1,10 @@
+{
+  "logLevels":{
+    <%- sources.each_with_index do |source, i| -%>
+      <%= source.to_json %>:{
+        <%- severity = log_levels[source]?.try(&.severity) -%>
+        "severity":<%= severity.to_s.to_json %>
+      }<%= comma(sources, i) %>
+    <%- end -%>
+  }
+}

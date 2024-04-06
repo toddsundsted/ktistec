@@ -4,6 +4,7 @@ require "uri"
 
 require "./ext/array"
 require "./ext/hash"
+require "./ext/log"
 require "./database"
 
 module Ktistec
@@ -12,7 +13,48 @@ module Ktistec
     puts Ktistec::Database.do_operation(:apply, version)
   end
 
-  # Model-like class for managing settings.
+  # Model-like class for managing log levels.
+  #
+  class LogLevel
+    property source : String
+    property severity : Log::Severity
+
+    def initialize(source, severity)
+      @source = source
+      @severity = severity
+    end
+
+    def save
+      Ktistec.database.exec(
+        "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)",
+        "log_level/#{@source}", @severity.to_s
+      )
+      self
+    end
+
+    def destroy
+      Ktistec.database.exec(
+        "DELETE FROM options WHERE key = ?",
+        "log_level/#{@source}"
+      )
+      self
+    end
+
+    def self.all_as_hash
+      Ktistec.database.query_all("SELECT key, value FROM options WHERE key LIKE 'log_level/%'", as: {String, String})
+        .reduce(Hash(String, LogLevel).new) do |log_levels, (key, value)|
+          key = key.lchop("log_level/")
+          log_levels[key] =  LogLevel.new(key, Log::Severity.parse(value))
+          log_levels
+        end
+    end
+
+    def ==(other)
+      other.is_a?(LogLevel) && @source == other.source && @severity == other.severity
+    end
+  end
+
+  # Model-like class for managing site settings.
   #
   class Settings
     property host : String?
@@ -23,10 +65,11 @@ module Ktistec
 
     def initialize
       values =
-        Ktistec.database.query_all("SELECT key, value FROM options", as: {String, String?}).reduce(Hash(String, String?).new) do |values, (key, value)|
-          values[key] = value
-          values
-        end
+        Ktistec.database.query_all("SELECT key, value FROM options", as: {String, String?})
+          .reduce(Hash(String, String?).new) do |values, (key, value)|
+            values[key] = value
+            values
+          end
       assign(values)
     end
 
@@ -51,19 +94,19 @@ module Ktistec
       if (host = @host) && !host.empty?
         uri = URI.parse(host)
         # `URI.parse` treats something like "ktistec.com" as a path
-        # name and not a host name. users expectations differ.
-        if !present?(uri.host) && present?(uri.path)
+        # name and not a host name. users' expectations differ.
+        if !uri.host.presence && uri.path.presence
           parts = uri.path.split('/', 2)
           unless parts.first.blank?
             uri.host = parts.first
             uri.path = parts.fetch(1, "")
           end
         end
-        host_errors << "must have a scheme" unless present?(uri.scheme)
-        host_errors << "must have a host name" unless present?(uri.host)
-        host_errors << "must not have a fragment" if present?(uri.fragment)
-        host_errors << "must not have a query" if present?(uri.query)
-        host_errors << "must not have a path" if present?(uri.path) && uri.path != "/"
+        host_errors << "must have a scheme" unless uri.scheme.presence
+        host_errors << "must have a host name" unless uri.host.presence
+        host_errors << "must not have a fragment" if uri.fragment.presence
+        host_errors << "must not have a query" if uri.query.presence
+        host_errors << "must not have a path" if uri.path.presence && uri.path != "/"
         if host_errors.empty? && uri.path == "/"
           uri.path = ""
           @host = uri.normalize.to_s
@@ -72,12 +115,8 @@ module Ktistec
         host_errors << "name must be present"
       end
       errors["host"] = host_errors unless host_errors.empty?
-      errors["site"] = ["name must be present"] unless present?(@site)
+      errors["site"] = ["name must be present"] unless @site.presence
       errors.empty?
-    end
-
-    private def present?(value)
-      !value.nil? && !value.empty?
     end
   end
 
@@ -110,6 +149,8 @@ module Ktistec
   #
   class Server
     def self.run
+      log_levels = LogLevel.all_as_hash
+      ::Log.setup log_levels.transform_values(&.severity)
       with new yield
       Kemal.config.app_name = "Ktistec"
       # work around Kemal's handling of the command line when running specs...

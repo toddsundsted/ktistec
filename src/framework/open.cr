@@ -6,6 +6,8 @@ module Ktistec
   module Open
     extend self
 
+    Log = ::Log.for(self)
+
     # Opens and reads from the specified URL.
     #
     # Uses `key_pair` to sign the request. Will automatically follow
@@ -70,14 +72,14 @@ module Ktistec
     def open?(key_pair, url, headers = HTTP::Headers.new, attempts = 10)
       open(key_pair, url, headers, attempts)
     rescue ex : Error
-      Log.warn { "#{self}.open? - #{ex.message}" }
+      Log.debug { "#{self}.open? - #{ex.message}" }
     end
 
     # :ditto:
     def open?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, &)
       yield open(key_pair, url, headers, attempts)
     rescue ex : Error
-      Log.warn { "#{self}.open? - #{ex.message}" }
+      Log.debug { "#{self}.open? - #{ex.message}" }
     end
 
     class Error < Exception

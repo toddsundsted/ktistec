@@ -8,6 +8,9 @@ require "../../activity_pub"
 module Ktistec
   module Model(*T)
     module Linked
+      # the only logging in this module is related to mapping JSON-LD.
+      Log = ::Log.for("ktistec.json_ld")
+
       def origin
         uri = URI.parse(iri)
         "#{uri.scheme}://#{uri.host}"
@@ -75,7 +78,7 @@ module Ktistec
               Ktistec::Open.open?(key_pair, iri, headers) do |response|
                 instance = self.from_json_ld(response.body, **options)
               rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
-                Log.warn { "#{self}.dereference? - #{iri} - #{ex.message}" }
+                Log.debug { "#{self}.dereference? - #{iri} - #{ex.message}" }
               end
             end
           end
@@ -105,7 +108,7 @@ module Ktistec
                             Ktistec::Open.open?(key_pair, {{foreign_key}}, headers) do |response|
                               self.{{name}} = {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
                             rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
-                              Log.warn { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} -- #{ex.message}" }
+                              Log.debug { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} -- #{ex.message}" }
                             end
                           end
                         else

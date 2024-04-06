@@ -5,6 +5,8 @@ require "../activity_pub/object"
 
 class Task
   class Terminate < Task
+    Log = ::Log.for(self)
+
     belongs_to source, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri
     validates(source) { "missing: #{source_iri}" unless source? }
 
@@ -32,7 +34,7 @@ class Task
 
     def perform
       if (object = subject.objects.first?)
-        Log.info { "Task::Terminate: deleting #{object.iri} published=#{!!object.published}" }
+        Log.warn { "Task::Terminate: deleting #{object.iri} published=#{!!object.published}" }
         self.next_attempt_at = 30.seconds.from_now
         if object.published
           task = Task::Deliver.new(sender: subject, activity: object.make_delete_activity, running: true).save
@@ -40,7 +42,7 @@ class Task
         end
         object.delete!
       else
-        Log.info { "Task::Terminate: deleting #{subject.iri}" }
+        Log.warn { "Task::Terminate: deleting #{subject.iri}" }
         task = Task::Deliver.new(sender: subject, activity: subject.make_delete_activity, running: true).save
         perform_once_now(task)
         subject.delete!

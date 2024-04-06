@@ -9,9 +9,13 @@ require "../rules/content_rules"
 class RelationshipsController
   include Ktistec::Controller
 
+  Log = ::Log.for("inbox")
+
   skip_auth ["/actors/:username/inbox"], POST
 
   post "/actors/:username/inbox" do |env|
+    request_id = env.request.object_id
+
     unless (account = get_account(env))
       not_found
     end
@@ -19,12 +23,16 @@ class RelationshipsController
       bad_request("Body Is Blank")
     end
 
+    Log.trace { "[#{request_id}] new post" }
+
     activity =
       begin
         ActivityPub::Activity.from_json_ld(body)
       rescue Ktistec::Model::TypeError
         bad_request("Unsupported Type")
       end
+
+    Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
     if activity.local?
       forbidden
@@ -56,6 +64,8 @@ class RelationshipsController
       bad_request("Actor Not Present")
     end
 
+    Log.trace { "[#{request_id}] actor iri=#{actor.iri}" }
+
     if actor.local?
       forbidden
     end
@@ -65,8 +75,10 @@ class RelationshipsController
     # 2
 
     if signature
-      if actor && Ktistec::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers, body)
+      if Ktistec::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers, body)
         verified = true
+      else
+        Log.trace { "[#{request_id}] signature verification failed" }
       end
     end
 
@@ -76,6 +88,8 @@ class RelationshipsController
       if activity.iri.presence && (temporary = ActivityPub::Activity.dereference?(account.actor, activity.iri))
         activity = temporary
         verified = true
+      else
+        Log.trace { "[#{request_id}] fetch from origin failed" }
       end
     end
 
@@ -94,6 +108,8 @@ class RelationshipsController
         response = HTTP::Client.get(object_iri, headers)
         if response.status_code.in?([404, 410])
           verified = true
+        else
+          Log.trace { "[#{request_id}] confirmation of delete failed iri=#{object_iri}" }
         end
       end
     end
@@ -107,6 +123,8 @@ class RelationshipsController
     actor.up!
 
     activity.actor = actor
+
+    Log.trace { "[#{request_id}] processing type=#{activity.class}" }
 
     case activity
     when ActivityPub::Activity::Announce
@@ -244,6 +262,8 @@ class RelationshipsController
 
     activity.save
 
+    Log.trace { "[#{request_id}] saved id=#{activity.id}" }
+
     ContentRules.new.run do
       recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq
       recipients.each { |recipient| assert ContentRules::IsRecipient.new(recipient) }
@@ -293,6 +313,8 @@ class RelationshipsController
       activity: activity,
       deliver_to: deliver_to
     ).schedule
+
+    Log.trace { "[#{request_id}] complete" }
 
     ok
   end

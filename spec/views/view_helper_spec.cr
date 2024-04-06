@@ -1073,6 +1073,12 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "system_path" do
+    it "gets the system path" do
+      expect(system_path).to eq("/system")
+    end
+  end
+
   describe "metrics_path" do
     it "gets the metrics path" do
       expect(metrics_path).to eq("/metrics")

@@ -12,6 +12,8 @@ end
 
 module Ktistec
   module JSON_LD
+    Log = ::Log.for(self)
+
     class Error < Exception
     end
 
@@ -154,7 +156,7 @@ module Ktistec
         end
         CONTEXTS.dig("#{uri.host}#{uri.path}/context.jsonld", "@context")
       rescue KeyError
-        Log.warn { "uncached external context not loaded: #{url}" }
+        Log.notice { "uncached external context not loaded: #{url}" }
         empty
       end
     end

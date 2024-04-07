@@ -93,23 +93,30 @@ class RelationshipsController
       end
     end
 
-    # mastodon issues identifiers for delete activities that cannot be
+    # mastodon issues identifiers for activities that cannot be
     # dereferenced (they are the identifier of the object or actor
-    # plus a URL fragment, but the object or actor has been deleted).
-    # so as a last resort, when dealing with a delete activity that
-    # can't otherwise be verified, check if the deleted object or
-    # actor exists, and if it does not (because it has been deleted),
-    # consider the activity valid.
+    # plus a URL fragment).  so as a last resort, when dealing with an
+    # activity that can't otherwise be verified, check on the object
+    # or actor.  if the activity is an update, and the object exists,
+    # or the activity is a delete, but the object or actor does not
+    # exit, consider the activity valid.
 
     unless verified
-      if activity.is_a?(ActivityPub::Activity::Delete) && (object_iri = activity.object_iri)
-        headers = Ktistec::Signature.sign(account.actor, object_iri, method: :get)
-        headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-        response = HTTP::Client.get(object_iri, headers)
-        if response.status_code.in?([404, 410])
-          verified = true
-        else
-          Log.trace { "[#{request_id}] confirmation of delete failed iri=#{object_iri}" }
+      if (object_iri = activity.object_iri)
+        if activity.is_a?(ActivityPub::Activity::Update)
+          Log.trace { "[#{request_id}] checking object of update iri=#{object_iri}" }
+          if (temporary = ActivityPub::Object.dereference?(account.actor, object_iri, ignore_cached: true))
+            activity.object = temporary
+            verified = true
+          end
+        elsif activity.is_a?(ActivityPub::Activity::Delete)
+          Log.trace { "[#{request_id}] checking object of delete iri=#{object_iri}" }
+          headers = Ktistec::Signature.sign(account.actor, object_iri, method: :get)
+          headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
+          response = HTTP::Client.get(object_iri, headers)
+          if response.status_code.in?([404, 410])
+            verified = true
+          end
         end
       end
     end

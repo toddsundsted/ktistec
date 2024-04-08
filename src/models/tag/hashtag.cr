@@ -70,7 +70,7 @@ class Tag
 
     # Returns the count of objects with the given hashtag.
     #
-    def self.count_all_objects(name, created_after after = Time::UNIX_EPOCH)
+    def self.all_objects_count(name, created_after after = Time::UNIX_EPOCH)
       query = <<-QUERY
         SELECT count(*)
           FROM objects AS o
@@ -123,7 +123,7 @@ class Tag
 
     # Returns the count of public objects with the given hashtag.
     #
-    def self.count_public_objects(name)
+    def self.public_objects_count(name)
       query = <<-QUERY
          SELECT count(*)
            FROM objects AS o

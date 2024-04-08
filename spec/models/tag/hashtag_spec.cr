@@ -158,7 +158,7 @@ Spectator.describe Tag::Hashtag do
     end
   end
 
-  describe ".count_all_objects" do
+  describe ".all_objects_count" do
     create_tagged_object(1, "foo", "bar")
     create_tagged_object(2, "foo")
     create_tagged_object(3, "foo", "bar")
@@ -166,37 +166,37 @@ Spectator.describe Tag::Hashtag do
     create_tagged_object(5, "foo", "quux")
 
     it "returns count of objects with the tag" do
-      expect(described_class.count_all_objects("bar")).to eq(2)
+      expect(described_class.all_objects_count("bar")).to eq(2)
     end
 
     it "filters out draft objects" do
       object5.assign(published: nil).save
-      expect(described_class.count_all_objects("foo")).to eq(4)
+      expect(described_class.all_objects_count("foo")).to eq(4)
     end
 
     it "filters out deleted objects" do
       object5.delete!
-      expect(described_class.count_all_objects("foo")).to eq(4)
+      expect(described_class.all_objects_count("foo")).to eq(4)
     end
 
     it "filters out blocked objects" do
       object5.block!
-      expect(described_class.count_all_objects("foo")).to eq(4)
+      expect(described_class.all_objects_count("foo")).to eq(4)
     end
 
     it "filters out objects with deleted attributed to actors" do
       author.delete!
-      expect(described_class.count_all_objects("foo")).to eq(0)
+      expect(described_class.all_objects_count("foo")).to eq(0)
     end
 
     it "filters out objects with blocked attributed to actors" do
       author.block!
-      expect(described_class.count_all_objects("foo")).to eq(0)
+      expect(described_class.all_objects_count("foo")).to eq(0)
     end
 
     it "filters out objects with destroyed attributed to actors" do
       author.destroy
-      expect(described_class.count_all_objects("foo")).to eq(0)
+      expect(described_class.all_objects_count("foo")).to eq(0)
     end
 
     context "given an older object" do
@@ -215,7 +215,7 @@ Spectator.describe Tag::Hashtag do
       end
 
       it "filters out the older object" do
-        expect(described_class.count_all_objects("foo", created_after: Time.utc(2016, 1, 1))).to eq(5)
+        expect(described_class.all_objects_count("foo", created_after: Time.utc(2016, 1, 1))).to eq(5)
       end
     end
   end
@@ -298,7 +298,7 @@ Spectator.describe Tag::Hashtag do
     end
   end
 
-  describe ".count_public_objects" do
+  describe ".public_objects_count" do
     create_tagged_object(1, "foo", "bar")
     create_tagged_object(2, "foo")
     create_tagged_object(3, "foo", "bar")
@@ -306,42 +306,42 @@ Spectator.describe Tag::Hashtag do
     create_tagged_object(5, "foo", "quux")
 
     it "returns count of objects with the tag" do
-      expect(described_class.count_public_objects("bar")).to eq(2)
+      expect(described_class.public_objects_count("bar")).to eq(2)
     end
 
     it "filters out non-published objects" do
       object5.assign(published: nil).save
-      expect(described_class.count_public_objects("foo")).to eq(4)
+      expect(described_class.public_objects_count("foo")).to eq(4)
     end
 
     it "filters out non-visible objects" do
       object5.assign(visible: false).save
-      expect(described_class.count_public_objects("foo")).to eq(4)
+      expect(described_class.public_objects_count("foo")).to eq(4)
     end
 
     it "filters out deleted objects" do
       object5.delete!
-      expect(described_class.count_public_objects("foo")).to eq(4)
+      expect(described_class.public_objects_count("foo")).to eq(4)
     end
 
     it "filters out blocked objects" do
       object5.block!
-      expect(described_class.count_public_objects("foo")).to eq(4)
+      expect(described_class.public_objects_count("foo")).to eq(4)
     end
 
     it "filters out objects with deleted attributed to actors" do
       author.delete!
-      expect(described_class.count_public_objects("foo")).to eq(0)
+      expect(described_class.public_objects_count("foo")).to eq(0)
     end
 
     it "filters out objects with blocked attributed to actors" do
       author.block!
-      expect(described_class.count_public_objects("foo")).to eq(0)
+      expect(described_class.public_objects_count("foo")).to eq(0)
     end
 
     it "filters out objects with destroyed attributed to actors" do
       author.destroy
-      expect(described_class.count_public_objects("foo")).to eq(0)
+      expect(described_class.public_objects_count("foo")).to eq(0)
     end
 
     context "given a remote object" do
@@ -357,14 +357,14 @@ Spectator.describe Tag::Hashtag do
       end
 
       it "filters out the object" do
-        expect(described_class.count_public_objects("foo")).to eq(5)
+        expect(described_class.public_objects_count("foo")).to eq(5)
       end
 
       context "that has been approved" do
         before_each { author.approve(remote) }
 
         it "includes the object" do
-          expect(described_class.count_public_objects("foo")).to eq(6)
+          expect(described_class.public_objects_count("foo")).to eq(6)
         end
       end
     end

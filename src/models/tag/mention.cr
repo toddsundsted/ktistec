@@ -73,7 +73,7 @@ class Tag
 
     # Returns the count of objects with the given mention.
     #
-    def self.count_objects(name)
+    def self.all_objects_count(name)
       query = <<-QUERY
         SELECT count(*)
           FROM objects AS o

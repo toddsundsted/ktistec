@@ -9,7 +9,7 @@ class MentionsController
     mention = env.params.url["mention"]
 
     collection = Tag::Mention.all_objects(mention, **pagination_params(env))
-    count = Tag::Mention.count_objects(mention)
+    count = Tag::Mention.all_objects_count(mention)
 
     not_found if collection.empty?
 
@@ -22,7 +22,7 @@ class MentionsController
     mention = env.params.url["mention"]
 
     collection = Tag::Mention.all_objects(mention)
-    count = Tag::Mention.count_objects(mention)
+    count = Tag::Mention.all_objects_count(mention)
 
     not_found if collection.empty?
 
@@ -40,7 +40,7 @@ class MentionsController
     mention = env.params.url["mention"]
 
     collection = Tag::Mention.all_objects(mention)
-    count = Tag::Mention.count_objects(mention)
+    count = Tag::Mention.all_objects_count(mention)
 
     not_found if collection.empty?
 

@@ -51,6 +51,14 @@ Spectator.describe Session do
     end
   end
 
+  describe "#delete" do
+    it "deletes the entry from the session" do
+      subject.string("foo", "bar")
+      expect(subject.delete("foo")).to eq("bar")
+      expect(subject.string?("foo")).to be_nil
+    end
+  end
+
   context "with an expiry in the future" do
     it "stores the expiration date" do
       subject.string("foo", "bar", expires_in: 5.seconds)
@@ -65,6 +73,12 @@ Spectator.describe Session do
     it "retrieves a string value from the session" do
       subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix + 60}}}|
       expect(subject.string?("foo")).to eq("bar")
+    end
+
+    it "deletes the entry from the session" do
+      subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix + 60}}}|
+      expect(subject.delete("foo")).to eq("bar")
+      expect(subject.string?("foo")).to be_nil
     end
   end
 
@@ -81,6 +95,12 @@ Spectator.describe Session do
 
     it "returns nil" do
       subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix - 60}}}|
+      expect(subject.string?("foo")).to be_nil
+    end
+
+    it "returns nil" do
+      subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix - 60}}}|
+      expect(subject.delete("foo")).to be_nil
       expect(subject.string?("foo")).to be_nil
     end
   end

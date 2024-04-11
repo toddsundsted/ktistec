@@ -46,8 +46,7 @@ class Session
     save
   end
 
-  def string(key)
-    value = self.body[key]
+  private def check_value(value)
     if (hash = value.as_h?)
       if hash["expiry"].as_i > Time.utc.to_unix
         hash["value"].as_s
@@ -57,10 +56,23 @@ class Session
     end
   end
 
+  def string(key)
+    check_value(self.body[key])
+  end
+
   def string?(key)
     string(key)
   rescue KeyError
     # ignore
+  end
+
+  def delete(key)
+    body = self.body.as_h
+    if (value = body.delete(key))
+      self.body = body
+      save
+      check_value(value)
+    end
   end
 
   @jwt : String?

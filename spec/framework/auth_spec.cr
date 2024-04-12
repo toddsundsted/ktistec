@@ -37,6 +37,11 @@ Spectator.describe Ktistec::Auth do
         expect(response.status_code).to eq(401)
         expect(JSON.parse(response.body)["msg"]).to eq("Unauthorized")
       end
+
+      it "stores the path in the session" do
+        get "/foo/bar/auth", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        expect(session.reload!.string?("redirect_after_auth_path")).to eq("/foo/bar/auth")
+      end
     end
 
     context "authenticated session" do
@@ -55,6 +60,11 @@ Spectator.describe Ktistec::Auth do
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
         expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
+      end
+
+      it "doesn't store the path in the session" do
+        get "/foo/bar/auth", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        expect(session.reload!.string?("redirect_after_auth_path")).to be_nil
       end
     end
   end
@@ -79,6 +89,11 @@ Spectator.describe Ktistec::Auth do
         expect(JSON.parse(response.body).dig("account")).to eq(nil)
         expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
       end
+
+      it "doesn't store the path in the session" do
+        get "/foo/bar/skip", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        expect(session.reload!.string?("redirect_after_auth_path")).to be_nil
+      end
     end
 
     context "authenticated session" do
@@ -97,6 +112,11 @@ Spectator.describe Ktistec::Auth do
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
         expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
+      end
+
+      it "doesn't store the path in the session" do
+        get "/foo/bar/skip", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        expect(session.reload!.string?("redirect_after_auth_path")).to be_nil
       end
     end
   end

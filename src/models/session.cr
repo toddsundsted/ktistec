@@ -57,11 +57,11 @@ class Session
   end
 
   def string(key)
-    check_value(self.body[key])
+    check_value(self.body[key]) || raise KeyError.new(%Q|Missing hash key: "#{key}"|)
   end
 
   def string?(key)
-    string(key)
+    check_value(self.body[key])
   rescue KeyError
     # ignore
   end

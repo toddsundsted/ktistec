@@ -88,9 +88,9 @@ Spectator.describe Session do
       expect(subject.body_json).to match(/{"foo":{"value":"bar","expiry":[0-9]+}}/)
     end
 
-    it "returns nil" do
+    it "raises an exception" do
       subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix - 60}}}|
-      expect(subject.string("foo")).to be_nil
+      expect{subject.string("foo")}.to raise_error(KeyError)
     end
 
     it "returns nil" do

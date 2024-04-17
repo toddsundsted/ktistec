@@ -769,6 +769,27 @@ Spectator.describe RelationshipsController do
         post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
         expect(response.status_code).to eq(200)
       end
+
+      context "signature is not valid but the remote object can be fetched" do
+        let(headers) { Ktistec::Signature.sign(other, "", "{}", "") }
+
+        before_each { update.object = note }
+
+        it "checks for the existence of the object" do
+          post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+          expect(HTTP::Client.requests).to have("GET #{note.iri}")
+        end
+
+        it "updates the saved object" do
+          expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
+            to change{note.class.find(note.id).content}.to("content")
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+      end
     end
 
     context "on follow" do

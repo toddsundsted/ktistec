@@ -13,14 +13,17 @@ class SessionsController
     username, password = params(env)
 
     if account = account?(username, password)
+      # get the `redirect_after_auth_path` from the old session.
+      redirect_path = env.session.string?("redirect_after_auth_path") || actor_path(account)
+
       session = env.new_session(account)
       jwt = session.generate_jwt
 
       if accepts?("text/html")
-        redirect actor_path(account)
+        redirect redirect_path
       else
         env.response.content_type = "application/json"
-        {jwt: jwt}.to_json
+        {jwt: jwt, redirect_path: redirect_path}.to_json
       end
     else
       forbidden "sessions/new", env: env, message: "invalid username or password", username: username, password: password

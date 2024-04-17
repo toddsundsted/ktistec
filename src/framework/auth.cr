@@ -12,6 +12,8 @@ module Ktistec
       return call_next(env) unless env.route_lookup.found?
       return call_next(env) if env.session.account? || exclude_match?(env)
 
+      env.session.string("redirect_after_auth_path", env.request.path, expires_in: 5.minutes)
+
       message = "Unauthorized"
       if env.accepts?("text/html")
         env.response.status_code = 401

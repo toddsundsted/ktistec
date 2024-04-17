@@ -70,6 +70,24 @@ Spectator.describe SessionsController do
       expect(response.status_code).to eq(200)
       expect(JSON.parse(response.body)["jwt"]).to be_truthy
     end
+
+    context "given a redirect path in the session" do
+      before_each { session.string("redirect_after_auth_path", "/foo/bar/baz") }
+
+      it "redirects to the path" do
+        body = "username=#{username}&password=#{password}"
+        post "/sessions", HTML_HEADERS.add("Cookie", "AuthToken=#{jwt}"), body
+        expect(response.status_code).to eq(302)
+        expect(response.headers.to_a).to have({"Location", ["/foo/bar/baz"]})
+      end
+
+      it "returns the path" do
+        body = {username: username, password: password}.to_json
+        post "/sessions", JSON_HEADERS.add("Authorization", "Bearer #{jwt}"), body
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body)["redirect_path"]).to eq("/foo/bar/baz")
+      end
+    end
   end
 
   describe "DELETE /sessions" do

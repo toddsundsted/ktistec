@@ -147,7 +147,7 @@ Spectator.describe Tag::Mention do
     end
   end
 
-  describe ".count_objects" do
+  describe ".all_objects_count" do
     create_object_with_mentions(1, "foo@remote", "bar@remote")
     create_object_with_mentions(2, "foo@remote")
     create_object_with_mentions(3, "foo@remote", "bar@remote")
@@ -155,37 +155,37 @@ Spectator.describe Tag::Mention do
     create_object_with_mentions(5, "foo@remote", "quux@remote")
 
     it "returns count of objects with the mention" do
-      expect(described_class.count_objects("bar@remote")).to eq(2)
+      expect(described_class.all_objects_count("bar@remote")).to eq(2)
     end
 
     it "filters out draft objects" do
       object5.assign(published: nil).save
-      expect(described_class.count_objects("foo@remote")).to eq(4)
+      expect(described_class.all_objects_count("foo@remote")).to eq(4)
     end
 
     it "filters out deleted objects" do
       object5.delete!
-      expect(described_class.count_objects("foo@remote")).to eq(4)
+      expect(described_class.all_objects_count("foo@remote")).to eq(4)
     end
 
     it "filters out blocked objects" do
       object5.block!
-      expect(described_class.count_objects("foo@remote")).to eq(4)
+      expect(described_class.all_objects_count("foo@remote")).to eq(4)
     end
 
     it "filters out objects with deleted attributed to actors" do
       author.delete!
-      expect(described_class.count_objects("foo@remote")).to eq(0)
+      expect(described_class.all_objects_count("foo@remote")).to eq(0)
     end
 
     it "filters out objects with blocked attributed to actors" do
       author.block!
-      expect(described_class.count_objects("foo@remote")).to eq(0)
+      expect(described_class.all_objects_count("foo@remote")).to eq(0)
     end
 
     it "filters out objects with destroyed attributed to actors" do
       author.destroy
-      expect(described_class.count_objects("foo@remote")).to eq(0)
+      expect(described_class.all_objects_count("foo@remote")).to eq(0)
     end
   end
 end

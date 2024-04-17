@@ -35,17 +35,44 @@ class Session
     body
   end
 
-  def string(key, value)
-    self.body = self.body.as_h.merge({key => value})
+  def string(key, value, *, expires_in = nil)
+    self.body =
+      if expires_in
+        expiry = Time.utc.to_unix + expires_in.to_i
+        self.body.as_h.merge({key => {"value" => value, "expiry" => expiry}})
+      else
+        self.body.as_h.merge({key => value})
+      end
     save
   end
 
+  private def check_value(value)
+    if (hash = value.as_h?)
+      if hash["expiry"].as_i > Time.utc.to_unix
+        hash["value"].as_s
+      end
+    else
+      value.as_s
+    end
+  end
+
   def string(key)
-    self.body[key].as_s
+    check_value(self.body[key]) || raise KeyError.new(%Q|Missing hash key: "#{key}"|)
   end
 
   def string?(key)
-    self.body[key]?.try(&.as_s)
+    check_value(self.body[key])
+  rescue KeyError
+    # ignore
+  end
+
+  def delete(key)
+    body = self.body.as_h
+    if (value = body.delete(key))
+      self.body = body
+      save
+      check_value(value)
+    end
   end
 
   @jwt : String?

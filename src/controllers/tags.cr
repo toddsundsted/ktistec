@@ -13,10 +13,10 @@ class TagsController
 
     if env.account?
       collection = Tag::Hashtag.all_objects(hashtag, **pagination_params(env))
-      count = Tag::Hashtag.count_all_objects(hashtag)
+      count = Tag::Hashtag.all_objects_count(hashtag)
     else
       collection = Tag::Hashtag.public_objects(hashtag, **pagination_params(env))
-      count = Tag::Hashtag.count_public_objects(hashtag)
+      count = Tag::Hashtag.public_objects_count(hashtag)
     end
 
     not_found if collection.empty?
@@ -33,7 +33,7 @@ class TagsController
     hashtag = env.params.url["hashtag"]
 
     collection = Tag::Hashtag.all_objects(hashtag)
-    count = Tag::Hashtag.count_all_objects(hashtag)
+    count = Tag::Hashtag.all_objects_count(hashtag)
 
     not_found if collection.empty?
 
@@ -54,7 +54,7 @@ class TagsController
     hashtag = env.params.url["hashtag"]
 
     collection = Tag::Hashtag.all_objects(hashtag)
-    count = Tag::Hashtag.count_all_objects(hashtag)
+    count = Tag::Hashtag.all_objects_count(hashtag)
 
     not_found if collection.empty?
 

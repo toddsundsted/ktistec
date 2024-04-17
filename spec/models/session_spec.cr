@@ -44,6 +44,65 @@ Spectator.describe Session do
       subject.body_json = %q|{"foo":"bar"}|
       expect(subject.string?("foo")).to eq("bar")
     end
+
+    it "returns nil" do
+      subject.body_json = %q|{"foo":"bar"}|
+      expect(subject.string?("fxx")).to be_nil
+    end
+  end
+
+  describe "#delete" do
+    it "deletes the entry from the session" do
+      subject.string("foo", "bar")
+      expect(subject.delete("foo")).to eq("bar")
+      expect(subject.string?("foo")).to be_nil
+    end
+  end
+
+  context "with an expiry in the future" do
+    it "stores the expiration date" do
+      subject.string("foo", "bar", expires_in: 5.seconds)
+      expect(subject.body_json).to match(/{"foo":{"value":"bar","expiry":[0-9]+}}/)
+    end
+
+    it "retrieves a string value from the session" do
+      subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix + 60}}}|
+      expect(subject.string("foo")).to eq("bar")
+    end
+
+    it "retrieves a string value from the session" do
+      subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix + 60}}}|
+      expect(subject.string?("foo")).to eq("bar")
+    end
+
+    it "deletes the entry from the session" do
+      subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix + 60}}}|
+      expect(subject.delete("foo")).to eq("bar")
+      expect(subject.string?("foo")).to be_nil
+    end
+  end
+
+  context "with an expiry in the past" do
+    it "stores the expiration date" do
+      subject.string("foo", "bar", expires_in: -5.seconds)
+      expect(subject.body_json).to match(/{"foo":{"value":"bar","expiry":[0-9]+}}/)
+    end
+
+    it "raises an exception" do
+      subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix - 60}}}|
+      expect{subject.string("foo")}.to raise_error(KeyError)
+    end
+
+    it "returns nil" do
+      subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix - 60}}}|
+      expect(subject.string?("foo")).to be_nil
+    end
+
+    it "returns nil" do
+      subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix - 60}}}|
+      expect(subject.delete("foo")).to be_nil
+      expect(subject.string?("foo")).to be_nil
+    end
   end
 
   describe "#account=" do

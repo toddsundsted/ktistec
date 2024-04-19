@@ -10,30 +10,45 @@ class WellKnownController
     domain = URI.parse(host).host
 
     bad_request unless resource = env.params.query["resource"]?
-    bad_request unless resource =~ %r<^https://(#{domain})/(actors/|@)(?<username>.+)$|^(acct:)?(?<username>[^@]+)@(#{domain})$>
+    bad_request unless resource =~ %r<
+      ^https://(#{domain})/(actors/|@)(?<username>.+)$|
+      ^(acct:)?(?<username>[^@]+)@(#{domain})$|
+      ^https://(#{domain})$|
+      ^(#{domain})$
+    >mx
 
-    username = $~["username"]
-
-    Account.find(username: username).actor
-
-    message = {
-      subject: resource,
-      aliases: [
-        "#{host}/actors/#{username}"
-      ],
-      links: [{
-                rel: "self",
-                href: "#{host}/actors/#{username}",
-                type: Ktistec::Constants::CONTENT_TYPE_HEADER
-              }, {
-                rel: "http://webfinger.net/rel/profile-page",
-                href: "#{host}/@#{username}",
-                type: "text/html"
-              }, {
-                rel: "http://ostatus.org/schema/1.0/subscribe",
-                template: "#{host}/actors/#{username}/authorize-follow?uri={uri}"
-              }]
-    }
+    if (username = $~["username"]?)
+      Account.find(username: username).actor # raise error if not found
+      message = {
+        subject: resource,
+        aliases: [
+          "#{host}/actors/#{username}"
+        ],
+        links: [{
+                  rel: "self",
+                  href: "#{host}/actors/#{username}",
+                  type: Ktistec::Constants::CONTENT_TYPE_HEADER
+                }, {
+                  rel: "http://webfinger.net/rel/profile-page",
+                  href: "#{host}/@#{username}",
+                  type: "text/html"
+                }, {
+                  rel: "http://ostatus.org/schema/1.0/subscribe",
+                  template: "#{host}/authorize-interaction?uri={uri}"
+                }]
+      }
+    else
+      message = {
+        subject: domain,
+        aliases: [
+          host
+        ],
+        links: [{
+                  rel: "http://ostatus.org/schema/1.0/subscribe",
+                  template: "#{host}/authorize-interaction?uri={uri}"
+                }]
+      }
+    end
     env.response.content_type = "application/jrd+json"
     env.response.headers.add("Access-Control-Allow-Origin", "*")
     message.to_json

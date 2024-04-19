@@ -22,6 +22,8 @@ Spectator.describe WellKnownController do
       expect(response.status_code).to eq(400)
     end
 
+    # actor
+
     it "returns 400 if bad host" do
       get "/.well-known/webfinger?resource=acct%3A#{username}%40remote"
       expect(response.status_code).to eq(400)
@@ -76,7 +78,40 @@ Spectator.describe WellKnownController do
 
     it "returns reference to the template" do
       get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
-      message = {"rel" => "http://ostatus.org/schema/1.0/subscribe", "template" => "https://test.test/actors/#{username}/authorize-follow?uri={uri}"}
+      message = {"rel" => "http://ostatus.org/schema/1.0/subscribe", "template" => "https://test.test/authorize-interaction?uri={uri}"}
+      expect(JSON.parse(response.body)["links"].as_a).to contain(message)
+    end
+
+    # host
+
+    it "returns 400 if bad host" do
+      get "/.well-known/webfinger?resource=remote"
+      expect(response.status_code).to eq(400)
+    end
+
+    it "returns 200 if found" do
+      get "/.well-known/webfinger?resource=test.test"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns 200 if 'https' URI scheme is used" do
+      get "/.well-known/webfinger?resource=https://test.test"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns the subject" do
+      get "/.well-known/webfinger?resource=test.test"
+      expect(JSON.parse(response.body)["subject"]).to eq("test.test")
+    end
+
+    it "returns aliases" do
+      get "/.well-known/webfinger?resource=test.test"
+      expect(JSON.parse(response.body)["aliases"]).to match(["https://test.test"])
+    end
+
+    it "returns reference to the template" do
+      get "/.well-known/webfinger?resource=test.test"
+      message = {"rel" => "http://ostatus.org/schema/1.0/subscribe", "template" => "https://test.test/authorize-interaction?uri={uri}"}
       expect(JSON.parse(response.body)["links"].as_a).to contain(message)
     end
   end

@@ -4,6 +4,49 @@ require "../utils/network"
 class InteractionsController
   include Ktistec::Controller
 
+  skip_auth ["/actors/:username/remote-follow"], GET, POST
+
+  get "/actors/:username/remote-follow" do |env|
+    username = env.params.url["username"]
+
+    unless (actor = Account.find?(username: username).try(&.actor))
+      not_found
+    end
+
+    ok "interactions/index", env: env, error: nil, account: nil, actor: actor
+  end
+
+  post "/actors/:username/remote-follow" do |env|
+    username = env.params.url["username"]
+
+    unless (actor = Account.find?(username: username).try(&.actor))
+      not_found
+    end
+
+    account =
+      if (params = (env.params.body.presence || env.params.json.presence))
+        if (param = params["account"]?) && param.is_a?(String)
+          param.lstrip('@').presence
+        end
+      end
+
+    if account
+      begin
+        location = WebFinger.query("acct:#{account}").link("http://ostatus.org/schema/1.0/subscribe").template
+        location = location.not_nil!.gsub("{uri}", URI.encode_path(actor.iri))
+        if accepts?("text/html")
+          redirect location
+        else
+          {location: location}.to_json
+        end
+      rescue ex : HostMeta::Error | WebFinger::Error | NilAssertionError | KeyError
+        bad_request "interactions/index", env: env, error: ex.message, account: account, actor: actor
+      end
+    else
+      unprocessable_entity "interactions/index", env: env, error: "the address must not be blank", account: account, actor: actor
+    end
+  end
+
   get "/authorize-interaction" do |env|
     unless (uri = env.params.query["uri"]?)
       bad_request("Missing URI")

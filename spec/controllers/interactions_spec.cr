@@ -7,10 +7,102 @@ require "../spec_helper/controller"
 Spectator.describe InteractionsController do
   setup_spec
 
-  HTML_HEADERS = HTTP::Headers{"Accept" => "text/html"}
-  JSON_HEADERS = HTTP::Headers{"Accept" => "application/json"}
+  HTML_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+  JSON_HEADERS = HTTP::Headers{"Content-Type" => "application/json", "Accept" => "application/json"}
 
   let(actor) { register.actor }
+
+  describe "GET /actors/:username/remote-follow" do
+    it "returns 404 if not found" do
+      get "/actors/missing/remote-follow"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "succeeds" do
+      get "/actors/#{actor.username}/remote-follow", HTML_HEADERS
+      expect(response.status_code).to eq(200)
+    end
+
+    it "succeeds" do
+      get "/actors/#{actor.username}/remote-follow", JSON_HEADERS
+      expect(response.status_code).to eq(200)
+    end
+
+    it "renders a form" do
+      get "/actors/#{actor.username}/remote-follow", HTML_HEADERS
+      expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='account']]")).not_to be_empty
+    end
+
+    it "returns a template" do
+      get "/actors/#{actor.username}/remote-follow", JSON_HEADERS
+      expect(JSON.parse(response.body).dig?("account")).not_to be_nil
+    end
+  end
+
+  describe "POST /actors/:username/remote-follow" do
+    it "returns 404 if not found" do
+      post "/actors/missing/remote-follow"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "renders an error if account is missing" do
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, ""
+      expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).
+        to match(/The address must not be blank/)
+    end
+
+    it "returns an error if account is missing" do
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, "{}"
+      expect(JSON.parse(response.body).dig?("msg")).
+        to match(/The address must not be blank/)
+    end
+
+    it "renders an error if account is blank" do
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "account="
+      expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).
+        to match(/The address must not be blank/)
+    end
+
+    it "returns an error if account is blank" do
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"account":""}|
+      expect(JSON.parse(response.body).dig?("msg")).
+        to match(/The address must not be blank/)
+    end
+
+    it "retains the account if account is invalid" do
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "account=xyz"
+      expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='account']/@value").first).
+        to eq("xyz")
+    end
+
+    it "retains the account if account is invalid" do
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"account":"xyz"}|
+      expect(JSON.parse(response.body).dig?("account")).
+        to eq("xyz")
+    end
+
+    it "redirects if succesful" do
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "account=foobar%40remote.com"
+      expect(response.status_code).to eq(302)
+    end
+
+    it "succeeds" do
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"account":"foobar@remote.com"}|
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns the remote location if successful" do
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "account=foobar%40remote.com"
+      expect(response.headers["Location"]?).
+        to eq("https://remote.com/actors/foobar/authorize-follow?uri=#{URI.encode_path(actor.iri)}")
+    end
+
+    it "returns the remote location if successful" do
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"account":"foobar@remote.com"}|
+      expect(JSON.parse(response.body).dig?("location")).
+        to eq("https://remote.com/actors/foobar/authorize-follow?uri=#{URI.encode_path(actor.iri)}")
+    end
+  end
 
   describe "GET /authorize-interaction" do
     it "returns 401 if not authorized" do

@@ -94,13 +94,13 @@ Spectator.describe InteractionsController do
     it "returns the remote location if successful" do
       post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "account=foobar%40remote.com"
       expect(response.headers["Location"]?).
-        to eq("https://remote.com/actors/foobar/authorize-follow?uri=#{URI.encode_path(actor.iri)}")
+        to eq("https://remote.com/authorize-interaction?uri=#{URI.encode_path(actor.iri)}")
     end
 
     it "returns the remote location if successful" do
       post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"account":"foobar@remote.com"}|
       expect(JSON.parse(response.body).dig?("location")).
-        to eq("https://remote.com/actors/foobar/authorize-follow?uri=#{URI.encode_path(actor.iri)}")
+        to eq("https://remote.com/authorize-interaction?uri=#{URI.encode_path(actor.iri)}")
     end
   end
 

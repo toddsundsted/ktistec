@@ -164,7 +164,7 @@ module WebFinger
             },
             {
               "rel":"http://ostatus.org/schema/1.0/subscribe",
-              "template":"https://#{host}/actors/#{name}/authorize-follow?uri={uri}"
+              "template":"https://#{host}/authorize-interaction?uri={uri}"
             }
           ]
         }

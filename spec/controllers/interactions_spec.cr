@@ -30,12 +30,12 @@ Spectator.describe InteractionsController do
 
     it "renders a form" do
       get "/actors/#{actor.username}/remote-follow", HTML_HEADERS
-      expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='account']]")).not_to be_empty
+      expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='domain']]")).not_to be_empty
     end
 
     it "returns a template" do
       get "/actors/#{actor.username}/remote-follow", JSON_HEADERS
-      expect(JSON.parse(response.body).dig?("account")).not_to be_nil
+      expect(JSON.parse(response.body).dig?("domain")).not_to be_nil
     end
   end
 
@@ -45,49 +45,49 @@ Spectator.describe InteractionsController do
       expect(response.status_code).to eq(404)
     end
 
-    it "renders an error if account is missing" do
+    it "renders an error if domain is missing" do
       post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, ""
       expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).
-        to match(/The address must not be blank/)
+        to match(/The domain must not be blank/)
     end
 
-    it "returns an error if account is missing" do
+    it "returns an error if domain is missing" do
       post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, "{}"
       expect(JSON.parse(response.body).dig?("msg")).
-        to match(/The address must not be blank/)
+        to match(/The domain must not be blank/)
     end
 
-    it "renders an error if account is blank" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "account="
+    it "renders an error if domain is blank" do
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain="
       expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).
-        to match(/The address must not be blank/)
+        to match(/The domain must not be blank/)
     end
 
-    it "returns an error if account is blank" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"account":""}|
+    it "returns an error if domain is blank" do
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":""}|
       expect(JSON.parse(response.body).dig?("msg")).
-        to match(/The address must not be blank/)
+        to match(/The domain must not be blank/)
     end
 
-    it "retains the account if account is invalid" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "account=xyz"
-      expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='account']/@value").first).
+    it "retains the domain if domain is invalid" do
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=xyz"
+      expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='domain']/@value").first).
         to eq("xyz")
     end
 
-    it "retains the account if account is invalid" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"account":"xyz"}|
-      expect(JSON.parse(response.body).dig?("account")).
+    it "retains the domain if domain is invalid" do
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"xyz"}|
+      expect(JSON.parse(response.body).dig?("domain")).
         to eq("xyz")
     end
 
     it "redirects if succesful" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "account=foobar%40remote.com"
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=foobar%40remote.com"
       expect(response.status_code).to eq(302)
     end
 
     it "succeeds" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"account":"foobar@remote.com"}|
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"foobar@remote.com"}|
       expect(response.status_code).to eq(200)
     end
 

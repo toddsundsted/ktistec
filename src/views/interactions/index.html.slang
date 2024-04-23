@@ -21,6 +21,6 @@ form.ui.form class=(error ? "error" : "") method="POST" data-turbo="false"
   .field
     label Your Address
     p This should be the address of your unique identity in the fediverse.
-    input type="text" name="account" value=account placeholder="username@domain.domain"
+    input type="text" name="domain" value=domain placeholder="username@domain.domain"
   input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
   input.ui.primary.button type="submit" value="Submit"

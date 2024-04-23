@@ -2,5 +2,5 @@
   <%- if error -%>
   "msg":<%= error.capitalize.to_json %>,
   <%- end -%>
-  "account":<%= account.try(&.to_json) || "null" %>
+  "domain":<%= domain.to_json %>
 }

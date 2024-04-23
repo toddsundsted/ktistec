@@ -13,7 +13,7 @@ class InteractionsController
       not_found
     end
 
-    ok "interactions/index", env: env, error: nil, account: nil, actor: actor
+    ok "interactions/index", env: env, error: nil, domain: nil, actor: actor
   end
 
   post "/actors/:username/remote-follow" do |env|
@@ -23,16 +23,16 @@ class InteractionsController
       not_found
     end
 
-    account =
+    domain =
       if (params = (env.params.body.presence || env.params.json.presence))
-        if (param = params["account"]?) && param.is_a?(String)
+        if (param = params["domain"]?) && param.is_a?(String)
           param.lstrip('@').presence
         end
       end
 
-    if account
+    if domain
       begin
-        location = WebFinger.query("acct:#{account}").link("http://ostatus.org/schema/1.0/subscribe").template
+        location = WebFinger.query("acct:#{domain}").link("http://ostatus.org/schema/1.0/subscribe").template
         location = location.not_nil!.gsub("{uri}", URI.encode_path(actor.iri))
         if accepts?("text/html")
           redirect location
@@ -40,10 +40,10 @@ class InteractionsController
           {location: location}.to_json
         end
       rescue ex : HostMeta::Error | WebFinger::Error | NilAssertionError | KeyError
-        bad_request "interactions/index", env: env, error: ex.message, account: account, actor: actor
+        bad_request "interactions/index", env: env, error: ex.message, domain: domain, actor: actor
       end
     else
-      unprocessable_entity "interactions/index", env: env, error: "the address must not be blank", account: account, actor: actor
+      unprocessable_entity "interactions/index", env: env, error: "the domain must not be blank", domain: domain, actor: actor
     end
   end
 

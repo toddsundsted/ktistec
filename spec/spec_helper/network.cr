@@ -148,28 +148,54 @@ end
 # WebFinger mock.
 #
 module WebFinger
+  ACCOUNT_REGEX = %r<
+    ^(acct:)?(?<name>[^@]+)@(?<host>[^@]+)$|
+    ^(?<host>.+)$
+  >mx
+
   def self.query(account)
-    account =~ /^acct:([^@]+)@([^@]+)$/
-    _, name, host = $~.to_a
+    unless account =~ ACCOUNT_REGEX
+      raise WebFinger::NotFoundError.new("Invalid account")
+    end
+    name = $~["name"]?
+    host = $~["host"]?
     case account
     when /no-such-host/
       raise WebFinger::NotFoundError.new("No such host")
     else
-      WebFinger::Result.from_json(<<-JSON
-        {
-          "links":[
-            {
-              "rel":"self",
-              "href":"https://#{host}/actors/#{name}"
-            },
-            {
-              "rel":"http://ostatus.org/schema/1.0/subscribe",
-              "template":"https://#{host}/authorize-interaction?uri={uri}"
-            }
-          ]
-        }
-        JSON
-      )
+      if name
+        WebFinger::Result.from_json(<<-JSON
+          {
+            "links":[
+              {
+                "rel":"self",
+                "href":"https://#{host}/actors/#{name}"
+              },
+              {
+                "rel":"http://ostatus.org/schema/1.0/subscribe",
+                "template":"https://#{host}/authorize-interaction?uri={uri}"
+              }
+            ]
+          }
+          JSON
+        )
+      else
+        WebFinger::Result.from_json(<<-JSON
+          {
+            "links":[
+              {
+                "rel":"self",
+                "href":"https://#{host}"
+              },
+              {
+                "rel":"http://ostatus.org/schema/1.0/subscribe",
+                "template":"https://#{host}/authorize-interaction?uri={uri}"
+              }
+            ]
+          }
+          JSON
+        )
+      end
     end
   end
 end

@@ -69,38 +69,62 @@ Spectator.describe InteractionsController do
         to match(/The domain must not be blank/)
     end
 
-    it "retains the domain if domain is invalid" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=xyz"
+    it "retains the domain if domain doesn't exist" do
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=no-such-host"
       expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='domain']/@value").first).
-        to eq("xyz")
+        to eq("no-such-host")
     end
 
-    it "retains the domain if domain is invalid" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"xyz"}|
+    it "retains the domain if domain doesn't exist" do
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"no-such-host"}|
       expect(JSON.parse(response.body).dig?("domain")).
-        to eq("xyz")
+        to eq("no-such-host")
     end
 
     it "redirects if succesful" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=foobar%40remote.com"
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=remote.com"
       expect(response.status_code).to eq(302)
     end
 
     it "succeeds" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"foobar@remote.com"}|
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"remote.com"}|
       expect(response.status_code).to eq(200)
     end
 
     it "returns the remote location if successful" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "account=foobar%40remote.com"
+      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=remote.com"
       expect(response.headers["Location"]?).
         to eq("https://remote.com/authorize-interaction?uri=#{URI.encode_path(actor.iri)}")
     end
 
     it "returns the remote location if successful" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"account":"foobar@remote.com"}|
+      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"remote.com"}|
       expect(JSON.parse(response.body).dig?("location")).
         to eq("https://remote.com/authorize-interaction?uri=#{URI.encode_path(actor.iri)}")
+    end
+
+    context "given a handle instead of a domain" do
+      it "redirects if succesful" do
+        post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=foobar%40remote.com"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "succeeds" do
+        post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"foobar@remote.com"}|
+        expect(response.status_code).to eq(200)
+      end
+
+      it "returns the remote location if successful" do
+        post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=foobar%40remote.com"
+        expect(response.headers["Location"]?).
+          to eq("https://remote.com/authorize-interaction?uri=#{URI.encode_path(actor.iri)}")
+      end
+
+      it "returns the remote location if successful" do
+        post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"foobar@remote.com"}|
+        expect(JSON.parse(response.body).dig?("location")).
+          to eq("https://remote.com/authorize-interaction?uri=#{URI.encode_path(actor.iri)}")
+      end
     end
   end
 

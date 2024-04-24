@@ -32,7 +32,7 @@ class InteractionsController
 
     if domain
       begin
-        location = WebFinger.query("acct:#{domain}").link("http://ostatus.org/schema/1.0/subscribe").template
+        location = WebFinger.query(domain).link("http://ostatus.org/schema/1.0/subscribe").template
         location = location.not_nil!.gsub("{uri}", URI.encode_path(actor.iri))
         if accepts?("text/html")
           redirect location

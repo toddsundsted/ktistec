@@ -4,8 +4,22 @@ require "../utils/network"
 class InteractionsController
   include Ktistec::Controller
 
+  skip_auth ["/objects/:id/remote-:action"], GET
   skip_auth ["/actors/:username/remote-follow"], GET
   skip_auth ["/remote-interaction"], POST
+
+  get "/objects/:id/remote-:action" do |env|
+    id = env.params.url["id"]
+    action = env.params.url["action"]
+
+    object_iri = "#{host}/objects/#{id}"
+
+    unless (message = generate_message(action, object_iri))
+      not_found
+    end
+
+    ok "interactions/index", env: env, message: message, error: nil, target: object_iri, action: action, domain: nil
+  end
 
   get "/actors/:username/remote-follow" do |env|
     username = env.params.url["username"]
@@ -80,13 +94,17 @@ class InteractionsController
 
   private def self.generate_message(action, target)
     case action
-    when "follow"
-      if (actor = ActivityPub::Actor.find?(target))
-        "follow #{actor.name}"
-      end
     when "reply"
       if (object = ActivityPub::Object.find?(target))
         "reply to #{object.attributed_to.name}'s post"
+      end
+    when "like", "share"
+      if (object = ActivityPub::Object.find?(target))
+        "#{action} #{object.attributed_to.name}'s post"
+      end
+    when "follow"
+      if (actor = ActivityPub::Actor.find?(target))
+        "follow #{actor.name}"
       end
     end
   end

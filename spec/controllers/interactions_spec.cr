@@ -14,6 +14,82 @@ Spectator.describe InteractionsController do
 
   let_create(object, attributed_to: actor)
 
+  describe "GET /objects/:id/remote-foobar" do
+    it "returns 404" do
+      get "/objects/#{object.iri.split('/').last}/remote-foobar"
+      expect(response.status_code).to eq(404)
+    end
+  end
+
+  describe "GET /objects/:id/remote-reply" do
+    it "returns 404 if not found" do
+      get "/objects/missing/remote-reply"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "succeeds" do
+      get "/objects/#{object.iri.split('/').last}/remote-reply", HTML_HEADERS
+      expect(response.status_code).to eq(200)
+    end
+
+    it "succeeds" do
+      get "/objects/#{object.iri.split('/').last}/remote-reply", JSON_HEADERS
+      expect(response.status_code).to eq(200)
+    end
+
+    it "renders a form" do
+      get "/objects/#{object.iri.split('/').last}/remote-reply", HTML_HEADERS
+      expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='domain']]")).not_to be_empty
+    end
+
+    it "returns a template" do
+      get "/objects/#{object.iri.split('/').last}/remote-reply", JSON_HEADERS
+      expect(JSON.parse(response.body).dig?("domain")).not_to be_nil
+    end
+
+    it "includes the target" do
+      get "/objects/#{object.iri.split('/').last}/remote-reply", HTML_HEADERS
+      expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='target']/@value").first).to eq(object.iri)
+    end
+
+    it "includes the target" do
+      get "/objects/#{object.iri.split('/').last}/remote-reply", JSON_HEADERS
+      expect(JSON.parse(response.body).dig?("target")).to eq(object.iri)
+    end
+
+    it "includes the action" do
+      get "/objects/#{object.iri.split('/').last}/remote-reply", HTML_HEADERS
+      expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='action']/@value").first).to eq("reply")
+    end
+
+    it "includes the action" do
+      get "/objects/#{object.iri.split('/').last}/remote-reply", JSON_HEADERS
+      expect(JSON.parse(response.body).dig?("action")).to eq("reply")
+    end
+
+    it "renders the message" do
+      get "/objects/#{object.iri.split('/').last}/remote-reply", HTML_HEADERS
+      expect(XML.parse_html(response.body).xpath_nodes("//h1").first).to match(/Reply to Actor's post/)
+    end
+  end
+
+  # currently, the actions for the following two sets of specs differ
+  # only in how they generate the message.
+
+  describe "GET /objects/:id/remote-like" do
+    it "renders the message" do
+      get "/objects/#{object.iri.split('/').last}/remote-like", HTML_HEADERS
+      expect(XML.parse_html(response.body).xpath_nodes("//h1").first).to match(/Like Actor's post/)
+    end
+  end
+
+  describe "GET /objects/:id/remote-share" do
+    it "renders the message" do
+      get "/objects/#{object.iri.split('/').last}/remote-share", HTML_HEADERS
+      expect(XML.parse_html(response.body).xpath_nodes("//h1").first).to match(/Share Actor's post/)
+    end
+  end
+
   describe "GET /actors/:username/remote-follow" do
     it "returns 404 if not found" do
       get "/actors/missing/remote-follow"

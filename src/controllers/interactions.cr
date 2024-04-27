@@ -4,46 +4,52 @@ require "../utils/network"
 class InteractionsController
   include Ktistec::Controller
 
-  skip_auth ["/actors/:username/remote-follow"], GET, POST
+  skip_auth ["/actors/:username/remote-follow"], GET
+  skip_auth ["/remote-interaction"], POST
 
   get "/actors/:username/remote-follow" do |env|
     username = env.params.url["username"]
 
-    unless (actor = Account.find?(username: username).try(&.actor))
+    actor_iri = "#{host}/actors/#{username}"
+
+    unless (message = generate_message("follow", actor_iri))
       not_found
     end
 
-    ok "interactions/index", env: env, error: nil, domain: nil, actor: actor
+    ok "interactions/index", env: env, message: message, error: nil, target: actor_iri, action: "follow", domain: nil
   end
 
-  post "/actors/:username/remote-follow" do |env|
-    username = env.params.url["username"]
-
-    unless (actor = Account.find?(username: username).try(&.actor))
-      not_found
+  post "/remote-interaction" do |env|
+    if (params = (env.params.body.presence || env.params.json.presence))
+      if (param = params["domain"]?) && param.is_a?(String)
+        domain = param.lstrip('@').presence
+      end
+      if (param = params["target"]?) && param.is_a?(String)
+        target = param.presence
+      end
+      if (param = params["action"]?) && param.is_a?(String)
+        action = param.presence
+      end
     end
 
-    domain =
-      if (params = (env.params.body.presence || env.params.json.presence))
-        if (param = params["domain"]?) && param.is_a?(String)
-          param.lstrip('@').presence
-        end
-      end
+    unless target && action && (message = generate_message(action, target))
+      bad_request
+    end
 
     if domain
       begin
         location = WebFinger.query(domain).link("http://ostatus.org/schema/1.0/subscribe").template
-        location = location.not_nil!.gsub("{uri}", URI.encode_path(actor.iri))
+        location = location.not_nil!.gsub("{uri}", target)
         if accepts?("text/html")
           redirect location
         else
           {location: location}.to_json
         end
       rescue ex : HostMeta::Error | WebFinger::Error | NilAssertionError | KeyError
-        bad_request "interactions/index", env: env, error: ex.message, domain: domain, actor: actor
+        bad_request "interactions/index", env: env, message: message, error: ex.message, target: target, action: action, domain: domain
       end
     else
-      unprocessable_entity "interactions/index", env: env, error: "the domain must not be blank", domain: domain, actor: actor
+      unprocessable_entity "interactions/index", env: env, message: message, error: "the domain must not be blank", target: target, action: action, domain: nil
     end
   end
 
@@ -69,6 +75,19 @@ class InteractionsController
       ok "objects/object", env: env, object: object, recursive: false
     else
       bad_request("Can't Dereference URI")
+    end
+  end
+
+  private def self.generate_message(action, target)
+    case action
+    when "follow"
+      if (actor = ActivityPub::Actor.find?(target))
+        "follow #{actor.name}"
+      end
+    when "reply"
+      if (object = ActivityPub::Object.find?(target))
+        "reply to #{object.attributed_to.name}'s post"
+      end
     end
   end
 end

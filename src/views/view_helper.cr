@@ -852,4 +852,8 @@ module Ktistec::ViewHelper
   macro unfollow_mention_path(mention = nil)
     "#{Ktistec::ViewHelper.mention_path({{mention}})}/unfollow"
   end
+
+  macro remote_interaction_path
+    "/remote-interaction"
+  end
 end

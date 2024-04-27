@@ -1558,4 +1558,10 @@ Spectator.describe "helpers" do
       expect(mention_path).to eq("/mentions/abc")
     end
   end
+
+  describe "remote_interaction_path" do
+    it "gets the remote interaction path" do
+      expect(remote_interaction_path).to eq("/remote-interaction")
+    end
+  end
 end

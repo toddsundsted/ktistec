@@ -10,7 +10,9 @@ Spectator.describe InteractionsController do
   HTML_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
   JSON_HEADERS = HTTP::Headers{"Content-Type" => "application/json", "Accept" => "application/json"}
 
-  let(actor) { register.actor }
+  let(actor) { register.actor.assign(name: "Actor").save }
+
+  let_create(object, attributed_to: actor)
 
   describe "GET /actors/:username/remote-follow" do
     it "returns 404 if not found" do
@@ -37,93 +39,123 @@ Spectator.describe InteractionsController do
       get "/actors/#{actor.username}/remote-follow", JSON_HEADERS
       expect(JSON.parse(response.body).dig?("domain")).not_to be_nil
     end
+
+    it "includes the target" do
+      get "/actors/#{actor.username}/remote-follow", HTML_HEADERS
+      expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='target']/@value").first).to eq(actor.iri)
+    end
+
+    it "includes the target" do
+      get "/actors/#{actor.username}/remote-follow", JSON_HEADERS
+      expect(JSON.parse(response.body).dig?("target")).to eq(actor.iri)
+    end
+
+    it "includes the action" do
+      get "/actors/#{actor.username}/remote-follow", HTML_HEADERS
+      expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='action']/@value").first).to eq("follow")
+    end
+
+    it "includes the action" do
+      get "/actors/#{actor.username}/remote-follow", JSON_HEADERS
+      expect(JSON.parse(response.body).dig?("action")).to eq("follow")
+    end
+
+    it "renders the message" do
+      get "/actors/#{actor.username}/remote-follow", HTML_HEADERS
+      expect(XML.parse_html(response.body).xpath_nodes("//h1").first).to match(/Follow Actor/)
+    end
   end
 
-  describe "POST /actors/:username/remote-follow" do
-    it "returns 404 if not found" do
-      post "/actors/missing/remote-follow"
-      expect(response.status_code).to eq(404)
+  describe "POST /remote-interaction" do
+    it "returns 400 if target is missing" do
+      post "/remote-interaction", HTML_HEADERS, ""
+      expect(response.status_code).to eq(400)
+    end
+
+    it "returns 400 if target is missing" do
+      post "/remote-interaction", JSON_HEADERS, "{}"
+      expect(response.status_code).to eq(400)
+    end
+
+    it "returns 400 if action is missing" do
+      post "/remote-interaction", HTML_HEADERS, "target=#{URI.encode_path(actor.iri)}"
+      expect(response.status_code).to eq(400)
+    end
+
+    it "returns 400 if action is missing" do
+      post "/remote-interaction", JSON_HEADERS, %Q|{"target":#{object.iri.to_json}}|
+      expect(response.status_code).to eq(400)
     end
 
     it "renders an error if domain is missing" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, ""
-      expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).
-        to match(/The domain must not be blank/)
+      post "/remote-interaction", HTML_HEADERS, "action=follow&target=#{URI.encode_path(actor.iri)}"
+      expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).to match(/The domain must not be blank/)
     end
 
     it "returns an error if domain is missing" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, "{}"
-      expect(JSON.parse(response.body).dig?("msg")).
-        to match(/The domain must not be blank/)
+      post "/remote-interaction", JSON_HEADERS, %Q|{"action":"reply","target":#{object.iri.to_json}}|
+      expect(JSON.parse(response.body).dig?("msg")).to match(/The domain must not be blank/)
     end
 
     it "renders an error if domain is blank" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain="
-      expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).
-        to match(/The domain must not be blank/)
+      post "/remote-interaction", HTML_HEADERS, "action=follow&target=#{URI.encode_path(actor.iri)}&domain="
+      expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).to match(/The domain must not be blank/)
     end
 
     it "returns an error if domain is blank" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":""}|
-      expect(JSON.parse(response.body).dig?("msg")).
-        to match(/The domain must not be blank/)
+      post "/remote-interaction", JSON_HEADERS, %Q|{"action":"reply","target":#{object.iri.to_json},"domain":""}|
+      expect(JSON.parse(response.body).dig?("msg")).to match(/The domain must not be blank/)
     end
 
     it "retains the domain if domain doesn't exist" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=no-such-host"
-      expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='domain']/@value").first).
-        to eq("no-such-host")
+      post "/remote-interaction", HTML_HEADERS, "action=follow&target=#{URI.encode_path(actor.iri)}&domain=no-such-host"
+      expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='domain']/@value").first).to eq("no-such-host")
     end
 
     it "retains the domain if domain doesn't exist" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"no-such-host"}|
-      expect(JSON.parse(response.body).dig?("domain")).
-        to eq("no-such-host")
+      post "/remote-interaction", JSON_HEADERS, %Q|{"action":"reply","target":#{object.iri.to_json},"domain":"no-such-host"}|
+      expect(JSON.parse(response.body).dig?("domain")).to eq("no-such-host")
     end
 
     it "redirects if succesful" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=remote.com"
+      post "/remote-interaction", HTML_HEADERS, "action=follow&target=#{URI.encode_path(actor.iri)}&domain=remote.com"
       expect(response.status_code).to eq(302)
     end
 
     it "succeeds" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"remote.com"}|
+      post "/remote-interaction", JSON_HEADERS, %Q|{"action":"reply","target":#{object.iri.to_json},"domain":"remote.com"}|
       expect(response.status_code).to eq(200)
     end
 
     it "returns the remote location if successful" do
-      post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=remote.com"
-      expect(response.headers["Location"]?).
-        to eq("https://remote.com/authorize-interaction?uri=#{URI.encode_path(actor.iri)}")
+      post "/remote-interaction", HTML_HEADERS, "action=follow&target=#{URI.encode_path(actor.iri)}&domain=remote.com"
+      expect(response.headers["Location"]?).to eq("https://remote.com/authorize-interaction?uri=#{actor.iri}")
     end
 
     it "returns the remote location if successful" do
-      post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"remote.com"}|
-      expect(JSON.parse(response.body).dig?("location")).
-        to eq("https://remote.com/authorize-interaction?uri=#{URI.encode_path(actor.iri)}")
+      post "/remote-interaction", JSON_HEADERS, %Q|{"action":"reply","target":#{object.iri.to_json},"domain":"remote.com"}|
+      expect(JSON.parse(response.body).dig?("location")).to eq("https://remote.com/authorize-interaction?uri=#{object.iri}")
     end
 
     context "given a handle instead of a domain" do
       it "redirects if succesful" do
-        post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=foobar%40remote.com"
+        post "/remote-interaction", HTML_HEADERS, "action=follow&target=#{URI.encode_path(actor.iri)}&domain=foobar%40remote.com"
         expect(response.status_code).to eq(302)
       end
 
       it "succeeds" do
-        post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"foobar@remote.com"}|
+        post "/remote-interaction", JSON_HEADERS, %Q|{"action":"reply","target":#{object.iri.to_json},"domain":"foobar@remote.com"}|
         expect(response.status_code).to eq(200)
       end
 
       it "returns the remote location if successful" do
-        post "/actors/#{actor.username}/remote-follow", HTML_HEADERS, "domain=foobar%40remote.com"
-        expect(response.headers["Location"]?).
-          to eq("https://remote.com/authorize-interaction?uri=#{URI.encode_path(actor.iri)}")
+        post "/remote-interaction", HTML_HEADERS, "action=follow&target=#{URI.encode_path(actor.iri)}&domain=foobar%40remote.com"
+        expect(response.headers["Location"]?).to eq("https://remote.com/authorize-interaction?uri=#{actor.iri}")
       end
 
       it "returns the remote location if successful" do
-        post "/actors/#{actor.username}/remote-follow", JSON_HEADERS, %q|{"domain":"foobar@remote.com"}|
-        expect(JSON.parse(response.body).dig?("location")).
-          to eq("https://remote.com/authorize-interaction?uri=#{URI.encode_path(actor.iri)}")
+        post "/remote-interaction", JSON_HEADERS, %Q|{"action":"reply","target":#{object.iri.to_json},"domain":"foobar@remote.com"}|
+        expect(JSON.parse(response.body).dig?("location")).to eq("https://remote.com/authorize-interaction?uri=#{object.iri}")
       end
     end
   end

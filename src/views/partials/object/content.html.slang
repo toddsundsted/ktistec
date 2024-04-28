@@ -160,18 +160,22 @@ crystal:
           button.ui.mini.iconic.button
             i.external.arrow.icon
             | Source
-    - else
+    - elsif object.local?
       - object.with_statistics!.with_replies_count!(approved_by: object.attributed_to)
       - if (c = object.replies_count) > 0 || object.in_reply_to?.try(&.approved_by?(object.attributed_to))
         a data-turbo-frame="_top" href=thread_path(object)
           button.ui.mini.iconic.button
             i.comments.icon
             | Thread
-      - if (c = object.likes_count) > 0
+      a data-turbo-frame="_top" href=object_remote_reply_path(object)
+        button.ui.mini.iconic.button
+          i.reply.icon
+          = pluralize(c, "Reply")
+      a data-turbo-frame="_top" href=object_remote_like_path(object)
         button.ui.mini.iconic.button
           i.thumbs.up.icon
-          = pluralize(c, "Like")
-      - if (c = object.announces_count) > 0
+          = pluralize(object.likes_count, "Like")
+      a data-turbo-frame="_top" href=object_remote_share_path(object)
         button.ui.mini.iconic.button
           i.share.icon
-          = pluralize(c, "Share")
+          = pluralize(object.announces_count, "Share")

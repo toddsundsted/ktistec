@@ -54,8 +54,23 @@ Spectator.describe WellKnownController do
       expect(response.status_code).to eq(200)
     end
 
-    it "returns the subject" do
+    it "returns the handle in the subject" do
       get "/.well-known/webfinger?resource=acct%3A#{username}%40test.test"
+      expect(JSON.parse(response.body)["subject"]).to eq("acct:#{username}@test.test")
+    end
+
+    it "returns the handle in the subject if 'acct' URI scheme is missing" do
+      get "/.well-known/webfinger?resource=#{username}%40test.test"
+      expect(JSON.parse(response.body)["subject"]).to eq("acct:#{username}@test.test")
+    end
+
+    it "returns the handle in the subject if 'https' URI scheme is used" do
+      get "/.well-known/webfinger?resource=https%3A%2F%2Ftest.test%2Factors%2F#{username}"
+      expect(JSON.parse(response.body)["subject"]).to eq("acct:#{username}@test.test")
+    end
+
+    it "returns the handle in the subject if 'https' URI scheme is used" do
+      get "/.well-known/webfinger?resource=https%3A%2F%2Ftest.test%2F%40#{username}"
       expect(JSON.parse(response.body)["subject"]).to eq("acct:#{username}@test.test")
     end
 
@@ -99,8 +114,13 @@ Spectator.describe WellKnownController do
       expect(response.status_code).to eq(200)
     end
 
-    it "returns the subject" do
+    it "returns the domain in the subject" do
       get "/.well-known/webfinger?resource=test.test"
+      expect(JSON.parse(response.body)["subject"]).to eq("test.test")
+    end
+
+    it "returns the domain in the subject if 'https' URI scheme is used" do
+      get "/.well-known/webfinger?resource=https://test.test"
       expect(JSON.parse(response.body)["subject"]).to eq("test.test")
     end
 

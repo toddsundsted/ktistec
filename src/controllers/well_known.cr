@@ -20,7 +20,7 @@ class WellKnownController
     if (username = $~["username"]?)
       Account.find(username: username).actor # raise error if not found
       message = {
-        subject: resource,
+        subject: "acct:#{username}@#{domain}",
         aliases: [
           "#{host}/actors/#{username}"
         ],

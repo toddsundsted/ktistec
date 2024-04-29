@@ -777,6 +777,18 @@ module Ktistec::ViewHelper
     "#{Ktistec::ViewHelper.remote_object_path({{object}})}/unfollow"
   end
 
+  macro object_remote_reply_path(object = nil)
+    "#{Ktistec::ViewHelper.object_path({{object}})}/remote-reply"
+  end
+
+  macro object_remote_like_path(object = nil)
+    "#{Ktistec::ViewHelper.object_path({{object}})}/remote-like"
+  end
+
+  macro object_remote_share_path(object = nil)
+    "#{Ktistec::ViewHelper.object_path({{object}})}/remote-share"
+  end
+
   macro remote_actor_path(actor = nil)
     {% if actor %}
       "/remote/actors/#{{{actor}}.id}"
@@ -851,5 +863,9 @@ module Ktistec::ViewHelper
 
   macro unfollow_mention_path(mention = nil)
     "#{Ktistec::ViewHelper.mention_path({{mention}})}/unfollow"
+  end
+
+  macro remote_interaction_path
+    "/remote-interaction"
   end
 end

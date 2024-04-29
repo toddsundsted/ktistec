@@ -1357,6 +1357,66 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "object_remote_reply_path" do
+    let(env) do
+      env_factory("GET", "/objects/abc/remote-reply").tap do |env|
+        env.params.url["id"] = "abc"
+      end
+    end
+
+    context "given an object" do
+      let(object) { double(:path_double) }
+
+      it "gets the object remote reply path" do
+        expect(object_remote_reply_path(object)).to eq("/objects/xyz/remote-reply")
+      end
+    end
+
+    it "gets the object remote reply path" do
+      expect(object_remote_reply_path).to eq("/objects/abc/remote-reply")
+    end
+  end
+
+  describe "object_remote_like_path" do
+    let(env) do
+      env_factory("GET", "/objects/abc/remote-like").tap do |env|
+        env.params.url["id"] = "abc"
+      end
+    end
+
+    context "given an object" do
+      let(object) { double(:path_double) }
+
+      it "gets the object remote like path" do
+        expect(object_remote_like_path(object)).to eq("/objects/xyz/remote-like")
+      end
+    end
+
+    it "gets the object remote like path" do
+      expect(object_remote_like_path).to eq("/objects/abc/remote-like")
+    end
+  end
+
+  describe "object_remote_share_path" do
+    let(env) do
+      env_factory("GET", "/objects/abc/remote-share").tap do |env|
+        env.params.url["id"] = "abc"
+      end
+    end
+
+    context "given an object" do
+      let(object) { double(:path_double) }
+
+      it "gets the object remote share path" do
+        expect(object_remote_share_path(object)).to eq("/objects/xyz/remote-share")
+      end
+    end
+
+    it "gets the object remote share path" do
+      expect(object_remote_share_path).to eq("/objects/abc/remote-share")
+    end
+  end
+
   describe "remote_actor_path" do
     let(env) do
       env_factory("GET", "/remote/actors/17").tap do |env|
@@ -1556,6 +1616,12 @@ Spectator.describe "helpers" do
 
     it "gets the mentions path" do
       expect(mention_path).to eq("/mentions/abc")
+    end
+  end
+
+  describe "remote_interaction_path" do
+    it "gets the remote interaction path" do
+      expect(remote_interaction_path).to eq("/remote-interaction")
     end
   end
 end

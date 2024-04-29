@@ -1,0 +1,8 @@
+{
+  <%- if error -%>
+  "msg":<%= error.capitalize.to_json %>,
+  <%- end -%>
+  "target":<%= target.to_json %>,
+  "action":<%= action.to_json %>,
+  "domain":<%= domain.to_json %>
+}

@@ -13,14 +13,14 @@ module Ktistec
     #
     #   KeyError - a rel="self" link does not exist in the retrieved record
     #
-    #   NilAssertionError - the href attribute is missing
+    #   NilAssertionError - the href attribute is blank
     #
     def self.resolve(name)
       url = URI.parse(name)
       if url.scheme && url.host && url.path
         name
       else
-        WebFinger.query("acct:#{name.lchop('@')}").link("self").href.not_nil!
+        WebFinger.query("acct:#{name.lchop('@')}").link("self").href.presence.not_nil!
       end
     end
   end

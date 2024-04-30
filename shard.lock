@@ -54,5 +54,5 @@ shards:
 
   web_finger:
     git: https://github.com/toddsundsted/web_finger.git
-    version: 0.2.4
+    version: 0.2.5
 

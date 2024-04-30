@@ -152,6 +152,16 @@ Spectator.describe Ktistec::HTML do
         expect(described_class.enhance(content).content).to eq(%q|<a href="#">#hashtag</a>|)
       end
 
+      it "skips hashtags inside pre blocks" do
+        content = %q|<pre>#hashtag</pre>|
+        expect(described_class.enhance(content).content).to eq(%q|<pre>#hashtag</pre>|)
+      end
+
+      it "skips hashtags inside code blocks" do
+        content = %q|<code>#hashtag</code>|
+        expect(described_class.enhance(content).content).to eq(%q|<code>#hashtag</code>|)
+      end
+
       it "returns hashtags" do
         content = %q|<div>#hashtag</div>|
         expect(described_class.enhance(content).hashtags).
@@ -180,6 +190,16 @@ Spectator.describe Ktistec::HTML do
       it "skips mentions inside links" do
         content = %q|<a href="#">@foo@bar.com</a>|
         expect(described_class.enhance(content).content).to eq(%q|<a href="#">@foo@bar.com</a>|)
+      end
+
+      it "skips mentions inside pre blocks" do
+        content = %q|<pre>@foo@bar.com</pre>|
+        expect(described_class.enhance(content).content).to eq(%q|<pre>@foo@bar.com</pre>|)
+      end
+
+      it "skips mentions inside code blocks" do
+        content = %q|<code>@foo@bar.com</code>|
+        expect(described_class.enhance(content).content).to eq(%q|<code>@foo@bar.com</code>|)
       end
 
       it "returns mentions" do

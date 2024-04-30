@@ -56,7 +56,7 @@ module Ktistec
           end
         end
 
-        xml.xpath_nodes("//node()[not(self::a)]/text()").each do |text|
+        xml.xpath_nodes("//node()[not(ancestor-or-self::a|ancestor-or-self::pre|ancestor-or-self::code)]/text()").each do |text|
           if (remainder = text.text).includes?('#') || remainder.includes?('@')
             cursor = insertion = XML.parse("<span/>").first_element_child.not_nil!
             text.replace_with(insertion)

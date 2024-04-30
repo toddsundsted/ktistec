@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.0.0-11]
+### Added
+- Allow user to change log level by functional area.
+- Redirect user to previous internal page after sign in succeeds.
+- Implement remote interaction/authorize interaction.
+
+### Fixed
+- Handle object updates from Mastodon servers when the signature can't be verified.
+- Don't convert text into a hashtag or mention in links and code. (see [#97](https://github.com/toddsundsted/ktistec/issues/97))
+
 ## [v2.0.0-10]
 ### Added
 - Automatically fetch followed threads.
@@ -197,6 +207,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.0.0-11]: https://github.com/toddsundsted/ktistec/compare/362f6391...a6ea1385
 [v2.0.0-10]: https://github.com/toddsundsted/ktistec/compare/0ae0dc26...9c480ed5
 [v2.0.0-9]: https://github.com/toddsundsted/ktistec/compare/4d9094fa...a5fc68f0
 [v2.0.0-8]: https://github.com/toddsundsted/ktistec/compare/b3ce035d...cde86283

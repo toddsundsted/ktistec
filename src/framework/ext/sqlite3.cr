@@ -50,6 +50,7 @@ lib LibSQLite3
   fun config = sqlite3_config(Int32, ...) : Code
   fun memory_used = sqlite3_memory_used() : Int64
   fun result_text = sqlite3_result_text(SQLite3Context, UInt8*, Int32, Void*) : Nil
+  fun test_control = sqlite3_test_control(Int32, ...) : Int32
   fun version_number = sqlite3_libversion_number() : Int32
   fun version = sqlite3_libversion() : UInt8*
 end
@@ -57,6 +58,7 @@ end
 module Ktistec
   module SQLite3
     SQLITE_CONFIG_MEMSTATUS = 9_i32
+    SQLITE_TESTCTRL_OPTIMIZATIONS = 15_i32
 
     if (code = LibSQLite3.config(SQLITE_CONFIG_MEMSTATUS, 1_i32)) != LibSQLite3::Code::OKAY
       Log.warn { "#{code}: couldn't set SQLITE_CONFIG_MEMSTATUS: this is not fatal" }
@@ -87,6 +89,12 @@ module Ktistec
 
     Ktistec.database.setup_connection do |connection|
       LibSQLite3.create_function(connection, "strip", 1, UTF8 | DETERMINISTIC | DIRECTONLY, nil, ->strip_fn, nil, nil)
+
+      # Disable faulty Bloom filter optimization.
+      # See: https://sqlite.org/forum/forumpost/56de336385
+      if LibSQLite3.version_number.in?(3039000...3041000)
+        LibSQLite3.test_control(Ktistec::SQLite3::SQLITE_TESTCTRL_OPTIMIZATIONS, connection, 0x080000_i32)
+      end
     end
 
     LibSQLite3.version.tap do |version|
@@ -94,6 +102,8 @@ module Ktistec
       if LibSQLite3.version_number < 3035000
         puts "Ktistec requires SQLite3 version 3.35.0 or later (linked version is #{version})."
         exit -1
+      elsif LibSQLite3.version_number.in?(3039000...3041000)
+        puts "Disabling Bloom filter optimization for SQLite3 version #{version}."
       else
         puts "SQLite3 version #{version}"
       end

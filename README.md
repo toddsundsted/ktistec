@@ -197,7 +197,7 @@ You can now connect to and configure the server.
 The following SQLite3 versions are known to have bugs that cause
 problems for Ktistec:
 
-| Ktistec Version | Issue |
+| SQLite Version | Issue |
 |--|--|
 | 3.39.x | problems with bloom filters and recursive queries [link](https://sqlite.org/forum/forumpost/56de336385) |
 | 3.40.x | problems with bloom filters and recursive queries [link](https://sqlite.org/forum/forumpost/56de336385) |

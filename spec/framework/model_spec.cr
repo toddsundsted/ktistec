@@ -1372,6 +1372,13 @@ Spectator.describe Ktistec::Model do
         expect(FooBarModel.count(not_nil_model_id: not_nil.id)).to eq(1)
       end
 
+      it "destroys the last associated instance" do
+        not_nil.assign(foo_bar_models: [foo_bar]).save
+        NotNilModel.find(not_nil.id).assign(foo_bar_models: [] of FooBarModel).save
+        expect(NotNilModel.find(not_nil.id).foo_bar_models).to be_empty
+        expect(FooBarModel.count(not_nil_model_id: not_nil.id)).to eq(0)
+      end
+
       it "does not save through a destroyed instance" do
         not_nil.assign(foo_bar_models: [foo_bar])
         new_foo_bar_model = FooBarModel.new(not_nil_model: not_nil).save

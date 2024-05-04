@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 ### Added
 - Allow user to change log level by functional area.
 - Redirect user to previous internal page after sign in succeeds.
-- Implement remote interaction/authorize interaction.
+- Implement remote interaction/authorize interaction. (see [#91](https://github.com/toddsundsted/ktistec/issues/91))
 
 ### Fixed
 - Handle object updates from Mastodon servers when the signature can't be verified.

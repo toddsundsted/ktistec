@@ -762,7 +762,7 @@ module Ktistec
         end
         def {{name.id}}(include_deleted : Bool = false, include_undone : Bool = false) : Enumerable({{class_name}})
           {{name.id}} = @{{name.id}}
-          if {{name.id}}.nil? || {{name.id}}.empty?
+          if {{name.id}}.nil?
             @{{name.id}} = {{class_name}}.where({{foreign_key.id}}: self.{{primary_key.id}}, include_deleted: include_deleted, include_undone: include_undone)
           end
           @{{name.id}}.not_nil!

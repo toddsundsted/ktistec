@@ -2,7 +2,7 @@ require "./framework"
 require "./util"
 
 module Ktistec
-  module Model(*T)
+  module Model
     # logging in this module is related to database query performance.
     Log = ::Log.for("database")
 
@@ -1194,12 +1194,6 @@ module Ktistec
     macro included
       extend ClassMethods
       include InstanceMethods
-
-      {% for type in T.type_vars %}
-        {% unless type == ::Nil %}
-          include ::Ktistec::Model::{{type}}
-        {% end %}
-      {% end %}
 
       @saved_record : self | Nil = nil
     end

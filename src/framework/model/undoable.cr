@@ -1,7 +1,7 @@
 require "../model"
 
 module Ktistec
-  module Model(*T)
+  module Model
     module Undoable
       @[Persistent]
       @[Insignificant]
@@ -20,8 +20,4 @@ module Ktistec
       end
     end
   end
-end
-
-# :nodoc:
-module Undoable
 end

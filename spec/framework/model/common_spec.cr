@@ -3,7 +3,8 @@ require "../../../src/framework/model/common"
 require "../../spec_helper/base"
 
 class CommonModel
-  include Ktistec::Model(Common)
+  include Ktistec::Model
+  include Ktistec::Model::Common
 end
 
 Spectator.describe Ktistec::Model::Common do

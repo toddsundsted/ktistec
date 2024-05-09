@@ -3,7 +3,8 @@ require "../../../src/framework/model/polymorphic"
 require "../../spec_helper/base"
 
 class PolymorphicModel
-  include Ktistec::Model(Polymorphic)
+  include Ktistec::Model
+  include Ktistec::Model::Polymorphic
 
   @@table_name = "polymorphic_models"
 

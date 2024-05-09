@@ -3,7 +3,8 @@ require "../../../../src/models/activity_pub/mixins/blockable"
 require "../../../spec_helper/base"
 
 class BlockableModel
-  include Ktistec::Model(Blockable)
+  include Ktistec::Model
+  include Ktistec::Model::Blockable
 end
 
 Spectator.describe Ktistec::Model::Blockable do

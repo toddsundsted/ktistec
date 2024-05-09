@@ -4,7 +4,9 @@ require "../framework/model/**"
 # Relationship between things.
 #
 class Relationship
-  include Ktistec::Model(Common, Polymorphic)
+  include Ktistec::Model
+  include Ktistec::Model::Common
+  include Ktistec::Model::Polymorphic
 
   @@table_name = "relationships"
 

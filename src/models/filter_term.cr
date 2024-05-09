@@ -4,7 +4,8 @@ require "../framework/model/**"
 # Filter term.
 #
 class FilterTerm
-  include Ktistec::Model(Common)
+  include Ktistec::Model
+  include Ktistec::Model::Common
 
   @@table_name = "filter_terms"
 

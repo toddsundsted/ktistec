@@ -6,7 +6,9 @@ require "../../src/framework/model"
 require "../spec_helper/base"
 
 class FooBarModel
-  include Ktistec::Model(Deletable, Undoable)
+  include Ktistec::Model
+  include Ktistec::Model::Deletable
+  include Ktistec::Model::Undoable
 
   @[Persistent]
   property foo : String? = "Foo"
@@ -32,7 +34,9 @@ class FooBarModel
 end
 
 class NotNilModel
-  include Ktistec::Model(Deletable, Undoable)
+  include Ktistec::Model
+  include Ktistec::Model::Deletable
+  include Ktistec::Model::Undoable
 
   @[Persistent]
   property key : String = "Key"
@@ -70,7 +74,7 @@ class AnotherModel < NotNilModel
 end
 
 class UnionAssociationModel
-  include Ktistec::Model(Nil)
+  include Ktistec::Model
 
   @[Assignable]
   property model_id : Int64
@@ -78,7 +82,7 @@ class UnionAssociationModel
 end
 
 class QueryModel
-  include Ktistec::Model(Nil)
+  include Ktistec::Model
 
   @[Assignable]
   property foo : String?
@@ -100,7 +104,7 @@ class QueryModel
 end
 
 abstract class AbstractModel
-  include Ktistec::Model(Nil)
+  include Ktistec::Model
 
   @@table_name = "models"
 end
@@ -204,7 +208,7 @@ Spectator.describe Ktistec::Model do
 
   describe "#to_sentence" do
     class ToSentence
-      include Ktistec::Model(Nil)
+      include Ktistec::Model
 
       # override private visibility
       def to_sentence(type)

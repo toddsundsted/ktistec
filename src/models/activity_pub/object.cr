@@ -23,7 +23,14 @@ end
 
 module ActivityPub
   class Object
-    include Ktistec::Model(Common, Blockable, Deletable, Polymorphic, Serialized, Linked, Renderable)
+    include Ktistec::Model
+    include Ktistec::Model::Common
+    include Ktistec::Model::Linked
+    include Ktistec::Model::Serialized
+    include Ktistec::Model::Polymorphic
+    include Ktistec::Model::Deletable
+    include Ktistec::Model::Blockable
+    include Ktistec::Model::Renderable
     include ActivityPub
 
     @@table_name = "objects"

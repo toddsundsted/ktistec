@@ -13,7 +13,9 @@ class Task
   module ConcurrentTask
   end
 
-  include Ktistec::Model(Common, Polymorphic)
+  include Ktistec::Model
+  include Ktistec::Model::Common
+  include Ktistec::Model::Polymorphic
 
   @@table_name = "tasks"
 

@@ -17,7 +17,8 @@ end
 # Also an account.
 #
 class Account
-  include Ktistec::Model(Common)
+  include Ktistec::Model
+  include Ktistec::Model::Common
 
   # Allocates a new account.
   #

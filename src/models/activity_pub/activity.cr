@@ -17,7 +17,12 @@ end
 
 module ActivityPub
   class Activity
-    include Ktistec::Model(Common, Undoable, Polymorphic, Serialized, Linked)
+    include Ktistec::Model
+    include Ktistec::Model::Common
+    include Ktistec::Model::Linked
+    include Ktistec::Model::Serialized
+    include Ktistec::Model::Polymorphic
+    include Ktistec::Model::Undoable
     include ActivityPub
 
     @@table_name = "activities"

@@ -3,7 +3,8 @@ require "../../../src/framework/model/undoable"
 require "../../spec_helper/base"
 
 class UndoableModel
-  include Ktistec::Model(Undoable)
+  include Ktistec::Model
+  include Ktistec::Model::Undoable
 
   validates(undone_at) { "must not be undone" if undone_at }
 end

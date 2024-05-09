@@ -3,7 +3,8 @@ require "../../../../src/models/activity_pub/mixins/serialized"
 require "../../../spec_helper/base"
 
 class SerializedModel
-  include Ktistec::Model(Serialized)
+  include Ktistec::Model
+  include Ktistec::Model::Serialized
 end
 
 Spectator.describe Ktistec::Model::Serialized do

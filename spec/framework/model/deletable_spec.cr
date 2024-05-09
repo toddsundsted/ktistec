@@ -3,7 +3,8 @@ require "../../../src/framework/model/deletable"
 require "../../spec_helper/base"
 
 class DeletableModel
-  include Ktistec::Model(Deletable)
+  include Ktistec::Model
+  include Ktistec::Model::Deletable
 
   validates(deleted_at) { "must not be deleted" if deleted_at }
 end

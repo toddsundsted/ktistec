@@ -8,7 +8,8 @@ require "./account"
 # Client session.
 #
 class Session
-  include Ktistec::Model(Common)
+  include Ktistec::Model
+  include Ktistec::Model::Common
 
   # Allocates a new session for an account.
   #

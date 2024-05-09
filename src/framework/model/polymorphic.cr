@@ -1,7 +1,7 @@
 require "../model"
 
 module Ktistec
-  module Model(*T)
+  module Model
     module Polymorphic
       macro find(_id id, *, as _as)
         {% raise "can't convert #{@type} to #{_as}" unless _as.resolve < @type %}
@@ -21,8 +21,4 @@ module Ktistec
       property type : String { {{@type.stringify}} }
     end
   end
-end
-
-# :nodoc:
-module Polymorphic
 end

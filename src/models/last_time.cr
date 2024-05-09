@@ -4,7 +4,8 @@ require "./account"
 # The last time something was visited, checked or changed.
 #
 class LastTime
-  include Ktistec::Model(Common)
+  include Ktistec::Model
+  include Ktistec::Model::Common
 
   @@table_name = "last_times"
 

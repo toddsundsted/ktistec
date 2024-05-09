@@ -3,7 +3,8 @@ require "../../../../src/models/activity_pub/mixins/renderable"
 require "../../../spec_helper/base"
 
 class RenderableModel
-  include Ktistec::Model(Renderable)
+  include Ktistec::Model
+  include Ktistec::Model::Renderable
 
   @[Persistent]
   property content : String?

@@ -3,7 +3,7 @@ require "markd"
 require "../../../framework/model"
 
 module Ktistec
-  module Model(*T)
+  module Model
     module Renderable
       def to_html
         if (content = self.content)
@@ -17,8 +17,4 @@ module Ktistec
       end
     end
   end
-end
-
-# :nodoc:
-module Renderable
 end

@@ -3,7 +3,7 @@ require "../../src/framework/rule"
 require "../spec_helper/base"
 
 class RuleModel
-  include Ktistec::Model(Nil)
+  include Ktistec::Model
 
   @[Persistent]
   property parent_id : Int64?

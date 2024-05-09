@@ -8,7 +8,9 @@ Spectator.describe Ktistec::Model::Linked do
   setup_spec
 
   class LinkedModel
-    include Ktistec::Model(Linked, Deletable)
+    include Ktistec::Model
+    include Ktistec::Model::Linked
+    include Ktistec::Model::Deletable
     include ActivityPub
 
     @@table_name = "linked_models"
@@ -67,7 +69,8 @@ Spectator.describe Ktistec::Model::Linked do
 
   describe "validation" do
     class BlankModel
-      include Ktistec::Model(Linked)
+      include Ktistec::Model
+      include Ktistec::Model::Linked
 
       @@required_iri = false
     end

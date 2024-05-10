@@ -206,35 +206,6 @@ Spectator.describe Ktistec::Model do
     end
   end
 
-  describe "#to_sentence" do
-    class ToSentence
-      include Ktistec::Model
-
-      # override private visibility
-      def to_sentence(type)
-        super(type)
-      end
-    end
-
-    subject { ToSentence.new }
-
-    it "converts the type to a string" do
-      expect(subject.to_sentence(String)).to eq("String")
-    end
-
-    it "converts the type to a string" do
-      expect(subject.to_sentence(Array(String))).to eq("Array(String)")
-    end
-
-    it "converts the types to a string" do
-      expect(subject.to_sentence(String | Nil)).to match(/^\w+ or \w+$/)
-    end
-
-    it "converts the types to a string" do
-      expect(subject.to_sentence(String | Float64 | Int32 | Nil)).to match(/^\w+, \w+, \w+ or \w+$/)
-    end
-  end
-
   describe ".new" do
     it "creates a new instance" do
       expect(FooBarModel.new.foo).to eq("Foo")
@@ -1548,6 +1519,26 @@ Spectator.describe Ktistec::Model do
       (not_nil.foo_bar_model_id = 999999) && not_nil.save
       expect(not_nil.foo_bar?).to be_nil
       expect(foo_bar.not_nil?).to be_nil
+    end
+  end
+end
+
+Spectator.describe Ktistec::Model::Internal do
+  describe ".to_sentence" do
+    it "converts the type to a string" do
+      expect(described_class.to_sentence(String)).to eq("String")
+    end
+
+    it "converts the type to a string" do
+      expect(described_class.to_sentence(Array(String))).to eq("Array(String)")
+    end
+
+    it "converts the types to a string" do
+      expect(described_class.to_sentence(String | Nil)).to match(/^\w+ or \w+$/)
+    end
+
+    it "converts the types to a string" do
+      expect(described_class.to_sentence(String | Float64 | Int32 | Nil)).to match(/^\w+, \w+, \w+ or \w+$/)
     end
   end
 end

@@ -104,6 +104,14 @@ class Task
       update_property(:complete, true)
     end
 
+    private property interrupted : Bool = false
+
+    # Indicates whether the task was asynchronously set as complete.
+    #
+    def interrupted?
+      @interrupted ||= self.class.find(self.id).complete
+    end
+
     # Fetches objects tagged with the hashtag `name`.
     #
     # On each invocation, performs at most `maximum` (default 100)
@@ -142,13 +150,20 @@ class Task
           count += 1
         end
       ensure
-        Log.trace { "perform [#{id}] - complete - #{count} fetched" }
+        if interrupted
+          Log.trace { "perform [#{id}] - hashtag: #{name} - interrupted! - #{count} fetched" }
+          # ensure that when this task is eventually saved, it too
+          # is set as complete.
+          self.complete = true
+        else
+          Log.trace { "perform [#{id}] - hashtag: #{name} - complete - #{count} fetched" }
+        end
         self.next_attempt_at =
-          if count < 1 && !continuation              # none fetched
+          if count < 1 && !continuation && !interrupted            # none fetched
             calculate_next_attempt_at(Horizon::FarFuture)
-          elsif count < maximum                      # some fetched
+          elsif count < maximum && !interrupted                    # some fetched
             calculate_next_attempt_at(Horizon::NearFuture)
-          else                                       # maximum number fetched
+          else                                                     # maximum number fetched
             calculate_next_attempt_at(Horizon::ImmediateFuture)
           end
       end
@@ -162,7 +177,10 @@ class Task
     # fetched.
     #
     private def fetch_one(horizon)
-      while (node = horizon.shift?)
+      # Check to see if the task has been interrupted/asynchronously
+      # set as complete. This is how a controller can signal to the
+      # task that its work is done.
+      while (node = horizon.shift?) && !interrupted?
         now = Time.utc
         node.last_attempt_at = now
         if state.cache.presence && state.cached_collection != node.href

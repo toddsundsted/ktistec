@@ -470,6 +470,45 @@ Spectator.describe Task::Fetch::Thread do
           expect{subject.perform(2)}.to change{ {find?(reply2.iri), find?(reply1.iri)}.any?(&.nil?) }.to(false)
         end
       end
+
+      context "and the task is asynchronously set as complete" do
+        # simulate the case where the task is asynchronously set as
+        # complete by updating another, duplicate instance of the
+        # task.
+
+        before_each do
+          subject.dup.complete!
+        end
+
+        pre_condition do
+          expect(subject.complete).to be_false
+        end
+
+        it "does not fetch the object" do
+          subject.perform
+          expect(HTTP::Client.requests).not_to have("GET #{object.iri}")
+        end
+
+        it "does not fetch the collection" do
+          subject.perform
+          expect(HTTP::Client.requests).not_to have("GET #{replies.iri}")
+        end
+
+        it "does not fetch any replies from the collection" do
+          subject.perform
+          expect(HTTP::Client.requests).not_to have("GET #{reply3.iri}", "GET #{reply2.iri}", "GET #{reply1.iri}")
+        end
+
+        it "sets the next attempt in the immediate future" do
+          subject.perform
+          expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+        end
+
+        it "sets the task as complete" do
+          subject.perform
+          expect(subject.complete).to be_true
+        end
+      end
     end
 
     context "given a thread with uncached parents" do

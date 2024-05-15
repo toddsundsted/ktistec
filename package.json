@@ -24,6 +24,6 @@
     "filepond-plugin-image-resize": "^2.0.7",
     "filepond-plugin-image-transform": "^3.7.5",
     "lightgallery": "^2.1.8",
-    "trix": "^1.3.1"
+    "trix": "^2.1.1"
   }
 }

@@ -17,7 +17,7 @@
     "chart.js": "^3.3.2",
     "@hotwired/stimulus": "^3.1.0",
     "@hotwired/stimulus-webpack-helpers": "^1.0.1",
-    "@hotwired/turbo": "^7.2.0",
+    "@hotwired/turbo": "^8.0.4",
     "filepond": "^4.25.3",
     "filepond-plugin-file-validate-type": "^1.2.5",
     "filepond-plugin-image-preview": "^4.6.5",

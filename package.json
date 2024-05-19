@@ -18,11 +18,11 @@
     "@hotwired/stimulus-webpack-helpers": "^1.0.1",
     "@hotwired/turbo": "^8.0.4",
     "chart.js": "^4.4.2",
-    "filepond": "^4.25.3",
-    "filepond-plugin-file-validate-type": "^1.2.5",
-    "filepond-plugin-image-preview": "^4.6.5",
-    "filepond-plugin-image-resize": "^2.0.7",
-    "filepond-plugin-image-transform": "^3.7.5",
+    "filepond": "^4.31.1",
+    "filepond-plugin-file-validate-type": "^1.2.9",
+    "filepond-plugin-image-preview": "^4.6.12",
+    "filepond-plugin-image-resize": "^2.0.10",
+    "filepond-plugin-image-transform": "^3.8.7",
     "lightgallery": "^2.7.2",
     "trix": "^2.1.1"
   }

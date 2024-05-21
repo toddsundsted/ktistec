@@ -67,15 +67,17 @@ crystal:
         == s object.to_html
     - if with_detail && account
       crystal:
-        hashtags = object.hashtags.map(&.name.downcase)
-        mentions = object.mentions.map(&.name.downcase)
+        hashtags = object.hashtags.map(&.name.downcase).uniq
+        mentions = object.mentions.map(&.name.downcase).uniq
+        no_duplicate_handles = (mentions.map(&.split("@").first).uniq.size == mentions.size)
       - unless hashtags.empty? && mentions.empty?
         .extra.detail
           .ui.labels
             - hashtags.each do |hashtag|
               a.ui.small.label data-turbo-frame="_top" href=hashtag_path(hashtag) ##{hashtag}
             - mentions.each do |mention|
-              a.ui.small.label data-turbo-frame="_top" href=mention_path(mention) @#{mention.split("@").first}
+              - handle = no_duplicate_handles ? mention.split("@").first : mention
+              a.ui.small.label data-turbo-frame="_top" href=mention_path(mention) @#{handle}
       - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
         .extra.detail
           - activities.each do |activity|

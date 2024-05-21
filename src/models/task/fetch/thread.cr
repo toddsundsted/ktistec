@@ -136,6 +136,14 @@ class Task
       update_property(:complete, true)
     end
 
+    private property interrupted : Bool = false
+
+    # Indicates whether the task was asynchronously set as complete.
+    #
+    def interrupted?
+      @interrupted ||= self.class.find(self.id).complete
+    end
+
     # Fetches objects in the thread.
     #
     # On each invocation, performs at most `maximum` (default 100)
@@ -183,13 +191,20 @@ class Task
           count += 1
         end
       ensure
-        Log.trace { "perform [#{id}] - complete - #{count} fetched" }
+        if interrupted
+          Log.trace { "perform [#{id}] - interrupted! - #{count} fetched" }
+          # ensure that when this task is eventually saved, it too
+          # is set as complete.
+          self.complete = true
+        else
+          Log.trace { "perform [#{id}] - complete - #{count} fetched" }
+        end
         self.next_attempt_at =
-          if count < 1 && !continuation              # none fetched
+          if count < 1 && !continuation && !interrupted            # none fetched
             calculate_next_attempt_at(Horizon::FarFuture)
-          elsif count < maximum                      # some fetched
+          elsif count < maximum && !interrupted                    # some fetched
             calculate_next_attempt_at(Horizon::NearFuture)
-          else                                       # maximum number fetched
+          else                                                     # maximum number fetched
             calculate_next_attempt_at(Horizon::ImmediateFuture)
           end
       end
@@ -199,6 +214,7 @@ class Task
     #
     private def fetch_up
       100.times do # for safety, cap loops
+        break if interrupted?
         Log.trace { "fetch_up [#{id}] - iri: #{self.thread}" }
         fetched, object = find_or_fetch_object(self.thread, include_deleted: true)
         state.root_object = object.id if object && object.root?
@@ -214,7 +230,10 @@ class Task
     # Fetches out through the horizon.
     #
     private def fetch_out(horizon)
-      while (node = horizon.shift?)
+      # Check to see if the task has been interrupted/asynchronously
+      # set as complete. This is how a controller can signal to the
+      # task that its work is done.
+      while (node = horizon.shift?) && !interrupted?
         object = ActivityPub::Object.find?(node.id)
         now = Time.utc
         if object

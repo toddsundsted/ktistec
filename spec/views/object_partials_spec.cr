@@ -114,6 +114,78 @@ Spectator.describe "object partials" do
         object.assign(in_reply_to_iri: "not dereferenced link")
         expect(subject.xpath_nodes("//button/text()")).to have("Thread")
       end
+
+      context "given hashtags with the same name" do
+        let(with_detail) { true }
+
+        before_each do
+          object.assign(
+            hashtags: [
+              Factory.build(:hashtag, name: "bar"),
+              Factory.build(:hashtag, name: "bar")
+            ]
+          )
+        end
+
+        it "renders one hashtag" do
+          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
+            .to contain_exactly("#bar")
+        end
+      end
+
+      context "given mentions with the same name" do
+        let(with_detail) { true }
+
+        before_each do
+          object.assign(
+            mentions: [
+              Factory.build(:mention, name: "bar@one.com"),
+              Factory.build(:mention, name: "bar@one.com")
+            ]
+          )
+        end
+
+        it "renders one mention" do
+          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
+            .to contain_exactly("@bar")
+        end
+      end
+
+      context "given mentions with different names but the same handle" do
+        let(with_detail) { true }
+
+        before_each do
+          object.assign(
+            mentions: [
+              Factory.build(:mention, name: "bar@one.com"),
+              Factory.build(:mention, name: "bar@two.com")
+            ]
+          )
+        end
+
+        it "renders two mentions" do
+          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
+            .to contain_exactly("@bar@one.com", "@bar@two.com")
+        end
+      end
+
+      context "given mentions with different names" do
+        let(with_detail) { true }
+
+        before_each do
+          object.assign(
+            mentions: [
+              Factory.build(:mention, name: "foo@one.com"),
+              Factory.build(:mention, name: "bar@two.com")
+            ]
+          )
+        end
+
+        it "renders two mentions" do
+          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
+            .to contain_exactly("@foo", "@bar")
+        end
+      end
     end
 
     context "if approved" do

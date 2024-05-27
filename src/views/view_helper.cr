@@ -54,6 +54,14 @@ module Ktistec::ViewHelper
       end
     end
 
+    def tag_page_tag_controls(env, hashtag, task, follow, count)
+      render "src/views/partials/tag_page_tag_controls.html.slang"
+    end
+
+    def thread_page_thread_controls(env, thread, task, follow)
+      render "src/views/partials/thread_page_thread_controls.html.slang"
+    end
+
     def pagination_params(env)
       {
         page: Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),

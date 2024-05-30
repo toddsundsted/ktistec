@@ -959,17 +959,22 @@ module Ktistec
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify.stringify).join(",")}}
-          conditions = (["?"] * {{vs.size}}).join(",")
+          values = (["?"] * {{vs.size}}).join(",")
           if self.responds_to?(:updated_at=)
             self.updated_at = Time.utc
           end
-          old = @id
-          @id = Ktistec.database.exec(
-            "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{conditions})",
+          query = "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{values})"
+          args = [
             {% for v in vs %}
               self.{{v}},
             {% end %}
-          ).last_insert_id
+          ]
+          old = @id
+          self.class.log_query(query, args) do
+            @id = Ktistec.database.exec(
+              query, args: args
+            ).last_insert_id
+          end
         {% end %}
         {% begin %}
           {% ancestors = @type.ancestors << @type %}
@@ -1056,14 +1061,18 @@ module Ktistec
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify.stringify).join(",")}}
-          Ktistec.database.query_one(
-            "SELECT #{columns} FROM #{table_name} WHERE id = ?", id,
-          ) do |rs|
-            __for_internal_use_only({
-              {% for v in vs %}
-                {{v}}: rs.read({{v.type}}),
-              {% end %}
-            })
+          query = "SELECT #{columns} FROM #{table_name} WHERE id = ?"
+          args = [id]
+          self.class.log_query(query, args) do
+            Ktistec.database.query_one(
+              query, args: args,
+            ) do |rs|
+              __for_internal_use_only({
+                {% for v in vs %}
+                  {{v}}: rs.read({{v.type}}),
+                {% end %}
+              })
+            end
           end
           self
         {% end %}

@@ -263,7 +263,7 @@ class Task
               state.cache =
                 if (temporary = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))
                   Log.trace { "fetch_out [#{id}] - iri: #{object.iri}" }
-                  if (replies = temporary.replies?(source, dereference: true))
+                  if (replies = temporary.replies?) || ((replies_iri = temporary.replies_iri) && (replies = ActivityPub::Collection.dereference?(source, replies_iri)))
                     if (iris = replies.all_item_iris(source))
                       iris
                     end

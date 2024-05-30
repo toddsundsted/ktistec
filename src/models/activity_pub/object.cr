@@ -42,9 +42,13 @@ module ActivityPub
     property in_reply_to_iri : String?
     belongs_to in_reply_to, class_name: ActivityPub::Object, foreign_key: in_reply_to_iri, primary_key: iri
 
+    # don't use an association for `replies` because it's a collection
+    # and associations are automatically saved by default.
+
     @[Persistent]
     property replies_iri : String?
-    belongs_to replies, class_name: ActivityPub::Collection, foreign_key: replies_iri, primary_key: iri
+    @[Assignable]
+    property! replies : ActivityPub::Collection
 
     @[Persistent]
     property thread : String?

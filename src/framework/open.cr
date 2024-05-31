@@ -52,6 +52,8 @@ module Ktistec
           message = "Secure connection failure"
         rescue IO::Error
           message = "I/O error"
+        rescue Compress::Deflate::Error | Compress::Gzip::Error
+          message = "Encoding error"
         end
       end
       message =

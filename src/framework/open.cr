@@ -44,16 +44,22 @@ module Ktistec
           end
         rescue URI::Error
           message = "Invalid URI"
+          break
         rescue Socket::Addrinfo::Error
           message = "Hostname lookup failure"
+          break
         rescue Socket::ConnectError
           message = "Connection failure"
+          break
         rescue OpenSSL::Error
           message = "Secure connection failure"
+          break
         rescue IO::Error
           message = "I/O error"
+          break
         rescue Compress::Deflate::Error | Compress::Gzip::Error
           message = "Encoding error"
+          break
         end
       end
       message =

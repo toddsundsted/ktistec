@@ -26,13 +26,22 @@ class Relationship
         #
         def self.find_or_new(**options)
           if (thread = options[:thread]?) && (ephemeral = ActivityPub::Object.new(iri: thread).ancestors.last?)
-            options = options.merge({thread: ephemeral.thread})
-            find?(**options) || new(**options)
+            super(**options.merge({thread: ephemeral.thread}))
           elsif (to_iri = options[:to_iri]?) && (ephemeral = ActivityPub::Object.new(iri: to_iri).ancestors.last?)
-            options = options.merge({to_iri: ephemeral.thread})
-            find?(**options) || new(**options)
+            super(**options.merge({to_iri: ephemeral.thread}))
           else
-            find?(**options) || new(**options)
+            super(**options)
+          end
+        end
+
+        # :ditto:
+        def self.find_or_new(options)
+          if (thread = options["thread"]?) && (ephemeral = ActivityPub::Object.new(iri: thread).ancestors.last?)
+            super(options.merge({"thread" => ephemeral.thread}))
+          elsif (to_iri = options["to_iri"]?) && (ephemeral = ActivityPub::Object.new(iri: to_iri).ancestors.last?)
+            super(options.merge({"to_iri" => ephemeral.thread}))
+          else
+            super(options)
           end
         end
 

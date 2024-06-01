@@ -52,28 +52,32 @@ Spectator.describe Task::Fetch::Thread do
   end
 
   describe ".find_or_new" do
-    it "instantiates a new task" do
-      expect(described_class.find_or_new(**options).new_record?).to be_true
+    let_create!(:object, named: :origin)
+    let_create!(:object, named: :reply, iri: options[:subject_iri], in_reply_to_iri: origin.iri)
+
+    context "given an existing task for thread" do
+      let(new_options) { {source_iri: options[:source_iri], thread: options[:subject_iri]} }
+
+      let!(existing) { described_class.new(**new_options).assign(thread: origin.thread).save }
+
+      it "finds the existing task" do
+        expect(described_class.find_or_new(**new_options)).to eq(existing)
+      end
+
+      it "finds the existing task" do
+        expect(described_class.find_or_new(new_options.to_h.transform_keys(&.to_s))).to eq(existing)
+      end
     end
 
-    context "given an existing task" do
-      let!(existing) { described_class.new(**options).save }
+    context "given an existing task for thread" do
+      let!(existing) { described_class.new(**options).assign(subject_iri: origin.thread).save }
 
       it "finds the existing task" do
         expect(described_class.find_or_new(**options)).to eq(existing)
       end
 
-      context "for the root of the thread" do
-        let_create!(:object, named: :origin)
-        let_create!(:object, named: :reply, iri: options[:subject_iri], in_reply_to_iri: origin.iri)
-
-        before_each do
-          existing.assign(thread: origin.thread).save
-        end
-
-        it "finds the existing task" do
-          expect(described_class.find_or_new(**options)).to eq(existing)
-        end
+      it "finds the existing task" do
+        expect(described_class.find_or_new(options.to_h.transform_keys(&.to_s))).to eq(existing)
       end
     end
   end

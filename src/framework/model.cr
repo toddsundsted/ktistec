@@ -386,6 +386,28 @@ module Ktistec
       rescue NotFound
       end
 
+      # Finds an existing instance or instantiates a new instance.
+      #
+      def find_or_new(include_deleted : Bool = false, include_undone : Bool = false, **options)
+        find?(**options, include_deleted: include_deleted, include_undone: include_undone) || new(**options)
+      end
+
+      # :ditto:
+      def find_or_new(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
+        find?(options, include_deleted: include_deleted, include_undone: include_undone) || new(options)
+      end
+
+      # Finds an existing instance, or instantiates and saves a new instance.
+      #
+      def find_or_create(include_deleted : Bool = false, include_undone : Bool = false, skip_validation : Bool = false, skip_associated : Bool = false, **options)
+        find?(**options, include_deleted: include_deleted, include_undone: include_undone) || new(**options).save(skip_validation: skip_validation, skip_associated: skip_associated)
+      end
+
+      # :ditto:
+      def find_or_create(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false, skip_validation : Bool = false, skip_associated : Bool = false) forall Any
+        find?(options, include_deleted: include_deleted, include_undone: include_undone) || new(options).save(skip_validation: skip_validation, skip_associated: skip_associated)
+      end
+
       # Returns saved instances.
       #
       def where(include_deleted : Bool = false, include_undone : Bool = false, **options)

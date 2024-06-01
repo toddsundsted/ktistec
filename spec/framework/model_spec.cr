@@ -530,6 +530,50 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe ".find_or_new" do
+    it "creates a new instance" do
+      expect(FooBarModel.find_or_new(foo: "Foo", bar: "Bar").new_record?).to be_true
+    end
+
+    it "creates a new instance" do
+      expect(FooBarModel.find_or_new({"foo" => "Foo", "bar" => "Bar"}).new_record?).to be_true
+    end
+
+    context "given an existing instance" do
+      let!(saved_model) { FooBarModel.new(foo: "Foo", bar: "Bar").save }
+
+      it "finds the saved instance" do
+        expect(FooBarModel.find_or_new(foo: "Foo", bar: "Bar")).to eq(saved_model)
+      end
+
+      it "finds the saved instance" do
+        expect(FooBarModel.find_or_new({"foo" => "Foo", "bar" => "Bar"})).to eq(saved_model)
+      end
+    end
+  end
+
+  describe ".find_or_create" do
+    it "creates a new instance" do
+      expect(NotNilModel.find_or_create(key: "Key", val: "Val").new_record?).to be_false
+    end
+
+    it "creates a new instance" do
+      expect(NotNilModel.find_or_create({"key" => "Key", "val" => "Val"}).new_record?).to be_false
+    end
+
+    context "given an existing instance" do
+      let!(saved_model) { NotNilModel.new(key: "Key", val: "Val").save }
+
+      it "finds the saved instance" do
+        expect(NotNilModel.find_or_create(key: "Key", val: "Val")).to eq(saved_model)
+      end
+
+      it "finds the saved instance" do
+        expect(NotNilModel.find_or_create({"key" => "Key", "val" => "Val"})).to eq(saved_model)
+      end
+    end
+  end
+
   describe ".where" do
     context "given properties" do
       it "returns the saved instances" do

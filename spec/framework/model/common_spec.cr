@@ -9,7 +9,7 @@ end
 Spectator.describe Ktistec::Model::Common do
   before_each do
     Ktistec.database.exec <<-SQL
-      CREATE TABLE common_models (
+      CREATE TABLE IF NOT EXISTS common_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         created_at datetime NOT NULL,
         updated_at datetime NOT NULL
@@ -17,7 +17,7 @@ Spectator.describe Ktistec::Model::Common do
     SQL
   end
   after_each do
-    Ktistec.database.exec "DROP TABLE common_models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS common_models"
   end
 
   describe ".new" do

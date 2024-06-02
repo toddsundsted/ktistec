@@ -47,7 +47,7 @@ Spectator.describe Ktistec::Model::Linked do
 
   before_each do
     Ktistec.database.exec <<-SQL
-      CREATE TABLE linked_models (
+      CREATE TABLE IF NOT EXISTS linked_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         iri varchar(255) NOT NULL,
         linked_model_iri text,
@@ -56,7 +56,7 @@ Spectator.describe Ktistec::Model::Linked do
     SQL
   end
   after_each do
-    Ktistec.database.exec "DROP TABLE linked_models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS linked_models"
   end
 
   describe ".new" do

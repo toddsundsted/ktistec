@@ -11,14 +11,14 @@ end
 Spectator.describe Ktistec::Model::Deletable do
   before_each do
     Ktistec.database.exec <<-SQL
-      CREATE TABLE deletable_models (
+      CREATE TABLE IF NOT EXISTS deletable_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime
       )
     SQL
   end
   after_each do
-    Ktistec.database.exec "DROP TABLE deletable_models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS deletable_models"
   end
 
   describe ".new" do

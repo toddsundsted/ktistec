@@ -9,14 +9,14 @@ end
 Spectator.describe Ktistec::Model::Blockable do
   before_each do
     Ktistec.database.exec <<-SQL
-      CREATE TABLE blockable_models (
+      CREATE TABLE IF NOT EXISTS blockable_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         blocked_at datetime
       )
     SQL
   end
   after_each do
-    Ktistec.database.exec "DROP TABLE blockable_models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS blockable_models"
   end
 
   describe ".new" do

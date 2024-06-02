@@ -108,7 +108,7 @@ end
 Spectator.describe Ktistec::Model do
   before_each do
     Ktistec.database.exec <<-SQL
-      CREATE TABLE foo_bar_models (
+      CREATE TABLE IF NOT EXISTS foo_bar_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime,
         undone_at datetime,
@@ -118,7 +118,7 @@ Spectator.describe Ktistec::Model do
       )
     SQL
     Ktistec.database.exec <<-SQL
-      CREATE TABLE not_nil_models (
+      CREATE TABLE IF NOT EXISTS not_nil_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime,
         undone_at datetime,
@@ -128,15 +128,15 @@ Spectator.describe Ktistec::Model do
       )
     SQL
     Ktistec.database.exec <<-SQL
-      CREATE TABLE models (
+      CREATE TABLE IF NOT EXISTS models (
         id integer PRIMARY KEY AUTOINCREMENT
       )
     SQL
   end
   after_each do
-    Ktistec.database.exec "DROP TABLE foo_bar_models"
-    Ktistec.database.exec "DROP TABLE not_nil_models"
-    Ktistec.database.exec "DROP TABLE models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS foo_bar_models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS not_nil_models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS models"
   end
 
   describe ".table_name" do

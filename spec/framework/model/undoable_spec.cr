@@ -11,14 +11,14 @@ end
 Spectator.describe Ktistec::Model::Undoable do
   before_each do
     Ktistec.database.exec <<-SQL
-      CREATE TABLE undoable_models (
+      CREATE TABLE IF NOT EXISTS undoable_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         undone_at datetime
       )
     SQL
   end
   after_each do
-    Ktistec.database.exec "DROP TABLE undoable_models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS undoable_models"
   end
 
   describe ".new" do

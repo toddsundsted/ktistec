@@ -4,6 +4,7 @@ require "../../framework/json_ld"
 require "../../framework/ext/sqlite3"
 require "../../framework/model"
 require "../../framework/model/**"
+require "../../channels/model_channel"
 require "../activity_pub"
 
 require "../../views/view_helper"
@@ -56,6 +57,20 @@ module ActivityPub
     @[Persistent]
     property current_iri : String?
     belongs_to :current, class_name: {{@type}}, foreign_key: current_iri, primary_key: iri
+
+    class_property channel = ModelChannel(self).new
+
+    # Notifies subscribers about updates to the collection.
+    #
+    def notify_subscribers
+      self.class.channel.publish(self)
+    end
+
+    # Subscribes to notifications about updates to the collection.
+    #
+    def subscribe(&block)
+      self.class.channel.subscribe(self, &block)
+    end
 
     # Traverses the collection and returns IRIs of all items.
     #

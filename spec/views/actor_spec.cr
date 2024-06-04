@@ -7,17 +7,20 @@ require "../spec_helper/controller"
 Spectator.describe "actor" do
   setup_spec
 
-  include Ktistec::Controller
-  include Ktistec::ViewHelper::ClassMethods
-
   describe "actor.html.slang" do
     let_create(:actor)
 
     let(env) { env_factory("GET", "/actor/username") }
 
+    module Ktistec::ViewHelper
+      def self.render_actor_html_slang(env, actor)
+        render "./src/views/actors/actor.html.slang"
+      end
+    end
+
     subject do
       begin
-        XML.parse_html(render "./src/views/actors/actor.html.slang")
+        XML.parse_html(Ktistec::ViewHelper.render_actor_html_slang(env, actor))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -51,9 +54,15 @@ Spectator.describe "actor" do
 
     let(env) { env_factory("GET", "/actor/username") }
 
+    module Ktistec::ViewHelper
+      def self.render_actor_json_ecr(env, actor)
+        render "./src/views/actors/actor.json.ecr"
+      end
+    end
+
     subject do
       begin
-        JSON.parse(render "./src/views/actors/actor.json.ecr")
+        JSON.parse(Ktistec::ViewHelper.render_actor_json_ecr(env, actor))
       rescue JSON::ParseException
         JSON.parse("{}")
       end

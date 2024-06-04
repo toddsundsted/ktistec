@@ -11,7 +11,6 @@ Spectator.describe "object partials" do
   setup_spec
 
   include Ktistec::Controller
-  include Ktistec::ViewHelper::ClassMethods
 
   describe "label.html.slang" do
     subject do
@@ -378,7 +377,7 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        XML.parse_html(object_partial(env, object, activity: activity, with_detail: with_detail, for_thread: for_thread))
+        XML.parse_html(Ktistec::ViewHelper.object_partial(env, object, activity: activity, with_detail: with_detail, for_thread: for_thread))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end

@@ -604,7 +604,7 @@ module Ktistec::ViewHelper
   ## View helpers
 
   # The naming below matches the format of automatically generated
-  # view helpers. View helpers for partial are *not* automatically
+  # view helpers. View helpers for partials are *not* automatically
   # generated.
 
   def self._layout_src_views_layouts_default_html_ecr(env, title, head, content)

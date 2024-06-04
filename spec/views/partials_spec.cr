@@ -495,9 +495,15 @@ Spectator.describe "partials" do
   describe "reply.html.slang" do
     let(env) { env_factory("GET", "/object") }
 
+    module Ktistec::ViewHelper
+      def self.render_reply_html_slang(env, object)
+        render "./src/views/objects/reply.html.slang"
+      end
+    end
+
     subject do
       begin
-        XML.parse_html(render "./src/views/objects/reply.html.slang")
+        XML.parse_html(Ktistec::ViewHelper.render_reply_html_slang(env, object))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end

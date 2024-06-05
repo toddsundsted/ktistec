@@ -109,6 +109,24 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".refresh_posts_message" do
+    let(path) { "/collection" }
+
+    subject { XML.parse_html(self.class.refresh_posts_message(path), PARSER_OPTIONS) }
+
+    it "renders a message" do
+      expect(subject.xpath_nodes("//div[contains(@class,'message')]")).not_to be_empty
+    end
+
+    it "does not prefetch" do
+      expect(subject.xpath_nodes("//a/@data-turbo-prefetch")).to contain_exactly("false")
+    end
+
+    it "renders a link" do
+      expect(subject.xpath_nodes("//a/@href")).to contain_exactly(path)
+    end
+  end
+
   describe ".wrap_link" do
     let(link) { "https://example.com/this-is-a-url" }
 

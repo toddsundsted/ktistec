@@ -75,6 +75,10 @@ module Ktistec::ViewHelper
       render "src/views/partials/paginator.html.slang"
     end
 
+    def refresh_posts_message(path)
+      render "src/views/partials/refresh-posts.html.slang"
+    end
+
     # Wraps a string in a link if it is a URL.
     #
     # By default, matches the weird format used by Mastodon:

@@ -1,9 +1,26 @@
 require "../../src/controllers/streams"
 
 require "../spec_helper/controller"
+require "../spec_helper/factory"
 
 Spectator.describe StreamsController do
   setup_spec
+
+  describe "GET /stream/tags/:hashtag" do
+    it "returns 401 if not authorized" do
+      get "/stream/tags/hashtag"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if the hashtag does not exist" do
+        get "/stream/tags/hashtag"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
 
   describe ".stream_action" do
     it "sends the body in a Turbo Stream / Server-Sent Events wrapper" do

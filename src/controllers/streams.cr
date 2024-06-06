@@ -1,7 +1,31 @@
 require "../framework/controller"
 
+require "../models/relationship/content/follow/hashtag"
+require "../models/task/fetch/hashtag"
+
 class StreamsController
   include Ktistec::Controller
+
+  get "/stream/tags/:hashtag" do |env|
+    hashtag = env.params.url["hashtag"]
+    if (first_count = Tag::Hashtag.all_objects_count(hashtag)) < 1
+      not_found
+    end
+    env.response.content_type = "text/event-stream"
+    collection = ActivityPub::Collection::Hashtag.find_or_create(name: hashtag)
+    collection.subscribe do
+      task = Task::Fetch::Hashtag.find(source: env.account.actor, name: hashtag)
+      follow = Relationship::Content::Follow::Hashtag.find(actor: env.account.actor, name: hashtag)
+      count = Tag::Hashtag.all_objects_count(hashtag)
+      body = tag_page_tag_controls(env, hashtag, task, follow, count)
+      stream_replace(env.response, id: "tag_page_tag_controls", body: body)
+      if count > first_count
+        first_count = Int64::MAX
+        body = Ktistec::ViewHelper.refresh_posts_message(hashtag_path(hashtag))
+        stream_prepend(env.response, selector: "section.ui.feed", body: body)
+      end
+    end
+  end
 
   {% for action in %w(append prepend replace update remove before after morph refresh) %}
     def self.stream_{{action.id}}(io, body, id = nil, selector = nil)

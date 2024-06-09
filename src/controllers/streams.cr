@@ -27,6 +27,30 @@ class StreamsController
     end
   end
 
+  get "/stream/objects/:id/thread" do |env|
+    id = env.params.url["id"].to_i
+    unless (object = ActivityPub::Object.find?(id))
+      not_found
+    end
+    thread = object.thread(for_actor: env.account.actor)
+    first_count = thread.size
+    env.response.content_type = "text/event-stream"
+    collection = ActivityPub::Collection::Thread.find_or_create(thread: thread.first.thread)
+    collection.subscribe do
+      thread = object.thread(for_actor: env.account.actor)
+      count = thread.size
+      task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
+      follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
+      body = thread_page_thread_controls(env, thread, task, follow)
+      stream_replace(env.response, id: "thread_page_thread_controls", body: body)
+      if count > first_count
+        first_count = Int64::MAX
+        body = Ktistec::ViewHelper.refresh_posts_message(remote_thread_path(object))
+        stream_prepend(env.response, selector: "section.ui.feed", body: body)
+      end
+    end
+  end
+
   {% for action in %w(append prepend replace update remove before after morph refresh) %}
     def self.stream_{{action.id}}(io, body, id = nil, selector = nil)
       stream_action(io, body, {{action}}, id, selector)

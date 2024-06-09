@@ -22,6 +22,22 @@ Spectator.describe StreamsController do
     end
   end
 
+  describe "/stream/objects/:id/thread" do
+    it "returns 401 if not authorized" do
+      get "/stream/objects/1/thread"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if the object does not exist" do
+        get "/stream/objects/1/thread"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe ".stream_action" do
     it "sends the body in a Turbo Stream / Server-Sent Events wrapper" do
       str = String.build do |io|

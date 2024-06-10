@@ -159,6 +159,8 @@ class Task
     # fetches/network requests for new objects.
     #
     def perform(maximum = 100)
+      collection = ActivityPub::Collection::Thread.find_or_create(thread: thread)
+      collection.notify_subscribers
       # look for replies that were added by some other means since
       # the last run. handles the regular arrival of objects via
       # ActivityPub.
@@ -202,6 +204,7 @@ class Task
           ContentRules.new.run do
             assert ContentRules::CheckFollowFor.new(source, object)
           end
+          collection.notify_subscribers
           count += 1
         end
       ensure
@@ -222,6 +225,11 @@ class Task
             calculate_next_attempt_at(Horizon::ImmediateFuture)
           end
       end
+    end
+
+    def after_save
+      collection = ActivityPub::Collection::Thread.find_or_create(thread: thread)
+      collection.notify_subscribers
     end
 
     # Fetches up toward the root.

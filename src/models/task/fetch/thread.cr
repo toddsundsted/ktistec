@@ -192,7 +192,12 @@ class Task
             break
           end
           Log.trace { "perform [#{id}] - iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
-          object = fetch_one(state.prioritize!)
+          object =
+            if !state.root_object && (temporary = fetch_up)
+              temporary
+            else
+              fetch_out(state.prioritize!)
+            end
           break unless object
           ContentRules.new.run do
             assert ContentRules::CheckFollowFor.new(source, object)
@@ -227,9 +232,11 @@ class Task
         Log.trace { "fetch_up [#{id}] - iri: #{self.thread}" }
         fetched, object = find_or_fetch_object(self.thread, include_deleted: true)
         state.root_object = object.id if object && object.root?
-        break if object.nil? || (object.root? && !fetched)
+        break if object.nil?
         self.thread = object.thread.not_nil!
-        state << State::Node.new(object.id.not_nil!)
+        node = State::Node.new(object.id.not_nil!)
+        state << node unless state.includes?(node)
+        break if object.root? && !fetched
         return object if fetched
       end
     end
@@ -296,19 +303,6 @@ class Task
             end
           end
         end
-      end
-    end
-
-    # Fetches one new object in the thread.
-    #
-    # Explores the thread, and fetches and returns a new object or
-    # `nil` if no new object is fetched.
-    #
-    private def fetch_one(horizon)
-      if !state.root_object && (object = fetch_up)
-        object
-      else
-        fetch_out(horizon)
       end
     end
 

@@ -515,7 +515,7 @@ Spectator.describe Task::Fetch::Thread do
       end
     end
 
-    context "given a thread with uncached parents" do
+    context "given a thread with uncached ancestors" do
       let_build(:object, named: :origin)
       let_build(:object, named: :reply1, in_reply_to_iri: origin.iri)
       let_build(:object, named: :reply2, in_reply_to_iri: reply1.iri)
@@ -609,7 +609,7 @@ Spectator.describe Task::Fetch::Thread do
         end
       end
 
-      context "with an existing object" do
+      context "with a cached ancestor" do
         before_each { reply2.save }
 
         it "does not fetch the object" do
@@ -647,6 +647,26 @@ Spectator.describe Task::Fetch::Thread do
           it "still fetches the other objects" do
             subject.perform
             expect(HTTP::Client.requests).to have("GET #{reply3.iri}", "GET #{reply1.iri}", "GET #{origin.iri}")
+          end
+        end
+      end
+
+      context "with a cached root" do
+        before_each { origin.save }
+
+        it "adds the root to the horizon" do
+          subject.perform
+          expect(horizon(subject)).to contain(origin.id)
+        end
+
+        context "with replies" do
+          before_each do
+            HTTP::Client.objects << origin.assign(replies_iri: "#{origin.iri}/replies")
+          end
+
+          it "fetches the replies" do
+            subject.perform
+            expect(HTTP::Client.requests).to have("GET #{origin.replies_iri}")
           end
         end
       end

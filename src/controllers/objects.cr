@@ -176,7 +176,7 @@ class ObjectsController
     follow.save if follow.new_record?
 
     task = Task::Fetch::Thread.find_or_new(source: env.account.actor, thread: thread.first.thread)
-    task.schedule if task.runnable? || task.complete
+    task.assign(backtrace: nil).schedule if task.runnable? || task.complete
 
     if turbo_frame?
       ok "objects/thread", env: env, object: object, thread: thread, follow: follow, task: task

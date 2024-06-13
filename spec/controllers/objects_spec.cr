@@ -1057,6 +1057,14 @@ Spectator.describe ObjectsController do
             not_to change{Task::Fetch::Thread.count(thread: remote.iri)}
         end
 
+        context "where the fetch is complete but has failed" do
+          before_each { fetch_thread_task.assign(complete: true, backtrace: ["error"]).save }
+
+          it "clears the backtrace" do
+            expect{post "/remote/objects/#{remote.id}/follow"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
+          end
+        end
+
         context "within a turbo-frame" do
           it "succeeds" do
             post "/remote/objects/#{remote.id}/follow", TURBO_FRAME

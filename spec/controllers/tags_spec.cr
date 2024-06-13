@@ -160,6 +160,14 @@ Spectator.describe TagsController do
             not_to change{Task::Fetch::Hashtag.count(name: "foo")}
         end
 
+        context "where the fetch is complete but has failed" do
+          before_each { fetch_hashtag_task.assign(complete: true, backtrace: ["error"]).save }
+
+          it "clears the backtrace" do
+            expect{post "/tags/foo/follow"}.to change{fetch_hashtag_task.reload!.backtrace}.to(nil)
+          end
+        end
+
         context "within a turbo-frame" do
           it "succeeds" do
             post "/tags/foo/follow", TURBO_FRAME

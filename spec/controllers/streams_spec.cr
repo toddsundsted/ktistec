@@ -38,6 +38,27 @@ Spectator.describe StreamsController do
     end
   end
 
+  describe ".setup_response" do
+    subject do
+      String.build do |io|
+        response = HTTP::Server::Response.new(io)
+        described_class.setup_response(response)
+      end
+    end
+
+    it "sets Content-Type" do
+      expect(subject.lines).to have("Content-Type: text/event-stream")
+    end
+
+    it "sets X-Accel-Buffering" do
+      expect(subject.lines).to have("X-Accel-Buffering: no")
+    end
+
+    it "sets Cache-Control" do
+      expect(subject.lines).to have("Cache-Control: no-cache")
+    end
+  end
+
   describe ".stream_action" do
     it "sends the body in a Turbo Stream / Server-Sent Events wrapper" do
       str = String.build do |io|

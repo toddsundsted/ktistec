@@ -11,9 +11,8 @@ class StreamsController
     if (first_count = Tag::Hashtag.all_objects_count(hashtag)) < 1
       not_found
     end
-    env.response.content_type = "text/event-stream"
-    collection = ActivityPub::Collection::Hashtag.find_or_create(name: hashtag)
-    collection.subscribe do
+    setup_response(env.response)
+    ActivityPub::Collection::Hashtag.find_or_create(name: hashtag).subscribe do
       task = Task::Fetch::Hashtag.find(source: env.account.actor, name: hashtag)
       follow = Relationship::Content::Follow::Hashtag.find(actor: env.account.actor, name: hashtag)
       count = Tag::Hashtag.all_objects_count(hashtag)
@@ -34,9 +33,8 @@ class StreamsController
     end
     thread = object.thread(for_actor: env.account.actor)
     first_count = thread.size
-    env.response.content_type = "text/event-stream"
-    collection = ActivityPub::Collection::Thread.find_or_create(thread: thread.first.thread)
-    collection.subscribe do
+    setup_response(env.response)
+    ActivityPub::Collection::Thread.find_or_create(thread: thread.first.thread).subscribe do
       thread = object.thread(for_actor: env.account.actor)
       count = thread.size
       task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
@@ -49,6 +47,14 @@ class StreamsController
         stream_prepend(env.response, selector: "section.ui.feed", body: body)
       end
     end
+  end
+
+  def self.setup_response(response : HTTP::Server::Response)
+    response.content_type = "text/event-stream"
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"
+    response.puts
+    response.flush
   end
 
   {% for action in %w(append prepend replace update remove before after morph refresh) %}

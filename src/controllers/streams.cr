@@ -21,7 +21,7 @@ class StreamsController
       if count > first_count
         first_count = Int64::MAX
         body = Ktistec::ViewHelper.refresh_posts_message(hashtag_path(hashtag))
-        stream_prepend(env.response, selector: "section.ui.feed", body: body)
+        stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
       end
     end
   end
@@ -44,7 +44,7 @@ class StreamsController
       if count > first_count
         first_count = Int64::MAX
         body = Ktistec::ViewHelper.refresh_posts_message(remote_thread_path(object))
-        stream_prepend(env.response, selector: "section.ui.feed", body: body)
+        stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
       end
     end
   end

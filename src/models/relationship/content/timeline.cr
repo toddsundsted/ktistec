@@ -1,3 +1,4 @@
+require "../../../framework/topic"
 require "../../relationship"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
@@ -12,6 +13,10 @@ class Relationship
       validates(object) { "missing: #{to_iri}" unless object? }
 
       property confirmed : Bool { true }
+
+      def after_save
+        Ktistec::Topic{"/actors/#{owner.username}/timeline"}.notify_subscribers
+      end
     end
   end
 end

@@ -1,10 +1,15 @@
 require "../framework/controller"
+require "../framework/topic"
 
 require "../models/relationship/content/follow/hashtag"
 require "../models/task/fetch/hashtag"
 
 class StreamsController
   include Ktistec::Controller
+
+  macro stop
+    raise Ktistec::Topic::Stop.new
+  end
 
   get "/stream/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
@@ -46,6 +51,38 @@ class StreamsController
         body = Ktistec::ViewHelper.refresh_posts_message(remote_thread_path(object))
         stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
       end
+    end
+  end
+
+  get "/stream/actor/timeline" do |env|
+    since = Time.utc
+    first_count = timeline_count(env, since)
+    setup_response(env.response)
+    Ktistec::Topic{"#{actor_path(env.account.actor)}/timeline"}.subscribe do
+      count = timeline_count(env, since)
+      if count > first_count
+        first_count = Int64::MAX
+        body = refresh_posts_message(actor_path(env.account.actor))
+        stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
+      else
+        stream_no_op(env.response)
+      end
+    rescue HTTP::Server::ClientError
+      stop
+    end
+  end
+
+  private def self.timeline_count(env, since)
+    filters = env.params.query.fetch_all("filters")
+    actor = env.account.actor
+    if filters.includes?("no-shares") && filters.includes?("no-replies")
+      timeline = actor.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create], exclude_replies: true)
+    elsif filters.includes?("no-shares")
+      timeline = actor.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create])
+    elsif filters.includes?("no-replies")
+      timeline = actor.timeline(since: since, exclude_replies: true)
+    else
+      timeline = actor.timeline(since: since)
     end
   end
 

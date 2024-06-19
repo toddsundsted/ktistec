@@ -17,7 +17,7 @@ class StreamsController
       not_found
     end
     setup_response(env.response)
-    ActivityPub::Collection::Hashtag.find_or_create(name: hashtag).subscribe do
+    Ktistec::Topic{hashtag_path(hashtag)}.subscribe do
       task = Task::Fetch::Hashtag.find(source: env.account.actor, name: hashtag)
       follow = Relationship::Content::Follow::Hashtag.find(actor: env.account.actor, name: hashtag)
       count = Tag::Hashtag.all_objects_count(hashtag)
@@ -25,9 +25,11 @@ class StreamsController
       stream_replace(env.response, id: "tag_page_tag_controls", body: body)
       if count > first_count
         first_count = Int64::MAX
-        body = Ktistec::ViewHelper.refresh_posts_message(hashtag_path(hashtag))
+        body = refresh_posts_message(hashtag_path(hashtag))
         stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
       end
+    rescue HTTP::Server::ClientError
+      stop
     end
   end
 

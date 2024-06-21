@@ -5,7 +5,7 @@ require "../spec_helper/base"
 Spectator.describe Ktistec::Topic do
   setup_spec
 
-  before_each { described_class.clear_subscriptions! }
+  before_each { described_class.reset! }
 
   describe "instantiation" do
     it "creates a new topic" do
@@ -18,6 +18,31 @@ Spectator.describe Ktistec::Topic do
 
     it "creates a topic with a subject" do
       expect(Ktistec::Topic{"subject"}.subjects).to eq(["subject"])
+    end
+
+    it "creates a topic with two subjects" do
+      expect(Ktistec::Topic{"subject", "foobar"}.subjects).to eq(["subject", "foobar"])
+    end
+  end
+
+  class ::Ktistec::Topic
+    class Subjects
+      def to_a
+        @subjects.map_with_index { |subject, i| subject if @counts[i] > 0 }.compact
+      end
+    end
+
+    class_getter subjects
+  end
+
+  describe "finalization" do
+    let!(topic) { Ktistec::Topic{"subject"} }
+
+    pre_condition { expect(described_class.subjects.to_a).to eq(["subject"]) }
+
+    it "removes the topic's subjects" do
+      topic.finalize
+      expect(described_class.subjects.to_a).to be_empty
     end
   end
 
@@ -41,11 +66,29 @@ Spectator.describe Ktistec::Topic do
     it "returns the subjects of the topic" do
       expect(topic.subjects).to be_empty
     end
+
+    context "given duplicate subjects" do
+      let(topic) { Ktistec::Topic{"subject", "subject"} }
+
+      it "returns each subject once" do
+        expect(topic.subjects).to eq(["subject"])
+      end
+    end
   end
 
   describe "#subscriptions" do
     it "returns the subscriptions" do
       expect(topic.subscriptions).to be_empty
+    end
+
+    context "given a subscription" do
+      let(topic) { Ktistec::Topic{"subject"} }
+
+      make_subscription(topic) { }
+
+      it "returns the subscriptions" do
+        expect(topic.subscriptions).to have_key("subject")
+      end
     end
   end
 
@@ -61,6 +104,14 @@ Spectator.describe Ktistec::Topic do
 
       it "raises an error" do
         expect{topic << "foobar"}.to raise_error(Ktistec::Topic::Error)
+      end
+    end
+
+    context "given a subject and a notification" do
+      before_each { topic.notify_subscribers }
+
+      it "raises an error" do
+        expect{topic << "subject"}.to raise_error(Ktistec::Topic::Error)
       end
     end
   end
@@ -127,6 +178,20 @@ Spectator.describe Ktistec::Topic do
         topic.notify_subscribers
         expect{Fiber.yield}.not_to change{invocations[0]}.from(0)
       end
+
+      context "that is renamed" do
+        before_each do
+          topic # ensure `topic` is created before the rename happens
+          Ktistec::Topic.rename_subject("foobar", "subject")
+        end
+
+        pre_condition { expect(Ktistec::Topic.subjects.size).to eq(2) }
+
+        it "notifies the subscriber" do
+          topic.notify_subscribers
+          expect{Fiber.yield}.to change{invocations[0]}.by(1)
+        end
+      end
     end
 
     context "given the same subject" do
@@ -149,6 +214,127 @@ Spectator.describe Ktistec::Topic do
         topic.notify_subscribers
         expect{Fiber.yield}.to change{topic.subscriptions.size}.to(0)
       end
+    end
+  end
+
+  describe ".rename_subject" do
+    let!(topic) { Ktistec::Topic{"subject"} }
+
+    it "renames the subject" do
+      expect{described_class.rename_subject("subject", "foobar")}.to change{topic.subjects}.from(["subject"]).to(["foobar"])
+    end
+
+    it "renames the subject" do
+      expect{described_class.rename_subject("subject", "foobar")}.to change{described_class.subjects.to_a}.from(["subject"]).to(["foobar"])
+    end
+  end
+end
+
+Spectator.describe Ktistec::Topic::Subjects do
+  describe "#map" do
+    it "maps a value to the next storage location" do
+      expect(subject.map("one")).to eq(0)
+      expect(subject.map("two")).to eq(1)
+    end
+
+    context "given existings mappings" do
+      before_each do
+        subject.map("one")
+        subject.map("two")
+      end
+
+      it "retrieves the storage location of existing mappings" do
+        expect(subject.map("one")).to eq(0)
+        expect(subject.map("two")).to eq(1)
+      end
+
+      it "maps a new value to the next storage location" do
+        expect(subject.map("three")).to eq(2)
+      end
+
+      context "that are cleared" do
+        before_each do
+          subject.clear(0)
+          subject.clear(1)
+        end
+
+        it "reuses the storage locations of cleared mappings" do
+          expect(subject.map("three")).to eq(0)
+          expect(subject.map("four")).to eq(1)
+        end
+      end
+    end
+  end
+
+  describe "#unmap" do
+    before_each do
+      subject.map("one")
+      subject.map("two")
+    end
+
+    it "unmaps values from their storage locations" do
+      expect{subject.unmap(0)}.to change{subject[0]}.from("one").to(nil)
+      expect{subject.unmap(1)}.to change{subject[1]}.from("two").to(nil)
+    end
+
+    it "raises an error if the storage location is not mapped" do
+      expect{subject.unmap(2)}.to raise_error
+    end
+
+    context "when mapped more than once" do
+      before_each do
+        subject.map("one")
+        subject.map("two")
+      end
+
+      it "does not unmap values from their storage locations" do
+        expect{subject.unmap(0)}.not_to change{subject[0]}.from("one")
+        expect{subject.unmap(1)}.not_to change{subject[1]}.from("two")
+      end
+
+      context "and unmapped once" do
+        before_each do
+          subject.unmap(0)
+          subject.unmap(1)
+        end
+
+        it "unmaps values from their storage locations" do
+          expect{subject.unmap(0)}.to change{subject[0]}.from("one").to(nil)
+          expect{subject.unmap(1)}.to change{subject[1]}.from("two").to(nil)
+        end
+      end
+    end
+  end
+
+  describe "#clear" do
+    before_each do
+      subject.map("one")
+      subject.map("two")
+    end
+
+    it "clears the storage locations" do
+      expect{subject.clear(0)}.to change{subject[0]}.from("one").to(nil)
+      expect{subject.clear(1)}.to change{subject[1]}.from("two").to(nil)
+    end
+
+    it "raises an error if the storage location is not mapped" do
+      expect{subject.clear(2)}.to raise_error
+    end
+  end
+
+  describe "#[]" do
+    before_each do
+      subject.map("one")
+      subject.map("two")
+    end
+
+    it "retrieves the value at the storage location" do
+      expect(subject[0]).to eq("one")
+      expect(subject[1]).to eq("two")
+    end
+
+    it "raises an error if the storage location is not mapped" do
+      expect{subject[2]}.to raise_error
     end
   end
 end

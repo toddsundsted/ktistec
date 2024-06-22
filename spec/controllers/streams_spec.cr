@@ -100,3 +100,26 @@ Spectator.describe StreamsController do
     end
   end
 end
+
+Spectator.describe ActivityPub::Object do
+  setup_spec
+
+  before_each { Ktistec::Topic.reset! }
+
+  context "given a topic" do
+    let_build(:object)
+    let(topic) { Ktistec::Topic{object.iri, "foo/bar"} }
+
+    it "updates subjects when thread changes" do
+      expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{topic.subjects}.to(["https://elsewhere", "foo/bar"])
+    end
+
+    context "given an existing topic" do
+      let!(existing) { Ktistec::Topic{"https://elsewhere"} }
+
+      it "updates subjects when thread changes" do
+        expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{topic.subjects}.to(["https://elsewhere", "foo/bar"])
+      end
+    end
+  end
+end

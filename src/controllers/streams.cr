@@ -41,7 +41,7 @@ class StreamsController
     thread = object.thread(for_actor: env.account.actor)
     first_count = thread.size
     setup_response(env.response)
-    ActivityPub::Collection::Thread.find_or_create(thread: thread.first.thread).subscribe do
+    Ktistec::Topic{thread.first.thread.not_nil!}.subscribe do
       thread = object.thread(for_actor: env.account.actor)
       count = thread.size
       task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
@@ -50,9 +50,11 @@ class StreamsController
       stream_replace(env.response, id: "thread_page_thread_controls", body: body)
       if count > first_count
         first_count = Int64::MAX
-        body = Ktistec::ViewHelper.refresh_posts_message(remote_thread_path(object))
+        body = refresh_posts_message(remote_thread_path(object))
         stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
       end
+    rescue HTTP::Server::ClientError
+      stop
     end
   end
 
@@ -126,5 +128,18 @@ class StreamsController
     io.puts "data: </turbo-stream>"
     io.puts
     io.flush
+  end
+end
+
+# updates the `subject` based on the `thread` when an object is
+# saved. patching `Object` like this pulls the explicit dependency out
+# of its source code.
+
+module ActivityPub
+  class Object
+    def after_save
+      previous_def
+      Ktistec::Topic.rename_subject(self.iri, self.thread)
+    end
   end
 end

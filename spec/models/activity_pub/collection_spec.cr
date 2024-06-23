@@ -39,37 +39,6 @@ Spectator.describe ActivityPub::Collection do
     end
   end
 
-  describe ".channel" do
-    it "returns the channel" do
-      expect(described_class.channel).to be_a(ModelChannel(ActivityPub::Collection))
-    end
-  end
-
-  context "the channel" do
-    # the `mock` keyword does not work with generic types
-    Spectator::Mock.define_subtype(:class, ModelChannel(ActivityPub::Collection), MockChannel, publish: nil, subscribe: nil)
-
-    let(channel) { MockChannel.new }
-
-    before_each { ActivityPub::Collection.channel = channel }
-
-    let_create(:collection, named: subject)
-
-    describe "#notify_subscribers" do
-      it "invokes publish on the channel" do
-        subject.notify_subscribers
-        expect(channel).to have_received(:publish)
-      end
-    end
-
-    describe "#subscribe" do
-      it "invokes subscribe on the channel" do
-        subject.subscribe {}
-        expect(channel).to have_received(:subscribe)
-      end
-    end
-  end
-
   let(model) { ActivityPubModel.new(iri: "item link") }
 
   let(json) do

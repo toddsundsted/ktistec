@@ -131,8 +131,8 @@ class HTTP::Client
     case url.path
     when /openssl-error/
       raise OpenSSL::Error.new
-    when /socket-error/
-      raise Socket::Error.new
+    when /io-error/
+      raise IO::Error.new
     when /([^\/]+)\/inbox/
       HTTP::Client::Response.new(
         200,

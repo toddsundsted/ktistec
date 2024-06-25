@@ -213,6 +213,26 @@ module ActivityPub
       Object.query_and_paginate(query, page: page, size: size)
     end
 
+    # Returns the count of federated posts.
+    #
+    # Includes local posts. Does not include private (not visible)
+    # posts.
+    #
+    def self.federated_posts_count
+      query = <<-QUERY
+          SELECT COUNT(o.id)
+            FROM objects AS o
+            JOIN actors AS t
+              ON t.iri = o.attributed_to_iri
+           WHERE o.visible = 1
+             AND o.deleted_at is NULL
+             AND o.blocked_at is NULL
+             AND t.deleted_at IS NULL
+             AND t.blocked_at IS NULL
+      QUERY
+      Object.scalar(query).as(Int64)
+    end
+
     # Returns the site's public posts.
     #
     # Does not include private (not visible) posts and replies.

@@ -964,17 +964,117 @@ Spectator.describe Ktistec::Model do
       end
     end
 
-    context "before save lifecycle callback" do
-      class AllCapsModel < NotNilModel
-        @@table_name = "not_nil_models"
+    class AllCapsModel < NotNilModel
+      @@table_name = "not_nil_models"
 
-        getter before_save_called = false
+      macro def_callback(name)
+        getter {{"before_#{name.id}_called".id}} = false
 
-        def before_save
-          @before_save_called = true
+        def before_{{name.id}}
+          @before_{{name.id}}_called = true
+        end
+
+        getter {{"after_#{name.id}_called".id}} = false
+
+        def after_{{name.id}}
+          @after_{{name.id}}_called = true
         end
       end
 
+      def_callback :create
+      def_callback :update
+      def_callback :save
+    end
+
+    context "before create lifecycle callback" do
+      it "runs the callback if a new record" do
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
+        expect{all_caps_model.save}.to change{all_caps_model.before_create_called}.to(true)
+      end
+
+      it "does not run the callback if not a new record" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val")
+        expect{all_caps_model.save}.not_to change{all_caps_model.before_create_called}.from(false)
+      end
+
+      it "runs the callback on associated instance if a new record" do
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.to change{all_caps_model.before_create_called}.to(true)
+      end
+
+      it "does not run the callback on associated instance if it's not a new record" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val") #.tap(&.clear!)
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.not_to change{all_caps_model.before_create_called}.from(false)
+      end
+    end
+
+    context "after create lifecycle callback" do
+      it "runs the callback if a new record" do
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
+        expect{all_caps_model.save}.to change{all_caps_model.after_create_called}.to(true)
+      end
+
+      it "does not run the callback if not a new record" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val")
+        expect{all_caps_model.save}.not_to change{all_caps_model.after_create_called}.from(false)
+      end
+
+      it "runs the callback on associated instance if a new record" do
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.to change{all_caps_model.after_create_called}.to(true)
+      end
+
+      it "does not run the callback on associated instance if it's not a new record" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.not_to change{all_caps_model.after_create_called}.from(false)
+      end
+    end
+
+    context "before update lifecycle callback" do
+      it "does not run the callback if a new record" do
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
+        expect{all_caps_model.save}.not_to change{all_caps_model.before_update_called}.from(false)
+      end
+
+      it "runs the callback if not a new record" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val")
+        expect{all_caps_model.save}.to change{all_caps_model.before_update_called}.to(true)
+      end
+
+      it "does not run the callback on associated instance if a new record" do
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.not_to change{all_caps_model.before_update_called}.from(false)
+      end
+
+      it "runs the callback on associated instance if not a new record" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.to change{all_caps_model.before_update_called}.to(true)
+      end
+    end
+
+    context "after update lifecycle callback" do
+      it "does not run the callback if a new record" do
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
+        expect{all_caps_model.save}.not_to change{all_caps_model.after_update_called}.from(false)
+      end
+
+      it "runs the callback if not a new record" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val")
+        expect{all_caps_model.save}.to change{all_caps_model.after_update_called}.to(true)
+      end
+
+      it "does not run the callback on associated instance if a new record" do
+        all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.not_to change{all_caps_model.after_update_called}.from(false)
+      end
+
+      it "runs the callback on associated instance if not a new record" do
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val")
+        expect{FooBarModel.new(not_nil_model: all_caps_model).save}.to change{all_caps_model.after_update_called}.to(true)
+      end
+    end
+
+    context "before save lifecycle callback" do
       it "runs the callback" do
         all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
         expect{all_caps_model.save}.to change{all_caps_model.before_save_called}.to(true)
@@ -997,16 +1097,6 @@ Spectator.describe Ktistec::Model do
     end
 
     context "after save lifecycle callback" do
-      class AllCapsModel < NotNilModel
-        @@table_name = "not_nil_models"
-
-        getter after_save_called = false
-
-        def after_save
-          @after_save_called = true
-        end
-      end
-
       it "runs the callback" do
         all_caps_model = AllCapsModel.new(key: "Key", val: "Val")
         expect{all_caps_model.save}.to change{all_caps_model.after_save_called}.to(true)

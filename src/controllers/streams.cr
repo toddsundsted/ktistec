@@ -90,6 +90,15 @@ class StreamsController
     end
   end
 
+  get "/stream/everything" do |env|
+    setup_response(env.response)
+    Ktistec::Topic{everything_path}.subscribe do
+      stream_refresh(env.response)
+    rescue HTTP::Server::ClientError
+      stop
+    end
+  end
+
   def self.setup_response(response : HTTP::Server::Response)
     response.content_type = "text/event-stream"
     response.headers["Cache-Control"] = "no-cache"
@@ -131,12 +140,15 @@ class StreamsController
   end
 end
 
-# updates the `subject` based on the `thread` when an object is
-# saved. patching `Object` like this pulls the explicit dependency out
-# of its source code.
-
 module ActivityPub
   class Object
+    def after_create
+      Ktistec::Topic{Ktistec::ViewHelper.everything_path}.notify_subscribers
+    end
+
+    # updates the `subject` based on the `thread` when an object is
+    # saved.
+
     def after_save
       previous_def
       Ktistec::Topic.rename_subject(self.iri, self.thread)

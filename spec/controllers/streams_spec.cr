@@ -45,6 +45,13 @@ Spectator.describe StreamsController do
     end
   end
 
+  describe "/stream/everything" do
+    it "returns 401 if not authorized" do
+      get "/stream/everything"
+      expect(response.status_code).to eq(401)
+    end
+  end
+
   describe ".setup_response" do
     subject do
       String.build do |io|

@@ -207,7 +207,7 @@ module ActivityPub
              AND o.blocked_at is NULL
              AND t.deleted_at IS NULL
              AND t.blocked_at IS NULL
-        ORDER BY o.published DESC
+        ORDER BY o.id DESC
            LIMIT ? OFFSET ?
       QUERY
       Object.query_and_paginate(query, page: page, size: size)

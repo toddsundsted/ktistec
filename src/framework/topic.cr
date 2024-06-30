@@ -136,6 +136,7 @@ module Ktistec
     #
     def subscribe(timeout : Time::Span? = nil, &block)
       @frozen = true
+      Log.debug { %Q|[#{object_id}] subscribing to #{subjects.join(" ")}| }
       subscriptions = @indexes.reduce({} of Int32 => Subscription) do |subscriptions, subject|
         subscription = Subscription.new
         @@subscriptions[subject] << subscription
@@ -152,6 +153,8 @@ module Ktistec
               Log.debug { %Q|[#{object_id}] yielding subject "#{@subjects[subject]}"| }
               yield @subjects[subject]
               subscription.unlatch!
+            else
+              Log.error { %Q|[#{object_id}] is unlatched! skipping subject "#{@subjects[subject]}"| }
             end
           else
             Log.debug { %Q|[#{object_id}] yielding on timeout| }
@@ -161,6 +164,7 @@ module Ktistec
       rescue Channel::ClosedError | Stop
         # exit
       ensure
+        Log.trace { %Q|[#{object_id}] unsubscribing| }
         subscriptions.each do |subject, subscription|
           @@subscriptions[subject].delete(subscription)
           subscription.channel.close
@@ -176,7 +180,8 @@ module Ktistec
       @frozen = true
       Log.debug do
         subscriptions_count = @@subscriptions.values.map(&.size).sum
-        "statistics - subscriptions=#{subscriptions_count} | space - subjects=#{@subjects.size} free=#{@subjects.free}"
+        subjects = (0...@subjects.size).map { |i| @subjects[i] }.compact.join(" ")
+        "statistics - subscriptions=#{subscriptions_count} slots=#{@subjects.size} free=#{@subjects.free} | #{subjects}"
       end
       # look up the indexes that share the same name
       indexes =
@@ -188,11 +193,9 @@ module Ktistec
       indexes.each do |subject|
         if @@subscriptions.has_key?(subject)
           @@subscriptions[subject].each do |subscription|
-            unless subscription.latched?
+            unless subscription.channel.closed? || subscription.latched?
               subscription.latch!
-              unless subscription.channel.closed?
-                subscription.channel.send(subject)
-              end
+              subscription.channel.send(subject)
             end
           end
         end

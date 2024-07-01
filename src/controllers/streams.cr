@@ -66,7 +66,8 @@ class StreamsController
       count = timeline_count(env, since)
       if count > first_count
         first_count = Int64::MAX
-        body = refresh_posts_message(actor_path(env.account.actor))
+        query = env.request.query.try { |query| "?#{query}" } || ""
+        body = refresh_posts_message("#{actor_path(env.account.actor)}#{query}")
         stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
       else
         stream_no_op(env.response)

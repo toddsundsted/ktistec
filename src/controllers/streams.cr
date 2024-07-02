@@ -16,20 +16,22 @@ class StreamsController
     if (first_count = Tag::Hashtag.all_objects_count(hashtag)) < 1
       not_found
     end
-    setup_response(env.response)
-    Ktistec::Topic{hashtag_path(hashtag)}.subscribe do
-      task = Task::Fetch::Hashtag.find(source: env.account.actor, name: hashtag)
-      follow = Relationship::Content::Follow::Hashtag.find(actor: env.account.actor, name: hashtag)
-      count = Tag::Hashtag.all_objects_count(hashtag)
-      body = tag_page_tag_controls(env, hashtag, task, follow, count)
-      stream_replace(env.response, id: "tag_page_tag_controls", body: body)
-      if count > first_count
-        first_count = Int64::MAX
-        body = refresh_posts_message(hashtag_path(hashtag))
-        stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
+    Ktistec::Topic{hashtag_path(hashtag)}.tap do |topic|
+      setup_response(env.response, topic.object_id)
+      topic.subscribe do
+        task = Task::Fetch::Hashtag.find(source: env.account.actor, name: hashtag)
+        follow = Relationship::Content::Follow::Hashtag.find(actor: env.account.actor, name: hashtag)
+        count = Tag::Hashtag.all_objects_count(hashtag)
+        body = tag_page_tag_controls(env, hashtag, task, follow, count)
+        stream_replace(env.response, id: "tag_page_tag_controls", body: body)
+        if count > first_count
+          first_count = Int64::MAX
+          body = refresh_posts_message(hashtag_path(hashtag))
+          stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
+        end
+      rescue HTTP::Server::ClientError
+        stop
       end
-    rescue HTTP::Server::ClientError
-      stop
     end
   end
 
@@ -40,40 +42,44 @@ class StreamsController
     end
     thread = object.thread(for_actor: env.account.actor)
     first_count = thread.size
-    setup_response(env.response)
-    Ktistec::Topic{thread.first.thread.not_nil!}.subscribe do
-      thread = object.thread(for_actor: env.account.actor)
-      count = thread.size
-      task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
-      follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
-      body = thread_page_thread_controls(env, thread, task, follow)
-      stream_replace(env.response, id: "thread_page_thread_controls", body: body)
-      if count > first_count
-        first_count = Int64::MAX
-        body = refresh_posts_message(remote_thread_path(object))
-        stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
+    Ktistec::Topic{thread.first.thread.not_nil!}.tap do |topic|
+      setup_response(env.response, topic.object_id)
+      topic.subscribe do
+        thread = object.thread(for_actor: env.account.actor)
+        count = thread.size
+        task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
+        follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
+        body = thread_page_thread_controls(env, thread, task, follow)
+        stream_replace(env.response, id: "thread_page_thread_controls", body: body)
+        if count > first_count
+          first_count = Int64::MAX
+          body = refresh_posts_message(remote_thread_path(object))
+          stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
+        end
+      rescue HTTP::Server::ClientError
+        stop
       end
-    rescue HTTP::Server::ClientError
-      stop
     end
   end
 
   get "/stream/actor/timeline" do |env|
     since = Time.utc
     first_count = timeline_count(env, since)
-    setup_response(env.response)
-    Ktistec::Topic{"#{actor_path(env.account.actor)}/timeline"}.subscribe do
-      count = timeline_count(env, since)
-      if count > first_count
-        first_count = Int64::MAX
-        query = env.request.query.try { |query| "?#{query}" } || ""
-        body = refresh_posts_message("#{actor_path(env.account.actor)}#{query}")
-        stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
-      else
-        stream_no_op(env.response)
+    Ktistec::Topic{"#{actor_path(env.account.actor)}/timeline"}.tap do |topic|
+      setup_response(env.response, topic.object_id)
+      topic.subscribe do
+        count = timeline_count(env, since)
+        if count > first_count
+          first_count = Int64::MAX
+          query = env.request.query.try { |query| "?#{query}" } || ""
+          body = refresh_posts_message("#{actor_path(env.account.actor)}#{query}")
+          stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
+        else
+          stream_no_op(env.response)
+        end
+      rescue HTTP::Server::ClientError
+        stop
       end
-    rescue HTTP::Server::ClientError
-      stop
     end
   end
 
@@ -92,18 +98,21 @@ class StreamsController
   end
 
   get "/stream/everything" do |env|
-    setup_response(env.response)
-    Ktistec::Topic{everything_path}.subscribe do
-      stream_refresh(env.response)
-    rescue HTTP::Server::ClientError
-      stop
+    Ktistec::Topic{everything_path}.tap do |topic|
+      setup_response(env.response, topic.object_id)
+      topic.subscribe do
+        stream_refresh(env.response)
+      rescue HTTP::Server::ClientError
+        stop
+      end
     end
   end
 
-  def self.setup_response(response : HTTP::Server::Response)
+  def self.setup_response(response : HTTP::Server::Response, topic_id)
     response.content_type = "text/event-stream"
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
+    response.headers["X-Topic-Id"] = topic_id.to_s
     response.puts
     response.flush
   end

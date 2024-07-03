@@ -113,7 +113,8 @@ class StreamsController
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
     response.headers["X-Topic-Id"] = topic_id.to_s
-    response.puts
+    # call `upgrade` to write the headers to the output
+    response.upgrade {}
     response.flush
   end
 

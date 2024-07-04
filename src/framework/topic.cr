@@ -105,15 +105,7 @@ module Ktistec
     #
     private class Subscription
       property channel = Channel(Int32).new
-      property? latched = false
-
-      def unlatch!
-        @latched = false
-      end
-
-      def latch!
-        @latched = true
-      end
+      property queue = Array(String).new
     end
 
     @@subscriptions = Hash(Int32, Array(Subscription)).new do |h, k|
@@ -147,18 +139,18 @@ module Ktistec
         loop do
           select_actions = subscriptions.values.map(&.channel.receive_select_action)
           select_actions += [timeout_select_action(timeout)] if timeout
-          i, subject = Channel(String).select(select_actions)
+          i, subject = Channel(Int32).select(select_actions)
           if subject
-            if (subscription = subscriptions[subject]).latched?
+            if (subscription = subscriptions[subject]) && (value = subscription.queue.first?)
               Log.debug { %Q|[#{object_id}] yielding subject "#{@subjects[subject]}"| }
-              yield @subjects[subject]
-              subscription.unlatch!
+              yield @subjects[subject], value
+              subscription.queue.shift
             else
-              Log.error { %Q|[#{object_id}] is unlatched! skipping subject "#{@subjects[subject]}"| }
+              Log.error { %Q|[#{object_id}] nothing queued! skipping subject "#{@subjects[subject]}"| }
             end
           else
             Log.debug { %Q|[#{object_id}] yielding on timeout| }
-            yield nil
+            yield nil, nil
           end
         end
       rescue Channel::ClosedError | Stop
@@ -174,9 +166,11 @@ module Ktistec
 
     # Notifies subscribers about updates.
     #
+    # Passes an optional `value` to each subscriber.
+    #
     # Does not block.
     #
-    def notify_subscribers
+    def notify_subscribers(value : String = "")
       @frozen = true
       Log.debug do
         subscriptions_count = @@subscriptions.values.map(&.size).sum
@@ -193,8 +187,8 @@ module Ktistec
       indexes.each do |subject|
         if @@subscriptions.has_key?(subject)
           @@subscriptions[subject].each do |subscription|
-            unless subscription.channel.closed? || subscription.latched?
-              subscription.latch!
+            unless subscription.channel.closed? || subscription.queue.includes?(value)
+              subscription.queue << value
               subscription.channel.send(subject)
             end
           end

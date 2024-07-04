@@ -151,21 +151,45 @@ Spectator.describe Ktistec::Topic do
       pre_condition { expect(topic.subscriptions.size).to eq(1) }
 
       it "notifies the subscriber" do
-        topic.notify_subscribers
-        expect{Fiber.yield}.to change{invocations[0]}.by(1)
+        expect do
+          topic.notify_subscribers
+          Fiber.yield
+        end.to change{invocations[0]}.to(1)
       end
 
       it "notifies the subscriber" do
-        topic.notify_subscribers
-        expect{Fiber.yield}.to change{invocations[0]}.to(1)
-        topic.notify_subscribers
-        expect{Fiber.yield}.to change{invocations[0]}.to(2)
+        expect do
+          topic.notify_subscribers("foo")
+          Fiber.yield
+        end.to change{invocations[0]}.to(1)
+        expect do
+          topic.notify_subscribers("bar")
+          Fiber.yield
+        end.to change{invocations[0]}.to(2)
       end
 
       it "merges the notifications" do
-        topic.notify_subscribers
-        topic.notify_subscribers
-        expect{Fiber.yield}.to change{invocations[0]}.by(1)
+        expect do
+          topic.notify_subscribers
+          topic.notify_subscribers
+          Fiber.yield
+        end.to change{invocations[0]}.to(1)
+      end
+
+      it "merges the notifications" do
+        expect do
+          topic.notify_subscribers("foo")
+          topic.notify_subscribers("foo")
+          Fiber.yield
+        end.to change{invocations[0]}.to(1)
+      end
+
+      it "does not merge the notifications" do
+        expect do
+          topic.notify_subscribers("foo")
+          topic.notify_subscribers("bar")
+          Fiber.yield
+        end.to change{invocations[0]}.to(2)
       end
     end
 

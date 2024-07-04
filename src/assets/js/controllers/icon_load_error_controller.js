@@ -5,8 +5,11 @@ import { Controller } from "@hotwired/stimulus"
  */
 export default class extends Controller {
   connect() {
-    this.element.querySelectorAll(".ui.feed .event img[data-actor-id]").forEach(function(element) {
-      element.addEventListener("error", () => {
+    // the `error` event does not bubble, so handle it during the
+    // capture phase (`addEventListener(..., true)`).
+    this.element.addEventListener("error", (event) => {
+      let element = event.target
+      if (element.matches("img[data-actor-id]")) {
         let replacement = document.createElement("i")
         replacement.className = "user icon"
         element.replaceWith(replacement)
@@ -14,7 +17,7 @@ export default class extends Controller {
         xhr.open("POST", `/remote/actors/${element.dataset.actorId}/refresh`)
         xhr.setRequestHeader("X-CSRF-Token", Ktistec.csrf)
         xhr.send()
-      })
-    })
+      }
+    }, true)
   }
 }

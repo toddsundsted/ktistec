@@ -52,6 +52,27 @@ Spectator.describe StreamsController do
     end
   end
 
+  describe ".replace_actor_icon" do
+    let_create(actor)
+
+    subject do
+      String.build do |io|
+        described_class.replace_actor_icon(io, actor.id)
+      end
+    end
+
+    it "renders a Turbo Stream action" do
+      expect(subject).to eq <<-HTML
+      data: <turbo-stream action="replace" targets=":is(i,img)[data-actor-id='#{actor.id}']">
+      data: <template>
+      data: <img src="#{actor.icon}">
+      data: </template>
+      data: </turbo-stream>
+      \n
+      HTML
+    end
+  end
+
   describe ".setup_response" do
     subject do
       String.build do |io|

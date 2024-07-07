@@ -13,9 +13,9 @@ turbo-frame#thread_page_thread_controls
       p Contributors to this thread:
       p
         - contributors.to_a.sort_by(&.last.-).truncate(0, 18).each do |actor, _|
-          a data-turbo-frame="_top" href=remote_actor_path(actor)
-            - if (icon = actor.icon)
-              img.ui.avatar.image data-actor-id=actor.id src=icon
+          - if (icon = actor.icon)
+            a.ui.avatar.image data-turbo-frame="_top" href=remote_actor_path(actor)
+              img data-actor-id=actor.id src=icon
       - if env.account?
         - if task && (status = fetch_task_status_line(task, thread))
           p.task

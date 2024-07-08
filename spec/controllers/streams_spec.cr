@@ -73,6 +73,28 @@ Spectator.describe StreamsController do
     end
   end
 
+  describe ".replace_refresh_posts_message" do
+    subject do
+      String.build do |io|
+        described_class.replace_refresh_posts_message(io)
+      end
+    end
+
+    it "renders a Turbo Stream action" do
+      expect(subject).to eq <<-HTML
+      data: <turbo-stream action="replace" target="refresh-posts-message">
+      data: <template>
+      data: <div id="refresh-posts-message" class="ui info icon message"><i class="sync icon"></i>\
+      <div class="content"><div class="header">There are new posts!</div>\
+      <p><a href="" data-turbo-prefetch="false" data-turbo-action="replace">Refresh</a></p>\
+      </div></div>
+      data: </template>
+      data: </turbo-stream>
+      \n
+      HTML
+    end
+  end
+
   describe ".setup_response" do
     subject do
       String.build do |io|

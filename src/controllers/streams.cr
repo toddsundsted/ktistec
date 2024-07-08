@@ -22,6 +22,13 @@ class StreamsController
     stream_replace(io, selector: ":is(i,img)[data-actor-id='#{actor.id}']", body: body)
   end
 
+  # Renders action to replace the refresh posts message.
+  #
+  def self.replace_refresh_posts_message(io, path = "")
+    body = render "src/views/partials/refresh-posts.html.slang"
+    stream_replace(io, id: "refresh-posts-message", body: body)
+  end
+
   get "/stream/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
     if (first_count = Tag::Hashtag.all_objects_count(hashtag)) < 1
@@ -42,9 +49,8 @@ class StreamsController
           body = tag_page_tag_controls(env, hashtag, task, follow, count)
           stream_replace(env.response, id: "tag_page_tag_controls", body: body)
           if count > first_count
-            first_count = Int64::MAX
-            body = refresh_posts_message(hashtag_path(hashtag))
-            stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
+            first_count = count
+            replace_refresh_posts_message(env.response)
           end
         end
       rescue HTTP::Server::ClientError
@@ -76,9 +82,8 @@ class StreamsController
           body = thread_page_thread_controls(env, thread, task, follow)
           stream_replace(env.response, id: "thread_page_thread_controls", body: body)
           if count > first_count
-            first_count = Int64::MAX
-            body = refresh_posts_message(remote_thread_path(object))
-            stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
+            first_count = count
+            replace_refresh_posts_message(env.response)
           end
         end
       rescue HTTP::Server::ClientError
@@ -101,10 +106,8 @@ class StreamsController
         else
           count = timeline_count(env, since)
           if count > first_count
-            first_count = Int64::MAX
-            query = env.request.query.try { |query| "?#{query}" } || ""
-            body = refresh_posts_message("#{actor_path(env.account.actor)}#{query}")
-            stream_replace(env.response, selector: "section.ui.feed > .refresh_posts_placeholder", body: body)
+            first_count = count
+            replace_refresh_posts_message(env.response)
           else
             stream_no_op(env.response)
           end

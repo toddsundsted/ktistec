@@ -155,6 +155,80 @@ Spectator.describe StreamsController do
   end
 end
 
+Spectator.describe StreamsController::ConnectionPool do
+  context "initialization" do
+    it "creates a new pool" do
+      pool = described_class.new(1)
+      expect(pool).to be_a(described_class)
+    end
+  end
+
+  describe "#capacity" do
+    subject { described_class.new(1) }
+
+    it "returns the capacity of the pool" do
+      expect(subject.capacity).to eq(1)
+    end
+  end
+
+  describe "#size" do
+    subject { described_class.new(1) }
+
+    it "returns the number of connections in the pool" do
+      expect(subject.size).to eq(0)
+    end
+  end
+
+  describe "#push" do
+    subject { described_class.new(2) }
+
+    let(connection) { IO::Memory.new }
+
+    it "adds the connection to the pool" do
+      subject.push(connection)
+      expect(subject).to contain(connection)
+    end
+
+    context "given a pool at capacity" do
+      before_each do
+        subject.capacity.times do |i|
+          connection = IO::Memory.new
+          subject.push(connection)
+        end
+      end
+
+      pre_condition { expect(subject.size).to eq(2) }
+
+      let(new_connection) { IO::Memory.new }
+
+      it "adds the connection to the pool" do
+        subject.push(new_connection)
+        expect(subject).to contain(new_connection)
+      end
+
+      it "does not change the capacity of the pool" do
+        expect{subject.push(new_connection)}.not_to change{subject.capacity}
+      end
+
+      it "does not change the size of the pool" do
+        expect{subject.push(new_connection)}.not_to change{subject.size}
+      end
+
+      context "when a new connection is added" do
+        let(removed) { subject.push(new_connection).not_nil! }
+
+        it "removes the oldest connection from the pool" do
+          expect(subject).not_to contain(removed)
+        end
+
+        it "closes the removed connection" do
+          expect(removed.closed?).to be(true)
+        end
+      end
+    end
+  end
+end
+
 Spectator.describe ActivityPub::Object do
   setup_spec
 

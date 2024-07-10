@@ -29,6 +29,61 @@ class StreamsController
     stream_replace(io, id: "refresh-posts-message", body: body)
   end
 
+  # Limits the number of long-lived connections.
+  #
+  # Limits the number of long-lived connections by maintaining a pool
+  # of connections. When the pool is full, adding a new connection
+  # closes the oldest connection.
+  #
+  # A "connection" is any subclass of `IO`.
+  #
+  class ConnectionPool
+    def initialize(capacity)
+      @connections = Array(IO?).new(capacity, nil)
+      @index = 0
+    end
+
+    # Returns the capacity of the pool.
+    #
+    def capacity
+      @connections.size
+    end
+
+    # Returns the number of connections in the pool.
+    #
+    def size
+      @connections.count(&.nil?.!)
+    end
+
+    # Pushes `connection` into the pool.
+    #
+    # If the pool is at capacity, the oldest connection is closed,
+    # removed from the pool, and returned.
+    #
+    def push(connection)
+      index = @index % @connections.size
+      last, @connections[index] = @connections[index], connection
+      @index += 1
+      last.close unless last.nil? || last.closed?
+      last
+    end
+
+    # Returns `true` if the pool includes `connection`.
+    #
+    def includes?(connection)
+      @connections.includes?(connection)
+    end
+  end
+
+  # ensure there are no more than five long-lived connections handling
+  # subscriptions "per browser", which is here implemented as "per
+  # session". this helps limit blocking and ensures that ktistec never
+  # runs out of file descriptors/sockets (we hit 1024 simultaneous
+  # connections once, while testing at epiktistes.com -- poor thing
+  # couldn't even connect to the database).
+
+  @@pools = Hash(Session, ConnectionPool).new { |h, k| h[k] = ConnectionPool.new(5) }
+
   get "/stream/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
     if (first_count = Tag::Hashtag.all_objects_count(hashtag)) < 1

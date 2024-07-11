@@ -82,34 +82,41 @@ class StreamsController
   # connections once, while testing at epiktistes.com -- poor thing
   # couldn't even connect to the database).
 
-  @@pools = Hash(Session, ConnectionPool).new { |h, k| h[k] = ConnectionPool.new(5) }
+  @@sessions_pools = Hash(Session, ConnectionPool).new { |h, k| h[k] = ConnectionPool.new(5) }
+
+  private macro subscribe(*subjects, &block)
+    Ktistec::Topic{{{subjects.splat}}}.tap do |topic|
+      @@sessions_pools[env.session].push(env.response.@io)
+      setup_response(env.response, topic.object_id)
+      topic.subscribe do |{{block.args.splat}}|
+        {{block.body}}
+      rescue HTTP::Server::ClientError | IO::Error
+        stop
+      end
+    end
+  end
 
   get "/stream/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
     if (first_count = Tag::Hashtag.all_objects_count(hashtag)) < 1
       not_found
     end
-    Ktistec::Topic{"/actor/refresh", hashtag_path(hashtag)}.tap do |topic|
-      setup_response(env.response, topic.object_id)
-      topic.subscribe do |subject, value|
-        case subject
-        when "/actor/refresh"
-          if value && (id = value.to_i64?)
-            replace_actor_icon(env.response, id)
-          end
-        else
-          task = Task::Fetch::Hashtag.find(source: env.account.actor, name: hashtag)
-          follow = Relationship::Content::Follow::Hashtag.find(actor: env.account.actor, name: hashtag)
-          count = Tag::Hashtag.all_objects_count(hashtag)
-          body = tag_page_tag_controls(env, hashtag, task, follow, count)
-          stream_replace(env.response, id: "tag_page_tag_controls", body: body)
-          if count > first_count
-            first_count = count
-            replace_refresh_posts_message(env.response)
-          end
+    subscribe "/actor/refresh", hashtag_path(hashtag) do |subject, value|
+      case subject
+      when "/actor/refresh"
+        if value && (id = value.to_i64?)
+          replace_actor_icon(env.response, id)
         end
-      rescue HTTP::Server::ClientError
-        stop
+      else
+        task = Task::Fetch::Hashtag.find(source: env.account.actor, name: hashtag)
+        follow = Relationship::Content::Follow::Hashtag.find(actor: env.account.actor, name: hashtag)
+        count = Tag::Hashtag.all_objects_count(hashtag)
+        body = tag_page_tag_controls(env, hashtag, task, follow, count)
+        stream_replace(env.response, id: "tag_page_tag_controls", body: body)
+        if count > first_count
+          first_count = count
+          replace_refresh_posts_message(env.response)
+        end
       end
     end
   end
@@ -121,28 +128,23 @@ class StreamsController
     end
     thread = object.thread(for_actor: env.account.actor)
     first_count = thread.size
-    Ktistec::Topic{"/actor/refresh", thread.first.thread.not_nil!}.tap do |topic|
-      setup_response(env.response, topic.object_id)
-      topic.subscribe do |subject, value|
-        case subject
-        when "/actor/refresh"
-          if value && (id = value.to_i64?)
-            replace_actor_icon(env.response, id)
-          end
-        else
-          thread = object.thread(for_actor: env.account.actor)
-          count = thread.size
-          task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
-          follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
-          body = thread_page_thread_controls(env, thread, task, follow)
-          stream_replace(env.response, id: "thread_page_thread_controls", body: body)
-          if count > first_count
-            first_count = count
-            replace_refresh_posts_message(env.response)
-          end
+    subscribe "/actor/refresh", thread.first.thread.not_nil! do |subject, value|
+      case subject
+      when "/actor/refresh"
+        if value && (id = value.to_i64?)
+          replace_actor_icon(env.response, id)
         end
-      rescue HTTP::Server::ClientError
-        stop
+      else
+        thread = object.thread(for_actor: env.account.actor)
+        count = thread.size
+        task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
+        follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
+        body = thread_page_thread_controls(env, thread, task, follow)
+        stream_replace(env.response, id: "thread_page_thread_controls", body: body)
+        if count > first_count
+          first_count = count
+          replace_refresh_posts_message(env.response)
+        end
       end
     end
   end
@@ -150,25 +152,20 @@ class StreamsController
   get "/stream/actor/timeline" do |env|
     since = Time.utc
     first_count = timeline_count(env, since)
-    Ktistec::Topic{"/actor/refresh", "#{actor_path(env.account.actor)}/timeline"}.tap do |topic|
-      setup_response(env.response, topic.object_id)
-      topic.subscribe do |subject, value|
-        case subject
-        when "/actor/refresh"
-          if value && (id = value.to_i64?)
-            replace_actor_icon(env.response, id)
-          end
-        else
-          count = timeline_count(env, since)
-          if count > first_count
-            first_count = count
-            replace_refresh_posts_message(env.response)
-          else
-            stream_no_op(env.response)
-          end
+    subscribe "/actor/refresh", "#{actor_path(env.account.actor)}/timeline" do |subject, value|
+      case subject
+      when "/actor/refresh"
+        if value && (id = value.to_i64?)
+          replace_actor_icon(env.response, id)
         end
-      rescue HTTP::Server::ClientError
-        stop
+      else
+        count = timeline_count(env, since)
+        if count > first_count
+          first_count = count
+          replace_refresh_posts_message(env.response)
+        else
+          stream_no_op(env.response)
+        end
       end
     end
   end
@@ -188,19 +185,14 @@ class StreamsController
   end
 
   get "/stream/everything" do |env|
-    Ktistec::Topic{"/actor/refresh", everything_path}.tap do |topic|
-      setup_response(env.response, topic.object_id)
-      topic.subscribe do |subject, value|
-        case subject
-        when "/actor/refresh"
-          if value && (id = value.to_i64?)
-            replace_actor_icon(env.response, id)
-          end
-        else
-          stream_refresh(env.response)
+    subscribe "/actor/refresh", everything_path do |subject, value|
+      case subject
+      when "/actor/refresh"
+        if value && (id = value.to_i64?)
+          replace_actor_icon(env.response, id)
         end
-      rescue HTTP::Server::ClientError
-        stop
+      else
+        stream_refresh(env.response)
       end
     end
   end

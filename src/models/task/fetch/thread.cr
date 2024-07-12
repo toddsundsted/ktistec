@@ -204,7 +204,7 @@ class Task
           ContentRules.new.run do
             assert ContentRules::CheckFollowFor.new(source, object)
           end
-          Ktistec::Topic{thread}.notify_subscribers
+          Ktistec::Topic{thread}.notify_subscribers(object.id.to_s)
           count += 1
         end
       ensure

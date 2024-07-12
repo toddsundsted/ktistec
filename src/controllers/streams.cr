@@ -98,7 +98,7 @@ class StreamsController
 
   get "/stream/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
-    if (first_count = Tag::Hashtag.all_objects_count(hashtag)) < 1
+    if Tag::Hashtag.all_objects_count(hashtag) < 1
       not_found
     end
     subscribe "/actor/refresh", hashtag_path(hashtag) do |subject, value|
@@ -113,8 +113,7 @@ class StreamsController
         count = Tag::Hashtag.all_objects_count(hashtag)
         body = tag_page_tag_controls(env, hashtag, task, follow, count)
         stream_replace(env.response, id: "tag_page_tag_controls", body: body)
-        if count > first_count
-          first_count = count
+        if value.presence
           replace_refresh_posts_message(env.response)
         end
       end
@@ -126,9 +125,7 @@ class StreamsController
     unless (object = ActivityPub::Object.find?(id))
       not_found
     end
-    thread = object.thread(for_actor: env.account.actor)
-    first_count = thread.size
-    subscribe "/actor/refresh", thread.first.thread.not_nil! do |subject, value|
+    subscribe "/actor/refresh", object.thread.not_nil! do |subject, value|
       case subject
       when "/actor/refresh"
         if value && (id = value.to_i64?)
@@ -141,8 +138,7 @@ class StreamsController
         follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
         body = thread_page_thread_controls(env, thread, task, follow)
         stream_replace(env.response, id: "thread_page_thread_controls", body: body)
-        if count > first_count
-          first_count = count
+        if value.presence
           replace_refresh_posts_message(env.response)
         end
       end

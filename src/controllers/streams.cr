@@ -88,8 +88,12 @@ class StreamsController
     Ktistec::Topic{{{subjects.splat}}}.tap do |topic|
       @@sessions_pools[env.session].push(env.response.@io)
       setup_response(env.response, topic.object_id)
-      topic.subscribe do |{{block.args.splat}}|
-        {{block.body}}
+      topic.subscribe(timeout: 1.minute) do |{{block.args.join(",").id}}|
+        if {{block.args.join(" && ").id}}
+          {{block.body}}
+        else # timeout
+          stream_no_op(env.response)
+        end
       rescue HTTP::Server::ClientError | IO::Error
         stop
       end
@@ -104,7 +108,7 @@ class StreamsController
     subscribe "/actor/refresh", hashtag_path(hashtag) do |subject, value|
       case subject
       when "/actor/refresh"
-        if value && (id = value.to_i64?)
+        if (id = value.to_i64?)
           replace_actor_icon(env.response, id)
         end
       else
@@ -113,7 +117,7 @@ class StreamsController
         count = Tag::Hashtag.all_objects_count(hashtag)
         body = tag_page_tag_controls(env, hashtag, task, follow, count)
         stream_replace(env.response, id: "tag_page_tag_controls", body: body)
-        if value.presence
+        unless value.blank?
           replace_refresh_posts_message(env.response)
         end
       end
@@ -128,7 +132,7 @@ class StreamsController
     subscribe "/actor/refresh", object.thread.not_nil! do |subject, value|
       case subject
       when "/actor/refresh"
-        if value && (id = value.to_i64?)
+        if (id = value.to_i64?)
           replace_actor_icon(env.response, id)
         end
       else
@@ -138,7 +142,7 @@ class StreamsController
         follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
         body = thread_page_thread_controls(env, thread, task, follow)
         stream_replace(env.response, id: "thread_page_thread_controls", body: body)
-        if value.presence
+        unless value.blank?
           replace_refresh_posts_message(env.response)
         end
       end
@@ -151,16 +155,13 @@ class StreamsController
     subscribe "/actor/refresh", "#{actor_path(env.account.actor)}/timeline" do |subject, value|
       case subject
       when "/actor/refresh"
-        if value && (id = value.to_i64?)
+        if (id = value.to_i64?)
           replace_actor_icon(env.response, id)
         end
       else
-        count = timeline_count(env, since)
-        if count > first_count
+        if (count = timeline_count(env, since)) > first_count
           first_count = count
           replace_refresh_posts_message(env.response)
-        else
-          stream_no_op(env.response)
         end
       end
     end
@@ -184,7 +185,7 @@ class StreamsController
     subscribe "/actor/refresh", everything_path do |subject, value|
       case subject
       when "/actor/refresh"
-        if value && (id = value.to_i64?)
+        if (id = value.to_i64?)
           replace_actor_icon(env.response, id)
         end
       else

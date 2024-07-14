@@ -38,9 +38,9 @@ Spectator.describe StreamsController do
     end
   end
 
-  describe "/stream/actor/timeline" do
+  describe "/stream/actor/homepage" do
     it "returns 401 if not authorized" do
-      get "/stream/actor/timeline"
+      get "/stream/actor/homepage"
       expect(response.status_code).to eq(401)
     end
   end

@@ -149,7 +149,7 @@ class StreamsController
     end
   end
 
-  get "/stream/actor/timeline" do |env|
+  get "/stream/actor/homepage" do |env|
     since = Time.utc
     first_count = timeline_count(env, since)
     subscribe "/actor/refresh", "#{actor_path(env.account.actor)}/timeline" do |subject, value|

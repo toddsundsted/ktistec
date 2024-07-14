@@ -44,7 +44,7 @@ Spectator.describe "timeline partial" do
       let(env) { env_factory("GET", "/timeline?foo=bar") }
 
       it "renders a stream source with the query string" do
-        expect(subject.xpath_nodes("//turbo-stream-source/@src").first).to eq("/stream/actor/timeline?foo=bar")
+        expect(subject.xpath_nodes("//turbo-stream-source/@src").first).to eq("/stream/actor/homepage?foo=bar")
       end
     end
   end

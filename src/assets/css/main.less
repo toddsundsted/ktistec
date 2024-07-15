@@ -291,8 +291,12 @@ trix-editor {
 
 /* transitional elements */
 .transitional {
-    transition: opacity 0.5s !important;
-    opacity: 0;
+    animation: fade-in 0.5s;
+}
+
+@keyframes fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
 }
 
 /* modals */

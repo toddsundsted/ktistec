@@ -71,12 +71,3 @@ Trix.config.blockAttributes.pre = { tagName: "pre", terminal: true, text: { plai
 Trix.config.textAttributes.code = { tagName: "code", inheritable: true }
 Trix.config.textAttributes.sub = { tagName: "sub", inheritable: true }
 Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
-
-// transitions for transitional elements
-document.addEventListener("turbo:load", function() {
-  document.querySelectorAll(".transitional").forEach(transitional => transitional.style.opacity = 1)
-})
-
-document.addEventListener("turbo:before-cache", function() {
-  document.querySelectorAll(".transitional").forEach(transitional => transitional.style.opacity = 0)
-})

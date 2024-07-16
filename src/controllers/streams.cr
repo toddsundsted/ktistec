@@ -22,6 +22,13 @@ class StreamsController
     stream_replace(io, selector: ":is(i,img)[data-actor-id='#{actor.id}']", body: body)
   end
 
+  # Renders action to replace the notifications count.
+  #
+  def self.replace_notifications_count(io, account)
+    body = render "src/views/partials/notifications-count.html.slang"
+    stream_replace(io, selector: ".ui.menu > .item.notifications", body: body)
+  end
+
   # Renders action to replace the refresh posts message.
   #
   def self.replace_refresh_posts_message(io, path = "")
@@ -152,13 +159,15 @@ class StreamsController
   get "/stream/actor/homepage" do |env|
     since = Time.utc
     first_count = timeline_count(env, since)
-    subscribe "/actor/refresh", "#{actor_path(env.account.actor)}/timeline" do |subject, value|
+    subscribe "/actor/refresh", "#{actor_path(env.account.actor)}/notifications", "#{actor_path(env.account.actor)}/timeline" do |subject, value|
       case subject
       when "/actor/refresh"
         if (id = value.to_i64?)
           replace_actor_icon(env.response, id)
         end
-      else
+      when "#{actor_path(env.account.actor)}/notifications"
+        replace_notifications_count(env.response,  env.account)
+      when "#{actor_path(env.account.actor)}/timeline"
         if (count = timeline_count(env, since)) > first_count
           first_count = count
           replace_refresh_posts_message(env.response)

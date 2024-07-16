@@ -9,6 +9,10 @@ class Relationship
       validates(owner) { "missing: #{from_iri}" unless owner? }
 
       property confirmed : Bool { true }
+
+      def after_save
+        Ktistec::Topic{"/actors/#{owner.username}/notifications"}.notify_subscribers
+      end
     end
   end
 end

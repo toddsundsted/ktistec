@@ -73,6 +73,31 @@ Spectator.describe StreamsController do
     end
   end
 
+  describe ".replace_notifications_count" do
+    let(account) { register }
+    let_create!(notification_follow, owner: account.actor)
+
+    subject do
+      String.build do |io|
+        described_class.replace_notifications_count(io, account)
+      end
+    end
+
+    it "renders a Turbo Stream action" do
+      expect(subject).to eq <<-HTML
+      data: <turbo-stream action="replace" targets=".ui.menu > .item.notifications">
+      data: <template>
+      data: <div class="item notifications">\
+      <a class="ui" href="/actors/#{account.username}/notifications">Notifications</a>\
+      <div class="ui mini transitional horizontal circular red label">1</div>\
+      </div>
+      data: </template>
+      data: </turbo-stream>
+      \n
+      HTML
+    end
+  end
+
   describe ".replace_refresh_posts_message" do
     subject do
       String.build do |io|

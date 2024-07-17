@@ -692,9 +692,9 @@ module ActivityPub
           Tag::Mention.new(name: name, href: href) if name.presence
         end,
         "attachments" => dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
-          url = attachment.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s)
-          media_type = attachment.dig?("https://www.w3.org/ns/activitystreams#mediaType").try(&.as_s)
-          Attachment.new(url, media_type) if url && media_type
+          url = attachment.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+          media_type = attachment.dig?("https://www.w3.org/ns/activitystreams#mediaType").try(&.as_s?)
+          Attachment.new(url, media_type) unless url.nil? || url.blank? || media_type.nil? || media_type.blank?
         end,
         "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
         # use addressing to establish visibility

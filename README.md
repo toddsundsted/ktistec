@@ -19,10 +19,10 @@
   - [Contributors](#contributors)
   - [Copyright and License](#copyright-and-license)
 
-**Ktistec** is an ActivityPub (https://www.w3.org/TR/activitypub/) server.
-It is intended for individual users, not farms of users, although
-support for additional users will be added in the future. It is
-designed to have few runtime dependencies -- for example, it uses
+**Ktistec** is an [ActivityPub](https://www.w3.org/TR/activitypub/)
+server. It is intended for individual users, not communities of users,
+although support for additional users will be added in the future. It
+is designed to have few runtime dependencies -- for example, it uses
 SQLite as its database, instead of PostgreSQL + Redis + etc. It is
 licensed under the AGPLv3.
 
@@ -32,10 +32,9 @@ home in the Fediverse. If you want to talk to me, I'm
 
 ## Features
 
-### Text and images
+Ktistec is intended for writing.
 
-Ktistec is intended for writing and currently supports the minimum
-viable set of tools for that purpose.
+### Text and images
 
 Text formatting options include *bold*, *italic*, *strikethrough*,
 *code* (inline and block), *superscript*/*subscript*, *headers*,
@@ -52,23 +51,16 @@ attachments used for compatibility with non-Ktistec servers.
 ### Drafts posts
 
 Meaningful writing is an iterative process so Ktistec supports draft
-posts. Draft posts aren't visible in your timeline until you publish
-them.
+posts. Draft posts aren't visible until you publish them.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/683hld.png" width=460>
 
 ### Threaded replies
 
-Threaded replies make it easier to follow discussions with lots of
+Threaded replies make it easier to follow discussions with many
 posts.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/eaxx1q.png" width=460>
-
-In a distributed, federated system, it's not uncommon for threads to
-be incomplete. Someone you follow shares a reply to a post—you see the
-shared reply but not the original post. Threads with incomplete
-history are now noted as such, and you can fetch the missing posts
-from the top of the thread.
 
 ### @-mention and #-hashtag autocomplete
 
@@ -81,7 +73,7 @@ autocompletion.
 ### Control over comment visibility
 
 Ktistec promotes healthy dialog. Ktistec allows you to control which
-replies to your posts are public, and visible to anonymous users, and
+replies to your posts are public and visible to anonymous users, and
 which are private.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/b70e69.png" width=460>
@@ -96,7 +88,7 @@ mnemonics for users (and yourself).
 The Fediverse is a distributed social network. You can follow other
 users on other servers from your timeline or by searching for them by
 name. Ktistec is also compatible with the "remote follow" protocol
-used by Mastodon and others.
+used by Mastodon and other servers.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/88hvqq.png" width=460>
 
@@ -117,14 +109,15 @@ labels with links to internal hashtag and mention index pages.
 
 Content filters prevent undesirable content from appearing in your
 timeline and notifications. Filter terms match on the text of a post
-(ignoring any markup). Wildcards are supported.
+(ignoring any markup). Filters support wildcards.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/wzgeti.png" width=460>
 
 ### Blocking
 
-Ktistec gives you control over what you see. Blocking authors and
-posts removes them and their content from your timeline.
+Ktistec gives you control over what you see. Blocking authors removes
+them and their posts from your timeline. Blocking posts removes
+individual posts.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/42fwx6.png" width=460>
 
@@ -132,8 +125,8 @@ posts removes them and their content from your timeline.
 
 ### Metrics
 
-Ktistec tracks metrics about how the instance is performing. Right
-now, the only metric is inbox and outbox volume per account, but the
+Ktistec tracks metrics about how the instance is performing. Metrics
+include inbox and outbox activity, as well as memory usage; and the
 machinery is in place to do much more.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/vrxnmg.png" width=460>
@@ -150,7 +143,7 @@ chores.
 
 To run an instance of Ktistec as part of the Fediverse, you'll need a
 server with a fixed hostname. In the Fediverse, users are identified
-by (and content is addressed to) a hostname and a username.
+by (and content is addressed to) a username and a hostname.
 
 ## Building
 
@@ -212,7 +205,7 @@ If you change the code, you should run the tests:
 
 The server runs on port 3000. If you're planning on running it in
 production, you should put Nginx or Apache in front of it. Don't
-forget your SSL certificate!
+forget an SSL certificate!
 
 When you run Ktistec for the first time, you'll need to name the
 server and create the primary user.

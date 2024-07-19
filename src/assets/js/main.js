@@ -3,7 +3,11 @@
 /**
  * Turbo
  */
-import Turbo from "@hotwired/turbo"
+import {Turbo, StreamActions} from "@hotwired/turbo"
+
+StreamActions["no-op"] = function () {
+  // no-op is a keep-alive action
+}
 
 /**
  * Stimulus

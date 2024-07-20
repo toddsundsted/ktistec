@@ -6,7 +6,9 @@ require "../../src/framework/model"
 require "../spec_helper/base"
 
 class FooBarModel
-  include Ktistec::Model(Deletable, Undoable)
+  include Ktistec::Model
+  include Ktistec::Model::Deletable
+  include Ktistec::Model::Undoable
 
   @[Persistent]
   property foo : String? = "Foo"
@@ -32,7 +34,9 @@ class FooBarModel
 end
 
 class NotNilModel
-  include Ktistec::Model(Deletable, Undoable)
+  include Ktistec::Model
+  include Ktistec::Model::Deletable
+  include Ktistec::Model::Undoable
 
   @[Persistent]
   property key : String = "Key"
@@ -70,7 +74,7 @@ class AnotherModel < NotNilModel
 end
 
 class UnionAssociationModel
-  include Ktistec::Model(Nil)
+  include Ktistec::Model
 
   @[Assignable]
   property model_id : Int64
@@ -78,7 +82,7 @@ class UnionAssociationModel
 end
 
 class QueryModel
-  include Ktistec::Model(Nil)
+  include Ktistec::Model
 
   @[Assignable]
   property foo : String?
@@ -100,7 +104,7 @@ class QueryModel
 end
 
 abstract class AbstractModel
-  include Ktistec::Model(Nil)
+  include Ktistec::Model
 
   @@table_name = "models"
 end
@@ -108,7 +112,7 @@ end
 Spectator.describe Ktistec::Model do
   before_each do
     Ktistec.database.exec <<-SQL
-      CREATE TABLE foo_bar_models (
+      CREATE TABLE IF NOT EXISTS foo_bar_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime,
         undone_at datetime,
@@ -118,7 +122,7 @@ Spectator.describe Ktistec::Model do
       )
     SQL
     Ktistec.database.exec <<-SQL
-      CREATE TABLE not_nil_models (
+      CREATE TABLE IF NOT EXISTS not_nil_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime,
         undone_at datetime,
@@ -128,15 +132,15 @@ Spectator.describe Ktistec::Model do
       )
     SQL
     Ktistec.database.exec <<-SQL
-      CREATE TABLE models (
+      CREATE TABLE IF NOT EXISTS models (
         id integer PRIMARY KEY AUTOINCREMENT
       )
     SQL
   end
   after_each do
-    Ktistec.database.exec "DROP TABLE foo_bar_models"
-    Ktistec.database.exec "DROP TABLE not_nil_models"
-    Ktistec.database.exec "DROP TABLE models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS foo_bar_models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS not_nil_models"
+    Ktistec.database.exec "DROP TABLE IF EXISTS models"
   end
 
   describe ".table_name" do
@@ -199,35 +203,6 @@ Spectator.describe Ktistec::Model do
     it "includes the additional columns" do
       query = %Q|SELECT 0, "foo", "bar", ?, ?|
       expect(QueryModel.query_one(query, additional_columns: {foo: String, bar: String})).to eq(QueryModel.new(id: 0_i64, foo: "foo", bar: "bar"))
-    end
-  end
-
-  describe "#to_sentence" do
-    class ToSentence
-      include Ktistec::Model(Nil)
-
-      # override private visibility
-      def to_sentence(type)
-        super(type)
-      end
-    end
-
-    subject { ToSentence.new }
-
-    it "converts the type to a string" do
-      expect(subject.to_sentence(String)).to eq("String")
-    end
-
-    it "converts the type to a string" do
-      expect(subject.to_sentence(Array(String))).to eq("Array(String)")
-    end
-
-    it "converts the types to a string" do
-      expect(subject.to_sentence(String | Nil)).to match(/^\w+ or \w+$/)
-    end
-
-    it "converts the types to a string" do
-      expect(subject.to_sentence(String | Float64 | Int32 | Nil)).to match(/^\w+, \w+, \w+ or \w+$/)
     end
   end
 
@@ -527,6 +502,50 @@ Spectator.describe Ktistec::Model do
 
     it "returns nil" do
       expect{NotNilModel.find?({"val" => "Baz"})}.to be_nil
+    end
+  end
+
+  describe ".find_or_new" do
+    it "creates a new instance" do
+      expect(FooBarModel.find_or_new(foo: "Foo", bar: "Bar").new_record?).to be_true
+    end
+
+    it "creates a new instance" do
+      expect(FooBarModel.find_or_new({"foo" => "Foo", "bar" => "Bar"}).new_record?).to be_true
+    end
+
+    context "given an existing instance" do
+      let!(saved_model) { FooBarModel.new(foo: "Foo", bar: "Bar").save }
+
+      it "finds the saved instance" do
+        expect(FooBarModel.find_or_new(foo: "Foo", bar: "Bar")).to eq(saved_model)
+      end
+
+      it "finds the saved instance" do
+        expect(FooBarModel.find_or_new({"foo" => "Foo", "bar" => "Bar"})).to eq(saved_model)
+      end
+    end
+  end
+
+  describe ".find_or_create" do
+    it "creates a new instance" do
+      expect(NotNilModel.find_or_create(key: "Key", val: "Val").new_record?).to be_false
+    end
+
+    it "creates a new instance" do
+      expect(NotNilModel.find_or_create({"key" => "Key", "val" => "Val"}).new_record?).to be_false
+    end
+
+    context "given an existing instance" do
+      let!(saved_model) { NotNilModel.new(key: "Key", val: "Val").save }
+
+      it "finds the saved instance" do
+        expect(NotNilModel.find_or_create(key: "Key", val: "Val")).to eq(saved_model)
+      end
+
+      it "finds the saved instance" do
+        expect(NotNilModel.find_or_create({"key" => "Key", "val" => "Val"})).to eq(saved_model)
+      end
     end
   end
 
@@ -1500,6 +1519,26 @@ Spectator.describe Ktistec::Model do
       (not_nil.foo_bar_model_id = 999999) && not_nil.save
       expect(not_nil.foo_bar?).to be_nil
       expect(foo_bar.not_nil?).to be_nil
+    end
+  end
+end
+
+Spectator.describe Ktistec::Model::Internal do
+  describe ".to_sentence" do
+    it "converts the type to a string" do
+      expect(described_class.to_sentence(String)).to eq("String")
+    end
+
+    it "converts the type to a string" do
+      expect(described_class.to_sentence(Array(String))).to eq("Array(String)")
+    end
+
+    it "converts the types to a string" do
+      expect(described_class.to_sentence(String | Nil)).to match(/^\w+ or \w+$/)
+    end
+
+    it "converts the types to a string" do
+      expect(described_class.to_sentence(String | Float64 | Int32 | Nil)).to match(/^\w+, \w+, \w+ or \w+$/)
     end
   end
 end

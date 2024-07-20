@@ -79,11 +79,14 @@ module Ktistec
       unless "(request-target)".in?(split_headers_string)
         raise Error.new("(request-target) header must be signed")
       end
-      unless algorithm == "rsa-sha256" || "(created)".in?(split_headers_string)
-        raise Error.new("(created) header must be signed")
+      if "(created)".in?(split_headers_string) && algorithm.starts_with?(/rsa|hmac|ecdsa/)
+        raise Error.new("(created) header must not be used with #{algorithm}")
       end
-      unless algorithm == "hs2019" || "date".in?(split_headers_string)
-        raise Error.new("date header must be signed")
+      if "(expires)".in?(split_headers_string) && algorithm.starts_with?(/rsa|hmac|ecdsa/)
+        raise Error.new("(expires) header must not be used with #{algorithm}")
+      end
+      unless "(created)".in?(split_headers_string) || "date".in?(split_headers_string)
+        raise Error.new("(created) header or date header must be signed")
       end
       unless "host".in?(split_headers_string)
         raise Error.new("host header must be signed")

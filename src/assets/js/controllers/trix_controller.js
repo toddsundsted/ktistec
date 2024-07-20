@@ -1,37 +1,53 @@
 import { Controller } from "@hotwired/stimulus"
+import Trix from "trix"
 
-export default class extends Controller {
-  connect() {
-    let editor = this.element.editor
-    let previous_keydown = editor.composition.delegate.inputController.events.keydown
-    editor.composition.delegate.inputController.events.keydown = function(keydown) {
-      if (keydown.keyCode == 8 /* backspace */ && editor.suggestion) {
-        editor.backspacing = true
-      }
-      else if (keydown.keyCode == 27 /* escape */ && editor.suggestion) {
+function extend_handler(controller) {
+  let previous_keydown = controller.events.keydown
+  controller.events.keydown = function(event) {
+    let editor = this.delegate.editor
+    if (editor.suggestion) {
+      switch (event.keyCode) {
+      case 8: /* backspace */
+        editor.backspaced = true
+        break
+      case 27: /* escape */
         editor.insertString("")
         editor.selectionManager.delegate.requestedRender = true
-        editor.backspacing = true
-        keydown.preventDefault()
-      }
-      else if (keydown.keyCode == 9 /* tab */ && editor.suggestion) {
+        editor.backspaced = true
+        event.preventDefault()
+        break
+      case 9: /* tab */
         let [begin, end] = editor.getSelectedRange()
         editor.setSelectedRange([end, end])
         editor.suggestion = undefined
-        keydown.preventDefault()
+        event.preventDefault()
+        break
       }
-      previous_keydown.call(this, keydown)
     }
+    previous_keydown.call(this, event)
   }
+}
 
+extend_handler(Trix.controllers.Level0InputController)
+extend_handler(Trix.controllers.Level2InputController)
+
+// Additional editor properties/state:
+//
+// - suggestion: the current suggestion
+// - change_lock: short-circuits change events (and prevents multiple
+//   calls to the backend) when typing quickly
+// - backspaced: prevents a new suggestion from being presented after
+//   backspacing/canceling the previous suggestion
+//
+export default class extends Controller {
   change(event) {
     let editor =  event.target.editor
     let document = editor.getDocument().toString()
     let position = editor.getPosition()
-    if (editor.edit_lock)
+    if (editor.change_lock)
       return
-    if (editor.backspacing) {
-      editor.backspacing = false
+    if (editor.backspaced) {
+      editor.backspaced = false
       return
     }
     for (var i = 1; i < 64; i++) {
@@ -54,7 +70,7 @@ export default class extends Controller {
     let prefix = document.substring(position - i, position)
     let suffix = document.substring(position, position + j)
     if (!suffix && prefix.length > 2 && (prefix[0] == "#" || prefix[0] == "@")) {
-      editor.edit_lock = true
+      editor.change_lock = true
       if (!editor.suggestion || !editor.suggestion.startsWith(prefix)) {
         let url
         switch (prefix[0]) {
@@ -80,7 +96,7 @@ export default class extends Controller {
         editor.insertString(suggestion)
         editor.setSelectedRange([position, position + suggestion.length])
       }
-      editor.edit_lock = false
+      editor.change_lock = false
     }
   }
 

@@ -150,35 +150,18 @@ module Ktistec
       # Removes a column from the table.
       #
       def remove_column(table, column)
-        indexes = indexes(table)
-
-        columns = columns(table).reduce(Hash(String, String).new) do |columns, column|
-          name = column.split(" ").first
-          columns[name] = column
-          columns
+        indexes(table).each do |index|
+          if (index =~ /INDEX (?<index>[^\s]+) ON (?<table>[^\s]+) \((?<columns>.*)\)/i)
+            index, table, columns = $~["index"], $~["table"], $~["columns"]
+            next unless columns.split(",").map(&.split.first).includes?(column)
+            Ktistec.database.exec <<-STR
+              DROP INDEX #{index}
+            STR
+          end
         end
-
-        columns.delete(column)
-
         Ktistec.database.exec <<-STR
-          CREATE TABLE #{table}__new__ (
-          #{columns.values.join(",")}
-          )
+          ALTER TABLE #{table} DROP COLUMN #{column}
         STR
-        Ktistec.database.exec <<-STR
-          INSERT INTO #{table}__new__ SELECT #{columns.keys.join(",")} FROM #{table}
-        STR
-        Ktistec.database.exec <<-STR
-          DROP TABLE #{table}
-        STR
-        Ktistec.database.exec <<-STR
-          ALTER TABLE #{table}__new__ RENAME TO #{table}
-        STR
-
-        indexes.each do |index|
-          next if index[/(?<=\().*(?=\))/m].split(",").map(&.split.first).includes?(column)
-          Ktistec.database.exec index
-        end
       end
 
       # Applies the migration.

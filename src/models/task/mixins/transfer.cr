@@ -53,7 +53,7 @@ class Task
               failures << Failure.new(recipient, message)
               Log.debug { message }
             end
-          rescue ex: OpenSSL::Error | Socket::Error
+          rescue ex: OpenSSL::Error | IO::Error
             message = "#{ex.class}: #{ex.message}: #{inbox}"
             failures << Failure.new(recipient, message)
             Log.debug { message }

@@ -2,7 +2,61 @@ require "./framework"
 require "./util"
 
 module Ktistec
-  module Model(*T)
+  module Model
+    module Internal
+      # Logs query performance.
+      #
+      # Times a database call and selectively emits a log message. The
+      # severity of the log message is based on the duration of the
+      # query. A slow query is any query that takes longer than
+      # 50ms. Slow queries include the query plan.
+      #
+      def self.log_query(query, args, &)
+        start = Time.monotonic
+        begin
+          yield
+        ensure
+          finish = Time.monotonic
+          delta = (finish - start).total_milliseconds
+          if delta > 50
+            Log.notice { |log| log_query_message(log, "Slow query", delta, query, args) }
+            Log.notice { |log| log_query_plan(log, query, args) }
+          else
+            Log.debug { |log| log_query_message(log, "Query", delta, query, args) }
+          end
+        end
+      end
+
+      private def self.log_query_message(log, message, delta, query, args)
+        delta = sprintf("%10.3fms", delta)
+        query = query.each_line.map(&.strip).join(" ")
+        args = DB::MetadataValueConverter.arg_to_log(args)
+        log.emit(
+          "#{message} [#{delta}] -- #{query}",
+          args: args
+        )
+      end
+
+      private def self.log_query_plan(log, query, args)
+        results =
+          Ktistec.database.query_all("EXPLAIN QUERY PLAN #{query}") do |rs|
+            _, order, _, detail = rs.read(Int64, Int64, Int64, String)
+            {order, detail}
+          end
+        log.emit(
+          results.inspect
+        )
+      end
+
+      # Transforms a type, in particular a union type, into a sentence.
+      #
+      def self.to_sentence(type)
+        type = type.to_s
+        types = (type.match(/^\((.+)\)$/).try(&.[1]) || type).split("|").map(&.strip)
+        Util.to_sentence(types, last_word_connector: " or ")
+      end
+    end
+
     # logging in this module is related to database query performance.
     Log = ::Log.for("database")
 
@@ -123,56 +177,12 @@ module Ktistec
         {{(@type.all_subclasses << @type).map(&.stringify)}}
       end
 
-      # Logs query performance.
-      #
-      # Times a database call and selectively emits a log message. The
-      # severity of the log message is based on the duration of the
-      # query. A slow query is any query that takes longer than
-      # 50ms. Slow queries include the query plan.
-      #
-      protected def log_query(query, args, &)
-        start = Time.monotonic
-        begin
-          yield
-        ensure
-          finish = Time.monotonic
-          delta = (finish - start).total_milliseconds
-          if delta > 50
-            Log.notice { |log| log_query_message(log, "Slow query", delta, query, args) }
-            Log.notice { |log| log_query_plan(log, query, args) }
-          else
-            Log.debug { |log| log_query_message(log, "Query", delta, query, args) }
-          end
-        end
-      end
-
-      private def log_query_message(log, message, delta, query, args)
-        delta = sprintf("%10.3fms", delta)
-        query = query.each_line.map(&.strip).join(" ")
-        args = DB::MetadataValueConverter.arg_to_log(args)
-        log.emit(
-          "#{message} [#{delta}] -- #{query}",
-          args: args
-        )
-      end
-
-      private def log_query_plan(log, query, args)
-        results =
-          Ktistec.database.query_all("EXPLAIN QUERY PLAN #{query}") do |rs|
-            _, order, _, detail = rs.read(Int64, Int64, Int64, String)
-            {order, detail}
-          end
-        log.emit(
-          results.inspect
-        )
-      end
-
       # Returns the count of saved instances.
       #
       def count(include_deleted : Bool = false, include_undone : Bool = false, **options)
         query = "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}"
         args = values(**options)
-        log_query(query, args) do
+        Internal.log_query(query, args) do
           Ktistec.database.scalar(
             query, args: args
           ).as(Int)
@@ -184,7 +194,7 @@ module Ktistec
       def count(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
         query = "SELECT COUNT(id) FROM #{table} WHERE #{conditions(options: options, include_deleted: include_deleted, include_undone: include_undone)}"
         args = values(options: options)
-        log_query(query, args) do
+        Internal.log_query(query, args) do
           Ktistec.database.scalar(
             query, args: args
           ).as(Int)
@@ -265,7 +275,7 @@ module Ktistec
       end
 
       protected def query_and_paginate(query, *args, additional_columns = NamedTuple.new, page = 1, size = 10)
-        log_query(query, {*args, size.to_i + 1, ((page - 1) * size).to_i}) do
+        Internal.log_query(query, {*args, size.to_i + 1, ((page - 1) * size).to_i}) do
           Ktistec::Util::PaginatedArray(self).new.tap do |array|
             Ktistec.database.query(
               query, *args, size.to_i + 1, ((page - 1) * size).to_i
@@ -284,7 +294,7 @@ module Ktistec
       # see: https://github.com/crystal-lang/crystal/issues/7164
 
       protected def query_all(query, *args_, additional_columns = NamedTuple.new)
-        log_query(query, args_) do
+        Internal.log_query(query, args_) do
           Ktistec.database.query_all(
             query, *args_
           ) do |rs|
@@ -294,7 +304,7 @@ module Ktistec
       end
 
       protected def query_all(query, args : Array? = nil, additional_columns = NamedTuple.new)
-        log_query(query, args) do
+        Internal.log_query(query, args) do
           Ktistec.database.query_all(
             query, args: args
           ) do |rs|
@@ -304,7 +314,7 @@ module Ktistec
       end
 
       protected def query_one(query, *args_, additional_columns = NamedTuple.new)
-        log_query(query, args_) do
+        Internal.log_query(query, args_) do
           Ktistec.database.query_one(
             query, *args_
           ) do |rs|
@@ -314,7 +324,7 @@ module Ktistec
       end
 
       protected def query_one(query, args : Array? = nil, additional_columns = NamedTuple.new)
-        log_query(query, args) do
+        Internal.log_query(query, args) do
           Ktistec.database.query_one(
             query, args: args
           ) do |rs|
@@ -386,6 +396,28 @@ module Ktistec
       rescue NotFound
       end
 
+      # Finds an existing instance or instantiates a new instance.
+      #
+      def find_or_new(include_deleted : Bool = false, include_undone : Bool = false, **options)
+        find?(**options, include_deleted: include_deleted, include_undone: include_undone) || new(**options)
+      end
+
+      # :ditto:
+      def find_or_new(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false) forall Any
+        find?(options, include_deleted: include_deleted, include_undone: include_undone) || new(options)
+      end
+
+      # Finds an existing instance, or instantiates and saves a new instance.
+      #
+      def find_or_create(include_deleted : Bool = false, include_undone : Bool = false, skip_validation : Bool = false, skip_associated : Bool = false, **options)
+        find?(**options, include_deleted: include_deleted, include_undone: include_undone) || new(**options).save(skip_validation: skip_validation, skip_associated: skip_associated)
+      end
+
+      # :ditto:
+      def find_or_create(options : Hash(String, Any), include_deleted : Bool = false, include_undone : Bool = false, skip_validation : Bool = false, skip_associated : Bool = false) forall Any
+        find?(options, include_deleted: include_deleted, include_undone: include_undone) || new(options).save(skip_validation: skip_validation, skip_associated: skip_associated)
+      end
+
       # Returns saved instances.
       #
       def where(include_deleted : Bool = false, include_undone : Bool = false, **options)
@@ -409,7 +441,7 @@ module Ktistec
       # Returns the result.
       #
       def scalar(query : String, *args_)
-        log_query(query, args_) do
+        Internal.log_query(query, args_) do
           Ktistec.database.scalar(query, *args_)
         end
       end
@@ -419,7 +451,7 @@ module Ktistec
       # Returns the result.
       #
       def scalar(query : String, args : Array? = nil)
-        log_query(query, args) do
+        Internal.log_query(query, args) do
           Ktistec.database.scalar(query, args: args)
         end
       end
@@ -429,7 +461,7 @@ module Ktistec
       # Returns the number of rows affected.
       #
       def exec(query : String, *args_)
-        log_query(query, args_) do
+        Internal.log_query(query, args_) do
           Ktistec.database.exec(query, *args_).rows_affected
         end
       end
@@ -439,7 +471,7 @@ module Ktistec
       # Returns the number of rows affected.
       #
       def exec(query : String, args : Array? = nil)
-        log_query(query, args) do
+        Internal.log_query(query, args) do
           Ktistec.database.exec(query, args: args).rows_affected
         end
       end
@@ -477,12 +509,6 @@ module Ktistec
         @saved_record = self.dup.clear_saved_record
       end
 
-      private def to_sentence(type)
-        type = type.to_s
-        types = (type.match(/^\((.+)\)$/).try(&.[1]) || type).split("|").map(&.strip)
-        Util.to_sentence(types, last_word_connector: " or ")
-      end
-
       # Initializes a new instance.
       #
       # Specified properties are assigned via setter methods. If a
@@ -511,7 +537,7 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
           {% end %}
@@ -550,7 +576,7 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
           {% end %}
@@ -598,7 +624,7 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
           {% end %}
@@ -626,7 +652,7 @@ module Ktistec
                   raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
                 end
               else
-                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{to_sentence(typeof(self.{{v}}))} for property '#{key}'")
+                raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{v}}))} for property '#{key}'")
               end
             end
           {% end %}
@@ -959,17 +985,22 @@ module Ktistec
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify.stringify).join(",")}}
-          conditions = (["?"] * {{vs.size}}).join(",")
+          values = (["?"] * {{vs.size}}).join(",")
           if self.responds_to?(:updated_at=)
             self.updated_at = Time.utc
           end
-          old = @id
-          @id = Ktistec.database.exec(
-            "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{conditions})",
+          query = "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{values})"
+          args = [
             {% for v in vs %}
               self.{{v}},
             {% end %}
-          ).last_insert_id
+          ]
+          old = @id
+          Internal.log_query(query, args) do
+            @id = Ktistec.database.exec(
+              query, args: args
+            ).last_insert_id
+          end
         {% end %}
         {% begin %}
           {% ancestors = @type.ancestors << @type %}
@@ -1056,14 +1087,18 @@ module Ktistec
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           columns = {{vs.map(&.stringify.stringify).join(",")}}
-          Ktistec.database.query_one(
-            "SELECT #{columns} FROM #{table_name} WHERE id = ?", id,
-          ) do |rs|
-            __for_internal_use_only({
-              {% for v in vs %}
-                {{v}}: rs.read({{v.type}}),
-              {% end %}
-            })
+          query = "SELECT #{columns} FROM #{table_name} WHERE id = ?"
+          args = [id]
+          Internal.log_query(query, args) do
+            Ktistec.database.query_one(
+              query, args: args,
+            ) do |rs|
+              __for_internal_use_only({
+                {% for v in vs %}
+                  {{v}}: rs.read({{v.type}}),
+                {% end %}
+              })
+            end
           end
           self
         {% end %}
@@ -1163,12 +1198,6 @@ module Ktistec
     macro included
       extend ClassMethods
       include InstanceMethods
-
-      {% for type in T.type_vars %}
-        {% unless type == ::Nil %}
-          include ::Ktistec::Model::{{type}}
-        {% end %}
-      {% end %}
 
       @saved_record : self | Nil = nil
     end

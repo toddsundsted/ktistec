@@ -154,12 +154,6 @@ Spectator.describe Ktistec::Signature do
     context "with hs2019" do
       let(headers) { described_class.sign(key_pair, "https://remote/inbox", algorithm: "hs2019", body: "") }
 
-      it "raises an error if the (created) header isn't signed" do
-        headers["Signature"] = headers["Signature"].gsub("(created)", "")
-        expect{described_class.verify(key_pair, "https://remote/inbox", headers, "")}.
-          to raise_error(Ktistec::Signature::Error, "(created) header must be signed")
-      end
-
       it "raises an error if the (created) header doesn't match" do
         headers["Signature"] = headers["Signature"].gsub(/created=[0-9]+/, "created=BAD DATE")
         expect{described_class.verify(key_pair, "https://remote/inbox", headers, "")}.
@@ -192,10 +186,16 @@ Spectator.describe Ktistec::Signature do
     context "with rsa-sha256" do
       let(headers) { described_class.sign(key_pair, "https://remote/inbox", algorithm: "rsa-sha256", body: "") }
 
-      it "raises an error if the date header isn't signed" do
-        headers["Signature"] = headers["Signature"].gsub("date", "")
+      it "raises an error if the (created) header is included" do
+        headers["Signature"] = headers["Signature"].gsub("date", "(created)")
         expect{described_class.verify(key_pair, "https://remote/inbox", headers, "")}.
-          to raise_error(Ktistec::Signature::Error, "date header must be signed")
+          to raise_error(Ktistec::Signature::Error, "(created) header must not be used with rsa-sha256")
+      end
+
+      it "raises an error if the (expires) header is included" do
+        headers["Signature"] = headers["Signature"].gsub("date", "(expires)")
+        expect{described_class.verify(key_pair, "https://remote/inbox", headers, "")}.
+          to raise_error(Ktistec::Signature::Error, "(expires) header must not be used with rsa-sha256")
       end
 
       it "raises an error if the date header doesn't match" do
@@ -219,6 +219,12 @@ Spectator.describe Ktistec::Signature do
       it "verifies signature" do
         expect(described_class.verify(key_pair, "https://remote/inbox", headers, "")).to be_true
       end
+    end
+
+    it "raises an error if neither the (created) header nor the date header is included" do
+      headers["Signature"] = headers["Signature"].gsub("(created)", "").gsub("date", "")
+      expect{described_class.verify(key_pair, "https://remote/inbox", headers, "")}.
+        to raise_error(Ktistec::Signature::Error, "(created) header or date header must be signed")
     end
 
     it "raises an error if the digest header isn't signed" do

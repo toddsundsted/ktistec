@@ -7,9 +7,6 @@ require "../spec_helper/controller"
 Spectator.describe "index.html.slang" do
   setup_spec
 
-  include Ktistec::Controller
-  include Ktistec::ViewHelper::ClassMethods
-
   let(hashtag) { "hashtag" }
 
   let(env) { env_factory("GET", "/tags/#{hashtag}") }
@@ -24,13 +21,15 @@ Spectator.describe "index.html.slang" do
 
   let(count) { 0 }
 
-  private def render_index_html_slang(env, collection, follow, task, count)
-    render "./src/views/tags/index.html.slang"
+  module Ktistec::ViewHelper
+    def self.render_index_html_slang(env, hashtag, collection, follow, task, count)
+      render "./src/views/tags/index.html.slang"
+    end
   end
 
   subject do
     begin
-      XML.parse_html(render_index_html_slang(env, collection, follow, task, count))
+      XML.parse_html(Ktistec::ViewHelper.render_index_html_slang(env, hashtag, collection, follow, task, count))
     rescue XML::Error
       XML.parse_html("<div/>").document
     end

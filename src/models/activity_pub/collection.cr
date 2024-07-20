@@ -18,7 +18,10 @@ end
 
 module ActivityPub
   class Collection
-    include Ktistec::Model(Common, Linked, Serialized)
+    include Ktistec::Model
+    include Ktistec::Model::Common
+    include Ktistec::Model::Linked
+    include Ktistec::Model::Serialized
     include ActivityPub
 
     @@table_name = "collections"

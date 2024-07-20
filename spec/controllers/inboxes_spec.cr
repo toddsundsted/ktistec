@@ -977,7 +977,8 @@ Spectator.describe RelationshipsController do
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", undo.to_json_ld, "application/json") }
 
       class ::UndoneActivity
-        include Ktistec::Model(Common)
+        include Ktistec::Model
+        include Ktistec::Model::Common
 
         @@table_name = "activities"
 
@@ -1116,7 +1117,8 @@ Spectator.describe RelationshipsController do
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 
         class ::DeletedObject
-          include Ktistec::Model(Common)
+          include Ktistec::Model
+          include Ktistec::Model::Common
 
           @@table_name = "objects"
 
@@ -1190,7 +1192,8 @@ Spectator.describe RelationshipsController do
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 
         class ::DeletedActor
-          include Ktistec::Model(Common)
+          include Ktistec::Model
+          include Ktistec::Model::Common
 
           @@table_name = "actors"
 

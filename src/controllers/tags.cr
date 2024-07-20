@@ -41,7 +41,7 @@ class TagsController
     follow.save if follow.new_record?
 
     task = Task::Fetch::Hashtag.find_or_new(source: env.account.actor, name: hashtag)
-    task.schedule if task.runnable? || task.complete
+    task.assign(backtrace: nil).schedule if task.runnable? || task.complete
 
     if turbo_frame?
       ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, follow: follow, task: task

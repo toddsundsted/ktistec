@@ -8,9 +8,6 @@ require "../spec_helper/controller"
 Spectator.describe "thread.html.slang" do
   setup_spec
 
-  include Ktistec::Controller
-  include Ktistec::ViewHelper::ClassMethods
-
   let(env) { env_factory("GET", "/objects/123/thread") }
 
   let_create(:object)
@@ -21,13 +18,15 @@ Spectator.describe "thread.html.slang" do
 
   let(task) { nil }
 
-  private def render_thread_html_slang(env, thread, follow, task)
-    render "./src/views/objects/thread.html.slang"
+  module Ktistec::ViewHelper
+    def self.render_thread_html_slang(env, thread, follow, task)
+      render "./src/views/objects/thread.html.slang"
+    end
   end
 
   subject do
     begin
-      XML.parse_html(render_thread_html_slang(env, thread, follow, task))
+      XML.parse_html(Ktistec::ViewHelper.render_thread_html_slang(env, thread, follow, task))
     rescue XML::Error
       XML.parse_html("<div/>").document
     end

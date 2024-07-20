@@ -1,6 +1,26 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.1.0]
+### Added
+- Added support for more ActivityPub types.
+
+### Changed
+- Upgraded dependencies.
+
+## [v2.0.0]
+### Added
+- Run "PRAGMA optimize" when a connection is closed.
+
+### Fixed
+- Disable faulty Bloom filter optimization. (see [#96](https://github.com/toddsundsted/ktistec/issues/96))
+- Fix handling of "(create)" and "date" headers in signatures. (see [#103](https://github.com/toddsundsted/ktistec/issues/103))
+- Correctly follow a thread with a cached root.
+
+### Changed
+- Interrupt fetch tasks when they are asynchronously set as complete.
+- Clear the prior backtrace when following a failed fetch task.
+
 ## [v2.0.0-11]
 ### Added
 - Allow user to change log level by functional area.
@@ -207,6 +227,8 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.1.0]: https://github.com/toddsundsted/ktistec/compare/a74651d9...238dad82
+[v2.0.0]: https://github.com/toddsundsted/ktistec/compare/490b8266...735842c4
 [v2.0.0-11]: https://github.com/toddsundsted/ktistec/compare/362f6391...a6ea1385
 [v2.0.0-10]: https://github.com/toddsundsted/ktistec/compare/0ae0dc26...9c480ed5
 [v2.0.0-9]: https://github.com/toddsundsted/ktistec/compare/4d9094fa...a5fc68f0

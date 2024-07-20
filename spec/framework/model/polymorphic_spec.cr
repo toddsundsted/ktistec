@@ -3,7 +3,8 @@ require "../../../src/framework/model/polymorphic"
 require "../../spec_helper/base"
 
 class PolymorphicModel
-  include Ktistec::Model(Polymorphic)
+  include Ktistec::Model
+  include Ktistec::Model::Polymorphic
 
   @@table_name = "polymorphic_models"
 
@@ -65,7 +66,7 @@ end
 Spectator.describe Ktistec::Model::Polymorphic do
   before_each do
     Ktistec.database.exec <<-SQL
-      CREATE TABLE polymorphic_models (
+      CREATE TABLE IF NOT EXISTS polymorphic_models (
         id integer PRIMARY KEY AUTOINCREMENT,
         type varchar(32) NOT NULL,
         state text,
@@ -75,7 +76,7 @@ Spectator.describe Ktistec::Model::Polymorphic do
   end
   after_each do
     Ktistec.database.exec <<-SQL
-      DROP TABLE polymorphic_models
+      DROP TABLE IF EXISTS polymorphic_models
     SQL
   end
 

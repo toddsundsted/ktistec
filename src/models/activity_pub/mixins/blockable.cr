@@ -1,7 +1,7 @@
 require "../../../framework/model"
 
 module Ktistec
-  module Model(*T)
+  module Model
     module Blockable
       @[Persistent]
       @[Insignificant]
@@ -24,8 +24,4 @@ module Ktistec
       end
     end
   end
-end
-
-# :nodoc:
-module Blockable
 end

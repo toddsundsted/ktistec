@@ -3,7 +3,7 @@ require "../../src/framework/rule"
 require "../spec_helper/base"
 
 class RuleModel
-  include Ktistec::Model(Nil)
+  include Ktistec::Model
 
   @[Persistent]
   property parent_id : Int64?
@@ -59,7 +59,7 @@ Spectator.describe Ktistec::Rule do
     context "and a database and models" do
       before_each do
         Ktistec.database.exec <<-SQL
-          CREATE TABLE rule_models (
+          CREATE TABLE IF NOT EXISTS rule_models (
             id integer PRIMARY KEY AUTOINCREMENT,
             parent_id integer,
             name text
@@ -71,7 +71,7 @@ Spectator.describe Ktistec::Rule do
         SQL
       end
       after_each do
-        Ktistec.database.exec "DROP TABLE rule_models"
+        Ktistec.database.exec "DROP TABLE IF EXISTS rule_models"
       end
 
       let(model1) { RuleModel.find(1) }

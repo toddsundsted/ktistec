@@ -1,5 +1,5 @@
 - accounts.map(&.actor).each do |actor|
-  == Ktistec::ViewHelper._view_src_views_partials_actor_panel_html_slang(env, actor)
+  == _view_src_views_partials_actor_panel_html_slang(env, actor)
 section.ui.feed data-controller="icon-load-error"
   - objects.each do |object|
     crystal:

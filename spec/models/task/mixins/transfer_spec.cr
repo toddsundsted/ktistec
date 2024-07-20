@@ -80,20 +80,20 @@ Spectator.describe Task::Transfer do
       end
     end
 
-    context "given a Socket error" do
+    context "given an IO error" do
       before_each do
-        # simulate a Socket error
-        local_recipient.assign(inbox: "https://remote/socket-error").save
+        # simulate an IO error
+        local_recipient.assign(inbox: "https://remote/io-error").save
       end
 
       it "doesn't raise an error" do
         expect{subject.transfer(activity, from: transferer, to: [local_recipient.iri])}.
-          not_to raise_error(Socket::Error)
+          not_to raise_error(IO::Error)
       end
 
       it "stores the failure reason" do
         subject.transfer(activity, from: transferer, to: [local_recipient.iri])
-        expect(subject.failures).to have(/Socket::Error: .* #{local_recipient.inbox}/)
+        expect(subject.failures).to have(/IO::Error: .* #{local_recipient.inbox}/)
       end
 
       it "does not mark the recipient as down" do

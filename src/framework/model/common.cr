@@ -1,7 +1,7 @@
 require "../model"
 
 module Ktistec
-  module Model(*T)
+  module Model
     module Common
       @[Persistent]
       @[Insignificant]
@@ -12,8 +12,4 @@ module Ktistec
       property updated_at : Time { Time.utc }
     end
   end
-end
-
-# :nodoc:
-module Common
 end

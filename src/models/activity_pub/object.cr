@@ -23,7 +23,14 @@ end
 
 module ActivityPub
   class Object
-    include Ktistec::Model(Common, Blockable, Deletable, Polymorphic, Serialized, Linked, Renderable)
+    include Ktistec::Model
+    include Ktistec::Model::Common
+    include Ktistec::Model::Linked
+    include Ktistec::Model::Serialized
+    include Ktistec::Model::Polymorphic
+    include Ktistec::Model::Deletable
+    include Ktistec::Model::Blockable
+    include Ktistec::Model::Renderable
     include ActivityPub
 
     @@table_name = "objects"
@@ -42,9 +49,13 @@ module ActivityPub
     property in_reply_to_iri : String?
     belongs_to in_reply_to, class_name: ActivityPub::Object, foreign_key: in_reply_to_iri, primary_key: iri
 
+    # don't use an association for `replies` because it's a collection
+    # and associations are automatically saved by default.
+
     @[Persistent]
     property replies_iri : String?
-    belongs_to replies, class_name: ActivityPub::Collection, foreign_key: replies_iri, primary_key: iri
+    @[Assignable]
+    property! replies : ActivityPub::Collection
 
     @[Persistent]
     property thread : String?
@@ -688,9 +699,9 @@ module ActivityPub
           Tag::Mention.new(name: name, href: href) if name.presence
         end,
         "attachments" => dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
-          url = attachment.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s)
-          media_type = attachment.dig?("https://www.w3.org/ns/activitystreams#mediaType").try(&.as_s)
-          Attachment.new(url, media_type) if url && media_type
+          url = attachment.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+          media_type = attachment.dig?("https://www.w3.org/ns/activitystreams#mediaType").try(&.as_s?)
+          Attachment.new(url, media_type) unless url.nil? || url.blank? || media_type.nil? || media_type.blank?
         end,
         "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
         # use addressing to establish visibility

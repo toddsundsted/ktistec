@@ -4,7 +4,7 @@ require "../framework/model/**"
 # Data point.
 #
 class Point
-  include Ktistec::Model(Nil)
+  include Ktistec::Model
 
   @[Persistent]
   property chart : String

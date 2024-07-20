@@ -6,7 +6,7 @@ require "../../spec_helper/network"
 
 Spectator.describe ActivityPub::Collection do
   class ActivityPubModel
-    include Ktistec::Model(Nil)
+    include Ktistec::Model
     include ActivityPub
 
     @[Persistent]

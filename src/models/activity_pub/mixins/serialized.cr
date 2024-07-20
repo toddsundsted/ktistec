@@ -1,7 +1,7 @@
 require "../../../framework/model"
 
 module Ktistec
-  module Model(*T)
+  module Model
     module Serialized
       macro included
         extend ClassMethods
@@ -58,8 +58,4 @@ module Ktistec
       end
     end
   end
-end
-
-# :nodoc:
-module Serialized
 end

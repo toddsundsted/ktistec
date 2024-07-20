@@ -6,7 +6,7 @@ require "../../../framework/constants"
 require "../../activity_pub"
 
 module Ktistec
-  module Model(*T)
+  module Model
     module Linked
       # the only logging in this module is related to mapping JSON-LD.
       Log = ::Log.for("ktistec.json_ld")
@@ -128,8 +128,4 @@ module Ktistec
       end
     end
   end
-end
-
-# :nodoc:
-module Linked
 end

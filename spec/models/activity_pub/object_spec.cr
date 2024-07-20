@@ -220,6 +220,42 @@ Spectator.describe ActivityPub::Object do
         expect(object.mentions).to be_empty
       end
     end
+
+    context "when attachment url is null" do
+      let(json) { super.gsub(%q|"url":"attachment link"|, %q|"url":null|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to be_empty
+      end
+    end
+
+    context "when attachment url is blank" do
+      let(json) { super.gsub(%q|"url":"attachment link"|, %q|"url":""|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to be_empty
+      end
+    end
+
+    context "when attachment media type is null" do
+      let(json) { super.gsub(%q|"mediaType":"type"|, %q|"mediaType":null|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to be_empty
+      end
+    end
+
+    context "when attachment media type is blank" do
+      let(json) { super.gsub(%q|"mediaType":"type"|, %q|"mediaType":""|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to be_empty
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -284,6 +320,42 @@ Spectator.describe ActivityPub::Object do
       it "is ignored" do
         object = described_class.new.from_json_ld(json).save
         expect(object.mentions).to be_empty
+      end
+    end
+
+    context "when attachment url is null" do
+      let(json) { super.gsub(%q|"url":"attachment link"|, %q|"url":null|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to be_empty
+      end
+    end
+
+    context "when attachment url is blank" do
+      let(json) { super.gsub(%q|"url":"attachment link"|, %q|"url":""|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to be_empty
+      end
+    end
+
+    context "when attachment media type is null" do
+      let(json) { super.gsub(%q|"mediaType":"type"|, %q|"mediaType":null|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to be_empty
+      end
+    end
+
+    context "when attachment media type is blank" do
+      let(json) { super.gsub(%q|"mediaType":"type"|, %q|"mediaType":""|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to be_empty
       end
     end
   end

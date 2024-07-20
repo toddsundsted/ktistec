@@ -34,6 +34,10 @@ Spectator.describe "thread.html.slang" do
 
   let(account) { register }
 
+  it "does not render turbo-stream-source tag" do
+    expect(subject.xpath_nodes("//turbo-stream-source")).to be_empty
+  end
+
   it "does not render a button to follow the thread" do
     expect(subject.xpath_nodes("//form[button[text()='Follow']]")).to be_empty
   end
@@ -60,6 +64,10 @@ Spectator.describe "thread.html.slang" do
 
   context "if authenticated" do
     before_each { env.account = account }
+
+    it "renders turbo-stream-source tag" do
+      expect(subject.xpath_nodes("//turbo-stream-source")).not_to be_empty
+    end
 
     it "renders a button to follow the thread" do
       expect(subject.xpath_nodes("//form[button[text()='Follow']]")).not_to be_empty

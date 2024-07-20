@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.1.0]
+### Added
+- Added support for more ActivityPub types.
+
+### Changed
+- Upgraded dependencies.
+
 ## [v2.0.0]
 ### Added
 - Run "PRAGMA optimize" when a connection is closed.
@@ -220,6 +227,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.1.0]: https://github.com/toddsundsted/ktistec/compare/a74651d9...238dad82
 [v2.0.0]: https://github.com/toddsundsted/ktistec/compare/490b8266...735842c4
 [v2.0.0-11]: https://github.com/toddsundsted/ktistec/compare/362f6391...a6ea1385
 [v2.0.0-10]: https://github.com/toddsundsted/ktistec/compare/0ae0dc26...9c480ed5

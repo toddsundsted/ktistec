@@ -9,7 +9,7 @@ Spectator.describe EverythingController do
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
 
-  describe "/everything" do
+  describe "GET /everything" do
     it "returns 401 if not authorized" do
       get "/everything", ACCEPT_HTML
       expect(response.status_code).to eq(401)

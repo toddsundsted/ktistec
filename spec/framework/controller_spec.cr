@@ -46,7 +46,7 @@ class FooBarController
 end
 
 Spectator.describe Ktistec::Controller do
-  describe "get /foo/bar/accepts" do
+  describe "GET /foo/bar/accepts" do
     it "responds with html" do
       get "/foo/bar/accepts", HTTP::Headers{"Accept" => "text/html"}
       expect(response.headers["Content-Type"]).to eq("text/html")
@@ -78,7 +78,7 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "post /foo/bar/turbo-frame" do
+  describe "POST /foo/bar/turbo-frame" do
     it "responds with turbo-frame" do
       get "/foo/bar/turbo-frame", HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "foo-bar"}
       expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).to eq("turbo-frame")
@@ -90,7 +90,7 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "get /foo/bar/created" do
+  describe "GET /foo/bar/created" do
     it "redirects with 302" do
       get "/foo/bar/created", HTTP::Headers{"Accept" => "text/html"}
       expect(response.status_code).to eq(302)
@@ -102,7 +102,7 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "get /foo/bar/redirect" do
+  describe "GET /foo/bar/redirect" do
     it "redirects with 301" do
       get "/foo/bar/redirect"
       expect(response.status_code).to eq(301)
@@ -119,7 +119,7 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "/foo/bar/ok" do
+  describe "GET /foo/bar/ok" do
     it "responds with json" do
       get "/foo/bar/ok", HTTP::Headers{"Accept" => "application/json"}
       expect(JSON.parse(response.body)).to eq("json")

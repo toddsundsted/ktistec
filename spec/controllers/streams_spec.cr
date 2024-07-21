@@ -22,7 +22,7 @@ Spectator.describe StreamsController do
     end
   end
 
-  describe "/stream/objects/:id/thread" do
+  describe "GET /stream/objects/:id/thread" do
     it "returns 401 if not authorized" do
       get "/stream/objects/1/thread"
       expect(response.status_code).to eq(401)
@@ -38,14 +38,14 @@ Spectator.describe StreamsController do
     end
   end
 
-  describe "/stream/actor/homepage" do
+  describe "GET /stream/actor/homepage" do
     it "returns 401 if not authorized" do
       get "/stream/actor/homepage"
       expect(response.status_code).to eq(401)
     end
   end
 
-  describe "/stream/everything" do
+  describe "GET /stream/everything" do
     it "returns 401 if not authorized" do
       get "/stream/everything"
       expect(response.status_code).to eq(401)

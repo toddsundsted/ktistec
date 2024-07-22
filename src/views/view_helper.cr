@@ -54,6 +54,10 @@ module Ktistec::ViewHelper
       end
     end
 
+    def mention_page_mention_banner(env, mention, follow, count)
+      render "src/views/partials/mention_page_mention_banner.html.slang"
+    end
+
     def tag_page_tag_controls(env, hashtag, task, follow, count)
       render "src/views/partials/tag_page_tag_controls.html.slang"
     end

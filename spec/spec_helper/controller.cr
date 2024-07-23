@@ -92,6 +92,11 @@ macro sign_in(as username = nil)
   after_each { _sign_out }
 end
 
+BEFORE_PROCS << -> do
+  Global.account = nil
+  Global.session = nil
+end
+
 def env_factory(method, path)
   HTTP::Server::Context.new(
     HTTP::Request.new(method, path),

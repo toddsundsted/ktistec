@@ -77,12 +77,12 @@ def response
   Global.response.not_nil!
 end
 
-def self._sign_in(username = nil)
+def _sign_in(username = nil)
   Global.account = account = username ? Account.find(username: username) : register
   Global.session = Session.new(account).save
 end
 
-def self._sign_out
+def _sign_out
   Global.account = nil
   Global.session = nil
 end

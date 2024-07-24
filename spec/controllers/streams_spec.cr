@@ -6,6 +6,22 @@ require "../spec_helper/factory"
 Spectator.describe StreamsController do
   setup_spec
 
+  describe "GET /stream/mentions/:mention" do
+    it "returns 401 if not authorized" do
+      get "/stream/mentions/mention@example.com"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if the mention does not exist" do
+        get "/stream/mentions/mention@example.com"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "GET /stream/tags/:hashtag" do
     it "returns 401 if not authorized" do
       get "/stream/tags/hashtag"

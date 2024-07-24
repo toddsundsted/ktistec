@@ -107,6 +107,29 @@ class StreamsController
     end
   end
 
+  get "/stream/mentions/:mention" do |env|
+    mention = env.params.url["mention"]
+    if Tag::Mention.all_objects_count(mention) < 1
+      not_found
+    end
+    subscribe "/actor/refresh", mention_path(mention) do |subject, value|
+      case subject
+      when "/actor/refresh"
+        if (id = value.to_i64?)
+          replace_actor_icon(env.response, id)
+        end
+      else
+        follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
+        count = Tag::Mention.all_objects_count(mention)
+        body = mention_page_mention_banner(env, mention, follow, count)
+        stream_replace(env.response, id: "mention_page_mention_banner", body: body)
+        unless value.blank?
+          replace_refresh_posts_message(env.response)
+        end
+      end
+    end
+  end
+
   get "/stream/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
     if Tag::Hashtag.all_objects_count(hashtag) < 1

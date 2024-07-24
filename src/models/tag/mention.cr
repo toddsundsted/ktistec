@@ -1,5 +1,6 @@
 require "../tag"
 require "../activity_pub/object"
+require "../../framework/topic"
 
 class Tag
   class Mention < Tag
@@ -17,6 +18,10 @@ class Tag
           self.name += "@#{host}"
         end
       end
+    end
+
+    def after_create
+      Ktistec::Topic{"/mentions/#{name}"}.notify_subscribers(subject.id.to_s)
     end
 
     # Returns the most recent objects with the given mention.

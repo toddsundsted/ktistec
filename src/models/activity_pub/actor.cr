@@ -690,8 +690,8 @@ module ActivityPub
         "followers" => dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
         "name" => dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
         "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-        "icon" => map_icon?(json),
-        "image" => dig_id?(json, "https://www.w3.org/ns/activitystreams#image", "https://www.w3.org/ns/activitystreams#url"),
+        "icon" => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
+        "image" => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
         "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
         "attachments" => attachments_from_ldjson(
           json.dig?("https://www.w3.org/ns/activitystreams#attachment")
@@ -699,8 +699,8 @@ module ActivityPub
       }.compact
     end
 
-    def self.map_icon?(json)
-      json.dig?("https://www.w3.org/ns/activitystreams#icon").try do |icons|
+    def self.map_icon?(json, *selector)
+      json.dig?(*selector).try do |icons|
         if icons.as_a?
           icon =
             icons.as_a.map do |icon|

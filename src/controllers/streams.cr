@@ -142,8 +142,8 @@ class StreamsController
           replace_actor_icon(env.response, id)
         end
       else
-        task = Task::Fetch::Hashtag.find(source: env.account.actor, name: hashtag)
-        follow = Relationship::Content::Follow::Hashtag.find(actor: env.account.actor, name: hashtag)
+        task = Task::Fetch::Hashtag.find?(source: env.account.actor, name: hashtag)
+        follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
         count = Tag::Hashtag.all_objects_count(hashtag)
         body = tag_page_tag_controls(env, hashtag, task, follow, count)
         stream_replace(env.response, id: "tag_page_tag_controls", body: body)

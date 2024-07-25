@@ -193,6 +193,30 @@ Spectator.describe StreamsController do
       \n
       HTML
     end
+
+    it "sets the id" do
+      str = String.build do |io|
+        described_class.stream_action(io, body: nil, action: "foobar", id: "xyzzy", target: nil, selector: nil)
+      end
+      expect(str).to eq <<-HTML
+      data: <turbo-stream action="foobar">
+      data: </turbo-stream>
+      id: xyzzy
+      \n
+      HTML
+    end
+
+    it "resets the id" do
+      str = String.build do |io|
+        described_class.stream_action(io, body: nil, action: "foobar", id: nil, target: nil, selector: nil)
+      end
+      expect(str).to eq <<-HTML
+      data: <turbo-stream action="foobar">
+      data: </turbo-stream>
+      id
+      \n
+      HTML
+    end
   end
 end
 

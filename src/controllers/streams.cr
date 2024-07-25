@@ -31,9 +31,9 @@ class StreamsController
 
   # Renders action to replace the refresh posts message.
   #
-  def self.replace_refresh_posts_message(io, path = "")
+  def self.replace_refresh_posts_message(io, id = false, path = "")
     body = render "src/views/partials/refresh-posts.html.slang"
-    stream_replace(io, target: "refresh-posts-message", body: body)
+    stream_replace(io, target: "refresh-posts-message", body: body, id: id)
   end
 
   # Limits the number of long-lived connections.
@@ -238,17 +238,17 @@ class StreamsController
 
   # Sends a no-op action.
   #
-  def self.stream_no_op(io)
-    stream_action(io, nil, "no-op", nil, nil)
+  def self.stream_no_op(io, id = false)
+    stream_action(io, nil, "no-op", nil, nil, id)
   end
 
   {% for action in %w(append prepend replace update remove before after morph refresh) %}
-    def self.stream_{{action.id}}(io, body = nil, target = nil, selector = nil)
-      stream_action(io, body, {{action}}, target, selector)
+    def self.stream_{{action.id}}(io, body = nil, target = nil, selector = nil, id = false)
+      stream_action(io, body, {{action}}, target, selector, id)
     end
   {% end %}
 
-  def self.stream_action(io : IO, body : String?, action : String, target : String?, selector : String?)
+  def self.stream_action(io : IO, body : String?, action : String, target : String?, selector : String?, id : String | Bool | Nil = false)
     if target && !selector
       io.puts %Q|data: <turbo-stream action="#{action}" target="#{target}">|
     elsif selector && !target
@@ -264,6 +264,11 @@ class StreamsController
       io.puts "data: </template>"
     end
     io.puts "data: </turbo-stream>"
+    if id.nil?
+      io.puts "id"
+    elsif id.is_a?(String)
+      io.puts "id: #{id}"
+    end
     io.puts
     io.flush
   end

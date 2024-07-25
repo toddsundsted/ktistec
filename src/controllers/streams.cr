@@ -33,7 +33,7 @@ class StreamsController
   #
   def self.replace_refresh_posts_message(io, path = "")
     body = render "src/views/partials/refresh-posts.html.slang"
-    stream_replace(io, id: "refresh-posts-message", body: body)
+    stream_replace(io, target: "refresh-posts-message", body: body)
   end
 
   # Limits the number of long-lived connections.
@@ -122,7 +122,7 @@ class StreamsController
         follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
         count = Tag::Mention.all_objects_count(mention)
         body = mention_page_mention_banner(env, mention, follow, count)
-        stream_replace(env.response, id: "mention_page_mention_banner", body: body)
+        stream_replace(env.response, target: "mention_page_mention_banner", body: body)
         unless value.blank?
           replace_refresh_posts_message(env.response)
         end
@@ -146,7 +146,7 @@ class StreamsController
         follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
         count = Tag::Hashtag.all_objects_count(hashtag)
         body = tag_page_tag_controls(env, hashtag, task, follow, count)
-        stream_replace(env.response, id: "tag_page_tag_controls", body: body)
+        stream_replace(env.response, target: "tag_page_tag_controls", body: body)
         unless value.blank?
           replace_refresh_posts_message(env.response)
         end
@@ -171,7 +171,7 @@ class StreamsController
         task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
         follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
         body = thread_page_thread_controls(env, thread, task, follow)
-        stream_replace(env.response, id: "thread_page_thread_controls", body: body)
+        stream_replace(env.response, target: "thread_page_thread_controls", body: body)
         unless value.blank?
           replace_refresh_posts_message(env.response)
         end
@@ -243,15 +243,15 @@ class StreamsController
   end
 
   {% for action in %w(append prepend replace update remove before after morph refresh) %}
-    def self.stream_{{action.id}}(io, body = nil, id = nil, selector = nil)
-      stream_action(io, body, {{action}}, id, selector)
+    def self.stream_{{action.id}}(io, body = nil, target = nil, selector = nil)
+      stream_action(io, body, {{action}}, target, selector)
     end
   {% end %}
 
-  def self.stream_action(io : IO, body : String?, action : String, id : String?, selector : String?)
-    if id && !selector
-      io.puts %Q|data: <turbo-stream action="#{action}" target="#{id}">|
-    elsif selector && !id
+  def self.stream_action(io : IO, body : String?, action : String, target : String?, selector : String?)
+    if target && !selector
+      io.puts %Q|data: <turbo-stream action="#{action}" target="#{target}">|
+    elsif selector && !target
       io.puts %Q|data: <turbo-stream action="#{action}" targets="#{selector}">|
     else
       io.puts %Q|data: <turbo-stream action="#{action}">|

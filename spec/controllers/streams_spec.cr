@@ -164,7 +164,7 @@ Spectator.describe StreamsController do
   describe ".stream_action" do
     it "sends the body in a Turbo Stream / Server-Sent Events wrapper" do
       str = String.build do |io|
-        described_class.stream_action(io, body: "<br>\n<br>\n<br>", action: "foobar", id: "target", selector: nil)
+        described_class.stream_action(io, body: "<br>\n<br>\n<br>", action: "foobar", target: "target", selector: nil)
       end
       expect(str).to eq <<-HTML
       data: <turbo-stream action="foobar" target="target">
@@ -180,7 +180,7 @@ Spectator.describe StreamsController do
 
     it "sends the body in a Turbo Stream / Server-Sent Events wrapper" do
       str = String.build do |io|
-        described_class.stream_action(io, body: "<br>\n<br>\n<br>", action: "foobar", selector: "target", id: nil)
+        described_class.stream_action(io, body: "<br>\n<br>\n<br>", action: "foobar", selector: "target", target: nil)
       end
       expect(str).to eq <<-HTML
       data: <turbo-stream action="foobar" targets="target">

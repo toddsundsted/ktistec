@@ -94,7 +94,7 @@ class StreamsController
   private macro subscribe(*subjects, &block)
     Ktistec::Topic{{{subjects.splat}}}.tap do |topic|
       @@sessions_pools[env.session].push(env.response.@io)
-      setup_response(env.response, topic.object_id)
+      setup_response(env.response)
       topic.subscribe(timeout: 1.minute) do |{{block.args.join(",").id}}|
         if {{block.args.join(" && ").id}}
           {{block.body}}
@@ -226,11 +226,10 @@ class StreamsController
     end
   end
 
-  def self.setup_response(response : HTTP::Server::Response, topic_id)
+  def self.setup_response(response : HTTP::Server::Response)
     response.content_type = "text/event-stream"
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
-    response.headers["X-Topic-Id"] = topic_id.to_s
     # call `upgrade` to write the headers to the output
     response.upgrade {}
     response.flush

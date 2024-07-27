@@ -140,7 +140,7 @@ Spectator.describe StreamsController do
     subject do
       String.build do |io|
         response = HTTP::Server::Response.new(io)
-        described_class.setup_response(response, "xyzzy")
+        described_class.setup_response(response)
       end
     end
 
@@ -154,10 +154,6 @@ Spectator.describe StreamsController do
 
     it "sets X-Accel-Buffering" do
       expect(subject.lines).to have("X-Accel-Buffering: no")
-    end
-
-    it "sets X-Topic-Id" do
-      expect(subject.lines).to have("X-Topic-Id: xyzzy")
     end
   end
 

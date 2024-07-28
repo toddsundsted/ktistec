@@ -7,6 +7,8 @@ require "../models/task/fetch/hashtag"
 class StreamsController
   include Ktistec::Controller
 
+  Log = ::Log.for("streaming")
+
   macro stop
     raise Ktistec::Topic::Stop.new
   end
@@ -94,7 +96,6 @@ class StreamsController
   private macro subscribe(*subjects, &block)
     Ktistec::Topic{{{subjects.splat}}}.tap do |topic|
       @@sessions_pools[env.session].push(env.response.@io)
-      setup_response(env.response)
       topic.subscribe(timeout: 1.minute) do |{{block.args.join(",").id}}|
         if {{block.args.join(" && ").id}}
           {{block.body}}
@@ -112,6 +113,7 @@ class StreamsController
     if Tag::Mention.all_objects_count(mention) < 1
       not_found
     end
+    setup_response(env.response)
     subscribe "/actor/refresh", mention_path(mention) do |subject, value|
       case subject
       when "/actor/refresh"
@@ -135,6 +137,7 @@ class StreamsController
     if Tag::Hashtag.all_objects_count(hashtag) < 1
       not_found
     end
+    setup_response(env.response)
     subscribe "/actor/refresh", hashtag_path(hashtag) do |subject, value|
       case subject
       when "/actor/refresh"
@@ -159,6 +162,7 @@ class StreamsController
     unless (object = ActivityPub::Object.find?(id))
       not_found
     end
+    setup_response(env.response)
     subscribe "/actor/refresh", object.thread.not_nil! do |subject, value|
       case subject
       when "/actor/refresh"
@@ -180,8 +184,25 @@ class StreamsController
   end
 
   get "/stream/actor/homepage" do |env|
-    since = Time.utc
-    first_count = timeline_count(env, since)
+    setup_response(env.response)
+    if env.request.headers["Last-Event-ID"]? =~ /^(\d+):(\d+)$/ && (seconds = $1.to_i?) && (count = $2.to_i?)
+      since = Time.unix(seconds)
+      first_count = count
+      if (count = timeline_count(env, since)) > first_count
+        Log.trace { "header - since: #{since} first_count: #{first_count} count: #{count}" }
+        first_count = count
+        id = "#{since.to_unix}:#{first_count}"
+        replace_refresh_posts_message(env.response, id)
+      else
+        Log.trace { "header - since: #{since} first_count: #{first_count}" }
+      end
+    else
+      since = Time.utc
+      first_count = timeline_count(env, since)
+      Log.trace { "initial - since: #{since} first_count: #{first_count}" }
+      id = "#{since.to_unix}:#{first_count}"
+      stream_no_op(env.response, id)
+    end
     subscribe "/actor/refresh", "#{actor_path(env.account.actor)}/notifications", "#{actor_path(env.account.actor)}/timeline" do |subject, value|
       case subject
       when "/actor/refresh"
@@ -192,8 +213,10 @@ class StreamsController
         replace_notifications_count(env.response,  env.account)
       when "#{actor_path(env.account.actor)}/timeline"
         if (count = timeline_count(env, since)) > first_count
+          Log.trace { "next - since: #{since} first_count: #{first_count} count: #{count}" }
           first_count = count
-          replace_refresh_posts_message(env.response)
+          id = "#{since.to_unix}:#{first_count}"
+          replace_refresh_posts_message(env.response, id)
         end
       end
     end
@@ -214,6 +237,7 @@ class StreamsController
   end
 
   get "/stream/everything" do |env|
+    setup_response(env.response)
     subscribe "/actor/refresh", everything_path do |subject, value|
       case subject
       when "/actor/refresh"

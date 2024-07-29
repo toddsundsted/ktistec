@@ -1,9 +1,9 @@
-require "../../src/controllers/streams"
+require "../../src/controllers/streaming"
 
 require "../spec_helper/controller"
 require "../spec_helper/factory"
 
-Spectator.describe StreamsController do
+Spectator.describe StreamingController do
   setup_spec
 
   describe "GET /stream/mentions/:mention" do
@@ -216,7 +216,7 @@ Spectator.describe StreamsController do
   end
 end
 
-Spectator.describe StreamsController::ConnectionPool do
+Spectator.describe StreamingController::ConnectionPool do
   context "initialization" do
     it "creates a new pool" do
       pool = described_class.new(1)

@@ -4,7 +4,7 @@ require "../framework/topic"
 require "../models/relationship/content/follow/hashtag"
 require "../models/task/fetch/hashtag"
 
-class StreamsController
+class StreamingController
   include Ktistec::Controller
 
   Log = ::Log.for("streaming")

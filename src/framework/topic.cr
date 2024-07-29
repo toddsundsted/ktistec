@@ -142,14 +142,14 @@ module Ktistec
           i, subject = Channel(Int32).select(select_actions)
           if subject
             if (subscription = subscriptions[subject]) && (value = subscription.queue.first?)
-              Log.debug { %Q|[#{object_id}] yielding subject "#{@subjects[subject]}"| }
+              Log.trace { %Q|[#{object_id}] yielding subject=#{@subjects[subject]} value=#{value}| }
               yield @subjects[subject], value
               subscription.queue.shift
             else
-              Log.error { %Q|[#{object_id}] nothing queued! skipping subject "#{@subjects[subject]}"| }
+              Log.error { %Q|[#{object_id}] nothing queued! skipping subject=#{@subjects[subject]}| }
             end
           else
-            Log.debug { %Q|[#{object_id}] yielding on timeout| }
+            Log.trace { %Q|[#{object_id}] yielding on timeout| }
             yield nil, nil
           end
         end
@@ -176,6 +176,9 @@ module Ktistec
         subscriptions_count = @@subscriptions.values.map(&.size).sum
         subjects = (0...@subjects.size).map { |i| @subjects[i] }.compact.join(" ")
         "statistics - subscriptions=#{subscriptions_count} slots=#{@subjects.size} free=#{@subjects.free} | #{subjects}"
+      end
+      Log.trace do
+         "[#{object_id}] notifying subscribers subject=#{subjects.join(" ")} value=#{value}"
       end
       # look up the indexes that share the same name
       indexes =

@@ -134,9 +134,10 @@ class Task
           false
         end
       count = 0
+      start = Time.monotonic
       begin
         maximum.times do
-          Log.trace { "perform [#{id}] - hashtag: #{name}, iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
+          Log.debug { "perform [#{id}] - hashtag: #{name}, iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
           ContentRules.new.run do
@@ -146,13 +147,15 @@ class Task
           count += 1
         end
       ensure
+        duration = (Time.monotonic - start).total_seconds
+        duration = sprintf("%.3f", duration)
         if interrupted
-          Log.trace { "perform [#{id}] - hashtag: #{name} - interrupted! - #{count} fetched" }
-          # ensure that when this task is eventually saved, it too
+          Log.debug { "perform [#{id}] - hashtag: #{name} - interrupted! - #{duration} seconds, #{count} fetched" }
+          # ensure that when this instance is eventually saved, it too
           # is set as complete.
           self.complete = true
         else
-          Log.trace { "perform [#{id}] - hashtag: #{name} - complete - #{count} fetched" }
+          Log.debug { "perform [#{id}] - hashtag: #{name} - complete - #{duration} seconds, #{count} fetched" }
         end
         self.next_attempt_at =
           if count < 1 && !continuation && !interrupted            # none fetched

@@ -182,6 +182,7 @@ class Task
           false
         end
       count = 0
+      start = Time.monotonic
       begin
         maximum.times do
           # It's possible to have two tasks following two parts of a
@@ -190,10 +191,10 @@ class Task
           # discovers the root it destroys the other task. If this
           # task was the one destroyed, stop working.
           if gone?
-            Log.trace { "perform [#{id}] - gone - stopping task" }
+            Log.debug { "perform [#{id}] - gone - stopping task" }
             break
           end
-          Log.trace { "perform [#{id}] - iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
+          Log.debug { "perform [#{id}] - iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object =
             if !state.root_object && (temporary = fetch_up)
               temporary
@@ -208,13 +209,15 @@ class Task
           count += 1
         end
       ensure
+        duration = (Time.monotonic - start).total_seconds
+        duration = sprintf("%.3f", duration)
         if interrupted
-          Log.trace { "perform [#{id}] - interrupted! - #{count} fetched" }
-          # ensure that when this task is eventually saved, it too
+          Log.debug { "perform [#{id}] - interrupted! - #{duration} seconds, #{count} fetched" }
+          # ensure that when this instance is eventually saved, it too
           # is set as complete.
           self.complete = true
         else
-          Log.trace { "perform [#{id}] - complete - #{count} fetched" }
+          Log.debug { "perform [#{id}] - complete - #{duration} seconds, #{count} fetched" }
         end
         self.next_attempt_at =
           if count < 1 && !continuation && !interrupted            # none fetched

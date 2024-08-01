@@ -255,7 +255,7 @@ Spectator.describe InteractionsController do
         expect(response.status_code).to eq(400)
       end
 
-      context "given a remote actor" do
+      context "given an actor" do
         let_build(:actor, named: :foobar, iri: "https://remote/actors/foobar")
 
         before_each do
@@ -281,9 +281,38 @@ Spectator.describe InteractionsController do
           get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", JSON_HEADERS
           expect(JSON.parse(response.body)["id"]?).to eq("https://remote/actors/foobar")
         end
+
+        context "with a public key" do
+          before_each do
+            foobar.assign(pem_public_key: "OLD PEM PUBLIC KEY").save
+            HTTP::Client.actors << foobar.assign(pem_public_key: "NEW PEM PUBLIC KEY")
+          end
+
+          it "updates the public key" do
+            expect{get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", HTML_HEADERS}.
+              to change{foobar.reload!.pem_public_key}.to("NEW PEM PUBLIC KEY")
+          end
+        end
+
+        context "that is local" do
+          before_each { foobar.assign(iri: "https://test.test/actors/foobar").save }
+
+          it "doesn't fetch the actor" do
+            expect{get "/authorize-interaction?uri=https%3A%2F%2Ftest.test%2Factors%2Ffoobar", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
+            expect(HTTP::Client.requests).not_to have("GET #{foobar.iri}")
+          end
+        end
+
+        context "that is down" do
+          before_each { foobar.save.down! }
+
+          it "marks the actor as up" do
+            expect{get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", HTML_HEADERS}.to change{foobar.reload!.up?}.to(true)
+          end
+        end
       end
 
-      context "given a remote object" do
+      context "given an object" do
         let_build(:object, named: :foobar, iri: "https://remote/objects/foobar")
 
         before_each do
@@ -309,6 +338,15 @@ Spectator.describe InteractionsController do
         it "returns the object" do
           get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Fobjects%2Ffoobar", JSON_HEADERS
           expect(JSON.parse(response.body)["id"]?).to eq("https://remote/objects/foobar")
+        end
+
+        context "that is local" do
+          before_each { foobar.assign(iri: "https://test.test/objects/foobar").save }
+
+          it "doesn't fetch the object" do
+            expect{get "/authorize-interaction?uri=https%3A%2F%2Ftest.test%2Fobjects%2Ffoobar", HTML_HEADERS}.not_to change{ActivityPub::Object.count}
+            expect(HTTP::Client.requests).not_to have("GET #{foobar.iri}")
+          end
         end
       end
     end

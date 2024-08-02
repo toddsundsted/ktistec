@@ -89,7 +89,7 @@ Spectator.describe MentionsController do
 
   let(body) { XML.parse_html(response.body) }
 
-  TURBO_FRAME = HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "mention_page_mention_controls"}
+  TURBO_FRAME = HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "mention_page_mention_banner"}
 
   describe "POST /mentions/follow" do
     create_object_with_mentions(1, "foo@remote")
@@ -121,7 +121,7 @@ Spectator.describe MentionsController do
 
         it "renders an unfollow button" do
           post "/mentions/foo%40remote/follow", TURBO_FRAME
-          expect(body.xpath_nodes("//*[@id='mention_page_mention_controls']//button")).to have("Unfollow")
+          expect(body.xpath_nodes("//*[@id='mention_page_mention_banner']//button")).to have("Unfollow")
         end
       end
 
@@ -146,7 +146,7 @@ Spectator.describe MentionsController do
 
           it "renders an unfollow button" do
             post "/mentions/foo%40remote/follow", TURBO_FRAME
-            expect(body.xpath_nodes("//*[@id='mention_page_mention_controls']//button")).to have("Unfollow")
+            expect(body.xpath_nodes("//*[@id='mention_page_mention_banner']//button")).to have("Unfollow")
           end
         end
       end
@@ -183,7 +183,7 @@ Spectator.describe MentionsController do
 
         it "renders a follow button" do
           post "/mentions/foo%40remote/unfollow", TURBO_FRAME
-          expect(body.xpath_nodes("//*[@id='mention_page_mention_controls']//button")).to have("Follow")
+          expect(body.xpath_nodes("//*[@id='mention_page_mention_banner']//button")).to have("Follow")
         end
       end
 
@@ -208,7 +208,7 @@ Spectator.describe MentionsController do
 
           it "renders a follow button" do
             post "/mentions/foo%40remote/unfollow", TURBO_FRAME
-            expect(body.xpath_nodes("//*[@id='mention_page_mention_controls']//button")).to have("Follow")
+            expect(body.xpath_nodes("//*[@id='mention_page_mention_banner']//button")).to have("Follow")
           end
         end
       end

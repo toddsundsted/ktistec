@@ -1,5 +1,6 @@
 require "../tag"
 require "../activity_pub/object"
+require "../../framework/topic"
 
 class Tag
   class Hashtag < Tag
@@ -10,6 +11,10 @@ class Tag
 
     def before_save
       self.name = self.name.lstrip('#')
+    end
+
+    def after_create
+      Ktistec::Topic{"/tags/#{name}"}.notify_subscribers(subject.id.to_s)
     end
 
     # Returns the most recent object with the given hashtag.

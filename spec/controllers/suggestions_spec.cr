@@ -6,7 +6,7 @@ require "../spec_helper/controller"
 Spectator.describe SuggestionsController do
   setup_spec
 
-  describe "/tags" do
+  describe "GET /tags" do
     it "returns 401 if not authorized" do
       get "/tags"
       expect(response.status_code).to eq(401)

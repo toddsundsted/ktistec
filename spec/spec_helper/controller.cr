@@ -77,12 +77,12 @@ def response
   Global.response.not_nil!
 end
 
-def self._sign_in(username = nil)
+def _sign_in(username = nil)
   Global.account = account = username ? Account.find(username: username) : register
   Global.session = Session.new(account).save
 end
 
-def self._sign_out
+def _sign_out
   Global.account = nil
   Global.session = nil
 end
@@ -90,6 +90,11 @@ end
 macro sign_in(as username = nil)
   before_each { _sign_in({{username}}) }
   after_each { _sign_out }
+end
+
+BEFORE_PROCS << -> do
+  Global.account = nil
+  Global.session = nil
 end
 
 def env_factory(method, path)

@@ -468,6 +468,52 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe ".federated_posts_count" do
+    macro post(index)
+      let_build(:actor, named: actor{{index}})
+      let_create!(
+        :object, named: post{{index}},
+        attributed_to: actor{{index}},
+        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+        visible: {{index}}.odd?
+      )
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(described_class.federated_posts_count).to be_a(Int64)
+    end
+
+    it "filters out deleted posts" do
+      post5.delete!
+      expect(described_class.federated_posts_count).to eq(2)
+    end
+
+    it "filters out blocked posts" do
+      post5.block!
+      expect(described_class.federated_posts_count).to eq(2)
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete!
+      expect(described_class.federated_posts_count).to eq(2)
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block!
+      expect(described_class.federated_posts_count).to eq(2)
+    end
+
+    it "filters out non-public posts" do
+      expect(described_class.federated_posts_count).to eq(3)
+    end
+  end
+
   describe ".public_posts" do
     let(actor) { register.actor }
 

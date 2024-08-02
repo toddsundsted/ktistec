@@ -19,20 +19,24 @@ Spectator.describe "thread.html.slang" do
   let(task) { nil }
 
   module Ktistec::ViewHelper
-    def self.render_thread_html_slang(env, thread, follow, task)
+    def self.render_thread_html_slang(env, object, thread, follow, task)
       render "./src/views/objects/thread.html.slang"
     end
   end
 
   subject do
     begin
-      XML.parse_html(Ktistec::ViewHelper.render_thread_html_slang(env, thread, follow, task))
+      XML.parse_html(Ktistec::ViewHelper.render_thread_html_slang(env, object, thread, follow, task))
     rescue XML::Error
       XML.parse_html("<div/>").document
     end
   end
 
   let(account) { register }
+
+  it "does not render turbo-stream-source tag" do
+    expect(subject.xpath_nodes("//turbo-stream-source")).to be_empty
+  end
 
   it "does not render a button to follow the thread" do
     expect(subject.xpath_nodes("//form[button[text()='Follow']]")).to be_empty
@@ -60,6 +64,10 @@ Spectator.describe "thread.html.slang" do
 
   context "if authenticated" do
     before_each { env.account = account }
+
+    it "renders turbo-stream-source tag" do
+      expect(subject.xpath_nodes("//turbo-stream-source")).not_to be_empty
+    end
 
     it "renders a button to follow the thread" do
       expect(subject.xpath_nodes("//form[button[text()='Follow']]")).not_to be_empty

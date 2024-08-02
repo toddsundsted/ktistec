@@ -180,42 +180,42 @@ def relationship_factory(clazz = Relationship, from_iri = "https://from/#{random
   clazz.new({"from_iri" => from_iri, "to_iri" => to_iri}.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
-def notification_factory(clazz = Relationship::Content::Notification, owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
+def notification_factory(clazz = Relationship::Content::Notification, activity_clazz = ActivityPub::Activity, owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
-  activity = activity_factory(actor_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, actor: owner) unless activity_iri || activity.nil? || activity
+  activity = activity_factory(activity_clazz, actor_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, actor: owner) unless activity_iri || activity.nil? || activity
   relationship_factory(clazz, **{from_iri: owner_iri, owner: owner, to_iri: activity_iri, activity: activity}.merge(options))
 end
 
 def notification_announce_factory(**options)
-  notification_factory(Relationship::Content::Notification::Announce, **options)
+  notification_factory(Relationship::Content::Notification::Announce, ActivityPub::Activity::Announce, **options)
 end
 
 def notification_like_factory(**options)
-  notification_factory(Relationship::Content::Notification::Like, **options)
+  notification_factory(Relationship::Content::Notification::Like, ActivityPub::Activity::Like, **options)
 end
 
 def notification_follow_factory(**options)
-  notification_factory(Relationship::Content::Notification::Follow, **options)
+  notification_factory(Relationship::Content::Notification::Follow, ActivityPub::Activity::Follow, **options)
 end
 
 def notification_follow_hashtag_factory(**options)
-  notification_factory(Relationship::Content::Notification::Follow::Hashtag, **options)
+  notification_factory(Relationship::Content::Notification::Follow::Hashtag, **{activity: nil}.merge(options))
 end
 
 def notification_follow_mention_factory(**options)
-  notification_factory(Relationship::Content::Notification::Follow::Mention, **options)
+  notification_factory(Relationship::Content::Notification::Follow::Mention, **{activity: nil}.merge(options))
 end
 
 def notification_follow_thread_factory(**options)
-  notification_factory(Relationship::Content::Notification::Follow::Thread, **options)
+  notification_factory(Relationship::Content::Notification::Follow::Thread, **{activity: nil}.merge(options))
 end
 
 def notification_reply_factory(**options)
-  notification_factory(Relationship::Content::Notification::Reply, **options)
+  notification_factory(Relationship::Content::Notification::Reply, **{activity: nil}.merge(options))
 end
 
 def notification_mention_factory(**options)
-  notification_factory(Relationship::Content::Notification::Mention, **options)
+  notification_factory(Relationship::Content::Notification::Mention, **{activity: nil}.merge(options))
 end
 
 def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)

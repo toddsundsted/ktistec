@@ -145,6 +145,12 @@ class HTTP::Client
   end
 end
 
+{% if @top_level.has_constant?("BEFORE_PROCS") %}
+  BEFORE_PROCS << -> do
+    HTTP::Client.reset
+  end
+{% end %}
+
 # WebFinger mock.
 #
 module WebFinger

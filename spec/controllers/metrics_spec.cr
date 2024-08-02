@@ -99,7 +99,7 @@ Spectator.describe MetricsController do
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
 
-  describe "/metrics" do
+  describe "GET /metrics" do
     it "returns 401 if not authorized" do
       get "/metrics", ACCEPT_HTML
       expect(response.status_code).to eq(401)

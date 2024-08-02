@@ -976,7 +976,18 @@ module Ktistec
       def save(skip_validation = false, skip_associated = false)
         raise Invalid.new(errors) unless skip_validation || valid?(skip_associated: skip_associated)
         with_callbacks(before_save, after_save, skip_associated: skip_associated) do |node|
-          node.model._save_model(skip_validation: skip_validation)
+          model = node.model
+          if (new_record = model.new_record?) && model.responds_to?(:before_create)
+            model.before_create
+          elsif !new_record && model.responds_to?(:before_update)
+            model.before_update
+          end
+          model._save_model(skip_validation: skip_validation)
+          if new_record && model.responds_to?(:after_create)
+            model.after_create
+          elsif !new_record && model.responds_to?(:after_update)
+            model.after_update
+          end
         end
         self
       end

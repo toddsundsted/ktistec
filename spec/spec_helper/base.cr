@@ -120,15 +120,19 @@ module Ktistec
   end
 end
 
+BEFORE_PROCS = [] of Proc(Nil)
+AFTER_PROCS = [] of Proc(Nil)
+
+BEFORE_PROCS << -> do
+  Ktistec.database.exec "SAVEPOINT __each__"
+end
+AFTER_PROCS << -> do
+  Ktistec.database.exec "ROLLBACK"
+end
+
 macro setup_spec
-  before_each do
-    clazz = HTTP::Client
-    if clazz.responds_to?(:reset)
-      clazz.reset
-    end
-  end
-  before_each { Ktistec.database.exec "SAVEPOINT __each__" }
-  after_each { Ktistec.database.exec "ROLLBACK" }
+  before_each { BEFORE_PROCS.each(&.call) }
+  after_each { AFTER_PROCS.each(&.call) }
 end
 
 ## Helpers for test instance creation

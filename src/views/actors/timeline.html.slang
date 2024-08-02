@@ -1,4 +1,7 @@
+- query = env.request.query.try { |query| "?#{query}" } || ""
+turbo-stream-source src="/stream/actor/homepage#{query}"
 section.ui.feed data-controller="icon-load-error"
+  #refresh-posts-message
   - timeline.each do |entry|
     crystal:
       object = entry.object

@@ -3,7 +3,7 @@
   .ui.stackable.secondary.menu
     a.item href=actor_relationships_path(actor, "posts") Posts
     a.item href=actor_relationships_path(actor, "drafts") Drafts
-    .item
+    .item.notifications
       a.ui href=actor_relationships_path(actor, "notifications") Notifications
       - if (count = actor.notifications(since: env.account.last_notifications_checked_at)) > 0
         .ui.mini.transitional.horizontal.circular.red.label= count

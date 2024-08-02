@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.2.0]
+### Added
+- Support streaming updates to the user-interface.
+
+### Fixed
+- Always build assets within building container. (see [#107](https://github.com/toddsundsted/ktistec/pull/107))
+- Handle arrays of actor profile images.
+
 ## [v2.1.0]
 ### Added
 - Added support for more ActivityPub types.
@@ -227,6 +235,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.2.0]: https://github.com/toddsundsted/ktistec/compare/8d68d896...e8fcc772
 [v2.1.0]: https://github.com/toddsundsted/ktistec/compare/a74651d9...238dad82
 [v2.0.0]: https://github.com/toddsundsted/ktistec/compare/490b8266...735842c4
 [v2.0.0-11]: https://github.com/toddsundsted/ktistec/compare/362f6391...a6ea1385

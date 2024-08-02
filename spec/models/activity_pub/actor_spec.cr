@@ -187,8 +187,6 @@ Spectator.describe ActivityPub::Actor do
   end
 
   describe ".map" do
-    let(json) { super.gsub(/"icon": {[^}]+}/, icon) }
-
     context "given an array of icons with width and height" do
       let(icon) do
         <<-ICON
@@ -205,6 +203,8 @@ Spectator.describe ActivityPub::Actor do
           }]
         ICON
       end
+
+      let(json) { super.gsub(/"icon": {[^}]+}/, icon) }
 
       it "picks the largest icon" do
         expect(described_class.map(json)["icon"]).to eq("second link")
@@ -226,8 +226,32 @@ Spectator.describe ActivityPub::Actor do
         ICON
       end
 
+      let(json) { super.gsub(/"icon": {[^}]+}/, icon) }
+
       it "picks the first icon" do
         expect(described_class.map(json)["icon"]).to eq("first link")
+      end
+    end
+
+    context "given an array of images" do
+      let(image) do
+        <<-IMAGE
+          "image": [{
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "url": "first link"
+          }, {
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "url": "second link"
+          }]
+        IMAGE
+      end
+
+      let(json) { super.gsub(/"image": {[^}]+}/, image) }
+
+      it "picks the first image" do
+        expect(described_class.map(json)["image"]).to eq("first link")
       end
     end
   end

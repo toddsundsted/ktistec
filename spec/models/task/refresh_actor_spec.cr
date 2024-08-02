@@ -131,6 +131,31 @@ Spectator.describe Task::RefreshActor do
         to change{actor.reload!.username}
     end
 
+    macro make_subscription(topic, &block)
+      before_each do
+        spawn do
+          {{topic}}.subscribe {{block}}
+        rescue
+        end
+        Fiber.yield
+      end
+    end
+
+    context "given a subscription" do
+      let(notifications) { [0] }
+
+      let(topic) { Ktistec::Topic{"/actor/refresh"} }
+
+      make_subscription(topic) { notifications[0] += 1 }
+
+      it "notifies subscribers" do
+        expect do
+          subject.perform
+          Fiber.yield
+        end.to change{notifications[0]}.by(1)
+      end
+    end
+
     it "documents the error if fetch fails" do
       actor.iri = "https://remote/returns-404"
       expect{subject.perform}.

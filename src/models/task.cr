@@ -119,4 +119,14 @@ class Task
   def perform
     raise NotImplementedError.new("Task#perform must be implemented in each subclass")
   end
+
+  def self.destroy_old_tasks
+    delete = "DELETE FROM tasks WHERE (complete = 1 OR backtrace IS NOT NULL) AND created_at < date('now', '-1 month')"
+    Task.exec(delete)
+  end
+
+  def self.clean_up_running_tasks
+    update = "UPDATE tasks SET running = 0 WHERE running = 1"
+    Task.exec(update)
+  end
 end

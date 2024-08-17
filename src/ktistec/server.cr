@@ -7,8 +7,8 @@ require "../workers/**"
 
 Ktistec::Server.run do
   TaskWorker.start do
-    TaskWorker.destroy_old_tasks
-    TaskWorker.clean_up_running_tasks
+    Task.destroy_old_tasks
+    Task.clean_up_running_tasks
     Task::Backup.schedule_unless_exists
     Task::Performance.schedule_unless_exists
     Task::UpdateMetrics.schedule_unless_exists

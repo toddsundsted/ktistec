@@ -6,27 +6,30 @@ class TaskWorker
   @@channel = Channel(Task).new
 
   def self.start
+    yield
     self.new.tap do |worker|
-      loop do
-        # try to keep the task worker alive in the face of critical,
-        # but possibly transient, problems affecting the database --
-        # in particular, insufficient disk space and locking. if
-        # these things happen, individual tasks may be left in an
-        # inconsistent state, but the task worker will continue to
-        # process future tasks, which is less surprising and more
-        # useful than the alternative.
-        begin
-          work_done = worker.work
-        rescue ex : SQLite3::Exception
-          Log.warn { "Exception while doing task work: #{ex.class}: #{ex.message}: #{ex.backtrace.first?}" }
-          work_done = false
-        end
-        unless work_done
-          select
-          when @@channel.receive
-            # process work
-          when timeout(5.seconds)
-            # process work
+      spawn do
+        loop do
+          # try to keep the task worker alive in the face of critical,
+          # but possibly transient, problems affecting the database --
+          # in particular, insufficient disk space and locking. if
+          # these things happen, individual tasks may be left in an
+          # inconsistent state, but the task worker will continue to
+          # process future tasks, which is less surprising and more
+          # useful than the alternative.
+          begin
+            work_done = worker.work
+          rescue ex : SQLite3::Exception
+            Log.warn { "Exception while doing task work: #{ex.class}: #{ex.message}: #{ex.backtrace.first?}" }
+            work_done = false
+          end
+          unless work_done
+            select
+            when @@channel.receive
+              # process work
+            when timeout(5.seconds)
+              # process work
+            end
           end
         end
       end

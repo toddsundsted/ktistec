@@ -56,7 +56,7 @@ class TaskWorker
     tasks.each do |task|
       if task.is_a?(Task::ConcurrentTask)
         spawn do
-          Fiber.current.name = "#{task.class} id=#{task.id}"
+          Fiber.current.name = task.fiber_name
           perform(task)
         end
       else

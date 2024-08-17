@@ -12,7 +12,7 @@ Spectator.describe Task do
   end
 
   subject do
-    described_class.new(
+    Task.new(
       source_iri: "https://test.test/source",
       subject_iri: "https://test.test/subject"
     )
@@ -167,6 +167,33 @@ Spectator.describe Task do
         subject.assign(running: true).save
         expect{described_class.clean_up_running_tasks}.to change{Task.count(running: true)}.by(-1)
       end
+    end
+  end
+end
+
+Spectator.describe Task::ConcurrentTask do
+  setup_spec
+
+  class ConcurrentTask < ::Task
+    include ::Task::ConcurrentTask
+
+    def perform
+      # no-op
+    end
+  end
+
+  subject do
+    ConcurrentTask.new(
+      source_iri: "https://test.test/source",
+      subject_iri: "https://test.test/subject"
+    )
+  end
+
+  describe "#fiber_name" do
+    subject { super.save }
+
+    it "returns the name of the associated fiber" do
+      expect(subject.fiber_name).to eq("#{subject.class}-#{subject.id}")
     end
   end
 end

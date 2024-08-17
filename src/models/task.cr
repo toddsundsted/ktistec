@@ -11,6 +11,11 @@ class Task
   # Marker for a task that may be processed concurrently.
   #
   module ConcurrentTask
+    # Returns the name assigned to the associated fiber.
+    #
+    def fiber_name
+      "#{self.class}-#{self.id}"
+    end
   end
 
   include Ktistec::Model

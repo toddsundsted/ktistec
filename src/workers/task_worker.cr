@@ -9,6 +9,7 @@ class TaskWorker
     yield
     self.new.tap do |worker|
       spawn do
+        Fiber.current.name = "TaskWorker"
         loop do
           # try to keep the task worker alive in the face of critical,
           # but possibly transient, problems affecting the database --
@@ -54,7 +55,10 @@ class TaskWorker
     tasks = Task.scheduled(now, reserve: true)
     tasks.each do |task|
       if task.is_a?(Task::ConcurrentTask)
-        spawn { perform(task) }
+        spawn do
+          Fiber.current.name = "#{task.class} id=#{task.id}"
+          perform(task)
+        end
       else
         perform(task)
       end

@@ -196,4 +196,24 @@ Spectator.describe Task::ConcurrentTask do
       expect(subject.fiber_name).to eq("#{subject.class}-#{subject.id}")
     end
   end
+
+  describe "#fiber" do
+    subject { super.save }
+
+    it "returns nil" do
+      expect(subject.fiber).to be_nil
+    end
+
+    context "given a fiber" do
+      let!(fiber) do
+        spawn(name: subject.fiber_name) do
+          sleep 1
+        end
+      end
+
+      it "returns the fiber" do
+        expect(subject.fiber).to eq(fiber)
+      end
+    end
+  end
 end

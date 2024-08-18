@@ -16,6 +16,15 @@ class Task
     def fiber_name
       "#{self.class}-#{self.id}"
     end
+
+    # Returns the associated fiber.
+    #
+    def fiber
+      fiber_name = self.fiber_name
+      Fiber.unsafe_each do |fiber|
+        return fiber if fiber.name == fiber_name
+      end
+    end
   end
 
   include Ktistec::Model

@@ -53,10 +53,9 @@ class TaskWorker
 
   protected def work(now = Time.utc)
     tasks = Task.scheduled(now, reserve: true)
-    tasks.each do |task|
+    tasks.sort_by(&.class.priority.-).each do |task|
       if task.is_a?(Task::ConcurrentTask)
-        spawn do
-          Fiber.current.name = task.fiber_name
+        spawn name: task.fiber_name do
           perform(task)
         end
       else

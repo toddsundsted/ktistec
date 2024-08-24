@@ -41,6 +41,11 @@ class Task
 
   @@table_columns = ["failures", "state"]
 
+  # Priority sets the order in which tasks are spawned by the task
+  # worker.  See `TaskWorker#work`.
+
+  class_property priority = 0
+
   @[Persistent]
   property source_iri : String
 

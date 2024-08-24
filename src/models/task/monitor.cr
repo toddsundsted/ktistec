@@ -9,6 +9,13 @@ class Task
 
     Log = ::Log.for(self)
 
+    # ensures that the monitor task spawns after all other tasks. this
+    # prevents the case where the task worker reserves multiple tasks,
+    # but due to nondeterministic ordering this task runs before the
+    # other tasks spawn (which results in warnings, below).
+
+    class_getter priority = -10
+
     def running_tasks_without_fibers
       Task.where(running: true).select do |task|
         task.is_a?(Task::ConcurrentTask) && task.fiber.nil?
@@ -16,12 +23,6 @@ class Task
     end
 
     def perform
-      # it's a kludge but briefly sleep while all of the other
-      # reserved tasks spawn. this handles the case where the task
-      # worker reserves multiple tasks, but due to nondeterministic
-      # ordering this task runs before the other tasks spawn (which
-      # results in warnings, below).
-      sleep 1
       Log.trace { "monitoring" }
       running_tasks_without_fibers.each do |task|
         Log.warn { %Q|#{task.class} id=#{task.id} is "running" but no running fiber exists| }

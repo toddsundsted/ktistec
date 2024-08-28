@@ -61,8 +61,13 @@ class HTTP::Client
   end
 
   def self.get(url : String, headers : HTTP::Headers? = nil)
-    @@requests << HTTP::Request.new("GET", url, headers)
     url = URI.parse(url)
+    new(url).get(url.request_target, headers)
+  end
+
+  def get(path : String, headers : HTTP::Headers? = nil)
+    url = URI.new(scheme: "https", host: self.host, path: path)
+    @@requests << HTTP::Request.new("GET", url.to_s, headers)
     if url.scheme && url.authority && url.path
       case url.path
       when /bad-json/
@@ -126,8 +131,13 @@ class HTTP::Client
   end
 
   def self.post(url : String, headers : HTTP::Headers, body : String)
-    @@requests << HTTP::Request.new("POST", url, headers, body)
     url = URI.parse(url)
+    new(url).post(url.request_target, headers, body)
+  end
+
+  def post(path : String, headers : HTTP::Headers, body : String)
+    url = URI.new(scheme: "https", host: self.host, path: path)
+    @@requests << HTTP::Request.new("POST", url.to_s, headers, body)
     case url.path
     when /openssl-error/
       raise OpenSSL::Error.new

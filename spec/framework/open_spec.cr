@@ -1,9 +1,12 @@
 require "../../src/framework/open"
 
-require "../spec_helper/key_pair"
+require "../spec_helper/base"
 require "../spec_helper/network"
+require "../spec_helper/key_pair"
 
 Spectator.describe Ktistec::Open do
+  setup_spec
+
   let(key_pair) do
     KeyPair.new("https://key_pair")
   end
@@ -63,6 +66,37 @@ Spectator.describe Ktistec::Open do
 
     it "fails on errors" do
       expect{described_class.open(key_pair, "https://external/io-error")}.to raise_error(Ktistec::Open::Error, /I\/O error/)
+    end
+
+    context "given a remote object" do
+      class MockObject
+        property iri : String
+
+        def initialize(@iri)
+        end
+
+        def to_json_ld(recursive)
+          %Q|{"@id":"#{iri}"}|
+        end
+      end
+
+      let(mock1) { MockObject.new("https://remote/foo/bar/baz") }
+      let(mock2) { MockObject.new("https://remote/?query") }
+
+      before_each do
+        HTTP::Client.objects << mock1
+        HTTP::Client.objects << mock2
+      end
+
+      it "fetches the object" do
+        described_class.open(key_pair, mock1.iri)
+        expect(HTTP::Client.requests).to have("GET #{mock1.iri}")
+      end
+
+      it "fetches the object" do
+        described_class.open(key_pair, mock2.iri)
+        expect(HTTP::Client.requests).to have("GET #{mock2.iri}")
+      end
     end
   end
 

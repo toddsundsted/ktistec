@@ -1,4 +1,5 @@
 require "http"
+require "uri"
 
 require "./signature"
 
@@ -18,13 +19,15 @@ module Ktistec
       message = "Failed"
       attempts.times do
         begin
+          uri = URI.parse(url)
+          client = HTTP::Client.new(uri)
           signed_headers = Ktistec::Signature.sign(key_pair, url, method: :get).merge!(headers)
-          response = HTTP::Client.get(url, signed_headers)
+          response = client.get(uri.request_target, signed_headers)
           case response.status_code
           when 200
             return response
           when 301, 302, 303, 307, 308
-            if (tmp = response.headers["Location"]?) && (url = URI.parse(url).resolve(tmp).to_s)
+            if (tmp = response.headers["Location"]?) && (url = uri.resolve(tmp).to_s)
               next
             else
               message = "Could not redirect [#{response.status_code}] [#{tmp}]"

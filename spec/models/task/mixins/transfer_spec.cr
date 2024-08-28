@@ -34,8 +34,8 @@ Spectator.describe Task::Transfer do
     subject { FooBarTransfer.new }
 
     it "dereferences the recipient" do
-      subject.transfer(activity, from: transferer, to: ["https://unknown-recipient"])
-      expect(HTTP::Client.requests).to have("GET https://unknown-recipient")
+      subject.transfer(activity, from: transferer, to: ["https://unknown-recipient/"])
+      expect(HTTP::Client.requests).to have("GET https://unknown-recipient/")
     end
 
     it "does not dereference the transferer" do

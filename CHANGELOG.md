@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.3.0]
+### Added
+- Add monitoring for hung tasks.
+- Add timeouts for `open` socket operations.
+
+### Fixed
+- Ensure subscribers are notified when a fetch task starts running.
+- Restrict actor fetching on broken image icons to profiles.
+
 ## [v2.2.0]
 ### Added
 - Support streaming updates to the user-interface.
@@ -11,7 +20,7 @@ All notable changes to this project are documented in this file.
 
 ## [v2.1.0]
 ### Added
-- Added support for more ActivityPub types.
+- Add support for more ActivityPub types.
 
 ### Changed
 - Upgraded dependencies.
@@ -235,6 +244,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.3.0]: https://github.com/toddsundsted/ktistec/compare/576ceeb2...1aab0951
 [v2.2.0]: https://github.com/toddsundsted/ktistec/compare/8d68d896...e8fcc772
 [v2.1.0]: https://github.com/toddsundsted/ktistec/compare/a74651d9...238dad82
 [v2.0.0]: https://github.com/toddsundsted/ktistec/compare/490b8266...735842c4

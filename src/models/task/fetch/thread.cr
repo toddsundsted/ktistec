@@ -160,6 +160,9 @@ class Task
     # fetches/network requests for new objects.
     #
     def perform(maximum = 100)
+      # notify subscribers when the task starts running, because the
+      # transition to `running = true` does not trigger a lifecycle
+      # callback.
       Ktistec::Topic{thread}.notify_subscribers
       # look for replies that were added by some other means since
       # the last run. handles the regular arrival of objects via

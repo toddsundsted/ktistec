@@ -11,6 +11,20 @@ class Task
   # Marker for a task that may be processed concurrently.
   #
   module ConcurrentTask
+    # Returns the name assigned to the associated fiber.
+    #
+    def fiber_name
+      "#{self.class}-#{self.id}"
+    end
+
+    # Returns the associated fiber.
+    #
+    def fiber
+      fiber_name = self.fiber_name
+      Fiber.unsafe_each do |fiber|
+        return fiber if fiber.name == fiber_name
+      end
+    end
   end
 
   include Ktistec::Model
@@ -26,6 +40,11 @@ class Task
   # define and use to serialize information about task state.
 
   @@table_columns = ["failures", "state"]
+
+  # Priority sets the order in which tasks are spawned by the task
+  # worker.  See `TaskWorker#work`.
+
+  class_property priority = 0
 
   @[Persistent]
   property source_iri : String
@@ -118,5 +137,15 @@ class Task
 
   def perform
     raise NotImplementedError.new("Task#perform must be implemented in each subclass")
+  end
+
+  def self.destroy_old_tasks
+    delete = "DELETE FROM tasks WHERE (complete = 1 OR backtrace IS NOT NULL) AND created_at < date('now', '-1 month')"
+    Task.exec(delete)
+  end
+
+  def self.clean_up_running_tasks
+    update = "UPDATE tasks SET running = 0 WHERE running = 1"
+    Task.exec(update)
   end
 end

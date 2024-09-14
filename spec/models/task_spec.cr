@@ -12,7 +12,7 @@ Spectator.describe Task do
   end
 
   subject do
-    described_class.new(
+    Task.new(
       source_iri: "https://test.test/source",
       subject_iri: "https://test.test/subject"
     )
@@ -137,6 +137,83 @@ Spectator.describe Task do
 
     it "reserves the scheduled tasks" do
       expect(described_class.scheduled(now, true).all?(&.running)).to be_true
+    end
+  end
+
+  context "given a saved task" do
+    subject { super.save }
+
+    let(now) { Time.utc(2016, 2, 15, 10, 20, 7) }
+
+    describe ".destroy_old_tasks" do
+      it "destroys old complete tasks" do
+        subject.assign(complete: true, created_at: now).save
+        expect{described_class.destroy_old_tasks}.to change{Task.count}.by(-1)
+      end
+
+      it "destroys old failed tasks" do
+        subject.assign(backtrace: [""], created_at: now).save
+        expect{described_class.destroy_old_tasks}.to change{Task.count}.by(-1)
+      end
+
+      it "ignores recent tasks" do
+        subject.assign(complete: true, backtrace: [""]).save
+        expect{described_class.destroy_old_tasks}.not_to change{Task.count}.from(1)
+      end
+    end
+
+    describe ".clean_up_running_tasks" do
+      it "sets running tasks to not running" do
+        subject.assign(running: true).save
+        expect{described_class.clean_up_running_tasks}.to change{Task.count(running: true)}.by(-1)
+      end
+    end
+  end
+end
+
+Spectator.describe Task::ConcurrentTask do
+  setup_spec
+
+  class ConcurrentTask < ::Task
+    include ::Task::ConcurrentTask
+
+    def perform
+      # no-op
+    end
+  end
+
+  subject do
+    ConcurrentTask.new(
+      source_iri: "https://test.test/source",
+      subject_iri: "https://test.test/subject"
+    )
+  end
+
+  describe "#fiber_name" do
+    subject { super.save }
+
+    it "returns the name of the associated fiber" do
+      expect(subject.fiber_name).to eq("#{subject.class}-#{subject.id}")
+    end
+  end
+
+  describe "#fiber" do
+    subject { super.save }
+
+    it "returns nil" do
+      expect(subject.fiber).to be_nil
+    end
+
+    context "given a fiber" do
+      let!(fiber) do
+        spawn(name: subject.fiber_name) do
+          sleep 1
+        end
+      end
+
+      it "returns the fiber" do
+        expect(subject.fiber).to eq(fiber)
+      end
     end
   end
 end

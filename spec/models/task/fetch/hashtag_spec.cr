@@ -43,6 +43,22 @@ Spectator.describe Task::Fetch::Hashtag do
     end
   end
 
+  describe "#follow?" do
+    subject { described_class.new(**options).save }
+
+    it "returns false" do
+      expect(subject.follow?).to be_false
+    end
+
+    context "given a follow relationship" do
+      let_create!(:follow_hashtag_relationship, actor: source, name: options[:subject_iri])
+
+      it "returns true" do
+        expect(subject.follow?).to be_true
+      end
+    end
+  end
+
   describe "#perform" do
     subject do
       described_class.new(

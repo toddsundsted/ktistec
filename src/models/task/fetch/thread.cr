@@ -2,6 +2,7 @@ require "../../task"
 require "./mixins/fetcher"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
+require "../../relationship/content/follow/thread"
 require "../../../framework/topic"
 require "../../activity_pub/collection"
 require "../../../rules/content_rules"
@@ -152,6 +153,12 @@ class Task
     #
     def interrupted?
       @interrupted ||= self.class.find(self.id).complete
+    end
+
+    # Indicates whether a follow relationship exists for the thread.
+    #
+    def follow?
+      Relationship::Content::Follow::Thread.count(actor: source, thread: thread) > 0
     end
 
     # Fetches objects in the thread.

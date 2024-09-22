@@ -2,6 +2,7 @@ require "../../task"
 require "./mixins/fetcher"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
+require "../../relationship/content/follow/hashtag"
 require "../../../framework/topic"
 require "../../../rules/content_rules"
 require "../../../views/view_helper"
@@ -105,6 +106,12 @@ class Task
     #
     def interrupted?
       @interrupted ||= self.class.find(self.id).complete
+    end
+
+    # Indicates whether a follow relationship exists for the hashtag.
+    #
+    def follow?
+      Relationship::Content::Follow::Hashtag.count(actor: source, name: name) > 0
     end
 
     # Fetches objects tagged with the hashtag `name`.

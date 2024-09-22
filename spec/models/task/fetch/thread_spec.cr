@@ -90,6 +90,22 @@ Spectator.describe Task::Fetch::Thread do
     end
   end
 
+  describe "#follow?" do
+    subject { described_class.new(**options).save }
+
+    it "returns false" do
+      expect(subject.follow?).to be_false
+    end
+
+    context "given a follow relationship" do
+      let_create!(:follow_thread_relationship, actor: source, thread: options[:subject_iri])
+
+      it "returns true" do
+        expect(subject.follow?).to be_true
+      end
+    end
+  end
+
   describe "#perform" do
     let_create(:object)
 

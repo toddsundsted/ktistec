@@ -141,14 +141,6 @@ class Task
       end
     end
 
-    private property interrupted : Bool = false
-
-    # Indicates whether the task was asynchronously set as complete.
-    #
-    def interrupted?
-      @interrupted ||= self.class.find(self.id).complete
-    end
-
     # Indicates whether a follow relationship exists for the thread.
     #
     def follow?

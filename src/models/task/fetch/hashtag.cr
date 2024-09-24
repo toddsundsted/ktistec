@@ -94,14 +94,6 @@ class Task
     derived name : String, aliased_to: subject_iri
     validates(name) { "must not be blank" if name.blank? }
 
-    private property interrupted : Bool = false
-
-    # Indicates whether the task was asynchronously set as complete.
-    #
-    def interrupted?
-      @interrupted ||= self.class.find(self.id).complete
-    end
-
     # Indicates whether a follow relationship exists for the hashtag.
     #
     def follow?

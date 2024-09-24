@@ -44,6 +44,10 @@ Spectator.describe Task::Fetch::Fetcher do
     it "makes the task not runnable" do
       expect{subject.complete!}.to change{subject.reload!.runnable?}.to(false)
     end
+
+    it "makes the class interrupted" do
+      expect{subject.complete!}.to change{subject.reload!.interrupted?}.to(true)
+    end
   end
 
   describe "#find_or_fetch_object" do

@@ -94,5 +94,13 @@ class Task
     def complete!
       update_property(:complete, true)
     end
+
+    private property interrupted : Bool = false
+
+    # Indicates whether the task was asynchronously set as complete.
+    #
+    def interrupted?
+      @interrupted ||= self.class.find(self.id).complete
+    end
   end
 end

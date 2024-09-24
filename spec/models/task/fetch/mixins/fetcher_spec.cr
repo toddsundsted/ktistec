@@ -38,6 +38,14 @@ Spectator.describe Task::Fetch::Fetcher do
     end
   end
 
+  describe "#complete!" do
+    subject { TestFetcher.new(source: source, value: "").save }
+
+    it "makes the task not runnable" do
+      expect{subject.complete!}.to change{subject.reload!.runnable?}.to(false)
+    end
+  end
+
   describe "#find_or_fetch_object" do
     subject { TestFetcher.new(source: source, value: "") }
 

@@ -141,12 +141,6 @@ class Task
       end
     end
 
-    # Sets the task to complete.
-    #
-    def complete!
-      update_property(:complete, true)
-    end
-
     private property interrupted : Bool = false
 
     # Indicates whether the task was asynchronously set as complete.

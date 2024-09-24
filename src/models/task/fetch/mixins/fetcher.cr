@@ -88,5 +88,11 @@ class Task
         random.rand(min..max).hours.from_now
       end
     end
+
+    # Sets the task to complete.
+    #
+    def complete!
+      update_property(:complete, true)
+    end
   end
 end

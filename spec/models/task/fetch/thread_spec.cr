@@ -82,14 +82,6 @@ Spectator.describe Task::Fetch::Thread do
     end
   end
 
-  describe "#complete!" do
-    subject { described_class.new(**options).save }
-
-    it "makes the task not runnable" do
-      expect{subject.complete!}.to change{subject.reload!.runnable?}.to(false)
-    end
-  end
-
   describe "#follow?" do
     subject { described_class.new(**options).save }
 

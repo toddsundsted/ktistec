@@ -1,3 +1,4 @@
+require "../../../../../src/models/task"
 require "../../../../../src/models/task/fetch/mixins/fetcher"
 
 require "../../../../spec_helper/base"
@@ -9,19 +10,24 @@ Spectator.describe Task::Fetch::Fetcher do
 
   let_create(:actor, named: :source, with_keys: true)
 
-  class TestFetcher
+  class TestFetcher < Task
     include Task::Fetch::Fetcher
 
     class State
       property failures : Int32 = 0
+
+      def last_success_at
+      end
     end
 
     property state : State { State.new }
 
-    property source : ActivityPub::Actor
+    belongs_to source, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri
+    validates(source) { "missing: #{source_iri}" unless source? }
 
-    def initialize(@source)
-    end
+    derived value : String, aliased_to: subject_iri
+
+    # make public for tests
 
     def find_or_fetch_object(*args, **options)
       super(*args, **options)
@@ -33,7 +39,7 @@ Spectator.describe Task::Fetch::Fetcher do
   end
 
   describe "#find_or_fetch_object" do
-    subject { TestFetcher.new(source: source) }
+    subject { TestFetcher.new(source: source, value: "") }
 
     context "given an object" do
       let_build(:object)
@@ -274,7 +280,7 @@ Spectator.describe Task::Fetch::Fetcher do
   end
 
   describe "#calculate_next_attempt_at" do
-    subject { TestFetcher.new(source: source) }
+    subject { TestFetcher.new(source: source, value: "") }
 
     ImmediateFuture = Task::Fetch::Horizon::ImmediateFuture
     NearFuture = Task::Fetch::Horizon::NearFuture

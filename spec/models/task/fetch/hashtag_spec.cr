@@ -409,9 +409,9 @@ Spectator.describe Task::Fetch::Hashtag do
           expect(HTTP::Client.requests).not_to have("GET #{object2.iri}", "GET #{object3.iri}")
         end
 
-        it "sets the next attempt in the immediate future" do
+        it "does not set the next attempt at" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+          expect(subject.next_attempt_at).to be_nil
         end
 
         it "sets the task as complete" do

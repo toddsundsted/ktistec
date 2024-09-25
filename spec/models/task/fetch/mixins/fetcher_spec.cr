@@ -36,6 +36,10 @@ Spectator.describe Task::Fetch::Fetcher do
     def calculate_next_attempt_at(*args)
       super(*args)
     end
+
+    def set_next_attempt_at(*args, **options)
+      super(*args, **options)
+    end
   end
 
   describe "#complete!" do
@@ -287,6 +291,46 @@ Spectator.describe Task::Fetch::Fetcher do
           expect(subject.find_or_fetch_object(object.iri, include_blocked: true).first).
             to be_true
         end
+      end
+    end
+  end
+
+  describe "#set_next_attempt_at" do
+    subject { TestFetcher.new(source: source, value: "").save }
+
+    it "sets the next attempt at in the immediate future" do
+      subject.set_next_attempt_at(10, 10)
+      expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+    end
+
+    it "sets the next attempt at in the near future" do
+      subject.set_next_attempt_at(10, 6)
+      expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
+    end
+
+    it "sets the next attempt at in the far future" do
+      subject.set_next_attempt_at(10, 0)
+      expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
+    end
+
+    it "sets the next attempt at in the near future" do
+      subject.set_next_attempt_at(10, 0, continuation: true)
+      expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
+    end
+
+    context "when the task has been interrupted" do
+      before_each { subject.complete! }
+
+      it "does not set the next attempt at" do
+        expect{subject.set_next_attempt_at(10, 10)}.not_to change{subject.next_attempt_at}
+      end
+
+      it "does not set the next attempt at" do
+        expect{subject.set_next_attempt_at(10, 6)}.not_to change{subject.next_attempt_at}
+      end
+
+      it "does not set the next attempt at" do
+        expect{subject.set_next_attempt_at(10, 0)}.not_to change{subject.next_attempt_at}
       end
     end
   end

@@ -154,14 +154,7 @@ class Task
         else
           Log.debug { "perform [#{id}] - hashtag: #{name} - complete - #{duration} seconds, #{count} fetched" }
         end
-        self.next_attempt_at =
-          if count < 1 && !continuation && !interrupted            # none fetched
-            calculate_next_attempt_at(Horizon::FarFuture)
-          elsif count < maximum && !interrupted                    # some fetched
-            calculate_next_attempt_at(Horizon::NearFuture)
-          else                                                     # maximum number fetched
-            calculate_next_attempt_at(Horizon::ImmediateFuture)
-          end
+        set_next_attempt_at(maximum, count, continuation)
       end
     end
 

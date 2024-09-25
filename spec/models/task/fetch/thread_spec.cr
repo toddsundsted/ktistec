@@ -511,9 +511,9 @@ Spectator.describe Task::Fetch::Thread do
           expect(HTTP::Client.requests).not_to have("GET #{reply3.iri}", "GET #{reply2.iri}", "GET #{reply1.iri}")
         end
 
-        it "sets the next attempt in the immediate future" do
+        it "does not set the next attempt at" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+          expect(subject.next_attempt_at).to be_nil
         end
 
         it "sets the task as complete" do

@@ -89,6 +89,22 @@ class Task
       end
     end
 
+    # Sets `next_attempt_at`.
+    #
+    private def set_next_attempt_at(maximum, count, continuation = false)
+      return if interrupted?
+      if count < 1 && !continuation
+        self.next_attempt_at =
+          calculate_next_attempt_at(Horizon::FarFuture)
+      elsif count < maximum
+        self.next_attempt_at =
+          calculate_next_attempt_at(Horizon::NearFuture)
+      else
+        self.next_attempt_at =
+          calculate_next_attempt_at(Horizon::ImmediateFuture)
+      end
+    end
+
     # Sets the task to complete.
     #
     def complete!

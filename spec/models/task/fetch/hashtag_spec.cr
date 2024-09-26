@@ -53,10 +53,9 @@ Spectator.describe Task::Fetch::Hashtag do
 
   describe "#perform" do
     subject do
-      described_class.new(
-        source: source,
-        name: "hashtag"
-      ).save
+      # these tests assume this is a "followed" hashtag
+      Factory.build(:follow_hashtag_relationship, actor: source, name: "hashtag").save
+      described_class.new(source: source, name: "hashtag").save
     end
 
     it "sets the next attempt at" do

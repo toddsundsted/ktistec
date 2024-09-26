@@ -27,6 +27,8 @@ Spectator.describe Task::Fetch::Fetcher do
 
     derived value : String, aliased_to: subject_iri
 
+    property? follow : Bool = true
+
     # make public for tests
 
     def find_or_fetch_object(*args, **options)
@@ -316,6 +318,23 @@ Spectator.describe Task::Fetch::Fetcher do
     it "sets the next attempt at in the near future" do
       subject.set_next_attempt_at(10, 0, continuation: true)
       expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
+    end
+
+    context "when the task is not followed" do
+      before_each { subject.follow = false }
+
+      it "sets the next attempt at in the immediate future" do
+        subject.set_next_attempt_at(10, 10)
+        expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+      end
+
+      it "does not set the next attempt at" do
+        expect{subject.set_next_attempt_at(10, 6)}.not_to change{subject.next_attempt_at}
+      end
+
+      it "does not set the next attempt at" do
+        expect{subject.set_next_attempt_at(10, 0)}.not_to change{subject.next_attempt_at}
+      end
     end
 
     context "when the task has been interrupted" do

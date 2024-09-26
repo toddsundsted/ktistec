@@ -102,10 +102,9 @@ Spectator.describe Task::Fetch::Thread do
     let_create(:object)
 
     subject do
-      described_class.new(
-        source: source,
-        thread: object.thread
-      ).save
+      # these tests assume this is a "followed" thread
+      Factory.build(:follow_thread_relationship, actor: source, thread: object.thread).save
+      described_class.new(source: source, thread: object.thread).save
     end
 
     it "sets the next attempt at" do

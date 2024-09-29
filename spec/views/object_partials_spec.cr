@@ -95,7 +95,7 @@ Spectator.describe "object partials" do
     end
 
     context "when authenticated" do
-      before_each { env.account = account }
+      sign_in(as: account.username)
 
       pre_condition { expect(object.draft?).to be_false }
 
@@ -215,7 +215,7 @@ Spectator.describe "object partials" do
       end
 
       context "when authenticated" do
-        before_each { env.account = account }
+        sign_in(as: account.username)
 
         it "does not render a button to reply" do
           expect(subject.xpath_nodes("//button/text()")).not_to have("Reply")
@@ -264,7 +264,7 @@ Spectator.describe "object partials" do
       end
 
       context "when authenticated" do
-        before_each { env.account = account }
+        sign_in(as: account.username)
 
         it "renders a button to block" do
           expect(subject.xpath_nodes("//button/text()")).to have("Block")
@@ -325,7 +325,7 @@ Spectator.describe "object partials" do
       end
 
       context "when authenticated" do
-        before_each { env.account = account }
+        sign_in(as: account.username)
 
         it "renders a checkbox" do
           actor.unapprove(object)

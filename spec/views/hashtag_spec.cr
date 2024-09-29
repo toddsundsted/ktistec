@@ -66,7 +66,7 @@ Spectator.describe "index.html.slang" do
   end
 
   context "if authenticated" do
-    before_each { env.account = account }
+    sign_in(as: account.username)
 
     it "renders turbo-stream-source tag" do
       expect(subject.xpath_nodes("//turbo-stream-source")).not_to be_empty

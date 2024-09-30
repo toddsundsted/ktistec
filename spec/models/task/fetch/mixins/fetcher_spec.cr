@@ -35,10 +35,6 @@ Spectator.describe Task::Fetch::Fetcher do
       super(*args, **options)
     end
 
-    def calculate_next_attempt_at(*args)
-      super(*args)
-    end
-
     def set_next_attempt_at(*args, **options)
       super(*args, **options)
     end
@@ -300,24 +296,76 @@ Spectator.describe Task::Fetch::Fetcher do
   describe "#set_next_attempt_at" do
     subject { TestFetcher.new(source: source, value: "").save }
 
+    EVERYTHING = {10, 10}
+    SOMETHING = {10, 6}
+    NOTHING = {10, 0}
+
     it "sets the next attempt at in the immediate future" do
-      subject.set_next_attempt_at(10, 10)
+      subject.set_next_attempt_at(*EVERYTHING)
       expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
     end
 
+    it "does not increment the failure counter" do
+      expect{subject.set_next_attempt_at(*EVERYTHING)}.not_to change{subject.failures}
+    end
+
     it "sets the next attempt at in the near future" do
-      subject.set_next_attempt_at(10, 6)
+      subject.set_next_attempt_at(*SOMETHING)
       expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
+    end
+
+    it "does not increment the failure counter" do
+      expect{subject.set_next_attempt_at(*SOMETHING)}.not_to change{subject.failures}
     end
 
     it "sets the next attempt at in the far future" do
-      subject.set_next_attempt_at(10, 0)
+      subject.set_next_attempt_at(*NOTHING)
       expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
     end
 
+    it "increments the failure counter" do
+      expect{subject.set_next_attempt_at(*NOTHING)}.to change{subject.failures}.to(1)
+    end
+
     it "sets the next attempt at in the near future" do
-      subject.set_next_attempt_at(10, 0, continuation: true)
+      subject.set_next_attempt_at(*NOTHING, continuation: true)
       expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
+    end
+
+    it "does not increment the failure counter" do
+      expect{subject.set_next_attempt_at(*NOTHING, continuation: true)}.not_to change{subject.failures}
+    end
+
+    context "given a prior failure" do
+      before_each { subject.state.failures = 1 }
+
+      it "resets the failure counter" do
+        expect{subject.set_next_attempt_at(*EVERYTHING)}.to change{subject.failures}.to(0)
+      end
+
+      it "resets the failure counter" do
+        expect{subject.set_next_attempt_at(*SOMETHING)}.to change{subject.failures}.to(0)
+      end
+
+      it "returns a time even further in the future" do
+        expect(subject.set_next_attempt_at(*NOTHING)).to be_between(350.minutes.from_now, 610.minutes.from_now)
+      end
+
+      it "increments the failure counter" do
+        expect{subject.set_next_attempt_at(*NOTHING)}.to change{subject.failures}.to(2)
+      end
+    end
+
+    context "given six prior failures" do
+      before_each { subject.state.failures = 6 }
+
+      it "returns a time the maximum distance in the future" do
+        expect(subject.set_next_attempt_at(*NOTHING)).to be_between(122.hours.from_now, 214.hours.from_now)
+      end
+
+      it "increments the failure counter" do
+        expect{subject.set_next_attempt_at(*NOTHING)}.to change{subject.failures}.to(7)
+      end
     end
 
     context "when the task is not followed" do
@@ -350,70 +398,6 @@ Spectator.describe Task::Fetch::Fetcher do
 
       it "does not set the next attempt at" do
         expect{subject.set_next_attempt_at(10, 0)}.not_to change{subject.next_attempt_at}
-      end
-    end
-  end
-
-  describe "#calculate_next_attempt_at" do
-    subject { TestFetcher.new(source: source, value: "") }
-
-    ImmediateFuture = Task::Fetch::Horizon::ImmediateFuture
-    NearFuture = Task::Fetch::Horizon::NearFuture
-    FarFuture = Task::Fetch::Horizon::FarFuture
-
-    it "returns a time in the immediate future" do
-      expect(subject.calculate_next_attempt_at(ImmediateFuture)).to be < 1.minute.from_now
-    end
-
-    it "does not increment the failure counter" do
-      expect{subject.calculate_next_attempt_at(ImmediateFuture)}.not_to change{subject.failures}
-    end
-
-    it "returns a time in the near future" do
-      expect(subject.calculate_next_attempt_at(NearFuture)).to be_between(80.minutes.from_now, 160.minutes.from_now)
-    end
-
-    it "does not increment the failure counter" do
-      expect{subject.calculate_next_attempt_at(NearFuture)}.not_to change{subject.failures}
-    end
-
-    it "returns a time in the far future" do
-      expect(subject.calculate_next_attempt_at(FarFuture)).to be_between(170.minutes.from_now, 310.minutes.from_now)
-    end
-
-    it "increments the failures counter" do
-      expect{subject.calculate_next_attempt_at(FarFuture)}.to change{subject.failures}.to(1)
-    end
-
-    context "given a prior failure" do
-      before_each { subject.state.failures = 1 }
-
-      it "resets the failure counter" do
-        expect{subject.calculate_next_attempt_at(ImmediateFuture)}.to change{subject.failures}.to(0)
-      end
-
-      it "resets the failure counter" do
-        expect{subject.calculate_next_attempt_at(NearFuture)}.to change{subject.failures}.to(0)
-      end
-
-      it "returns a time even further in the future" do
-        expect(subject.calculate_next_attempt_at(FarFuture)).to be_between(350.minutes.from_now, 610.minutes.from_now)
-      end
-
-      it "increments the failure counter" do
-        expect{subject.calculate_next_attempt_at(FarFuture)}.to change{subject.failures}.to(2)
-      end
-    end
-
-    context "given six prior failures" do
-      before_each { subject.state.failures = 6 }
-
-      it "returns a time the maximum distance in the future" do
-        expect(subject.calculate_next_attempt_at(FarFuture)).to be_between(122.hours.from_now, 214.hours.from_now)
-      end
-
-      it "increments the failure counter" do
-        expect{subject.calculate_next_attempt_at(FarFuture)}.to change{subject.failures}.to(7)
       end
     end
   end

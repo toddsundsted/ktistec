@@ -861,6 +861,14 @@ module Ktistec::ViewHelper
     "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/unfollow"
   end
 
+  macro start_fetch_hashtag_path(hashtag = nil)
+    "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/fetch/start"
+  end
+
+  macro cancel_fetch_hashtag_path(hashtag = nil)
+    "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/fetch/cancel"
+  end
+
   macro mention_path(mention = nil)
     {% if mention %}
       "/mentions/#{{{mention}}}"

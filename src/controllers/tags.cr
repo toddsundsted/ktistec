@@ -70,4 +70,40 @@ class TagsController
       redirect back_path
     end
   end
+
+  post "/tags/:hashtag/fetch/start" do |env|
+    hashtag = env.params.url["hashtag"]
+
+    collection = Tag::Hashtag.all_objects(hashtag)
+    count = Tag::Hashtag.all_objects_count(hashtag)
+
+    not_found if collection.empty?
+
+    task = Task::Fetch::Hashtag.find_or_new(source: env.account.actor, name: hashtag)
+    task.assign(backtrace: nil).schedule if task.runnable? || task.complete
+
+    if turbo_frame?
+      ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, follow: nil, task: task
+    else
+      redirect back_path
+    end
+  end
+
+  post "/tags/:hashtag/fetch/cancel" do |env|
+    hashtag = env.params.url["hashtag"]
+
+    collection = Tag::Hashtag.all_objects(hashtag)
+    count = Tag::Hashtag.all_objects_count(hashtag)
+
+    not_found if collection.empty?
+
+    task = Task::Fetch::Hashtag.find?(source: env.account.actor, name: hashtag)
+    task.complete! if task
+
+    if turbo_frame?
+      ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, follow: nil, task: nil
+    else
+      redirect back_path
+    end
+  end
 end

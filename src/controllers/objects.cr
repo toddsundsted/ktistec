@@ -205,6 +205,42 @@ class ObjectsController
     end
   end
 
+  post "/remote/objects/:id/fetch/start" do |env|
+    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
+      not_found
+    end
+
+    thread = object.thread(for_actor: env.account.actor)
+
+    thread.first.save # lazy migration -- ensure the `thread` property is up to date
+
+    task = Task::Fetch::Thread.find_or_new(source: env.account.actor, thread: thread.first.thread)
+    task.assign(backtrace: nil).schedule if task.runnable? || task.complete
+
+    if turbo_frame?
+      ok "objects/thread", env: env, object: object, thread: thread, follow: nil, task: task
+    else
+      redirect back_path
+    end
+  end
+
+  post "/remote/objects/:id/fetch/cancel" do |env|
+    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
+      not_found
+    end
+
+    thread = object.thread(for_actor: env.account.actor)
+
+    task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
+    task.complete! if task
+
+    if turbo_frame?
+      ok "objects/thread", env: env, object: object, thread: thread, follow: nil, task: task
+    else
+      redirect back_path
+    end
+  end
+
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
     {

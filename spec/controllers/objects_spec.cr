@@ -1191,4 +1191,181 @@ Spectator.describe ObjectsController do
       end
     end
   end
+
+  describe "POST /remote/objects/:id/fetch/start" do
+    it "returns 401" do
+      post "/remote/objects/0/fetch/start"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/remote/objects/#{remote.id}/fetch/start"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "does not follow the thread" do
+        post "/remote/objects/#{remote.id}/fetch/start"
+        expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to be_empty
+      end
+
+      it "begins fetching the thread" do
+        post "/remote/objects/#{remote.id}/fetch/start"
+        expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
+      end
+
+      context "within a turbo-frame" do
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/fetch/start", TURBO_FRAME
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "given a reply" do
+        let_create!(:object, named: :reply, in_reply_to: remote)
+
+        it "succeeds" do
+          post "/remote/objects/#{reply.id}/fetch/start"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "does not follow the thread" do
+          post "/remote/objects/#{reply.id}/fetch/start"
+          expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to be_empty
+        end
+
+        it "begins fetching the thread" do
+          post "/remote/objects/#{reply.id}/fetch/start"
+          expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
+        end
+      end
+
+      context "given an existing follow and fetch" do
+        let_create!(:follow_thread_relationship, actor: actor, thread: remote.thread)
+        let_create!(:fetch_thread_task, source: actor, thread: remote.thread)
+
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/fetch/start"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "does not change the count of follow relationships" do
+          expect{post "/remote/objects/#{remote.id}/fetch/start"}.
+            not_to change{Relationship::Content::Follow::Thread.count(thread: remote.iri)}
+        end
+
+        it "does not change the count of fetch tasks" do
+          expect{post "/remote/objects/#{remote.id}/fetch/start"}.
+            not_to change{Task::Fetch::Thread.count(thread: remote.iri)}
+        end
+
+        context "where the fetch is complete but has failed" do
+          before_each { fetch_thread_task.assign(complete: true, backtrace: ["error"]).save }
+
+          it "clears the backtrace" do
+            expect{post "/remote/objects/#{remote.id}/fetch/start"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
+          end
+        end
+      end
+
+      it "returns 404 if object is draft" do
+        post "/remote/objects/#{draft.id}/fetch/start"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/fetch/start"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/:id/fetch/cancel" do
+    it "returns 401" do
+      post "/remote/objects/0/fetch/cancel"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/remote/objects/#{remote.id}/fetch/cancel"
+        expect(response.status_code).to eq(302)
+      end
+
+      context "within a turbo-frame" do
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/fetch/cancel", TURBO_FRAME
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "given a follow and fetch" do
+        let_create(:object, named: :reply, in_reply_to: remote)
+        let_create!(:follow_thread_relationship, actor: actor, thread: reply.thread)
+        let_create!(:fetch_thread_task, source: actor, thread: reply.thread)
+
+        it "succeeds" do
+          post "/remote/objects/#{remote.id}/fetch/cancel"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "does not unfollow the thread" do
+          post "/remote/objects/#{remote.id}/fetch/cancel"
+          expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(reply.thread)
+        end
+
+        it "stops fetching the thread" do
+          post "/remote/objects/#{remote.id}/fetch/cancel"
+          expect(Task::Fetch::Thread.where(complete: true).map(&.subject_iri)).to contain_exactly(reply.thread)
+        end
+
+        context "within a turbo-frame" do
+          it "succeeds" do
+            post "/remote/objects/#{remote.id}/fetch/cancel", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "given a reply" do
+          let_create!(:object, named: :reply, in_reply_to: remote)
+
+          it "succeeds" do
+            post "/remote/objects/#{reply.id}/fetch/cancel"
+            expect(response.status_code).to eq(302)
+          end
+
+          it "does not unfollow the root object of the thread" do
+            post "/remote/objects/#{reply.id}/fetch/cancel"
+            expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.thread)
+          end
+
+          it "stops fetching the root object of the thread" do
+            post "/remote/objects/#{reply.id}/fetch/cancel"
+            expect(Task::Fetch::Thread.where(complete: true).map(&.subject_iri)).to contain_exactly(remote.iri)
+          end
+
+          context "within a turbo-frame" do
+            it "succeeds" do
+              post "/remote/objects/#{reply.id}/fetch/cancel", TURBO_FRAME
+              expect(response.status_code).to eq(200)
+            end
+          end
+        end
+
+        it "returns 404 if object is draft" do
+          post "/remote/objects/#{draft.id}/fetch/cancel"
+          expect(response.status_code).to eq(404)
+        end
+
+        it "returns 404 if object does not exist" do
+          post "/remote/objects/999999/fetch/cancel"
+          expect(response.status_code).to eq(404)
+        end
+      end
+    end
+  end
 end

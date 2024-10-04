@@ -1,3 +1,6 @@
+crystal:
+  _task = task
+  _follow = follow
 turbo-frame#thread_page_thread_controls
   .ui.thread.segments
     .ui.segment
@@ -17,12 +20,19 @@ turbo-frame#thread_page_thread_controls
             a.ui.avatar.image data-turbo-frame="_top" href=remote_actor_path(actor)
               img data-actor-id=actor.id src=icon
       - if env.account?
-        - if task && (status = fetch_task_status_line(task, thread))
+        - if _task && (_status = fetch_task_status_line(_task, thread))
           p.task
-            em = status
+            em = _status
     - if env.account?
       .ui.basic.segment
-        - if follow.nil? || follow.new_record?
-          == form_button "Follow", follow_thread_path(thread.first), button_class: "ui button primary"
-        - else
+        - if _follow && !_follow.destroyed?
           == form_button "Unfollow", unfollow_thread_path(thread.first)
+        - elsif _task && !_task.complete
+          == form_button "Cancel", cancel_fetch_thread_path(thread.first)
+        - else
+          form.ui.inline.form method="POST"
+            == authenticity_token(env)
+            .ui.buttons
+              button.ui.primary.button type="submit" formaction=follow_thread_path(thread.first) Follow
+              .or
+              button.ui.button type="submit" formaction=start_fetch_thread_path(thread.first) Fetch

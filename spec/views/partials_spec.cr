@@ -182,6 +182,72 @@ Spectator.describe "partials" do
     end
   end
 
+  describe "thread_page_thread_controls.html.slang" do
+    sign_in
+
+    let_create(:object)
+
+    let(env) { env_factory("GET", "/remote/objects/#{object.id}/thread") }
+
+    let(:thread) { object.thread(for_actor: object.attributed_to) }
+
+    let(task) { nil }
+    let(follow) { nil }
+
+    subject do
+      begin
+        XML.parse_html(render "./src/views/partials/thread_page_thread_controls.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    it "renders a follow and a fetch button" do
+      expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
+        to contain_exactly("Follow", "Fetch")
+    end
+
+    def_double :follow, destroyed?: false
+
+    context "given a follow" do
+      let(follow) { new_double(:follow) }
+
+      it "renders an unfollow button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
+          to contain_exactly("Unfollow")
+      end
+    end
+
+    context "given a destroyed follow" do
+      let(follow) { new_double(:follow, destroyed?: true) }
+
+      it "does not render an unfollow button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
+          not_to contain("Unfollow")
+      end
+    end
+
+    def_double :task, complete: false, running: true, backtrace: nil
+
+    context "given a task" do
+      let(task) { new_double(:task) }
+
+      it "renders a cancel button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
+          to contain_exactly("Cancel")
+      end
+    end
+
+    context "given a complete task" do
+      let(task) { new_double(:task, complete: true) }
+
+      it "does not render a cancel button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
+          not_to contain("Cancel")
+      end
+    end
+  end
+
   describe "actor-panel.html.slang" do
     let_create(:actor)
 

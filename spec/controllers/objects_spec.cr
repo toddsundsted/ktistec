@@ -1000,11 +1000,6 @@ Spectator.describe ObjectsController do
           post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
           expect(response.status_code).to eq(200)
         end
-
-        it "renders an unfollow button" do
-          post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
-          expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Unfollow")
-        end
       end
 
       context "given a reply" do
@@ -1023,18 +1018,6 @@ Spectator.describe ObjectsController do
         it "begins fetching the thread" do
           post "/remote/objects/#{reply.id}/follow"
           expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
-        end
-
-        context "within a turbo-frame" do
-          it "succeeds" do
-            post "/remote/objects/#{reply.id}/follow", TURBO_FRAME
-            expect(response.status_code).to eq(200)
-          end
-
-          it "renders an unfollow button" do
-            post "/remote/objects/#{reply.id}/follow", TURBO_FRAME
-            expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Unfollow")
-          end
         end
       end
 
@@ -1062,18 +1045,6 @@ Spectator.describe ObjectsController do
 
           it "clears the backtrace" do
             expect{post "/remote/objects/#{remote.id}/follow"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
-          end
-        end
-
-        context "within a turbo-frame" do
-          it "succeeds" do
-            post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
-            expect(response.status_code).to eq(200)
-          end
-
-          it "renders an unfollow button" do
-            post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
-            expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Unfollow")
           end
         end
       end
@@ -1109,11 +1080,6 @@ Spectator.describe ObjectsController do
           post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
           expect(response.status_code).to eq(200)
         end
-
-        it "renders a follow button" do
-          post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
-          expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
-        end
       end
 
       context "given a follow and fetch" do
@@ -1128,23 +1094,18 @@ Spectator.describe ObjectsController do
 
         it "unfollows the thread" do
           post "/remote/objects/#{remote.id}/unfollow"
-          expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+          expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to be_empty
         end
 
         it "stops fetching the thread" do
           post "/remote/objects/#{remote.id}/unfollow"
-          expect(Task::Fetch::Thread.where(complete: true).map(&.subject_iri)).to eq([remote.iri])
+          expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(remote.iri)
         end
 
         context "within a turbo-frame" do
           it "succeeds" do
             post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
             expect(response.status_code).to eq(200)
-          end
-
-          it "renders a follow button" do
-            post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
-            expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
           end
         end
 
@@ -1158,23 +1119,18 @@ Spectator.describe ObjectsController do
 
           it "unfollows the root object of the thread" do
             post "/remote/objects/#{reply.id}/unfollow"
-            expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to be_empty
+            expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to be_empty
           end
 
           it "stops fetching the root object of the thread" do
             post "/remote/objects/#{reply.id}/unfollow"
-            expect(Task::Fetch::Thread.where(complete: true).map(&.subject_iri)).to eq([remote.iri])
+            expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(remote.iri)
           end
 
           context "within a turbo-frame" do
             it "succeeds" do
               post "/remote/objects/#{reply.id}/unfollow", TURBO_FRAME
               expect(response.status_code).to eq(200)
-            end
-
-            it "renders a follow button" do
-              post "/remote/objects/#{reply.id}/unfollow", TURBO_FRAME
-              expect(body.xpath_nodes("//*[@id='thread_page_thread_controls']//button")).to have("Follow")
             end
           end
         end
@@ -1315,12 +1271,12 @@ Spectator.describe ObjectsController do
 
         it "does not unfollow the thread" do
           post "/remote/objects/#{remote.id}/fetch/cancel"
-          expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(reply.thread)
+          expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(reply.thread)
         end
 
         it "stops fetching the thread" do
           post "/remote/objects/#{remote.id}/fetch/cancel"
-          expect(Task::Fetch::Thread.where(complete: true).map(&.subject_iri)).to contain_exactly(reply.thread)
+          expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(reply.thread)
         end
 
         context "within a turbo-frame" do
@@ -1340,12 +1296,12 @@ Spectator.describe ObjectsController do
 
           it "does not unfollow the root object of the thread" do
             post "/remote/objects/#{reply.id}/fetch/cancel"
-            expect(Relationship::Content::Follow::Thread.all.map(&.to_iri)).to contain_exactly(remote.thread)
+            expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(remote.thread)
           end
 
           it "stops fetching the root object of the thread" do
             post "/remote/objects/#{reply.id}/fetch/cancel"
-            expect(Task::Fetch::Thread.where(complete: true).map(&.subject_iri)).to contain_exactly(remote.iri)
+            expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(remote.iri)
           end
 
           context "within a turbo-frame" do

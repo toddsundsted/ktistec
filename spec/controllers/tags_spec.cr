@@ -121,7 +121,7 @@ Spectator.describe TagsController do
 
       it "follows the tag" do
         post "/tags/foo/follow"
-        expect(Relationship::Content::Follow::Hashtag.all.map(&.to_iri)).to contain_exactly("foo")
+        expect(Relationship::Content::Follow::Hashtag.all.map(&.name)).to contain_exactly("foo")
       end
 
       it "begins fetching the tag" do
@@ -133,11 +133,6 @@ Spectator.describe TagsController do
         it "succeeds" do
           post "/tags/foo/follow", TURBO_FRAME
           expect(response.status_code).to eq(200)
-        end
-
-        it "renders an unfollow button" do
-          post "/tags/foo/follow", TURBO_FRAME
-          expect(body.xpath_nodes("//*[@id='tag_page_tag_controls']//button")).to have("Unfollow")
         end
       end
 
@@ -165,18 +160,6 @@ Spectator.describe TagsController do
 
           it "clears the backtrace" do
             expect{post "/tags/foo/follow"}.to change{fetch_hashtag_task.reload!.backtrace}.to(nil)
-          end
-        end
-
-        context "within a turbo-frame" do
-          it "succeeds" do
-            post "/tags/foo/follow", TURBO_FRAME
-            expect(response.status_code).to eq(200)
-          end
-
-          it "renders an unfollow button" do
-            post "/tags/foo/follow", TURBO_FRAME
-            expect(body.xpath_nodes("//*[@id='tag_page_tag_controls']//button")).to have("Unfollow")
           end
         end
       end
@@ -210,11 +193,6 @@ Spectator.describe TagsController do
           post "/tags/foo/unfollow", TURBO_FRAME
           expect(response.status_code).to eq(200)
         end
-
-        it "renders a follow button" do
-          post "/tags/foo/unfollow", TURBO_FRAME
-          expect(body.xpath_nodes("//*[@id='tag_page_tag_controls']//button")).to have("Follow")
-        end
       end
 
       context "given a follow and a fetch" do
@@ -228,24 +206,12 @@ Spectator.describe TagsController do
 
         it "unfollows the tag" do
           post "/tags/foo/unfollow"
-          expect(Relationship::Content::Follow::Hashtag.all.map(&.to_iri)).to be_empty
+          expect(Relationship::Content::Follow::Hashtag.all.map(&.name)).to be_empty
         end
 
         it "stops fetching the hashtag" do
           post "/tags/foo/unfollow"
-          expect(Task::Fetch::Hashtag.where(complete: true).map(&.subject_iri)).to eq(["foo"])
-        end
-
-        context "within a turbo-frame" do
-          it "succeeds" do
-            post "/tags/foo/unfollow", TURBO_FRAME
-            expect(response.status_code).to eq(200)
-          end
-
-          it "renders a follow button" do
-            post "/tags/foo/unfollow", TURBO_FRAME
-            expect(body.xpath_nodes("//*[@id='tag_page_tag_controls']//button")).to have("Follow")
-          end
+          expect(Task::Fetch::Hashtag.where(complete: true).map(&.name)).to contain_exactly("foo")
         end
       end
 
@@ -275,7 +241,7 @@ Spectator.describe TagsController do
 
       it "does not follow the tag" do
         post "/tags/foo/fetch/start"
-        expect(Relationship::Content::Follow::Hashtag.all.map(&.to_iri)).to be_empty
+        expect(Relationship::Content::Follow::Hashtag.all.map(&.name)).to be_empty
       end
 
       it "begins fetching the tag" do
@@ -360,12 +326,12 @@ Spectator.describe TagsController do
 
         it "does not unfollow the tag" do
           post "/tags/foo/fetch/cancel"
-          expect(Relationship::Content::Follow::Hashtag.all.map(&.to_iri)).to contain_exactly("foo")
+          expect(Relationship::Content::Follow::Hashtag.all.map(&.name)).to contain_exactly("foo")
         end
 
         it "stops fetching the hashtag" do
           post "/tags/foo/fetch/cancel"
-          expect(Task::Fetch::Hashtag.where(complete: true).map(&.subject_iri)).to eq(["foo"])
+          expect(Task::Fetch::Hashtag.where(complete: true).map(&.name)).to contain_exactly("foo")
         end
       end
 

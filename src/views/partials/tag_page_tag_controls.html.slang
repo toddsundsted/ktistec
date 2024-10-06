@@ -24,4 +24,4 @@ turbo-frame#tag_page_tag_controls
             .ui.buttons
               button.ui.primary.button type="submit" formaction=follow_hashtag_path(hashtag) Follow
               .or
-              button.ui.button type="submit" formaction=start_fetch_hashtag_path(hashtag) Fetch
+              button.ui.button type="submit" formaction=start_fetch_hashtag_path(hashtag) Fetch Once

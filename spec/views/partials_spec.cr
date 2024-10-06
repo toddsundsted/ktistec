@@ -138,7 +138,7 @@ Spectator.describe "partials" do
 
     it "renders a follow and a fetch button" do
       expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
-        to contain_exactly("Follow", "Fetch")
+        to contain_exactly("Follow", "Fetch Once")
     end
 
     def_double :follow, destroyed?: false
@@ -204,7 +204,7 @@ Spectator.describe "partials" do
 
     it "renders a follow and a fetch button" do
       expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
-        to contain_exactly("Follow", "Fetch")
+        to contain_exactly("Follow", "Fetch Once")
     end
 
     def_double :follow, destroyed?: false

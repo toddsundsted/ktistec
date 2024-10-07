@@ -163,82 +163,76 @@ class ObjectsController
   # property, which identifies the root of the thread and which is
   # updated when previously uncached parent objects are fetched.
 
-  post "/remote/objects/:id/follow" do |env|
+  private macro set_up
+    follow = nil
+    task = nil
+  end
+
+  private macro check_thread
     unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
       not_found
     end
-
     thread = object.thread(for_actor: env.account.actor)
+    # lazily migrate objects and ensure the `thread` property is set
+    thread.first.save
+  end
 
-    thread.first.save # lazy migration -- ensure the `thread` property is up to date
-
+  private macro find_or_new_follow
     follow = Relationship::Content::Follow::Thread.find_or_new(actor: env.account.actor, thread: thread.first.thread)
     follow.save if follow.new_record?
+  end
 
+  private macro find_or_new_task
     task = Task::Fetch::Thread.find_or_new(source: env.account.actor, thread: thread.first.thread)
     task.assign(backtrace: nil).schedule if task.runnable? || task.complete
+  end
 
+  private macro destroy_follow
+    follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
+    follow.destroy if follow
+  end
+
+  private macro complete_task
+    task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
+    task.complete! if task
+  end
+
+  private macro render_or_redirect
     if turbo_frame?
       ok "objects/thread", env: env, object: object, thread: thread, follow: follow, task: task
     else
       redirect back_path
     end
+  end
+
+  post "/remote/objects/:id/follow" do |env|
+    set_up
+    check_thread
+    find_or_new_follow
+    find_or_new_task
+    render_or_redirect
   end
 
   post "/remote/objects/:id/unfollow" do |env|
-    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
-      not_found
-    end
-
-    thread = object.thread(for_actor: env.account.actor)
-
-    follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
-    follow.destroy if follow
-
-    task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
-    task.complete! if task
-
-    if turbo_frame?
-      ok "objects/thread", env: env, object: object, thread: thread, follow: follow, task: task
-    else
-      redirect back_path
-    end
+    set_up
+    check_thread
+    destroy_follow
+    complete_task
+    render_or_redirect
   end
 
   post "/remote/objects/:id/fetch/start" do |env|
-    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
-      not_found
-    end
-
-    thread = object.thread(for_actor: env.account.actor)
-
-    thread.first.save # lazy migration -- ensure the `thread` property is up to date
-
-    task = Task::Fetch::Thread.find_or_new(source: env.account.actor, thread: thread.first.thread)
-    task.assign(backtrace: nil).schedule if task.runnable? || task.complete
-
-    if turbo_frame?
-      ok "objects/thread", env: env, object: object, thread: thread, follow: nil, task: task
-    else
-      redirect back_path
-    end
+    set_up
+    check_thread
+    find_or_new_task
+    render_or_redirect
   end
 
   post "/remote/objects/:id/fetch/cancel" do |env|
-    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
-      not_found
-    end
-
-    thread = object.thread(for_actor: env.account.actor)
-
-    task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
-    task.complete! if task
-
-    if turbo_frame?
-      ok "objects/thread", env: env, object: object, thread: thread, follow: nil, task: task
-    else
-      redirect back_path
-    end
+    set_up
+    check_thread
+    complete_task
+    render_or_redirect
   end
 
   private def self.params(env)

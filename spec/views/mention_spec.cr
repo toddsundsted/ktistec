@@ -47,7 +47,7 @@ Spectator.describe "index.html.slang" do
   end
 
   context "if authenticated" do
-    before_each { env.account = account }
+    sign_in(as: account.username)
 
     it "renders a button to follow the mention" do
       expect(subject.xpath_nodes("//form//button")).to have("Follow")

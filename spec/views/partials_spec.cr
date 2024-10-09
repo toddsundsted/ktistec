@@ -117,6 +117,137 @@ Spectator.describe "partials" do
     )
   end
 
+  describe "tag_page_tag_controls.html.slang" do
+    sign_in
+
+    let(hashtag) { "foobar" }
+
+    let(env) { env_factory("GET", "/tags/#{hashtag}") }
+
+    let(task) { nil }
+    let(follow) { nil }
+    let(count) { 0 }
+
+    subject do
+      begin
+        XML.parse_html(render "./src/views/partials/tag_page_tag_controls.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    it "renders a follow and a fetch button" do
+      expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
+        to contain_exactly("Follow", "Fetch Once")
+    end
+
+    def_double :follow, destroyed?: false
+
+    context "given a follow" do
+      let(follow) { new_double(:follow) }
+
+      it "renders an unfollow button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
+          to contain_exactly("Unfollow")
+      end
+    end
+
+    context "given a destroyed follow" do
+      let(follow) { new_double(:follow, destroyed?: true) }
+
+      it "does not render an unfollow button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
+          not_to contain("Unfollow")
+      end
+    end
+
+    def_double :task, complete: false, running: true, backtrace: nil
+
+    context "given a task" do
+      let(task) { new_double(:task) }
+
+      it "renders a cancel button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
+          to contain_exactly("Cancel")
+      end
+    end
+
+    context "given a complete task" do
+      let(task) { new_double(:task, complete: true) }
+
+      it "does not render a cancel button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
+          not_to contain("Cancel")
+      end
+    end
+  end
+
+  describe "thread_page_thread_controls.html.slang" do
+    sign_in
+
+    let_create(:object)
+
+    let(env) { env_factory("GET", "/remote/objects/#{object.id}/thread") }
+
+    let(:thread) { object.thread(for_actor: object.attributed_to) }
+
+    let(task) { nil }
+    let(follow) { nil }
+
+    subject do
+      begin
+        XML.parse_html(render "./src/views/partials/thread_page_thread_controls.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    it "renders a follow and a fetch button" do
+      expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
+        to contain_exactly("Follow", "Fetch Once")
+    end
+
+    def_double :follow, destroyed?: false
+
+    context "given a follow" do
+      let(follow) { new_double(:follow) }
+
+      it "renders an unfollow button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
+          to contain_exactly("Unfollow")
+      end
+    end
+
+    context "given a destroyed follow" do
+      let(follow) { new_double(:follow, destroyed?: true) }
+
+      it "does not render an unfollow button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
+          not_to contain("Unfollow")
+      end
+    end
+
+    def_double :task, complete: false, running: true, backtrace: nil
+
+    context "given a task" do
+      let(task) { new_double(:task) }
+
+      it "renders a cancel button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
+          to contain_exactly("Cancel")
+      end
+    end
+
+    context "given a complete task" do
+      let(task) { new_double(:task, complete: true) }
+
+      it "does not render a cancel button" do
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
+          not_to contain("Cancel")
+      end
+    end
+  end
+
   describe "actor-panel.html.slang" do
     let_create(:actor)
 
@@ -160,7 +291,7 @@ Spectator.describe "partials" do
     context "if authenticated" do
       let(account) { register }
 
-      before_each { env.account = account }
+      sign_in(as: account.username)
 
       it "renders an internal link to the actor" do
         expect(subject.xpath_nodes("//a/@href")).to have("/remote/actors/#{actor.id}")
@@ -259,7 +390,7 @@ Spectator.describe "partials" do
     context "if authenticated" do
       let(account) { register }
 
-      before_each { env.account = account }
+      sign_in(as: account.username)
 
       it "renders an internal link to the actor" do
         expect(subject.xpath_nodes("//a/@href")).to have("/remote/actors/#{actor.id}")
@@ -391,7 +522,7 @@ Spectator.describe "partials" do
     let_build(:object, named: :original)
 
     context "if authenticated" do
-      before_each { env.account = register }
+      sign_in
 
       context "given a new object" do
         pre_condition { expect(object.new_record?).to be_true }
@@ -510,13 +641,11 @@ Spectator.describe "partials" do
     end
 
     context "if authenticated" do
-      let(account) { register }
-
-      before_each { env.account = account }
+      sign_in
 
       let_build(:actor, named: :actor1, username: "actor1")
       let_build(:actor, named: :actor2, username: "actor2")
-      let_build(:object, named: :original, attributed_to: account.actor)
+      let_build(:object, named: :original, attributed_to: env.account.actor)
       let_build(:object, named: :object1, attributed_to: actor1, in_reply_to: original)
       let_build(:object, named: :object2, attributed_to: actor2, in_reply_to: object1)
 

@@ -95,7 +95,7 @@ Spectator.describe "object partials" do
     end
 
     context "when authenticated" do
-      before_each { env.account = account }
+      sign_in(as: account.username)
 
       pre_condition { expect(object.draft?).to be_false }
 
@@ -112,6 +112,37 @@ Spectator.describe "object partials" do
       it "renders a button to the threaded conversation" do
         object.assign(in_reply_to_iri: "not dereferenced link")
         expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+      end
+
+      context "when viewing a thread" do
+        let(for_thread) { [original] }
+
+        it "does not render a button to the threaded conversation" do
+          object.assign(in_reply_to: original).save
+          expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
+        end
+
+        it "does not render a button to the threaded conversation" do
+          original.assign(in_reply_to: object).save
+          expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
+        end
+
+        it "does not render a button to the threaded conversation" do
+          object.assign(in_reply_to_iri: "not dereferenced link")
+          expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
+        end
+      end
+
+      it "does not render a button to the threaded conversation" do
+        expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
+      end
+
+      context "when viewing details" do
+        let(with_detail) { true }
+
+        it "renders a button to the threaded conversation" do
+          expect(subject.xpath_nodes("//button/text()")).to have("Thread")
+        end
       end
 
       context "given hashtags with the same name" do
@@ -215,7 +246,7 @@ Spectator.describe "object partials" do
       end
 
       context "when authenticated" do
-        before_each { env.account = account }
+        sign_in(as: account.username)
 
         it "does not render a button to reply" do
           expect(subject.xpath_nodes("//button/text()")).not_to have("Reply")
@@ -264,7 +295,7 @@ Spectator.describe "object partials" do
       end
 
       context "when authenticated" do
-        before_each { env.account = account }
+        sign_in(as: account.username)
 
         it "renders a button to block" do
           expect(subject.xpath_nodes("//button/text()")).to have("Block")
@@ -325,7 +356,7 @@ Spectator.describe "object partials" do
       end
 
       context "when authenticated" do
-        before_each { env.account = account }
+        sign_in(as: account.username)
 
         it "renders a checkbox" do
           actor.unapprove(object)

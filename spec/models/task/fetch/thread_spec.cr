@@ -82,11 +82,19 @@ Spectator.describe Task::Fetch::Thread do
     end
   end
 
-  describe "#complete!" do
+  describe "#follow?" do
     subject { described_class.new(**options).save }
 
-    it "makes the task not runnable" do
-      expect{subject.complete!}.to change{subject.reload!.runnable?}.to(false)
+    it "returns false" do
+      expect(subject.follow?).to be_false
+    end
+
+    context "given a follow relationship" do
+      let_create!(:follow_thread_relationship, actor: source, thread: options[:subject_iri])
+
+      it "returns true" do
+        expect(subject.follow?).to be_true
+      end
     end
   end
 
@@ -94,10 +102,9 @@ Spectator.describe Task::Fetch::Thread do
     let_create(:object)
 
     subject do
-      described_class.new(
-        source: source,
-        thread: object.thread
-      ).save
+      # these tests assume this is a "followed" thread
+      Factory.build(:follow_thread_relationship, actor: source, thread: object.thread).save
+      described_class.new(source: source, thread: object.thread).save
     end
 
     it "sets the next attempt at" do
@@ -503,9 +510,9 @@ Spectator.describe Task::Fetch::Thread do
           expect(HTTP::Client.requests).not_to have("GET #{reply3.iri}", "GET #{reply2.iri}", "GET #{reply1.iri}")
         end
 
-        it "sets the next attempt in the immediate future" do
+        it "does not set the next attempt at" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+          expect(subject.next_attempt_at).to be_nil
         end
 
         it "sets the task as complete" do

@@ -73,7 +73,11 @@ class InteractionsController
     end
     uri = Ktistec::Network.resolve(uri)
     actor_or_object =
-      begin
+      if uri.starts_with?("#{host}/actors/")
+        ActivityPub::Actor.find(uri)
+      elsif uri.starts_with?("#{host}/objects/")
+        ActivityPub::Object.find(uri)
+      else
         headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
         Ktistec::Open.open?(env.account.actor, uri, headers) do |response|
           ActivityPub.from_json_ld(response.body, include_key: true)
@@ -82,6 +86,7 @@ class InteractionsController
     case actor_or_object
     when ActivityPub::Actor
       actor = actor_or_object.save
+      actor.up!
       ok "actors/remote", env: env, actor: actor
     when ActivityPub::Object
       actor_or_object.attributed_to?(env.account.actor, dereference: true)

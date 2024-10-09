@@ -38,15 +38,15 @@ Spectator.describe "thread.html.slang" do
     expect(subject.xpath_nodes("//turbo-stream-source")).to be_empty
   end
 
-  it "does not render a button to follow the thread" do
-    expect(subject.xpath_nodes("//form[button[text()='Follow']]")).to be_empty
+  it "does not render any controls" do
+    expect(subject.xpath_nodes("//form//button")).to be_empty
   end
 
   context "given a follow" do
     let_create!(:follow_thread_relationship, named: follow, actor: account.actor, name: "https://remote/thread")
 
-    it "does not render a button to unfollow the thread" do
-      expect(subject.xpath_nodes("//form[button[text()='Unfollow']]")).to be_empty
+    it "does not render any controls" do
+      expect(subject.xpath_nodes("//form//button")).to be_empty
     end
   end
 
@@ -55,7 +55,7 @@ Spectator.describe "thread.html.slang" do
   end
 
   context "given a task" do
-    let_build!(:fetch_thread_task, named: task)
+    let_create!(:fetch_thread_task, named: task, source: account.actor, name: "https://remote/thread")
 
     it "does not render information about the task" do
       expect(subject.xpath_nodes("//p[@class='task']")).to be_empty
@@ -63,21 +63,21 @@ Spectator.describe "thread.html.slang" do
   end
 
   context "if authenticated" do
-    before_each { env.account = account }
+    sign_in(as: account.username)
 
     it "renders turbo-stream-source tag" do
       expect(subject.xpath_nodes("//turbo-stream-source")).not_to be_empty
     end
 
     it "renders a button to follow the thread" do
-      expect(subject.xpath_nodes("//form[button[text()='Follow']]")).not_to be_empty
+      expect(subject.xpath_nodes("//form//button")).to have("Follow")
     end
 
     context "given a follow" do
       let_create!(:follow_thread_relationship, named: follow, actor: account.actor, name: "https://remote/thread")
 
       it "renders a button to unfollow the thread" do
-        expect(subject.xpath_nodes("//form[button[text()='Unfollow']]")).not_to be_empty
+        expect(subject.xpath_nodes("//form//button")).to have("Unfollow")
       end
     end
 
@@ -86,7 +86,7 @@ Spectator.describe "thread.html.slang" do
     end
 
     context "given a task" do
-      let_build!(:fetch_thread_task, named: task)
+      let_create!(:fetch_thread_task, named: task, source: account.actor, name: "https://remote/thread")
 
       it "renders information about the task" do
         expect(subject.xpath_nodes("//p[@class='task']")).not_to be_empty

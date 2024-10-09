@@ -2,6 +2,7 @@ require "../../task"
 require "./mixins/fetcher"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
+require "../../relationship/content/follow/thread"
 require "../../../framework/topic"
 require "../../activity_pub/collection"
 require "../../../rules/content_rules"
@@ -140,18 +141,10 @@ class Task
       end
     end
 
-    # Sets the task to complete.
+    # Indicates whether a follow relationship exists for the thread.
     #
-    def complete!
-      update_property(:complete, true)
-    end
-
-    private property interrupted : Bool = false
-
-    # Indicates whether the task was asynchronously set as complete.
-    #
-    def interrupted?
-      @interrupted ||= self.class.find(self.id).complete
+    def follow?
+      Relationship::Content::Follow::Thread.count(actor: source, thread: thread) > 0
     end
 
     # Fetches objects in the thread.
@@ -222,14 +215,7 @@ class Task
         else
           Log.debug { "perform [#{id}] - complete - #{duration} seconds, #{count} fetched" }
         end
-        self.next_attempt_at =
-          if count < 1 && !continuation && !interrupted            # none fetched
-            calculate_next_attempt_at(Horizon::FarFuture)
-          elsif count < maximum && !interrupted                    # some fetched
-            calculate_next_attempt_at(Horizon::NearFuture)
-          else                                                     # maximum number fetched
-            calculate_next_attempt_at(Horizon::ImmediateFuture)
-          end
+        set_next_attempt_at(maximum, count, continuation)
       end
     end
 

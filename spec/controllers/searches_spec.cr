@@ -117,11 +117,12 @@ Spectator.describe SearchesController do
 
           context "with a public key" do
             before_each do
-              HTTP::Client.actors << other.assign(pem_public_key: "PEM PUBLIC KEY").save
+              other.assign(pem_public_key: "OLD PEM PUBLIC KEY").save
+              HTTP::Client.actors << other.assign(pem_public_key: "NEW PEM PUBLIC KEY")
             end
 
-            it "doesn't nuke the public key" do
-              expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{other.reload!.pem_public_key}
+            it "updates the public key" do
+              expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.to change{other.reload!.pem_public_key}.to("NEW PEM PUBLIC KEY")
             end
           end
         end
@@ -187,11 +188,12 @@ Spectator.describe SearchesController do
 
           context "with a public key" do
             before_each do
-              HTTP::Client.actors << other.assign(pem_public_key: "PEM PUBLIC KEY").save
+              other.assign(pem_public_key: "OLD PEM PUBLIC KEY").save
+              HTTP::Client.actors << other.assign(pem_public_key: "NEW PEM PUBLIC KEY")
             end
 
-            it "doesn't nuke the public key" do
-              expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{other.reload!.pem_public_key}
+            it "updates the public key" do
+              expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.to change{other.reload!.pem_public_key}.to("NEW PEM PUBLIC KEY")
             end
           end
         end

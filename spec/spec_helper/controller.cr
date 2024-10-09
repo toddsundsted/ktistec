@@ -97,6 +97,12 @@ BEFORE_PROCS << -> do
   Global.session = nil
 end
 
+class HTTP::Server::Context
+  def session
+    Global.session || previous_def
+  end
+end
+
 def env_factory(method, path)
   HTTP::Server::Context.new(
     HTTP::Request.new(method, path),

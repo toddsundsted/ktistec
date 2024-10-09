@@ -2,6 +2,7 @@ require "../../task"
 require "./mixins/fetcher"
 require "../../activity_pub/actor"
 require "../../activity_pub/object"
+require "../../relationship/content/follow/hashtag"
 require "../../../framework/topic"
 require "../../../rules/content_rules"
 require "../../../views/view_helper"
@@ -93,18 +94,10 @@ class Task
     derived name : String, aliased_to: subject_iri
     validates(name) { "must not be blank" if name.blank? }
 
-    # Sets the task to complete.
+    # Indicates whether a follow relationship exists for the hashtag.
     #
-    def complete!
-      update_property(:complete, true)
-    end
-
-    private property interrupted : Bool = false
-
-    # Indicates whether the task was asynchronously set as complete.
-    #
-    def interrupted?
-      @interrupted ||= self.class.find(self.id).complete
+    def follow?
+      Relationship::Content::Follow::Hashtag.count(actor: source, name: name) > 0
     end
 
     # Fetches objects tagged with the hashtag `name`.
@@ -161,14 +154,7 @@ class Task
         else
           Log.debug { "perform [#{id}] - hashtag: #{name} - complete - #{duration} seconds, #{count} fetched" }
         end
-        self.next_attempt_at =
-          if count < 1 && !continuation && !interrupted            # none fetched
-            calculate_next_attempt_at(Horizon::FarFuture)
-          elsif count < maximum && !interrupted                    # some fetched
-            calculate_next_attempt_at(Horizon::NearFuture)
-          else                                                     # maximum number fetched
-            calculate_next_attempt_at(Horizon::ImmediateFuture)
-          end
+        set_next_attempt_at(maximum, count, continuation)
       end
     end
 

@@ -58,35 +58,56 @@ class Task
       actor
     end
 
-    enum ::Task::Fetch::Horizon
-      ImmediateFuture
-      NearFuture
-      FarFuture
-    end
-
     # Count of successive failures to fetch new objects.
     #
     delegate :failures, :last_success_at, to: state
 
-    # Returns the time at which the next fetch should be attempted.
+    # Sets `next_attempt_at`.
     #
-    private def calculate_next_attempt_at(horizon : Horizon)
-      random = Random::DEFAULT
-      case horizon
-      in Horizon::ImmediateFuture
-        state.failures = 0
-        random.rand(6..10).seconds.from_now
-      in Horizon::NearFuture
-        state.failures = 0
-        random.rand(90..150).minutes.from_now
-      in Horizon::FarFuture
-        state.failures += 1
-        base = Math.min(2 ** (state.failures + 1), 168) # max 1 week
-        offset = base // 4
-        min = base - offset
-        max = base + offset
-        random.rand(min..max).hours.from_now
+    private def set_next_attempt_at(maximum, count, continuation = false)
+      unless interrupted?
+        if count < 1 && !continuation
+          if follow?
+            self.next_attempt_at =
+              begin
+                state.failures += 1
+                base = Math.min(2 ** (state.failures + 1), 168) # max 1 week
+                offset = base // 4
+                min = base - offset
+                max = base + offset
+                Random::DEFAULT.rand(min..max).hours.from_now
+              end
+          end
+        elsif count < maximum
+          if follow?
+            self.next_attempt_at =
+              begin
+                state.failures = 0
+                Random::DEFAULT.rand(90..150).minutes.from_now
+              end
+          end
+        else
+          self.next_attempt_at =
+            begin
+              state.failures = 0
+              Random::DEFAULT.rand(6..10).seconds.from_now
+            end
+        end
       end
+    end
+
+    # Sets the task to complete.
+    #
+    def complete!
+      update_property(:complete, true)
+    end
+
+    private property interrupted : Bool = false
+
+    # Indicates whether the task was asynchronously set as complete.
+    #
+    def interrupted?
+      @interrupted ||= self.class.find(self.id).complete
     end
   end
 end

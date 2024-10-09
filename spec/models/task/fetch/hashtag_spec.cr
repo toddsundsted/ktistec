@@ -35,20 +35,27 @@ Spectator.describe Task::Fetch::Hashtag do
     end
   end
 
-  describe "#complete!" do
+  describe "#follow?" do
     subject { described_class.new(**options).save }
 
-    it "makes the task not runnable" do
-      expect{subject.complete!}.to change{subject.reload!.runnable?}.to(false)
+    it "returns false" do
+      expect(subject.follow?).to be_false
+    end
+
+    context "given a follow relationship" do
+      let_create!(:follow_hashtag_relationship, actor: source, name: options[:subject_iri])
+
+      it "returns true" do
+        expect(subject.follow?).to be_true
+      end
     end
   end
 
   describe "#perform" do
     subject do
-      described_class.new(
-        source: source,
-        name: "hashtag"
-      ).save
+      # these tests assume this is a "followed" hashtag
+      Factory.build(:follow_hashtag_relationship, actor: source, name: "hashtag").save
+      described_class.new(source: source, name: "hashtag").save
     end
 
     it "sets the next attempt at" do
@@ -401,9 +408,9 @@ Spectator.describe Task::Fetch::Hashtag do
           expect(HTTP::Client.requests).not_to have("GET #{object2.iri}", "GET #{object3.iri}")
         end
 
-        it "sets the next attempt in the immediate future" do
+        it "does not set the next attempt at" do
           subject.perform
-          expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+          expect(subject.next_attempt_at).to be_nil
         end
 
         it "sets the task as complete" do

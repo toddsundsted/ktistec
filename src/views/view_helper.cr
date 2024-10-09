@@ -789,6 +789,14 @@ module Ktistec::ViewHelper
     "#{Ktistec::ViewHelper.remote_object_path({{object}})}/unfollow"
   end
 
+  macro start_fetch_thread_path(object = nil)
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/fetch/start"
+  end
+
+  macro cancel_fetch_thread_path(object = nil)
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/fetch/cancel"
+  end
+
   macro object_remote_reply_path(object = nil)
     "#{Ktistec::ViewHelper.object_path({{object}})}/remote-reply"
   end
@@ -859,6 +867,14 @@ module Ktistec::ViewHelper
 
   macro unfollow_hashtag_path(hashtag = nil)
     "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/unfollow"
+  end
+
+  macro start_fetch_hashtag_path(hashtag = nil)
+    "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/fetch/start"
+  end
+
+  macro cancel_fetch_hashtag_path(hashtag = nil)
+    "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/fetch/cancel"
   end
 
   macro mention_path(mention = nil)

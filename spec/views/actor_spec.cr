@@ -31,16 +31,14 @@ Spectator.describe "actor" do
     end
 
     context "if authenticated" do
-      let(account) { register }
-
-      before_each { env.account = account }
+      sign_in
 
       it "does not render an editor" do
         expect(subject.xpath_nodes("//trix-editor")).to be_empty
       end
 
       context "if account actor is actor" do
-        let(actor) { account.actor }
+        let(actor) { env.account.actor }
 
         it "renders an editor" do
           expect(subject.xpath_nodes("//trix-editor")).not_to be_empty

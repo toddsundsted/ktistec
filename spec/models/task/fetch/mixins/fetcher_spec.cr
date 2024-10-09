@@ -1,3 +1,4 @@
+require "../../../../../src/models/task"
 require "../../../../../src/models/task/fetch/mixins/fetcher"
 
 require "../../../../spec_helper/base"
@@ -9,31 +10,50 @@ Spectator.describe Task::Fetch::Fetcher do
 
   let_create(:actor, named: :source, with_keys: true)
 
-  class TestFetcher
+  class TestFetcher < Task
     include Task::Fetch::Fetcher
 
     class State
       property failures : Int32 = 0
+
+      def last_success_at
+      end
     end
 
     property state : State { State.new }
 
-    property source : ActivityPub::Actor
+    belongs_to source, class_name: ActivityPub::Actor, foreign_key: source_iri, primary_key: iri
+    validates(source) { "missing: #{source_iri}" unless source? }
 
-    def initialize(@source)
-    end
+    derived value : String, aliased_to: subject_iri
+
+    property? follow : Bool = true
+
+    # make public for tests
 
     def find_or_fetch_object(*args, **options)
       super(*args, **options)
     end
 
-    def calculate_next_attempt_at(*args)
-      super(*args)
+    def set_next_attempt_at(*args, **options)
+      super(*args, **options)
+    end
+  end
+
+  describe "#complete!" do
+    subject { TestFetcher.new(source: source, value: "").save }
+
+    it "makes the task not runnable" do
+      expect{subject.complete!}.to change{subject.reload!.runnable?}.to(false)
+    end
+
+    it "makes the class interrupted" do
+      expect{subject.complete!}.to change{subject.reload!.interrupted?}.to(true)
     end
   end
 
   describe "#find_or_fetch_object" do
-    subject { TestFetcher.new(source: source) }
+    subject { TestFetcher.new(source: source, value: "") }
 
     context "given an object" do
       let_build(:object)
@@ -273,54 +293,66 @@ Spectator.describe Task::Fetch::Fetcher do
     end
   end
 
-  describe "#calculate_next_attempt_at" do
-    subject { TestFetcher.new(source: source) }
+  describe "#set_next_attempt_at" do
+    subject { TestFetcher.new(source: source, value: "").save }
 
-    ImmediateFuture = Task::Fetch::Horizon::ImmediateFuture
-    NearFuture = Task::Fetch::Horizon::NearFuture
-    FarFuture = Task::Fetch::Horizon::FarFuture
+    EVERYTHING = {10, 10}
+    SOMETHING = {10, 6}
+    NOTHING = {10, 0}
 
-    it "returns a time in the immediate future" do
-      expect(subject.calculate_next_attempt_at(ImmediateFuture)).to be < 1.minute.from_now
+    it "sets the next attempt at in the immediate future" do
+      subject.set_next_attempt_at(*EVERYTHING)
+      expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
     end
 
     it "does not increment the failure counter" do
-      expect{subject.calculate_next_attempt_at(ImmediateFuture)}.not_to change{subject.failures}
+      expect{subject.set_next_attempt_at(*EVERYTHING)}.not_to change{subject.failures}
     end
 
-    it "returns a time in the near future" do
-      expect(subject.calculate_next_attempt_at(NearFuture)).to be_between(80.minutes.from_now, 160.minutes.from_now)
+    it "sets the next attempt at in the near future" do
+      subject.set_next_attempt_at(*SOMETHING)
+      expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
     end
 
     it "does not increment the failure counter" do
-      expect{subject.calculate_next_attempt_at(NearFuture)}.not_to change{subject.failures}
+      expect{subject.set_next_attempt_at(*SOMETHING)}.not_to change{subject.failures}
     end
 
-    it "returns a time in the far future" do
-      expect(subject.calculate_next_attempt_at(FarFuture)).to be_between(170.minutes.from_now, 310.minutes.from_now)
+    it "sets the next attempt at in the far future" do
+      subject.set_next_attempt_at(*NOTHING)
+      expect(subject.next_attempt_at.not_nil!).to be_between(170.minutes.from_now, 310.minutes.from_now)
     end
 
-    it "increments the failures counter" do
-      expect{subject.calculate_next_attempt_at(FarFuture)}.to change{subject.failures}.to(1)
+    it "increments the failure counter" do
+      expect{subject.set_next_attempt_at(*NOTHING)}.to change{subject.failures}.to(1)
+    end
+
+    it "sets the next attempt at in the near future" do
+      subject.set_next_attempt_at(*NOTHING, continuation: true)
+      expect(subject.next_attempt_at.not_nil!).to be_between(80.minutes.from_now, 160.minutes.from_now)
+    end
+
+    it "does not increment the failure counter" do
+      expect{subject.set_next_attempt_at(*NOTHING, continuation: true)}.not_to change{subject.failures}
     end
 
     context "given a prior failure" do
       before_each { subject.state.failures = 1 }
 
       it "resets the failure counter" do
-        expect{subject.calculate_next_attempt_at(ImmediateFuture)}.to change{subject.failures}.to(0)
+        expect{subject.set_next_attempt_at(*EVERYTHING)}.to change{subject.failures}.to(0)
       end
 
       it "resets the failure counter" do
-        expect{subject.calculate_next_attempt_at(NearFuture)}.to change{subject.failures}.to(0)
+        expect{subject.set_next_attempt_at(*SOMETHING)}.to change{subject.failures}.to(0)
       end
 
       it "returns a time even further in the future" do
-        expect(subject.calculate_next_attempt_at(FarFuture)).to be_between(350.minutes.from_now, 610.minutes.from_now)
+        expect(subject.set_next_attempt_at(*NOTHING)).to be_between(350.minutes.from_now, 610.minutes.from_now)
       end
 
       it "increments the failure counter" do
-        expect{subject.calculate_next_attempt_at(FarFuture)}.to change{subject.failures}.to(2)
+        expect{subject.set_next_attempt_at(*NOTHING)}.to change{subject.failures}.to(2)
       end
     end
 
@@ -328,11 +360,44 @@ Spectator.describe Task::Fetch::Fetcher do
       before_each { subject.state.failures = 6 }
 
       it "returns a time the maximum distance in the future" do
-        expect(subject.calculate_next_attempt_at(FarFuture)).to be_between(122.hours.from_now, 214.hours.from_now)
+        expect(subject.set_next_attempt_at(*NOTHING)).to be_between(122.hours.from_now, 214.hours.from_now)
       end
 
       it "increments the failure counter" do
-        expect{subject.calculate_next_attempt_at(FarFuture)}.to change{subject.failures}.to(7)
+        expect{subject.set_next_attempt_at(*NOTHING)}.to change{subject.failures}.to(7)
+      end
+    end
+
+    context "when the task is not followed" do
+      before_each { subject.follow = false }
+
+      it "sets the next attempt at in the immediate future" do
+        subject.set_next_attempt_at(10, 10)
+        expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+      end
+
+      it "does not set the next attempt at" do
+        expect{subject.set_next_attempt_at(10, 6)}.not_to change{subject.next_attempt_at}
+      end
+
+      it "does not set the next attempt at" do
+        expect{subject.set_next_attempt_at(10, 0)}.not_to change{subject.next_attempt_at}
+      end
+    end
+
+    context "when the task has been interrupted" do
+      before_each { subject.complete! }
+
+      it "does not set the next attempt at" do
+        expect{subject.set_next_attempt_at(10, 10)}.not_to change{subject.next_attempt_at}
+      end
+
+      it "does not set the next attempt at" do
+        expect{subject.set_next_attempt_at(10, 6)}.not_to change{subject.next_attempt_at}
+      end
+
+      it "does not set the next attempt at" do
+        expect{subject.set_next_attempt_at(10, 0)}.not_to change{subject.next_attempt_at}
       end
     end
   end

@@ -107,11 +107,12 @@ crystal:
         | Delete
     - elsif account
       - object.with_statistics!.with_replies_count!
-      - if (c = object.replies_count) > 0 || object.in_reply_to_iri.presence
-        a data-turbo-frame="_top" href=remote_thread_path(object)
-          button.ui.mini.iconic.button
-            i.comments.icon
-            | Thread
+      - if (c = object.replies_count) > 0 || object.in_reply_to_iri.presence || with_detail
+        - unless for_thread.presence
+          a data-turbo-frame="_top" href=remote_thread_path(object)
+            button.ui.mini.iconic.button
+              i.comments.icon
+              | Thread
       a data-turbo-frame="_top" href=reply_path(object)
         button.ui.mini.iconic.button
           i.reply.icon

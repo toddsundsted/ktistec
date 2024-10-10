@@ -12,7 +12,7 @@ Spectator.describe "actor" do
 
     let(env) { env_factory("GET", "/actor/username") }
 
-    module Ktistec::ViewHelper
+    module ::Ktistec::ViewHelper
       def self.render_actor_html_slang(env, actor)
         render "./src/views/actors/actor.html.slang"
       end
@@ -52,7 +52,7 @@ Spectator.describe "actor" do
 
     let(env) { env_factory("GET", "/actor/username") }
 
-    module Ktistec::ViewHelper
+    module ::Ktistec::ViewHelper
       def self.render_actor_json_ecr(env, actor)
         render "./src/views/actors/actor.json.ecr"
       end

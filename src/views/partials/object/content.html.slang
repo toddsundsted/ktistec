@@ -53,18 +53,29 @@ crystal:
               video.ui.extra.attachment.video src=attachment.url controls=:true
             - elsif attachment.audio?
               audio.ui.extra.attachment.audio src=attachment.url controls=:true
-    - if (name = object.name)
+    - if (name = object.name.presence)
       .extra.text
         - if object.external?
           a href=object.display_link target="_blank" : strong = name
         - else
           strong = name
-    - if with_detail
-      .extra.text
-        == s object.to_html
+    - if (summary = object.summary.presence)
+      details.extra.text open=with_detail
+        summary = summary
+        - if with_detail
+          div
+            == s object.to_html
+        - else
+          div data-controller="clickable-background" data-clickable-background-href-value=href
+            == s object.to_html
     - else
-      .extra.text data-controller="clickable-background" data-clickable-background-href-value=href
-        == s object.to_html
+      .extra.text
+        - if with_detail
+          div
+            == s object.to_html
+        - else
+          div data-controller="clickable-background" data-clickable-background-href-value=href
+            == s object.to_html
     - if with_detail && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq

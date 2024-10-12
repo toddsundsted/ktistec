@@ -77,6 +77,22 @@ Spectator.describe "object partials" do
       end
     end
 
+    context "given a name" do
+      before_each { object.assign(name: "Foo Bar Baz") }
+
+      it "renders the name" do
+        expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bar Baz")
+      end
+    end
+
+    context "given a summary" do
+      before_each { object.assign(summary: "Foo Bar Baz") }
+
+      it "renders the summary" do
+        expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bar Baz")
+      end
+    end
+
     # threads
 
     it "does not render a button to the threaded conversation" do

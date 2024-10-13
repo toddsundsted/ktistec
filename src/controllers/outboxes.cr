@@ -97,7 +97,9 @@ class RelationshipsController
       if (followers = account.actor.followers)
         cc << followers
       end
-      canonical_path = activity["canonical_path"]?.try(&.presence)
+      name = activity["name"]?.presence
+      summary = activity["summary"]?.presence
+      canonical_path = activity["canonical_path"]?.presence
       activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
       iri = "#{host}/objects/#{id}"
       object ||= ActivityPub::Object::Note.new(iri: iri)
@@ -106,6 +108,8 @@ class RelationshipsController
         attributed_to_iri: account.iri,
         in_reply_to_iri: in_reply_to_iri,
         replies_iri: "#{iri}/replies",
+        name: name,
+        summary: summary,
         canonical_path: canonical_path,
         visible: visible,
         to: to,

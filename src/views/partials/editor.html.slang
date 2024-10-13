@@ -27,6 +27,12 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
   .field
     input#input-trix-editor type="hidden" name="content" value=content
     trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-change@window->trix#change input->has-content#change" data-has-content-target="input" input="input-trix-editor"
+  .field
+    label Title
+    input type="text" name="name" value=object.name
+  .field
+    label Summary
+    textarea name="summary" rows="2" = object.summary
   .field class=(canonical_path_errors ? "error" : nil)
     label Canonical Path
     input type="text" name="canonical_path" value=object.canonical_path

@@ -389,6 +389,34 @@ Spectator.describe ObjectsController do
           expect(JSON.parse(response.body)["content"]).to eq("this is a test")
         end
 
+        context "with a name" do
+          before_each { draft.assign(name: "foo bar baz").save }
+
+          it "renders an input with the name" do
+            get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='name']/@value").first).to eq("foo bar baz")
+          end
+
+          it "renders the name" do
+            get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["name"]).to eq("foo bar baz")
+          end
+        end
+
+        context "with a summary" do
+          before_each { draft.assign(summary: "foo bar baz").save }
+
+          it "renders a textarea with the summary" do
+            get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='summary']/text()").first).to eq("foo bar baz")
+          end
+
+          it "renders the summary" do
+            get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["summary"]).to eq("foo bar baz")
+          end
+        end
+
         context "with a canonical path" do
           before_each { draft.assign(canonical_path: "/foo/bar/baz").save }
 
@@ -447,6 +475,34 @@ Spectator.describe ObjectsController do
           expect(JSON.parse(response.body)["content"]).to eq("foo bar baz")
         end
 
+        context "with a name" do
+          before_each { visible.assign(name: "foo bar baz").save }
+
+          it "renders an input with the name" do
+            get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='name']/@value").first).to eq("foo bar baz")
+          end
+
+          it "renders the name" do
+            get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["name"]).to eq("foo bar baz")
+          end
+        end
+
+        context "with a summary" do
+          before_each { visible.assign(summary: "foo bar baz").save }
+
+          it "renders a textarea with the summary" do
+            get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='summary']/text()").first).to eq("foo bar baz")
+          end
+
+          it "renders the summary" do
+            get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["summary"]).to eq("foo bar baz")
+          end
+        end
+
         context "with a canonical path" do
           before_each { visible.assign(canonical_path: "/foo/bar/baz").save }
 
@@ -503,6 +559,26 @@ Spectator.describe ObjectsController do
       it "changes the content" do
         expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar"}|}.
           to change{draft.reload!.content}
+      end
+
+      it "updates the name" do
+        expect{post "/objects/#{draft.uid}", FORM_DATA, "name=foo+bar"}.
+          to change{draft.reload!.name}
+      end
+
+      it "updates the name" do
+        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"name":"foo bar"}|}.
+          to change{draft.reload!.name}
+      end
+
+      it "updates the summary" do
+        expect{post "/objects/#{draft.uid}", FORM_DATA, "summary=foo+bar"}.
+          to change{draft.reload!.summary}
+      end
+
+      it "updates the summary" do
+        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"summary":"foo bar"}|}.
+          to change{draft.reload!.summary}
       end
 
       it "updates the canonical path" do

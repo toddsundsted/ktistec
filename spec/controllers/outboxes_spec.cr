@@ -253,6 +253,20 @@ Spectator.describe RelationshipsController do
             to change{ActivityPub::Object::Note.count(attributed_to_iri: actor.iri)}.by(1)
         end
 
+        context "given a name" do
+          it "sets the name" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&name=Name"
+            expect(created.name).to eq("Name")
+          end
+        end
+
+        context "given a summary" do
+          it "sets the summary" do
+            post "/actors/#{actor.username}/outbox", headers, "type=Publish&content=this+is+a+test&summary=Summary"
+            expect(created.summary).to eq("Summary")
+          end
+        end
+
         context "given a canonical path" do
           before_all do
             unless Kemal::RouteHandler::INSTANCE.lookup_route("GET", "/objects/:id").found?

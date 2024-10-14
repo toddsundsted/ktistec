@@ -18,7 +18,7 @@ Spectator.describe "thread.html.slang" do
 
   let(task) { nil }
 
-  module Ktistec::ViewHelper
+  module ::Ktistec::ViewHelper
     def self.render_thread_html_slang(env, object, thread, follow, task)
       render "./src/views/objects/thread.html.slang"
     end

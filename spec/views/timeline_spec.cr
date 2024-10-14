@@ -6,7 +6,7 @@ Spectator.describe "timeline partial" do
 
   include Ktistec::Controller
 
-  module Ktistec::ViewHelper
+  module ::Ktistec::ViewHelper
     def self.render_timeline_html_slang(env, actor, timeline)
       render "./src/views/actors/timeline.html.slang"
     end

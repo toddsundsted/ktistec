@@ -239,6 +239,8 @@ class ObjectsController
     params = accepts?("text/html") ? env.params.body : env.params.json
     {
       "source" => params["content"]?.try(&.as(String).presence).try { |content| ActivityPub::Object::Source.new(content, "text/html; editor=trix") },
+      "name" => params["name"]?.try(&.as(String).presence),
+      "summary" => params["summary"]?.try(&.as(String).presence),
       "canonical_path" => params["canonical_path"]?.try(&.as(String).presence)
     }
   end

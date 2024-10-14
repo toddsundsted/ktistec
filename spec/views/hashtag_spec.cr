@@ -21,7 +21,7 @@ Spectator.describe "index.html.slang" do
 
   let(count) { 0 }
 
-  module Ktistec::ViewHelper
+  module ::Ktistec::ViewHelper
     def self.render_index_html_slang(env, hashtag, collection, follow, task, count)
       render "./src/views/tags/index.html.slang"
     end

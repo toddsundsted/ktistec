@@ -28,6 +28,22 @@ body { display: flex; flex-direction: column; }
     }
 }
 
+/** form with collapsible details/summary section **/
+.ui.form {
+    > details {
+        clear: both;
+        margin: 0 0 1em;
+
+        input:not([type]), input[type="date"], input[type="datetime-local"],
+        input[type="email"], input[type="file"], input[type="number"],
+        input[type="password"], input[type="search"], input[type="tel"],
+        input[type="text"], input[type="time"], input[type="url"],
+        textarea {
+            box-sizing: border-box;
+        }
+    }
+}
+
 /** timeline **/
 .ui.feed {
     > .event {

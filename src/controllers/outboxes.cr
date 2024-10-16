@@ -117,7 +117,8 @@ class RelationshipsController
       )
       # validate ensures properties are populated from source
       unless object.valid?
-        unprocessable_entity "partials/editor", env: env, object: object
+        target = %Q<object-#{object.id || "new"}>
+        unprocessable_entity "partials/editor", env: env, object: object, recursive: false, _operation: "replace", _target: target
       end
       # hack to sidestep typing of unions as their nearest common ancestor
       if activity.responds_to?(:actor=) && activity.responds_to?(:object=)

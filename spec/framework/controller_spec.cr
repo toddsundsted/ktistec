@@ -7,6 +7,7 @@ class FooBarController
 
   skip_auth [
     "/foo/bar/accepts",
+    "/foo/bar/turbo-streams/:operation/:target",
     "/foo/bar/turbo-frame",
     "/foo/bar/created",
     "/foo/bar/redirect",
@@ -21,6 +22,10 @@ class FooBarController
     elsif accepts?("application/ld+json", "application/activity+json", "application/json")
       ok "json"
     end
+  end
+
+  get "/foo/bar/turbo-streams/:operation/:target" do |env|
+    ok "turbo-streams", _operation: env.params.url["operation"], _target: env.params.url["target"]
   end
 
   get "/foo/bar/turbo-frame" do |env|
@@ -50,7 +55,7 @@ Spectator.describe Ktistec::Controller do
     it "responds with html" do
       get "/foo/bar/accepts", HTTP::Headers{"Accept" => "text/html"}
       expect(response.headers["Content-Type"]).to eq("text/html")
-      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).to eq("html")
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)")).to eq("html")
     end
 
     it "responds with text" do
@@ -78,15 +83,22 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
+  describe "GET /foo/bar/turbo-streams/:operation/:target" do
+    it "responds with turbo-streams" do
+      get "/foo/bar/turbo-streams/append/foo-bar", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
+      expect(XML.parse_html(response.body).xpath_string("string(//turbo-stream[@action='append'][@target='foo-bar']/template//h1)")).to eq("turbo-streams")
+    end
+  end
+
   describe "POST /foo/bar/turbo-frame" do
     it "responds with turbo-frame" do
       get "/foo/bar/turbo-frame", HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "foo-bar"}
-      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).to eq("turbo-frame")
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)")).to eq("turbo-frame")
     end
 
     it "does not respond with turbo-frame" do
       get "/foo/bar/turbo-frame", HTTP::Headers{"Accept" => "text/html"}
-      expect(XML.parse_html(response.body).xpath_string("string(//h1)") ).not_to eq("turbo-frame")
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)")).not_to eq("turbo-frame")
     end
   end
 

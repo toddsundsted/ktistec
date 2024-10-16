@@ -15,7 +15,7 @@ class ObjectsController
     )
 
     unless object.assign(params(env)).valid?
-      unprocessable_entity "objects/new", env: env, object: object, recursive: false
+      unprocessable_entity "partials/editor", env: env, object: object, recursive: false, _operation: "replace", _target: "object-new"
     end
 
     object.save
@@ -71,7 +71,7 @@ class ObjectsController
     end
 
     unless object.assign(params(env)).valid?
-      unprocessable_entity "objects/edit", env: env, object: object, recursive: false
+      unprocessable_entity "partials/editor", env: env, object: object, recursive: false, _operation: "replace", _target: "object-#{object.id}"
     end
 
     object.save

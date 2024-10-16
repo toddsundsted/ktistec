@@ -11,7 +11,7 @@ Spectator.describe RelationshipsController do
     let(actor) { register.actor }
     let(other) { register.actor }
 
-    let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"} }
+    let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/vnd.turbo-stream.html, text/html"} }
 
     it "returns 401 if not authorized" do
       post "/actors/0/outbox", headers

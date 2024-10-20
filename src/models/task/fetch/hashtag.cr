@@ -162,7 +162,7 @@ class Task
       Ktistec::Topic{path_to}.notify_subscribers
     end
 
-    property been_fetched : Array(String) = [] of String
+    property been_fetched = Set(String).new
 
     # Fetches one new object tagged with the hashtag.
     #
@@ -213,6 +213,9 @@ class Task
           Log.trace { "fetch_one [#{id}] - #{size} items" }
         end
         while (cache = state.cache) && (item = cache.shift?)
+          # only fetch an object once per run
+          next if been_fetched.includes?(item)
+          been_fetched << item
           fetched, object = find_or_fetch_object(item)
           next if object.nil?
           if (hashtags = object.hashtags)

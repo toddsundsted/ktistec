@@ -420,6 +420,42 @@ Spectator.describe Task::Fetch::Hashtag do
       end
     end
 
+    context "given many tagged objects, all in multiple collections" do
+      let_build_object(1, "https://remote1/tags/hashtag")
+      let_build_object(2, "https://remote2/tags/hashtag")
+      let_build_object(3, "https://remote3/tags/hashtag")
+      let_build(:collection, named: :hashtag1, iri: "https://remote1/tags/hashtag")
+      let_build(:collection, named: :hashtag2, iri: "https://remote2/tags/hashtag")
+      let_build(:collection, named: :hashtag3, iri: "https://remote3/tags/hashtag")
+
+      before_each do
+        # the first two objects are cached
+        HTTP::Client.objects << object1.save
+        HTTP::Client.objects << object2.save
+        HTTP::Client.objects << object3
+        HTTP::Client.actors << object1.attributed_to
+        HTTP::Client.actors << object2.attributed_to
+        HTTP::Client.actors << object3.attributed_to
+        HTTP::Client.collections << hashtag1.assign(items_iris: [object1.iri, object2.iri, object3.iri])
+        HTTP::Client.collections << hashtag2.assign(items_iris: [object1.iri, object2.iri, object3.iri])
+        HTTP::Client.collections << hashtag3.assign(items_iris: [object1.iri, object2.iri, object3.iri])
+      end
+
+      it "fetches the remaining object once" do
+        subject.perform
+        expect(HTTP::Client.requests.count { |request| request === "GET #{object3.iri}"}).to eq(1)
+      end
+
+      context "with a blocked author" do
+        before_each { object3.attributed_to.save.block! }
+
+        it "fetches the remaining object once" do
+          subject.perform
+          expect(HTTP::Client.requests.count { |request| request === "GET #{object3.iri}"}).to eq(1)
+        end
+      end
+    end
+
     context "given many tagged objects, via the Mastodon API" do
       let_build_object(1, "https://remote/tags/hashtag")
       let_build_object(2, "https://remote/tags/hashtag")

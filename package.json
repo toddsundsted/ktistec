@@ -10,8 +10,8 @@
     "less": "^4.1.1",
     "less-loader": "^8.0.0",
     "style-loader": "^2.0.0",
-    "webpack": "^5.25.0",
-    "webpack-cli": "^4.5.0"
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4"
   },
   "dependencies": {
     "@hotwired/stimulus": "^3.2.2",
@@ -24,6 +24,6 @@
     "filepond-plugin-image-resize": "^2.0.10",
     "filepond-plugin-image-transform": "^3.8.7",
     "lightgallery": "^2.7.2",
-    "trix": "^2.1.1"
+    "trix": "^2.1.7"
   }
 }

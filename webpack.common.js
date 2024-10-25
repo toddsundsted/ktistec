@@ -1,6 +1,15 @@
 const path = require('path');
 
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+
 module.exports = {
+  plugins: [
+    new MiniCssExtractPlugin({
+      filename: "[name].css",
+      chunkFilename: "[id].css",
+    }),
+  ],
   entry: {
     settings: './src/assets/settings.js',
     site: './src/assets/site.js',
@@ -13,11 +22,11 @@ module.exports = {
     rules: [
       {
         test: /\.less$/i,
-        use: ['style-loader', 'css-loader', 'less-loader'],
+        use: [MiniCssExtractPlugin.loader, 'css-loader', 'less-loader'],
       },
       {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader'],
+        use: [MiniCssExtractPlugin.loader, 'css-loader'],
       },
       {
         test: /\.(png|svg|jpg|jpeg|gif)$/i,
@@ -27,6 +36,12 @@ module.exports = {
         test: /\.(woff|woff2|eot|ttf|otf)$/i,
         type: 'asset/resource',
       },
+    ],
+  },
+  optimization: {
+    minimizer: [
+      '...',
+      new CssMinimizerPlugin(),
     ],
   },
 };

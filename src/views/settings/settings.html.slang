@@ -1,4 +1,5 @@
 - content_for "head" do
+  link rel="stylesheet" href="/dist/settings.css"
   script src="/dist/settings.bundle.js"
 - content_for "title" do
   | Settings

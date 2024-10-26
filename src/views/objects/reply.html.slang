@@ -11,8 +11,8 @@ section.ui.feed data-controller="icon-load-error"
     input type="hidden" name="in-reply-to" value=object.iri
     input type="hidden" name="public" value="true"
     .field
-      input#input-trix-editor type="hidden" name="content" value=mentions
-      trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-change@window->trix#change input->has-content#change" data-has-content-target="input" input="input-trix-editor"
+      trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-change@window->trix#change input->has-content#change" data-has-content-target="input" input="editor-input"
+      textarea#editor-input name="content" rows=3 = mentions
     .ui.buttons
       input.ui.disabled.primary.button data-has-content-target="button" type="submit" value="Reply" formaction=outbox_path(actor)
 br.transition.hidden

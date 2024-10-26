@@ -14,5 +14,5 @@ section.ui.feed data-controller="icon-load-error"
       trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-change@window->trix#change input->has-content#change" data-has-content-target="input" input="editor-input"
       textarea#editor-input name="content" rows=3 = mentions
     .ui.buttons
-      input.ui.disabled.primary.button data-has-content-target="button" type="submit" value="Reply" formaction=outbox_path(actor)
+      input.ui.primary.button data-has-content-target="button" type="submit" value="Reply" formaction=outbox_path(actor)
 br.transition.hidden

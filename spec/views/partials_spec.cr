@@ -652,7 +652,7 @@ Spectator.describe "partials" do
       let!(object) { object2.save }
 
       it "prepopulates editor with mentions" do
-        expect(subject.xpath_nodes("//input[@name='content']/@value").first).
+        expect(subject.xpath_nodes("//textarea[@name='content']/text()").first).
           to eq("@#{actor2.handle} @#{actor1.handle} ")
       end
     end

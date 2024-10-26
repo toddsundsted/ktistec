@@ -379,9 +379,9 @@ Spectator.describe ObjectsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@formaction").first).to eq("/objects/#{draft.uid}")
         end
 
-        it "renders an input with the draft content" do
+        it "renders a textarea with the draft content" do
           get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first).to eq("this is a test")
+          expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("this is a test")
         end
 
         it "renders the content" do
@@ -465,9 +465,9 @@ Spectator.describe ObjectsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@formaction")).to be_empty
         end
 
-        it "renders an input with the content" do
+        it "renders a textarea with the content" do
           get "/objects/#{visible.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first).to eq("foo bar baz")
+          expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("foo bar baz")
         end
 
         it "renders the content" do
@@ -879,7 +879,7 @@ Spectator.describe ObjectsController do
 
       it "prepopulates editor with mentions" do
         get "/remote/objects/#{visible.id}/reply", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first).to eq("@author@nowhere @other@nowhere ")
+        expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("@author@nowhere @other@nowhere ")
       end
 
       it "returns 404 if object is a draft" do

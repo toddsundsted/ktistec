@@ -25,7 +25,7 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
     input type="hidden" name="in-reply-to" value=object.in_reply_to_iri
   input type="hidden" name="public" value="true"
   .field
-    trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-change@window->trix#change input->has-content#change" data-has-content-target="input" input="editor-input"
+    trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-initialize->has-content#check input->has-content#check" data-has-content-target="input" input="editor-input"
     textarea#editor-input name="content" rows=3 = content
   details open=(object.name || object.summary || object.canonical_path ? true : false)
     summary Optional Settings

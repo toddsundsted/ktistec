@@ -5,15 +5,7 @@ export default class extends Controller {
     return [ "input", "button" ]
   }
 
-  connect() {
-    this._checkContent()
-  }
-
-  change() {
-    this._checkContent()
-  }
-
-  _checkContent() {
+  check() {
     if (this.hasContent != !!this.inputTarget.textContent) {
       let hasContent = (this.hasContent = !!this.inputTarget.textContent)
       let turboStreamSources = document.querySelectorAll('turbo-stream-source')

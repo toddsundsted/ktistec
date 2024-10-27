@@ -284,7 +284,7 @@ module Ktistec::ViewHelper
     end
   end
 
-  macro form_tag(model, action, method = "POST", class _class = "ui form", data = nil, csrf = env.session.string?("csrf"), &block)
+  macro form_tag(model, action, *, method = "POST", form = nil, class _class = "ui form", data = nil, csrf = env.session.string?("csrf"), &block)
     {% if model %}
       %classes =
         {{model}}.errors.presence ?
@@ -312,6 +312,17 @@ module Ktistec::ViewHelper
       %Q|class="#{%classes}"|,
       %Q|action="#{{{action}}}"|,
       %Q|method="#{{{method}}}"|,
+      {% if method == "POST" && form %}
+        {% if form == "data" %}
+          %Q|enctype="multipart/form-data"|
+        {% elsif form == "urlencoded" %}
+          %Q|enctype="application/x-www-form-urlencoded"|
+        {% else %}
+          {% raise "invalid form encoding: #{form}" %}
+        {% end %}
+      {% elsif form %}
+        {% raise "form encoding may only be specified on POST method" %}
+      {% end %}
       {% if data %}
         {% for key, value in data %}
           %Q|data-{{key.id}}="#{{{value}}}"|,

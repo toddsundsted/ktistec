@@ -426,6 +426,26 @@ Spectator.describe "helpers" do
       expect(subject.xpath_nodes("/form/@class")).to contain_exactly("ui form error")
     end
 
+    context "when specifying form data" do
+      subject do
+        XML.parse_html(form_tag(model, "/foobar", form: "data", csrf: nil) { "<div/>" }, PARSER_OPTIONS).document
+      end
+
+      it "sets the enctype" do
+        expect(subject.xpath_nodes("/form/@enctype")).to contain_exactly("multipart/form-data")
+      end
+    end
+
+    context "when specifying form urlencoded" do
+      subject do
+        XML.parse_html(form_tag(model, "/foobar", form: "urlencoded", csrf: nil) { "<div/>" }, PARSER_OPTIONS).document
+      end
+
+      it "sets the enctype" do
+        expect(subject.xpath_nodes("/form/@enctype")).to contain_exactly("application/x-www-form-urlencoded")
+      end
+    end
+
     context "given data attributes" do
       subject do
         XML.parse_html(form_tag(model, "/foobar", data: {"foo" => "bar", "abc" => "xyz"}, csrf: nil) { "<div/>" }, PARSER_OPTIONS).document

@@ -7,7 +7,7 @@
 h1 Account Settings
 p
   | Settings for account <strong>#{actor.username}</strong>.
-== form_tag(account, "/settings/actor") do
+== form_tag(account, "/settings/actor", form: "data") do
   == error_messages(account)
   == input_tag("Display Name", actor, name)
   == input_tag("Summary", actor, summary)

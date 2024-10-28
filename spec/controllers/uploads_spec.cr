@@ -6,13 +6,6 @@ require "../spec_helper/factory"
 Spectator.describe UploadsController do
   setup_spec
 
-  around_each do |example|
-    previous, Kemal.config.public_folder = Kemal.config.public_folder, Dir.tempdir
-    example.call
-  ensure
-    Kemal.config.public_folder = previous if previous
-  end
-
   let(current_actor_id) { Global.account.try(&.actor.id) }
 
   describe "POST /uploads" do

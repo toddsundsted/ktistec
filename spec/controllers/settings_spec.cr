@@ -144,13 +144,6 @@ Spectator.describe SettingsController do
       end
 
       context "and posting form data" do
-        around_each do |example|
-          previous, Kemal.config.public_folder = Kemal.config.public_folder, Dir.tempdir
-          example.call
-        ensure
-          Kemal.config.public_folder = previous if previous
-        end
-
         let(form) do
           String.build do |io|
             HTTP::FormData.build(io) do |form_data|

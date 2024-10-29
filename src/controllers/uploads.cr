@@ -8,7 +8,7 @@ class UploadsController
   post "/uploads" do |env|
     filename = nil
     filepath = nil
-    HTTP::FormData.parse(env.request) do |part|
+    env.params.files.each do |name, part|
       if part.filename.presence
         filename = env.account.actor.id.to_s
         filepath = File.join("uploads", *Tuple(String, String, String).from(UUID.random.to_s.split("-")[0..2]))
@@ -17,9 +17,7 @@ class UploadsController
           filename = "#{filename}#{extension}"
         end
         Dir.mkdir_p(File.join(Kemal.config.public_folder, filepath))
-        File.open(File.join(Kemal.config.public_folder, filepath, filename), "w") do |file|
-          IO.copy(part.body, file)
-        end
+        part.tempfile.rename(File.join(Kemal.config.public_folder, filepath, filename))
       end
     end
     if filename && filepath

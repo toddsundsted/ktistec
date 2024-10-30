@@ -62,7 +62,7 @@ class TagsController
   end
 
   private macro render_or_redirect
-    if turbo_frame?
+    if in_turbo_frame?
       ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, follow: follow, task: task
     else
       redirect back_path

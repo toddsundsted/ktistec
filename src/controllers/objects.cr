@@ -198,7 +198,7 @@ class ObjectsController
   end
 
   private macro render_or_redirect
-    if turbo_frame?
+    if in_turbo_frame?
       ok "objects/thread", env: env, object: object, thread: thread, follow: follow, task: task
     else
       redirect back_path

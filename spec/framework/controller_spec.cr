@@ -29,7 +29,7 @@ class FooBarController
   end
 
   get "/foo/bar/turbo-frame" do |env|
-    if turbo_frame?
+    if in_turbo_frame?
       ok "turbo-frame"
     else
       ok

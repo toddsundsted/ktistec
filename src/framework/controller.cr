@@ -27,7 +27,7 @@ class HTTP::Server::Context
     end
   end
 
-  def turbo_frame?
+  def in_turbo_frame?
     @request.headers.has_key?("Turbo-Frame")
   end
 
@@ -50,8 +50,8 @@ module Ktistec
       env.accepts?({{mime_type.splat}})
     end
 
-    macro turbo_frame?
-      env.turbo_frame?
+    macro in_turbo_frame?
+      env.in_turbo_frame?
     end
 
     # Redirect and end processing.

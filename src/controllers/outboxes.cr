@@ -7,8 +7,6 @@ require "../rules/content_rules"
 class RelationshipsController
   include Ktistec::Controller
 
-  skip_auth ["/actors/:username/outbox"], GET
-
   post "/actors/:username/outbox" do |env|
     unless (account = get_account(env))
       not_found
@@ -308,6 +306,10 @@ class RelationshipsController
     unless (account = get_account(env))
       not_found
     end
+    unless env.account? == account
+      forbidden
+    end
+
     activities = account.actor.in_outbox(**pagination_params(env), public: env.account? != account)
 
     ok "relationships/outbox", env: env, activities: activities

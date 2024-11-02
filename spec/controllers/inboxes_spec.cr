@@ -1244,4 +1244,33 @@ Spectator.describe RelationshipsController do
       end
     end
   end
+
+  describe "GET /actors/:username/inbox" do
+    it "returns 401 if not authorized" do
+      get "/actors/0/inbox"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "with authorized" do
+      let(actor) { register.actor }
+      let(other) { register.actor }
+
+      sign_in(as: actor.username)
+
+      it "returns 404 if not found" do
+        get "/actors/0/inbox"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 403 if not the current account" do
+        get "/actors/#{other.username}/inbox"
+        expect(response.status_code).to eq(403)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/inbox"
+        expect(response.status_code).to eq(200)
+      end
+    end
+  end
 end

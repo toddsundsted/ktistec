@@ -41,9 +41,49 @@ Spectator.describe Ktistec::CSRF do
     expect(client_response.status_code).to eq(404)
   end
 
+  it "allows POSTs with safe content types" do
+    handler = described_class.new
+    request = HTTP::Request.new("POST", "/",
+      headers: HTTP::Headers{"Content-Type" => %q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|})
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(404)
+
+    handler = described_class.new
+    request = HTTP::Request.new("POST", "/",
+      headers: HTTP::Headers{"Content-Type" => "application/activity+json"})
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(404)
+
+    handler = described_class.new
+    request = HTTP::Request.new("POST", "/",
+      headers: HTTP::Headers{"Content-Type" => "application/json"})
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(404)
+  end
+
   it "blocks POSTs without the token" do
     handler = described_class.new
     request = HTTP::Request.new("POST", "/")
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(403)
+
+    handler = described_class.new
+    request = HTTP::Request.new("POST", "/",
+      body: "foo=bar",
+      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"})
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(403)
+
+    handler = described_class.new
+    request = HTTP::Request.new("POST", "/",
+      body: %Q|--1Aa\r\nContent-Disposition: form-data; name="foo"\r\n\r\nbar\r\n--1Aa--"|,
+      headers: HTTP::Headers{"Content-Type" => "multipart/form-data; boundary=1Aa"})
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(403)
+
+    handler = described_class.new
+    request = HTTP::Request.new("POST", "/",
+      headers: HTTP::Headers{"Content-Type" => "text/plain"})
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
   end

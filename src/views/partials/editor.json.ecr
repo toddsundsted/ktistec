@@ -1,1 +1,18 @@
-<%= render "src/views/partials/object.json.ecr" %>
+{
+<%- if (errors = object.errors.presence) -%>
+  "errors":{
+  <%- errors.each_with_index do |(name, value), i| -%>
+    <%= name.inspect %>:<%= value.to_json %><%= comma(errors, i) %>
+  <%- end -%>
+  },
+<%- end -%>
+<%- unless object.new_record? -%>
+  "object":<%= object.iri.to_json %>,
+<%- end -%>
+<%- if object.in_reply_to? -%>
+  "in-reply-to":<%= object.in_reply_to_iri.to_json %>,
+<%- end -%>
+"name":<%= object.name.to_json %>,
+"summary":<%= object.summary.to_json %>,
+"canonical_path":<%= object.canonical_path.to_json %>
+}

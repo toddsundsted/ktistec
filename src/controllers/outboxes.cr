@@ -15,7 +15,7 @@ class RelationshipsController
       forbidden
     end
 
-    activity = env.params.body
+    activity = (env.params.body.presence || env.params.json).to_h.transform_values(&.to_s)
 
     case activity["type"]?
     when "Announce"
@@ -23,7 +23,7 @@ class RelationshipsController
         bad_request
       end
       now = Time.utc
-      visible = !!activity["public"]?.presence
+      visible = activity["public"]? == "true"
       to = [] of String
       if visible
         to << "https://www.w3.org/ns/activitystreams#Public"
@@ -49,7 +49,7 @@ class RelationshipsController
         bad_request
       end
       now = Time.utc
-      visible = !!activity["public"]?.presence
+      visible = activity["public"]? == "true"
       to = [] of String
       if visible
         to << "https://www.w3.org/ns/activitystreams#Public"
@@ -83,7 +83,7 @@ class RelationshipsController
       if object && object.attributed_to != account.actor
         forbidden
       end
-      visible = !!activity["public"]?.presence
+      visible = activity["public"]? == "true"
       to = activity["to"]?.presence.try(&.split(",")) || [] of String
       if (attributed_to = in_reply_to.try(&.attributed_to?))
         to |= [attributed_to.iri]
@@ -115,8 +115,12 @@ class RelationshipsController
       )
       # validate ensures properties are populated from source
       unless object.valid?
-        target = %Q<object-#{object.id || "new"}>
-        unprocessable_entity "partials/editor", env: env, object: object, recursive: false, _operation: "replace", _target: target
+        if accepts?("application/ld+json", "application/activity+json", "application/json")
+          unprocessable_entity "partials/editor", env: env, object: object, recursive: false
+        else
+          target = %Q<object-#{object.id || "new"}>
+          unprocessable_entity "partials/editor", env: env, object: object, recursive: false, _operation: "replace", _target: target
+        end
       end
       # hack to sidestep typing of unions as their nearest common ancestor
       if activity.responds_to?(:actor=) && activity.responds_to?(:object=)
@@ -290,16 +294,27 @@ class RelationshipsController
     ).schedule
 
     if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Update)
-      if activity.object.in_reply_to?
-        env.created remote_thread_path(activity.object.in_reply_to)
+      if accepts?("application/ld+json", "application/activity+json", "application/json")
+        env.response.headers.add("Location", remote_object_path(activity.object))
+        created
       else
-        env.created remote_object_path(activity.object)
+        if activity.object.in_reply_to?
+          redirect remote_thread_path(activity.object.in_reply_to)
+        else
+          redirect remote_object_path(activity.object)
+        end
       end
-    elsif activity.is_a?(ActivityPub::Activity::Delete) && back_path =~ /\/remote\/objects|\/objects/
-      redirect actor_path
-    else
-      redirect back_path
+    elsif activity.is_a?(ActivityPub::Activity::Delete)
+      if accepts?("application/ld+json", "application/activity+json", "application/json")
+        no_content
+      else
+        if back_path =~ /\/remote\/objects|\/objects/
+          redirect actor_path
+        end
+      end
     end
+
+    redirect back_path
   end
 
   get "/actors/:username/outbox" do |env|

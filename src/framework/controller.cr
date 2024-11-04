@@ -165,6 +165,7 @@ module Ktistec
 
     def_response_helper(ok, "OK", 200)
     def_response_helper(created, "Created", 201)
+    def_response_helper(no_content, "No Content", 204)
     def_response_helper(bad_request, "Bad Request", 400)
     def_response_helper(forbidden, "Forbidden", 403)
     def_response_helper(not_found, "Not Found", 404)

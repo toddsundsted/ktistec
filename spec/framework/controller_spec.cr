@@ -41,8 +41,7 @@ class FooBarController
   end
 
   get "/foo/bar/redirect" do |env|
-    redirect "/foobar", 301, body: "Foo Bar"
-    ok # should never get here
+    redirect "/foobar", 301
   end
 
   get "/foo/bar/ok" do |env|
@@ -123,11 +122,6 @@ Spectator.describe Ktistec::Controller do
     it "sets the location header" do
       get "/foo/bar/redirect"
       expect(response.headers["Location"]).to eq("/foobar")
-    end
-
-    it "includes the body" do
-      get "/foo/bar/redirect"
-      expect(response.body).to eq("Foo Bar")
     end
   end
 

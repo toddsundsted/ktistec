@@ -293,27 +293,25 @@ class RelationshipsController
       activity: activity
     ).schedule
 
-    if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Update)
-      if accepts?("application/ld+json", "application/activity+json", "application/json")
-        created remote_object_path(activity.object), "activities/activity", env: env, activity: activity, recursive: true
-      else
+    if accepts?("application/ld+json", "application/activity+json", "application/json")
+      unless activity.is_a?(ActivityPub::Activity::Delete)
+        created activity_path(activity), "activities/activity", env: env, activity: activity, recursive: true
+      end
+      no_content
+    else
+      if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Update)
         if activity.object.in_reply_to?
           redirect remote_thread_path(activity.object.in_reply_to)
         else
           redirect remote_object_path(activity.object)
         end
-      end
-    elsif activity.is_a?(ActivityPub::Activity::Delete)
-      if accepts?("application/ld+json", "application/activity+json", "application/json")
-        no_content
-      else
+      elsif activity.is_a?(ActivityPub::Activity::Delete)
         if back_path =~ /\/remote\/objects|\/objects/
           redirect actor_path
         end
       end
+      redirect back_path
     end
-
-    redirect back_path
   end
 
   get "/actors/:username/outbox" do |env|

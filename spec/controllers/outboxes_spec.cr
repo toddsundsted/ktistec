@@ -91,9 +91,9 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(302)
         end
 
-        it "redirects when successful" do
+        it "returns 201 when successful" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|
-          expect(response.status_code).to eq(302)
+          expect(response.status_code).to eq(201)
         end
 
         it "creates an announce activity" do
@@ -251,9 +251,9 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(302)
         end
 
-        it "redirects when successful" do
+        it "returns 201 when successful" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|
-          expect(response.status_code).to eq(302)
+          expect(response.status_code).to eq(201)
         end
 
         it "creates a like activity" do
@@ -396,8 +396,10 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(201)
         end
 
-        # lazy shorthand to return the created object
-        let(created) do
+        let(new_activity) do
+          ActivityPub::Activity.find(actor_iri: actor.iri)
+        end
+        let(new_object) do
           ActivityPub::Object.find(attributed_to_iri: actor.iri)
         end
 
@@ -410,12 +412,12 @@ Spectator.describe RelationshipsController do
 
         it "redirects to the object view" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"
-          expect(response.headers["Location"]).to eq("/remote/objects/#{created.id}")
+          expect(response.headers["Location"]).to eq("/remote/objects/#{new_object.id}")
         end
 
-        it "specifies the location of the object" do
+        it "specifies the location of the activity" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|
-          expect(response.headers["Location"]).to eq("/remote/objects/#{created.id}")
+          expect(response.headers["Location"]).to eq(URI.parse(new_activity.iri).path)
         end
 
         it "creates a create activity" do
@@ -441,24 +443,24 @@ Spectator.describe RelationshipsController do
         context "given a name" do
           it "sets the name" do
             post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&name=Name"
-            expect(created.name).to eq("Name")
+            expect(new_object.name).to eq("Name")
           end
 
           it "sets the name" do
             post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","name":"Name"}|
-            expect(created.name).to eq("Name")
+            expect(new_object.name).to eq("Name")
           end
         end
 
         context "given a summary" do
           it "sets the summary" do
             post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&summary=Summary"
-            expect(created.summary).to eq("Summary")
+            expect(new_object.summary).to eq("Summary")
           end
 
           it "sets the summary" do
             post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","summary":"Summary"}|
-            expect(created.summary).to eq("Summary")
+            expect(new_object.summary).to eq("Summary")
           end
         end
 
@@ -471,12 +473,12 @@ Spectator.describe RelationshipsController do
 
           it "sets the canonical path" do
             post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical_path=%2Ffoo%2Fbar%2Fbaz"
-            expect(created.canonical_path).to eq("/foo/bar/baz")
+            expect(new_object.canonical_path).to eq("/foo/bar/baz")
           end
 
           it "sets the canonical path" do
             post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical_path":"/foo/bar/baz"}|
-            expect(created.canonical_path).to eq("/foo/bar/baz")
+            expect(new_object.canonical_path).to eq("/foo/bar/baz")
           end
         end
 
@@ -873,9 +875,9 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(302)
         end
 
-        it "redirects when successful" do
+        it "returns 201 when successful" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Follow","object":"#{object.iri}"}|
-          expect(response.status_code).to eq(302)
+          expect(response.status_code).to eq(201)
         end
 
         it "creates an unconfirmed follow relationship" do

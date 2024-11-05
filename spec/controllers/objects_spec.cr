@@ -548,7 +548,7 @@ Spectator.describe ObjectsController do
 
       it "succeeds" do
         post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":""}|
-        expect(response.status_code).to eq(302)
+        expect(response.status_code).to eq(200)
       end
 
       it "changes the content" do

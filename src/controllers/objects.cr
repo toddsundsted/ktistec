@@ -21,7 +21,7 @@ class ObjectsController
     object.save
 
     if accepts?("application/ld+json", "application/activity+json", "application/json")
-      created edit_object_path(object), "objects/object", env: env, object: object, recursive: false
+      created object_path(object), "objects/object", env: env, object: object, recursive: false
     else
       redirect edit_object_path(object)
     end
@@ -80,7 +80,11 @@ class ObjectsController
 
     object.save
 
-    redirect object_path(object)
+    if accepts?("application/ld+json", "application/activity+json", "application/json")
+      ok "objects/object", env: env, object: object, recursive: false
+    else
+      redirect object_path(object)
+    end
   end
 
   delete "/objects/:id" do |env|

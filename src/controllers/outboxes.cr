@@ -295,8 +295,7 @@ class RelationshipsController
 
     if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Update)
       if accepts?("application/ld+json", "application/activity+json", "application/json")
-        env.response.headers.add("Location", remote_object_path(activity.object))
-        created
+        created remote_object_path(activity.object), "activities/activity", env: env, activity: activity, recursive: true
       else
         if activity.object.in_reply_to?
           redirect remote_thread_path(activity.object.in_reply_to)

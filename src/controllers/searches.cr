@@ -11,7 +11,7 @@ class SearchesController
     actor_or_object = nil
 
     if (query = env.params.query["query"]?)
-      query = query.strip()
+      query = query.strip
       url = Ktistec::Network.resolve(query)
       actor_or_object =
         if url.starts_with?("#{host}/actors/")

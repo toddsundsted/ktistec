@@ -41,8 +41,7 @@ class UploadsController
       forbidden
     end
     filepath = File.join(Kemal.config.public_folder, "uploads", p1, p2, p3, id)
-    if File.exists?(filepath)
-      File.delete(filepath)
+    if File.delete?(filepath)
       ok
     else
       not_found

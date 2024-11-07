@@ -9,8 +9,8 @@ class FooBarController
     "/foo/bar/accepts",
     "/foo/bar/turbo-streams/:operation/:target",
     "/foo/bar/turbo-frame",
-    "/foo/bar/created",
     "/foo/bar/redirect",
+    "/foo/bar/created",
     "/foo/bar/ok"
   ]
 
@@ -36,13 +36,12 @@ class FooBarController
     end
   end
 
-  get "/foo/bar/created" do |env|
-    env.created "/foobar"
+  get "/foo/bar/redirect" do |env|
+    redirect "/foobar", 301
   end
 
-  get "/foo/bar/redirect" do |env|
-    redirect "/foobar", 301, body: "Foo Bar"
-    ok # should never get here
+  get "/foo/bar/created" do |env|
+    created "/foobar", "body"
   end
 
   get "/foo/bar/ok" do |env|
@@ -102,18 +101,6 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "GET /foo/bar/created" do
-    it "redirects with 302" do
-      get "/foo/bar/created", HTTP::Headers{"Accept" => "text/html"}
-      expect(response.status_code).to eq(302)
-    end
-
-    it "redirects with 201" do
-      get "/foo/bar/created", HTTP::Headers{"Accept" => "application/json"}
-      expect(response.status_code).to eq(201)
-    end
-  end
-
   describe "GET /foo/bar/redirect" do
     it "redirects with 301" do
       get "/foo/bar/redirect"
@@ -124,10 +111,22 @@ Spectator.describe Ktistec::Controller do
       get "/foo/bar/redirect"
       expect(response.headers["Location"]).to eq("/foobar")
     end
+  end
+
+  describe "GET /foo/bar/created" do
+    it "responds with 201" do
+      get "/foo/bar/created"
+      expect(response.status_code).to eq(201)
+    end
+
+    it "sets the location header" do
+      get "/foo/bar/created"
+      expect(response.headers["Location"]).to eq("/foobar")
+    end
 
     it "includes the body" do
-      get "/foo/bar/redirect"
-      expect(response.body).to eq("Foo Bar")
+      get "/foo/bar/created", HTTP::Headers{"Accept" => "text/plain"}
+      expect(response.body).to eq("body")
     end
   end
 

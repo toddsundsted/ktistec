@@ -21,8 +21,7 @@ class UploadsController
       end
     end
     if filename && filepath
-      env.response.headers["Location"] = "#{host}/#{filepath}/#{filename}"
-      created "/#{filepath}/#{filename}"
+      created "#{host}/#{filepath}/#{filename}", "/#{filepath}/#{filename}"
     else
       bad_request
     end
@@ -42,8 +41,7 @@ class UploadsController
       forbidden
     end
     filepath = File.join(Kemal.config.public_folder, "uploads", p1, p2, p3, id)
-    if File.exists?(filepath)
-      File.delete(filepath)
+    if File.delete?(filepath)
       ok
     else
       not_found

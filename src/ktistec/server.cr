@@ -13,6 +13,7 @@ Ktistec::Server.run do
     Task::Performance.schedule_unless_exists
     Task::UpdateMetrics.schedule_unless_exists
     Task::Monitor.schedule_unless_exists
+    Task::RunScripts.schedule_unless_exists
   end
   Session.clean_up_stale_sessions
   # track server starts

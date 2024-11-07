@@ -30,6 +30,9 @@ module Ktistec
          @header = "X-CSRF-Token",
          @allowed_routes = [] of String,
          @allowed_methods = %w(GET HEAD OPTIONS TRACE),
+         # these are the only content types/encodings that a browser
+         # should be able to submit cross-domain by default.
+         @enforced_content_types = %w(application/x-www-form-urlencoded multipart/form-data text/plain),
          @parameter_name = "authenticity_token",
          @error : String | (HTTP::Server::Context -> String) = "Forbidden (CSRF)"
        )
@@ -59,6 +62,8 @@ module Ktistec
         )
       end
 
+      content_type = context.request.headers["Content-Type"]?.try(&.split(";").first.strip.presence)
+      return call_next(context) unless content_type.nil? || @enforced_content_types.includes?(content_type)
       return call_next(context) if @allowed_methods.includes?(context.request.method)
 
       req = context.request

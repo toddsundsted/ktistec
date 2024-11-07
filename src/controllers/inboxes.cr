@@ -330,6 +330,10 @@ class RelationshipsController
     unless (account = get_account(env))
       not_found
     end
+    unless env.account? == account
+      forbidden
+    end
+
     activities = account.actor.in_inbox(**pagination_params(env), public: env.account? != account)
 
     ok "relationships/inbox", env: env, account: account, activities: activities

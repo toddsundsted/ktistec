@@ -30,12 +30,6 @@ class HTTP::Server::Context
   def in_turbo_frame?
     @request.headers.has_key?("Turbo-Frame")
   end
-
-  def created(url, status_code = nil, *, body = nil)
-    @response.headers.add("Location", url)
-    @response.status_code = status_code.nil? ? accepts?("text/html") ? 302 : 201 : status_code
-    @response.print(body) if body
-  end
 end
 
 module Ktistec
@@ -56,12 +50,9 @@ module Ktistec
 
     # Redirect and end processing.
     #
-    macro redirect(url, status_code = 302, body = nil)
+    macro redirect(url, status_code = 302)
       env.response.headers.add("Location", {{url}})
       env.response.status_code = {{status_code}}
-      {% if body %}
-        env.response.print({{body}})
-      {% end %}
       env.response.close
       next
     end
@@ -164,7 +155,8 @@ module Ktistec
     end
 
     def_response_helper(ok, "OK", 200)
-    def_response_helper(created, "Created", 201)
+    def_response_helper(_created, "Created", 201) # requres a location
+    def_response_helper(no_content, "No Content", 204)
     def_response_helper(bad_request, "Bad Request", 400)
     def_response_helper(forbidden, "Forbidden", 403)
     def_response_helper(not_found, "Not Found", 404)
@@ -172,6 +164,15 @@ module Ktistec
     def_response_helper(unprocessable_entity, "Unprocessable Entity", 422)
     def_response_helper(server_error, "Server Error", 500)
     def_response_helper(bad_gateway, "Bad Gateway", 502)
+
+    macro created(url, *args, **opts)
+      env.response.headers.add("Location", {{url}})
+      {% if args.empty? || opts.empty? %}
+        _created {{args.splat}}{{opts.double_splat}}
+      {% else %}
+        _created {{args.splat}}, {{opts.double_splat}}
+      {% end %}
+    end
 
     # Don't authenticate specified handlers.
     #

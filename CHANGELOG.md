@@ -1,6 +1,23 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.0]
+### Added
+- Support running scripted automations (see README).
+- "Fetch Once" button on hashtag and thread pages. (fixes [#108](https://github.com/toddsundsted/ktistec/issues/108))
+- Support navigation to a post's threaded view. (fixes [#108](https://github.com/toddsundsted/ktistec/issues/108))
+- Add support for post `name` and `summary`.
+
+### Fixed
+- Improve support for operating without JavaScript available/enabled.
+- Only enforce CSRF protection on "simple" requests.
+
+### Changed
+- Replace use of multi-action controller with `formaction`. (fixes [#101](https://github.com/toddsundsted/ktistec/issues/101))
+
+### Other
+- API usability improvements.
+
 ## [v2.3.0]
 ### Added
 - Add monitoring for hung tasks.
@@ -244,6 +261,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.4.0]: https://github.com/toddsundsted/ktistec/compare/084754a5...74f65140
 [v2.3.0]: https://github.com/toddsundsted/ktistec/compare/576ceeb2...1aab0951
 [v2.2.0]: https://github.com/toddsundsted/ktistec/compare/8d68d896...e8fcc772
 [v2.1.0]: https://github.com/toddsundsted/ktistec/compare/a74651d9...238dad82

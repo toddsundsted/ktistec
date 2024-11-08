@@ -178,6 +178,7 @@ the server such as posting, following, sharing, liking, etc.
 The table below contains a list of supported endpoints:
 
 | Method | Path | Notes |
+|-|-|-|
 | GET    | /actors/:username/inbox     | Retrieves a page of `activities` in your inbox as an ActivityPub collection. |
 | GET    | /actors/:username/outbox    | Retrieves a page of `activities` in your outbox as an ActivityPub collection. |
 | POST   | /actors/:username/outbox    | Puts an `activity` in your outbox for delivery. |
@@ -233,6 +234,7 @@ endpoint (examples assume scripts use `curl`). The JSON `activity` may
 include the following fields:
 
 | Name        | Notes |
+|-|-|
 | type        | Must be "Publish". |
 | content     | An HTML formatted string. |
 | name        | Optional. A plain text string often displayed as the title of a post. |
@@ -261,6 +263,7 @@ To share an `object`, `POST` a JSON `activity` to the `outbox`
 endpoint. The JSON `activity` may include the following fields:
 
 | Name   | Notes |
+|-|-|
 | type   | Must be "Announce". |
 | object | The IRI of the `object` being shared. |
 | to     | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
@@ -283,6 +286,7 @@ To like an `object`, `POST` a JSON `activity` to the `outbox`
 endpoint. The JSON `activity` may include the following fields:
 
 | Name   | Notes |
+|-|-|
 | type   | Must be "Like". |
 | object | The IRI of the `object` being liked. |
 | to     | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
@@ -305,6 +309,7 @@ To follow an actor, `POST` a JSON `activity` to the `outbox`
 endpoint. The JSON `activity` may include the following fields:
 
 | Name   | Notes |
+|-|-|
 | type   | Must be "Follow". |
 | object | The IRI of the `actor` being followed. |
 
@@ -321,6 +326,7 @@ You can undo a previously published `activity` by `POST`ing an `Undo`
 the following fields:
 
 | Name   | Notes |
+|-|-|
 | type   | Must be "Undo". |
 | object | The IRI of the `activity` being undone. |
 
@@ -337,6 +343,7 @@ You can delete an `actor` or `object` by `POST`ing a `Delete`
 the following fields:
 
 | Name   | Notes |
+|-|-|
 | type   | Must be "Delete". |
 | object | The IRI of the `actor` or `object` being deleted. |
 

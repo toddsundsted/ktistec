@@ -12,8 +12,18 @@
     - [Blocking](#blocking)
     - [Metrics](#metrics)
     - [Tasks](#tasks)
+    - [Scripts](#scripts)
+  - [API](#api)
+    - [A Note on ActivityPub](#a-note-on-activitypub)
+    - [Publishing an Object](#publishing-an-object)
+    - [Sharing an Object (ActivityPub `Announce`)](#sharing-an-object-activitypub-announce))
+    - [Liking an Object](#liking-an-object)
+    - [Following an Actor](#following-an-actor)
+    - [Undoing an Activity](#undoing-an-activity)
+    - [Deleting](#deleting)
   - [Prerequisites](#prerequisites)
   - [Building](#building)
+    - [SQLite3 Compatibility](#sqlite3-compatibility)
     - [Running Tests](#running-tests)
   - [Usage](#usage)
   - [Contributors](#contributors)
@@ -32,7 +42,7 @@ home in the Fediverse. If you want to talk to me, I'm
 
 ## Features
 
-Ktistec is intended for writing.
+Ktistec is intended for writing and scripting.
 
 ### Text and images
 
@@ -48,7 +58,7 @@ attachments used for compatibility with non-Ktistec servers.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/aecz36.png" width=460>
 
-### Drafts posts
+### Draft posts
 
 Meaningful writing is an iterative process so Ktistec supports draft
 posts. Draft posts aren't visible until you publish them.
@@ -138,6 +148,203 @@ that deliver content, fetch content, and perform other housekeeping
 chores.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/h075mm.png" width=460>
+
+### Scripts
+
+The Ktistec server will periodically and in sequential order run all
+**executable** files in the `etc/scripts` directory.
+
+When running scripts, the Ktistec server will set the following
+variables in the child process's environment:
+
+* API\_KEY - authenticates the script with the server
+* KTISTEC\_HOST - the base URL of the server instance
+* KTISTEC\_NAME - the name of the server instance
+* USERNAME - the username of the account the script is run as
+
+Output to `STDOUT` and `STDERR` will show up in the Ktistec server
+logs.  Output to `STDOUT` will be emitted as severity `INFO` and
+output to `STDERR` will be emitted as severity `WARN`.
+
+Scripts can use the [API](#api) to communicate with the Ktistec
+server.
+
+## API
+
+Given a valid `API_KEY`, scripts and external tools have full access
+to the Ktistec server's API.  This allows them to automate actions on
+the server such as posting, following, sharing, liking, etc.
+
+The table below contains a list of supported endpoints:
+
+| Method | Path | Notes |
+| GET    | /actors/:username/inbox     | Retrieves a page of `activities` in your inbox as an ActivityPub collection. |
+| GET    | /actors/:username/outbox    | Retrieves a page of `activities` in your outbox as an ActivityPub collection. |
+| POST   | /actors/:username/outbox    | Puts an `activity` in your outbox for delivery. |
+| GET    | /actors/:username/posts     | Retrieves a page of `objects` you've published. |
+| GET    | /actors/:username/drafts    | Retrieves a page of `objects` you've saved as drafts. |
+| GET    | /actors/:username/followers | Retrieves a page of `actors` following you. |
+| GET    | /actors/:username/following | Retrieves a page of `actors` you're following. |
+| GET    | /lookup/activity?iri=:iri   | Looks up the `activity` in the server cache identified by `iri`. |
+| GET    | /lookup/actor?iri=:iri      | Looks up the `actor` in the server cache identified by `iri`. |
+| GET    | /lookup/object?iri=:iri     | Looks up the `object` in the server cache identified by `iri`. |
+| GET    | /sessions                   | Gets a representation of an authentication attempt with unset `username` and `password`. |
+| POST   | /sessions                   | Attempts authentication using the supplied `username` and `password`. |
+| DELETE | /sessions                   | Destroys the current session. |
+
+The `/sessions` endpoint is useful when doing script development
+outside of the server environment.  The scripts the Ktistec server
+runs directly do not need to create their own session -- the supplied
+`API_KEY` is sufficient.
+
+### A Note on ActivityPub
+
+At its core, Ktistec is an ActivityPub server and some things about
+its API make more sense if you understand a little bit about
+ActivityPub.
+
+ActivityPub is a protocol for sending and receiving messages.
+Entities called `actors` send and receive `activities`.  `Activities`
+represent the various social actions that define interaction on the
+Fediverse: posting, sharing and liking posts, following other actors,
+etc.
+
+Every `actor` has an `inbox` for receiving `activities` from the
+`actors` they follow, and an `outbox` for sending `activities` to the
+`actors` that follow them.
+
+A Fediverse "post", "status", "note", "toot", etc. are all names for
+an ActivityPub `object`.  ActivityPub `activities` are typically about
+`objects`.
+
+ActivityPub `actors`, `activities`, and `objects` are described using
+a flavor of JSON known as JSON-LD.  Every `actor`, `activity`, and
+`object` is identified by a unique `IRI`.
+
+Ktistec allows a JSON shorthand (described below) to be used when
+publishing, which greatly simplifies the development of scripts.
+
+* [ActivityPub W3C Recommendation](https://www.w3.org/TR/activitypub/)
+
+### Publishing an Object
+
+To publish an `object`, `POST` a JSON `activity` to the `outbox`
+endpoint (examples assume scripts use `curl`). The JSON `activity` may
+include the following fields:
+
+| Name        | Notes |
+| type        | Must be "Publish". |
+| content     | An HTML formatted string. |
+| name        | Optional. A plain text string often displayed as the title of a post. |
+| summary     | Optional. A plain text string often used as a summary of a longer post. |
+| object      | Optional. The IRI of the `object` being updated (instead of created). |
+| in-reply-to | Optional. The IRI of the `object` being replied to. |
+| to          | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
+| cc          | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
+| public      | May be `true` or `false`. |
+
+By default, `cc` incldues the publishing `actor`'s followers collection.
+
+Example:
+
+    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
+    activity="{\"type\":\"Publish\",\"content\":\"this is a test\",\"public\":true}"
+    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+
+Note: "publishing" an `object` encompasses both creating a new
+`object` (an ActivityPub `Create` activity) and updating an existing
+`object` (an ActivityPub `Update` activity).
+
+### Sharing an Object (ActivityPub `Announce`)
+
+To share an `object`, `POST` a JSON `activity` to the `outbox`
+endpoint. The JSON `activity` may include the following fields:
+
+| Name   | Notes |
+| type   | Must be "Announce". |
+| object | The IRI of the `object` being shared. |
+| to     | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
+| cc     | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
+| public | May be `true` or `false`. |
+
+By default, `to` includes the actor to which the `object` is
+attributed, and `cc` includes the publishing `actor`'s followers
+collection.
+
+Example:
+
+    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
+    activity="{\"type\":\"Announce\",\"object\":\"https://example.com/objects/123\",\"public\":true}"
+    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+
+### Liking an Object
+
+To like an `object`, `POST` a JSON `activity` to the `outbox`
+endpoint. The JSON `activity` may include the following fields:
+
+| Name   | Notes |
+| type   | Must be "Like". |
+| object | The IRI of the `object` being liked. |
+| to     | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
+| cc     | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
+| public | May be `true` or `false`. |
+
+By default, `to` includes the actor to which the `object` is
+attributed, and `cc` includes the publishing `actor`'s followers
+collection.
+
+Example:
+
+    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
+    activity="{\"type\":\"Like\",\"object\":\"https://example.com/objects/123\",\"public\":true}"
+    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+
+### Following an Actor
+
+To follow an actor, `POST` a JSON `activity` to the `outbox`
+endpoint. The JSON `activity` may include the following fields:
+
+| Name   | Notes |
+| type   | Must be "Follow". |
+| object | The IRI of the `actor` being followed. |
+
+Example:
+
+    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
+    activity="{\"type\":\"Follow\",\"object\":\"https://example.com/actors/alice\"}"
+    curl -s -H "Authorization Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+
+### Undoing an Activity
+
+You can undo a previously published `activity` by `POST`ing an `Undo`
+`activity` to the `outbox` endpoint. The JSON `activity` may include
+the following fields:
+
+| Name   | Notes |
+| type   | Must be "Undo". |
+| object | The IRI of the `activity` being undone. |
+
+Example:
+
+    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
+    activity="{\"type\":\"Undo\",\"object\":\"https://example.com/activities/123\"}"
+    curl -s -H "Authorization Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+
+### Deleting
+
+You can delete an `actor` or `object` by `POST`ing a `Delete`
+`activity` to the `outbox` endpoint. The JSON `activity` may include
+the following fields:
+
+| Name   | Notes |
+| type   | Must be "Delete". |
+| object | The IRI of the `actor` or `object` being deleted. |
+
+Example:
+
+    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
+    activity="{\"type\":\"Delete\",\"object\":\"https://example.com/123\"}"
+    curl -s -H "Authorization Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
 
 ## Prerequisites
 

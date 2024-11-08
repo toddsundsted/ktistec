@@ -18,7 +18,7 @@ module Ktistec
       # "application/x-www-form-urlencoded" on activities. see:
       # https://github.com/pixelfed/pixelfed/issues/3049
       return call_next env unless env.request.method == "POST"
-      return call_next env if env.request.path == "/uploads" || env.request.path.ends_with?("/inbox")
+      return call_next env if env.request.path.ends_with?("/inbox")
       return call_next env unless env.params.body["_method"]? == "delete"
 
       # switch method and fix URL params

@@ -623,6 +623,51 @@ Spectator.describe "partials" do
     end
   end
 
+  describe "editor.json.ecr" do
+    let(env) { env_factory("GET", "/editor") }
+
+    subject do
+      JSON.parse(render "./src/views/partials/editor.json.ecr")
+    end
+
+    let_build(:object, local: true)
+    let_build(:object, named: :original)
+
+    context "given a new object" do
+      pre_condition { expect(object.new_record?).to be_true }
+
+      it "does not render the object's iri" do
+        expect(subject["object"]?).to be_nil
+      end
+    end
+
+    context "given a saved object" do
+      before_each { object.save }
+
+      pre_condition { expect(object.new_record?).to be_false }
+
+      it "renders the object's iri" do
+        expect(subject["object"]?).to eq(object.iri)
+      end
+    end
+
+    context "given a reply" do
+      before_each { object.assign(in_reply_to: original).save }
+
+      it "renders the replies to object's iri" do
+        expect(subject["in-reply-to"]?).to eq(original.iri)
+      end
+    end
+
+    context "an object with errors" do
+      before_each { object.errors["object"] = ["has errors"] }
+
+      it "renders the errors" do
+        expect(subject["errors"]["object"]).to eq(["has errors"])
+      end
+    end
+  end
+
   describe "reply.html.slang" do
     let(env) { env_factory("GET", "/object") }
 
@@ -652,7 +697,7 @@ Spectator.describe "partials" do
       let!(object) { object2.save }
 
       it "prepopulates editor with mentions" do
-        expect(subject.xpath_nodes("//input[@name='content']/@value").first).
+        expect(subject.xpath_nodes("//textarea[@name='content']/text()").first).
           to eq("@#{actor2.handle} @#{actor1.handle} ")
       end
     end

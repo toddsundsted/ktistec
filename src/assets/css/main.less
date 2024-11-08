@@ -307,6 +307,18 @@ trix-editor {
     figure img { object-fit: cover; width: 100%; height: auto; }
 }
 
+@media (scripting: none) {
+    trix-editor {
+        display: none;
+    }
+}
+
+@media (scripting: enabled) {
+    trix-editor + textarea {
+        display: none;
+    }
+}
+
 /** transitions **/
 
 /* transitional elements */

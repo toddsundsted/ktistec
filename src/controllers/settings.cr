@@ -1,3 +1,5 @@
+require "uuid"
+
 require "../framework/controller"
 require "../models/task/terminate"
 
@@ -27,8 +29,10 @@ class SettingsController
 
     settings = Ktistec.settings
 
-    account.assign(params(env))
-    actor.assign(params(env))
+    params = params(env)
+
+    account.assign(params)
+    actor.assign(params)
 
     if account.valid?
       account.save
@@ -45,7 +49,9 @@ class SettingsController
 
     settings = Ktistec.settings
 
-    settings.assign(params(env))
+    params = params(env)
+
+    settings.assign(params)
 
     if settings.valid?
       settings.save
@@ -68,7 +74,35 @@ class SettingsController
   end
 
   private def self.params(env)
-    params = (env.params.body.presence || env.params.json.presence).not_nil!
+    # this method has to handle two different sources of form data
+    # (in addition to JSON data and urlencoded data): vanilla form
+    # submission and FilePond-enhanced form submission.
+
+    params = (env.params.body.presence || env.params.json)
+
+    # check for the presense of uploaded files. `rescue` because the
+    # `files` invocation will fail if called on anything other than
+    # form data.
+    files = begin
+              env.params.files.presence
+            rescue HTTP::FormData::Error
+            end
+    if files
+      ["image", "icon"].each do |name|
+        if (upload = files[name]?) && (filename = upload.filename.presence) && upload.tempfile.size > 0
+          filename = "#{env.account.actor.id}#{File.extname(filename)}"
+          filepath = File.join("uploads", *Tuple(String, String, String).from(UUID.random.to_s.split("-")[0..2]))
+          begin
+            Dir.mkdir_p(File.join(Kemal.config.public_folder, filepath))
+            upload.tempfile.rename(File.join(Kemal.config.public_folder, filepath, filename))
+            params[name] = "/#{filepath}/#{filename}"
+          rescue err : File::Error
+            Log.warn { err.message }
+          end
+        end
+      end
+    end
+
     {
       "name" => params["name"]?.try(&.to_s),
       "summary" => params["summary"]?.try(&.to_s),

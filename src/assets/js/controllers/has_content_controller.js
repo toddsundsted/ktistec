@@ -5,23 +5,9 @@ export default class extends Controller {
     return [ "input", "button" ]
   }
 
-  connect() {
-    this._checkContent()
-  }
-
-  change() {
-    this._checkContent()
-  }
-
-  _checkContent() {
+  check() {
     if (this.hasContent != !!this.inputTarget.textContent) {
       let hasContent = (this.hasContent = !!this.inputTarget.textContent)
-      let turboStreamSources = document.querySelectorAll('turbo-stream-source')
-      turboStreamSources.forEach((turboStreamSource) => {
-        hasContent ?
-          Turbo.session.disconnectStreamSource(turboStreamSource.streamSource) :
-          Turbo.session.connectStreamSource(turboStreamSource.streamSource)
-      })
       Array.prototype.forEach.call(this.buttonTargets, function(target) {
         hasContent ?
           target.classList.remove("disabled") :

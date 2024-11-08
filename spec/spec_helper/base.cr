@@ -151,6 +151,8 @@ end
 
 ## Test configuration
 
+Kemal.config.public_folder = Dir.tempdir
+
 Kemal.config.env = ENV["KEMAL_ENV"]? || "test"
 
 Ktistec.settings.assign({"host" => "https://test.test", "site" => "Test"}).save

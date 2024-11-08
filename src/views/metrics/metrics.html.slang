@@ -71,7 +71,7 @@ crystal:
     "weekly" => "By Week",
     "monthly" => "By Month"
   }
-== form_tag(nil, "/metrics", "GET", class: "ui mini form") do
+== form_tag(nil, "/metrics", method: "GET", class: "ui mini form") do
   .two.fields
     == select_tag("Range", nil, :begin, ranges, env.params.query["begin"]?)
     == select_tag("Granularity", nil, :granularity, granularities, env.params.query["granularity"]?)

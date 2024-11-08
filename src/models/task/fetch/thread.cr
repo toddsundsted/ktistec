@@ -240,7 +240,7 @@ class Task
       end
     end
 
-    property been_fetched : Array(String) = [] of String
+    property been_fetched = Set(String).new
 
     # Fetches out through the horizon.
     #

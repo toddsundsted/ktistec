@@ -25,8 +25,8 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
     input type="hidden" name="in-reply-to" value=object.in_reply_to_iri
   input type="hidden" name="public" value="true"
   .field
-    input#input-trix-editor type="hidden" name="content" value=content
-    trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-change@window->trix#change input->has-content#change" data-has-content-target="input" input="input-trix-editor"
+    trix-editor data-controller="trix" data-action="trix-attachment-add@window->trix#add trix-attachment-remove@window->trix#remove trix-initialize->has-content#check input->has-content#check" data-has-content-target="input" input="editor-input"
+    textarea#editor-input name="content" rows=3 = content
   details open=(object.name || object.summary || object.canonical_path ? true : false)
     summary Optional Settings
     .field
@@ -40,13 +40,13 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
       input type="text" name="canonical_path" value=object.canonical_path
   - if object.new_record? || object.draft?
     .ui.buttons
-      input.ui.disabled.primary.button data-has-content-target="button" type="submit" value="Publish Post" formaction=outbox_path(actor)
+      input.ui.primary.button data-has-content-target="button" type="submit" value="Publish Post" formaction=outbox_path(actor)
       - if object.new_record?
-        input.ui.disabled.button data-has-content-target="button" type="submit" value="Save Draft" formaction=objects_path
+        input.ui.button data-has-content-target="button" type="submit" value="Save Draft" formaction=objects_path
       - else
-        input.ui.disabled.button data-has-content-target="button" type="submit" value="Save Draft" formaction=object_path(object)
+        input.ui.button data-has-content-target="button" type="submit" value="Save Draft" formaction=object_path(object)
     - unless object.new_record?
       a.ui.teal.right.floated.button href=actor_relationships_path(actor, "drafts")
         | To Drafts
   - else
-    input.ui.disabled.primary.button data-has-content-target="button" type="submit" value="Update Post" formaction=outbox_path(actor)
+    input.ui.primary.button data-has-content-target="button" type="submit" value="Update Post" formaction=outbox_path(actor)

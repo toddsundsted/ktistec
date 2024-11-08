@@ -86,14 +86,14 @@ Spectator.describe ObjectsController do
           expect(response.status_code).to eq(422)
         end
 
-        it "renders a form with the object" do
+        it "renders an error message" do
           post "/objects", FORM_DATA, "content=foo+bar&canonical_path=foo%2Fbar"
-          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-new")
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]")).not_to be_empty
         end
 
-        it "renders the object" do
+        it "renders an error message" do
           post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical_path":"foo/bar"}|
-          expect(JSON.parse(response.body)["id"]).to be_truthy
+          expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
         end
       end
     end
@@ -379,9 +379,9 @@ Spectator.describe ObjectsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@formaction").first).to eq("/objects/#{draft.uid}")
         end
 
-        it "renders an input with the draft content" do
+        it "renders a textarea with the draft content" do
           get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first).to eq("this is a test")
+          expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("this is a test")
         end
 
         it "renders the content" do
@@ -465,9 +465,9 @@ Spectator.describe ObjectsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@formaction")).to be_empty
         end
 
-        it "renders an input with the content" do
+        it "renders a textarea with the content" do
           get "/objects/#{visible.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first).to eq("foo bar baz")
+          expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("foo bar baz")
         end
 
         it "renders the content" do
@@ -548,7 +548,7 @@ Spectator.describe ObjectsController do
 
       it "succeeds" do
         post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":""}|
-        expect(response.status_code).to eq(302)
+        expect(response.status_code).to eq(200)
       end
 
       it "changes the content" do
@@ -602,14 +602,14 @@ Spectator.describe ObjectsController do
           expect(response.status_code).to eq(422)
         end
 
-        it "renders a form with the object" do
+        it "renders an error message" do
           post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=foo%2Fbar"
-          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-#{draft.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]")).not_to be_empty
         end
 
-        it "renders the object" do
+        it "renders an error message" do
           post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"foo/bar"}|
-          expect(JSON.parse(response.body)["id"]).to eq(draft.iri)
+          expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
         end
       end
 
@@ -879,7 +879,7 @@ Spectator.describe ObjectsController do
 
       it "prepopulates editor with mentions" do
         get "/remote/objects/#{visible.id}/reply", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='content']/@value").first).to eq("@author@nowhere @other@nowhere ")
+        expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("@author@nowhere @other@nowhere ")
       end
 
       it "returns 404 if object is a draft" do

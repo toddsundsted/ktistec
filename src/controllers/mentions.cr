@@ -29,7 +29,7 @@ class MentionsController
     follow = Relationship::Content::Follow::Mention.find_or_new(actor: env.account.actor, name: mention)
     follow.save if follow.new_record?
 
-    if turbo_frame?
+    if in_turbo_frame?
       ok "mentions/index", env: env, mention: mention, collection: collection, count: count, follow: follow
     else
       redirect back_path
@@ -47,7 +47,7 @@ class MentionsController
     follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
     follow.destroy if follow
 
-    if turbo_frame?
+    if in_turbo_frame?
       ok "mentions/index", env: env, mention: mention, collection: collection, count: count, follow: nil
     else
       redirect back_path

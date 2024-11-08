@@ -63,7 +63,7 @@ Spectator.describe SettingsController do
 
       let(account) { Global.account.not_nil! }
 
-      context "and posting form data" do
+      context "and posting urlencoded data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
 
         it "succeeds" do
@@ -140,6 +140,59 @@ Spectator.describe SettingsController do
           expect(attachments.size).to eq(1)
           expect(attachments.first.name).to eq("Blog")
           expect(attachments.first.value).to eq("https://beowulf.example.com")
+        end
+      end
+
+      context "and posting form data" do
+        let(form) do
+          String.build do |io|
+            HTTP::FormData.build(io) do |form_data|
+              metadata = HTTP::FormData::FileMetadata.new(filename: "image.jpg")
+              form_data.file("image", IO::Memory.new("0123456789"), metadata)
+              metadata = HTTP::FormData::FileMetadata.new(filename: "icon.jpg")
+              form_data.file("icon", IO::Memory.new("0123456789"), metadata)
+            end
+          end
+        end
+
+        let(headers) do
+          HTTP::Headers{"Content-Type" => %Q{multipart/form-data; boundary="#{form.lines.first[2..-1]}"}}
+        end
+
+        macro uploaded_image(actor)
+          "#{Dir.tempdir}#{URI.parse({{actor}}.reload!.image.not_nil!).path}"
+        end
+
+        it "updates the image" do
+          expect{post "/settings/actor", headers, form}.to change{actor.reload!.image}.from(nil)
+        end
+
+        it "updates the icon" do
+          expect{post "/settings/actor", headers, form}.to change{actor.reload!.icon}.from(nil)
+        end
+
+        it "stores the image file" do
+          post "/settings/actor", headers, form
+          expect(File.exists?(uploaded_image(actor))).to be(true)
+        end
+
+        it "stores the icon file" do
+          post "/settings/actor", headers, form
+          expect(File.exists?(uploaded_image(actor))).to be(true)
+        end
+
+        context "given existing image and icon" do
+          before_each do
+            actor.assign(image: "https://test.test/foo/bar.jpg", icon: "https://test.test/foo/bar.jpg").save
+          end
+
+          it "updates the image" do
+            expect{post "/settings/actor", headers, form}.to change{actor.reload!.image}.from("https://test.test/foo/bar.jpg")
+          end
+
+          it "updates the icon" do
+            expect{post "/settings/actor", headers, form}.to change{actor.reload!.icon}.from("https://test.test/foo/bar.jpg")
+          end
         end
       end
 

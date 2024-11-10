@@ -54,6 +54,11 @@ Spectator.describe UploadsController do
         expect(File.read_lines(uploaded_file).last).to eq("0123456789")
       end
 
+      it "makes the file readable" do
+        post "/uploads", headers, form
+        expect(File.info(uploaded_file).permissions).to contain(File::Permissions[OtherRead, GroupRead, OwnerRead])
+      end
+
       context "if file is not present" do
         let(form) do
           String.build do |io|

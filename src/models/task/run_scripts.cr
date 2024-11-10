@@ -15,15 +15,13 @@ class Task
     private def make_channel(io : IO) : Channel
       Channel(String).new.tap do |channel|
         spawn name: "run-scripts-#{channel.object_id}" do
-          begin
-            while (line = io.gets)
-              channel.send(line)
-            end
-          rescue IO::Error
-            # ignore
-          ensure
-            channel.close
+          while (line = io.gets)
+            channel.send(line)
           end
+        rescue IO::Error
+          # ignore
+        ensure
+          channel.close
         end
       end
     end
@@ -49,11 +47,10 @@ class Task
               output = make_channel(process.output)
               error = make_channel(process.error)
               loop do
-                break if output.closed? && error.closed?
                 select
-                when line = output.receive?
+                when line = output.receive
                   Log.info { line }
-                when line = error.receive?
+                when line = error.receive
                   Log.warn { line }
                 when timeout(60.seconds)
                   Log.error { "timeout exceeded without output" }
@@ -61,13 +58,16 @@ class Task
                   break
                 end
               end
+            rescue Channel::ClosedError
+              # done
             end
           end
         end
       rescue File::NotFoundError
-        # ignore case where a temporary file is removed while
-        # processing.
+        # file was removed while processing
       end
+    rescue File::NotFoundError
+      # directory does not exist
     ensure
       self.next_attempt_at = 1.hour.from_now
     end

@@ -8,6 +8,7 @@ class FooBarController
   skip_auth [
     "/foo/bar/accepts",
     "/foo/bar/turbo-streams/:operation/:target",
+    "/foo/bar/turbo-stream",
     "/foo/bar/turbo-frame",
     "/foo/bar/redirect",
     "/foo/bar/created",
@@ -26,6 +27,14 @@ class FooBarController
 
   get "/foo/bar/turbo-streams/:operation/:target" do |env|
     ok "turbo-streams", _operation: env.params.url["operation"], _target: env.params.url["target"]
+  end
+
+  get "/foo/bar/turbo-stream" do |env|
+    if accepts_turbo_stream?
+      ok "turbo-stream", _operation: "replace", _target: "foobar"
+    else
+      ok
+    end
   end
 
   get "/foo/bar/turbo-frame" do |env|
@@ -86,6 +95,18 @@ Spectator.describe Ktistec::Controller do
     it "responds with turbo-streams" do
       get "/foo/bar/turbo-streams/append/foo-bar", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
       expect(XML.parse_html(response.body).xpath_string("string(//turbo-stream[@action='append'][@target='foo-bar']/template//h1)")).to eq("turbo-streams")
+    end
+  end
+
+  describe "GET /foo/bar/turbo-stream" do
+    it "responds with turbo-stream" do
+      get "/foo/bar/turbo-stream", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)")).to eq("turbo-stream")
+    end
+
+    it "does not respond with turbo-stream" do
+      get "/foo/bar/turbo-stream", HTTP::Headers{"Accept" => "text/html"}
+      expect(XML.parse_html(response.body).xpath_string("string(//h1)")).not_to eq("turbo-stream")
     end
   end
 

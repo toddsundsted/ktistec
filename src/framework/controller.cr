@@ -20,11 +20,15 @@ class HTTP::Server::Context
       else
         {} of String => String
       end
-    if accepts = @accepts
+    if (accepts = @accepts)
       if (accept = accepts.find(&.first.in?(mime_types)))
         self.response.content_type = accept.last
       end
     end
+  end
+
+  def accepts_turbo_stream?
+    accepts?("text/vnd.turbo-stream.html") ? true : false
   end
 
   def in_turbo_frame?
@@ -42,6 +46,10 @@ module Ktistec
 
     macro accepts?(*mime_type)
       env.accepts?({{mime_type.splat}})
+    end
+
+    macro accepts_turbo_stream?
+      env.accepts_turbo_stream?
     end
 
     macro in_turbo_frame?

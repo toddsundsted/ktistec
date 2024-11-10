@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.1]
+### Fixed
+- Handle edge cases and race conditions in script runner.
+- Reconnect editor autocomplete support.
+- Fix permissions on uploaded files.
+
 ## [v2.4.0]
 ### Added
 - Support running scripted automations (see README).
@@ -261,6 +267,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.4.1]: https://github.com/toddsundsted/ktistec/compare/6754d1bd...e6ad8966
 [v2.4.0]: https://github.com/toddsundsted/ktistec/compare/084754a5...74f65140
 [v2.3.0]: https://github.com/toddsundsted/ktistec/compare/576ceeb2...1aab0951
 [v2.2.0]: https://github.com/toddsundsted/ktistec/compare/8d68d896...e8fcc772

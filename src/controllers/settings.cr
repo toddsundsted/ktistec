@@ -94,6 +94,7 @@ class SettingsController
           filepath = File.join("uploads", *Tuple(String, String, String).from(UUID.random.to_s.split("-")[0..2]))
           begin
             Dir.mkdir_p(File.join(Kemal.config.public_folder, filepath))
+            upload.tempfile.chmod(0o644) # fix permissions
             upload.tempfile.rename(File.join(Kemal.config.public_folder, filepath, filename))
             params[name] = "/#{filepath}/#{filename}"
           rescue err : File::Error

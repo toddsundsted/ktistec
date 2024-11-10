@@ -176,9 +176,19 @@ Spectator.describe SettingsController do
           expect(File.exists?(uploaded_image(actor))).to be(true)
         end
 
+        it "makes the image file readable" do
+          post "/settings/actor", headers, form
+          expect(File.info(uploaded_image(actor)).permissions).to contain(File::Permissions[OtherRead, GroupRead, OwnerRead])
+        end
+
         it "stores the icon file" do
           post "/settings/actor", headers, form
           expect(File.exists?(uploaded_image(actor))).to be(true)
+        end
+
+        it "makes the icon file readable" do
+          post "/settings/actor", headers, form
+          expect(File.info(uploaded_image(actor)).permissions).to contain(File::Permissions[OtherRead, GroupRead, OwnerRead])
         end
 
         context "given existing image and icon" do

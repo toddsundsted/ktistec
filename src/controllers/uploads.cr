@@ -17,6 +17,7 @@ class UploadsController
           filename = "#{filename}#{extension}"
         end
         Dir.mkdir_p(File.join(Kemal.config.public_folder, filepath))
+        part.tempfile.chmod(0o644) # fix permissions
         part.tempfile.rename(File.join(Kemal.config.public_folder, filepath, filename))
       end
     end

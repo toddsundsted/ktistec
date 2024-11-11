@@ -425,9 +425,9 @@ Spectator.describe ObjectsController do
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first).to eq("/foo/bar/baz")
           end
 
-          it "renders the canonical path as URL" do
+          it "renders the canonical path" do
             get "/objects/#{draft.uid}/edit", ACCEPT_JSON
-            expect(JSON.parse(response.body)["url"]).to eq(["#{Ktistec.host}/foo/bar/baz"])
+            expect(JSON.parse(response.body)["canonical_path"]).to eq("/foo/bar/baz")
           end
         end
       end
@@ -511,9 +511,9 @@ Spectator.describe ObjectsController do
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first).to eq("/foo/bar/baz")
           end
 
-          it "renders the canonical path as URL" do
+          it "renders the canonical path" do
             get "/objects/#{visible.uid}/edit", ACCEPT_JSON
-            expect(JSON.parse(response.body)["url"]).to eq(["#{Ktistec.host}/foo/bar/baz"])
+            expect(JSON.parse(response.body)["canonical_path"]).to eq("/foo/bar/baz")
           end
         end
       end

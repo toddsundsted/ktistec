@@ -115,11 +115,12 @@ class RelationshipsController
       )
       # validate ensures properties are populated from source
       unless object.valid?
-        if accepts?("application/ld+json", "application/activity+json", "application/json")
-          unprocessable_entity "partials/editor", env: env, object: object, recursive: false
+        if accepts_turbo_stream?
+          unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _target: %Q<object-#{object.id || "new"}>
+        elsif object.new_record?
+          unprocessable_entity "objects/new", env: env, object: object, recursive: false
         else
-          target = %Q<object-#{object.id || "new"}>
-          unprocessable_entity "partials/editor", env: env, object: object, recursive: false, _operation: "replace", _target: target
+          unprocessable_entity "objects/edit", env: env, object: object, recursive: false
         end
       end
       # hack to sidestep typing of unions as their nearest common ancestor

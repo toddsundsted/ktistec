@@ -78,7 +78,7 @@ module Ktistec
       "ul", "ol", "li",
       "dl", "dt", "dd",
       "div", "span", "figure", "figcaption",
-      "strong", "em", "sup", "sub",
+      "strong", "em", "sup", "sub", "del", "ins", "s",
       "blockquote",
       "code", "pre",
       "img",

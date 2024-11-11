@@ -51,7 +51,7 @@ Spectator.describe Ktistec::Util do
     end
 
     it "preserves supported tags" do
-      content = "<p>this is <span><strong>some</strong> <em>text</em></span></p>"
+      content = "<p>this is <span><strong>some</strong> <em>text</em> <sup>test</sup> <sub>test</sub> <del>test</del> <ins>test</ins> <s>test</s></span></p>"
       expect(described_class.sanitize(content)).to eq(content)
     end
 

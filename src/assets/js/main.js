@@ -75,3 +75,22 @@ Trix.config.blockAttributes.pre = { tagName: "pre", terminal: true, text: { plai
 Trix.config.textAttributes.code = { tagName: "code", inheritable: true }
 Trix.config.textAttributes.sub = { tagName: "sub", inheritable: true }
 Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
+
+// prevent morphing of the editor. when editing, the editor has client
+// state that will be lost if the page is refreshed.
+// see: https://github.com/hotwired/turbo-rails/issues/533
+// see: https://github.com/hotwired/turbo/issues/1083
+
+addEventListener("turbo:before-morph-attribute", (event) => {
+  const { target } = event
+  if (target.tagName == "FORM" && target.classList.contains("editor")) {
+    event.preventDefault()
+  }
+})
+
+addEventListener("turbo:before-morph-element", (event) => {
+  const { target } = event
+  if (target.tagName == "FORM" && target.classList.contains("editor")) {
+    event.preventDefault()
+  }
+})

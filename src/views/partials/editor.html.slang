@@ -7,7 +7,7 @@ crystal:
   must_be_unique = canonical_path_errors.try(&.includes?("must be unique"))
   content = object.source.try(&.content) || object.content || ""
   actor = env.account.actor
-form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controller="has-content" method="POST"
+form.ui.form.editor id="object-#{id}" class=(has_errors ? "error" : nil) data-controller="has-content" method="POST"
   - if canonical_path_errors
     .ui.error.message
       .header The Canonical Path is Invalid

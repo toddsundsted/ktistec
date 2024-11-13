@@ -25,7 +25,7 @@ form.ui.form.editor id="object-#{id}" class=(has_errors ? "error" : nil) data-co
     input type="hidden" name="in-reply-to" value=object.in_reply_to_iri
   input type="hidden" name="public" value="true"
   .field
-    trix-editor data-controller="trix" data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change trix-initialize->has-content#check input->has-content#check" data-has-content-target="input" input="editor-input"
+    trix-editor data-controller="trix" data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change trix-initialize->has-content#check input->has-content#check turbo:morph@document->has-content#check" data-has-content-target="input" input="editor-input"
     textarea#editor-input name="content" rows=3 = content
   details open=(object.name || object.summary || object.canonical_path ? true : false)
     summary Optional Settings

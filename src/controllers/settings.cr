@@ -1,3 +1,4 @@
+require "file_utils"
 require "uuid"
 
 require "../framework/controller"
@@ -95,7 +96,7 @@ class SettingsController
           begin
             Dir.mkdir_p(File.join(Kemal.config.public_folder, filepath))
             upload.tempfile.chmod(0o644) # fix permissions
-            upload.tempfile.rename(File.join(Kemal.config.public_folder, filepath, filename))
+            FileUtils.mv(upload.tempfile.path, File.join(Kemal.config.public_folder, filepath, filename))
             params[name] = "/#{filepath}/#{filename}"
           rescue err : File::Error
             Log.warn { err.message }

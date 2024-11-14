@@ -3,7 +3,7 @@
 /**
  * Turbo
  */
-import {Turbo, StreamActions} from "@hotwired/turbo"
+import {StreamActions, session} from "@hotwired/turbo"
 
 StreamActions["no-op"] = function () {
   // no-op is a keep-alive action
@@ -94,3 +94,33 @@ addEventListener("turbo:before-morph-element", (event) => {
     event.preventDefault()
   }
 })
+
+// monitor the stream sources on the page. if any are closed, remove
+// them, which ensures they are recreated when the page refreshes.
+
+// to prevent the monitor from spamming the server during maintenance
+// or other downtime events, delay the start of the check for 60
+// seconds. then check every 10 seconds. after refreshing the page,
+// again delay the start of the check for 60 seconds. note that this
+// code will not be reloaded if the page is refreshed.
+
+;(function () {
+  let counter = 0
+  let closed = false
+
+  setInterval(function () {
+    counter = counter + 1
+    document.querySelectorAll('turbo-stream-source').forEach(function (turboStreamSource) {
+      if (turboStreamSource.streamSource.readyState == 2) { // closed
+        turboStreamSource.remove()
+        closed = true
+      }
+    })
+    if (counter > 5 && closed) {
+      console.log("counter", counter, "closed", closed, "|", "refreshing", window.location.href)
+      session.refresh(window.location.href)
+      counter = 0
+      closed = false
+    }
+  }, 10000)
+})()

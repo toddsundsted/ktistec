@@ -11,6 +11,10 @@ class FooBarController
     {account: env.account?, session: env.session?}.to_json
   end
 
+  post "/foo/bar/auth" do |env|
+    {account: env.account?, session: env.session?}.to_json
+  end
+
   get "/foo/bar/skip" do |env|
     {account: env.account?, session: env.session?}.to_json
   end
@@ -33,14 +37,24 @@ Spectator.describe Ktistec::Auth do
       end
 
       it "fails to authenticate" do
-        get "/foo/bar/auth", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        get "/foo/bar/auth", HTTP::Headers{"Accept" => "application/json", "Cookie" => "AuthToken=#{jwt}"}
         expect(response.status_code).to eq(401)
         expect(JSON.parse(response.body)["msg"]).to eq("Unauthorized")
       end
 
       it "stores the path in the session" do
-        get "/foo/bar/auth", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        get "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html", "Cookie" => "AuthToken=#{jwt}"}
         expect(session.reload!.string?("redirect_after_auth_path")).to eq("/foo/bar/auth")
+      end
+
+      it "doesn't store the path in the session" do
+        post "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html", "Cookie" => "AuthToken=#{jwt}"}
+        expect(session.reload!.string?("redirect_after_auth_path")).to be_nil
+      end
+
+      it "doesn't store the path in the session" do
+        get "/foo/bar/auth", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        expect(session.reload!.string?("redirect_after_auth_path")).to be_nil
       end
     end
 
@@ -56,7 +70,7 @@ Spectator.describe Ktistec::Auth do
       end
 
       it "successfully authenticates" do
-        get "/foo/bar/auth", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        get "/foo/bar/auth", HTTP::Headers{"Accept" => "application/json", "Cookie" => "AuthToken=#{jwt}"}
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
         expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
@@ -84,7 +98,7 @@ Spectator.describe Ktistec::Auth do
       end
 
       it "doesn't authenticate but doesn't fail" do
-        get "/foo/bar/skip", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        get "/foo/bar/skip", HTTP::Headers{"Accept" => "application/json", "Cookie" => "AuthToken=#{jwt}"}
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body).dig("account")).to eq(nil)
         expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
@@ -108,7 +122,7 @@ Spectator.describe Ktistec::Auth do
       end
 
       it "successfully authenticates" do
-        get "/foo/bar/skip", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        get "/foo/bar/skip", HTTP::Headers{"Accept" => "application/json", "Cookie" => "AuthToken=#{jwt}"}
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
         expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)

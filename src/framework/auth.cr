@@ -12,8 +12,11 @@ module Ktistec
       return call_next(env) unless env.route_lookup.found?
       return call_next(env) if env.session.account? || exclude_match?(env)
 
-      # include both the path and the query in the redirect path
-      env.session.string("redirect_after_auth_path", env.request.resource, expires_in: 5.minutes)
+      # only apply on browser navigation
+      if env.request.method == "GET" && env.accepts?("text/html")
+        # include both the path and the query in the redirect path
+        env.session.string("redirect_after_auth_path", env.request.resource, expires_in: 5.minutes)
+      end
 
       message = "Unauthorized"
       if env.accepts?("text/html")

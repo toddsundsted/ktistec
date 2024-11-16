@@ -46,7 +46,8 @@ crystal:
       data: chart.data(*range, granularity: granularity, predicate: MetricsController::Chart::Predicate::Summate),
       borderColor: (color = colors.next.to_s),
       backgroundColor: "#{color}80",
-      type: "scatter",
+      type: "line",
+      showLine: false,
       pointStyle: "triangle",
       pointRadius: 4
     }

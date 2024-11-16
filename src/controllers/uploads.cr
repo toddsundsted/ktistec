@@ -1,3 +1,4 @@
+require "file_utils"
 require "uuid"
 
 require "../framework/controller"
@@ -18,7 +19,7 @@ class UploadsController
         end
         Dir.mkdir_p(File.join(Kemal.config.public_folder, filepath))
         part.tempfile.chmod(0o644) # fix permissions
-        part.tempfile.rename(File.join(Kemal.config.public_folder, filepath, filename))
+        FileUtils.mv(part.tempfile.path, File.join(Kemal.config.public_folder, filepath, filename))
       end
     end
     if filename && filepath

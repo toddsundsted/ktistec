@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.2]
+### Fixed
+- Fix metrics chart line labels.
+- Permit `del`, `ins`, and `s` elements in sanitized HTML.
+- Only store the `redirect_after_auth_path` on browser navigation.
+- Add "content" property to editor JSON error response.
+- Use `FileUtils.mv` to move uploaded file. (fixes [117](https://github.com/toddsundsted/ktistec/issues/117))
+
 ## [v2.4.1]
 ### Fixed
 - Handle edge cases and race conditions in script runner.
@@ -267,6 +275,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.4.2]: https://github.com/toddsundsted/ktistec/compare/d3dbd74a...8b795e1a
 [v2.4.1]: https://github.com/toddsundsted/ktistec/compare/6754d1bd...e6ad8966
 [v2.4.0]: https://github.com/toddsundsted/ktistec/compare/084754a5...74f65140
 [v2.3.0]: https://github.com/toddsundsted/ktistec/compare/576ceeb2...1aab0951

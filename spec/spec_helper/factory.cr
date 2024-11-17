@@ -276,12 +276,14 @@ def task_factory(clazz = Task, source_iri = "https://source/#{random_string}", s
   clazz.new({"source_iri" => source_iri, "subject_iri" => subject_iri}.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
-def fetch_hashtag_task_factory(**options)
-  task_factory(Task::Fetch::Hashtag, **options)
+def fetch_hashtag_task_factory(source_iri = nil, source = false, **options)
+  source = actor_factory(local: true) unless source_iri || source.nil? || source
+  task_factory(Task::Fetch::Hashtag, **{source: source, source_iri: source_iri}.merge(options))
 end
 
-def fetch_thread_task_factory(**options)
-  task_factory(Task::Fetch::Thread, **options)
+def fetch_thread_task_factory(source_iri = nil, source = false, **options)
+  source = actor_factory(local: true) unless source_iri || source.nil? || source
+  task_factory(Task::Fetch::Thread, **{source: source, source_iri: source_iri}.merge(options))
 end
 
 # tag factories

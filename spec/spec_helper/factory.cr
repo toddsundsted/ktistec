@@ -286,6 +286,18 @@ def fetch_thread_task_factory(source_iri = nil, source = false, **options)
   task_factory(Task::Fetch::Thread, **{source: source, source_iri: source_iri}.merge(options))
 end
 
+class Factory::ConcurrentTask < Task
+  include Task::ConcurrentTask
+
+  def perform
+    # no-op
+  end
+end
+
+def concurrent_task_factory(**options)
+  task_factory(Factory::ConcurrentTask, **options)
+end
+
 # tag factories
 
 def tag_factory(clazz = Tag, **options)

@@ -295,7 +295,8 @@ class Factory::ConcurrentTask < Task
 end
 
 def concurrent_task_factory(**options)
-  task_factory(Factory::ConcurrentTask, **options)
+  # tests using concurrent tasks depend on tasks being assigned unique ids
+  task_factory(Factory::ConcurrentTask, **{id: rand(1_000_000_i64)}.merge(options))
 end
 
 # tag factories

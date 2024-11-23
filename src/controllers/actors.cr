@@ -10,7 +10,7 @@ require "../models/relationship/content/notification/follow/thread"
 class ActorsController
   include Ktistec::Controller
 
-  skip_auth ["/actors/:username", "/actors/:username/public-posts"]
+  skip_auth ["/actors/:username", "/actors/:username/public-posts"], GET
 
   get "/actors/:username" do |env|
     username = env.params.url["username"]

@@ -4,7 +4,7 @@ require "../framework/constants"
 class WellKnownController
   include Ktistec::Controller
 
-  skip_auth ["/.well-known/*"]
+  skip_auth ["/.well-known/*"], GET
 
   get "/.well-known/webfinger" do |env|
     domain = URI.parse(host).host

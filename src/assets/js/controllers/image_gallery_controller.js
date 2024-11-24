@@ -1,7 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
 import lightGallery from "lightgallery"
+import lgZoom from "lightgallery/plugins/zoom"
+import lgRotate from "lightgallery/plugins/rotate"
 import "lightgallery/css/lightgallery.css"
+import "lightgallery/css/lg-zoom.css"
+import "lightgallery/css/lg-rotate.css"
 
 /**
  * lightGallery
@@ -17,7 +21,10 @@ export default class extends Controller {
       this.element, {
         licenseKey: "946563C8-F1154141-B722911E-843E9729",
         selector: ".content .text img, .content img.attachment, .content .text video, .content video.attachment",
-        download: false
+        download: false,
+        plugins: [lgZoom, lgRotate],
+        showZoomInOutIcons: true,
+        actualSize: false,
       })
   }
 

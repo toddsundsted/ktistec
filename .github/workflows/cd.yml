@@ -47,7 +47,7 @@ jobs:
       # build ktistec using the version of the current tag
       - name: Build and push docker image
         id: push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true

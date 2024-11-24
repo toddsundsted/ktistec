@@ -13,11 +13,15 @@ import "lightgallery/css/lightgallery.css"
  */
 export default class extends Controller {
   connect() {
-    lightGallery(
+    this.lightGallery = lightGallery(
       this.element, {
         licenseKey: "946563C8-F1154141-B722911E-843E9729",
         selector: ".content .text img, .content img.attachment, .content .text video, .content video.attachment",
         download: false
       })
+  }
+
+  disconnect() {
+    this.lightGallery.destroy()
   }
 }

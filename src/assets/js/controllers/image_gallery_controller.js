@@ -7,6 +7,34 @@ import "lightgallery/css/lightgallery.css"
 import "lightgallery/css/lg-zoom.css"
 import "lightgallery/css/lg-rotate.css"
 
+// open up the lightGallery prototype to redefine the `addHtml` method
+// to better support the captioning of images.
+;(function (lg) {
+  Object.getPrototypeOf(lg).addHtml = function(index) {
+    let caption = null,
+        $figure = null,
+        $figcaption = null,
+        $item = this.items[index],
+        appendSubHtmlTo = this.settings.appendSubHtmlTo,
+        $lgComponents = this.$lgComponents.firstElement,
+        $subHtml = $lgComponents.querySelector(appendSubHtmlTo)
+
+    if ($figure = $item.closest("figure")) {
+      if ($figcaption = $figure.querySelector("figcaption")) {
+        if ($figcaption.innerHTML.trim() !== "") {
+          caption = $figcaption.innerHTML
+        }
+      }
+    }
+    if (!caption) {
+      caption = $item.getAttribute("alt") || $item.getAttribute("title")
+    }
+    if ($subHtml && caption) {
+      $subHtml.innerHTML = caption
+    }
+  }
+})(lightGallery())
+
 /**
  * lightGallery
  *

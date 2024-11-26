@@ -101,7 +101,10 @@ module ActivityPub
       @[JSON::Field(key: "mediaType")]
       property media_type : String
 
-      def initialize(@url, @media_type)
+      @[JSON::Field(key: "name")]
+      property caption : String?
+
+      def initialize(@url, @media_type, @caption = nil)
       end
 
       def image?
@@ -708,20 +711,21 @@ module ActivityPub
         "media_type" => dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
         "hashtags" => dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
           next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Hashtag"
-          name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und")
-          href = dig?(tag, "https://www.w3.org/ns/activitystreams#href")
-          Tag::Hashtag.new(name: name, href: href) if name.presence
+          name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
+          href = dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
+          Tag::Hashtag.new(name: name, href: href) if name
         end,
         "mentions" => dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
           next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Mention"
-          name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und")
-          href = dig?(tag, "https://www.w3.org/ns/activitystreams#href")
-          Tag::Mention.new(name: name, href: href) if name.presence
+          name = dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
+          href = dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
+          Tag::Mention.new(name: name, href: href) if name
         end,
         "attachments" => dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
-          url = attachment.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
-          media_type = attachment.dig?("https://www.w3.org/ns/activitystreams#mediaType").try(&.as_s?)
-          Attachment.new(url, media_type) unless url.nil? || url.blank? || media_type.nil? || media_type.blank?
+          url = dig?(attachment, "https://www.w3.org/ns/activitystreams#url").presence
+          media_type = dig?(attachment, "https://www.w3.org/ns/activitystreams#mediaType").presence
+          name = dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
+          Attachment.new(url, media_type, name) if url && media_type
         end,
         "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
         # use addressing to establish visibility

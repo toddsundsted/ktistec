@@ -39,7 +39,7 @@ crystal:
   - else
     - if attachments && (attachment = attachments.shift?)
       - if attachment.image?
-        img.ui.extra.attachment.image src=attachment.url
+        img.ui.extra.attachment.image src=attachment.url alt=attachment.caption
       - elsif attachment.video?
         video.ui.extra.attachment.video src=attachment.url controls=:true
       - elsif attachment.audio?

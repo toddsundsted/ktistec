@@ -50,9 +50,9 @@ crystal:
             - if attachment.image?
               img.ui.attachment.image src=attachment.url
             - elsif attachment.video?
-              video.ui.extra.attachment.video src=attachment.url controls=:true
+              video.ui.attachment.video src=attachment.url controls=:true
             - elsif attachment.audio?
-              audio.ui.extra.attachment.audio src=attachment.url controls=:true
+              audio.ui.attachment.audio src=attachment.url controls=:true
     - if (name = object.name.presence)
       .extra.text
         - if object.external?

@@ -48,7 +48,7 @@ export default class extends Controller {
     this.lightGallery = lightGallery(
       this.element, {
         licenseKey: "946563C8-F1154141-B722911E-843E9729",
-        selector: ".content .text img, .content img.attachment, .content .text video, .content video.attachment",
+        selector: ".content .text img, .content img.attachment",
         download: false,
         plugins: [lgZoom, lgRotate],
         showZoomInOutIcons: true,

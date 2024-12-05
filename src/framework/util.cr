@@ -81,7 +81,7 @@ module Ktistec
       "strong", "em", "sup", "sub", "del", "ins", "s",
       "blockquote",
       "code", "pre",
-      "img",
+      "img", "audio", "video", "source",
       "a",
       "br"
     ]
@@ -96,6 +96,17 @@ module Ktistec
       img: {
         keep: ["src", "alt"],
         all: [{"class", "ui image"}, {"loading", "lazy"}]
+      },
+      audio: {
+        keep: ["src"],
+        all: [{"controls", nil}]
+      },
+      video: {
+        keep: ["src"],
+        all: [{"controls", nil}]
+      },
+      source: {
+        keep: ["src", "type"],
       },
       span: {
         class: ["invisible", "ellipsis"]
@@ -137,7 +148,9 @@ module Ktistec
           if (local && (values = attributes[:local]?)) ||
              (!local && (values = attributes[:remote]?)) ||
              (values = attributes[:all]?)
-            build << values.map { |value| " #{value[0]}='#{value[1]}'" }.join
+            build << values.map do |name, value|
+              value ? " #{name}='#{value}'" : " #{name}"
+            end.join
           end
           build << ">"
         else

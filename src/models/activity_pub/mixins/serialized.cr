@@ -9,7 +9,7 @@ module Ktistec
 
       module ClassMethods
         def dig?(json : JSON::Any, *selector, as : T.class = String) forall T
-          json.dig?(*selector).try(&.raw.as(T))
+          json.dig?(*selector).try(&.raw.as?(T))
         end
 
         def dig_value?(json, *selector, &)

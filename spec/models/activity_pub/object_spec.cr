@@ -134,7 +134,8 @@ Spectator.describe ActivityPub::Object do
         "attachment":[
           {
             "url":"attachment link",
-            "mediaType":"type"
+            "mediaType":"type",
+            "name":"caption"
           }
         ],
         "url":"url link"
@@ -172,7 +173,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.media_type).to eq("xyz")
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
       expect(object.mentions.first).to match(Tag::Mention.new(name: "mention", href: "mention href"))
-      expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type")])
+      expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
       expect(object.urls).to eq(["url link"])
     end
 
@@ -274,7 +275,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.media_type).to eq("xyz")
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
       expect(object.mentions.first).to match(Tag::Mention.new(name: "mention", href: "mention href"))
-      expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type")])
+      expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
       expect(object.urls).to eq(["url link"])
     end
 

@@ -7,7 +7,7 @@ All notable changes to this project are documented in this file.
 - Permit `del`, `ins`, and `s` elements in sanitized HTML.
 - Only store the `redirect_after_auth_path` on browser navigation.
 - Add "content" property to editor JSON error response.
-- Use `FileUtils.mv` to move uploaded file. (fixes [117](https://github.com/toddsundsted/ktistec/issues/117))
+- Use `FileUtils.mv` to move uploaded files. (fixes [#117](https://github.com/toddsundsted/ktistec/issues/117))
 
 ## [v2.4.1]
 ### Fixed

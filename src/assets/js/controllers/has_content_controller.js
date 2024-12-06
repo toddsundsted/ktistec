@@ -5,14 +5,23 @@ export default class extends Controller {
     return [ "input", "button" ]
   }
 
-  check() {
-    if (this.hasContent != !!this.inputTarget.textContent) {
-      let hasContent = (this.hasContent = !!this.inputTarget.textContent)
-      Array.prototype.forEach.call(this.buttonTargets, function(target) {
+  connect() {
+    this._check(null)
+  }
+
+  check(event) {
+    this._check(event)
+  }
+
+  _check(event) {
+    let hasContent = !!this.inputTarget.value
+    this.buttonTargets.forEach(function(target) {
+      let enabled = !target.classList.contains("disabled")
+      if (hasContent != enabled) {
         hasContent ?
           target.classList.remove("disabled") :
           target.classList.add("disabled")
-      })
-    }
+      }
+    })
   }
 }

@@ -1,6 +1,7 @@
 require "../../../src/models/task/monitor"
 
 require "../../spec_helper/base"
+require "../../spec_helper/factory"
 
 Spectator.describe Task::Monitor do
   setup_spec
@@ -12,22 +13,8 @@ Spectator.describe Task::Monitor do
       expect(subject.running_tasks_without_fibers).to be_empty
     end
 
-    context "given a running task" do
-      class ConcurrentTask < ::Task
-        include ::Task::ConcurrentTask
-
-        def perform
-          # no-op
-        end
-      end
-
-      let!(task) do
-        ConcurrentTask.new(
-          source_iri: "https://test.test/source",
-          subject_iri: "https://test.test/subject",
-          running: true
-        ).save
-      end
+    context "given a running concurrent task" do
+      let_create!(concurrent_task, named: task, running: true)
 
       it "returns the task" do
         expect(subject.running_tasks_without_fibers).to have(task)

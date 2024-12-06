@@ -1,6 +1,7 @@
 require "../../src/models/task"
 
 require "../spec_helper/base"
+require "../spec_helper/factory"
 
 Spectator.describe Task do
   setup_spec
@@ -174,19 +175,8 @@ end
 Spectator.describe Task::ConcurrentTask do
   setup_spec
 
-  class ConcurrentTask < ::Task
-    include ::Task::ConcurrentTask
-
-    def perform
-      # no-op
-    end
-  end
-
   subject do
-    ConcurrentTask.new(
-      source_iri: "https://test.test/source",
-      subject_iri: "https://test.test/subject"
-    )
+    Factory.build(concurrent_task)
   end
 
   describe "#fiber_name" do

@@ -15,7 +15,11 @@ class ObjectsController
     )
 
     unless object.assign(params(env)).valid?
-      unprocessable_entity "partials/editor", env: env, object: object, recursive: false, _operation: "replace", _target: "object-new"
+      if accepts_turbo_stream?
+        unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _target: "object-new"
+      else
+        unprocessable_entity "objects/new", env: env, object: object, recursive: false
+      end
     end
 
     object.save
@@ -75,7 +79,11 @@ class ObjectsController
     end
 
     unless object.assign(params(env)).valid?
-      unprocessable_entity "partials/editor", env: env, object: object, recursive: false, _operation: "replace", _target: "object-#{object.id}"
+      if accepts_turbo_stream?
+        unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _target: "object-#{object.id}"
+      else
+        unprocessable_entity "objects/edit", env: env, object: object, recursive: false
+      end
     end
 
     object.save

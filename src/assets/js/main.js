@@ -3,7 +3,7 @@
 /**
  * Turbo
  */
-import {Turbo, StreamActions} from "@hotwired/turbo"
+import {StreamActions, session} from "@hotwired/turbo"
 
 StreamActions["no-op"] = function () {
   // no-op is a keep-alive action
@@ -75,3 +75,49 @@ Trix.config.blockAttributes.pre = { tagName: "pre", terminal: true, text: { plai
 Trix.config.textAttributes.code = { tagName: "code", inheritable: true }
 Trix.config.textAttributes.sub = { tagName: "sub", inheritable: true }
 Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
+
+// prevent morphing of the editor, lightgallery, and images. each has
+// client state that will be lost if the page is refreshed/morphed.
+// see: https://github.com/hotwired/turbo-rails/issues/533
+// see: https://github.com/hotwired/turbo/issues/1083
+
+addEventListener("turbo:before-morph-element", (event) => {
+  const { target } = event
+  if (target.tagName == "FORM" && target.classList.contains("editor")) {
+    event.preventDefault()
+  } else if (target.tagName == "DIV" && target.classList.contains("lg-container")) {
+    event.preventDefault()
+  } else if (target.tagName == "IMG" && target.dataset.lgId) {
+    event.preventDefault()
+  }
+})
+
+// monitor the stream sources on the page. if any are closed, remove
+// them, which ensures they are recreated when the page refreshes.
+
+// to prevent the monitor from spamming the server during maintenance
+// or other downtime events, delay the start of the check for 60
+// seconds. then check every 10 seconds. after refreshing the page,
+// again delay the start of the check for 60 seconds. note that this
+// code will not be reloaded if the page is refreshed.
+
+;(function () {
+  let counter = 0
+  let closed = false
+
+  setInterval(function () {
+    counter = counter + 1
+    document.querySelectorAll('turbo-stream-source').forEach(function (turboStreamSource) {
+      if (turboStreamSource.streamSource.readyState == 2) { // closed
+        turboStreamSource.remove()
+        closed = true
+      }
+    })
+    if (counter > 5 && closed) {
+      console.log("counter", counter, "closed", closed, "|", "refreshing", window.location.href)
+      session.refresh(window.location.href)
+      counter = 0
+      closed = false
+    }
+  }, 10000)
+})()

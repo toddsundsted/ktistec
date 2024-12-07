@@ -64,7 +64,7 @@ module Ktistec
       Log.warn { "#{code}: couldn't set SQLITE_CONFIG_MEMSTATUS: this is not fatal" }
     end
 
-    TRANSIENT = Pointer(Void*).new(-1)
+    TRANSIENT = Pointer(Void*).new(-1.to_u64!)
 
     private def self.strip_fn(context : LibSQLite3::SQLite3Context, argc : Int32, argv : LibSQLite3::SQLite3Value*)
       txt = LibSQLite3.value_text(argv[0])

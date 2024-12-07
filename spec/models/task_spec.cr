@@ -197,7 +197,7 @@ Spectator.describe Task::ConcurrentTask do
     context "given a fiber" do
       let!(fiber) do
         spawn(name: subject.fiber_name) do
-          sleep 1
+          sleep 1.second
         end
       end
 

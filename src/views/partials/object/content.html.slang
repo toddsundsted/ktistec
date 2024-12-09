@@ -9,6 +9,9 @@ crystal:
   end
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
   type = object.type.split("::").last.downcase
+  if (content = object.content)
+    html = (object.media_type == "text/markdown") ? markdown_to_html(content) : content
+  end
 .content data-controller="image-gallery"
   .summary
     - if object.draft?
@@ -64,18 +67,18 @@ crystal:
         summary = summary
         - if with_detail
           div
-            == s object.to_html
+            == s html
         - else
           div data-controller="clickable-background" data-clickable-background-href-value=href
-            == s object.to_html
+            == s html
     - else
       .extra.text
         - if with_detail
           div
-            == s object.to_html
+            == s html
         - else
           div data-controller="clickable-background" data-clickable-background-href-value=href
-            == s object.to_html
+            == s html
     - if with_detail && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq

@@ -1,6 +1,7 @@
 require "ecr"
 require "slang"
 require "kemal"
+require "markd"
 
 # Redefine the `render` macros provided by Kemal.
 
@@ -616,6 +617,12 @@ module Ktistec::ViewHelper
   #
   macro comma(collection, counter)
     {{counter}} < {{collection}}.size - 1 ? "," : ""
+  end
+
+  # Converts Markdown to HTML.
+  #
+  macro markdown_to_html(markdown)
+    Markd.to_html({{markdown}})
   end
 
   # Generates a random, URL-safe identifier.

@@ -1013,6 +1013,20 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "markdown_to_html" do
+    subject do
+      markdown = <<-MD
+      Markdown
+      ========
+      MD
+      XML.parse_html(markdown_to_html(markdown), PARSER_OPTIONS).document
+    end
+
+    it "transforms Markdown to HTML" do
+      expect(subject.xpath_nodes("/h1/text()")).to contain_exactly("Markdown")
+    end
+  end
+
   describe "id" do
     it "generates an id" do
       expect(id).to match(/^[a-zA-Z0-9_-]+$/)

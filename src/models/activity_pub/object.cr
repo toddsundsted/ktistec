@@ -31,7 +31,6 @@ module ActivityPub
     include Ktistec::Model::Polymorphic
     include Ktistec::Model::Deletable
     include Ktistec::Model::Blockable
-    include Ktistec::Model::Renderable
     include ActivityPub
 
     @@table_name = "objects"

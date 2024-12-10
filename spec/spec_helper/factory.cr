@@ -326,6 +326,13 @@ def filter_term_factory(clazz = FilterTerm, actor_id = nil, actor = false, **opt
   clazz.new(**{actor_id: actor_id, actor: actor}.merge(options))
 end
 
+# translation factory
+
+def translation_factory(clazz = Translation, origin_id = nil, origin = false, **options)
+  origin = object_factory unless origin_id || origin.nil? || origin
+  clazz.new(**{origin_id: origin_id, origin: origin}.merge(options))
+end
+
 # account factory
 
 require "../../src/models/account"

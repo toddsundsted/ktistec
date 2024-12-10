@@ -9,7 +9,8 @@ crystal:
   end
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
   type = object.type.split("::").last.downcase
-  if (content = object.content)
+  translation = object.translations.first?
+  if (content = translation.try(&.content).presence || object.content.presence)
     html = (object.media_type == "text/markdown") ? markdown_to_html(content) : content
   end
 .content data-controller="image-gallery"
@@ -56,13 +57,13 @@ crystal:
               video.ui.attachment.video src=attachment.url controls=true
             - elsif attachment.audio?
               audio.ui.attachment.audio src=attachment.url controls=true
-    - if (name = object.name.presence)
+    - if (name = translation.try(&.name).presence || object.name.presence)
       .extra.text
         - if object.external?
           a href=object.display_link target="_blank" : strong = name
         - else
           strong = name
-    - if (summary = object.summary.presence)
+    - if (summary = translation.try(&.summary).presence || object.summary.presence)
       details.extra.text open=with_detail
         summary = summary
         - if with_detail

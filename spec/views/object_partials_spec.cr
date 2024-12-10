@@ -2,6 +2,7 @@ require "../../src/models/activity_pub/object/note"
 require "../../src/models/activity_pub/object/video"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
+require "../../src/models/translation"
 require "../../src/views/view_helper"
 
 require "../spec_helper/factory"
@@ -67,6 +68,14 @@ Spectator.describe "object partials" do
       it "renders the content as is" do
         expect(subject.xpath_nodes("//ul/li/text()")).to contain_exactly("One", "Two")
       end
+
+      context "and a translation" do
+        let_create!(:translation, origin: object, content: "<ul><li>Un</li><li>Du</li></ul>")
+
+        it "renders the translation of the content" do
+          expect(subject.xpath_nodes("//ul/li/text()")).to contain_exactly("Un", "Du")
+        end
+      end
     end
 
     context "given Markdown content" do
@@ -74,6 +83,14 @@ Spectator.describe "object partials" do
 
       it "renders the content as HTML" do
         expect(subject.xpath_nodes("//ul/li/text()")).to contain_exactly("One", "Two")
+      end
+
+      context "and a translation" do
+        let_create!(:translation, origin: object, content: "* Un\n* Du")
+
+        it "renders the translation of the content" do
+          expect(subject.xpath_nodes("//ul/li/text()")).to contain_exactly("Un", "Du")
+        end
       end
     end
 
@@ -83,6 +100,14 @@ Spectator.describe "object partials" do
       it "renders the name" do
         expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bar Baz")
       end
+
+      context "and a translation" do
+        let_create!(:translation, origin: object, name: "Foo Bàr Bàz")
+
+        it "renders the translation of the name" do
+          expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bàr Bàz")
+        end
+      end
     end
 
     context "given a summary" do
@@ -90,6 +115,14 @@ Spectator.describe "object partials" do
 
       it "renders the summary" do
         expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bar Baz")
+      end
+
+      context "and a translation" do
+        let_create!(:translation, origin: object, summary: "Foo Bàr Bàz")
+
+        it "renders the translation of the summary" do
+          expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bàr Bàz")
+        end
       end
     end
 

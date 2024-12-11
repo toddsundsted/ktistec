@@ -51,7 +51,7 @@ Spectator.describe Ktistec::Settings do
 
   after_each do
     # reset settings to initial values
-    Ktistec.settings.assign({"host" => "https://test.test/", "site" => "Test", "footer" => nil}).save
+    Ktistec.set_default_settings
   end
 
   it "initializes instance from the persisted values" do
@@ -64,16 +64,6 @@ Spectator.describe Ktistec::Settings do
     expect(subject.host).to eq("HOST")
     expect(subject.site).to eq("SITE")
     expect(subject.footer).to eq("FOOTER")
-  end
-
-  describe "#save" do
-    it "persists assigned values to the database" do
-      subject.assign({"host" => "https://test.test/", "site" => "Test", "footer" => "Copyright"}).save
-
-      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "host")).to eq("https://test.test")
-      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "site")).to eq("Test")
-      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "footer")).to eq("Copyright")
-    end
   end
 
   describe "#assign" do
@@ -90,6 +80,16 @@ Spectator.describe Ktistec::Settings do
     it "sets the footer" do
       subject.clear_footer
       expect{subject.assign({"footer" => "FOOTER"})}.to change{subject.footer}
+    end
+  end
+
+  describe "#save" do
+    it "persists assigned values to the database" do
+      subject.assign({"host" => "https://test.test/", "site" => "Test", "footer" => "Copyright"}).save
+
+      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "host")).to eq("https://test.test")
+      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "site")).to eq("Test")
+      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "footer")).to eq("Copyright")
     end
   end
 

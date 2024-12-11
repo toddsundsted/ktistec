@@ -96,27 +96,27 @@ module Ktistec
   @@db_file = "sqlite3://#{File.tempname("ktistec-test", ".db")}"
 
   class Settings
-    def clear_host
-      Ktistec.database.exec("DELETE FROM options WHERE key = ?", "host")
-      @host = nil
-    end
-
-    def clear_site
-      Ktistec.database.exec("DELETE FROM options WHERE key = ?", "site")
-      @site = nil
-    end
-
-    def clear_footer
-      Ktistec.database.exec("DELETE FROM options WHERE key = ?", "footer")
-      @footer = nil
-    end
+    {% for property in PROPERTIES %}
+      def clear_{{property.id}}
+        Ktistec.database.exec("DELETE FROM options WHERE key = ?", "{{property.id}}")
+        @{{property.id}} = nil
+      end
+    {% end %}
   end
 
   def self.clear_settings
-    settings.clear_host
-    settings.clear_site
-    settings.clear_footer
+    {% for property in Settings::PROPERTIES %}
+      settings.clear_{{property.id}}
+    {% end %}
     @@settings = nil
+  end
+
+  def self.set_default_settings
+    Ktistec.settings.assign({
+      "host" => "https://test.test/",
+      "site" => "Test",
+      "footer" => nil,
+    }).save
   end
 end
 
@@ -155,7 +155,7 @@ Kemal.config.public_folder = Dir.tempdir
 
 Kemal.config.env = ENV["KEMAL_ENV"]? || "test"
 
-Ktistec.settings.assign({"host" => "https://test.test", "site" => "Test"}).save
+Ktistec.set_default_settings
 
 # Spectator calls `setup_from_env` to set up logging. the dispatcher
 # default (`DispatchMode::Async`) does not work -- probably due to:

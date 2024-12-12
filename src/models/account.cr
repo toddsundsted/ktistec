@@ -7,6 +7,10 @@ require "./activity_pub/actor"
 require "./last_time"
 require "./session"
 
+private def check_language?(language)
+  language.nil? || language =~ /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*$/
+end
+
 private def check_timezone?(timezone)
   Time::Location.load(timezone)
 rescue Time::Location::InvalidLocationNameError
@@ -120,6 +124,13 @@ class Account
 
   def after_save
     @password = nil
+  end
+
+  @[Persistent]
+  property language : String?
+  validates(language) do
+    return "cannot be blank" unless language.presence
+    return "is unsupported" unless check_language?(language)
   end
 
   @[Persistent]

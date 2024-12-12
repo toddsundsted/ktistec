@@ -9,7 +9,7 @@ Spectator.describe Account do
   let(username) { random_username }
   let(password) { random_password }
 
-  subject { described_class.new(username, password).save }
+  subject { described_class.new(username: username, password: password, language: "en").save }
 
   describe "#password=" do
     it "changes the encrypted_password" do
@@ -65,6 +65,16 @@ Spectator.describe Account do
     it "rejects the password as weak" do
       new_account = described_class.new(username: "", password: "abc123")
       expect(new_account.validate["password"]).to eq(["is weak"])
+    end
+
+    it "rejects the language if blank" do
+      new_account = described_class.new(username: "", password: "", language: "")
+      expect(new_account.validate["language"]).to eq(["cannot be blank"])
+    end
+
+    it "rejects the language as unsupported" do
+      new_account = described_class.new(username: "", password: "", language: "123")
+      expect(new_account.validate["language"]).to eq(["is unsupported"])
     end
 
     it "rejects the timezone as unsupported" do

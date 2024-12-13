@@ -1,6 +1,7 @@
 require "../../../src/framework/ext/context"
 
 require "../../spec_helper/controller"
+require "../../spec_helper/factory"
 
 class FooBarController
   include Ktistec::Controller
@@ -71,7 +72,7 @@ Spectator.describe HTTP::Server::Context do
   end
 
   context "authenticated session" do
-    let(account) { Account.new(random_username, random_password).save }
+    let(account) { register }
     let(session) { Session.new(account).save }
 
     it "uses an existing session" do

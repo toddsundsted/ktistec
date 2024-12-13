@@ -1,14 +1,12 @@
 require "../../src/models/session"
 
 require "../spec_helper/base"
+require "../spec_helper/factory"
 
 Spectator.describe Session do
   setup_spec
 
-  let(username) { random_username }
-  let(password) { random_password }
-
-  let(account) { Account.new(username, password).save }
+  let(account) { register }
   subject { described_class.new(account).save }
 
   describe "#body=" do
@@ -107,14 +105,14 @@ Spectator.describe Session do
 
   describe "#account=" do
     it "sets the account" do
-      account = Account.new(random_username, random_password).save
+      account = Factory.create(:account)
       expect{subject.account = account}.to change{subject.account_id}
     end
   end
 
   describe "#account" do
     it "gets the account" do
-      account = subject.account = Account.new(random_username, random_password).save
+      account = subject.account = Factory.create(:account)
       expect(subject.account).to eq(account)
     end
   end

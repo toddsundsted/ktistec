@@ -8,6 +8,7 @@ p Passwords must be at least six characters long, and must consist of at least o
   == input_tag("Password", account, password, type: "password")
   == input_tag("Display Name", actor, name)
   == input_tag("Summary", actor, summary)
+  == input_tag("Language", account, language)
   == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone"})
   == submit_button
 p.small.text Ktistec Version #{Ktistec::VERSION}

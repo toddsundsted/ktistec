@@ -3,8 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   connect() {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-    this.element.setAttribute("placeholder", timezone)
-    if (!this.element.value) {
+    if (!this.element.value && !this.element.closest(".field.error")) {
       this.element.value = timezone
     }
   }

@@ -24,18 +24,6 @@ class Account
   include Ktistec::Model
   include Ktistec::Model::Common
 
-  # Allocates a new account.
-  #
-  # This constructor is used to create new accounts (which must have a
-  # valid username and password).
-  #
-  def self.new(_username username : String, _password password : String, **options)
-    new(**options.merge({
-      username: username,
-      password: password
-    }))
-  end
-
   @[Persistent]
   property username : String
 

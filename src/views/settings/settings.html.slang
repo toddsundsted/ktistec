@@ -11,6 +11,7 @@ p
   == error_messages(account)
   == input_tag("Display Name", actor, name)
   == input_tag("Summary", actor, summary)
+  == input_tag("Language", account, language)
   == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone"})
   == input_tag("Password", account, password, type: "password", placeholder: "Leave blank to leave unchanged")
   crystal:

@@ -8,7 +8,7 @@ require "./last_time"
 require "./session"
 
 private def check_language?(language)
-  language.nil? || language =~ /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*$/
+  language.nil? || language =~ Ktistec::Constants::LANGUAGE_RE
 end
 
 private def check_timezone?(timezone)

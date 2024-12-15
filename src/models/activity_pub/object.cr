@@ -82,7 +82,7 @@ module ActivityPub
     property language : String?
     validates(language) do
       if language
-        "is unsupported" unless language =~ /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*$/
+        "is unsupported" unless language =~ Ktistec::Constants::LANGUAGE_RE
       end
     end
 

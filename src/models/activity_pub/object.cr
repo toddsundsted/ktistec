@@ -78,6 +78,14 @@ module ActivityPub
     @[Persistent]
     property media_type : String?
 
+    @[Persistent]
+    property language : String?
+    validates(language) do
+      if language
+        "is unsupported" unless language =~ /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*$/
+      end
+    end
+
     struct Source
       include JSON::Serializable
 

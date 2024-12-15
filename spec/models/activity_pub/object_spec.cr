@@ -66,6 +66,10 @@ Spectator.describe ActivityPub::Object do
       expect(subject.assign(canonical_path: "foobar").valid?).to be_false
     end
 
+    it "returns false if the language is not supported" do
+      expect(subject.assign(language: "123").valid?).to be_false
+    end
+
     it "is valid" do
       expect(subject.valid?).to be_true
     end

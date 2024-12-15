@@ -95,6 +95,7 @@ class RelationshipsController
       if (followers = account.actor.followers)
         cc << followers
       end
+      language = activity["language"]?.presence
       name = activity["name"]?.presence
       summary = activity["summary"]?.presence
       canonical_path = activity["canonical_path"]?.presence
@@ -106,6 +107,7 @@ class RelationshipsController
         attributed_to_iri: account.iri,
         in_reply_to_iri: in_reply_to_iri,
         replies_iri: "#{iri}/replies",
+        language: language,
         name: name,
         summary: summary,
         canonical_path: canonical_path,

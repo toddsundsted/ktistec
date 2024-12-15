@@ -561,6 +561,16 @@ Spectator.describe ObjectsController do
           to change{draft.reload!.content}
       end
 
+      it "updates the language" do
+        expect{post "/objects/#{draft.uid}", FORM_DATA, "language=fr"}.
+          to change{draft.reload!.language}.to("fr")
+      end
+
+      it "updates the language" do
+        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"language":"fr"}|}.
+          to change{draft.reload!.language}.to("fr")
+      end
+
       it "updates the name" do
         expect{post "/objects/#{draft.uid}", FORM_DATA, "name=foo+bar"}.
           to change{draft.reload!.name}

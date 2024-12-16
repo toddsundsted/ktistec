@@ -130,6 +130,9 @@ Spectator.describe ActivityPub::Object do
         "name":"123",
         "summary":"abc",
         "content":"abc",
+        "contentMap":{
+          "en":"abc"
+        },
         "mediaType":"xyz",
         "tag":[
           {"type":"Hashtag","href":"hashtag href","name":"#hashtag"},
@@ -171,6 +174,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
       expect(object.content).to eq("abc")
@@ -273,6 +277,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
       expect(object.content).to eq("abc")
@@ -369,6 +374,14 @@ Spectator.describe ActivityPub::Object do
     it "renders an identical instance" do
       object = described_class.from_json_ld(json)
       expect(described_class.from_json_ld(object.to_json_ld)).to eq(object)
+    end
+
+    it "does not render a content map" do
+      object = described_class.new(
+        iri: "https://test.test/object",
+        content: "abc"
+      ).save
+      expect(JSON.parse(object.to_json_ld).as_h).not_to have_key("contentMap")
     end
 
     it "renders hashtags" do

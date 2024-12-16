@@ -740,7 +740,18 @@ module ActivityPub
         "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
         # use addressing to establish visibility
         "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
-      }.compact
+      }.tap do |map|
+        if (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
+          content.each do |language, content|
+            if language && content
+              if language != "und" && content == map["content"]?
+                map["language"] = language
+                break
+              end
+            end
+          end
+        end
+      end.compact
     end
 
     def make_delete_activity

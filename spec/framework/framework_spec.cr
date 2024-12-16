@@ -96,7 +96,7 @@ Spectator.describe Ktistec::Settings do
   describe "#valid?" do
     it "expects host to be present" do
       expect(subject.assign({"host" => ""}).valid?).to be_false
-      expect(subject.errors["host"]).to contain("name must be present")
+      expect(subject.errors["host"]).to contain("must be present")
     end
 
     it "expects host to specify a scheme" do
@@ -105,18 +105,13 @@ Spectator.describe Ktistec::Settings do
     end
 
     it "expects host to specify a host name" do
-      expect(subject.assign({"host" => "test.test"}).valid?).to be_false
-      expect(subject.errors["host"]).not_to contain("must have a host name")
-    end
-
-    it "expects host to specify a host name" do
-      expect(subject.assign({"host" => "test.test"}).valid?).to be_false
-      expect(subject.errors["host"]).not_to contain("must not have a path")
-    end
-
-    it "expects host to specify a host name" do
       expect(subject.assign({"host" => "https://"}).valid?).to be_false
       expect(subject.errors["host"]).to contain("must have a host name")
+    end
+
+    it "expects host not to specify a path" do
+      expect(subject.assign({"host" => "https://test.test/path"}).valid?).to be_false
+      expect(subject.errors["host"]).to contain("must not have a path")
     end
 
     it "expects host not to specify a fragment" do
@@ -127,11 +122,6 @@ Spectator.describe Ktistec::Settings do
     it "expects hosts not to specify a query" do
       expect(subject.assign({"host" => "https://test.test?query"}).valid?).to be_false
       expect(subject.errors["host"]).to contain("must not have a query")
-    end
-
-    it "expects host not to specify a path" do
-      expect(subject.assign({"host" => "https://test.test/path"}).valid?).to be_false
-      expect(subject.errors["host"]).to contain("must not have a path")
     end
 
     it "expects site to be present" do

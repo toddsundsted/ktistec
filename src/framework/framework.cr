@@ -120,7 +120,7 @@ module Ktistec
           @host = uri.normalize.to_s
         end
       else
-        host_errors << "name must be present"
+        host_errors << "must be present"
       end
       errors["host"] = host_errors unless host_errors.empty?
       errors["site"] = ["name must be present"] unless @site.presence

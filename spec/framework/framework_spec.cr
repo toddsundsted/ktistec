@@ -128,6 +128,26 @@ Spectator.describe Ktistec::Settings do
       expect(subject.assign({"site" => ""}).valid?).to be_false
       expect(subject.errors["site"]).to contain("name must be present")
     end
+
+    it "expects translator service to be valid" do
+      expect(subject.assign({"translator_service" => "foobar"}).valid?).to be_false
+      expect(subject.errors["translator_service"]).to contain("is not supported")
+    end
+
+    it "expects translator URL to specify a scheme" do
+      expect(subject.assign({"translator_url" => "test.test"}).valid?).to be_false
+      expect(subject.errors["translator_url"]).to contain("must have a scheme")
+    end
+
+    it "expects translator URL to specify a host name" do
+      expect(subject.assign({"translator_url" => "https://"}).valid?).to be_false
+      expect(subject.errors["translator_url"]).to contain("must have a host name")
+    end
+
+    it "expects translator URL not to specify a fragment" do
+      expect(subject.assign({"translator_url" => "https://test.test#fragment"}).valid?).to be_false
+      expect(subject.errors["translator_url"]).to contain("must not have a fragment")
+    end
   end
 end
 
@@ -150,6 +170,12 @@ Spectator.describe Ktistec do
       it "clears the errors when getting the settings singleton" do
         expect(Ktistec.settings.errors).to be_empty
       end
+    end
+  end
+
+  describe ".translator" do
+    it "returns nil when the translator service is not configured" do
+      expect(Ktistec.translator).to be_nil
     end
   end
 

@@ -61,6 +61,8 @@ module Ktistec
       host: String,
       site: String,
       footer: String,
+      translator_service: String,
+      translator_url: String,
     }
 
     {% for property, type in PROPERTIES %}
@@ -115,6 +117,15 @@ module Ktistec
       end
       errors["host"] = host_errors unless host_errors.empty?
       errors["site"] = ["name must be present"] unless @site.presence
+      errors["translator_service"] = ["is not supported"] if @translator_service.presence
+      url_errors = [] of String
+      if (url = @translator_url.presence)
+        uri = URI.parse(url)
+        url_errors << "must have a scheme" unless uri.scheme.presence
+        url_errors << "must have a host name" unless uri.host.presence
+        url_errors << "must not have a fragment" if uri.fragment.presence
+      end
+      errors["translator_url"] = url_errors unless url_errors.empty?
       errors.empty?
     end
   end
@@ -126,6 +137,10 @@ module Ktistec
         settings = @@settings
         settings.nil? || !settings.errors.empty? ? Settings.new : settings
       end
+  end
+
+  def self.translator
+    @@translator ||= nil
   end
 
   {% for property, _ in Settings::PROPERTIES %}

@@ -99,17 +99,8 @@ module Ktistec
     def valid?
       errors.clear
       host_errors = [] of String
-      if (host = @host) && !host.empty?
+      if (host = @host.presence)
         uri = URI.parse(host)
-        # `URI.parse` treats something like "ktistec.com" as a path
-        # name and not a host name. users' expectations differ.
-        if !uri.host.presence && uri.path.presence
-          parts = uri.path.split('/', 2)
-          unless parts.first.blank?
-            uri.host = parts.first
-            uri.path = parts.fetch(1, "")
-          end
-        end
         host_errors << "must have a scheme" unless uri.scheme.presence
         host_errors << "must have a host name" unless uri.host.presence
         host_errors << "must not have a fragment" if uri.fragment.presence

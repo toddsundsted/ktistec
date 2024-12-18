@@ -48,7 +48,7 @@ crystal:
         .extra.media
           - attachments.each do |attachment|
             - if attachment.image?
-              img.ui.attachment.image src=attachment.url
+              img.ui.attachment.image src=attachment.url alt=attachment.caption
             - elsif attachment.video?
               video.ui.attachment.video src=attachment.url controls=true
             - elsif attachment.audio?

@@ -173,9 +173,69 @@ Spectator.describe Ktistec do
     end
   end
 
+  module ::Ktistec
+    def self.clear_translator
+      settings.clear_translator_service
+      settings.clear_translator_url
+      @@translator = nil
+    end
+  end
+
   describe ".translator" do
+    after_each { ::Ktistec.clear_translator }
+
     it "returns nil when the translator service is not configured" do
       expect(Ktistec.translator).to be_nil
+    end
+
+    context "given invalid settings" do
+      before_each do
+        Ktistec.settings.assign({"translator_service" => "foobar", "translator_url" => "https://foobar.com/"})
+      end
+
+      it "returns nil when the translator service is not supported" do
+        expect(Ktistec.translator).to be_nil
+      end
+    end
+
+    context "given settings for the DeepL translator" do
+      before_each do
+        Ktistec.settings.assign({"translator_service" => "deepl", "translator_url" => "https://api.deepl.com/"}).save
+        ENV.delete("DEEPL_API_KEY")
+      end
+
+      it "returns nil when the API key is missing" do
+        expect(Ktistec.translator).to be_nil
+      end
+
+      context "given an API key" do
+        before_each { ENV["DEEPL_API_KEY"] = "API_KEY" }
+        after_each { ENV.delete("DEEPL_API_KEY") }
+
+        it "returns the DeepL translator singleton" do
+          expect(Ktistec.translator).to be_a(Ktistec::Translator::DeepLTranslator)
+        end
+      end
+    end
+
+    context "given settings for the LibreTranslate translator" do
+      before_each do
+        Ktistec.settings.assign({"translator_service" => "libretranslate", "translator_url" => "https://libretranslate.com/"}).save
+        ENV.delete("LIBRETRANSLATE_API_KEY")
+      end
+
+      it "returns nil when the API key is missing" do
+        expect(Ktistec.translator).to be_nil
+      end
+
+      context "given an API key" do
+        before_each { ENV["LIBRETRANSLATE_API_KEY"] = "API_KEY" }
+        after_each { ENV.delete("LIBRETRANSLATE_API_KEY") }
+
+        it "returns the LibreTranslate translator singleton" do
+          expect(Ktistec.translator).to be_a(Ktistec::Translator::LibreTranslateTranslator)
+        end
+      end
     end
   end
 

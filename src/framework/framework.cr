@@ -6,6 +6,7 @@ require "./ext/array"
 require "./ext/hash"
 require "./ext/log"
 require "./database"
+require "../utils/translator"
 
 module Ktistec
   # always run database migrations when we boot up the framework
@@ -117,7 +118,11 @@ module Ktistec
       end
       errors["host"] = host_errors unless host_errors.empty?
       errors["site"] = ["name must be present"] unless @site.presence
-      errors["translator_service"] = ["is not supported"] if @translator_service.presence
+      if (translator_service = @translator_service.presence)
+        unless translator_service.in?("deepl", "libretranslate")
+          errors["translator_service"] = ["is not supported"]
+        end
+      end
       url_errors = [] of String
       if (url = @translator_url.presence)
         uri = URI.parse(url)
@@ -139,8 +144,24 @@ module Ktistec
       end
   end
 
+  @@translator : Ktistec::Translator? = nil
+
   def self.translator
-    @@translator ||= nil
+    @@translator ||=
+      begin
+        if (service = settings.translator_service) && (url = settings.translator_url)
+          case service
+          when "deepl"
+            if (key = ENV["DEEPL_API_KEY"]?)
+              Ktistec::Translator::DeepLTranslator.new(url, key)
+            end
+          when "libretranslate"
+            if (key = ENV["LIBRETRANSLATE_API_KEY"]?)
+              Ktistec::Translator::LibreTranslateTranslator.new(url, key)
+            end
+          end
+        end
+      end
   end
 
   {% for property, _ in Settings::PROPERTIES %}

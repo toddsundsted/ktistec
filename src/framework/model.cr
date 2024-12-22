@@ -962,6 +962,15 @@ module Ktistec
       #     validates xyz { "is blank" if xyz.blank? }
       #
       macro validates(property, &block)
+        {% begin %}
+          {% ancestors = @type.ancestors << @type %}
+          {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+          {% names = methods.map(&.name) %}
+          {% unless names.includes?(property.name) %}
+            {% raise "no such property: #{property.name}" %}
+          {% end %}
+        {% end %}
+
         private def _validate_{{property.name}}
           {% if block %}
             {{block.body}}

@@ -126,6 +126,8 @@ class SettingsController
       # the host may not be changed via settings
       "site" => params["site"]?.try(&.to_s),
       "footer" => params["footer"]?.try(&.to_s),
+      "translator_service" => params["translator_service"]?.try(&.to_s),
+      "translator_url" => params["translator_url"]?.try(&.to_s),
     }.select do |k, v|
       v
     end

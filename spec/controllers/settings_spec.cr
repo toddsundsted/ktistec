@@ -34,6 +34,65 @@ Spectator.describe SettingsController do
           get "/settings", headers
           expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='footer']][.//input[@name='site']]")).not_to be_empty
         end
+
+        before_each do
+          ENV.delete("DEEPL_API_KEY")
+          ENV.delete("LIBRETRANSLATE_API_KEY")
+        end
+        after_each do
+          ENV.delete("DEEPL_API_KEY")
+          ENV.delete("LIBRETRANSLATE_API_KEY")
+        end
+
+        it "does not render an option for the translator service" do
+          get "/settings", headers
+          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_service']]//input[@type='radio']")).to be_empty
+        end
+
+        it "does not render an input for the service URL" do
+          get "/settings", headers
+          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_url']]//input[@type='text']")).to be_empty
+        end
+
+        context "given an API key for the DeepL service" do
+          before_each { ENV["DEEPL_API_KEY"] = "API_KEY" }
+          after_each { ENV.delete("DEEPL_API_KEY") }
+
+          it "renders an option for the DeepL service" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_service']]//input[@type='radio']/@value")).to have("deepl")
+          end
+
+          it "does not render an option for the LibreTranslate service" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_service']]//input[@type='radio']/@value")).not_to have("libretranslate")
+          end
+
+          it "renders an input for the service URL" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_url']]//input[@type='text']")).not_to be_empty
+          end
+        end
+
+        context "given an API key for the LibreTranslate service" do
+          before_each { ENV["LIBRETRANSLATE_API_KEY"] = "API_KEY" }
+          after_each { ENV.delete("LIBRETRANSLATE_API_KEY") }
+
+          it "renders an option for the LibreTranslate service" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_service']]//input[@type='radio']/@value")).to have("libretranslate")
+          end
+
+          it "does not render an option for the DeepL service" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_service']]//input[@type='radio']/@value")).not_to have("deepl")
+          end
+
+          it "renders an input for the service URL" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_url']]//input[@type='text']")).not_to be_empty
+          end
+        end
       end
 
       context "and accepting JSON" do

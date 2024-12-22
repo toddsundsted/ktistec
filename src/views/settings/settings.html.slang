@@ -63,6 +63,45 @@ h1 Site Settings
   == error_messages(settings)
   == input_tag("Site Name", settings, site)
   == input_tag("Footer", settings, footer)
+  crystal:
+    can_deepl = ENV["DEEPL_API_KEY"]?
+    can_libretranslate = ENV["LIBRETRANSLATE_API_KEY"]?
+    service = settings.translator_service
+    is_deepl = service == "deepl"
+    is_libretranslate = service == "libretranslate"
+  - if can_deepl || can_libretranslate
+    .inline.fields
+      label for="translator_service" Use Translator Service
+      - if can_deepl
+        .field
+          .ui.radio.checkbox
+            input type="radio" name="translator_service" value="deepl" checked=is_deepl
+            label DeepL
+      - if can_libretranslate
+        .field
+          .ui.radio.checkbox
+            input type="radio" name="translator_service" value="libretranslate" checked=is_libretranslate
+            label LibreTranslate
+      .field
+        .ui.radio.checkbox
+          input type="radio" name="translator_service" value="" checked=(!is_deepl && !is_libretranslate)
+          label None
+    .field
+      label Translator Service URL
+      input type="text" name="translator_url" value=settings.translator_url
+    p.ui.documentation: em
+      | If you are struggling to get translation to work, enable debug logging
+        for the translator(s) <a href="/system">here</a>.
+  - else
+    p.ui.documentation
+      | In order to translate posts, sign up for a service
+        (both <a href="https://www.deepl.com/" target="_blank">DeepL</a>
+        and <a href="https://libretranslate.com/" target="_blank">LibreTranslate</a>
+        are supported) and add the API key to the Ktistec
+        server process environment (as either environment variable
+        <code>DEEPL_API_KEY</code> or <code>LIBRETRANSLATE_API_KEY</code>,
+        depending on the service) and restart the server. Configuration
+        options will replace this text.
   == submit_button("Update")
 p.small.text Ktistec Version #{Ktistec::VERSION}
 br.transition.hidden

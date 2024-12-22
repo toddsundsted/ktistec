@@ -1020,7 +1020,6 @@ module Ktistec
           # update associated instances
           if @id != old
             {% for method in methods %}
-              {% name = method.name[13..-1] %}
               {% if method.body[0] == :has_one && method.body[1] == :id %}
                 if (model = {{method.body.last}})
                   model.{{method.body[2].id}} = @id

@@ -1410,4 +1410,110 @@ Spectator.describe ObjectsController do
       end
     end
   end
+
+  def_mock Ktistec::Translator
+
+  module ::Ktistec
+    def self.translator(translator : Ktistec::Translator)
+      @@translator = translator
+    end
+
+    def self.clear_translator
+      @@translator = nil
+    end
+  end
+
+  describe "POST /remote/objects/:id/translation/create" do
+    it "returns 401" do
+      post "/remote/objects/0/translation/create"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/remote/objects/#{remote.id}/translation/create"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "does not create a translation" do
+        expect{post "/remote/objects/#{remote.id}/translation/create"}.
+          not_to change{remote.reload!.translations.size}
+      end
+
+      context "given a translator" do
+        let(translator) do
+          mock(Ktistec::Translator).tap do |translator|
+            allow(translator).to receive(:translate).and_return({name: "name", summary: "zusammenfassung", content: "inhalt"})
+          end
+        end
+
+        before_each { ::Ktistec.translator(translator) }
+        after_each { ::Ktistec.clear_translator }
+
+        it "does not create a translation" do
+          expect{post "/remote/objects/#{remote.id}/translation/create"}.
+            not_to change{remote.reload!.translations.size}
+        end
+
+        context "and an account and an object with the same primary language" do
+          before_each do
+            Global.account.not_nil!.assign(language: "en-US").save
+            remote.assign(language: "en-GB").save
+          end
+
+          it "does not create a translation" do
+            expect{post "/remote/objects/#{remote.id}/translation/create"}.
+              not_to change{remote.reload!.translations.size}
+          end
+        end
+
+        context "and an account and an object with different languages" do
+          before_each do
+            Global.account.not_nil!.assign(language: "de").save
+            remote.assign(language: "en").save
+          end
+
+          it "creates a translation" do
+            expect{post "/remote/objects/#{remote.id}/translation/create"}.
+              to change{remote.reload!.translations.size}.by(1)
+          end
+        end
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/translation/create"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/:id/translation/clear" do
+    let_create!(:translation, origin: remote)
+
+    it "returns 401" do
+      post "/remote/objects/0/translation/clear"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/remote/objects/#{remote.id}/translation/clear"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "destroys the translation" do
+        expect{post "/remote/objects/#{remote.id}/translation/clear"}.
+          to change{remote.reload!.translations.size}.by(-1)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/translation/clear"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
 end

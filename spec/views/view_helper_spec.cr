@@ -1451,6 +1451,46 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "create_translation_object_path" do
+    let(env) do
+      env_factory("GET", "/remote/objects/17/translation/create").tap do |env|
+        env.params.url["id"] = "17"
+      end
+    end
+
+    context "given an object" do
+      let(object) { double(:path_double) }
+
+      it "gets the create translation object path" do
+        expect(create_translation_object_path(object)).to eq("/remote/objects/42/translation/create")
+      end
+    end
+
+    it "gets the create translation object path" do
+      expect(create_translation_object_path).to eq("/remote/objects/17/translation/create")
+    end
+  end
+
+  describe "clear_translation_object_path" do
+    let(env) do
+      env_factory("GET", "/remote/objects/17/translation/clear").tap do |env|
+        env.params.url["id"] = "17"
+      end
+    end
+
+    context "given an object" do
+      let(object) { double(:path_double) }
+
+      it "gets the clear translation object path" do
+        expect(clear_translation_object_path(object)).to eq("/remote/objects/42/translation/clear")
+      end
+    end
+
+    it "gets the clear translation object path" do
+      expect(clear_translation_object_path).to eq("/remote/objects/17/translation/clear")
+    end
+  end
+
   describe "remote_actor_path" do
     let(env) do
       env_factory("GET", "/remote/actors/17").tap do |env|

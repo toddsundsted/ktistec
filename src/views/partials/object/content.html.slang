@@ -148,6 +148,16 @@ crystal:
         == activity_button(outbox_path(account), object.iri, "Announce", button_class: "ui button mini iconic") do
           i.share.icon
           = pluralize(c, "Share")
+      - if translation
+        == form_button clear_translation_object_path(object), button_class: "ui button mini purple iconic" do
+          i.paper.plane.icon
+          | Clear
+      - elsif Ktistec.translator
+        - if (source = account.language) && (target = object.language)
+          - if source.split("-").first != target.split("-").first
+            == form_button create_translation_object_path(object), button_class: "ui button mini iconic" do
+              i.paper.plane.icon
+              | Translate
       - if object.in_reply_to? && for_thread.try(&.first.attributed_to?) == account.actor
         - if object.approved_by?(account.actor)
           form.ui.form method="POST" action=unapprove_path(object) data-controller="checkbox-submit"

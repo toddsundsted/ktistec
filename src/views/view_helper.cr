@@ -827,6 +827,14 @@ module Ktistec::ViewHelper
     "#{Ktistec::ViewHelper.object_path({{object}})}/remote-share"
   end
 
+  macro create_translation_object_path(object = nil)
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/translation/create"
+  end
+
+  macro clear_translation_object_path(object = nil)
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/translation/clear"
+  end
+
   macro remote_actor_path(actor = nil)
     {% if actor %}
       "/remote/actors/#{{{actor}}.id}"

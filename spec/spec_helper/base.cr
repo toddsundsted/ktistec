@@ -118,6 +118,12 @@ module Ktistec
       "footer" => nil,
     }).save
   end
+
+  def self.clear_translator
+    settings.clear_translator_service
+    settings.clear_translator_url
+    @@translator = nil
+  end
 end
 
 BEFORE_PROCS = [] of Proc(Nil)

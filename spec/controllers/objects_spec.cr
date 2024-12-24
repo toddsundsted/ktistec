@@ -1417,10 +1417,6 @@ Spectator.describe ObjectsController do
     def self.translator(translator : Ktistec::Translator)
       @@translator = translator
     end
-
-    def self.clear_translator
-      @@translator = nil
-    end
   end
 
   describe "POST /remote/objects/:id/translation/create" do

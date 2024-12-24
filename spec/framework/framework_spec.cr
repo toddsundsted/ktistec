@@ -173,16 +173,8 @@ Spectator.describe Ktistec do
     end
   end
 
-  module ::Ktistec
-    def self.clear_translator
-      settings.clear_translator_service
-      settings.clear_translator_url
-      @@translator = nil
-    end
-  end
-
   describe ".translator" do
-    after_each { ::Ktistec.clear_translator }
+    after_each { Ktistec.clear_translator }
 
     it "returns nil when the translator service is not configured" do
       expect(Ktistec.translator).to be_nil

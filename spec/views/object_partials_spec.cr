@@ -135,10 +135,6 @@ Spectator.describe "object partials" do
       def self.translator(translator : Ktistec::Translator)
         @@translator = translator
       end
-
-      def self.clear_translator
-        @@translator = nil
-      end
     end
 
     it "does not render a button to translate the content" do

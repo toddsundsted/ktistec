@@ -265,6 +265,31 @@ Spectator.describe ActivityPub::Object do
         expect(object.attachments).to be_empty
       end
     end
+
+    # support Lemmy-style language property
+    context "when language is present" do
+      let(json) do
+        <<-JSON
+          {
+            "@context": [
+              "https://join-lemmy.org/context.json",
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "@id":"https://remote/foo_bar",
+            "@type":"FooBarObject",
+            "language": {
+              "identifier": "en",
+              "name": "English"
+            }
+          }
+        JSON
+      end
+
+      it "sets the language" do
+        object = described_class.from_json_ld(json).save
+        expect(object.language).to eq("en")
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -366,6 +391,31 @@ Spectator.describe ActivityPub::Object do
       it "is ignored" do
         object = described_class.new.from_json_ld(json).save
         expect(object.attachments).to be_empty
+      end
+    end
+
+    # support Lemmy-style language property
+    context "when language is present" do
+      let(json) do
+        <<-JSON
+          {
+            "@context": [
+              "https://join-lemmy.org/context.json",
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "@id":"https://remote/foo_bar",
+            "@type":"FooBarObject",
+            "language": {
+              "identifier": "en",
+              "name": "English"
+            }
+          }
+        JSON
+      end
+
+      it "sets the language" do
+        object = described_class.from_json_ld(json).save
+        expect(object.language).to eq("en")
       end
     end
   end

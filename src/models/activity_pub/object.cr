@@ -741,7 +741,9 @@ module ActivityPub
         # use addressing to establish visibility
         "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
       }.tap do |map|
-        if (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
+        if (language = json.dig?("http://schema.org/inLanguage", "http://schema.org/identifier")) && (language = language.as_s?)
+          map["language"] = language
+        elsif (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
           content.each do |language, content|
             if language && content
               if language != "und" && content == map["content"]?

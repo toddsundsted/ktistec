@@ -6,7 +6,7 @@ require "../spec_helper/network"
 Spectator.describe Ktistec::Translator::DeepLTranslator do
   setup_spec
 
-  DEEPL_API = "https://api.deepl.com/"
+  DEEPL_API = URI.parse("https://api.deepl.com/v2/translate")
 
   it "instantiates the class" do
     expect(described_class.new(DEEPL_API, "")).to be_a(Ktistec::Translator::DeepLTranslator)
@@ -35,7 +35,7 @@ end
 Spectator.describe Ktistec::Translator::LibreTranslateTranslator do
   setup_spec
 
-  LIBRETRANSLATE_API = "https://libretranslate.com/"
+  LIBRETRANSLATE_API = URI.parse("https://libretranslate.com/translate")
 
   it "instantiates the class" do
     expect(described_class.new(LIBRETRANSLATE_API, "")).to be_a(Ktistec::Translator::LibreTranslateTranslator)

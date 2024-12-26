@@ -26,9 +26,9 @@ class HTTP::Client
       end
     end
 
-    def set(url, object)
+    def set(url : String | URI, object)
       if object.responds_to?(:to_json)
-        self[url] = object.to_json
+        self[url.to_s] = object.to_json
       else
         raise "Unsupported: #{object}"
       end
@@ -72,8 +72,8 @@ class HTTP::Client
     @@cache.clear
   end
 
-  def self.get(url : String, headers : HTTP::Headers? = nil)
-    url = URI.parse(url)
+  def self.get(url : String | URI, headers : HTTP::Headers? = nil)
+    url = URI.parse(url) if url.is_a?(String)
     new(url).get(url.request_target, headers)
   end
 
@@ -142,8 +142,8 @@ class HTTP::Client
     end
   end
 
-  def self.post(url : String, headers : HTTP::Headers, body : String)
-    url = URI.parse(url)
+  def self.post(url : String | URI, headers : HTTP::Headers, body : String)
+    url = URI.parse(url) if url.is_a?(String)
     new(url).post(url.request_target, headers, body)
   end
 

@@ -153,11 +153,11 @@ module Ktistec
           case service
           when "deepl"
             if (key = ENV["DEEPL_API_KEY"]?)
-              Ktistec::Translator::DeepLTranslator.new(url, key)
+              Ktistec::Translator::DeepLTranslator.new(URI.parse(url), key)
             end
           when "libretranslate"
             if (key = ENV["LIBRETRANSLATE_API_KEY"]?)
-              Ktistec::Translator::LibreTranslateTranslator.new(url, key)
+              Ktistec::Translator::LibreTranslateTranslator.new(URI.parse(url), key)
             end
           end
         end

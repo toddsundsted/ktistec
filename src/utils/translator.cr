@@ -16,7 +16,7 @@ module Ktistec
       DEEPL_API = "https://api.deepl.com/v2/translate"
       DEEPL_FREE_API = "https://api-free.deepl.com/v2/translate"
 
-      def initialize(@api_url : String, @api_key : String)
+      def initialize(@api_uri : URI, @api_key : String)
       end
 
       def translate(name : String?, summary : String?, content : String?, source : String, target : String) : \
@@ -32,7 +32,7 @@ module Ktistec
           "tag_handling" => "html",
         }.to_json
         Log.debug { body }
-        response = HTTP::Client.post(@api_url, headers: headers, body: body)
+        response = HTTP::Client.post(@api_uri, headers: headers, body: body)
         body = response.body
         Log.debug { body }
         texts = JSON.parse(body)["translations"].as_a.map(&.dig("text"))
@@ -51,7 +51,7 @@ module Ktistec
 
       LIBRETRANSLATE_API = "https://libretranslate.com/translate"
 
-      def initialize(@api_url : String, @api_key : String)
+      def initialize(@api_uri : URI, @api_key : String)
       end
 
       def translate(name : String?, summary : String?, content : String?, source : String, target : String) : \
@@ -67,7 +67,7 @@ module Ktistec
           "api_key" => @api_key,
         }.to_json
         Log.debug { body.gsub(/"api_key":"[a-f0-9-]+"/, %q|"api_key":"****"|) }
-        response = HTTP::Client.post(@api_url, headers: headers, body: body)
+        response = HTTP::Client.post(@api_uri, headers: headers, body: body)
         body = response.body
         Log.debug { body }
         texts = JSON.parse(body)["translatedText"].as_a

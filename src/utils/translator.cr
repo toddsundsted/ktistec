@@ -16,7 +16,22 @@ module Ktistec
       DEEPL_API = "https://api.deepl.com/v2/translate"
       DEEPL_FREE_API = "https://api-free.deepl.com/v2/translate"
 
+      @source_languages = Set(String).new
+      @target_languages = Set(String).new
+
       def initialize(@api_uri : URI, @api_key : String)
+        headers = HTTP::Headers{
+          "Accept" => "application/json",
+          "Authorization" => "DeepL-Auth-Key #{@api_key}"
+        }
+        response = HTTP::Client.get(@api_uri.resolve("/v2/languages?type=source"), headers: headers)
+        JSON.parse(response.body).as_a.each do |language|
+          @source_languages << language["language"].as_s.upcase
+        end
+        response = HTTP::Client.get(@api_uri.resolve("/v2/languages?type=target"), headers: headers)
+        JSON.parse(response.body).as_a.each do |language|
+          @target_languages << language["language"].as_s.upcase
+        end
       end
 
       def translate(name : String?, summary : String?, content : String?, source : String, target : String) : \
@@ -27,20 +42,37 @@ module Ktistec
         }
         body = {
           "text" => [name, summary, content].compact,
-          "source_lang" => source.split("-").first,
-          "target_lang" => target.split("-").first,
           "tag_handling" => "html",
-        }.to_json
+        }
+        add_source(body, source)
+        add_target(body, target)
         Log.debug { body }
-        response = HTTP::Client.post(@api_uri, headers: headers, body: body)
-        body = response.body
+        response = HTTP::Client.post(@api_uri.resolve("/v2/translate"), headers: headers, body: body.to_json)
+        body = JSON.parse(response.body)
         Log.debug { body }
-        texts = JSON.parse(body)["translations"].as_a.map(&.dig("text"))
+        texts = body["translations"].as_a.map(&.dig("text"))
         {
           name: name ? texts.shift.as_s : nil,
           summary: summary ? texts.shift.as_s : nil,
           content: content ? texts.shift.as_s : nil,
         }
+      end
+
+      private def add_source(hash, source)
+        source = source.upcase
+        split_source = source.split("-").first
+        if @source_languages.includes?(source) || @source_languages.includes?(split_source)
+          hash["source_lang"] = split_source
+        end
+      end
+
+      private def add_target(hash, target)
+        target = target.upcase
+        if @target_languages.includes?(target)
+          hash["target_lang"] = target
+        else
+          hash["target_lang"] = target.split("-").first
+        end
       end
     end
 
@@ -51,7 +83,18 @@ module Ktistec
 
       LIBRETRANSLATE_API = "https://libretranslate.com/translate"
 
+      @source_languages = Set(String).new
+      @target_languages = Set(String).new
+
       def initialize(@api_uri : URI, @api_key : String)
+        headers = HTTP::Headers{
+          "Content-Type" => "application/json",
+        }
+        response = HTTP::Client.get(@api_uri.resolve("/languages"), headers: headers)
+        JSON.parse(response.body).as_a.each do |language|
+          @source_languages.add language["code"].as_s.downcase
+          @target_languages.concat language["targets"].as_a.map(&.as_s.downcase)
+        end
       end
 
       def translate(name : String?, summary : String?, content : String?, source : String, target : String) : \
@@ -61,21 +104,36 @@ module Ktistec
         }
         body = {
           "q" => [name, summary, content].compact,
-          "source" => source.split("-").first,
-          "target" => target.split("-").first,
           "format" => "html",
           "api_key" => @api_key,
-        }.to_json
-        Log.debug { body.gsub(/"api_key":"[a-f0-9-]+"/, %q|"api_key":"****"|) }
-        response = HTTP::Client.post(@api_uri, headers: headers, body: body)
-        body = response.body
+        }
+        add_source(body, source)
+        add_target(body, target)
+        Log.debug { body.reject("api_key") }
+        response = HTTP::Client.post(@api_uri.resolve("/translate"), headers: headers, body: body.to_json)
+        body = JSON.parse(response.body)
         Log.debug { body }
-        texts = JSON.parse(body)["translatedText"].as_a
+        texts = body["translatedText"].as_a
         {
           name: name ? texts.shift.as_s : nil,
           summary: summary ? texts.shift.as_s : nil,
           content: content ? texts.shift.as_s : nil,
         }
+      end
+
+      private def add_source(hash, source)
+        source = source.downcase
+        split_source = source.split("-").first
+        if @source_languages.includes?(source) || @source_languages.includes?(split_source)
+          hash["source"] = split_source
+        else
+          hash["source"] = "auto"
+        end
+      end
+
+      private def add_target(hash, target)
+        target = target.downcase
+        hash["target"] = target.split("-").first
       end
     end
   end

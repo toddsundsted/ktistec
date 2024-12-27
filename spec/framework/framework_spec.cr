@@ -3,6 +3,7 @@ require "yaml"
 require "../../src/framework"
 
 require "../spec_helper/base"
+require "../spec_helper/network"
 
 Spectator.describe Ktistec::LogLevel do
   setup_spec
@@ -192,6 +193,9 @@ Spectator.describe Ktistec do
 
     context "given settings for the DeepL translator" do
       before_each do
+        empty_array = Array(Nil).new
+        HTTP::Client.cache.set("https://api.deepl.com/v2/languages?type=source", empty_array)
+        HTTP::Client.cache.set("https://api.deepl.com/v2/languages?type=target", empty_array)
         Ktistec.settings.assign({"translator_service" => "deepl", "translator_url" => "https://api.deepl.com/"}).save
         ENV.delete("DEEPL_API_KEY")
       end
@@ -212,6 +216,8 @@ Spectator.describe Ktistec do
 
     context "given settings for the LibreTranslate translator" do
       before_each do
+        empty_array = Array(Nil).new
+        HTTP::Client.cache.set("https://libretranslate.com/languages", empty_array)
         Ktistec.settings.assign({"translator_service" => "libretranslate", "translator_url" => "https://libretranslate.com/"}).save
         ENV.delete("LIBRETRANSLATE_API_KEY")
       end

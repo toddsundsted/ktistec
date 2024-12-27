@@ -11,8 +11,8 @@ p
   == error_messages(account)
   == input_tag("Display Name", actor, name)
   == input_tag("Summary", actor, summary)
-  == input_tag("Language", account, language, data: {"controller" => "default-language"})
-  == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone"})
+  == input_tag("Language", account, language, data: {"controller" => "default-language", "placeholder-only" => true})
+  == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone", "placeholder-only" => true})
   == input_tag("Password", account, password, type: "password", placeholder: "Leave blank to leave unchanged")
   crystal:
     attachments = actor.attachments || [] of ActivityPub::Actor::Attachment

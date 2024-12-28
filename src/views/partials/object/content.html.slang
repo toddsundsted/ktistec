@@ -1,17 +1,17 @@
 crystal:
   account = env.account?
   timezone = account.try { |account| Time::Location.load(account.timezone) }
-  if (attachments = object.attachments) && (content = object.content)
-    unless content.empty?
-      urls = XML.parse_html(content).xpath_nodes("//img/@src").map(&.text)
-      attachments.reject! { |a| a.url.in?(urls) }
-    end
-  end
   href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
   type = object.type.split("::").last.downcase
   translation = object.translations.first?
   if (content = translation.try(&.content).presence || object.content.presence)
     html = (object.media_type == "text/markdown") ? markdown_to_html(content) : content
+  end
+  if html && (attachments = object.attachments)
+    unless html.empty?
+      urls = XML.parse_html(html).xpath_nodes("//img/@src").map(&.text)
+      attachments.reject! { |a| a.url.in?(urls) }
+    end
   end
 .content data-controller="image-gallery"
   .summary

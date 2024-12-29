@@ -3,6 +3,7 @@
     - [Text and images](#text-and-images)
     - [Draft posts](#draft-posts)
     - [Threaded replies](#threaded-replies)
+    - [Translations](#translations)
     - [@-mention and #-hashtag autocomplete](#-mention-and--hashtag-autocomplete)
     - [Control over comment visibility](#control-over-comment-visibility)
     - [Pretty URLs](#pretty-urls)
@@ -26,6 +27,7 @@
     - [SQLite3 Compatibility](#sqlite3-compatibility)
     - [Running Tests](#running-tests)
   - [Usage](#usage)
+    - [Configuring Translation](#configuring-translation)
   - [Contributors](#contributors)
   - [Copyright and License](#copyright-and-license)
 
@@ -71,6 +73,17 @@ Threaded replies make it easier to follow discussions with many
 posts.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/eaxx1q.png" width=460>
+
+### Translations
+
+Integrate Ktistec with a translation service like DeepL or
+LibreTranslate (or host your own) and translate posts in other
+languages into your own language.
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/733yvm.gif" width=460>
+
+See [Configuring Translation](#configuring-translation) for details on
+how to set up the integration.
 
 ### @-mention and #-hashtag autocomplete
 
@@ -452,6 +465,47 @@ database string (e.g. "America/New_York").
 Once these steps are done, you're running!
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/o0ton2.png" width=640>
+
+### Configuring Translation
+
+First, ensure you've set your language in Account Settings on
+the settings page. Your  language must be a valid [IETF BCP 47
+language tag](https://en.wikipedia.org/wiki/IETF_language_tag) like
+"en-US" for US English, "de" for German (Deutsch), or "ja" for
+Japanese (日本語).
+
+In order to enable translation, you need an *API key* for either
+[DeepL](https://www.deepl.com/) or [LibreTranslate](https://libretranslate.com/).
+These are the only services Ktistec supports at this time.
+
+Depending on the service you use, you need to set either the
+environment variable `DEEPL_API_KEY` or `LIBRETRANSLATE_API_KEY`
+to the API key and restart Ktistec.
+
+Once the API key is set correctly, Site Settings on the settings page
+will show an input for the translator service API endpoint. Currently,
+supported values are:
+https://api.deepl.com/v2/translate (for the DeepL paid service) or
+https://api-free.deepl.com/v2/translate (for the DeepL free service), or
+https://libretranslate.com/translate (for the LibreTranslate paid
+service).
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/2i73hd.png" width=640>
+
+*If you change the service API or change the service you are using, you
+will need to restart Ktistec.*
+
+Posts from properly configured accounts on supported servers, like
+Mastodon, include the language the content is written in. On these
+posts, Ktistec will display a button to translate the content if the
+language differs from your default language.
+
+A few caveats:
+
+* Some ActivityPub servers don't explicitly support language.
+* Some users don't correctly set their posts' language.
+
+TL;DR It's a big Fediverse so translation won't always work.
 
 ## Contributors
 

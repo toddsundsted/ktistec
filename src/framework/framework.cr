@@ -6,6 +6,7 @@ require "./ext/array"
 require "./ext/hash"
 require "./ext/log"
 require "./database"
+require "../utils/translator"
 
 module Ktistec
   # always run database migrations when we boot up the framework
@@ -61,6 +62,8 @@ module Ktistec
       host: String,
       site: String,
       footer: String,
+      translator_service: String,
+      translator_url: String,
     }
 
     {% for property, type in PROPERTIES %}
@@ -115,6 +118,19 @@ module Ktistec
       end
       errors["host"] = host_errors unless host_errors.empty?
       errors["site"] = ["name must be present"] unless @site.presence
+      if (translator_service = @translator_service.presence)
+        unless translator_service.in?("deepl", "libretranslate")
+          errors["translator_service"] = ["is not supported"]
+        end
+      end
+      url_errors = [] of String
+      if (url = @translator_url.presence)
+        uri = URI.parse(url)
+        url_errors << "must have a scheme" unless uri.scheme.presence
+        url_errors << "must have a host name" unless uri.host.presence
+        url_errors << "must not have a fragment" if uri.fragment.presence
+      end
+      errors["translator_url"] = url_errors unless url_errors.empty?
       errors.empty?
     end
   end
@@ -125,6 +141,26 @@ module Ktistec
       begin
         settings = @@settings
         settings.nil? || !settings.errors.empty? ? Settings.new : settings
+      end
+  end
+
+  @@translator : Ktistec::Translator? = nil
+
+  def self.translator
+    @@translator ||=
+      begin
+        if (service = settings.translator_service) && (url = settings.translator_url)
+          case service
+          when "deepl"
+            if (key = ENV["DEEPL_API_KEY"]?)
+              Ktistec::Translator::DeepLTranslator.new(URI.parse(url), key)
+            end
+          when "libretranslate"
+            if (key = ENV["LIBRETRANSLATE_API_KEY"]?)
+              Ktistec::Translator::LibreTranslateTranslator.new(URI.parse(url), key)
+            end
+          end
+        end
       end
   end
 

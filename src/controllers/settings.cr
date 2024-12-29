@@ -30,7 +30,7 @@ class SettingsController
 
     settings = Ktistec.settings
 
-    params = params(env)
+    params = actor_params(env)
 
     account.assign(params)
     actor.assign(params)
@@ -50,7 +50,7 @@ class SettingsController
 
     settings = Ktistec.settings
 
-    params = params(env)
+    params = service_params(env)
 
     settings.assign(params)
 
@@ -74,7 +74,7 @@ class SettingsController
     redirect home_path
   end
 
-  private def self.params(env)
+  private def self.actor_params(env)
     # this method has to handle two different sources of form data
     # (in addition to JSON data and urlencoded data): vanilla form
     # submission and FilePond-enhanced form submission.
@@ -108,16 +108,28 @@ class SettingsController
     {
       "name" => params["name"]?.try(&.to_s),
       "summary" => params["summary"]?.try(&.to_s),
-      "timezone" => params["timezone"]?.try(&.to_s),
+      "language" => params["language"]?.try(&.to_s),
+      "timezone" => params["timezone"]?.try(&.to_s.presence),
       "password" => params["password"]?.try(&.to_s),
       # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
       "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
-      "footer" => params["footer"]?.try(&.to_s.presence),
-      "site" => params["site"]?.try(&.to_s.presence),
       "attachments" => reduce_attachments(params)
-    }.reject do |k, v|
-      v.presence.nil? && k.in?("timezone", "password", "site")
+    }.select do |k, v|
+      v || k.in?("image", "icon")
+    end
+  end
+
+  private def self.service_params(env)
+    params = (env.params.body.presence || env.params.json)
+    {
+      # the host may not be changed via settings
+      "site" => params["site"]?.try(&.to_s),
+      "footer" => params["footer"]?.try(&.to_s),
+      "translator_service" => params["translator_service"]?.try(&.to_s),
+      "translator_url" => params["translator_url"]?.try(&.to_s),
+    }.select do |k, v|
+      v
     end
   end
 

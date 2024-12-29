@@ -440,6 +440,18 @@ Spectator.describe RelationshipsController do
             to change{ActivityPub::Object::Note.count(attributed_to_iri: actor.iri)}.by(1)
         end
 
+        context "given a language" do
+          it "sets the language" do
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&language=en"
+            expect(new_object.language).to eq("en")
+          end
+
+          it "sets the language" do
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","language":"en"}|
+            expect(new_object.language).to eq("en")
+          end
+        end
+
         context "given a name" do
           it "sets the name" do
             post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&name=Name"

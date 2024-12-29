@@ -2,6 +2,7 @@ require "../framework/controller"
 require "../models/activity_pub/object/note"
 require "../models/relationship/content/follow/thread"
 require "../models/task/fetch/thread"
+require "../models/translation"
 
 class ObjectsController
   include Ktistec::Controller
@@ -251,10 +252,45 @@ class ObjectsController
     render_or_redirect
   end
 
+  post "/remote/objects/:id/translation/create" do |env|
+    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
+
+    object.translations.each(&.destroy)
+
+    if (translator = Ktistec.translator)
+      if (source = object.language) && (target = env.account.language)
+        if source.split("-").first != target.split("-").first
+          begin
+            translations = translator.translate(object.name, object.summary, object.content, source, target)
+            Translation.new(
+              origin: object,
+              name: translations[:name],
+              summary: translations[:summary],
+              content: translations[:content],
+            ).save
+          rescue ex : KeyError
+            # ignore
+          end
+        end
+      end
+    end
+
+    redirect back_path
+  end
+
+  post "/remote/objects/:id/translation/clear" do |env|
+    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
+
+    object.translations.each(&.destroy)
+
+    redirect back_path
+  end
+
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
     {
       "source" => params["content"]?.try(&.as(String).presence).try { |content| ActivityPub::Object::Source.new(content, "text/html; editor=trix") },
+      "language" => params["language"]?.try(&.as(String).presence),
       "name" => params["name"]?.try(&.as(String).presence),
       "summary" => params["summary"]?.try(&.as(String).presence),
       "canonical_path" => params["canonical_path"]?.try(&.as(String).presence)

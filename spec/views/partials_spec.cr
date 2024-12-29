@@ -522,7 +522,9 @@ Spectator.describe "partials" do
     let_build(:object, named: :original)
 
     context "if authenticated" do
-      sign_in
+      let(account) { register }
+
+      sign_in(as: account.username)
 
       context "given a new object" do
         pre_condition { expect(object.new_record?).to be_true }
@@ -544,6 +546,26 @@ Spectator.describe "partials" do
         it "does not include a link to return to drafts" do
           expect(subject.xpath_nodes("//a[text()='To Drafts']")).
             to be_empty
+        end
+
+        it "uses the default language" do
+          expect(subject.xpath_nodes("//input[@name='language']/@value").first).to eq("en")
+        end
+
+        context "if no default language is set" do
+          before_each { Global.account.not_nil!.language = nil }
+
+          it "does not render an input for language" do
+            expect(subject.xpath_nodes("//input[@name='language']")).to be_empty
+          end
+        end
+
+        context "given an assigned language" do
+          before_each { object.assign(language: "fr") }
+
+          it "uses the assigned language" do
+            expect(subject.xpath_nodes("//input[@name='language']/@value").first).to eq("fr")
+          end
         end
       end
 
@@ -633,37 +655,63 @@ Spectator.describe "partials" do
     let_build(:object, local: true)
     let_build(:object, named: :original)
 
-    context "given a new object" do
-      pre_condition { expect(object.new_record?).to be_true }
+    context "if authenticated" do
+      let(account) { register }
 
-      it "does not render the object's iri" do
-        expect(subject["object"]?).to be_nil
+      sign_in(as: account.username)
+
+      context "given a new object" do
+        pre_condition { expect(object.new_record?).to be_true }
+
+        it "does not render the object's iri" do
+          expect(subject["object"]?).to be_nil
+        end
+
+        it "uses the default language" do
+          expect(subject["language"]).to eq("en")
+        end
+
+        context "if no default language is set" do
+          before_each { Global.account.not_nil!.language = nil }
+
+          it "does not render a key for language" do
+            expect(subject.as_h.has_key?("language")).to be_false
+          end
+        end
+
+        context "given an assigned language" do
+          before_each { object.assign(language: "fr") }
+
+          it "uses the assigned language" do
+            expect(subject["language"]).to eq("fr")
+          end
+        end
       end
-    end
 
-    context "given a saved object" do
-      before_each { object.save }
+      context "given a saved object" do
+        before_each { object.save }
 
-      pre_condition { expect(object.new_record?).to be_false }
+        pre_condition { expect(object.new_record?).to be_false }
 
-      it "renders the object's iri" do
-        expect(subject["object"]?).to eq(object.iri)
+        it "renders the object's iri" do
+          expect(subject["object"]?).to eq(object.iri)
+        end
       end
-    end
 
-    context "given a reply" do
-      before_each { object.assign(in_reply_to: original).save }
+      context "given a reply" do
+        before_each { object.assign(in_reply_to: original).save }
 
-      it "renders the replies to object's iri" do
-        expect(subject["in-reply-to"]?).to eq(original.iri)
+        it "renders the replies to object's iri" do
+          expect(subject["in-reply-to"]?).to eq(original.iri)
+        end
       end
-    end
 
-    context "an object with errors" do
-      before_each { object.errors["object"] = ["has errors"] }
+      context "an object with errors" do
+        before_each { object.errors["object"] = ["has errors"] }
 
-      it "renders the errors" do
-        expect(subject["errors"]["object"]).to eq(["has errors"])
+        it "renders the errors" do
+          expect(subject["errors"]["object"]).to eq(["has errors"])
+        end
       end
     end
   end
@@ -686,7 +734,9 @@ Spectator.describe "partials" do
     end
 
     context "if authenticated" do
-      sign_in
+      let(account) { register }
+
+      sign_in(as: account.username)
 
       let_build(:actor, named: :actor1, username: "actor1")
       let_build(:actor, named: :actor2, username: "actor2")
@@ -699,6 +749,26 @@ Spectator.describe "partials" do
       it "prepopulates editor with mentions" do
         expect(subject.xpath_nodes("//textarea[@name='content']/text()").first).
           to eq("@#{actor2.handle} @#{actor1.handle} ")
+      end
+
+      it "uses the default language" do
+        expect(subject.xpath_nodes("//input[@name='language']/@value").first).to eq("en")
+      end
+
+      context "if no default language is set" do
+        before_each { Global.account.not_nil!.language = nil }
+
+        it "does not render an input for language" do
+          expect(subject.xpath_nodes("//input[@name='language']")).to be_empty
+        end
+      end
+
+      context "given an assigned language" do
+        before_each { object.assign(language: "fr") }
+
+        it "uses the default language" do
+          expect(subject.xpath_nodes("//input[@name='language']/@value").first).to eq("en")
+        end
       end
     end
   end

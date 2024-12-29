@@ -6,6 +6,7 @@ require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
 require "../relationship/content/canonical"
+require "../translation"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
@@ -30,7 +31,6 @@ module ActivityPub
     include Ktistec::Model::Polymorphic
     include Ktistec::Model::Deletable
     include Ktistec::Model::Blockable
-    include Ktistec::Model::Renderable
     include ActivityPub
 
     @@table_name = "objects"
@@ -77,6 +77,14 @@ module ActivityPub
 
     @[Persistent]
     property media_type : String?
+
+    @[Persistent]
+    property language : String?
+    validates(language) do
+      if language
+        "is unsupported" unless language =~ Ktistec::Constants::LANGUAGE_RE
+      end
+    end
 
     struct Source
       include JSON::Serializable
@@ -125,6 +133,8 @@ module ActivityPub
 
     @[Persistent]
     property urls : Array(String)?
+
+    has_many translations, foreign_key: origin_id, primary_key: id, inverse_of: origin
 
     has_many hashtags, class_name: Tag::Hashtag, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
     has_many mentions, class_name: Tag::Mention, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
@@ -730,7 +740,20 @@ module ActivityPub
         "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
         # use addressing to establish visibility
         "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
-      }.compact
+      }.tap do |map|
+        if (language = json.dig?("http://schema.org/inLanguage", "http://schema.org/identifier")) && (language = language.as_s?)
+          map["language"] = language
+        elsif (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
+          content.each do |language, content|
+            if language && content
+              if language != "und" && content == map["content"]?
+                map["language"] = language
+                break
+              end
+            end
+          end
+        end
+      end.compact
     end
 
     def make_delete_activity

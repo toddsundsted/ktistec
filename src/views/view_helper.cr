@@ -1,6 +1,7 @@
 require "ecr"
 require "slang"
 require "kemal"
+require "markd"
 
 # Redefine the `render` macros provided by Kemal.
 
@@ -618,6 +619,12 @@ module Ktistec::ViewHelper
     {{counter}} < {{collection}}.size - 1 ? "," : ""
   end
 
+  # Converts Markdown to HTML.
+  #
+  macro markdown_to_html(markdown)
+    Markd.to_html({{markdown}})
+  end
+
   # Generates a random, URL-safe identifier.
   #
   macro id
@@ -818,6 +825,14 @@ module Ktistec::ViewHelper
 
   macro object_remote_share_path(object = nil)
     "#{Ktistec::ViewHelper.object_path({{object}})}/remote-share"
+  end
+
+  macro create_translation_object_path(object = nil)
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/translation/create"
+  end
+
+  macro clear_translation_object_path(object = nil)
+    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/translation/clear"
   end
 
   macro remote_actor_path(actor = nil)

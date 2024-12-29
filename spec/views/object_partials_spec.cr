@@ -2,7 +2,9 @@ require "../../src/models/activity_pub/object/note"
 require "../../src/models/activity_pub/object/video"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
+require "../../src/models/translation"
 require "../../src/views/view_helper"
+require "../../src/utils/translator"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"
@@ -67,6 +69,14 @@ Spectator.describe "object partials" do
       it "renders the content as is" do
         expect(subject.xpath_nodes("//ul/li/text()")).to contain_exactly("One", "Two")
       end
+
+      context "and a translation" do
+        let_create!(:translation, origin: object, content: "<ul><li>Un</li><li>Du</li></ul>")
+
+        it "renders the translation of the content" do
+          expect(subject.xpath_nodes("//ul/li/text()")).to contain_exactly("Un", "Du")
+        end
+      end
     end
 
     context "given Markdown content" do
@@ -74,6 +84,14 @@ Spectator.describe "object partials" do
 
       it "renders the content as HTML" do
         expect(subject.xpath_nodes("//ul/li/text()")).to contain_exactly("One", "Two")
+      end
+
+      context "and a translation" do
+        let_create!(:translation, origin: object, content: "* Un\n* Du")
+
+        it "renders the translation of the content" do
+          expect(subject.xpath_nodes("//ul/li/text()")).to contain_exactly("Un", "Du")
+        end
       end
     end
 
@@ -83,6 +101,14 @@ Spectator.describe "object partials" do
       it "renders the name" do
         expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bar Baz")
       end
+
+      context "and a translation" do
+        let_create!(:translation, origin: object, name: "Foo Bàr Bàz")
+
+        it "renders the translation of the name" do
+          expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bàr Bàz")
+        end
+      end
     end
 
     context "given a summary" do
@@ -90,6 +116,85 @@ Spectator.describe "object partials" do
 
       it "renders the summary" do
         expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bar Baz")
+      end
+
+      context "and a translation" do
+        let_create!(:translation, origin: object, summary: "Foo Bàr Bàz")
+
+        it "renders the translation of the summary" do
+          expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bàr Bàz")
+        end
+      end
+    end
+
+    # translation
+
+    def_mock Ktistec::Translator
+
+    module ::Ktistec
+      def self.translator(translator : Ktistec::Translator)
+        @@translator = translator
+      end
+    end
+
+    it "does not render a button to translate the content" do
+      expect(subject.xpath_nodes("//button/text()")).not_to have("Translate")
+    end
+
+    it "does not render a button to clear the translation" do
+      expect(subject.xpath_nodes("//button/text()")).not_to have("Clear")
+    end
+
+    context "when authenticated" do
+      sign_in(as: account.username)
+
+      it "does not render a button to translate the content" do
+        expect(subject.xpath_nodes("//button/text()")).not_to have("Translate")
+      end
+
+      it "does not render a button to clear the translation" do
+        expect(subject.xpath_nodes("//button/text()")).not_to have("Clear")
+      end
+
+      context "given a translator" do
+        let(translator) { mock(Ktistec::Translator) }
+
+        before_each { ::Ktistec.translator(translator) }
+        after_each { ::Ktistec.clear_translator }
+
+        it "does not render a button to translate the content" do
+          expect(subject.xpath_nodes("//button/text()")).not_to have("Translate")
+        end
+
+        context "and an account and an object with the same primary language" do
+          before_each do
+            Global.account.not_nil!.language = "en-US"
+            object.language = "en-GB"
+          end
+
+          it "does not render a button to translate the content" do
+            expect(subject.xpath_nodes("//button/text()")).not_to have("Translate")
+          end
+        end
+
+        context "and an account and an object with different languages" do
+          before_each do
+            Global.account.not_nil!.language = "fr"
+            object.language = "en"
+          end
+
+          it "renders a button to translate the content" do
+            expect(subject.xpath_nodes("//button/text()")).to have("Translate")
+          end
+        end
+      end
+
+      context "given a translation" do
+        let_create!(:translation, origin: object)
+
+        it "renders a button to clear the translation" do
+          expect(subject.xpath_nodes("//button/text()")).to have("Clear")
+        end
       end
     end
 

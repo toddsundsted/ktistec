@@ -13,7 +13,8 @@ class HomeController
 
       ok "home/step_1", env: env, settings: settings
     elsif (accounts = Account.all).empty?
-      account = Account.new("", "")
+      # `username` and `password` properties are not nilable
+      account = Account.new(username: "", password: "")
       actor = ActivityPub::Actor.new
 
       account.actor = actor
@@ -83,6 +84,7 @@ class HomeController
       "password" => params["password"].as(String),
       "name" => params["name"].as(String),
       "summary" => params["summary"].as(String),
+      "language" => params["language"].as(String),
       "timezone" => params["timezone"].as(String)
     }
   end

@@ -12,6 +12,9 @@
 <%- if object.in_reply_to? -%>
   "in-reply-to":<%= object.in_reply_to_iri.to_json %>,
 <%- end -%>
+<%- if (language = object.language.presence || env.account.language.presence) -%>
+"language":<%= language.to_json %>,
+<%- end -%>
 "name":<%= object.name.to_json %>,
 "summary":<%= object.summary.to_json %>,
 "content":<%= object.content.to_json %>,

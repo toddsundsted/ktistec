@@ -1013,6 +1013,20 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "markdown_to_html" do
+    subject do
+      markdown = <<-MD
+      Markdown
+      ========
+      MD
+      XML.parse_html(markdown_to_html(markdown), PARSER_OPTIONS).document
+    end
+
+    it "transforms Markdown to HTML" do
+      expect(subject.xpath_nodes("/h1/text()")).to contain_exactly("Markdown")
+    end
+  end
+
   describe "id" do
     it "generates an id" do
       expect(id).to match(/^[a-zA-Z0-9_-]+$/)
@@ -1434,6 +1448,46 @@ Spectator.describe "helpers" do
 
     it "gets the object remote share path" do
       expect(object_remote_share_path).to eq("/objects/abc/remote-share")
+    end
+  end
+
+  describe "create_translation_object_path" do
+    let(env) do
+      env_factory("GET", "/remote/objects/17/translation/create").tap do |env|
+        env.params.url["id"] = "17"
+      end
+    end
+
+    context "given an object" do
+      let(object) { double(:path_double) }
+
+      it "gets the create translation object path" do
+        expect(create_translation_object_path(object)).to eq("/remote/objects/42/translation/create")
+      end
+    end
+
+    it "gets the create translation object path" do
+      expect(create_translation_object_path).to eq("/remote/objects/17/translation/create")
+    end
+  end
+
+  describe "clear_translation_object_path" do
+    let(env) do
+      env_factory("GET", "/remote/objects/17/translation/clear").tap do |env|
+        env.params.url["id"] = "17"
+      end
+    end
+
+    context "given an object" do
+      let(object) { double(:path_double) }
+
+      it "gets the clear translation object path" do
+        expect(clear_translation_object_path(object)).to eq("/remote/objects/42/translation/clear")
+      end
+    end
+
+    it "gets the clear translation object path" do
+      expect(clear_translation_object_path).to eq("/remote/objects/17/translation/clear")
     end
   end
 

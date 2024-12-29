@@ -23,7 +23,7 @@ Spectator.describe Task::Monitor do
       context "given a fiber" do
         let!(fiber) do
           spawn(name: task.fiber_name) do
-            sleep 1
+            sleep 1.second
           end
         end
 

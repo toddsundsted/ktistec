@@ -962,6 +962,15 @@ module Ktistec
       #     validates xyz { "is blank" if xyz.blank? }
       #
       macro validates(property, &block)
+        {% begin %}
+          {% ancestors = @type.ancestors << @type %}
+          {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+          {% names = methods.map(&.name) %}
+          {% unless names.includes?(property.name) %}
+            {% raise "no such property: #{property.name}" %}
+          {% end %}
+        {% end %}
+
         private def _validate_{{property.name}}
           {% if block %}
             {{block.body}}
@@ -1020,7 +1029,6 @@ module Ktistec
           # update associated instances
           if @id != old
             {% for method in methods %}
-              {% name = method.name[13..-1] %}
               {% if method.body[0] == :has_one && method.body[1] == :id %}
                 if (model = {{method.body.last}})
                   model.{{method.body[2].id}} = @id
@@ -1111,6 +1119,17 @@ module Ktistec
               })
             end
           end
+          # nil the associations, as well...
+          {% ancestors = @type.ancestors << @type %}
+          {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
+          {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+          {% for method in methods %}
+            {% if method.body[0] == :has_one %}
+              {{method.body.last}} = nil
+            {% elsif method.body[0] == :has_many %}
+              {{method.body.last}} = nil
+            {% end %}
+          {% end %}
           self
         {% end %}
       rescue DB::NoResultsError

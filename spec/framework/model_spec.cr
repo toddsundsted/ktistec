@@ -1192,6 +1192,23 @@ Spectator.describe Ktistec::Model do
       expect(foo_bar_model.reload!.foo).to eq("New")
     end
 
+    context "given an association" do
+      let!(not_nil_model) { NotNilModel.new(val: "Val").save }
+
+      before_each do
+        foo_bar_model.assign(not_nil: not_nil_model).save
+        not_nil_model.assign(foo_bar: foo_bar_model).save
+      end
+
+      it "clears the model association" do
+        expect{foo_bar_model.reload!}.to change{foo_bar_model.@not_nil_model}.to(nil)
+      end
+
+      it "clears the model association" do
+        expect{not_nil_model.reload!}.to change{not_nil_model.@foo_bar_models}.to(nil)
+      end
+    end
+
     it "clears the changed status" do
       foo_bar_model.assign(foo: "New")
       expect{foo_bar_model.reload!}.to change{foo_bar_model.changed?}.to(false)

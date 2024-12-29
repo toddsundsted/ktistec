@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.3]
+### Added
+- Support for setting a default language on each account.
+- Support for setting a distinct language on each object when editing.
+- Support for translation.
+
+### Changed
+- Monitor streams and refresh page when connections close.
+- Re-enable Turbo Drive page morphing.
+- In gallery, set `alt` text as attachment caption.
+
+### Other
+- Automatically build Docker image of tagged release. (see [#115](https://github.com/toddsundsted/ktistec/pull/115))
+
 ## [v2.4.2]
 ### Fixed
 - Fix metrics chart line labels.
@@ -275,6 +289,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.4.3]: https://github.com/toddsundsted/ktistec/compare/e5dd16ee...1bd44b40
 [v2.4.2]: https://github.com/toddsundsted/ktistec/compare/d3dbd74a...8b795e1a
 [v2.4.1]: https://github.com/toddsundsted/ktistec/compare/6754d1bd...e6ad8966
 [v2.4.0]: https://github.com/toddsundsted/ktistec/compare/084754a5...74f65140

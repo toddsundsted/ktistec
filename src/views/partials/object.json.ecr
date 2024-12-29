@@ -31,6 +31,11 @@
   <%- end -%>
   <%- if (content = object.content) -%>
   "content":<%= content.to_json %>,
+  <%- if (language = object.language) -%>
+  "contentMap":{
+    <%= language.to_json %>:<%= content.to_json %>
+  },
+  <%- end -%>
   <%- end -%>
   <%- if (media_type = object.media_type) -%>
   "mediaType":<%= media_type.to_json %>,

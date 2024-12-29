@@ -34,6 +34,65 @@ Spectator.describe SettingsController do
           get "/settings", headers
           expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='footer']][.//input[@name='site']]")).not_to be_empty
         end
+
+        before_each do
+          ENV.delete("DEEPL_API_KEY")
+          ENV.delete("LIBRETRANSLATE_API_KEY")
+        end
+        after_each do
+          ENV.delete("DEEPL_API_KEY")
+          ENV.delete("LIBRETRANSLATE_API_KEY")
+        end
+
+        it "does not render an option for the translator service" do
+          get "/settings", headers
+          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_service']]//input[@type='radio']")).to be_empty
+        end
+
+        it "does not render an input for the service URL" do
+          get "/settings", headers
+          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_url']]//input[@type='text']")).to be_empty
+        end
+
+        context "given an API key for the DeepL service" do
+          before_each { ENV["DEEPL_API_KEY"] = "API_KEY" }
+          after_each { ENV.delete("DEEPL_API_KEY") }
+
+          it "renders an option for the DeepL service" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_service']]//input[@type='radio']/@value")).to have("deepl")
+          end
+
+          it "does not render an option for the LibreTranslate service" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_service']]//input[@type='radio']/@value")).not_to have("libretranslate")
+          end
+
+          it "renders an input for the service URL" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_url']]//input[@type='text']")).not_to be_empty
+          end
+        end
+
+        context "given an API key for the LibreTranslate service" do
+          before_each { ENV["LIBRETRANSLATE_API_KEY"] = "API_KEY" }
+          after_each { ENV.delete("LIBRETRANSLATE_API_KEY") }
+
+          it "renders an option for the LibreTranslate service" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_service']]//input[@type='radio']/@value")).to have("libretranslate")
+          end
+
+          it "does not render an option for the DeepL service" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_service']]//input[@type='radio']/@value")).not_to have("deepl")
+          end
+
+          it "renders an input for the service URL" do
+            get "/settings", headers
+            expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='translator_url']]//input[@type='text']")).not_to be_empty
+          end
+        end
       end
 
       context "and accepting JSON" do
@@ -66,37 +125,72 @@ Spectator.describe SettingsController do
       context "and posting urlencoded data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
 
+        let(query_string) {
+          [
+            "name=Foo+Bar",
+            "summary=Blah+Blah",
+            "password=foobarbaz1%21",
+            "language=fr",
+            "timezone=Etc%2FGMT",
+            "image=%2Ffoo%2Fbar%2Fbaz",
+            "icon=%2Ffoo%2Fbar%2Fbaz",
+          ].join("&")
+        }
+
         it "succeeds" do
-          post "/settings/actor", headers, "name=&summary=&password="
+          post "/settings/actor", headers, query_string
           expect(response.status_code).to eq(302)
         end
 
         it "updates the name" do
-          post "/settings/actor", headers, "name=Foo+Bar&summary="
+          post "/settings/actor", headers, "name=Foo+Bar"
           expect(actor.reload!.name).to eq("Foo Bar")
         end
 
+        context "given an actor with a name" do
+          before_each { actor.assign(name: "Foo Bar").save }
+
+          it "updates the name if blank" do
+            expect{post "/settings/actor", headers, "name="}.
+              to change{actor.reload!.name}.from("Foo Bar").to("")
+          end
+        end
+
         it "updates the summary" do
-          post "/settings/actor", headers, "name=&summary=Foo+Bar"
-          expect(actor.reload!.summary).to eq("Foo Bar")
+          post "/settings/actor", headers, "summary=Blah+Blah"
+          expect(actor.reload!.summary).to eq("Blah Blah")
+        end
+
+        it "updates the language" do
+          post "/settings/actor", headers, "language=fr"
+          expect(account.reload!.language).to eq("fr")
+        end
+
+        context "given an account with a language" do
+          before_each { account.assign(language: "en").save }
+
+          it "does not update the language if blank" do
+            expect{post "/settings/actor", headers, "language="}.
+              not_to change{account.reload!.language}
+          end
         end
 
         it "updates the timezone" do
-          post "/settings/actor", headers, "name=&summary=&timezone=Etc/GMT"
+          post "/settings/actor", headers, "timezone=Etc%2FGMT"
           expect(account.reload!.timezone).to eq("Etc/GMT")
         end
 
         context "given an account with a timezone" do
-          before_each { account.assign(timezone: "Etc/UTC").save }
+          before_each { account.assign(timezone: "America/New_York").save }
 
-          it "does not updates the timezone if blank" do
+          it "does not update the timezone if blank" do
             expect{post "/settings/actor", headers, "timezone="}.
               not_to change{account.reload!.timezone}
           end
         end
 
         it "updates the password" do
-          expect{post "/settings/actor", headers, "password=foobarbaz1!"}.
+          expect{post "/settings/actor", headers, "password=foobarbaz1%21"}.
             to change{account.reload!.encrypted_password}
         end
 
@@ -209,19 +303,54 @@ Spectator.describe SettingsController do
       context "and posting JSON data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 
+        let(json_string) {
+          {
+            name: "Foo Bar",
+            summary: "Blah Blah",
+            password: "foobarbaz1!",
+            language: "fr",
+            timezone: "Etc/GMT",
+            image: "/foo/bar/baz",
+            icon: "/foo/bar/baz",
+          }.to_json
+        }
+
         it "succeeds" do
-          post "/settings/actor", headers, %q|{"name":"","summary":""}|
+          post "/settings/actor", headers, json_string
           expect(response.status_code).to eq(302)
         end
 
         it "updates the name" do
-          post "/settings/actor", headers, %q|{"name":"Foo Bar","summary":""}|
+          post "/settings/actor", headers, %q|{"name":"Foo Bar"}|
           expect(actor.reload!.name).to eq("Foo Bar")
         end
 
+        context "given an actor with a name" do
+          before_each { actor.assign(name: "Foo Bar").save }
+
+          it "updates the name if blank" do
+            expect{post "/settings/actor", headers, %q|{"name":""}|}.
+              to change{actor.reload!.name}.from("Foo Bar").to("")
+          end
+        end
+
         it "updates the summary" do
-          post "/settings/actor", headers, %q|{"name":"","summary":"Foo Bar"}|
-          expect(actor.reload!.summary).to eq("Foo Bar")
+          post "/settings/actor", headers, %q|{"summary":"Blah Blah"}|
+          expect(actor.reload!.summary).to eq("Blah Blah")
+        end
+
+        it "updates the language" do
+          post "/settings/actor", headers, %q|{"language":"fr"}|
+          expect(account.reload!.language).to eq("fr")
+        end
+
+        context "given an account with a language" do
+          before_each { account.assign(language: "en").save }
+
+          it "does not update the language if blank" do
+            expect{post "/settings/actor", headers, %q|{"language":""}|}.
+              not_to change{account.reload!.language}
+          end
         end
 
         it "updates the timezone" do
@@ -230,9 +359,9 @@ Spectator.describe SettingsController do
         end
 
         context "given an account with a timezone" do
-          before_each { account.assign(timezone: "Etc/UTC").save }
+          before_each { account.assign(timezone: "America/New_York").save }
 
-          it "does not updates the timezone if blank" do
+          it "does not update the timezone if blank" do
             expect{post "/settings/actor", headers, %q|{"timezone":""}|}.
               not_to change{account.reload!.timezone}
           end
@@ -298,21 +427,22 @@ Spectator.describe SettingsController do
       sign_in(as: actor.username)
 
       after_each do
-        Ktistec.settings.clear_footer
-        Ktistec.settings.site = "Test"
+        Ktistec.set_default_settings
       end
 
-      context "and posting form data" do
+      context "and posting urlencoded data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
 
+        let(query_string) { "host=https%3A%2F%2Ffoo.bar%2F&site=Name&footer=Copyright+Blah+Blah" }
+
         it "succeeds" do
-          post "/settings/service", headers, "site=Name&footer="
+          post "/settings/service", headers, query_string
           expect(response.status_code).to eq(302)
         end
 
-        it "changes the footer" do
-          expect {post "/settings/service", headers, "site=Name&footer=Copyright Blah Blah"}.
-            to change{Ktistec.settings.footer}
+        it "does not change the host" do
+          expect {post "/settings/service", headers, "host=https%3A%2F%2Ffoo.bar%2F"}.
+            not_to change{Ktistec.settings.host}
         end
 
         it "changes the site" do
@@ -324,19 +454,35 @@ Spectator.describe SettingsController do
           expect {post "/settings/service", headers, "site="}.
             not_to change{Ktistec.settings.site}
         end
+
+        it "changes the footer" do
+          expect {post "/settings/service", headers, "footer=Copyright+Blah+Blah"}.
+            to change{Ktistec.settings.footer}
+        end
+
+        context "given a footer" do
+          before_each { Ktistec.settings.assign({"footer" => "Copyright Blah Blah"}).save }
+
+          it "changes the footer if blank" do
+            expect {post "/settings/service", headers, "footer="}.
+              to change{Ktistec.settings.footer}.from("Copyright Blah Blah").to("")
+          end
+        end
       end
 
       context "and posting JSON data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 
+        let(json_string) { {"host" => "https://foo.bar/", "site" => "Name", "footer" => "Copyright Blah Blah"}.to_json }
+
         it "succeeds" do
-          post "/settings/service", headers, %q|{"site":"Name","footer":""}|
+          post "/settings/service", headers, json_string
           expect(response.status_code).to eq(302)
         end
 
-        it "changes the footer" do
-          expect {post "/settings/service", headers, %q|{"site":"Name","footer":"Copyright Blah Blah"}|}.
-            to change{Ktistec.settings.footer}
+        it "does not change the host" do
+           expect {post "/settings/service", headers, %q|{"host":"https://foo.bar/"}|}.
+            not_to change{Ktistec.settings.host}
         end
 
         it "changes the site" do
@@ -347,6 +493,20 @@ Spectator.describe SettingsController do
         it "does not change the site" do
           expect {post "/settings/service", headers, %q|{"site":""}|}.
             not_to change{Ktistec.settings.site}
+        end
+
+        it "changes the footer" do
+          expect {post "/settings/service", headers, %q|{"footer":"Copyright Blah Blah"}|}.
+            to change{Ktistec.settings.footer}
+        end
+
+        context "given a footer" do
+          before_each { Ktistec.settings.assign({"footer" => "Copyright Blah Blah"}).save }
+
+          it "changes the footer if blank" do
+            expect {post "/settings/service", headers, %q|{"footer":""}|}.
+              to change{Ktistec.settings.footer}.from("Copyright Blah Blah").to("")
+          end
         end
       end
     end

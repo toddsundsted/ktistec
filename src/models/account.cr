@@ -7,6 +7,10 @@ require "./activity_pub/actor"
 require "./last_time"
 require "./session"
 
+private def check_language?(language)
+  language.nil? || language =~ Ktistec::Constants::LANGUAGE_RE
+end
+
 private def check_timezone?(timezone)
   Time::Location.load(timezone)
 rescue Time::Location::InvalidLocationNameError
@@ -19,18 +23,6 @@ end
 class Account
   include Ktistec::Model
   include Ktistec::Model::Common
-
-  # Allocates a new account.
-  #
-  # This constructor is used to create new accounts (which must have a
-  # valid username and password).
-  #
-  def self.new(_username username : String, _password password : String, **options)
-    new(**options.merge({
-      username: username,
-      password: password
-    }))
-  end
 
   @[Persistent]
   property username : String
@@ -120,6 +112,13 @@ class Account
 
   def after_save
     @password = nil
+  end
+
+  @[Persistent]
+  property language : String?
+  validates(language) do
+    return "cannot be blank" unless language.presence
+    return "is unsupported" unless check_language?(language)
   end
 
   @[Persistent]

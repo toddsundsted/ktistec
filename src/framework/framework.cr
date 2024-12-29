@@ -6,6 +6,7 @@ require "./ext/array"
 require "./ext/hash"
 require "./ext/log"
 require "./database"
+require "../utils/translator"
 
 module Ktistec
   # always run database migrations when we boot up the framework
@@ -57,9 +58,17 @@ module Ktistec
   # Model-like class for managing site settings.
   #
   class Settings
-    property host : String?
-    property site : String?
-    property footer : String?
+    PROPERTIES = {
+      host: String,
+      site: String,
+      footer: String,
+      translator_service: String,
+      translator_url: String,
+    }
+
+    {% for property, type in PROPERTIES %}
+      property {{property.id}} : {{type.id}}?
+    {% end %}
 
     getter errors = Hash(String, Array(String)).new
 
@@ -73,35 +82,28 @@ module Ktistec
       assign(values)
     end
 
-    def save
-      raise "invalid settings" unless valid?
-      {"host" => @host, "site" => @site, "footer" => @footer}.each do |key, value|
-        Ktistec.database.exec("INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)", key, value)
-      end
+    def assign(options)
+      {% for property, type in PROPERTIES %}
+        @{{property.id}} = options["{{property.id}}"].as({{type.id}}?) if options.has_key?("{{property.id}}")
+      {% end %}
       self
     end
 
-    def assign(options)
-      @host = options["host"].as(String) if options.has_key?("host")
-      @site = options["site"].as(String) if options.has_key?("site")
-      @footer = options["footer"].as(String?) if options.has_key?("footer")
+    private SQL = "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)"
+
+    def save
+      raise "invalid settings" unless valid?
+      {% for property, _ in PROPERTIES %}
+        Ktistec.database.exec(SQL, "{{property.id}}", @{{property.id}})
+      {% end %}
       self
     end
 
     def valid?
       errors.clear
       host_errors = [] of String
-      if (host = @host) && !host.empty?
+      if (host = @host.presence)
         uri = URI.parse(host)
-        # `URI.parse` treats something like "ktistec.com" as a path
-        # name and not a host name. users' expectations differ.
-        if !uri.host.presence && uri.path.presence
-          parts = uri.path.split('/', 2)
-          unless parts.first.blank?
-            uri.host = parts.first
-            uri.path = parts.fetch(1, "")
-          end
-        end
         host_errors << "must have a scheme" unless uri.scheme.presence
         host_errors << "must have a host name" unless uri.host.presence
         host_errors << "must not have a fragment" if uri.fragment.presence
@@ -112,10 +114,23 @@ module Ktistec
           @host = uri.normalize.to_s
         end
       else
-        host_errors << "name must be present"
+        host_errors << "must be present"
       end
       errors["host"] = host_errors unless host_errors.empty?
       errors["site"] = ["name must be present"] unless @site.presence
+      if (translator_service = @translator_service.presence)
+        unless translator_service.in?("deepl", "libretranslate")
+          errors["translator_service"] = ["is not supported"]
+        end
+      end
+      url_errors = [] of String
+      if (url = @translator_url.presence)
+        uri = URI.parse(url)
+        url_errors << "must have a scheme" unless uri.scheme.presence
+        url_errors << "must have a host name" unless uri.host.presence
+        url_errors << "must not have a fragment" if uri.fragment.presence
+      end
+      errors["translator_url"] = url_errors unless url_errors.empty?
       errors.empty?
     end
   end
@@ -129,17 +144,31 @@ module Ktistec
       end
   end
 
-  def self.host
-    settings.host.not_nil!
+  @@translator : Ktistec::Translator? = nil
+
+  def self.translator
+    @@translator ||=
+      begin
+        if (service = settings.translator_service) && (url = settings.translator_url)
+          case service
+          when "deepl"
+            if (key = ENV["DEEPL_API_KEY"]?)
+              Ktistec::Translator::DeepLTranslator.new(URI.parse(url), key)
+            end
+          when "libretranslate"
+            if (key = ENV["LIBRETRANSLATE_API_KEY"]?)
+              Ktistec::Translator::LibreTranslateTranslator.new(URI.parse(url), key)
+            end
+          end
+        end
+      end
   end
 
-  def self.site
-    settings.site.not_nil!
-  end
-
-  def self.footer
-    settings.footer.not_nil!
-  end
+  {% for property, _ in Settings::PROPERTIES %}
+    def self.{{property.id}}
+      settings.{{property.id}}.not_nil!
+    end
+  {% end %}
 
   # An [ActivityPub](https://www.w3.org/TR/activitypub/) server.
   #

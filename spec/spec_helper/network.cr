@@ -25,6 +25,14 @@ class HTTP::Client
         raise "Unsupported: #{object}"
       end
     end
+
+    def set(url : String | URI, object)
+      if object.responds_to?(:to_json)
+        self[url.to_s] = object.to_json
+      else
+        raise "Unsupported: #{object}"
+      end
+    end
   end
 
   @@requests = [] of HTTP::Request
@@ -37,6 +45,10 @@ class HTTP::Client
 
   def self.requests
     @@requests
+  end
+
+  def self.cache
+    @@cache
   end
 
   def self.activities
@@ -60,8 +72,8 @@ class HTTP::Client
     @@cache.clear
   end
 
-  def self.get(url : String, headers : HTTP::Headers? = nil)
-    url = URI.parse(url)
+  def self.get(url : String | URI, headers : HTTP::Headers? = nil)
+    url = URI.parse(url) if url.is_a?(String)
     new(url).get(url.request_target, headers)
   end
 
@@ -130,27 +142,39 @@ class HTTP::Client
     end
   end
 
-  def self.post(url : String, headers : HTTP::Headers, body : String)
-    url = URI.parse(url)
+  def self.post(url : String | URI, headers : HTTP::Headers, body : String)
+    url = URI.parse(url) if url.is_a?(String)
     new(url).post(url.request_target, headers, body)
   end
 
   def post(path : String, headers : HTTP::Headers, body : String)
     url = URI.new(scheme: "https", host: self.host, path: path)
     @@requests << HTTP::Request.new("POST", url.to_s, headers, body)
-    case url.path
-    when /openssl-error/
-      raise OpenSSL::Error.new
-    when /io-error/
-      raise IO::Error.new
-    when /([^\/]+)\/inbox/
-      HTTP::Client::Response.new(
-        200,
-        headers: HTTP::Headers.new,
-        body: ""
-      )
+    if url.scheme && url.authority && url.path
+      case url.path
+      when /openssl-error/
+        raise OpenSSL::Error.new
+      when /io-error/
+        raise IO::Error.new
+      when /([^\/]+)\/inbox/
+        HTTP::Client::Response.new(
+          200,
+          headers: HTTP::Headers.new,
+          body: ""
+        )
+      else
+        if (json = @@cache[url.to_s]?)
+          HTTP::Client::Response.new(
+            200,
+            headers: HTTP::Headers.new,
+            body: json
+          )
+        else
+          HTTP::Client::Response.new(404)
+        end
+      end
     else
-      raise "request not mocked: POST #{url}"
+      HTTP::Client::Response.new(500)
     end
   end
 end

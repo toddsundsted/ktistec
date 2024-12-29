@@ -1,14 +1,18 @@
 crystal:
   account = env.account?
   timezone = account.try { |account| Time::Location.load(account.timezone) }
-  if (attachments = object.attachments) && (content = object.content)
-    unless content.empty?
-      urls = XML.parse_html(content).xpath_nodes("//img/@src").map(&.text)
+  href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
+  type = object.type.split("::").last.downcase
+  translation = object.translations.first?
+  if (content = translation.try(&.content).presence || object.content.presence)
+    html = (object.media_type == "text/markdown") ? markdown_to_html(content) : content
+  end
+  if html && (attachments = object.attachments)
+    unless html.empty?
+      urls = XML.parse_html(html).xpath_nodes("//img/@src").map(&.text)
       attachments.reject! { |a| a.url.in?(urls) }
     end
   end
-  href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
-  type = object.type.split("::").last.downcase
 .content data-controller="image-gallery"
   .summary
     - if object.draft?
@@ -48,34 +52,34 @@ crystal:
         .extra.media
           - attachments.each do |attachment|
             - if attachment.image?
-              img.ui.attachment.image src=attachment.url
+              img.ui.attachment.image src=attachment.url alt=attachment.caption
             - elsif attachment.video?
               video.ui.attachment.video src=attachment.url controls=true
             - elsif attachment.audio?
               audio.ui.attachment.audio src=attachment.url controls=true
-    - if (name = object.name.presence)
+    - if (name = translation.try(&.name).presence || object.name.presence)
       .extra.text
         - if object.external?
           a href=object.display_link target="_blank" : strong = name
         - else
           strong = name
-    - if (summary = object.summary.presence)
+    - if (summary = translation.try(&.summary).presence || object.summary.presence)
       details.extra.text open=with_detail
         summary = summary
         - if with_detail
           div
-            == s object.to_html
+            == s html
         - else
           div data-controller="clickable-background" data-clickable-background-href-value=href
-            == s object.to_html
+            == s html
     - else
       .extra.text
         - if with_detail
           div
-            == s object.to_html
+            == s html
         - else
           div data-controller="clickable-background" data-clickable-background-href-value=href
-            == s object.to_html
+            == s html
     - if with_detail && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq
@@ -144,6 +148,16 @@ crystal:
         == activity_button(outbox_path(account), object.iri, "Announce", button_class: "ui button mini iconic") do
           i.share.icon
           = pluralize(c, "Share")
+      - if translation
+        == form_button clear_translation_object_path(object), button_class: "ui button mini purple iconic" do
+          i.paper.plane.icon
+          | Clear
+      - elsif Ktistec.translator
+        - if (source = account.language) && (target = object.language)
+          - if source.split("-").first != target.split("-").first
+            == form_button create_translation_object_path(object), button_class: "ui button mini iconic" do
+              i.paper.plane.icon
+              | Translate
       - if object.in_reply_to? && for_thread.try(&.first.attributed_to?) == account.actor
         - if object.approved_by?(account.actor)
           form.ui.form method="POST" action=unapprove_path(object) data-controller="checkbox-submit"

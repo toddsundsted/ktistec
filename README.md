@@ -452,10 +452,12 @@ currently supports only one user. This is intentional -- one of
 Ktistec's design goals is to promote a more fully distributed
 Fediverse.
 
-At a minimum, you need to specify the user's *username*, *password*
-and *timezone*. You can use a single character for the username if you
-want, but you'll need six characters, including letters, numbers and
-symbols, for the password. *timezone* is any valid IANA time zone
+At a minimum, you need to specify the user's *username*, *password*,
+*language*, and *timezone*. You can use a single character for the
+*username* if you want, but you'll need six characters, including
+letters, numbers and symbols, for the *password* (but more than six
+characters is better). *language* is any valid IETF BCP 47 language
+tag (e.g. "en-US" or "en").  *timezone* is any valid IANA time zone
 database string (e.g. "America/New_York").
 
 *Display name* and *summary* are optional.
@@ -514,7 +516,7 @@ TL;DR It's a big Fediverse so translation won't always work.
 ## Copyright and License
 
 Ktistec ActivityPub Server
-Copyright (C) 2021, 2022, 2023, 2024 Todd Sundsted
+Copyright (C) 2021, 2022, 2023, 2024, 2025 Todd Sundsted
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as

@@ -45,6 +45,11 @@ INSERT INTO migrations VALUES(20231207050349,'rename-column-on-objects');
 INSERT INTO migrations VALUES(20231218135321,'add-index-on-subject-iri-to-tasks');
 INSERT INTO migrations VALUES(20240118055642,'fix-indexes-on-relationships');
 INSERT INTO migrations VALUES(20240119121753,'remove-index-on-created-at-from-tasks');
+INSERT INTO migrations VALUES(20240630040342,'add-index-to-relationships');
+INSERT INTO migrations VALUES(20241208053239,'create-translations');
+INSERT INTO migrations VALUES(20241211124721,'add-language-to-accounts');
+INSERT INTO migrations VALUES(20241214103109,'add-language-to-objects');
+INSERT INTO migrations VALUES(20250101054127,'delete-old-notifications');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -53,7 +58,8 @@ CREATE TABLE accounts (
     encrypted_password varchar(255) NOT NULL,
     iri varchar(255) NOT NULL COLLATE NOCASE,
     timezone varchar(244) NOT NULL DEFAULT "",
-    state text
+    state text,
+    language varchar(244) COLLATE NOCASE
   );
 CREATE TABLE sessions (
     id integer PRIMARY KEY AUTOINCREMENT,
@@ -131,7 +137,8 @@ CREATE TABLE objects (
     "deleted_at" datetime,
     "blocked_at" datetime,
     "name" text,
-    "thread" text COLLATE NOCASE
+    "thread" text COLLATE NOCASE,
+    "language" varchar(244) COLLATE NOCASE
   );
 CREATE TABLE activities (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -200,6 +207,15 @@ CREATE TABLE last_times (
     "name" varchar(63) NOT NULL,
     "account_id" integer
   );
+CREATE TABLE translations (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL,
+    "origin_id" integer,
+    "summary" text,
+    "content" text,
+    "name" text
+  );
 CREATE INDEX idx_accounts_iri
     ON accounts (iri ASC);
 CREATE UNIQUE INDEX idx_accounts_username
@@ -216,6 +232,8 @@ CREATE INDEX idx_relationships_to_iri
     ON relationships (to_iri ASC);
 CREATE INDEX idx_relationships_type
     ON relationships (type ASC);
+CREATE INDEX idx_relationships_created_at
+    ON relationships (created_at DESC);
 CREATE UNIQUE INDEX idx_collections_iri
     ON collections (iri ASC);
 CREATE INDEX idx_objects_in_reply_to_iri
@@ -252,4 +270,6 @@ CREATE INDEX idx_filter_terms_actor_id
     ON filter_terms (actor_id ASC);
 CREATE INDEX idx_last_times_name
     ON last_times (name ASC);
+CREATE INDEX idx_translations_origin_id
+    ON translations (origin_id ASC);
 COMMIT;

@@ -127,6 +127,16 @@ Spectator.describe "object partials" do
       end
     end
 
+    context "given an attachment" do
+      let(attachment) { ActivityPub::Object::Attachment.new(url: "http://remote/foo.jpg", media_type: "image/jpeg") }
+
+      before_each { object.assign(attachments: [attachment]) }
+
+      it "renders the attachment" do
+        expect(subject.xpath_nodes("//img/@src")).to have("http://remote/foo.jpg")
+      end
+    end
+
     # translation
 
     def_mock Ktistec::Translator

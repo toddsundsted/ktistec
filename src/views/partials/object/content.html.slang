@@ -7,8 +7,8 @@ crystal:
   if (content = translation.try(&.content).presence || object.content.presence)
     html = (object.media_type == "text/markdown") ? markdown_to_html(content) : content
   end
-  if html && (attachments = object.attachments)
-    unless html.empty?
+  if (attachments = object.attachments)
+    if html
       urls = XML.parse_html(html).xpath_nodes("//img/@src").map(&.text)
       attachments.reject! { |a| a.url.in?(urls) }
     end

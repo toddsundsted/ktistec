@@ -29,7 +29,7 @@ class Task
     PATH = File.join("etc", "scripts")
 
     def perform
-      account = Account.all.first
+      return unless (account = Account.all.first?)
       session = Session.new(account).save
       jwt = session.generate_jwt
       Dir.new(PATH).each_child do |script|

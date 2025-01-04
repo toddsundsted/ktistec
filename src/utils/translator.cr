@@ -19,6 +19,8 @@ module Ktistec
       @source_languages = Set(String).new
       @target_languages = Set(String).new
 
+      getter api_uri : URI
+
       def initialize(@api_uri : URI, @api_key : String)
         headers = HTTP::Headers{
           "Accept" => "application/json",
@@ -85,6 +87,8 @@ module Ktistec
 
       @source_languages = Set(String).new
       @target_languages = Set(String).new
+
+      getter api_uri : URI
 
       def initialize(@api_uri : URI, @api_key : String)
         headers = HTTP::Headers{

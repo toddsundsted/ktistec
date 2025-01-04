@@ -141,12 +141,6 @@ Spectator.describe "object partials" do
 
     def_mock Ktistec::Translator
 
-    module ::Ktistec
-      def self.translator(translator : Ktistec::Translator)
-        @@translator = translator
-      end
-    end
-
     it "does not render a button to translate the content" do
       expect(subject.xpath_nodes("//button/text()")).not_to have("Translate")
     end
@@ -169,7 +163,7 @@ Spectator.describe "object partials" do
       context "given a translator" do
         let(translator) { mock(Ktistec::Translator) }
 
-        before_each { ::Ktistec.translator(translator) }
+        before_each { ::Ktistec.set_translator(translator) }
         after_each { ::Ktistec.clear_translator }
 
         it "does not render a button to translate the content" do

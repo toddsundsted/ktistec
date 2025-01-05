@@ -1,4 +1,4 @@
-FROM crystallang/crystal:latest-alpine AS builder
+FROM 84codes/crystal:latest-alpine AS builder
 RUN apk update && apk upgrade && apk add sqlite-static
 WORKDIR /build/
 ARG version

@@ -208,8 +208,20 @@ Spectator.describe Ktistec do
         before_each { ENV["DEEPL_API_KEY"] = "API_KEY" }
         after_each { ENV.delete("DEEPL_API_KEY") }
 
-        it "returns the DeepL translator singleton" do
+        it "returns a DeepL translator" do
           expect(Ktistec.translator).to be_a(Ktistec::Translator::DeepLTranslator)
+        end
+
+        it "caches the translator" do
+          expect(Ktistec.translator).to be(Ktistec.translator)
+        end
+
+        context "given a configured translator" do
+          pre_condition { expect(Ktistec.translator).to be_a(Ktistec::Translator::DeepLTranslator) }
+
+          it "instantiates a new translator when the settings change" do
+            expect{Ktistec.settings.assign({"translator_service" => "libretranslate"}).save}.to change{Ktistec.translator}
+          end
         end
       end
     end
@@ -230,8 +242,20 @@ Spectator.describe Ktistec do
         before_each { ENV["LIBRETRANSLATE_API_KEY"] = "API_KEY" }
         after_each { ENV.delete("LIBRETRANSLATE_API_KEY") }
 
-        it "returns the LibreTranslate translator singleton" do
+        it "returns a LibreTranslate translator" do
           expect(Ktistec.translator).to be_a(Ktistec::Translator::LibreTranslateTranslator)
+        end
+
+        it "caches the translator" do
+          expect(Ktistec.translator).to be(Ktistec.translator)
+        end
+
+        context "given a configured translator" do
+          pre_condition { expect(Ktistec.translator).to be_a(Ktistec::Translator::LibreTranslateTranslator) }
+
+          it "instantiates a new translator when the settings change" do
+            expect{Ktistec.settings.assign({"translator_service" => "deepl"}).save}.to change{Ktistec.translator}
+          end
         end
       end
     end

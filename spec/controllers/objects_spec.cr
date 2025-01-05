@@ -1413,12 +1413,6 @@ Spectator.describe ObjectsController do
 
   def_mock Ktistec::Translator
 
-  module ::Ktistec
-    def self.translator(translator : Ktistec::Translator)
-      @@translator = translator
-    end
-  end
-
   describe "POST /remote/objects/:id/translation/create" do
     it "returns 401" do
       post "/remote/objects/0/translation/create"
@@ -1445,7 +1439,7 @@ Spectator.describe ObjectsController do
           end
         end
 
-        before_each { ::Ktistec.translator(translator) }
+        before_each { ::Ktistec.set_translator(translator) }
         after_each { ::Ktistec.clear_translator }
 
         it "does not create a translation" do

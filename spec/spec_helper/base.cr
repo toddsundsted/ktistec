@@ -119,10 +119,23 @@ module Ktistec
     }).save
   end
 
+  @@mocks = [] of Ktistec::Translator
+
+  def self.check_translator
+    return if @@translator && @@mocks.includes?(@@translator)
+    previous_def
+  end
+
+  def self.set_translator(translator : Ktistec::Translator)
+    @@translator = translator
+    @@mocks << translator
+  end
+
   def self.clear_translator
     settings.clear_translator_service
     settings.clear_translator_url
     @@translator = nil
+    @@mocks.clear
   end
 end
 

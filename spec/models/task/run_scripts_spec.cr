@@ -29,5 +29,18 @@ Spectator.describe Task::RunScripts do
       subject.perform
       expect(subject.next_attempt_at).not_to be_nil
     end
+
+    context "if there is no account yet" do
+      before_each { account.destroy }
+
+      it "does not raise an error" do
+        expect{subject.perform}.not_to raise_error
+      end
+
+      it "sets the next attempt at" do
+        subject.perform
+        expect(subject.next_attempt_at).not_to be_nil
+      end
+    end
   end
 end

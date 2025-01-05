@@ -144,20 +144,36 @@ module Ktistec
       end
   end
 
+  alias DeepLTranslator = Ktistec::Translator::DeepLTranslator
+  alias LibreTranslateTranslator = Ktistec::Translator::LibreTranslateTranslator
+
   @@translator : Ktistec::Translator? = nil
 
+  # provide a method for this check so that it can be redefined in tests
+  private def self.check_translator
+    if (translator = @@translator)
+      service = settings.translator_service
+      url = settings.translator_url
+      unless (service == "deepl" && translator.is_a?(DeepLTranslator) && url == translator.api_uri.to_s) ||
+             (service == "libretranslate" && translator.is_a?(LibreTranslateTranslator) && url == translator.api_uri.to_s)
+        @@translator = nil
+      end
+    end
+  end
+
   def self.translator
+    check_translator
     @@translator ||=
       begin
         if (service = settings.translator_service) && (url = settings.translator_url)
           case service
           when "deepl"
             if (key = ENV["DEEPL_API_KEY"]?)
-              Ktistec::Translator::DeepLTranslator.new(URI.parse(url), key)
+              DeepLTranslator.new(URI.parse(url), key)
             end
           when "libretranslate"
             if (key = ENV["LIBRETRANSLATE_API_KEY"]?)
-              Ktistec::Translator::LibreTranslateTranslator.new(URI.parse(url), key)
+              LibreTranslateTranslator.new(URI.parse(url), key)
             end
           end
         end

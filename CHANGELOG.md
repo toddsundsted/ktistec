@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.4]
+### Fixed
+- Always get the attachments. (fixes [#119](https://github.com/toddsundsted/ktistec/issues/119))
+- Don't run scripts until the server has been configured.
+
+### Changed
+- Make the editor toolbar sticky.
+- Clear the cached translator when the settings change.
+
 ## [v2.4.3]
 ### Added
 - Support for setting a default language on each account.
@@ -289,6 +298,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.4.4]: https://github.com/toddsundsted/ktistec/compare/730e0b96...f03cea00
 [v2.4.3]: https://github.com/toddsundsted/ktistec/compare/e5dd16ee...1bd44b40
 [v2.4.2]: https://github.com/toddsundsted/ktistec/compare/d3dbd74a...8b795e1a
 [v2.4.1]: https://github.com/toddsundsted/ktistec/compare/6754d1bd...e6ad8966

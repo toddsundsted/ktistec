@@ -3,6 +3,8 @@ on:
   push:
     tags:
       - "v*.*.*"
+  # Temporary, for demonstration purposes
+  pull_request:
 
 # deploy to github's image registry
 env:
@@ -53,5 +55,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
           build-args: |
             version=v${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}

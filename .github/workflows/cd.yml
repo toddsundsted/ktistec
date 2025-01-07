@@ -24,6 +24,11 @@ jobs:
     
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
         
       - name: Log in to the Container registry
         uses: docker/login-action@v3

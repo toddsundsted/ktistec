@@ -198,44 +198,43 @@ module WebFinger
       raise WebFinger::NotFoundError.new("Invalid account")
     end
     name = $~["name"]?
-    host = $~["host"]?
-    case account
-    when /no-such-host/
+    host = $~["host"]
+    if name =~ /no-such-name/
+      raise WebFinger::NotFoundError.new("No such name")
+    elsif host =~ /no-such-host/
       raise WebFinger::NotFoundError.new("No such host")
+    elsif name
+      WebFinger::Result.from_json(<<-JSON
+        {
+          "links":[
+            {
+              "rel":"self",
+              "href":"https://#{host}/actors/#{name}"
+            },
+            {
+              "rel":"http://ostatus.org/schema/1.0/subscribe",
+              "template":"https://#{host}/authorize-interaction?uri={uri}"
+            }
+          ]
+        }
+        JSON
+      )
     else
-      if name
-        WebFinger::Result.from_json(<<-JSON
-          {
-            "links":[
-              {
-                "rel":"self",
-                "href":"https://#{host}/actors/#{name}"
-              },
-              {
-                "rel":"http://ostatus.org/schema/1.0/subscribe",
-                "template":"https://#{host}/authorize-interaction?uri={uri}"
-              }
-            ]
-          }
-          JSON
-        )
-      else
-        WebFinger::Result.from_json(<<-JSON
-          {
-            "links":[
-              {
-                "rel":"self",
-                "href":"https://#{host}"
-              },
-              {
-                "rel":"http://ostatus.org/schema/1.0/subscribe",
-                "template":"https://#{host}/authorize-interaction?uri={uri}"
-              }
-            ]
-          }
-          JSON
-        )
-      end
+      WebFinger::Result.from_json(<<-JSON
+        {
+          "links":[
+            {
+              "rel":"self",
+              "href":"https://#{host}"
+            },
+            {
+              "rel":"http://ostatus.org/schema/1.0/subscribe",
+              "template":"https://#{host}/authorize-interaction?uri={uri}"
+            }
+          ]
+        }
+        JSON
+      )
     end
   end
 end

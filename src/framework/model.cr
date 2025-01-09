@@ -663,17 +663,19 @@ module Ktistec
         self
       end
 
-      # Returns true if all persistent properties are equal.
+      # Returns `true` if all persistent properties are equal.
+      #
+      def ==(other : self)
+        {% begin %}
+          {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
+          self.same?(other) || ({{vs.map { |v| "self.#{v} == other.#{v}" }.join(" && ").id}})
+        {% end %}
+      end
+
+      # Returns `false`.
       #
       def ==(other)
-        if other.is_a?(self)
-          {% begin %}
-            {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
-            self.same?(other) || ({{vs.map { |v| "self.#{v} == other.#{v}" }.join(" && ").id}})
-          {% end %}
-        else
-          false
-        end
+        false
       end
 
       # Computes the hash for this instance.

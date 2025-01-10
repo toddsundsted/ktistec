@@ -1,6 +1,7 @@
 require "json"
 require "xml"
 require "libxml_ext"
+require "web_finger"
 
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
@@ -78,8 +79,19 @@ module Ktistec
                     cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
                     enhancements.mentions << Mention.new(name: mention, href: actor.iri)
                   else
-                    node = %Q|<span class="mention">@#{mention}</span>|
-                    cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
+                    href =
+                      begin
+                        WebFinger.query("acct:#{mention.lchop('@')}").link("self").href.presence
+                      rescue WebFinger::Error
+                      end
+                    if href
+                      node = %Q|<a href="#{href}" class="mention" rel="tag">@#{mention}</a>|
+                      cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
+                      enhancements.mentions << Mention.new(name: mention, href: href)
+                    else
+                      node = %Q|<span class="mention">@#{mention}</span>|
+                      cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
+                    end
                   end
                 end
               end

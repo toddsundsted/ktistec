@@ -12,7 +12,7 @@ module Ktistec::Handler
     SUFFIXES = %w[thread]
 
     def call(env)
-      return call_next(env) unless env.request.method == "GET"
+      return call_next(env) unless env.request.method.in?("GET", "HEAD")
       path = env.request.path
       suffix = SUFFIXES.find { |suffix| path.ends_with?("/#{suffix}") }
       if suffix

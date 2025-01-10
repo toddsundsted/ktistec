@@ -75,6 +75,18 @@ Spectator.describe Ktistec::Handler::Canonical do
           expect(response.headers["Location"]).to eq("/does/not/exist/#{segment}")
         end
       end
+
+      context "and a HEAD request" do
+        it "returns 200" do
+          head "/does/not/exist", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns 301" do
+          head "/foo/bar/secret", ACCEPT_HTML
+          expect(response.status_code).to eq(301)
+        end
+      end
     end
   end
 end

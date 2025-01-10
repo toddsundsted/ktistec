@@ -24,9 +24,12 @@ dependencies:
   openssl_ext:
     github: toddsundsted/openssl_ext
     version: ~> 0.1.6
+  host_meta:
+    github: toddsundsted/host_meta
+    version: ~> 0.2.4
   web_finger:
     github: toddsundsted/web_finger
-    version: ~> 0.2.5
+    version: ~> 0.2.6
   school:
     github: toddsundsted/school
     version: ~> 0.2.4

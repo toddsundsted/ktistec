@@ -228,7 +228,7 @@ module Ktistec
                 {% if subclass.abstract? %}
                   raise TypeError.new("cannot instantiate abstract model {{subclass}}")
                 {% else %}
-                  options = rs.read(**self.persistent_columns.merge(additional_columns)).to_h
+                  options = rs.read(**self.persistent_columns.merge(additional_columns))
                   {% temp = @type.instance_vars.select(&.annotation(Persistent)).map(&.name) %}
                   {% vars = subclass.instance_vars.select(&.annotation(Persistent)).reject { |d| temp.includes?(d.name) } %}
                   {% unless vars.empty? %}
@@ -237,7 +237,7 @@ module Ktistec
                         case column
                         {% for v in vars %}
                         when {{v.stringify}}
-                          options = options.merge({ {{v.name.symbolize}} => rs.read({{v.type}}) })
+                          options = options.merge({ {{v.name}}: rs.read({{v.type}}) })
                         {% end %}
                         else
                           rs.read # discard, it's not a property

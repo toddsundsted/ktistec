@@ -246,7 +246,7 @@ module Ktistec
                     end
                   {% end %}
                   {{subclass}}.allocate.tap do |instance|
-                    instance.__for_internal_use_only(options).clear!
+                    instance.as({{subclass}}).__for_internal_use_only(options).clear!
                   end
                 {% end %}
             {% end %}
@@ -257,7 +257,7 @@ module Ktistec
               else
                 options = rs.read(**self.persistent_columns.merge(additional_columns))
                 self.allocate.tap do |instance|
-                  instance.__for_internal_use_only(options).clear!
+                  instance.as(self).__for_internal_use_only(options).clear!
                 end
             {% end %}
             end
@@ -267,7 +267,7 @@ module Ktistec
             {% else %}
               options = rs.read(**self.persistent_columns.merge(additional_columns))
               self.allocate.tap do |instance|
-                instance.__for_internal_use_only(options).clear!
+                instance.as(self).__for_internal_use_only(options).clear!
               end
             {% end %}
           {% end %}

@@ -437,4 +437,162 @@ Spectator.describe Ktistec::JSON_LD do
       end
     end
   end
+
+  describe ".dig?" do
+    let(json) { JSON.parse(%<{"foo":5}>) }
+
+    it "returns the value cast to the specified type" do
+      expect(described_class.dig?(json, "foo", as: Int64)).to eq(5)
+    end
+
+    it "returns nil if key does not exist" do
+      expect(described_class.dig?(json, "bar", as: Int64)).to be_nil
+    end
+  end
+
+  def block(value)
+    if (bar = described_class.dig?(value, "bar", as: Int64)) && (baz = described_class.dig?(value, "baz", as: Int64))
+      bar + baz
+    end
+  end
+
+  describe ".dig_value?" do
+    context "given a nested object" do
+      let(json) { JSON.parse(%<{"foo":{"bar":3,"baz":5}}>) }
+
+      it "returns the result of the block" do
+        result = described_class.dig_value?(json, "foo", &->block(JSON::Any))
+        expect(result).to eq(8)
+      end
+    end
+
+    context "given an array of nested objects" do
+      let(json) { JSON.parse(%<{"foo":[{"bar":3,"baz":5},{"bar":1,"baz":2}]}>) }
+
+      it "returns the result of the block on the first element" do
+        result = described_class.dig_value?(json, "foo", &->block(JSON::Any))
+        expect(result).to eq(8)
+      end
+    end
+  end
+
+  describe ".dig_values?" do
+    context "given a nested object" do
+      let(json) { JSON.parse(%<{"foo":{"bar":3,"baz":5}}>) }
+
+      it "returns the result of the block as an array" do
+        result = described_class.dig_values?(json, "foo", &->block(JSON::Any))
+        expect(result).to eq([8])
+      end
+    end
+
+    context "given an array of nested objects" do
+      let(json) { JSON.parse(%<{"foo":[{"bar":3,"baz":5},{"bar":1,"baz":2}]}>) }
+
+      it "returns the result of the block on all elements" do
+        result = described_class.dig_values?(json, "foo", &->block(JSON::Any))
+        expect(result).to eq([8, 3])
+      end
+    end
+  end
+
+  describe ".dig_id?" do
+    context "given a nested object" do
+      let(json) { JSON.parse(%<{"foo":{"@id":"https://test.test/bar"}}>) }
+
+      it "returns the identifier" do
+        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      end
+    end
+
+    context "given a link" do
+      let(json) { JSON.parse(%<{"foo":{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}}>) }
+
+      it "returns the identifier" do
+        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      end
+    end
+
+    context "given an identifier" do
+      let(json) { JSON.parse(%<{"foo":"https://test.test/bar"}>) }
+
+      it "returns the identifier" do
+        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      end
+    end
+
+    context "given an array of nested objects" do
+      let(json) { JSON.parse(%<{"foo":[{"@id":"https://test.test/bar"}]}>) }
+
+      it "returns the first identifier" do
+        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      end
+    end
+
+    context "given an array of links" do
+      let(json) { JSON.parse(%<{"foo":[{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}]}>) }
+
+      it "returns the first identifier" do
+        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      end
+    end
+
+    context "given an array of identifiers" do
+      let(json) { JSON.parse(%<{"foo":["https://test.test/bar"]}>) }
+
+      it "returns the first identifier" do
+        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      end
+    end
+  end
+
+  describe ".dig_ids?" do
+    context "given a nested object" do
+      let(json) { JSON.parse(%<{"foo":{"@id":"https://test.test/bar"}}>) }
+
+      it "returns the identifier as an array" do
+        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      end
+    end
+
+    context "given a link" do
+      let(json) { JSON.parse(%<{"foo":{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}}>) }
+
+      it "returns the identifier as an array" do
+        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      end
+    end
+
+    context "given an identifier" do
+      let(json) { JSON.parse(%<{"foo":"https://test.test/bar"}>) }
+
+      it "returns the identifier as an array" do
+        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      end
+    end
+
+    context "given an array of nested objects" do
+      let(json) { JSON.parse(%<{"foo":[{"@id":"https://test.test/bar"}]}>) }
+
+      it "returns all the identifiers" do
+        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      end
+    end
+
+    context "given an array of links" do
+      let(json) { JSON.parse(%<{"foo":[{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}]}>) }
+
+      it "returns all the identifiers" do
+        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      end
+    end
+
+    context "given an array of identifiers" do
+      let(json) { JSON.parse(%<{"foo":["https://test.test/bar"]}>) }
+
+      it "returns all the identifiers" do
+        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      end
+    end
+  end
 end

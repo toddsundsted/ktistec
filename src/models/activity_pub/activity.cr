@@ -20,7 +20,6 @@ module ActivityPub
     include Ktistec::Model
     include Ktistec::Model::Common
     include Ktistec::Model::Linked
-    include Ktistec::Model::Serialized
     include Ktistec::Model::Polymorphic
     include Ktistec::Model::Undoable
     include ActivityPub
@@ -84,7 +83,7 @@ module ActivityPub
       {
         "iri" => json.dig?("@id").try(&.as_s),
         "_type" => json.dig?("@type").try(&.as_s.split("#").last),
-        "published" => (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
+        "published" => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
         # either pick up the actor's id or the embedded actor
         "actor_iri" => json.dig?("https://www.w3.org/ns/activitystreams#actor").try(&.as_s?),
         "actor" => if (actor = json.dig?("https://www.w3.org/ns/activitystreams#actor")) && actor.as_h?
@@ -100,9 +99,9 @@ module ActivityPub
         "target" => if (target = json.dig?("https://www.w3.org/ns/activitystreams#target")) && target.as_h?
           ActivityPub.from_json_ld(target)
         end,
-        "to" => to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
-        "cc" => cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
-        "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+        "to" => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
+        "cc" => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+        "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
         # use addressing to establish visibility
         "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
       }.compact

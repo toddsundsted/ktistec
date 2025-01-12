@@ -21,7 +21,6 @@ module ActivityPub
     include Ktistec::Model
     include Ktistec::Model::Common
     include Ktistec::Model::Linked
-    include Ktistec::Model::Serialized
     include ActivityPub
 
     @@table_name = "collections"
@@ -130,33 +129,33 @@ module ActivityPub
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
         "iri" => json.dig?("@id").try(&.as_s),
-        "items_iris" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
+        "items_iris" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
         "items" => if (items = json.dig?("https://www.w3.org/ns/activitystreams#items"))
           map_items(items)
         end,
         "total_items" => json.dig?("https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i64),
         # pick up the collection's id or the embedded collection
-        "first_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#first"),
+        "first_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#first"),
         "first" => if (first = json.dig?("https://www.w3.org/ns/activitystreams#first")) && first.as_h?
           Collection.from_json_ld(first)
         end,
         # pick up the collection's id or the embedded collection
-        "last_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#last"),
+        "last_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#last"),
         "last" => if (last = json.dig?("https://www.w3.org/ns/activitystreams#last")) && last.as_h?
           Collection.from_json_ld(last)
         end,
         # pick up the collection's id or the embedded collection
-        "prev_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#prev"),
+        "prev_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#prev"),
         "prev" => if (prev = json.dig?("https://www.w3.org/ns/activitystreams#prev")) && prev.as_h?
           Collection.from_json_ld(prev)
         end,
         # pick up the collection's id or the embedded collection
-        "next_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#next"),
+        "next_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#next"),
         "next" => if (_next = json.dig?("https://www.w3.org/ns/activitystreams#next")) && _next.as_h?
           Collection.from_json_ld(_next)
         end,
         # pick up the collection's id or the embedded collection
-        "current_iri" => dig_id?(json, "https://www.w3.org/ns/activitystreams#current"),
+        "current_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#current"),
         "current" => if (current = json.dig?("https://www.w3.org/ns/activitystreams#current")) && current.as_h?
           Collection.from_json_ld(current)
         end

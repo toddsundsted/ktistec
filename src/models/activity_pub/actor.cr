@@ -39,7 +39,6 @@ module ActivityPub
     include Ktistec::Model
     include Ktistec::Model::Common
     include Ktistec::Model::Linked
-    include Ktistec::Model::Serialized
     include Ktistec::Model::Polymorphic
     include Ktistec::Model::Deletable
     include Ktistec::Model::Blockable
@@ -680,19 +679,19 @@ module ActivityPub
       {
         "iri" => json.dig?("@id").try(&.as_s),
         "_type" => json.dig?("@type").try(&.as_s.split("#").last),
-        "username" => dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
+        "username" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
         "pem_public_key" => if include_key
-          dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
+          Ktistec::JSON_LD.dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
         end,
-        "inbox" => dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
-        "outbox" => dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
-        "following" => dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
-        "followers" => dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
-        "name" => dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
-        "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+        "inbox" => Ktistec::JSON_LD.dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
+        "outbox" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
+        "following" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
+        "followers" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
+        "name" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
+        "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
         "icon" => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
         "image" => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
-        "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+        "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
         "attachments" => attachments_from_ldjson(
           json.dig?("https://www.w3.org/ns/activitystreams#attachment")
         )
@@ -725,7 +724,7 @@ module ActivityPub
       entry_not_nil = (entry.try(&.as_a) || [] of JSON::Any).not_nil!
 
       entry_not_nil.reduce([] of Attachment) do |memo, a|
-        name = (dig?(a, "https://www.w3.org/ns/activitystreams#name", "und") || "").not_nil!
+        name = (Ktistec::JSON_LD.dig?(a, "https://www.w3.org/ns/activitystreams#name", "und") || "").not_nil!
         type = (a.dig?("@type").try(&.as_s) || "").not_nil!
         value = (a.dig?("http://schema.org#value").try(&.as_s) || "").not_nil!
 

@@ -75,6 +75,20 @@ module Ktistec
     annotation Persistent
     end
 
+    # Table name.
+    #
+    # Overrides the name derived from the class name.
+    #
+    @@table_name : String?
+
+    # Table columns.
+    #
+    # Specifies columns that should be retrieved in queries by
+    # default that cannot be inferred from annotated instance
+    # variables.
+    #
+    @@table_columns : Array(String)?
+
     module ClassMethods
       # Returns the table name.
       #
@@ -484,6 +498,15 @@ module Ktistec
         query_all(query, *arguments)
       end
     end
+
+    macro included
+      extend ClassMethods
+
+      @saved_record : self | Nil = nil
+    end
+
+    @[Persistent]
+    property id : Int64? = nil
 
     @changed : Set(Symbol)
 
@@ -1209,29 +1232,6 @@ module Ktistec
           }
       {% end %}
     end
-
-    # Table name.
-    #
-    # Overrides the name derived from the class name.
-    #
-    @@table_name : String?
-
-    # Table columns.
-    #
-    # Specifies columns that should be retrieved in queries by
-    # default that cannot be inferred from annotated instance
-    # variables.
-    #
-    @@table_columns : Array(String)?
-
-    macro included
-      extend ClassMethods
-
-      @saved_record : self | Nil = nil
-    end
-
-    @[Persistent]
-    property id : Int64? = nil
 
     class NotFound < Exception
     end

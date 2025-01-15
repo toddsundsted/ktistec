@@ -94,10 +94,6 @@ def tombstone_factory(**options)
   object_factory(ActivityPub::Object::Tombstone, **options)
 end
 
-def video_factory(**options)
-  object_factory(ActivityPub::Object::Video, **options)
-end
-
 # activity factories
 
 def activity_factory(clazz = ActivityPub::Activity, iri = nil, actor_iri = nil, actor = false, object_iri = nil, object = false, target_iri = nil, target = false, local = nil, **options)

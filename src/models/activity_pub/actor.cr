@@ -26,20 +26,11 @@ require "./object"
 
 require "../../views/view_helper"
 
-module ActorModelRenderer
-  include Ktistec::ViewHelper
-
-  def self.to_json_ld(actor, recursive)
-    render "src/views/actors/actor.json.ecr"
-  end
-end
-
 module ActivityPub
   class Actor < Ktistec::KeyPair
     include Ktistec::Model
     include Ktistec::Model::Common
     include Ktistec::Model::Linked
-    include Ktistec::Model::Serialized
     include Ktistec::Model::Polymorphic
     include Ktistec::Model::Deletable
     include Ktistec::Model::Blockable
@@ -48,6 +39,13 @@ module ActivityPub
     ATTACHMENT_LIMIT = 4
 
     @@table_name = "actors"
+
+    ALIASES = [
+      "Application",
+      "Group",
+      "Organization",
+      "Service",
+    ]
 
     @[Persistent]
     property username : String?
@@ -667,75 +665,6 @@ module ActivityPub
       FilterTerm.query_and_paginate(query, id, page: page, size: size)
     end
 
-    def to_json_ld(recursive = true)
-      ActorModelRenderer.to_json_ld(self, recursive)
-    end
-
-    def from_json_ld(json, *, include_key = false)
-      self.assign(self.class.map(json, include_key: include_key))
-    end
-
-    def self.map(json : JSON::Any | String | IO, include_key = false, **options)
-      json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
-      {
-        "iri" => json.dig?("@id").try(&.as_s),
-        "_type" => json.dig?("@type").try(&.as_s.split("#").last),
-        "username" => dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
-        "pem_public_key" => if include_key
-          dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
-        end,
-        "inbox" => dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
-        "outbox" => dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
-        "following" => dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
-        "followers" => dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
-        "name" => dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
-        "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-        "icon" => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
-        "image" => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
-        "urls" => dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
-        "attachments" => attachments_from_ldjson(
-          json.dig?("https://www.w3.org/ns/activitystreams#attachment")
-        )
-      }.compact
-    end
-
-    def self.map_icon?(json, *selector)
-      json.dig?(*selector).try do |icons|
-        if icons.as_a?
-          icon =
-            icons.as_a.map do |icon|
-              if (width = icon.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = icon.dig?("https://www.w3.org/ns/activitystreams#height"))
-                {width.as_i * height.as_i, icon}
-              else
-                {0, icon}
-              end
-            end.sort do |(a, _), (b, _)|
-              b <=> a
-            end.first?
-          if icon
-            icon[1].dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
-          end
-        elsif icons
-          icons.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
-        end
-      end
-    end
-
-    def self.attachments_from_ldjson(entry)
-      entry_not_nil = (entry.try(&.as_a) || [] of JSON::Any).not_nil!
-
-      entry_not_nil.reduce([] of Attachment) do |memo, a|
-        name = (dig?(a, "https://www.w3.org/ns/activitystreams#name", "und") || "").not_nil!
-        type = (a.dig?("@type").try(&.as_s) || "").not_nil!
-        value = (a.dig?("http://schema.org#value").try(&.as_s) || "").not_nil!
-
-        unless name.empty? || value.empty?
-          memo << Attachment.new(name, type, value)
-        end
-        memo
-      end
-    end
-
     def make_delete_activity
       ActivityPub::Activity::Delete.new(
         iri: "#{Ktistec.host}/activities/#{Ktistec::Util.id}",
@@ -744,6 +673,87 @@ module ActivityPub
         to: ["https://www.w3.org/ns/activitystreams#Public"],
         cc: [followers, following].compact
       )
+    end
+
+    def to_json_ld(recursive = true)
+      ActorModelHelper.to_json_ld(self, recursive)
+    end
+
+    def from_json_ld(json, *, include_key = false)
+      self.assign(ActorModelHelper.from_json_ld(json, include_key))
+    end
+
+    def self.map(json, *, include_key = false, **options)
+      ActorModelHelper.from_json_ld(json, include_key)
+    end
+  end
+end
+
+private module ActorModelHelper
+  include Ktistec::ViewHelper
+
+  def self.to_json_ld(actor, recursive)
+    render "src/views/actors/actor.json.ecr"
+  end
+
+  def self.from_json_ld(json : JSON::Any | String | IO, include_key)
+    json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+    {
+      "iri" => json.dig?("@id").try(&.as_s),
+      "_type" => json.dig?("@type").try(&.as_s.split("#").last),
+      "username" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
+      "pem_public_key" => if include_key
+        Ktistec::JSON_LD.dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
+      end,
+      "inbox" => Ktistec::JSON_LD.dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
+      "outbox" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
+      "following" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
+      "followers" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
+      "name" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
+      "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+      "icon" => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
+      "image" => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
+      "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+      "attachments" => attachments_from_json_ld(
+        json.dig?("https://www.w3.org/ns/activitystreams#attachment")
+      )
+    }.compact
+  end
+
+  def self.map_icon?(json, *selector)
+    json.dig?(*selector).try do |icons|
+      if icons.as_a?
+        icon =
+          icons.as_a.map do |icon|
+          if (width = icon.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = icon.dig?("https://www.w3.org/ns/activitystreams#height"))
+            {width.as_i * height.as_i, icon}
+          else
+            {0, icon}
+          end
+        end.sort do |(a, _), (b, _)|
+          b <=> a
+        end.first?
+        if icon
+          icon[1].dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+        end
+      elsif icons
+        icons.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+      end
+    end
+  end
+
+  def self.attachments_from_json_ld(entry)
+    entry_not_nil = (entry.try(&.as_a) || [] of JSON::Any).not_nil!
+
+    entry_not_nil.reduce([] of ActivityPub::Actor::Attachment) do |memo, a|
+      name = (Ktistec::JSON_LD.dig?(a, "https://www.w3.org/ns/activitystreams#name", "und") || "").not_nil!
+      type = (a.dig?("@type").try(&.as_s) || "").not_nil!
+      value = (a.dig?("http://schema.org#value").try(&.as_s) || "").not_nil!
+
+      unless name.empty? || value.empty?
+        memo << ActivityPub::Actor::Attachment.new(name, type, value)
+      end
+      memo
     end
   end
 end

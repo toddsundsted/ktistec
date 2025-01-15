@@ -1,5 +1,4 @@
 require "../../src/models/activity_pub/object/note"
-require "../../src/models/activity_pub/object/video"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
 require "../../src/models/translation"
@@ -508,7 +507,11 @@ Spectator.describe "object partials" do
     # hosting
 
     context "if object content is externally hosted" do
-      let_create!(:video, named: :object, name: "Foo Bar Baz")
+      class ExternalObject < ActivityPub::Object
+        # objects are externally hosted by default
+      end
+
+      let(object) { ExternalObject.new(name: "Foo Bar Baz") }
 
       pre_condition { expect(object.external?).to be_true }
 

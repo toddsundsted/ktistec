@@ -4,6 +4,12 @@ require "../framework/json_ld"
 require "../framework/model"
 require "./activity_pub/mixins/*"
 
+# An ActivityPub model.
+#
+# This module indicates that an including model is an ActivityPub
+# model. It defines class methods for instantiating ActivityPub models
+# from JSON-LD.
+#
 module ActivityPub
   # the only logging in this module is related to mapping JSON-LD.
   Log = ::Log.for("ktistec.json_ld")
@@ -12,12 +18,19 @@ module ActivityPub
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
     {% begin %}
       case json["@type"]?.try(&.as_s.split("#").last)
-      {% for subclass in @type.includers.reduce([] of TypeNode) { |a, t| a + t.all_subclasses << t }.uniq %}
-        when {{name = subclass.stringify.split("::").last}}
-          {% id = name.downcase.id %}
-          attrs = {{subclass}}.map(json, **options)
+      {% for includer in @type.includers %}
+        {% for subclass in includer.all_subclasses << includer %}
+          {% name = subclass.stringify.split("::").last %}
+          {% if subclass == includer && includer.has_constant?(:ALIASES) %}
+            {% aliases = [name] + includer.constant(:ALIASES) %}
+            when {{aliases.map(&.stringify).join(",").id}}
+          {% else %}
+            when {{name}}
+          {% end %}
+          attrs = {{includer}}.map(json, **options)
           {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(attrs)) ||
             {{subclass}}.new(attrs)
+        {% end %}
       {% end %}
       else
         if (default = options[:default]?)

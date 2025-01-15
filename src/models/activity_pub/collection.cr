@@ -17,6 +17,12 @@ module ActivityPub
 
     @@table_name = "collections"
 
+    ALIASES = [
+      "CollectionPage",
+      "OrderedCollection",
+      "OrderedCollectionPage",
+    ]
+
     @@required_iri = false
 
     @[Persistent]

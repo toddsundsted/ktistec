@@ -31,6 +31,18 @@ Spectator.describe ActivityPub do
       expect(described_class.from_json_ld(%q[{"@type":"Note"}])).to be_a(ActivityPub::Object::Note)
     end
 
+    context "given aliases" do
+      pre_condition do
+        expect(ActivityPub::Actor::ALIASES).to have("Organization")
+        expect(ActivityPub::Object::ALIASES).to have("Place")
+      end
+
+      it "instantiates the base class" do
+        expect(described_class.from_json_ld(%q[{"@type":"Organization"}])).to be_a(ActivityPub::Actor)
+        expect(described_class.from_json_ld(%q[{"@type":"Place"}])).to be_a(ActivityPub::Object)
+      end
+    end
+
     subject { Factory.create(:activity) }
 
     it "creates an instance if one doesn't exist" do

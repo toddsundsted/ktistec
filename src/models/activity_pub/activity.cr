@@ -18,6 +18,16 @@ module ActivityPub
 
     @@table_name = "activities"
 
+    ALIASES = [
+      "Add",
+      "Block",
+      "Flag",
+      "Listen",
+      "Read",
+      "Remove",
+      "View",
+    ]
+
     @[Persistent]
     property visible : Bool { false }
 

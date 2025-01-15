@@ -40,6 +40,13 @@ module ActivityPub
 
     @@table_name = "actors"
 
+    ALIASES = [
+      "Application",
+      "Group",
+      "Organization",
+      "Service",
+    ]
+
     @[Persistent]
     property username : String?
 

@@ -26,6 +26,21 @@ module ActivityPub
 
     @@table_name = "objects"
 
+    # Note: a Question is an object, as per Mastodon's implementation:
+    #   https://docs.joinmastodon.org/spec/activitypub/#Question
+    # It is not an activity, as per the Activity Streams specification:
+    #   https://www.w3.org/TR/activitystreams-vocabulary/#dfn-question
+
+    ALIASES = [
+      "Audio",
+      "Event",
+      "Image",
+      "Page",
+      "Place",
+      "Question",
+      "Video",
+    ]
+
     @[Persistent]
     property visible : Bool { false }
 

@@ -20,11 +20,16 @@ module ActivityPub
       case json["@type"]?.try(&.as_s.split("#").last)
       {% for includer in @type.includers %}
         {% for subclass in includer.all_subclasses << includer %}
-          when {{name = subclass.stringify.split("::").last}}
-            {% id = name.downcase.id %}
-            attrs = {{includer}}.map(json, **options)
-            {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(attrs)) ||
-              {{subclass}}.new(attrs)
+          {% name = subclass.stringify.split("::").last %}
+          {% if subclass == includer && includer.has_constant?(:ALIASES) %}
+            {% aliases = [name] + includer.constant(:ALIASES) %}
+            when {{aliases.map(&.stringify).join(",").id}}
+          {% else %}
+            when {{name}}
+          {% end %}
+          attrs = {{includer}}.map(json, **options)
+          {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(attrs)) ||
+            {{subclass}}.new(attrs)
         {% end %}
       {% end %}
       else

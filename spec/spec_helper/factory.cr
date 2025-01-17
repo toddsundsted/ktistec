@@ -282,13 +282,15 @@ def fetch_thread_task_factory(source_iri = nil, source = false, **options)
   task_factory(Task::Fetch::Thread, **{source: source, source_iri: source_iri}.merge(options))
 end
 
-class Factory::ConcurrentTask < Task
-  include Task::ConcurrentTask
+{% if @top_level.has_constant?("Task") %}
+  class Factory::ConcurrentTask < Task
+    include Task::ConcurrentTask
 
-  def perform
-    # no-op
+    def perform
+      # no-op
+    end
   end
-end
+{% end %}
 
 def concurrent_task_factory(**options)
   # tests using concurrent tasks depend on tasks being assigned unique ids

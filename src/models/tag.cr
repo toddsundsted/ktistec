@@ -63,9 +63,18 @@ class Tag
       INSERT OR REPLACE INTO tag_statistics (type, name, count)
       VALUES (?, ?, (
         SELECT count(*)
-          FROM tags
-         WHERE type = ?
-           AND name = ?
+          FROM tags AS t
+          JOIN objects AS o
+            ON o.iri = t.subject_iri
+          JOIN actors AS a
+            ON a.iri = o.attributed_to_iri
+         WHERE t.type = ?
+           AND t.name = ?
+           AND o.published IS NOT NULL
+           AND o.deleted_at IS NULL
+           AND o.blocked_at IS NULL
+           AND a.deleted_at IS NULL
+           AND a.blocked_at IS NULL
         )
       )
     QUERY

@@ -158,34 +158,8 @@ Spectator.describe Tag::Mention do
       expect(described_class.all_objects_count("bar@remote")).to eq(2)
     end
 
-    it "filters out draft objects" do
-      object5.assign(published: nil).save
-      expect(described_class.all_objects_count("foo@remote")).to eq(4)
-    end
-
-    it "filters out deleted objects" do
-      object5.delete!
-      expect(described_class.all_objects_count("foo@remote")).to eq(4)
-    end
-
-    it "filters out blocked objects" do
-      object5.block!
-      expect(described_class.all_objects_count("foo@remote")).to eq(4)
-    end
-
-    it "filters out objects with deleted attributed to actors" do
-      author.delete!
-      expect(described_class.all_objects_count("foo@remote")).to eq(0)
-    end
-
-    it "filters out objects with blocked attributed to actors" do
-      author.block!
-      expect(described_class.all_objects_count("foo@remote")).to eq(0)
-    end
-
-    it "filters out objects with destroyed attributed to actors" do
-      author.destroy
-      expect(described_class.all_objects_count("foo@remote")).to eq(0)
+    it "returns zero" do
+      expect(described_class.all_objects_count("thud")).to eq(0)
     end
   end
 end

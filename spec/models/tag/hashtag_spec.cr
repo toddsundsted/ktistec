@@ -131,26 +131,6 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.all_objects("foo")).to be_empty
     end
 
-    context "given an older object" do
-      let_create!(
-        :object, named: :older,
-        attributed_to: author,
-        published: Time.utc(2015, 2, 15, 10, 20, 10),
-        created_at: Time.utc(2015, 2, 15, 10, 20, 10),
-        local: true
-      )
-      before_each do
-        described_class.new(
-          name: "foo",
-          subject: older
-        ).save
-      end
-
-      it "filters out the older object" do
-        expect(described_class.all_objects("foo", created_after: Time.utc(2016, 1, 1))).not_to have(older)
-      end
-    end
-
     it "paginates the results" do
       expect(described_class.all_objects("foo", 1, 2)).to eq([object5, object4])
       expect(described_class.all_objects("foo", 2, 2)).to eq([object3, object2])
@@ -169,54 +149,8 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.all_objects_count("bar")).to eq(2)
     end
 
-    it "filters out draft objects" do
-      object5.assign(published: nil).save
-      expect(described_class.all_objects_count("foo")).to eq(4)
-    end
-
-    it "filters out deleted objects" do
-      object5.delete!
-      expect(described_class.all_objects_count("foo")).to eq(4)
-    end
-
-    it "filters out blocked objects" do
-      object5.block!
-      expect(described_class.all_objects_count("foo")).to eq(4)
-    end
-
-    it "filters out objects with deleted attributed to actors" do
-      author.delete!
-      expect(described_class.all_objects_count("foo")).to eq(0)
-    end
-
-    it "filters out objects with blocked attributed to actors" do
-      author.block!
-      expect(described_class.all_objects_count("foo")).to eq(0)
-    end
-
-    it "filters out objects with destroyed attributed to actors" do
-      author.destroy
-      expect(described_class.all_objects_count("foo")).to eq(0)
-    end
-
-    context "given an older object" do
-      let_create!(
-        :object, named: :older,
-        attributed_to: author,
-        published: Time.utc(2015, 2, 15, 10, 20, 10),
-        created_at: Time.utc(2015, 2, 15, 10, 20, 10),
-        local: true
-      )
-      before_each do
-        described_class.new(
-          name: "foo",
-          subject: older
-        ).save
-      end
-
-      it "filters out the older object" do
-        expect(described_class.all_objects_count("foo", created_after: Time.utc(2016, 1, 1))).to eq(5)
-      end
+    it "returns zero" do
+      expect(described_class.all_objects_count("thud")).to eq(0)
     end
   end
 

@@ -56,20 +56,26 @@ Spectator.describe Tag::Hashtag do
     end
   end
 
-  let_build(:actor, named: :author)
+  let!(author) { register.actor }
 
   macro create_tagged_object(index, *tags)
     let_create!(
       :object, named: object{{index}},
       attributed_to: author,
       published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-      local: true
+      local: true,
+    )
+    let_create!(
+      :create, named: create{{index}},
+      object: object{{index}},
+      actor: author,
     )
     before_each do
+      put_in_outbox(author, create{{index}})
       {% for tag in tags %}
         described_class.new(
           name: {{tag}},
-          subject: object{{index}}
+          subject: object{{index}},
         ).save
       {% end %}
     end
@@ -227,28 +233,16 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.public_objects("foo")).to be_empty
     end
 
-    context "given a remote object" do
-      let_create!(
-        :object, named: :remote,
-        published: Time.utc(2016, 2, 15, 10, 20, 10),
-      )
+    context "given a shared object" do
+      let_create!(:object, named: shared, published: Time.utc(2016, 2, 15, 10, 20, 6))
+      let_create!(:announce, object: shared, actor: author)
       before_each do
-        described_class.new(
-          name: "foo",
-          subject: remote
-        ).save
+        put_in_outbox(author, announce)
+        described_class.new(name: "foo", subject: shared).save
       end
 
-      it "filters out the object" do
-        expect(described_class.public_objects("foo")).not_to have(remote)
-      end
-
-      context "that has been approved" do
-        before_each { author.approve(remote) }
-
-        it "includes the object" do
-          expect(described_class.public_objects("foo")).to have(remote)
-        end
+      it "includes the shared object" do
+        expect(described_class.public_objects("foo")).to have(shared)
       end
     end
 
@@ -305,28 +299,16 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.public_objects_count("foo")).to eq(0)
     end
 
-    context "given a remote object" do
-      let_create!(
-        :object, named: :remote,
-        published: Time.utc(2016, 2, 15, 10, 20, 10),
-      )
+    context "given a shared object" do
+      let_create!(:object, named: shared, published: Time.utc(2016, 2, 15, 10, 20, 6))
+      let_create!(:announce, object: shared, actor: author)
       before_each do
-        described_class.new(
-          name: "foo",
-          subject: remote
-        ).save
+        put_in_outbox(author, announce)
+        described_class.new(name: "foo", subject: shared).save
       end
 
-      it "filters out the object" do
-        expect(described_class.public_objects_count("foo")).to eq(5)
-      end
-
-      context "that has been approved" do
-        before_each { author.approve(remote) }
-
-        it "includes the object" do
-          expect(described_class.public_objects_count("foo")).to eq(6)
-        end
+      it "includes the shared object" do
+        expect(described_class.public_objects_count("foo")).to eq(6)
       end
     end
   end

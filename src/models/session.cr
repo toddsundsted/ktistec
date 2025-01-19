@@ -94,8 +94,12 @@ class Session
   rescue Ktistec::JWT::Error | Ktistec::Model::NotFound
   end
 
-  def self.clean_up_stale_sessions(time = 1.day.ago)
-    delete = "DELETE FROM sessions WHERE account_id IS NULL AND updated_at < ?"
-    exec(delete, time)
+  def self.clean_up_stale_sessions
+    delete = <<-QUERY
+      DELETE FROM sessions
+       WHERE (account_id IS NULL AND updated_at < date('now', '-1 day'))
+          OR (updated_at < date('now', '-1 month'))
+    QUERY
+    exec(delete)
   end
 end

@@ -1,6 +1,18 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.5]
+### Fixed
+- Handle @-mentions with hosts in new posts.
+- Handle `HEAD` requests for pages with pretty URLs.
+- Destroy session after running scripts.
+
+### Changed
+- Delete old authenticated sessions.
+
+### Other
+- Reductions (~25%) in build time and executable size.
+
 ## [v2.4.4]
 ### Fixed
 - Always get the attachments. (fixes [#119](https://github.com/toddsundsted/ktistec/issues/119))
@@ -298,6 +310,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.4.5]: https://github.com/toddsundsted/ktistec/compare/2eb2560a...04aaaba9
 [v2.4.4]: https://github.com/toddsundsted/ktistec/compare/730e0b96...f03cea00
 [v2.4.3]: https://github.com/toddsundsted/ktistec/compare/e5dd16ee...1bd44b40
 [v2.4.2]: https://github.com/toddsundsted/ktistec/compare/d3dbd74a...8b795e1a

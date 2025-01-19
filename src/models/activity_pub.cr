@@ -52,13 +52,16 @@ module ActivityPub
     Log.debug { ex.message }
   end
 
+  # the following methods wrap the methods above and ensure that the
+  # returned instance is of the correct type
+
   macro included
     def self.from_json_ld(json, **options)
-      ActivityPub.from_json_ld(json, **options.merge({default: self})).as(self)
+      ActivityPub.from_json_ld(json, **options.merge(default: self)).as(self)
     end
 
     def self.from_json_ld?(json, **options)
-      ActivityPub.from_json_ld?(json, **options.merge({default: self})).as(self?)
+      ActivityPub.from_json_ld?(json, **options.merge(default: self)).as(self?)
     end
   end
 end

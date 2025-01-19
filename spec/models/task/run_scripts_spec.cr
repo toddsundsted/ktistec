@@ -30,6 +30,10 @@ Spectator.describe Task::RunScripts do
       expect(subject.next_attempt_at).not_to be_nil
     end
 
+    it "cleans up its session" do
+      expect{subject.perform}.not_to change{account.reload!.sessions}
+    end
+
     context "if there is no account yet" do
       before_each { account.destroy }
 

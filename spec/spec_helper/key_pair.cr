@@ -2,7 +2,8 @@ require "openssl_ext"
 
 require "../../src/framework/key_pair"
 
-class KeyPair < Ktistec::KeyPair
+class KeyPair
+  include Ktistec::KeyPair
 
   def initialize(@iri : String)
     keypair = OpenSSL::RSA.generate(512, 17)

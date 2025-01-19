@@ -70,6 +70,7 @@ class Task
       # directory does not exist
     ensure
       self.next_attempt_at = 1.hour.from_now
+      session.destroy if session
     end
   end
 end

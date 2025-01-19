@@ -765,19 +765,19 @@ module Ktistec
       end
       def {{name.id}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
         @{{name.id}} ||= begin
-                           {% for union_type in union_types %}
-              {{union_type}}.find?({{primary_key.id}}: self.{{foreign_key.id}}, include_deleted: include_deleted, include_undone: include_undone) ||
-                           {% end %}
-                           nil
-                         end
+          {% for union_type in union_types %}
+            {{union_type}}.find?({{primary_key.id}}: self.{{foreign_key.id}}, include_deleted: include_deleted, include_undone: include_undone) ||
+          {% end %}
+          nil
+        end
       end
       def {{name.id}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
         @{{name.id}} ||= begin
-                           {% for union_type in union_types %}
-              {{union_type}}.find?({{primary_key.id}}: self.{{foreign_key.id}}, include_deleted: include_deleted, include_undone: include_undone) ||
-                           {% end %}
-                           raise NotFound.new("#{self.class} {{name.id}} {{primary_key.id}}=#{self.{{foreign_key.id}}}: not found")
-                         end
+          {% for union_type in union_types %}
+            {{union_type}}.find?({{primary_key.id}}: self.{{foreign_key.id}}, include_deleted: include_deleted, include_undone: include_undone) ||
+          {% end %}
+          raise NotFound.new("#{self.class} {{name.id}} {{primary_key.id}}=#{self.{{foreign_key.id}}}: not found")
+        end
       end
       def _association_{{name.id}}
         {:belongs_to, {{primary_key.id.symbolize}}, {{foreign_key.id.symbolize}}, {{class_name}}, @{{name.id}}}
@@ -996,9 +996,9 @@ module Ktistec
 
       private def _validate_{{property.name}}
         {% if block %}
-            {{block.body}}
+          {{block.body}}
         {% else %}
-            {{property.block.body}}
+          {{property.block.body}}
         {% end %}
       end
     end
@@ -1136,10 +1136,10 @@ module Ktistec
             query, args: args,
           ) do |rs|
             __for_internal_use_only({
-                                      {% for v in vs %}
-                  {{v}}: rs.read({{v.type}}),
-                                      {% end %}
-                                    })
+              {% for v in vs %}
+                {{v}}: rs.read({{v.type}}),
+              {% end %}
+            })
           end
         end
         # nil the associations, as well...
@@ -1148,9 +1148,9 @@ module Ktistec
         {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
         {% for method in methods %}
           {% if method.body[0] == :has_one %}
-              {{method.body.last}} = nil
+            {{method.body.last}} = nil
           {% elsif method.body[0] == :has_many %}
-              {{method.body.last}} = nil
+            {{method.body.last}} = nil
           {% end %}
         {% end %}
         self
@@ -1224,12 +1224,12 @@ module Ktistec
 
     def to_h
       {% begin %}
-          {
-            {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-            {% for v in vs %}
-              {{v.stringify}} => self.{{v}},
-            {% end %}
-          }
+        {
+          {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
+          {% for v in vs %}
+            {{v.stringify}} => self.{{v}},
+          {% end %}
+        }
       {% end %}
     end
 

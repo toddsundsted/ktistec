@@ -27,13 +27,14 @@ require "./object"
 require "../../views/view_helper"
 
 module ActivityPub
-  class Actor < Ktistec::KeyPair
+  class Actor
     include Ktistec::Model
     include Ktistec::Model::Common
     include Ktistec::Model::Linked
     include Ktistec::Model::Polymorphic
     include Ktistec::Model::Deletable
     include Ktistec::Model::Blockable
+    include Ktistec::KeyPair
     include ActivityPub
 
     ATTACHMENT_LIMIT = 4

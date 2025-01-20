@@ -20,12 +20,6 @@ Spectator.describe HTTP::Server::Context do
     expect{get "/foo/bar/session"}.to change{Session.count}.by(1)
   end
 
-  it "returns the session token in a header" do
-    get "/foo/bar/session"
-    payload = Ktistec::JWT.decode(response.headers["X-Auth-Token"])
-    expect(payload["jti"]).not_to be_nil
-  end
-
   it "returns the session token in a cookie" do
     get "/foo/bar/session"
     payload = Ktistec::JWT.decode(response.cookies["AuthToken"].value)

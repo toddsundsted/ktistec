@@ -96,14 +96,13 @@ Spectator.describe Ktistec::CSRF do
     context, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
 
-    jwt = client_response.headers["X-Auth-Token"]
     csrf = context.session.string("csrf")
 
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "authenticity_token=#{csrf}&hasan=lamec",
       headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded",
-                             "Authorization" => "Bearer #{jwt}"})
+                             "Cookie" => client_response.headers["Set-Cookie"]})
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
   end
@@ -116,14 +115,13 @@ Spectator.describe Ktistec::CSRF do
     context, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
 
-    jwt = client_response.headers["X-Auth-Token"]
     csrf = context.session.string("csrf")
 
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "hasan=lamec",
       headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded",
-                             "Authorization" => "Bearer #{jwt}",
+                             "Cookie" => client_response.headers["Set-Cookie"],
                              "X-CSRF-Token" => csrf})
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)

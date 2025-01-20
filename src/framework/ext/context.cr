@@ -21,7 +21,6 @@ class HTTP::Server::Context
   private def new_session
     Session.new.save.tap do |session|
       jwt = session.generate_jwt
-      response.headers["X-Auth-Token"] = jwt
       response.cookies["AuthToken"] = jwt
     end
   end
@@ -31,7 +30,6 @@ class HTTP::Server::Context
   def new_session(account : Account)
     @session = Session.new(account).save.tap do |session|
       jwt = session.generate_jwt
-      response.headers["X-Auth-Token"] = jwt
       response.cookies["AuthToken"] = jwt
     end
   end

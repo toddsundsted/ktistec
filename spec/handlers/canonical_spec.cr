@@ -1,4 +1,5 @@
 require "../../src/handlers/canonical"
+require "../../src/framework/controller"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"

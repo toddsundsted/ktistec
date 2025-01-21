@@ -97,8 +97,8 @@ class Session
   def self.clean_up_stale_sessions
     delete = <<-QUERY
       DELETE FROM sessions
-       WHERE (account_id IS NULL AND updated_at < date('now', '-1 day'))
-          OR (updated_at < date('now', '-1 month'))
+       WHERE (account_id IS NULL AND updated_at < datetime('now', '-1 hour'))
+          OR (updated_at < datetime('now', '-1 month'))
     QUERY
     exec(delete)
   end

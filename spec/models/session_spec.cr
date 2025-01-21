@@ -146,7 +146,7 @@ Spectator.describe Session do
     context "given an old, anonymous session" do
       before_each do
         Ktistec.database.exec(
-          "UPDATE sessions SET updated_at = date('now', '-2 days') WHERE id IN (?, ?)",
+          "UPDATE sessions SET updated_at = datetime('now', '-2 hours') WHERE id IN (?, ?)",
           anonymous.id,
           subject.id,
         )
@@ -160,7 +160,7 @@ Spectator.describe Session do
     context "givan an old, authenticated session" do
       before_each do
         Ktistec.database.exec(
-          "UPDATE sessions SET updated_at = date('now', '-35 days') WHERE id = ?",
+          "UPDATE sessions SET updated_at = datetime('now', '-35 days') WHERE id = ?",
           authenticated.id,
         )
       end

@@ -1,5 +1,6 @@
 require "../task"
 require "./mixins/singleton"
+require "../session"
 
 class Task
   # Monitors server health.
@@ -27,6 +28,7 @@ class Task
       running_tasks_without_fibers.each do |task|
         Log.warn { %Q|#{task.class} id=#{task.id} is "running" but no running fiber exists| }
       end
+      Session.clean_up_stale_sessions
     ensure
       # run on a random schedule
       delay = Random::DEFAULT.rand(15..300)

@@ -1,13 +1,9 @@
 require "kemal"
 
-require "./controller"
-
 module Ktistec
   # Authentication middleware.
   #
   class Auth < Kemal::Handler
-    include Ktistec::Controller
-
     def call(env)
       return call_next(env) unless env.route_lookup.found?
       return call_next(env) if env.session.account? || exclude_match?(env)

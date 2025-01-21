@@ -79,8 +79,6 @@ module Ktistec
                         end
       current_token = context.session.string?("csrf")
       if current_token == submitted_token
-        # reset the token after every use
-        context.session.string("csrf", Random::Secure.hex(16))
         return call_next(context)
       else
         context.response.status_code = 403

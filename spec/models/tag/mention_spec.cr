@@ -3,6 +3,15 @@ require "../../../src/models/tag/mention"
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
+class Tag
+  class_property mention_recount_count : Int64 = 0
+
+  private def recount
+    Tag.mention_recount_count += 1
+    previous_def
+  end
+end
+
 Spectator.describe Tag::Mention do
   setup_spec
 
@@ -21,7 +30,7 @@ Spectator.describe Tag::Mention do
   end
 
   describe "#save" do
-    let_build(:object)
+    let_build(:object, local: true)
 
     it "strips the leading @" do
       new_tag = described_class.new(subject: object, name: "@foo@remote")
@@ -36,6 +45,24 @@ Spectator.describe Tag::Mention do
     it "does not change the host if present" do
       new_tag = described_class.new(subject: object, href: "http://example.com/foo", name: "foo@remote")
       expect{new_tag.save}.not_to change{new_tag.name}
+    end
+
+    pre_condition { expect(object.draft?).to be_true }
+
+    it "does not change the count" do
+      new_tag = described_class.new(subject: object, name: "@foo@remote")
+      expect{new_tag.save}.not_to change{Tag.mention_recount_count}
+    end
+  end
+
+  describe "#destroy" do
+    let_create(:object, local: true)
+
+    pre_condition { expect(object.draft?).to be_true }
+
+    it "does not change the count" do
+      new_tag = described_class.new(subject: object, name: "@foo@remote")
+      expect{new_tag.destroy}.not_to change{Tag.mention_recount_count}
     end
   end
 

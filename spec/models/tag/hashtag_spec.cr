@@ -3,6 +3,15 @@ require "../../../src/models/tag/hashtag"
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
+class Tag
+  class_property hashtag_recount_count : Int64 = 0
+
+  private def recount
+    Tag.hashtag_recount_count += 1
+    previous_def
+  end
+end
+
 Spectator.describe Tag::Hashtag do
   setup_spec
 
@@ -21,11 +30,29 @@ Spectator.describe Tag::Hashtag do
   end
 
   describe "#save" do
-    let_build(:object)
+    let_build(:object, local: true)
 
     it "strips the leading #" do
       new_tag = described_class.new(subject: object, name: "#foo")
       expect{new_tag.save}.to change{new_tag.name}.from("#foo").to("foo")
+    end
+
+    pre_condition { expect(object.draft?).to be_true }
+
+    it "does not change the count" do
+      new_tag = described_class.new(subject: object, name: "#foo")
+      expect{new_tag.save}.not_to change{Tag.hashtag_recount_count}
+    end
+  end
+
+  describe "#destroy" do
+    let_create(:object, local: true)
+
+    pre_condition { expect(object.draft?).to be_true }
+
+    it "does not change the count" do
+      new_tag = described_class.new(subject: object, name: "#foo")
+      expect{new_tag.destroy}.not_to change{Tag.hashtag_recount_count}
     end
   end
 

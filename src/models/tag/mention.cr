@@ -24,6 +24,14 @@ class Tag
       Ktistec::Topic{"/mentions/#{name}"}.notify_subscribers(subject.id.to_s)
     end
 
+    def after_save
+      super unless subject.draft?
+    end
+
+    def after_destroy
+      super unless subject.draft?
+    end
+
     # Returns the most recent object with the given mention.
     #
     # Orders objects by `id` as an acceptable proxy for "most recent".

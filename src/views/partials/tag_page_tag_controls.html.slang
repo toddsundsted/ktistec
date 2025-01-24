@@ -23,5 +23,4 @@ turbo-frame#tag_page_tag_controls
             == authenticity_token(env)
             .ui.buttons
               button.ui.primary.button type="submit" formaction=follow_hashtag_path(hashtag) Follow
-              .or
               button.ui.button type="submit" formaction=start_fetch_hashtag_path(hashtag) Fetch Once

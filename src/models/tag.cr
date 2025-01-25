@@ -47,13 +47,13 @@ class Tag
       ORDER BY count DESC
          LIMIT ?
     QUERY
-    Ktistec.database.query_all(
-      query,
-      short_type,
-      prefix + "%",
-      limit,
-      as: {String, Int64}
-    )
+    args = {short_type, prefix + "%", limit}
+    Internal.log_query(query, args) do
+      Ktistec.database.query_all(
+        query, *args,
+        as: {String, Int64},
+      )
+    end
   end
 
   # Updates tag statistics.
@@ -78,13 +78,12 @@ class Tag
         )
       )
     QUERY
-    Ktistec.database.exec(
-      query,
-      short_type,
-      name,
-      type,
-      name
-    )
+    args = {short_type, name, type, name}
+    Internal.log_query(query, args) do
+      Ktistec.database.exec(
+        query, *args,
+      )
+    end
   end
 
   def after_save

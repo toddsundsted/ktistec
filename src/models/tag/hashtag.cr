@@ -17,9 +17,19 @@ class Tag
       Ktistec::Topic{"/tags/#{name}"}.notify_subscribers(subject.id.to_s)
     end
 
+    def after_save
+      super unless subject.draft?
+    end
+
+    def after_destroy
+      super unless subject.draft?
+    end
+
     # Returns the most recent object with the given hashtag.
     #
-    # Orders objects by `id` (not `published`).
+    # Orders objects by `id` as an acceptable proxy for "most recent".
+    # (This prevents the query from using a temporary b-tree for
+    # ordering).
     #
     # Includes private (not visible) objects.
     #
@@ -29,7 +39,7 @@ class Tag
           FROM objects AS o
           JOIN tags AS t
             ON t.subject_iri = o.iri
-           AND t.type = "#{Tag::Hashtag}"
+           AND t.type = "#{self}"
           JOIN actors AS a
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
@@ -38,7 +48,7 @@ class Tag
            AND o.blocked_at IS NULL
            AND a.deleted_at IS NULL
            AND a.blocked_at IS NULL
-      ORDER BY o.id DESC
+      ORDER BY t.id DESC
          LIMIT 1
       QUERY
       ActivityPub::Object.query_all(query, name).first?
@@ -48,51 +58,42 @@ class Tag
     #
     # Includes private (not visible) objects.
     #
-    # If `created_after` is specified, only incude objects created
-    # after (not published after) that time.
+    # Orders objects by `id` for consistency with the query above.
     #
-    def self.all_objects(name, page = 1, size = 10, created_after after = Time::UNIX_EPOCH)
+    def self.all_objects(name, page = 1, size = 10)
       query = <<-QUERY
         SELECT #{ActivityPub::Object.columns(prefix: "o")}
           FROM objects AS o
           JOIN tags AS t
             ON t.subject_iri = o.iri
-           AND t.type = "#{Tag::Hashtag}"
+           AND t.type = "#{self}"
           JOIN actors AS a
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
-           AND o.created_at > ?
            AND o.published IS NOT NULL
            AND o.deleted_at IS NULL
            AND o.blocked_at IS NULL
            AND a.deleted_at IS NULL
            AND a.blocked_at IS NULL
-      ORDER BY o.published DESC
+      ORDER BY t.id DESC
          LIMIT ? OFFSET ?
       QUERY
-      ActivityPub::Object.query_and_paginate(query, name, after, page: page, size: size)
+      ActivityPub::Object.query_and_paginate(query, name, page: page, size: size)
     end
 
     # Returns the count of objects with the given hashtag.
     #
-    def self.all_objects_count(name, created_after after = Time::UNIX_EPOCH)
+    # Uses the statistics table since there is no high cardinality way to
+    # subset and count the objects with a given hashtag.
+    #
+    def self.all_objects_count(name)
       query = <<-QUERY
-        SELECT count(*)
-          FROM objects AS o
-          JOIN tags AS t
-            ON t.subject_iri = o.iri
-           AND t.type = "#{Tag::Hashtag}"
-          JOIN actors AS a
-            ON a.iri = o.attributed_to_iri
-         WHERE t.name = ?
-           AND o.created_at > ?
-           AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
+        SELECT coalesce(sum(count), 0)
+          FROM tag_statistics
+         WHERE type = ?
+           AND name = ?
       QUERY
-      ActivityPub::Object.scalar(query, name, after).as(Int64)
+      ActivityPub::Object.scalar(query, short_type, name).as(Int64)
     end
 
     # Returns the public objects with the given hashtag.

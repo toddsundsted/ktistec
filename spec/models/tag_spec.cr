@@ -6,7 +6,59 @@ require "../spec_helper/factory"
 Spectator.describe Tag do
   setup_spec
 
-  context "#save" do
+  class TagDouble < Tag
+    class_property full_recount_count : Int64 = 0
+    class_property update_count_count : Int64 = 0
+
+    def self.reset_counts
+      @@full_recount_count = 0
+      @@update_count_count = 0
+    end
+
+    private def full_recount
+      self.class.full_recount_count += 1
+    end
+
+    private def update_count(difference)
+      self.class.update_count_count += 1
+    end
+  end
+
+  before_each { TagDouble.reset_counts }
+
+  describe "#after_save" do
+    context "when called 10 times" do
+      before_each do
+        10.times { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar").after_save }
+      end
+
+      it "calls `full_recount` once" do
+        expect(TagDouble.full_recount_count).to eq(1)
+      end
+
+      it "calls `update_count` 9 times" do
+        expect(TagDouble.update_count_count).to eq(9)
+      end
+    end
+  end
+
+  describe "#after_destroy" do
+    context "when called 10 times" do
+      before_each do
+        10.times { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar").after_destroy }
+      end
+
+      it "calls `full_recount` once" do
+        expect(TagDouble.full_recount_count).to eq(1)
+      end
+
+      it "calls `update_count` 9 times" do
+        expect(TagDouble.update_count_count).to eq(9)
+      end
+    end
+  end
+
+  describe "#save" do
     let!(tag) { described_class.new(subject_iri: "http://remote/thing", name: "foobar") }
 
     it "increments the count" do
@@ -14,7 +66,7 @@ Spectator.describe Tag do
     end
   end
 
-  context "#destroy" do
+  describe "#destroy" do
     let!(tag) { described_class.new(subject_iri: "http://remote/thing", name: "foobar").save }
 
     it "decrements the count" do
@@ -22,7 +74,7 @@ Spectator.describe Tag do
     end
   end
 
-  context ".match" do
+  describe ".match" do
     macro create_tag(index, name)
       let_create!(:object, named: object{{index}}, published: {{index}}.days.ago)
       let_create!(:tag, named: tag{{index}}, subject_iri: object{{index}}.iri, name: {{name}})
@@ -40,6 +92,11 @@ Spectator.describe Tag do
     it "returns no match" do
       expect(Tag.match("bar")).to be_empty
     end
+
+    # these must all invalidate the cache after setup since they are
+    # implicitly testing the full count logic.
+
+    before_each { Tag.cache.clear }
 
     context "an object isn't published" do
       before_each do

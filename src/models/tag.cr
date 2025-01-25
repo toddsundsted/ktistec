@@ -56,9 +56,9 @@ class Tag
     end
   end
 
-  # Updates tag statistics.
+  # Updates tag statistics by recounting all posts with a tag.
   #
-  private def recount
+  private def full_recount
     query = <<-QUERY
       INSERT OR REPLACE INTO tag_statistics (type, name, count)
       VALUES (?, ?, (
@@ -86,12 +86,59 @@ class Tag
     end
   end
 
+  # Updates tag statistics by applying a difference to the count.
+  #
+  private def update_count(difference)
+    query = <<-QUERY
+      UPDATE tag_statistics
+         SET count = count + ?
+       WHERE type = ?
+         AND name = ?
+    QUERY
+    args = {difference, short_type, name}
+    Internal.log_query(query, args) do
+      Ktistec.database.exec(
+        query, *args,
+      )
+    end
+  end
+
+  private macro increment_count
+    update_count(1)
+  end
+
+  private macro decrement_count
+    update_count(-1)
+  end
+
+  # handle two use cases: 1) rapidly fetching posts, 2) tags that are
+  # expensive to fully count. currently, do a full count only after a
+  # server restart. things (e.g. blocking/deleting actors) can affect
+  # the full count in the meantime, but hopefully the impact is not
+  # noticeable.
+
+  record CacheEntry, type : String, name : String
+
+  class_property cache = Set(CacheEntry).new
+
   def after_save
-    recount
+    entry = CacheEntry.new(short_type, name)
+    if Tag.cache.includes?(entry)
+      increment_count
+    else
+      Tag.cache.add(entry)
+      full_recount
+    end
   end
 
   def after_destroy
-    recount
+    entry = CacheEntry.new(short_type, name)
+    if Tag.cache.includes?(entry)
+      decrement_count
+    else
+      Tag.cache.add(entry)
+      full_recount
+    end
   end
 
   @[Persistent]

@@ -10,21 +10,19 @@ Spectator.describe TagsController do
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
 
   let(author) { register.actor }
+  let_create(:actor, named: other)
 
   macro create_tagged_object(index, origin, *tags)
     let_create(
       :object, named: object{{index}},
-      attributed_to: author,
       published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-      local: {{
-        if origin == :local
-          true
-        elsif origin == :remote
-          false
-        else
-          raise "not supported: #{origin}"
-        end
-      }}
+      attributed_to: {{origin == :local ? :author.id : :other.id}},
+      local: {{origin == :local}},
+    )
+    let_create!(
+      :create, named: create{{index}},
+      object: object{{index}},
+      actor: object{{index}}.attributed_to,
     )
     {% for tag in tags %}
       let_create!(
@@ -32,6 +30,11 @@ Spectator.describe TagsController do
         name: {{tag}},
         subject: object{{index}}
       )
+    {% end %}
+    {% if origin == :local %}
+      before_each do
+        put_in_outbox(author, create{{index}})
+      end
     {% end %}
   end
 

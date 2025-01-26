@@ -15,8 +15,8 @@ class TagsController
       collection = Tag::Hashtag.all_objects(hashtag, **pagination_params(env))
       count = Tag::Hashtag.all_objects_count(hashtag)
     else
-      collection = Tag::Hashtag.public_objects(hashtag, **pagination_params(env))
-      count = Tag::Hashtag.public_objects_count(hashtag)
+      collection = Tag::Hashtag.public_posts(hashtag, **pagination_params(env))
+      count = Tag::Hashtag.public_posts_count(hashtag)
     end
 
     not_found if collection.empty?

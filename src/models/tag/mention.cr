@@ -22,9 +22,6 @@ class Tag
 
     def after_create
       Ktistec::Topic{"/mentions/#{name}"}.notify_subscribers(subject.id.to_s)
-    end
-
-    def after_save
       super unless subject.draft?
     end
 

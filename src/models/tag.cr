@@ -121,7 +121,7 @@ class Tag
 
   class_property cache = Set(CacheEntry).new
 
-  def after_save
+  def after_create
     entry = CacheEntry.new(short_type, name)
     if Tag.cache.includes?(entry)
       increment_count

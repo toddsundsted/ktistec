@@ -101,7 +101,7 @@ class Tag
     # Does not include private (not visible) posts. Includes
     # other's posts that have been shared.
     #
-    def self.public_objects(name, page = 1, size = 10)
+    def self.public_posts(name, page = 1, size = 10)
       # note: disqualify the index on tag *name* because, although it
       # has high cardinality, the distribution of names is very uneven
       # and this method is likely to be called on those tags it would
@@ -139,7 +139,7 @@ class Tag
     # Does not include private (not visible) posts. Includes
     # other's posts that have been shared.
     #
-    def self.public_objects_count(name)
+    def self.public_posts_count(name)
       # note: disqualify the index on tag *name* because, although it
       # has high cardinality, the distribution of names is very uneven
       # and this method is likely to be called on those tags it would

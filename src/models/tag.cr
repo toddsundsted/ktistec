@@ -90,12 +90,21 @@ class Tag
   #
   private def update_count(difference)
     query = <<-QUERY
-      UPDATE tag_statistics
+      UPDATE tag_statistics AS ts
          SET count = count + ?
-       WHERE type = ?
-         AND name = ?
+        FROM tags AS t, objects AS o, actors AS a
+       WHERE ts.type = ?
+         AND ts.name = ?
+         AND t.id = ?
+         AND o.iri = t.subject_iri
+         AND a.iri = o.attributed_to_iri
+         AND o.published IS NOT NULL
+         AND o.deleted_at IS NULL
+         AND o.blocked_at IS NULL
+         AND a.deleted_at IS NULL
+         AND a.blocked_at IS NULL
     QUERY
-    args = {difference, short_type, name}
+    args = {difference, short_type, name, id}
     Internal.log_query(query, args) do
       Ktistec.database.exec(
         query, *args,

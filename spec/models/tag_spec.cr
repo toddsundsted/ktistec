@@ -93,66 +93,127 @@ Spectator.describe Tag do
       expect(Tag.match("bar")).to be_empty
     end
 
-    # these must all invalidate the cache after setup since they are
-    # implicitly testing the full count logic.
-
-    before_each { Tag.cache.clear }
-
     let_create(:object, published: Time.local)
     let_build(:tag, subject_iri: object.iri, name: "foobar")
 
-    context "an object isn't published" do
-      before_each do
-        object.assign(published: nil).save
-        tag.save
+    context "full recount logic" do
+      # invalidate the cache after to ensure the test hits
+      # `#full_recount`
+
+      before_each { Tag.cache.clear }
+
+      context "an object isn't published" do
+        before_each do
+          object.assign(published: nil).save
+          tag.save
+        end
+
+        it "returns the match" do
+          expect(Tag.match("foo", 2)).to have({"foobar", 2})
+        end
       end
 
-      it "returns the match" do
-        expect(Tag.match("foo", 2)).to have({"foobar", 2})
+      context "an object is deleted" do
+        before_each do
+          object.delete!
+          tag.save
+        end
+
+        it "returns the match" do
+          expect(Tag.match("foo", 2)).to have({"foobar", 2})
+        end
+      end
+
+      context "an object is blocked" do
+        before_each do
+          object.block!
+          tag.save
+        end
+
+        it "returns the match" do
+          expect(Tag.match("foo", 2)).to have({"foobar", 2})
+        end
+      end
+
+      context "an actor is deleted" do
+        before_each do
+          object.attributed_to.delete!
+          tag.save
+        end
+
+        it "returns the match" do
+          expect(Tag.match("foo", 2)).to have({"foobar", 2})
+        end
+      end
+
+      context "an actor is blocked" do
+        before_each do
+          object.attributed_to.block!
+          tag.save
+        end
+
+        it "returns the match" do
+          expect(Tag.match("foo", 2)).to have({"foobar", 2})
+        end
       end
     end
 
-    context "an object is deleted" do
-      before_each do
-        object.delete!
-        tag.save
+    context "update count logic" do
+      # tests hit `#update_count`
+
+      context "an object isn't published" do
+        before_each do
+          object.assign(published: nil).save
+          tag.save
+        end
+
+        it "returns the match" do
+          expect(Tag.match("foo", 2)).to have({"foobar", 2})
+        end
       end
 
-      it "returns the match" do
-        expect(Tag.match("foo", 2)).to have({"foobar", 2})
-      end
-    end
+      context "an object is deleted" do
+        before_each do
+          object.delete!
+          tag.save
+        end
 
-    context "an object is blocked" do
-      before_each do
-        object.block!
-        tag.save
-      end
-
-      it "returns the match" do
-        expect(Tag.match("foo", 2)).to have({"foobar", 2})
-      end
-    end
-
-    context "an actor is deleted" do
-      before_each do
-        object.attributed_to.delete!
-        tag.save
+        it "returns the match" do
+          expect(Tag.match("foo", 2)).to have({"foobar", 2})
+        end
       end
 
-      it "returns the match" do
-        expect(Tag.match("foo", 2)).to have({"foobar", 2})
-      end
-    end
+      context "an object is blocked" do
+        before_each do
+          object.block!
+          tag.save
+        end
 
-    context "an actor is blocked" do
-      before_each do
-        object.attributed_to.block!
-        tag.save
+        it "returns the match" do
+          expect(Tag.match("foo", 2)).to have({"foobar", 2})
+        end
       end
 
-      it "returns the match" do
-        expect(Tag.match("foo", 2)).to have({"foobar", 2})
+      context "an actor is deleted" do
+        before_each do
+          object.attributed_to.delete!
+          tag.save
+        end
+
+        it "returns the match" do
+          expect(Tag.match("foo", 2)).to have({"foobar", 2})
+        end
+      end
+
+      context "an actor is blocked" do
+        before_each do
+          object.attributed_to.block!
+          tag.save
+        end
+
+        it "returns the match" do
+          expect(Tag.match("foo", 2)).to have({"foobar", 2})
+        end
       end
     end
   end

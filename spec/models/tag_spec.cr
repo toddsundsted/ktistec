@@ -81,7 +81,7 @@ Spectator.describe Tag do
     end
 
     create_tag(1, "foobar")
-    create_tag(2, "foobar")
+    create_tag(2, "FooBar")
     create_tag(3, "foo")
     create_tag(4, "quux")
 

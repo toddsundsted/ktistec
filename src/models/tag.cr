@@ -131,7 +131,7 @@ class Tag
   class_property cache = Set(CacheEntry).new
 
   def after_create
-    entry = CacheEntry.new(short_type, name)
+    entry = CacheEntry.new(short_type, name.downcase)
     if Tag.cache.includes?(entry)
       increment_count
     else
@@ -141,7 +141,7 @@ class Tag
   end
 
   def after_destroy
-    entry = CacheEntry.new(short_type, name)
+    entry = CacheEntry.new(short_type, name.downcase)
     if Tag.cache.includes?(entry)
       decrement_count
     else

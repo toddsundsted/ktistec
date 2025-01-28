@@ -312,6 +312,33 @@ module ActivityPub
       Object.scalar(query).as(Int64)
     end
 
+    # Returns an identifier associated with the latest public post.
+    #
+    # Skips many joins and filters in the interest of speed.
+    #
+    # It is intended for use in expiring cached results from the two
+    # methods above. If the identifier changes, the cached results are
+    # probably stale.
+    #
+    # NB: The "identifier" is not necessarily the `id` of the latest
+    # post!
+    #
+    def self.latest_public_post
+      query = <<-QUERY
+          SELECT a.id
+            FROM activities AS a
+            JOIN accounts AS c
+              ON c.iri = a.actor_iri
+           WHERE a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+             AND a.undone_at IS NULL
+        ORDER BY a.id DESC
+           LIMIT 1
+      QUERY
+      Object.scalar(query).as(Int64)
+    rescue DB::NoResultsError
+      -1_i64
+    end
+
     @[Assignable]
     property announces_count : Int64 = 0
 

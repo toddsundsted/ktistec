@@ -582,25 +582,30 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
-  describe ".public_posts" do
-    let(actor) { register.actor }
-
-    macro post(index)
+  macro public_post(index, factory)
+    {% if factory == :create %}
+      let_build(:object, named: post{{index}}, attributed_to: actor)
+      let_build(:create, named: activity{{index}}, actor: actor, object: post{{index}})
+    {% elsif factory == :announce %}
       let_build(:actor, named: actor{{index}})
       let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
       let_build(:announce, named: activity{{index}}, actor: actor, object: post{{index}})
-      let_create!(
-        :outbox_relationship, named: relationship{{index}},
-        owner: actor,
-        activity: activity{{index}}
-      )
-    end
+    {% elsif factory == :like %}
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
+      let_build(:like, named: activity{{index}}, actor: actor, object: post{{index}})
+    {% end %}
+    before_each { put_in_outbox(actor, activity{{index}}) }
+  end
 
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
+  describe ".public_posts" do
+    let(actor) { register.actor }
+
+    public_post(1, :announce)
+    public_post(2, :create)
+    public_post(3, :announce)
+    public_post(4, :create)
+    public_post(5, :announce)
 
     it "instantiates the correct subclass" do
       expect(described_class.public_posts(1, 2).first).to be_a(ActivityPub::Object)
@@ -654,22 +659,11 @@ Spectator.describe ActivityPub::Object do
   describe ".public_posts_count" do
     let(actor) { register.actor }
 
-    macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: actor, object: post{{index}})
-      let_create!(
-        :outbox_relationship, named: relationship{{index}},
-        owner: actor,
-        activity: activity{{index}}
-      )
-    end
-
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
+    public_post(1, :announce)
+    public_post(2, :create)
+    public_post(3, :announce)
+    public_post(4, :create)
+    public_post(5, :announce)
 
     it "instantiates the correct subclass" do
       expect(described_class.public_posts_count).to be_a(Int64)
@@ -715,6 +709,44 @@ Spectator.describe ActivityPub::Object do
 
     it "returns the count" do
       expect(described_class.public_posts_count).to eq(5)
+    end
+  end
+
+  describe ".latest_public_post" do
+    let(actor) { register.actor }
+
+    it "returns -1 if there are no posts" do
+      expect(described_class.latest_public_post).to eq(-1)
+    end
+
+    context "given posts" do
+      public_post(1, :announce)
+      public_post(2, :create)
+      public_post(3, :announce)
+
+      # the type of the returned identifier is unspecified, but we
+      # know it's the id of the activity associated with the latest
+      # post, so test for that.
+
+      it "returns the id" do
+        expect(described_class.latest_public_post).to eq(activity3.id)
+      end
+
+      it "ignores activities from remote actors" do
+        activity3.assign(actor: post3.attributed_to).save
+        expect(described_class.latest_public_post).to eq(activity2.id)
+      end
+
+      it "ignores activities that are undone" do
+        activity3.undo!
+        expect(described_class.latest_public_post).to eq(activity2.id)
+      end
+
+      public_post(4, :like)
+
+      it "ignores activities that are not create or announce" do
+        expect(described_class.latest_public_post).to eq(activity3.id)
+      end
     end
   end
 

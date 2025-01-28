@@ -68,6 +68,18 @@ class WellKnownController
     message.to_json
   end
 
+  record CachedCount, ident : Int64, count : Int64
+
+  class_property cached_count = CachedCount.new(0, 0)
+
+  def self.local_posts
+    if (ident = ActivityPub::Object.latest_public_post) != self.cached_count.ident
+      count = ActivityPub::Object.public_posts_count
+      self.cached_count = CachedCount.new(ident, count)
+    end
+    self.cached_count.count
+  end
+
   get "/.well-known/nodeinfo/2.1" do |env|
     message = {
       version: "2.1",
@@ -89,7 +101,7 @@ class WellKnownController
         users: {
           total: Account.count
         },
-        localPosts: ActivityPub::Object.public_posts_count
+        localPosts: local_posts
       },
       metadata: {
         siteName: Ktistec.site

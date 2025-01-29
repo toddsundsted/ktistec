@@ -27,9 +27,9 @@ Spectator.describe Task::Backup do
       expect(subject.next_attempt_at).not_to be_nil
     end
 
-    let(file) { Ktistec.db_file }
+    let(name) { Ktistec.db_file }
     let(date) { Time.local.to_s("%Y%m%d") }
-    let(backup) { "#{file}.backup_#{date}".split("//").last }
+    let(backup) { "#{name}.backup_#{date}" }
 
     it "dumps a backup file" do
       subject.perform_backup

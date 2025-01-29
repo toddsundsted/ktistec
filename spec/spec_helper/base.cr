@@ -93,7 +93,7 @@ end
 ## Test setup/teardown
 
 module Ktistec
-  @@db_file = "sqlite3://#{File.tempname("ktistec-test", ".db")}"
+  @@db_uri = "sqlite3://#{File.tempname("ktistec-test", ".db")}"
 
   class Settings
     {% for property in PROPERTIES %}

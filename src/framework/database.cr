@@ -4,7 +4,7 @@ require "sqlite3"
 require "./ext/sqlite3"
 
 module Ktistec
-  @@db_file : String =
+  @@db_uri : String =
     begin
       ENV["KTISTEC_DB"]?.try { |db| "sqlite3://#{db}" } ||
         if ENV["KEMAL_ENV"]? == "production"
@@ -16,8 +16,8 @@ module Ktistec
 
   @@database : DB::Database =
     begin
-      unless File.exists?(db_file.split("//").last.split("?").first)
-        DB.open(db_file) do |db|
+      unless File.exists?(db_file)
+        DB.open(db_uri) do |db|
           File.read(File.join(Dir.current, "etc", "database", "schema.sql")).split(';').each do |command|
             db.exec(command) unless command.blank?
           end
@@ -29,7 +29,7 @@ module Ktistec
           db.exec "INSERT INTO options (key, value) VALUES (?, ?)", "secret_key", Random::Secure.hex(64)
         end
       end
-      DB.open(db_file)
+      DB.open(db_uri)
     end
 
   @@secret_key : String =
@@ -37,7 +37,11 @@ module Ktistec
       database.scalar("SELECT value FROM options WHERE key = ?", "secret_key").as(String)
     end
 
-  class_getter db_file, database, secret_key
+  class_getter db_uri, database, secret_key
+
+  def self.db_file
+    db_uri.split("//").last.split("?").first
+  end
 
   # Database utilities.
   #

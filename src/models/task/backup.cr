@@ -25,7 +25,7 @@ class Task
       Log.trace { "database backup beginning" }
 
       times = Benchmark.measure("backup times") do
-        DB.open(backup) do |db_backup|
+        DB.open("sqlite3://#{backup}") do |db_backup|
           db_backup.using_connection do |conn_backup|
             Ktistec.database.using_connection do |conn_db|
               conn_db.dump(conn_backup)

@@ -47,7 +47,13 @@ class Task
           body = activity.to_json_ld
           headers = Ktistec::Signature.sign(transferer, inbox, body, Ktistec::Constants::CONTENT_TYPE_HEADER)
           begin
-            response = HTTP::Client.post(inbox, headers, body)
+            uri = URI.parse(inbox)
+            client = HTTP::Client.new(uri)
+            client.dns_timeout = 5.seconds
+            client.connect_timeout = 10.seconds
+            client.write_timeout = 10.seconds
+            client.read_timeout = 10.seconds
+            response = client.post(uri.request_target, headers, body)
             unless response.success?
               message = "failed to deliver to #{inbox}: [#{response.status_code}] #{response.body}"
               failures << Failure.new(recipient, message)

@@ -24,6 +24,7 @@ module Ktistec
           client = HTTP::Client.new(uri)
           client.dns_timeout = 5.seconds
           client.connect_timeout = 5.seconds
+          client.write_timeout = 5.seconds
           client.read_timeout = 5.seconds
           signed_headers = Ktistec::Signature.sign(key_pair, url, method: :get).merge!(headers)
           response = client.get(uri.request_target, signed_headers)

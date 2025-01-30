@@ -20,7 +20,7 @@ module Ktistec
           delta = (finish - start).total_milliseconds
           if delta > 50
             Log.notice { |log| log_query_message(log, "Slow query", delta, query, args) }
-            Log.notice { |log| log_query_plan(log, query, args) }
+            Log.notice { |log| log_query_plan(log, query) }
           else
             Log.debug { |log| log_query_message(log, "Query", delta, query, args) }
           end
@@ -37,7 +37,7 @@ module Ktistec
         )
       end
 
-      private def self.log_query_plan(log, query, args)
+      private def self.log_query_plan(log, query)
         results =
           Ktistec.database.query_all("EXPLAIN QUERY PLAN #{query}") do |rs|
             _, order, _, detail = rs.read(Int64, Int64, Int64, String)

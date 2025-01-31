@@ -11,7 +11,7 @@ module Ktistec
       # query. A slow query is any query that takes longer than
       # 50ms. Slow queries include the query plan.
       #
-      def self.log_query(query, args, &)
+      def self.log_query(query, args = nil, &)
         start = Time.monotonic
         begin
           yield
@@ -30,11 +30,16 @@ module Ktistec
       private def self.log_query_message(log, message, delta, query, args)
         delta = sprintf("%10.3fms", delta)
         query = query.each_line.map(&.strip).join(" ")
-        args = DB::MetadataValueConverter.arg_to_log(args)
-        log.emit(
-          "#{message} [#{delta}] -- #{query}",
-          args: args
-        )
+        if args
+          log.emit(
+            "#{message} [#{delta}] -- #{query}",
+            args: DB::MetadataValueConverter.arg_to_log(args),
+          )
+        else
+          log.emit(
+            "#{message} [#{delta}] -- #{query}",
+          )
+        end
       end
 
       private def self.log_query_plan(log, query)

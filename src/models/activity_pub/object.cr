@@ -352,9 +352,11 @@ module ActivityPub
           WHERE a.undone_at IS NULL
             AND a.object_iri = ?
       QUERY
-      Ktistec.database.query_one(query, iri) do |rs|
-        rs.read(Int64?).try { |announces_count| self.announces_count = announces_count }
-        rs.read(Int64?).try { |likes_count| self.likes_count = likes_count }
+      Internal.log_query(query) do
+        Ktistec.database.query_one(query, iri) do |rs|
+          rs.read(Int64?).try { |announces_count| self.announces_count = announces_count }
+          rs.read(Int64?).try { |likes_count| self.likes_count = likes_count }
+        end
       end
       self
     end

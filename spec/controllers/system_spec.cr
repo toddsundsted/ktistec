@@ -26,7 +26,9 @@ Spectator.describe SystemController do
       end
 
       context "given a source of logs" do
-        before_each { ::Log.for("foo.bar").trace { "test" } }
+        Log = ::Log.for("foo.bar")
+
+        before_each { Log.trace { "test" } }
 
         it "renders an input" do
           get "/system", HTML_HEADERS
@@ -70,7 +72,9 @@ Spectator.describe SystemController do
       end
 
       context "given a source of logs" do
-        before_each { ::Log.for("foo.bar").trace { "test" } }
+        Log = ::Log.for("foo.bar")
+
+        before_each { Log.trace { "test" } }
 
         it "sets the log level" do
           post "/system", HTML_HEADERS, "foo.bar=Info"

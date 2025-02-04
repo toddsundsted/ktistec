@@ -5,6 +5,14 @@ require "uri"
 require "./ext/array"
 require "./ext/hash"
 require "./ext/log"
+
+# the SQLite extensions required by "database", below, use `Log`.
+# ensure that, at this point, at a minimum, the default log level set
+# in the environment is respected. `setup` with values from the
+# database happens when the server starts running (see below).
+
+Log.setup_from_env
+
 require "./database"
 require "../utils/translator"
 

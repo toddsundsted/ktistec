@@ -1,6 +1,22 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.6]
+### Fixed
+- Add missing database query logging.
+
+### Changed
+- Improve query performance for hashtags and mentions.
+- Make less costly updates to tag statistics.
+- Improve anonymous session management.
+- Cache the Nodeinfo count of local posts.
+
+### Removed
+- Remove support for `X-Auth-Token`.
+
+### Other
+- Add timeout values for POST socket operations.
+
 ## [v2.4.5]
 ### Fixed
 - Handle @-mentions with hosts in new posts.
@@ -310,6 +326,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.4.6]: https://github.com/toddsundsted/ktistec/compare/70d67e74...c51a664c
 [v2.4.5]: https://github.com/toddsundsted/ktistec/compare/2eb2560a...04aaaba9
 [v2.4.4]: https://github.com/toddsundsted/ktistec/compare/730e0b96...f03cea00
 [v2.4.3]: https://github.com/toddsundsted/ktistec/compare/e5dd16ee...1bd44b40

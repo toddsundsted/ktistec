@@ -50,6 +50,7 @@ INSERT INTO migrations VALUES(20241208053239,'create-translations');
 INSERT INTO migrations VALUES(20241211124721,'add-language-to-accounts');
 INSERT INTO migrations VALUES(20241214103109,'add-language-to-objects');
 INSERT INTO migrations VALUES(20250101054127,'delete-old-notifications');
+INSERT INTO migrations VALUES(20250201104126,'remove-indexes');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -222,22 +223,14 @@ CREATE INDEX idx_accounts_iri
     ON accounts (iri ASC);
 CREATE UNIQUE INDEX idx_sessions_session_key
     ON sessions (session_key ASC);
-CREATE INDEX idx_sessions_account_id
-    ON sessions (account_id ASC);
-CREATE INDEX idx_sessions_updated_at
-    ON sessions (updated_at DESC);
 CREATE UNIQUE INDEX idx_actors_iri
     ON actors (iri ASC);
-CREATE INDEX idx_actors_username
-    ON actors (username ASC);
 CREATE UNIQUE INDEX idx_objects_iri
     ON objects (iri ASC);
 CREATE INDEX idx_objects_in_reply_to_iri
     ON objects (in_reply_to_iri ASC);
 CREATE INDEX idx_objects_attributed_to_iri
     ON objects (attributed_to_iri ASC);
-CREATE INDEX idx_objects_published
-    ON objects (published ASC);
 CREATE INDEX idx_objects_thread
     ON objects (thread ASC);
 CREATE UNIQUE INDEX idx_activities_iri
@@ -246,8 +239,6 @@ CREATE INDEX idx_activities_actor_iri
     ON activities (actor_iri ASC);
 CREATE INDEX idx_activities_object_iri
     ON activities (object_iri ASC);
-CREATE INDEX idx_activities_target_iri
-    ON activities (target_iri ASC);
 CREATE UNIQUE INDEX idx_collections_iri
     ON collections (iri ASC);
 CREATE INDEX idx_relationships_to_iri

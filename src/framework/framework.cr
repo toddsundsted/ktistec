@@ -58,8 +58,8 @@ module Ktistec
         end
     end
 
-    def ==(other)
-      other.is_a?(LogLevel) && @source == other.source && @severity == other.severity
+    def ==(other : self)
+      @source == other.source && @severity == other.severity
     end
   end
 

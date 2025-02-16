@@ -474,11 +474,8 @@ module ActivityPub
              FROM objects AS o, ancestors_of AS p
              JOIN actors AS a
                ON a.iri = o.attributed_to_iri
-            WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
-              AND o.deleted_at IS NULL
-              AND o.blocked_at IS NULL
-              AND a.deleted_at IS NULL
-              AND a.blocked_at IS NULL
+            WHERE o.iri = p.iri
+              AND o.in_reply_to_iri IS NOT NULL
          ORDER BY depth DESC
        ),
        replies_to(iri, position, depth) AS (
@@ -489,10 +486,6 @@ module ActivityPub
              JOIN actors AS a
                ON a.iri = o.attributed_to_iri
             WHERE o.in_reply_to_iri = r.iri
-              AND o.deleted_at IS NULL
-              AND o.blocked_at IS NULL
-              AND a.deleted_at IS NULL
-              AND a.blocked_at IS NULL
          ORDER BY depth DESC
         )
       QUERY
@@ -502,6 +495,10 @@ module ActivityPub
     #
     # Intended for presenting a thread to an authorized user (one who
     # may see all objects in a thread).
+    #
+    # Does not filter out deleted or blocked objects. Leaves decisions
+    # about presentation of these objects and their replies to the
+    # caller.
     #
     # The `for_actor` parameter must be specified to disambiguate this
     # method from the `thread` property getter, but is not currently
@@ -520,6 +517,10 @@ module ActivityPub
 
     # Returns all objects in the thread to which this object belongs
     # which have been approved by `approved_by`.
+    #
+    # Does not filter out deleted or blocked objects. Leaves decisions
+    # about presentation of these objects and their replies to the
+    # caller.
     #
     # Intended for presenting a thread to an unauthorized user (one
     # who may not see all objects in a thread e.g. an anonymous

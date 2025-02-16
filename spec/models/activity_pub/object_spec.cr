@@ -1023,28 +1023,8 @@ Spectator.describe ActivityPub::Object do
         expect(object5.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5])
       end
 
-      it "omits deleted replies and their children" do
-        object4.delete!
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
-      it "omits blocked replies and their children" do
-        object4.block!
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
       it "omits destroyed replies and their children" do
         object4.destroy
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
-      it "omits replies with deleted attributed to actors" do
-        actor4.delete!
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
-      it "omits replies with blocked attributed to actors" do
-        actor4.block!
         expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 

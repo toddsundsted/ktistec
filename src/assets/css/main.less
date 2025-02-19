@@ -75,6 +75,15 @@ body { display: flex; flex-direction: column; }
             -webkit-hyphens: auto;
             hyphens: auto;
 
+            > .summary > .label {
+                &.left.pointing {
+                    margin-left: 0.4666em;
+                }
+                &.inline {
+                    margin-right: 0;
+                }
+            }
+
             > .meta {
                 &:empty { display: none; }
                 /* actions (e.g. reply and delete) */

@@ -22,24 +22,48 @@ crystal:
       - if account
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = actor.display_name
+          - if actor.deleted?
+            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
+          - elsif actor.blocked?
+            span.ui.red.inline.horizontal.left.pointing.label> blocked
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
+          a.user<> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
+          - if author.deleted?
+            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
+          - if author.blocked?
+            span.ui.red.inline.horizontal.left.pointing.label> blocked
         - else
           a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
+          - if author.deleted?
+            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
+          - elsif author.blocked?
+            span.ui.red.inline.horizontal.left.pointing.label> blocked
           | posted
         a.date data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
       - else
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = actor.display_name
+          - if actor.deleted?
+            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
+          - elsif actor.blocked?
+            span.ui.red.inline.horizontal.left.pointing.label> blocked
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
+          a.user<> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
+          - if author.deleted?
+            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
+          - if author.blocked?
+            span.ui.red.inline.horizontal.left.pointing.label> blocked
         - else
           a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
+          - if author.deleted?
+            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
+          - elsif author.blocked?
+            span.ui.red.inline.horizontal.left.pointing.label> blocked
           | posted
         a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
-  - if object.blocked?
+  - if object.blocked? || author.blocked? || actor.blocked?
     .extra.text
-      em This object is blocked!
+      em This content is blocked!
   - else
     - if attachments && (attachment = attachments.shift?)
       - if attachment.image?
@@ -107,11 +131,31 @@ crystal:
                   i.share.icon
                 - when ActivityPub::Activity::Like
                   i.thumbs.up.icon
+  - if object.deleted?
+    .extra.text
+      em This content is deleted!
   .meta
-    - if account && object.blocked?
+    - if account && object.deleted?
+      - if object.cached?
+        a.source target="_blank" href=object.display_link
+          button.ui.mini.iconic.button
+            i.external.arrow.icon
+            | Source
+    - elsif account && object.blocked?
       == form_button unblock_object_path(object), button_class: "ui button mini iconic" do
         i.times.icon
         | Unblock
+      - if object.cached?
+        a.source target="_blank" href=object.display_link
+          button.ui.mini.iconic.button
+            i.external.arrow.icon
+            | Source
+    - elsif account && (author.blocked? || actor.blocked?)
+      - if object.cached?
+        a.source target="_blank" href=object.display_link
+          button.ui.mini.iconic.button
+            i.external.arrow.icon
+            | Source
     - elsif account && object.draft?
       a data-turbo-frame="_top" href=edit_object_path(object)
         button.ui.mini.iconic.button

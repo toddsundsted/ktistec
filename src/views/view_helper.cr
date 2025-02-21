@@ -45,7 +45,7 @@ module Ktistec::ViewHelper
       activity ? "activity-#{activity.class.to_s.split("::").last.downcase}" : ""
     end
 
-    def object_partial(env, object, actor = object.attributed_to, author = actor, *, activity = nil, with_detail = false, for_thread = nil)
+    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, for_thread = nil)
       if for_thread
         render "src/views/partials/thread.html.slang"
       elsif with_detail

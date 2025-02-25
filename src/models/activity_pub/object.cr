@@ -662,7 +662,7 @@ module ActivityPub
       end
     end
 
-    def before_save
+    private def update_canonical_path
       if @canonical_path_changed
         @canonical_path_changed = false
         if (canonical = Relationship::Content::Canonical.find?(to_iri: path)) && canonical.from_iri != @canonical_path
@@ -680,7 +680,9 @@ module ActivityPub
           end
         end
       end
-      # update thread
+    end
+
+    private def update_thread
       new_thread =
         if self.in_reply_to_iri
           if self.in_reply_to? && self.in_reply_to.thread
@@ -696,6 +698,11 @@ module ActivityPub
       if self.thread != new_thread
         self.thread = new_thread
       end
+    end
+
+    def before_save
+      update_canonical_path
+      update_thread
     end
 
     def after_save

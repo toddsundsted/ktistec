@@ -145,6 +145,16 @@ module ActivityPub
     has_many hashtags, class_name: Tag::Hashtag, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
     has_many mentions, class_name: Tag::Mention, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
 
+    # Updates the thread and saves the object.
+    #
+    # On older databases, threads are lazily migrated. This is a
+    # convenience method for triggering the update and save, and
+    # returning the value.
+    #
+    def thread!
+      save.thread.not_nil!
+    end
+
     def before_validate
       if changed?(:source)
         clear!(:source)

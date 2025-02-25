@@ -191,7 +191,7 @@ class ObjectsController
     end
     thread = object.thread(for_actor: env.account.actor)
     # lazily migrate objects and ensure the `thread` property is set
-    thread.first.save
+    thread.first.thread!
   end
 
   private macro find_or_new_follow

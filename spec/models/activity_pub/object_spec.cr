@@ -840,6 +840,22 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#thread!" do
+    let_build(:object)
+
+    it "updates the thread" do
+      expect{object.thread!}.to change{object.thread}.from(nil).to(object.iri)
+    end
+
+    it "saves the updated object" do
+      expect{object.thread!}.to change{ActivityPub::Object.find?(object.iri)}.from(nil).to(object)
+    end
+
+    it "returns the thread" do
+      expect(object.thread!).to eq(object.iri)
+    end
+  end
+
   context "when threaded" do
     subject do
       described_class.new(

@@ -163,7 +163,7 @@ class StreamingController
       not_found
     end
     setup_response(env.response)
-    subscribe "/actor/refresh", object.thread.not_nil! do |subject, value|
+    subscribe "/actor/refresh", object.thread! do |subject, value|
       case subject
       when "/actor/refresh"
         if (id = value.to_i64?)

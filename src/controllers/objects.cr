@@ -306,7 +306,7 @@ class ObjectsController
   end
 
   private def self.get_object(env, iri_or_id)
-    if (object = ActivityPub::Object.find?(iri_or_id))
+    if (object = ActivityPub::Object.find?(iri_or_id, include_deleted: true))
       if (object.visible && !object.draft?) ||
          ((account = env.account?) &&
           (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
@@ -316,7 +316,7 @@ class ObjectsController
   end
 
   private def self.get_remote_object(env, iri_or_id)
-    if (object = ActivityPub::Object.find?(iri_or_id))
+    if (object = ActivityPub::Object.find?(iri_or_id, include_deleted: true))
       if (object.visible && !object.draft?) ||
          ((account = env.account?) &&
           ((account.actor == object.attributed_to? && !object.draft?) || account.actor.in_inbox?(object)))

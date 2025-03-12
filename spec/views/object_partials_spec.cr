@@ -433,7 +433,6 @@ Spectator.describe "object partials" do
 
       it "indicates the author is deleted" do
         expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
-        expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
       end
 
       context "when authenticated" do
@@ -441,7 +440,6 @@ Spectator.describe "object partials" do
 
         it "indicates the author is deleted" do
           expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
-          expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
         end
       end
     end
@@ -454,7 +452,6 @@ Spectator.describe "object partials" do
 
         it "indicates the author is deleted" do
           expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
-          expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
         end
 
         context "when authenticated" do
@@ -462,7 +459,6 @@ Spectator.describe "object partials" do
 
           it "indicates the author is deleted" do
             expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
-            expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
           end
         end
       end
@@ -472,7 +468,6 @@ Spectator.describe "object partials" do
 
         it "indicates the actor is deleted" do
           expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
-          expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
         end
 
         context "when authenticated" do
@@ -480,7 +475,6 @@ Spectator.describe "object partials" do
 
           it "indicates the actor is deleted" do
             expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
-            expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
           end
         end
       end
@@ -501,7 +495,6 @@ Spectator.describe "object partials" do
 
       it "indicates the author is blocked" do
         expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
-        expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
       end
 
       context "when authenticated" do
@@ -509,7 +502,6 @@ Spectator.describe "object partials" do
 
         it "indicates the author is blocked" do
           expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
-          expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
         end
       end
     end
@@ -522,7 +514,6 @@ Spectator.describe "object partials" do
 
         it "indicates the author is blocked" do
           expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
-          expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
         end
 
         context "when authenticated" do
@@ -530,7 +521,6 @@ Spectator.describe "object partials" do
 
           it "indicates the author is blocked" do
             expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
-            expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
           end
         end
       end
@@ -540,7 +530,6 @@ Spectator.describe "object partials" do
 
         it "indicates the actor is blocked" do
           expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
-          expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
         end
 
         context "when authenticated" do
@@ -548,7 +537,6 @@ Spectator.describe "object partials" do
 
           it "indicates the actor is blocked" do
             expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
-            expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
           end
         end
       end

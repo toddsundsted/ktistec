@@ -22,43 +22,19 @@ crystal:
       - if account
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = actor.display_name
-          - if actor.deleted?
-            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
-          - elsif actor.blocked?
-            span.ui.red.inline.horizontal.left.pointing.label> blocked
           | shared a #{type} by
-          a.user<> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
-          - if author.deleted?
-            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
-          - if author.blocked?
-            span.ui.red.inline.horizontal.left.pointing.label> blocked
+          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
         - else
           a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
-          - if author.deleted?
-            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
-          - elsif author.blocked?
-            span.ui.red.inline.horizontal.left.pointing.label> blocked
           | posted
         a.date data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
       - else
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = actor.display_name
-          - if actor.deleted?
-            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
-          - elsif actor.blocked?
-            span.ui.red.inline.horizontal.left.pointing.label> blocked
           | shared a #{type} by
-          a.user<> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
-          - if author.deleted?
-            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
-          - if author.blocked?
-            span.ui.red.inline.horizontal.left.pointing.label> blocked
+          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
         - else
           a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
-          - if author.deleted?
-            span.ui.yellow.inline.horizontal.left.pointing.label> deleted
-          - elsif author.blocked?
-            span.ui.red.inline.horizontal.left.pointing.label> blocked
           | posted
         a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
   - unless object.blocked? || author.blocked? || actor.blocked?

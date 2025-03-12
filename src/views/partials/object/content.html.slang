@@ -70,7 +70,8 @@ crystal:
           div data-controller="clickable-background" data-clickable-background-href-value=href
             == s html
     - else
-      .extra.text
+      - is_deleted = object.deleted? || author.deleted? || actor.deleted?
+      .extra.text class=(is_deleted && "deleted" || nil)
         - if with_detail
           div
             == s html

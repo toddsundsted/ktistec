@@ -61,10 +61,7 @@ crystal:
             span.ui.red.inline.horizontal.left.pointing.label> blocked
           | posted
         a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
-  - if object.blocked? || author.blocked? || actor.blocked?
-    .extra.text
-      em This content is blocked!
-  - else
+  - unless object.blocked? || author.blocked? || actor.blocked?
     - if attachments && (attachment = attachments.shift?)
       - if attachment.image?
         img.ui.extra.attachment.image src=attachment.url alt=attachment.caption
@@ -131,9 +128,18 @@ crystal:
                   i.share.icon
                 - when ActivityPub::Activity::Like
                   i.thumbs.up.icon
-  - if object.deleted?
+  - if author.deleted? || actor.deleted?
+    .extra.text
+      em This actor is deleted!
+  - elsif author.blocked? || actor.blocked?
+    .extra.text
+      em This actor is blocked!
+  - elsif object.deleted?
     .extra.text
       em This content is deleted!
+  - elsif object.blocked?
+    .extra.text
+      em This content is blocked!
   .meta
     - if account && object.deleted?
       - if object.cached?

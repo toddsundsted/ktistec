@@ -431,14 +431,16 @@ Spectator.describe "object partials" do
     context "when author is deleted" do
       before_each { author.delete! }
 
-      it "indicates the author is deleted in the summary" do
+      it "indicates the author is deleted" do
+        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
         expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
       end
 
       context "when authenticated" do
         sign_in
 
-        it "indicates the author is deleted in the summary" do
+        it "indicates the author is deleted" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
           expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
         end
       end
@@ -450,14 +452,16 @@ Spectator.describe "object partials" do
       context "when author is deleted" do
         before_each { author.delete! }
 
-        it "indicates the author is deleted in the summary" do
+        it "indicates the author is deleted" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
           expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
         end
 
         context "when authenticated" do
           sign_in
 
-          it "indicates the author is deleted in the summary" do
+          it "indicates the author is deleted" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
             expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
           end
         end
@@ -466,14 +470,16 @@ Spectator.describe "object partials" do
       context "when actor is deleted" do
         before_each { actor.delete! }
 
-        it "indicates the actor is deleted in the summary" do
+        it "indicates the actor is deleted" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
           expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
         end
 
         context "when authenticated" do
           sign_in
 
-          it "indicates the actor is deleted in the summary" do
+          it "indicates the actor is deleted" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
             expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/deleted/)
           end
         end
@@ -493,20 +499,18 @@ Spectator.describe "object partials" do
     context "when author is blocked" do
       before_each { author.block! }
 
-      it "indicates the author is blocked in the summary" do
+      it "indicates the author is blocked" do
+        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
         expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
       end
 
       context "when authenticated" do
         sign_in
 
-        it "indicates the author is blocked in the summary" do
+        it "indicates the author is blocked" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
           expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
         end
-      end
-
-      it "indicates the object is blocked" do
-        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/This content is blocked/)
       end
     end
 
@@ -516,40 +520,36 @@ Spectator.describe "object partials" do
       context "when author is blocked" do
         before_each { author.block! }
 
-        it "indicates the author is blocked in the summary" do
+        it "indicates the author is blocked" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
           expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
         end
 
         context "when authenticated" do
           sign_in
 
-          it "indicates the author is blocked in the summary" do
+          it "indicates the author is blocked" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
             expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
           end
-        end
-
-        it "indicates the object is blocked" do
-          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/This content is blocked/)
         end
       end
 
       context "when actor is blocked" do
         before_each { actor.block! }
 
-        it "indicates the actor is blocked in the summary" do
+        it "indicates the actor is blocked" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
           expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
         end
 
         context "when authenticated" do
           sign_in
 
-          it "indicates the actor is blocked in the summary" do
+          it "indicates the actor is blocked" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
             expect(subject.xpath_nodes("//div[contains(@class,'summary')]/span/text()")).to have(/blocked/)
           end
-        end
-
-        it "indicates the object is blocked" do
-          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/This content is blocked/)
         end
       end
     end

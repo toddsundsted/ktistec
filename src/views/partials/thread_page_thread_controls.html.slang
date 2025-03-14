@@ -34,5 +34,4 @@ turbo-frame#thread_page_thread_controls
             == authenticity_token(env)
             .ui.buttons
               button.ui.primary.button type="submit" formaction=follow_thread_path(thread.first) Follow
-              .or
               button.ui.button type="submit" formaction=start_fetch_thread_path(thread.first) Fetch Once

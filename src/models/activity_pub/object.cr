@@ -145,6 +145,16 @@ module ActivityPub
     has_many hashtags, class_name: Tag::Hashtag, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
     has_many mentions, class_name: Tag::Mention, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
 
+    # Updates the thread and saves the object.
+    #
+    # On older databases, threads are lazily migrated. This is a
+    # convenience method for triggering the update and save, and
+    # returning the value.
+    #
+    def thread!
+      save.thread.not_nil!
+    end
+
     def before_validate
       if changed?(:source)
         clear!(:source)
@@ -474,11 +484,8 @@ module ActivityPub
              FROM objects AS o, ancestors_of AS p
              JOIN actors AS a
                ON a.iri = o.attributed_to_iri
-            WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
-              AND o.deleted_at IS NULL
-              AND o.blocked_at IS NULL
-              AND a.deleted_at IS NULL
-              AND a.blocked_at IS NULL
+            WHERE o.iri = p.iri
+              AND o.in_reply_to_iri IS NOT NULL
          ORDER BY depth DESC
        ),
        replies_to(iri, position, depth) AS (
@@ -489,10 +496,6 @@ module ActivityPub
              JOIN actors AS a
                ON a.iri = o.attributed_to_iri
             WHERE o.in_reply_to_iri = r.iri
-              AND o.deleted_at IS NULL
-              AND o.blocked_at IS NULL
-              AND a.deleted_at IS NULL
-              AND a.blocked_at IS NULL
          ORDER BY depth DESC
         )
       QUERY
@@ -502,6 +505,10 @@ module ActivityPub
     #
     # Intended for presenting a thread to an authorized user (one who
     # may see all objects in a thread).
+    #
+    # Does not filter out deleted or blocked objects. Leaves decisions
+    # about presentation of these objects and their replies to the
+    # caller.
     #
     # The `for_actor` parameter must be specified to disambiguate this
     # method from the `thread` property getter, but is not currently
@@ -520,6 +527,10 @@ module ActivityPub
 
     # Returns all objects in the thread to which this object belongs
     # which have been approved by `approved_by`.
+    #
+    # Does not filter out deleted or blocked objects. Leaves decisions
+    # about presentation of these objects and their replies to the
+    # caller.
     #
     # Intended for presenting a thread to an unauthorized user (one
     # who may not see all objects in a thread e.g. an anonymous
@@ -661,7 +672,7 @@ module ActivityPub
       end
     end
 
-    def before_save
+    private def update_canonical_path
       if @canonical_path_changed
         @canonical_path_changed = false
         if (canonical = Relationship::Content::Canonical.find?(to_iri: path)) && canonical.from_iri != @canonical_path
@@ -679,7 +690,9 @@ module ActivityPub
           end
         end
       end
-      # update thread
+    end
+
+    private def update_thread
       new_thread =
         if self.in_reply_to_iri
           if self.in_reply_to? && self.in_reply_to.thread
@@ -695,6 +708,11 @@ module ActivityPub
       if self.thread != new_thread
         self.thread = new_thread
       end
+    end
+
+    def before_save
+      update_canonical_path
+      update_thread
     end
 
     def after_save

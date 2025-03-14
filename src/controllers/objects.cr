@@ -191,7 +191,7 @@ class ObjectsController
     end
     thread = object.thread(for_actor: env.account.actor)
     # lazily migrate objects and ensure the `thread` property is set
-    thread.first.save
+    thread.first.thread!
   end
 
   private macro find_or_new_follow
@@ -306,7 +306,7 @@ class ObjectsController
   end
 
   private def self.get_object(env, iri_or_id)
-    if (object = ActivityPub::Object.find?(iri_or_id))
+    if (object = ActivityPub::Object.find?(iri_or_id, include_deleted: true))
       if (object.visible && !object.draft?) ||
          ((account = env.account?) &&
           (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
@@ -316,7 +316,7 @@ class ObjectsController
   end
 
   private def self.get_remote_object(env, iri_or_id)
-    if (object = ActivityPub::Object.find?(iri_or_id))
+    if (object = ActivityPub::Object.find?(iri_or_id, include_deleted: true))
       if (object.visible && !object.draft?) ||
          ((account = env.account?) &&
           ((account.actor == object.attributed_to? && !object.draft?) || account.actor.in_inbox?(object)))

@@ -37,10 +37,7 @@ crystal:
           a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
           | posted
         a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
-  - if object.blocked?
-    .extra.text
-      em This object is blocked!
-  - else
+  - unless object.blocked? || author.blocked? || actor.blocked?
     - if attachments && (attachment = attachments.shift?)
       - if attachment.image?
         img.ui.extra.attachment.image src=attachment.url alt=attachment.caption
@@ -73,7 +70,8 @@ crystal:
           div data-controller="clickable-background" data-clickable-background-href-value=href
             == s html
     - else
-      .extra.text
+      - is_deleted = object.deleted? || author.deleted? || actor.deleted?
+      .extra.text class=(is_deleted && "deleted" || nil)
         - if with_detail
           div
             == s html
@@ -107,11 +105,40 @@ crystal:
                   i.share.icon
                 - when ActivityPub::Activity::Like
                   i.thumbs.up.icon
+  - if author.deleted? || actor.deleted?
+    .extra.text
+      em This actor is deleted!
+  - elsif author.blocked? || actor.blocked?
+    .extra.text
+      em This actor is blocked!
+  - elsif object.deleted?
+    .extra.text
+      em This content is deleted!
+  - elsif object.blocked?
+    .extra.text
+      em This content is blocked!
   .meta
-    - if account && object.blocked?
+    - if account && object.deleted?
+      - if object.cached?
+        a.source target="_blank" href=object.display_link
+          button.ui.mini.iconic.button
+            i.external.arrow.icon
+            | Source
+    - elsif account && object.blocked?
       == form_button unblock_object_path(object), button_class: "ui button mini iconic" do
         i.times.icon
         | Unblock
+      - if object.cached?
+        a.source target="_blank" href=object.display_link
+          button.ui.mini.iconic.button
+            i.external.arrow.icon
+            | Source
+    - elsif account && (author.blocked? || actor.blocked?)
+      - if object.cached?
+        a.source target="_blank" href=object.display_link
+          button.ui.mini.iconic.button
+            i.external.arrow.icon
+            | Source
     - elsif account && object.draft?
       a data-turbo-frame="_top" href=edit_object_path(object)
         button.ui.mini.iconic.button

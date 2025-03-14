@@ -2,7 +2,7 @@ require "../../src/models/activity_pub/object/note"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
 require "../../src/models/translation"
-require "../../src/views/view_helper"
+require "../../src/framework/controller"
 require "../../src/utils/translator"
 
 require "../spec_helper/factory"
@@ -30,6 +30,22 @@ Spectator.describe "object partials" do
       it "renders one profile icon" do
         expect(subject.xpath_nodes("//img/@src")).to contain_exactly(author.icon)
       end
+
+      context "and the author is deleted" do
+        before_each { author.delete! }
+
+        it "renders an empty icon" do
+          expect(subject.xpath_nodes("//i/@class")).to contain_exactly("user outline icon")
+        end
+      end
+
+      context "and the author is blocked" do
+        before_each { author.block! }
+
+        it "renders an empty icon" do
+          expect(subject.xpath_nodes("//i/@class")).to contain_exactly("user outline icon")
+        end
+      end
     end
 
     context "the actor is not the author" do
@@ -37,6 +53,22 @@ Spectator.describe "object partials" do
 
       it "renders two profile icons" do
         expect(subject.xpath_nodes("//img/@src")).to contain_exactly(author.icon, actor.icon)
+      end
+
+      context "and the actor is deleted" do
+        before_each { actor.delete! }
+
+        it "renders an empty icon" do
+          expect(subject.xpath_nodes("//i/@class")).to contain_exactly("user outline icon")
+        end
+      end
+
+      context "and the actor is blocked" do
+        before_each { actor.block! }
+
+        it "renders an empty icon" do
+          expect(subject.xpath_nodes("//i/@class")).to contain_exactly("user outline icon")
+        end
       end
     end
   end
@@ -391,6 +423,130 @@ Spectator.describe "object partials" do
         it "renders a button to edit" do
           expect(subject.xpath_nodes("//button/text()")).to have("Edit")
         end
+      end
+    end
+
+    # deleted
+
+    context "when author is deleted" do
+      before_each { author.delete! }
+
+      it "indicates the author is deleted" do
+        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+      end
+
+      context "when authenticated" do
+        sign_in
+
+        it "indicates the author is deleted" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+        end
+      end
+    end
+
+    context "given an author that is not the actor" do
+      let_create(:actor, named: author)
+
+      context "when author is deleted" do
+        before_each { author.delete! }
+
+        it "indicates the author is deleted" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+        end
+
+        context "when authenticated" do
+          sign_in
+
+          it "indicates the author is deleted" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+          end
+        end
+      end
+
+      context "when actor is deleted" do
+        before_each { actor.delete! }
+
+        it "indicates the actor is deleted" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+        end
+
+        context "when authenticated" do
+          sign_in
+
+          it "indicates the actor is deleted" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+          end
+        end
+      end
+    end
+
+    context "when object is deleted" do
+      before_each { object.delete! }
+
+      it "indicates the object is deleted" do
+        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/This content is deleted/)
+      end
+    end
+
+    # blocked
+
+    context "when author is blocked" do
+      before_each { author.block! }
+
+      it "indicates the author is blocked" do
+        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+      end
+
+      context "when authenticated" do
+        sign_in
+
+        it "indicates the author is blocked" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+        end
+      end
+    end
+
+    context "given an author that is not the actor" do
+      let_create(:actor, named: author)
+
+      context "when author is blocked" do
+        before_each { author.block! }
+
+        it "indicates the author is blocked" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+        end
+
+        context "when authenticated" do
+          sign_in
+
+          it "indicates the author is blocked" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+          end
+        end
+      end
+
+      context "when actor is blocked" do
+        before_each { actor.block! }
+
+        it "indicates the actor is blocked" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+        end
+
+        context "when authenticated" do
+          sign_in
+
+          it "indicates the actor is blocked" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+          end
+        end
+      end
+    end
+
+    context "when object is blocked" do
+      before_each { object.block! }
+
+      it "indicates the object is blocked" do
+        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/This content is blocked/)
       end
     end
 

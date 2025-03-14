@@ -50,6 +50,7 @@ INSERT INTO migrations VALUES(20241208053239,'create-translations');
 INSERT INTO migrations VALUES(20241211124721,'add-language-to-accounts');
 INSERT INTO migrations VALUES(20241214103109,'add-language-to-objects');
 INSERT INTO migrations VALUES(20250101054127,'delete-old-notifications');
+INSERT INTO migrations VALUES(20250201104126,'remove-indexes');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -92,29 +93,6 @@ CREATE TABLE actors (
     "attachments" text,
     "down_at" datetime
   );
-CREATE TABLE relationships (
-    id integer PRIMARY KEY AUTOINCREMENT,
-    created_at datetime NOT NULL,
-    updated_at datetime NOT NULL,
-    type varchar(63) NOT NULL,
-    from_iri varchar(255) NOT NULL COLLATE NOCASE,
-    to_iri varchar(255) NOT NULL COLLATE NOCASE,
-    confirmed boolean,
-    visible boolean
-  );
-CREATE TABLE collections (
-    id integer PRIMARY KEY AUTOINCREMENT,
-    created_at datetime NOT NULL,
-    updated_at datetime NOT NULL,
-    iri varchar(255) NOT NULL COLLATE NOCASE,
-    items_iris text,
-    total_items integer,
-    first_iri varchar(255),
-    last_iri varchar(255),
-    prev_iri varchar(255),
-    next_iri varchar(255),
-    current_iri varchar(255)
-  );
 CREATE TABLE objects (
     "id" integer PRIMARY KEY AUTOINCREMENT,
     "created_at" datetime NOT NULL,
@@ -156,20 +134,28 @@ CREATE TABLE activities (
     "summary" text,
     "undone_at" datetime
   );
-CREATE TABLE tasks (
-    "id" integer PRIMARY KEY AUTOINCREMENT,
-    "created_at" datetime NOT NULL,
-    "updated_at" datetime NOT NULL,
-    "type" varchar(63) NOT NULL,
-    "source_iri" text COLLATE NOCASE,
-    "subject_iri" text COLLATE NOCASE,
-    "failures" text,
-    "running" boolean DEFAULT 0,
-    "complete" boolean DEFAULT 0,
-    "backtrace" text,
-    "next_attempt_at" datetime,
-    "last_attempt_at" datetime,
-    "state" text
+CREATE TABLE collections (
+    id integer PRIMARY KEY AUTOINCREMENT,
+    created_at datetime NOT NULL,
+    updated_at datetime NOT NULL,
+    iri varchar(255) NOT NULL COLLATE NOCASE,
+    items_iris text,
+    total_items integer,
+    first_iri varchar(255),
+    last_iri varchar(255),
+    prev_iri varchar(255),
+    next_iri varchar(255),
+    current_iri varchar(255)
+  );
+CREATE TABLE relationships (
+    id integer PRIMARY KEY AUTOINCREMENT,
+    created_at datetime NOT NULL,
+    updated_at datetime NOT NULL,
+    type varchar(63) NOT NULL,
+    from_iri varchar(255) NOT NULL COLLATE NOCASE,
+    to_iri varchar(255) NOT NULL COLLATE NOCASE,
+    confirmed boolean,
+    visible boolean
   );
 CREATE TABLE tags (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -186,6 +172,21 @@ CREATE TABLE tag_statistics (
     "count" integer,
     PRIMARY KEY("type", "name")
   ) WITHOUT ROWID;
+CREATE TABLE tasks (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL,
+    "type" varchar(63) NOT NULL,
+    "source_iri" text COLLATE NOCASE,
+    "subject_iri" text COLLATE NOCASE,
+    "failures" text,
+    "running" boolean DEFAULT 0,
+    "complete" boolean DEFAULT 0,
+    "backtrace" text,
+    "next_attempt_at" datetime,
+    "last_attempt_at" datetime,
+    "state" text
+  );
 CREATE TABLE points (
     "id" integer PRIMARY KEY AUTOINCREMENT,
     "chart" varchar(63) NOT NULL,
@@ -216,56 +217,46 @@ CREATE TABLE translations (
     "content" text,
     "name" text
   );
-CREATE INDEX idx_accounts_iri
-    ON accounts (iri ASC);
 CREATE UNIQUE INDEX idx_accounts_username
     ON accounts (username ASC);
+CREATE INDEX idx_accounts_iri
+    ON accounts (iri ASC);
 CREATE UNIQUE INDEX idx_sessions_session_key
     ON sessions (session_key ASC);
-CREATE INDEX idx_sessions_account_id
-    ON sessions (account_id ASC);
-CREATE INDEX idx_sessions_updated_at
-    ON sessions (updated_at DESC);
-CREATE INDEX idx_actors_username
-    ON actors (username ASC);
+CREATE UNIQUE INDEX idx_actors_iri
+    ON actors (iri ASC);
+CREATE UNIQUE INDEX idx_objects_iri
+    ON objects (iri ASC);
+CREATE INDEX idx_objects_in_reply_to_iri
+    ON objects (in_reply_to_iri ASC);
+CREATE INDEX idx_objects_attributed_to_iri
+    ON objects (attributed_to_iri ASC);
+CREATE INDEX idx_objects_thread
+    ON objects (thread ASC);
+CREATE UNIQUE INDEX idx_activities_iri
+    ON activities (iri ASC);
+CREATE INDEX idx_activities_actor_iri
+    ON activities (actor_iri ASC);
+CREATE INDEX idx_activities_object_iri
+    ON activities (object_iri ASC);
+CREATE UNIQUE INDEX idx_collections_iri
+    ON collections (iri ASC);
 CREATE INDEX idx_relationships_to_iri
     ON relationships (to_iri ASC);
 CREATE INDEX idx_relationships_type
     ON relationships (type ASC);
 CREATE INDEX idx_relationships_created_at
     ON relationships (created_at DESC);
-CREATE UNIQUE INDEX idx_collections_iri
-    ON collections (iri ASC);
-CREATE INDEX idx_objects_in_reply_to_iri
-    ON objects (in_reply_to_iri ASC);
-CREATE INDEX idx_objects_published
-    ON objects (published ASC);
-CREATE INDEX idx_objects_thread
-    ON objects (thread ASC);
-CREATE UNIQUE INDEX idx_activities_iri
-    ON activities (iri ASC);
-CREATE INDEX idx_activities_object_iri
-    ON activities (object_iri ASC);
-CREATE INDEX idx_tasks_running_complete_backtrace
-    ON tasks (running ASC, complete ASC, backtrace ASC);
-CREATE INDEX idx_tasks_subject_iri
-    ON tasks (subject_iri ASC);
 CREATE INDEX idx_tags_type_subject_iri
     ON tags (type ASC, subject_iri ASC);
 CREATE INDEX idx_tags_type_name
     ON tags (type ASC, name ASC);
+CREATE INDEX idx_tasks_running_complete_backtrace
+    ON tasks (running ASC, complete ASC, backtrace ASC);
+CREATE INDEX idx_tasks_subject_iri
+    ON tasks (subject_iri ASC);
 CREATE INDEX idx_points_chart_timestamp
     ON points (chart ASC, timestamp ASC);
-CREATE INDEX idx_objects_attributed_to_iri
-    ON objects (attributed_to_iri ASC);
-CREATE INDEX idx_activities_actor_iri
-    ON activities (actor_iri ASC);
-CREATE INDEX idx_activities_target_iri
-    ON activities (target_iri ASC);
-CREATE UNIQUE INDEX idx_actors_iri
-    ON actors (iri ASC);
-CREATE UNIQUE INDEX idx_objects_iri
-    ON objects (iri ASC);
 CREATE INDEX idx_filter_terms_actor_id
     ON filter_terms (actor_id ASC);
 CREATE INDEX idx_last_times_name

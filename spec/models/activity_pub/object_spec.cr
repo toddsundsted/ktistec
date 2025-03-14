@@ -840,6 +840,22 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#thread!" do
+    let_build(:object)
+
+    it "updates the thread" do
+      expect{object.thread!}.to change{object.thread}.from(nil).to(object.iri)
+    end
+
+    it "saves the updated object" do
+      expect{object.thread!}.to change{ActivityPub::Object.find?(object.iri)}.from(nil).to(object)
+    end
+
+    it "returns the thread" do
+      expect(object.thread!).to eq(object.iri)
+    end
+  end
+
   context "when threaded" do
     subject do
       described_class.new(
@@ -1023,28 +1039,8 @@ Spectator.describe ActivityPub::Object do
         expect(object5.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5])
       end
 
-      it "omits deleted replies and their children" do
-        object4.delete!
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
-      it "omits blocked replies and their children" do
-        object4.block!
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
       it "omits destroyed replies and their children" do
         object4.destroy
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
-      it "omits replies with deleted attributed to actors" do
-        actor4.delete!
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
-      it "omits replies with blocked attributed to actors" do
-        actor4.block!
         expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 

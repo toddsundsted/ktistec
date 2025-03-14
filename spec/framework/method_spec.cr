@@ -1,4 +1,5 @@
 require "../../src/framework/method"
+require "../../src/framework/controller"
 
 require "../spec_helper/controller"
 

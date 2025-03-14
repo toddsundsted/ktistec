@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+require "spectator"
+
 require "../../src/framework/csrf"
 
 private def process_request_and_return_response(handler, request)

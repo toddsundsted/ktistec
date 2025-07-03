@@ -13,6 +13,8 @@ turbo-frame#thread_page_thread_controls
         # boost OP
         op = contributors.first_key
         contributors[op] = Int32::MAX
+        # remove blocked and deleted actors
+        contributors.reject! { |actor, _| actor.blocked? || actor.deleted? }
       p Contributors to this thread:
       p
         - contributors.to_a.sort_by(&.last.-).truncate(0, 18).each do |actor, _|

@@ -486,17 +486,15 @@ module ActivityPub
                ON a.iri = o.attributed_to_iri
             WHERE o.iri = p.iri
               AND o.in_reply_to_iri IS NOT NULL
-         ORDER BY depth DESC
        ),
        replies_to(iri, position, depth) AS (
-         SELECT * FROM (SELECT iri, "", 0 FROM ancestors_of ORDER BY depth DESC LIMIT 1)
+           SELECT * FROM (SELECT iri, '', 0 FROM ancestors_of ORDER BY depth DESC LIMIT 1)
             UNION
-           SELECT o.iri, r.position || "." || o.id, r.depth + 1 AS depth
+           SELECT o.iri, r.position || '.' || o.id, r.depth + 1 AS depth
              FROM objects AS o, replies_to AS r
              JOIN actors AS a
                ON a.iri = o.attributed_to_iri
             WHERE o.in_reply_to_iri = r.iri
-         ORDER BY depth DESC
         )
       QUERY
     end
@@ -567,7 +565,6 @@ module ActivityPub
              AND o.blocked_at IS NULL
              AND a.deleted_at IS NULL
              AND a.blocked_at IS NULL
-        ORDER BY depth DESC
       )
       QUERY
     end
@@ -584,6 +581,7 @@ module ActivityPub
          AND o.blocked_at IS NULL
          AND a.deleted_at IS NULL
          AND a.blocked_at IS NULL
+       ORDER BY p.depth
       QUERY
       Object.query_all(query, iri, additional_columns: {depth: Int32})
     end
@@ -604,6 +602,7 @@ module ActivityPub
             AND o.blocked_at IS NULL
             AND a.deleted_at IS NULL
             AND a.blocked_at IS NULL
+       ORDER BY p.depth
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})

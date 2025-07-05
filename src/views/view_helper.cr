@@ -68,9 +68,10 @@ module Ktistec::ViewHelper
     end
 
     def pagination_params(env)
+      max_size = env.account? ? 1000 : 20
       {
         page: Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
-        size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
+        size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, max_size)
       }
     end
 

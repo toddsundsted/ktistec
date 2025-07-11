@@ -8,9 +8,11 @@ class Task
       @source_iri = ""
       @subject_iri  = ""
 
+      class_property instance : self { self.all.first? || self.new.save }
+
       def self.schedule_unless_exists
-        if self.where("running = 0 AND complete = 0 AND backtrace IS NULL").empty?
-          self.new.schedule
+        if !instance.running && !instance.complete && instance.backtrace.nil?
+          instance.schedule
         end
       end
     end

@@ -173,7 +173,7 @@ Spectator.describe Ktistec::Model::Polymorphic do
     context "when instantiating an abstract model" do
       before_each do
         Ktistec.database.exec <<-SQL
-          INSERT INTO polymorphic_models (id, type) VALUES (9999, "Subclass6")
+          INSERT INTO polymorphic_models (id, type) VALUES (9999, 'Subclass6')
         SQL
       end
 

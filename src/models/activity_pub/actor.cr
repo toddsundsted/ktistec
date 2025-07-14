@@ -221,7 +221,7 @@ module ActivityPub
           FROM actors AS a, relationships AS r
          WHERE a.iri = r.#{orig}
            #{common_filters_on("a")}
-           AND r.type = "#{type}"
+           AND r.type = '#{type}'
            AND r.#{dest} = ?
            #{public}
       ORDER BY r.id DESC
@@ -252,7 +252,7 @@ module ActivityPub
            JOIN activities AS a
              ON a.object_iri = o.iri
           WHERE a.actor_iri = ?
-            AND a.type = "#{type}"
+            AND a.type = '#{type}'
             #{common_filters_on("o", "c", "a")}
        ORDER BY o.id DESC
           LIMIT ? OFFSET ?
@@ -290,23 +290,23 @@ module ActivityPub
       mailbox =
         case mailbox
         when Class
-          %Q|AND r.type = "#{mailbox}"|
+          %Q|AND r.type = '#{mailbox}'|
         when Array
-          %Q|AND r.type IN (#{mailbox.map(&.to_s.inspect).join(",")})|
+          %Q|AND r.type IN ('#{mailbox.map(&.to_s).join("','")}')|
         end
       inclusion =
         case inclusion
         when Class
-          %Q|AND a.type = "#{inclusion}"|
+          %Q|AND a.type = '#{inclusion}'|
         when Array
-          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND a.type IN ('#{inclusion.map(&.to_s).join("','")}')|
         end
       exclusion =
         case exclusion
         when Class
-          %Q|AND a.type != "#{exclusion}"|
+          %Q|AND a.type != '#{exclusion}'|
         when Array
-          %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND a.type NOT IN ('#{exclusion.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
          SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "obj")}
@@ -335,23 +335,23 @@ module ActivityPub
       mailbox =
         case mailbox
         when Class
-          %Q|AND r.type = "#{mailbox}"|
+          %Q|AND r.type = '#{mailbox}'|
         when Array
-          %Q|AND r.type IN (#{mailbox.map(&.to_s.inspect).join(",")})|
+          %Q|AND r.type IN ('#{mailbox.map(&.to_s).join("','")}')|
         end
       inclusion =
         case inclusion
         when Class
-          %Q|AND a.type = "#{inclusion}"|
+          %Q|AND a.type = '#{inclusion}'|
         when Array
-          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND a.type IN ('#{inclusion.map(&.to_s).join("','")}')|
         end
       exclusion =
         case exclusion
         when Class
-          %Q|AND a.type != "#{exclusion}"|
+          %Q|AND a.type != '#{exclusion}'|
         when Array
-          %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND a.type NOT IN ('#{exclusion.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
          SELECT count(a.id)
@@ -393,16 +393,16 @@ module ActivityPub
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND a.type = "#{inclusion}"|
+          %Q|AND a.type = '#{inclusion}'|
         when Array
-          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND a.type IN ('#{inclusion.map(&.to_s).join("','")}')|
         end
       exclusion =
         case exclusion
         when Class, String
-          %Q|AND a.type != "#{exclusion}"|
+          %Q|AND a.type != '#{exclusion}'|
         when Array
-          %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND a.type NOT IN ('#{exclusion.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
          SELECT #{Activity.columns(prefix: "a")}
@@ -462,10 +462,10 @@ module ActivityPub
              ON t.iri = o.attributed_to_iri
            JOIN activities AS a
              ON a.object_iri = o.iri
-            AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
            JOIN relationships AS r
              ON r.to_iri = a.iri
-            AND r.type = "#{Relationship::Content::Outbox}"
+            AND r.type = '#{Relationship::Content::Outbox}'
           WHERE r.from_iri = ?
             AND o.visible = 1
             AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
@@ -490,10 +490,10 @@ module ActivityPub
              ON t.iri = o.attributed_to_iri
            JOIN activities AS a
              ON a.object_iri = o.iri
-            AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
            JOIN relationships AS r
              ON r.to_iri = a.iri
-            AND r.type = "#{Relationship::Content::Outbox}"
+            AND r.type = '#{Relationship::Content::Outbox}'
           WHERE r.from_iri = ?
             #{common_filters_on("o", "t", "a")}
        ORDER BY r.id DESC
@@ -523,11 +523,11 @@ module ActivityPub
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND +t.type = "#{inclusion}"|
+          %Q|AND +t.type = '#{inclusion}'|
         when Array
-          %Q|AND +t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN ('#{inclusion.map(&.to_s).join("','")}')|
         else
-          %Q|AND +t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN ('#{Timeline.all_subtypes.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
@@ -559,11 +559,11 @@ module ActivityPub
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND +t.type = "#{inclusion}"|
+          %Q|AND +t.type = '#{inclusion}'|
         when Array
-          %Q|AND +t.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN ('#{inclusion.map(&.to_s).join("','")}')|
         else
-          %Q|AND +t.type IN (#{Timeline.all_subtypes.map(&.to_s.inspect).join(",")})|
+          %Q|AND +t.type IN ('#{Timeline.all_subtypes.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
           SELECT count(t.id)
@@ -602,7 +602,7 @@ module ActivityPub
       LEFT JOIN actors AS t
              ON t.iri = e.attributed_to_iri
           WHERE +n.from_iri = ?
-            AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
+            AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
             #{common_filters_on("c", "o", "a")}
             #{common_filters_on("e", "t")}
        ORDER BY n.id DESC
@@ -631,7 +631,7 @@ module ActivityPub
       LEFT JOIN actors AS t
              ON t.iri = e.attributed_to_iri
           WHERE +n.from_iri = ?
-            AND n.type IN (#{Notification.all_subtypes.map(&.inspect).join(",")})
+            AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
             #{common_filters_on("c", "o", "a")}
             #{common_filters_on("e", "t")}
             AND n.created_at > ?

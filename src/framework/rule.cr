@@ -131,14 +131,14 @@ module Ktistec
         case target
         when School::Lit
           if (term = block.call target.target)
-            { %Q|like("#{table}"."#{column}", ?, "\\")|, term }
+            { %Q|like("#{table}"."#{column}", ?, '\\')|, term }
           else
             { %Q|"#{table}"."#{column}" IS NULL|, nil }
           end
         when School::Var
           if bindings.has_key?(target.name)
             if (term = block.call bindings[target.name])
-              { %Q|like("#{table}"."#{column}", ?, "\\")|, term }
+              { %Q|like("#{table}"."#{column}", ?, '\\')|, term }
             else
               { %Q|"#{table}"."#{column}" IS NULL|, nil }
             end
@@ -147,7 +147,7 @@ module Ktistec
           end
         when School::Accessor
           if (term = block.call target.call(bindings))
-            { %Q|like("#{table}"."#{column}", ?, "\\")|, term }
+            { %Q|like("#{table}"."#{column}", ?, '\\')|, term }
           else
             { %Q|"#{table}"."#{column}" IS NULL|, nil }
           end
@@ -156,14 +156,14 @@ module Ktistec
           case target
           when School::Lit
             if (term = block.call target.target)
-              { %Q|like("#{table}"."#{column}", strip(?), "\\")|, term }
+              { %Q|like("#{table}"."#{column}", strip(?), '\\')|, term }
             else
               { %Q|"#{table}"."#{column}" IS NULL|, nil }
             end
           when School::Var
             if bindings.has_key?(target.name)
               if (term = block.call bindings[target.name])
-                { %Q|like("#{table}"."#{column}", strip(?), "\\")|, term }
+                { %Q|like("#{table}"."#{column}", strip(?), '\\')|, term }
               else
                 { %Q|"#{table}"."#{column}" IS NULL|, nil }
               end
@@ -172,7 +172,7 @@ module Ktistec
             end
           when School::Accessor
             if (term = block.call target.call(bindings))
-              { %Q|like("#{table}"."#{column}", strip(?), "\\")|, term }
+              { %Q|like("#{table}"."#{column}", strip(?), '\\')|, term }
             else
               { %Q|"#{table}"."#{column}" IS NULL|, nil }
             end
@@ -338,8 +338,8 @@ module Ktistec
           {% end %}
           {% if clazz < Model::Polymorphic %}
             unless @options.has_key?("type")
-              types = {{(clazz.all_subclasses << clazz).map(&.stringify.stringify).join(",")}}
-              conditions << { %Q|#{table_name}."type" IN (#{types})|, nil }
+              types = {{(clazz.all_subclasses << clazz).map(&.stringify).join("','")}}
+              conditions << { %Q|#{table_name}."type" IN ('#{types}')|, nil }
             end
           {% end %}
 

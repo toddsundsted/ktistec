@@ -33,12 +33,12 @@ class Task
     alias Key = Tuple(String, Time)
 
     private def accumulate(relationship_types)
-      types = relationship_types.map(&.to_s.dump).join(",")
+      types = relationship_types.map(&.to_s).join("','")
       items =
         if (last_id = self.last_id)
-          Relationship.where("id > ? AND type IN (#{types}) ORDER BY id", last_id)
+          Relationship.where("id > ? AND type IN ('#{types}') ORDER BY id", last_id)
         else
-          Relationship.where("type IN (#{types}) ORDER BY id")
+          Relationship.where("type IN ('#{types}') ORDER BY id")
         end
 
       account_timezone_cache = Hash(String, {Account, Time::Location}).new do |hash, iri|

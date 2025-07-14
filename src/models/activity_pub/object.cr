@@ -272,10 +272,10 @@ module ActivityPub
             FROM accounts AS c
             JOIN relationships AS r
               ON likelihood(r.from_iri = c.iri, 0.99)
-             AND r.type = "#{Relationship::Content::Outbox}"
+             AND r.type = '#{Relationship::Content::Outbox}'
             JOIN activities AS a
               ON a.iri = r.to_iri
-             AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+             AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
             JOIN objects AS o
               ON o.iri = a.object_iri
             JOIN actors AS t
@@ -303,10 +303,10 @@ module ActivityPub
             FROM accounts AS c
             JOIN relationships AS r
               ON likelihood(r.from_iri = c.iri, 0.99)
-             AND r.type = "#{Relationship::Content::Outbox}"
+             AND r.type = '#{Relationship::Content::Outbox}'
             JOIN activities AS a
               ON a.iri = r.to_iri
-             AND a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+             AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
             JOIN objects AS o
               ON o.iri = a.object_iri
             JOIN actors AS t
@@ -339,7 +339,7 @@ module ActivityPub
             FROM activities AS a
             JOIN accounts AS c
               ON c.iri = a.actor_iri
-           WHERE a.type IN ("#{ActivityPub::Activity::Announce}", "#{ActivityPub::Activity::Create}")
+           WHERE a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
              AND a.undone_at IS NULL
         ORDER BY a.id DESC
            LIMIT 1
@@ -357,7 +357,7 @@ module ActivityPub
 
     def with_statistics!
       query = <<-QUERY
-         SELECT sum(a.type = "ActivityPub::Activity::Announce") AS announces, sum(a.type = "ActivityPub::Activity::Like") AS likes
+         SELECT sum(a.type = 'ActivityPub::Activity::Announce') AS announces, sum(a.type = 'ActivityPub::Activity::Like') AS likes
            FROM activities AS a
           WHERE a.undone_at IS NULL
             AND a.object_iri = ?
@@ -410,7 +410,7 @@ module ActivityPub
          SELECT count(o.iri) - 1
            FROM objects AS o, replies_to AS t
       LEFT JOIN relationships AS r
-             ON r.type = "#{Relationship::Content::Approved}"
+             ON r.type = '#{Relationship::Content::Approved}'
              AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
             AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
@@ -458,7 +458,7 @@ module ActivityPub
            JOIN actors AS a
              ON a.iri = o.attributed_to_iri
            JOIN relationships AS r
-             ON r.type = "#{Relationship::Content::Approved}"
+             ON r.type = '#{Relationship::Content::Approved}'
             AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.in_reply_to_iri = ?
             AND o.deleted_at IS NULL
@@ -540,7 +540,7 @@ module ActivityPub
          SELECT #{Object.columns(prefix: "o")}, t.depth
            FROM objects AS o, replies_to AS t
       LEFT JOIN relationships AS r
-             ON r.type = "#{Relationship::Content::Approved}"
+             ON r.type = '#{Relationship::Content::Approved}'
             AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
             AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
@@ -594,7 +594,7 @@ module ActivityPub
            JOIN actors AS a
              ON a.iri = o.attributed_to_iri
       LEFT JOIN relationships AS r
-             ON r.type = "#{Relationship::Content::Approved}"
+             ON r.type = '#{Relationship::Content::Approved}'
             AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (p.iri)
             AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
@@ -612,16 +612,16 @@ module ActivityPub
       inclusion =
         case inclusion
         when Class, String
-          %Q|AND a.type = "#{inclusion}"|
+          %Q|AND a.type = '#{inclusion}'|
         when Array
-          %Q|AND a.type IN (#{inclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND a.type IN ('#{inclusion.map(&.to_s).join("','")}')|
         end
       exclusion =
         case exclusion
         when Class, String
-          %Q|AND a.type != "#{exclusion}"|
+          %Q|AND a.type != '#{exclusion}'|
         when Array
-          %Q|AND a.type NOT IN (#{exclusion.map(&.to_s.inspect).join(",")})|
+          %Q|AND a.type NOT IN ('#{exclusion.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
          SELECT #{Activity.columns(prefix: "a")}

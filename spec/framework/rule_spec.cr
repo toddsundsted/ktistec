@@ -67,7 +67,7 @@ Spectator.describe Ktistec::Rule do
         SQL
         Ktistec.database.exec <<-SQL
           INSERT INTO rule_models (id, parent_id, name)
-          VALUES (1, null, "one"), (2, 1, "two"), (3, 2, "three")
+          VALUES (1, null, 'one'), (2, 1, 'two'), (3, 2, 'three')
         SQL
       end
       after_each do

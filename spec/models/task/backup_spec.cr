@@ -19,13 +19,17 @@ Spectator.describe Task::Backup do
     end
   end
 
-  describe "#perform_backup" do
+  describe "#perform" do
     subject { described_class.new }
 
     it "sets the next attempt at" do
-      subject.perform_backup
+      subject.perform
       expect(subject.next_attempt_at).not_to be_nil
     end
+  end
+
+  describe "#perform_backup" do
+    subject { described_class.new }
 
     let(name) { Ktistec.db_file }
     let(date) { Time.local.to_s("%Y%m%d") }

@@ -143,7 +143,9 @@ module Ktistec
           local =
             if (key = attributes[:key]?) && (value = html.attributes[key]?)
               uri = URI.parse(value.text)
-              (!uri.scheme && !uri.host) || Ktistec.host == "#{uri.scheme}://#{uri.host}"
+              server = URI.parse(Ktistec.host)
+              (!uri.scheme && !uri.host && !uri.port) ||
+                (uri.scheme == server.scheme && uri.host == server.host && uri.port == server.port)
             end
           if (local && (values = attributes[:local]?)) ||
              (!local && (values = attributes[:remote]?)) ||

@@ -1,6 +1,25 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.7]
+### Added
+- Option for garbage collection on startup (see README).
+
+### Fixed
+- Use single quotes for string literals in SQLite queries.
+- Fix `WITH RECURSIVE` queries.
+- Fix broken CI workflow.
+
+### Changed
+- Present local internal URLs as external URLs in posts.
+- Limit pagination size for unauthenticated users.
+- Better convey actor/object deleted/blocked status on index pages.
+- Improve presentation of inline code and code blocks.
+- Clip alt text on thumbnail images.
+
+### Other
+- Update cached copy of Lemmy's JSON-LD context.
+
 ## [v2.4.6]
 ### Fixed
 - Add missing database query logging.
@@ -326,6 +345,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.4.7]: https://github.com/toddsundsted/ktistec/compare/c8a59be3...0261e9d3
 [v2.4.6]: https://github.com/toddsundsted/ktistec/compare/70d67e74...c51a664c
 [v2.4.5]: https://github.com/toddsundsted/ktistec/compare/2eb2560a...04aaaba9
 [v2.4.4]: https://github.com/toddsundsted/ktistec/compare/730e0b96...f03cea00

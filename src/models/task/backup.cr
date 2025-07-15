@@ -15,6 +15,8 @@ class Task
       if Kemal.config.env == "production"
         perform_backup
       end
+    ensure
+      self.next_attempt_at = 1.day.from_now
     end
 
     def perform_backup
@@ -35,8 +37,6 @@ class Task
       end
 
       Log.trace { "#{times.label}: #{times.to_s}" }
-    ensure
-      self.next_attempt_at = 1.day.from_now
     end
   end
 end

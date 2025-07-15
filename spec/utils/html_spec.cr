@@ -243,5 +243,55 @@ Spectator.describe Ktistec::HTML do
       expect(described_class.enhance(content).content).
         to eq(%Q|<p><a href="#{Ktistec.host}/tags/hashtag" class="hashtag" rel="tag">#hashtag</a> <a href="https://foo.com/actors/bar" class="mention" rel="tag">@bar@foo.com</a></p>|)
     end
+
+    context "links to local objects/actors" do
+      let_create(:actor, local: true)
+      let_create(:object, owner: actor, local: true)
+
+      it "converts relative internal links to relative external links" do
+        content = %Q|<p><a href="/remote/objects/#{object.id}">link</a></p>|
+        expect(described_class.enhance(content).content).to eq(%Q|<p><a href="#{URI.parse(object.iri).path}">link</a></p>|)
+      end
+
+      it "converts absolute internal links to absolute external links" do
+        content = %Q|<p><a href="#{Ktistec.host}/remote/objects/#{object.id}">link</a></p>|
+        expect(described_class.enhance(content).content).to eq(%Q|<p><a href="#{object.iri}">link</a></p>|)
+      end
+
+      it "converts relative internal links to relative external links" do
+        content = %Q|<p><a href="/remote/actors/#{actor.id}">link</a></p>|
+        expect(described_class.enhance(content).content).to eq(%Q|<p><a href="#{URI.parse(actor.iri).path}">link</a></p>|)
+      end
+
+      it "converts absolute internal links to absolute external links" do
+        content = %Q|<p><a href="#{Ktistec.host}/remote/actors/#{actor.id}">link</a></p>|
+        expect(described_class.enhance(content).content).to eq(%Q|<p><a href="#{actor.iri}">link</a></p>|)
+      end
+    end
+
+    context "links to remote objects/actors" do
+      let_create(:actor)
+      let_create(:object, owner: actor)
+
+      it "does not convert relative internal links" do
+        content = %Q|<p><a href="/remote/objects/#{object.id}">link</a></p>|
+        expect(described_class.enhance(content).content).to eq(content)
+      end
+
+      it "does not convert absolute internal links" do
+        content = %Q|<p><a href="#{Ktistec.host}/remote/objects/#{object.id}">link</a></p>|
+        expect(described_class.enhance(content).content).to eq(content)
+      end
+
+      it "does not convert relative internal links" do
+        content = %Q|<p><a href="/remote/actors/#{actor.id}">link</a></p>|
+        expect(described_class.enhance(content).content).to eq(content)
+      end
+
+      it "does not convert absolute internal links" do
+        content = %Q|<p><a href="#{Ktistec.host}/remote/actors/#{actor.id}">link</a></p>|
+        expect(described_class.enhance(content).content).to eq(content)
+      end
+    end
   end
 end

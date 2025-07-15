@@ -181,7 +181,7 @@ module Ktistec
           # subclasses, since all rows and all subclasses should
           # belong to the hierarchy and should be included.
           {% if @type < Polymorphic && @type.superclass != Reference %}
-            conditions << %Q|"type" IN (%s)| % {{(@type.all_subclasses << @type).map(&.stringify.stringify).join(",")}}
+            conditions << %Q|"type" IN ('%s')| % {{(@type.all_subclasses << @type).map(&.stringify).join("','")}}
           {% end %}
           conditions += terms.to_a
           conditions.size > 0 ?

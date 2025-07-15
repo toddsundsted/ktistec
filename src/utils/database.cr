@@ -15,7 +15,7 @@ module Ktistec
     #
     def self.recreate_timeline_and_notifications(limit = 1000)
       query = <<-QUERY
-        type IN ("#{Relationship::Content::Inbox}","#{Relationship::Content::Outbox}")
+        type IN ('#{Relationship::Content::Inbox}','#{Relationship::Content::Outbox}')
         AND from_iri = ?
         AND id > ?
         ORDER BY id ASC

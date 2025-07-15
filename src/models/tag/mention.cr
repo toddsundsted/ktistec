@@ -43,7 +43,7 @@ class Tag
           FROM objects AS o
           JOIN tags AS t
             ON t.subject_iri = o.iri
-           AND t.type = "#{self}"
+           AND t.type = '#{self}'
           JOIN actors AS a
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
@@ -70,7 +70,7 @@ class Tag
           FROM objects AS o
           JOIN tags AS t
             ON t.subject_iri = o.iri
-           AND t.type = "#{self}"
+           AND t.type = '#{self}'
           JOIN actors AS a
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?

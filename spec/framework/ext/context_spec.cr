@@ -1,4 +1,5 @@
 require "../../../src/framework/ext/context"
+require "../../../src/framework/controller"
 
 require "../../spec_helper/controller"
 require "../../spec_helper/factory"

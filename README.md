@@ -27,6 +27,7 @@
     - [SQLite3 Compatibility](#sqlite3-compatibility)
     - [Running Tests](#running-tests)
   - [Usage](#usage)
+    - [Command Line Options](#command-line-options)
     - [Configuring Translation](#configuring-translation)
   - [Contributors](#contributors)
   - [Copyright and License](#copyright-and-license)
@@ -467,6 +468,35 @@ database string (e.g. "America/New_York").
 Once these steps are done, you're running!
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/o0ton2.png" width=640>
+
+### Command Line Options
+
+The Ktistec server supports several command line options:
+
+#### `--full-garbage-collection-on-startup`
+
+**⚠️ WARNING: This operation can take significant time and delete large amounts of data.**
+
+Garbage collection removes old ActivityPub objects that are not
+connected to your user through:
+
+- **Attribution**: Objects attributed to you or actors you follow
+- **Activities**: Objects referenced by your activities or activities of actors you follow
+- **Collections**: Objects in your timeline, notifications, or outbox
+- **Content**: Objects with hashtags, mentions, or in threads you follow
+
+Note that garbage collection preserves:
+
+- Complete threads if any object in a thread is preserved
+- Objects newer than the configured age limit (default: 365 days)
+
+It also:
+
+- Performs database optimization (VACUUM and PRAGMA optimize) after cleanup
+- May take minutes to hours, depending on database size
+- Should not be interrupted once started
+
+**Consider backing up your database before using this option!**
 
 ### Configuring Translation
 

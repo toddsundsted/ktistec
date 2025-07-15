@@ -1,6 +1,7 @@
 require "../../src/views/view_helper"
 
 require "../spec_helper/controller"
+require "../spec_helper/factory"
 
 class FooBarController
   include Ktistec::Controller
@@ -1030,6 +1031,84 @@ Spectator.describe "helpers" do
   describe "id" do
     it "generates an id" do
       expect(id).to match(/^[a-zA-Z0-9_-]+$/)
+    end
+  end
+
+  ## Pagination helpers
+
+  describe "pagination_params" do
+    it "ensures page is at least 1" do
+      env = env_factory("GET", "/?page=0")
+      result = self.class.pagination_params(env)
+      expect(result[:page]).to eq(1)
+    end
+
+    it "ignores negative page numbers" do
+      env = env_factory("GET", "/?page=-5")
+      result = self.class.pagination_params(env)
+      expect(result[:page]).to eq(1)
+    end
+
+    context "when user is not authenticated" do
+      it "allows size up to 20" do
+        env = env_factory("GET", "/?page=2&size=20")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(2)
+        expect(result[:size]).to eq(20)
+      end
+
+      it "limits size to 20" do
+        env = env_factory("GET", "/?page=2&size=21")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(2)
+        expect(result[:size]).to eq(20)
+      end
+
+      it "uses default size of 10 when no size specified" do
+        env = env_factory("GET", "/?page=1")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(1)
+        expect(result[:size]).to eq(10)
+      end
+
+      it "uses requested size when under the limit" do
+        env = env_factory("GET", "/?size=15")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(1)
+        expect(result[:size]).to eq(15)
+      end
+    end
+
+    context "when user is authenticated" do
+      sign_in
+
+      it "allows size up to 1000" do
+        env = env_factory("GET", "/?page=3&size=1000")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(3)
+        expect(result[:size]).to eq(1000)
+      end
+
+      it "limits size to 1000" do
+        env = env_factory("GET", "/?size=1001")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(1)
+        expect(result[:size]).to eq(1000)
+      end
+
+      it "uses default size of 10 when no size specified" do
+        env = env_factory("GET", "/?page=1")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(1)
+        expect(result[:size]).to eq(10)
+      end
+
+      it "uses requested size when under the limit" do
+        env = env_factory("GET", "/?size=500")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(1)
+        expect(result[:size]).to eq(500)
+      end
     end
   end
 

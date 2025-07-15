@@ -57,6 +57,33 @@ module Ktistec
           end
         end
 
+        xml.xpath_nodes("//a[contains(@href, '/remote/')]").each do |anchor|
+          uri = URI.parse(anchor["href"])
+          if uri.host
+            server = URI.parse(Ktistec.host)
+            unless uri.scheme == server.scheme && uri.host == server.host && uri.port == server.port
+              next
+            end
+          end
+          parts = uri.path.split('/')
+          unless parts.size == 4
+            next
+          end
+          id = parts[3].to_i64
+          instance =
+            case parts[2]
+            when "actors" then ActivityPub::Actor.find?(id)
+            when "objects" then ActivityPub::Object.find?(id)
+            end
+          if instance && instance.local?
+            if uri.host
+              anchor["href"] = instance.iri
+            else
+              anchor["href"] = URI.parse(instance.iri).path
+            end
+          end
+        end
+
         xml.xpath_nodes("//node()[not(ancestor-or-self::a|ancestor-or-self::pre|ancestor-or-self::code)]/text()").each do |text|
           if (remainder = text.text).includes?('#') || remainder.includes?('@')
             cursor = insertion = XML.parse("<span/>").first_element_child.not_nil!

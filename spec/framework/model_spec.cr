@@ -187,21 +187,21 @@ Spectator.describe Ktistec::Model do
 
   describe ".query_and_paginate" do
     it "includes the additional columns" do
-      query = %Q|SELECT 0, "foo", "bar", ?, ?|
+      query = %Q|SELECT 0, 'foo', 'bar', ?, ?|
       expect(QueryModel.query_and_paginate(query, additional_columns: {foo: String, bar: String})).to eq([QueryModel.new(id: 0_i64, foo: "foo", bar: "bar")])
     end
   end
 
   describe ".query_all" do
     it "includes the additional columns" do
-      query = %Q|SELECT 0, "foo", "bar", ?, ?|
+      query = %Q|SELECT 0, 'foo', 'bar', ?, ?|
       expect(QueryModel.query_all(query, additional_columns: {foo: String, bar: String})).to eq([QueryModel.new(id: 0_i64, foo: "foo", bar: "bar")])
     end
   end
 
   describe ".query_one" do
     it "includes the additional columns" do
-      query = %Q|SELECT 0, "foo", "bar", ?, ?|
+      query = %Q|SELECT 0, 'foo', 'bar', ?, ?|
       expect(QueryModel.query_one(query, additional_columns: {foo: String, bar: String})).to eq(QueryModel.new(id: 0_i64, foo: "foo", bar: "bar"))
     end
   end

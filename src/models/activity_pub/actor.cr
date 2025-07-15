@@ -536,7 +536,7 @@ module ActivityPub
               ON o.iri = t.to_iri
             JOIN actors AS c
               ON c.iri = o.attributed_to_iri
-           WHERE t.from_iri = ?
+           WHERE +t.from_iri = ?
              #{inclusion}
              #{exclude_replies}
              #{common_filters_on("o", "c")}
@@ -572,7 +572,7 @@ module ActivityPub
               ON o.iri = t.to_iri
             JOIN actors AS c
               ON c.iri = o.attributed_to_iri
-           WHERE t.from_iri = ?
+           WHERE +t.from_iri = ?
              #{inclusion}
              #{exclude_replies}
              #{common_filters_on("o", "c")}

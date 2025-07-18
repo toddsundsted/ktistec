@@ -49,6 +49,7 @@ Spectator.describe McpController do
         expect(result["serverInfo"]["name"]).to eq("Ktistec MCP Server")
         expect(result["serverInfo"]["version"]).to eq("1.0.0")
         expect(result["capabilities"]["resources"]).to be_a(JSON::Any)
+        expect(result["capabilities"]["tools"]).to be_a(JSON::Any)
         expect(result["instructions"]).to be_a(JSON::Any)
       end
     end
@@ -206,6 +207,31 @@ Spectator.describe McpController do
 
         expect(parsed["error"]["code"]).to eq(-32602)
         expect(parsed["error"]["message"]).to eq("Missing URI parameter")
+      end
+    end
+
+    context "with tools/list request" do
+      let(tools_list_request) { %Q|{"jsonrpc": "2.0", "id": "tools-1", "method": "tools/list"}| }
+
+      it "returns empty tools array" do
+        post "/mcp", JSON_HEADERS, tools_list_request
+        expect(response.status_code).to eq(200)
+        parsed = JSON.parse(response.body)
+
+        expect(parsed["result"]["tools"].as_a).to be_empty
+      end
+    end
+
+    context "with tools/call request" do
+      let(tools_call_request) { %Q|{"jsonrpc": "2.0", "id": "call-1", "method": "tools/call", "params": {"name": "nonexistent_tool"}}| }
+
+      it "returns protocol error for invalid tool name" do
+        post "/mcp", JSON_HEADERS, tools_call_request
+        expect(response.status_code).to eq(400)
+        parsed = JSON.parse(response.body)
+
+        expect(parsed["error"]["code"]).to eq(-32602)
+        expect(parsed["error"]["message"]).to eq("Invalid tool name")
       end
     end
   end

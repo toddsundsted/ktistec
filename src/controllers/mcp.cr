@@ -69,6 +69,9 @@ class McpController
               json.field "resources" do
                 json.object {}
               end
+              json.field "tools" do
+                json.object {}
+              end
             end
           end
           json.field "serverInfo" do
@@ -94,6 +97,12 @@ class McpController
       JSON::RPC::Response.new(request_id, result)
     when "resources/read"
       result = handle_resources_read(request)
+      JSON::RPC::Response.new(request_id, result)
+    when "tools/list"
+      result = handle_tools_list(request)
+      JSON::RPC::Response.new(request_id, result)
+    when "tools/call"
+      result = handle_tools_call(request)
       JSON::RPC::Response.new(request_id, result)
     end
   end
@@ -177,5 +186,22 @@ class McpController
     else
       raise MCPError.new("Unsupported URI scheme: #{uri}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
+  end
+
+  private def self.handle_tools_list(request : JSON::RPC::Request) : JSON::Any
+    JSON::Any.new({
+      "tools" => JSON::Any.new([] of JSON::Any)
+    })
+  end
+
+  private def self.handle_tools_call(request : JSON::RPC::Request) : JSON::Any
+    unless (params = request.params)
+      raise MCPError.new("Missing params", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+    unless (name = params["name"]?.try(&.as_s))
+      raise MCPError.new("Missing tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+
+    raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
   end
 end

@@ -189,8 +189,34 @@ class McpController
   end
 
   private def self.handle_tools_list(request : JSON::RPC::Request) : JSON::Any
+    tools = [
+      JSON::Any.new({
+        "name" => JSON::Any.new("paginate_collection"),
+        "description" => JSON::Any.new("Paginate through collections of objects, activities, and actors"),
+        "inputSchema" => JSON::Any.new({
+          "type" => JSON::Any.new("object"),
+          "properties" => JSON::Any.new({
+            "user" => JSON::Any.new({
+              "type" => JSON::Any.new("string"),
+              "description" => JSON::Any.new("URI of the user whose collections to paginate")
+            }),
+            "name" => JSON::Any.new({
+              "type" => JSON::Any.new("string"),
+              "description" => JSON::Any.new("Name of the collection to paginate")
+            }),
+            "page" => JSON::Any.new({
+              "type" => JSON::Any.new("integer"),
+              "description" => JSON::Any.new("Page number (optional, defaults to 1)"),
+              "minimum" => JSON::Any.new(1)
+            })
+          }),
+          "required" => JSON::Any.new([JSON::Any.new("user"), JSON::Any.new("name")])
+        })
+      })
+    ]
+
     JSON::Any.new({
-      "tools" => JSON::Any.new([] of JSON::Any)
+      "tools" => JSON::Any.new(tools)
     })
   end
 
@@ -202,6 +228,40 @@ class McpController
       raise MCPError.new("Missing tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
-    raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    case name
+    when "paginate_collection"
+      handle_paginate_collection_tool(params)
+    else
+      raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+  end
+
+  private def self.handle_paginate_collection_tool(params : JSON::Any) : JSON::Any
+    unless (arguments = params["arguments"]?)
+      raise MCPError.new("Missing arguments", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+    unless (user = arguments["user"]?.try(&.as_s))
+      raise MCPError.new("Missing user URI", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+    unless (collection_name = arguments["name"]?.try(&.as_s))
+      raise MCPError.new("Missing collection name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+
+    page = arguments["page"]?.try(&.as_i) || 1
+    if page < 1
+      raise MCPError.new("Page number must be >= 1", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+
+    unless user.starts_with?("ktistec://users/")
+      raise MCPError.new("Invalid user URI format", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+    unless (user_id = user.sub("ktistec://users/", "").to_i64?)
+      raise MCPError.new("Invalid user ID in URI", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+    unless Account.find?(user_id)
+      raise MCPError.new("User not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+
+    raise MCPError.new("Invalid collection name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
   end
 end

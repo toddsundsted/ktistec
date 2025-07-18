@@ -133,7 +133,6 @@ module ActivityPub
           self.following = "#{host}/actors/#{username}/following"
           self.followers = "#{host}/actors/#{username}/followers"
           self.urls = ["#{host}/@#{username}"]
-          self.attachments = [] of Attachment
         end
       end
     end

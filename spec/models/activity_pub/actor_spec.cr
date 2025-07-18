@@ -40,10 +40,6 @@ Spectator.describe ActivityPub::Actor do
       expect{subject.assign(username: "foobar").save}.to change{subject.urls}
     end
 
-    it "assigns attachments" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.attachments}
-    end
-
     it "doesn't assign if the actor isn't local" do
       expect{subject.assign(iri: "https://remote/object", username: "foobar").save}.not_to change{subject.urls}
     end

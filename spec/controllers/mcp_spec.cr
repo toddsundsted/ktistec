@@ -243,6 +243,8 @@ Spectator.describe McpController do
       end
 
       context "with paginate_collection tool" do
+        let_create!(account, named: alice, username: "alice")
+
         it "returns error for missing arguments" do
           request = %Q|{"jsonrpc": "2.0", "id": "paginate-1", "method": "tools/call", "params": {"name": "paginate_collection"}}|
 
@@ -254,8 +256,19 @@ Spectator.describe McpController do
           expect(parsed["error"]["message"]).to eq("Missing arguments")
         end
 
-        it "returns error for missing user URI" do
+        it "returns error for missing arguments" do
           request = %Q|{"jsonrpc": "2.0", "id": "paginate-2", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {}}}|
+
+          post "/mcp", JSON_HEADERS, request
+          expect(response.status_code).to eq(400)
+          parsed = JSON.parse(response.body)
+
+          expect(parsed["error"]["code"]).to eq(-32602)
+          expect(parsed["error"]["message"]).to eq("Missing user URI, collection name")
+        end
+
+        it "returns error for missing user URI" do
+          request = %Q|{"jsonrpc": "2.0", "id": "paginate-1", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"name": "timeline"}}}|
 
           post "/mcp", JSON_HEADERS, request
           expect(response.status_code).to eq(400)
@@ -276,37 +289,52 @@ Spectator.describe McpController do
           expect(parsed["error"]["message"]).to eq("Missing collection name")
         end
 
-        it "returns error for invalid user URI format" do
-          request = %Q|{"jsonrpc": "2.0", "id": "paginate-4", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "invalid://uri", "name": "timeline"}}}|
+        context "with valid collection name" do
+          it "returns error for invalid user URI" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-4", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "invalid://uri", "name": "timeline"}}}|
 
-          post "/mcp", JSON_HEADERS, request
-          expect(response.status_code).to eq(400)
-          parsed = JSON.parse(response.body)
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(400)
+            parsed = JSON.parse(response.body)
 
-          expect(parsed["error"]["code"]).to eq(-32602)
-          expect(parsed["error"]["message"]).to eq("Invalid user URI format")
+            expect(parsed["error"]["code"]).to eq(-32602)
+            expect(parsed["error"]["message"]).to eq("Invalid user URI format")
+          end
+
+          it "returns error for invalid user ID in URI" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-5", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/invalid", "name": "timeline"}}}|
+
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(400)
+            parsed = JSON.parse(response.body)
+
+            expect(parsed["error"]["code"]).to eq(-32602)
+            expect(parsed["error"]["message"]).to eq("Invalid user ID in URI")
+          end
+
+          it "returns error for non-existent user" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-6", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/999999", "name": "timeline"}}}|
+
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(400)
+            parsed = JSON.parse(response.body)
+
+            expect(parsed["error"]["code"]).to eq(-32602)
+            expect(parsed["error"]["message"]).to eq("User not found")
+          end
         end
 
-        it "returns error for invalid user ID in URI" do
-          request = %Q|{"jsonrpc": "2.0", "id": "paginate-5", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/invalid", "name": "timeline"}}}|
+        context "with valid user URI" do
+          it "returns error for invalid collection name" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-8", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "does_not_exist"}}}|
 
-          post "/mcp", JSON_HEADERS, request
-          expect(response.status_code).to eq(400)
-          parsed = JSON.parse(response.body)
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(400)
+            parsed = JSON.parse(response.body)
 
-          expect(parsed["error"]["code"]).to eq(-32602)
-          expect(parsed["error"]["message"]).to eq("Invalid user ID in URI")
-        end
-
-        it "returns error for non-existent user" do
-          request = %Q|{"jsonrpc": "2.0", "id": "paginate-6", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/999999", "name": "timeline"}}}|
-
-          post "/mcp", JSON_HEADERS, request
-          expect(response.status_code).to eq(400)
-          parsed = JSON.parse(response.body)
-
-          expect(parsed["error"]["code"]).to eq(-32602)
-          expect(parsed["error"]["message"]).to eq("User not found")
+            expect(parsed["error"]["code"]).to eq(-32602)
+            expect(parsed["error"]["message"]).to eq("Invalid collection name")
+          end
         end
 
         it "returns error for invalid page number" do
@@ -320,29 +348,49 @@ Spectator.describe McpController do
           expect(parsed["error"]["message"]).to eq("Page number must be >= 1")
         end
 
-        context "with valid user" do
-          let_create!(account, named: alice, username: "alice")
+        context "with an object in the timeline" do
+          let_create!(:object, attributed_to: alice.actor)
 
-          it "returns error for invalid collection name" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-8", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "does_not_exist"}}}|
+          before_each do
+            put_in_timeline(alice.actor, object)
+          end
+
+          it "returns timeline objects for valid request" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-9", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline"}}}|
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(400)
+            expect(response.status_code).to eq(200)
             parsed = JSON.parse(response.body)
 
-            expect(parsed["error"]["code"]).to eq(-32602)
-            expect(parsed["error"]["message"]).to eq("Invalid collection name")
+            result = parsed["result"]
+            content = result["content"].as_a
+            expect(content.size).to eq(1)
+
+            text_content = content.first
+            expect(text_content["type"]).to eq("text")
+
+            data = JSON.parse(text_content["text"].as_s)
+            expect(data["objects"].as_a).to eq(["ktistec://objects/#{object.id}"])
+            expect(data["more"]).to be_false
           end
 
           it "handles valid request with page parameter" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-9", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "page": 2}}}|
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-10", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "page": 2}}}|
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(400)
+            expect(response.status_code).to eq(200)
             parsed = JSON.parse(response.body)
 
-            expect(parsed["error"]["code"]).to eq(-32602)
-            expect(parsed["error"]["message"]).to eq("Invalid collection name")
+            result = parsed["result"]
+            content = result["content"].as_a
+            expect(content.size).to eq(1)
+
+            text_content = content.first
+            expect(text_content["type"]).to eq("text")
+
+            data = JSON.parse(text_content["text"].as_s)
+            expect(data["objects"]).to be_empty
+            expect(data["more"]).to be_false
           end
         end
       end

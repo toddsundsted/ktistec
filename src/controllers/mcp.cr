@@ -240,12 +240,16 @@ class McpController
     unless (arguments = params["arguments"]?)
       raise MCPError.new("Missing arguments", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
-    unless (user = arguments["user"]?.try(&.as_s))
-      raise MCPError.new("Missing user URI", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+
+    missing_fields = [] of String
+    missing_fields << "user URI" unless arguments["user"]?.try(&.as_s)
+    missing_fields << "collection name" unless arguments["name"]?.try(&.as_s)
+    unless missing_fields.empty?
+      raise MCPError.new("Missing #{missing_fields.join(", ")}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
-    unless (collection_name = arguments["name"]?.try(&.as_s))
-      raise MCPError.new("Missing collection name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
+
+    user = arguments["user"].as_s
+    name = arguments["name"].as_s
 
     page = arguments["page"]?.try(&.as_i) || 1
     if page < 1
@@ -258,10 +262,32 @@ class McpController
     unless (user_id = user.sub("ktistec://users/", "").to_i64?)
       raise MCPError.new("Invalid user ID in URI", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
-    unless Account.find?(user_id)
+    unless (account = Account.find?(user_id))
       raise MCPError.new("User not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
-    raise MCPError.new("Invalid collection name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    case name
+    when "timeline"
+      actor = account.actor
+      timeline = actor.timeline(page: page)
+
+      objects = timeline.map do |rel|
+        JSON::Any.new("ktistec://objects/#{rel.object.id}")
+      end
+
+      result_data = {
+        "objects" => objects.to_a,
+        "more" => timeline.more?
+      }
+
+      JSON::Any.new({
+        "content" => JSON::Any.new([JSON::Any.new({
+          "type" => JSON::Any.new("text"),
+          "text" => JSON::Any.new(result_data.to_json)
+        })])
+      })
+    else
+      raise MCPError.new("Invalid collection name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
   end
 end

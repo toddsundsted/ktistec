@@ -102,6 +102,8 @@ module ActivityPub
 
     has_many filter_terms, inverse_of: actor
 
+    # the implementation of attachments follows Mastodon's design
+
     struct Attachment
       include JSON::Serializable
 
@@ -714,9 +716,12 @@ private module ActorModelHelper
       "icon" => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
       "image" => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
       "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
-      "attachments" => attachments_from_json_ld(
-        json.dig?("https://www.w3.org/ns/activitystreams#attachment")
-      )
+      "attachments" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
+        name = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
+        type = Ktistec::JSON_LD.dig?(attachment, "@type").presence
+        value = Ktistec::JSON_LD.dig?(attachment, "http://schema.org#value").presence
+        ActivityPub::Actor::Attachment.new(name, type, value) if name && type && value
+      end
     }.compact
   end
 
@@ -739,21 +744,6 @@ private module ActorModelHelper
       elsif icons
         icons.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
       end
-    end
-  end
-
-  def self.attachments_from_json_ld(entry)
-    entry_not_nil = (entry.try(&.as_a) || [] of JSON::Any).not_nil!
-
-    entry_not_nil.reduce([] of ActivityPub::Actor::Attachment) do |memo, a|
-      name = (Ktistec::JSON_LD.dig?(a, "https://www.w3.org/ns/activitystreams#name", "und") || "").not_nil!
-      type = (a.dig?("@type").try(&.as_s) || "").not_nil!
-      value = (a.dig?("http://schema.org#value").try(&.as_s) || "").not_nil!
-
-      unless name.empty? || value.empty?
-        memo << ActivityPub::Actor::Attachment.new(name, type, value)
-      end
-      memo
     end
   end
 end

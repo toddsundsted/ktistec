@@ -125,7 +125,49 @@ Spectator.describe McpController do
       end
     end
 
+    context "with resources/templates/list request" do
+      let(templates_list_request) { %Q|{"jsonrpc": "2.0", "id": "templates-1", "method": "resources/templates/list"}| }
+
+      it "returns object template" do
+        post "/mcp", JSON_HEADERS, templates_list_request
+        expect(response.status_code).to eq(200)
+        parsed = JSON.parse(response.body)
+
+        result = parsed["result"]
+        templates = result["resourceTemplates"].as_a
+        expect(templates.size).to eq(1)
+
+        object_template = templates.first
+        expect(object_template["uriTemplate"]).to eq("ktistec://objects/{id}")
+        expect(object_template["name"]).to eq("Object")
+        expect(object_template["description"]).to eq("ActivityPub objects")
+        expect(object_template["mimeType"]).to eq("application/json")
+      end
+    end
+
     context "with resources/read request" do
+      it "returns error for missing URI parameter" do
+        request = %Q|{"jsonrpc": "2.0", "id": "read-3", "method": "resources/read", "params": {}}|
+
+        post "/mcp", JSON_HEADERS, request
+        expect(response.status_code).to eq(400)
+        parsed = JSON.parse(response.body)
+
+        expect(parsed["error"]["code"]).to eq(-32602)
+        expect(parsed["error"]["message"]).to eq("Missing URI parameter")
+      end
+
+      it "returns error for unsupported schema" do
+        request = %Q|{"jsonrpc": "2.0", "id": "read-obj-3", "method": "resources/read", "params": {"uri": "ktistec://foo/bar"}}|
+
+        post "/mcp", JSON_HEADERS, request
+        expect(response.status_code).to eq(400)
+        parsed = JSON.parse(response.body)
+
+        expect(parsed["error"]["code"]).to eq(-32602)
+        expect(parsed["error"]["message"]).to eq("Unsupported URI scheme: ktistec://foo/bar")
+      end
+
       context "given a user" do
         let_create!(
           actor,
@@ -185,28 +227,66 @@ Spectator.describe McpController do
           urls = json["urls"].as_a
           expect(urls).to eq(["https://test.test/@alice"])
         end
+
+        it "returns error for invalid user URI" do
+          request = %Q|{"jsonrpc": "2.0", "id": "read-2", "method": "resources/read", "params": {"uri": "ktistec://users/999999"}}|
+
+          post "/mcp", JSON_HEADERS, request
+          expect(response.status_code).to eq(400)
+          parsed = JSON.parse(response.body)
+
+          expect(parsed["error"]["code"]).to eq(-32602)
+          expect(parsed["error"]["message"]).to eq("User not found")
+        end
       end
 
-      it "returns error for invalid URI" do
-        request = %Q|{"jsonrpc": "2.0", "id": "read-2", "method": "resources/read", "params": {"uri": "ktistec://users/999999"}}|
+      context "given an object" do
+        let_create!(
+          object,
+          name: "Test Object",
+          summary: "This is a summary",
+          content: "This is the content",
+          media_type: "text/html",
+          language: "en",
+        )
 
-        post "/mcp", JSON_HEADERS, request
-        expect(response.status_code).to eq(400)
-        parsed = JSON.parse(response.body)
+        it "returns object data for valid URI" do
+          uri = "ktistec://objects/#{object.id}"
+          request = %Q|{"jsonrpc": "2.0", "id": "read-obj-1", "method": "resources/read", "params": {"uri": "#{uri}"}}|
 
-        expect(parsed["error"]["code"]).to eq(-32602)
-        expect(parsed["error"]["message"]).to eq("User not found")
-      end
+          post "/mcp", JSON_HEADERS, request
+          expect(response.status_code).to eq(200)
+          parsed = JSON.parse(response.body)
 
-      it "returns error for missing URI parameter" do
-        request = %Q|{"jsonrpc": "2.0", "id": "read-3", "method": "resources/read", "params": {}}|
+          result = parsed["result"]
+          contents = result["contents"].as_a
+          expect(contents.size).to eq(1)
 
-        post "/mcp", JSON_HEADERS, request
-        expect(response.status_code).to eq(400)
-        parsed = JSON.parse(response.body)
+          content = contents.first
+          expect(content["uri"]).to eq(uri)
+          expect(content["mimeType"]).to eq("application/json")
+          expect(content["name"]).to eq("Test Object")
 
-        expect(parsed["error"]["code"]).to eq(-32602)
-        expect(parsed["error"]["message"]).to eq("Missing URI parameter")
+          text = content["text"].as_s
+          json = JSON.parse(text)
+
+          expect(json["name"]).to eq("Test Object")
+          expect(json["summary"]).to eq("This is a summary")
+          expect(json["content"]).to eq("This is the content")
+          expect(json["media_type"]).to eq("text/html")
+          expect(json["language"]).to eq("en")
+        end
+
+        it "returns error for invalid object URI" do
+          request = %Q|{"jsonrpc": "2.0", "id": "read-obj-2", "method": "resources/read", "params": {"uri": "ktistec://objects/999999"}}|
+
+          post "/mcp", JSON_HEADERS, request
+          expect(response.status_code).to eq(400)
+          parsed = JSON.parse(response.body)
+
+          expect(parsed["error"]["code"]).to eq(-32602)
+          expect(parsed["error"]["message"]).to eq("Object not found")
+        end
       end
     end
 

@@ -1,6 +1,7 @@
 require "../framework/controller"
 require "../utils/json_rpc"
 require "../models/account"
+require "../models/activity_pub/object"
 
 class MCPError < Exception
   getter code : Int32
@@ -69,6 +70,9 @@ class McpController
               json.field "resources" do
                 json.object {}
               end
+              json.field "resourceTemplates" do
+                json.object {}
+              end
               json.field "tools" do
                 json.object {}
               end
@@ -97,6 +101,9 @@ class McpController
       JSON::RPC::Response.new(request_id, result)
     when "resources/read"
       result = handle_resources_read(request)
+      JSON::RPC::Response.new(request_id, result)
+    when "resources/templates/list"
+      result = handle_resources_templates_list(request)
       JSON::RPC::Response.new(request_id, result)
     when "tools/list"
       result = handle_tools_list(request)
@@ -133,6 +140,20 @@ class McpController
     })
   end
 
+  private def self.handle_resources_templates_list(request : JSON::RPC::Request) : JSON::Any
+    templates = [
+      JSON::Any.new({
+        "uriTemplate" => JSON::Any.new("ktistec://objects/{id}"),
+        "mimeType" => JSON::Any.new("application/json"),
+        "name" => JSON::Any.new("Object"),
+        "description" => JSON::Any.new("ActivityPub objects"),
+      })
+    ]
+    JSON::Any.new({
+      "resourceTemplates" => JSON::Any.new(templates)
+    })
+  end
+
   private def self.handle_resources_read(request : JSON::RPC::Request) : JSON::Any
     unless (params = request.params)
       raise MCPError.new("Missing params", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -141,7 +162,6 @@ class McpController
       raise MCPError.new("Missing URI parameter", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
-    # parse ktistec://users/{id} format
     if uri =~ /^ktistec:\/\/users\/(\d+)$/
       unless (account_id = $1.to_i64?)
         raise MCPError.new("Invalid user ID in URI: #{$1}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -183,6 +203,45 @@ class McpController
           JSON::Any.new(user_data)
         ])
       })
+
+    elsif uri =~ /^ktistec:\/\/objects\/(\d+)$/
+      unless (object_id = $1.to_i64?)
+        raise MCPError.new("Invalid object ID in URI: #{$1}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+      unless (object = ActivityPub::Object.find?(object_id))
+        raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      object_data = {
+        "uri" => JSON::Any.new(uri),
+        "mimeType" => JSON::Any.new("application/json"),
+        "name" => JSON::Any.new(object.name || "Object #{object.id}"),
+      }
+
+      text_data = {} of String => JSON::Any
+      if (name = object.name)
+        text_data["name"] = JSON::Any.new(name)
+      end
+      if (summary = object.summary)
+        text_data["summary"] = JSON::Any.new(summary)
+      end
+      if (content = object.content)
+        text_data["content"] = JSON::Any.new(content)
+      end
+      if (media_type = object.media_type)
+        text_data["media_type"] = JSON::Any.new(media_type)
+      end
+      if (language = object.language)
+        text_data["language"] = JSON::Any.new(language)
+      end
+      object_data["text"] = JSON::Any.new(text_data.to_json)
+
+      JSON::Any.new({
+        "contents" => JSON::Any.new([
+          JSON::Any.new(object_data)
+        ])
+      })
+
     else
       raise MCPError.new("Unsupported URI scheme: #{uri}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end

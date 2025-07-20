@@ -3,6 +3,8 @@ require "../utils/json_rpc"
 require "../models/account"
 require "../models/activity_pub/object"
 
+require "markd"
+
 class MCPError < Exception
   getter code : Int32
 
@@ -154,6 +156,66 @@ class McpController
     })
   end
 
+  private def self.process_object_content(object : ActivityPub::Object) : Hash(String, JSON::Any)
+    translation = object.translations.first?
+    name = translation.try(&.name).presence || object.name.presence
+    summary = translation.try(&.summary).presence || object.summary.presence
+    content = translation.try(&.content).presence || object.content.presence
+
+    if content && object.media_type == "text/markdown"
+      content = Markd.to_html(content)
+    end
+
+    # process attachments to filter out embedded image URLs
+    embedded_urls = [] of String
+    if content && (attachments = object.attachments)
+      begin
+        html_doc = XML.parse_html(content)
+        embedded_urls = html_doc.xpath_nodes("//img/@src").map(&.text)
+      rescue
+        # continue without filtering attachments
+      end
+    end
+    filtered_attachments = object.attachments.try(&.reject { |a| a.url.in?(embedded_urls) })
+
+    result = Hash(String, JSON::Any).new
+    result["uri"] = JSON::Any.new("ktistec://objects/#{object.id}")
+
+    if name
+      result["name"] = JSON::Any.new(name)
+    end
+    if summary
+      result["summary"] = JSON::Any.new(summary)
+    end
+    if content
+      result["content"] = JSON::Any.new(content)
+    end
+    if object.media_type
+      result["media_type"] = JSON::Any.new(object.media_type)
+    end
+    if object.language
+      result["language"] = JSON::Any.new(object.language)
+    end
+
+    if filtered_attachments && !filtered_attachments.empty?
+      attachment_data = filtered_attachments.map do |attachment|
+        JSON::Any.new({
+          "url" => JSON::Any.new(attachment.url),
+          "media_type" => JSON::Any.new(attachment.media_type),
+          "caption" => JSON::Any.new(attachment.caption || "")
+        })
+      end
+      result["attachments"] = JSON::Any.new(attachment_data)
+    end
+
+    if translation
+      result["is_translated"] = JSON::Any.new(true)
+      result["original_language"] = JSON::Any.new(object.language || "")
+    end
+
+    result
+  end
+
   private def self.handle_resources_read(request : JSON::RPC::Request) : JSON::Any
     unless (params = request.params)
       raise MCPError.new("Missing params", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -212,29 +274,14 @@ class McpController
         raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
+      text_data = process_object_content(object)
+
       object_data = {
         "uri" => JSON::Any.new(uri),
         "mimeType" => JSON::Any.new("application/json"),
         "name" => JSON::Any.new(object.name || "Object #{object.id}"),
+        "text" => JSON::Any.new(text_data.to_json)
       }
-
-      text_data = {} of String => JSON::Any
-      if (name = object.name)
-        text_data["name"] = JSON::Any.new(name)
-      end
-      if (summary = object.summary)
-        text_data["summary"] = JSON::Any.new(summary)
-      end
-      if (content = object.content)
-        text_data["content"] = JSON::Any.new(content)
-      end
-      if (media_type = object.media_type)
-        text_data["media_type"] = JSON::Any.new(media_type)
-      end
-      if (language = object.language)
-        text_data["language"] = JSON::Any.new(language)
-      end
-      object_data["text"] = JSON::Any.new(text_data.to_json)
 
       JSON::Any.new({
         "contents" => JSON::Any.new([

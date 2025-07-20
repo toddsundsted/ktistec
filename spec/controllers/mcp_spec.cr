@@ -245,15 +245,12 @@ Spectator.describe McpController do
           object,
           name: "Test Object",
           summary: "This is a summary",
-          content: "This is the content",
-          media_type: "text/html",
           language: "en",
         )
+        let(uri) { "ktistec://objects/#{object.id}" }
+        let(request) { %Q|{"jsonrpc": "2.0", "id": "read-obj-1", "method": "resources/read", "params": {"uri": "#{uri}"}}| }
 
         it "returns object data for valid URI" do
-          uri = "ktistec://objects/#{object.id}"
-          request = %Q|{"jsonrpc": "2.0", "id": "read-obj-1", "method": "resources/read", "params": {"uri": "#{uri}"}}|
-
           post "/mcp", JSON_HEADERS, request
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
@@ -272,21 +269,76 @@ Spectator.describe McpController do
 
           expect(json["name"]).to eq("Test Object")
           expect(json["summary"]).to eq("This is a summary")
-          expect(json["content"]).to eq("This is the content")
-          expect(json["media_type"]).to eq("text/html")
           expect(json["language"]).to eq("en")
         end
 
-        it "returns error for invalid object URI" do
-          request = %Q|{"jsonrpc": "2.0", "id": "read-obj-2", "method": "resources/read", "params": {"uri": "ktistec://objects/999999"}}|
+        context "with HTML content" do
+          before_each { object.assign(media_type: "text/html", content: "<h1>This is the content</h1>").save }
 
-          post "/mcp", JSON_HEADERS, request
-          expect(response.status_code).to eq(400)
-          parsed = JSON.parse(response.body)
+          it "returns HTML content" do
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
 
-          expect(parsed["error"]["code"]).to eq(-32602)
-          expect(parsed["error"]["message"]).to eq("Object not found")
+            text = parsed["result"]["contents"].as_a.first["text"].as_s
+            json = JSON.parse(text)
+
+            expect(json["media_type"]).to eq("text/html")
+            expect(json["content"]).to match(%r|<h1>This is the content</h1>|)
+          end
         end
+
+        context "with Markdown content" do
+          before_each { object.assign(media_type: "text/markdown", content: "# This is the content").save }
+
+          it "returns HTML content" do
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            text = parsed["result"]["contents"].as_a.first["text"].as_s
+            json = JSON.parse(text)
+
+            expect(json["media_type"]).to eq("text/markdown")
+            expect(json["content"]).to match(%r|<h1>This is the content</h1>|)
+          end
+        end
+
+        context "with a translation" do
+          let_create!(
+            translation,
+            origin: object,
+            name: "Translated Object",
+            summary: "This is a translated summary",
+            content: "This is translated content",
+          )
+
+          it "uses translation content over original content" do
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            text = parsed["result"]["contents"].as_a.first["text"].as_s
+            json = JSON.parse(text)
+
+            expect(json["name"]).to eq("Translated Object")
+            expect(json["summary"]).to eq("This is a translated summary")
+            expect(json["content"]).to eq("This is translated content")
+            expect(json["original_language"]).to eq("en")
+            expect(json["is_translated"]).to eq(true)
+          end
+        end
+      end
+
+      it "returns error for invalid object URI" do
+        request = %Q|{"jsonrpc": "2.0", "id": "read-obj-2", "method": "resources/read", "params": {"uri": "ktistec://objects/999999"}}|
+
+        post "/mcp", JSON_HEADERS, request
+        expect(response.status_code).to eq(400)
+        parsed = JSON.parse(response.body)
+
+        expect(parsed["error"]["code"]).to eq(-32602)
+        expect(parsed["error"]["message"]).to eq("Object not found")
       end
     end
 

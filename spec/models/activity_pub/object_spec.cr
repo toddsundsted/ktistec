@@ -1053,6 +1053,23 @@ Spectator.describe ActivityPub::Object do
         expect(object5.thread(for_actor: actor).map(&.depth)).to eq([0, 1, 2, 3, 1, 2])
       end
 
+      context "when the root is missing" do
+        before_each { subject.assign(in_reply_to_iri: "https://no.where/object").save }
+
+        it "returns the thread" do
+          # the operation above changes all of the `thread` properties in the thread, so reload
+          expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5].map(&.reload!))
+        end
+      end
+
+      context "given a reply by the original poster" do
+        before_each { object4.assign(attributed_to: subject.attributed_to).save }
+
+        it "prioritizes the reply" do
+          expect(subject.thread(for_actor: actor)).to eq([subject, object4, object5, object1, object2, object3])
+        end
+      end
+
       context "given an approval" do
         it "only includes the subject" do
           expect(subject.thread(approved_by: actor)).to eq([subject])

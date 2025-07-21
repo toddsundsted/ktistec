@@ -3,7 +3,7 @@ require "../../src/controllers/mcp"
 require "../spec_helper/factory"
 require "../spec_helper/controller"
 
-Spectator.describe McpController do
+Spectator.describe MCPController do
   setup_spec
 
   JSON_HEADERS = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
@@ -351,6 +351,12 @@ Spectator.describe McpController do
         expect(tool["inputSchema"]["required"].as_a).to contain("user")
         expect(tool["inputSchema"]["required"].as_a).to contain("name")
 
+        page_param = tool["inputSchema"]["properties"]["page"]
+        expect(page_param["type"]).to eq("integer")
+        expect(page_param["minimum"]).to eq(1)
+        expect(page_param["maximum"]?).to be_nil
+        expect(page_param["description"].as_s).to contain("defaults to 1")
+
         size_param = tool["inputSchema"]["properties"]["size"]
         expect(size_param["type"]).to eq("integer")
         expect(size_param["minimum"]).to eq(1)
@@ -402,49 +408,41 @@ Spectator.describe McpController do
         end
 
         it "returns error for missing user URI" do
-          request = %Q|{"jsonrpc": "2.0", "id": "paginate-1", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"name": "timeline"}}}|
+          request = paginate_timeline_request("paginate-1", alice.id)
+          request = request.gsub(%Q|"user": "ktistec://users/#{alice.id}", |, "")
 
           post "/mcp", JSON_HEADERS, request
           expect_mcp_error(-32602, "Missing user URI")
         end
 
         it "returns error for missing collection name" do
-          request = %Q|{"jsonrpc": "2.0", "id": "paginate-3", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/1"}}}|
+          request = paginate_timeline_request("paginate-3", alice.id)
+          request = request.gsub(%Q|, "name": "timeline"|, "")
 
           post "/mcp", JSON_HEADERS, request
           expect_mcp_error(-32602, "Missing collection name")
         end
 
-        context "with valid collection name" do
-          it "returns error for invalid user URI" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-4", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "invalid://uri", "name": "timeline"}}}|
+        it "returns error for invalid user URI" do
+          request = paginate_timeline_request("paginate-4", alice.id)
+          request = request.gsub(%Q|"ktistec://users/#{alice.id}"|, %Q|"invalid://uri"|)
 
-            post "/mcp", JSON_HEADERS, request
-            expect_mcp_error(-32602, "Invalid user URI format")
-          end
-
-          it "returns error for invalid user ID in URI" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-5", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/invalid", "name": "timeline"}}}|
-
-            post "/mcp", JSON_HEADERS, request
-            expect_mcp_error(-32602, "Invalid user ID in URI")
-          end
-
-          it "returns error for non-existent user" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-6", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/999999", "name": "timeline"}}}|
-
-            post "/mcp", JSON_HEADERS, request
-            expect_mcp_error(-32602, "User not found")
-          end
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Invalid user URI format")
         end
 
-        context "with valid user URI" do
-          it "returns error for invalid collection name" do
-            request = paginate_timeline_request("paginate-8", alice.id, {"name" => "does_not_exist"})
+        it "returns error for non-existent user" do
+          request = paginate_timeline_request("paginate-6", 999999)
 
-            post "/mcp", JSON_HEADERS, request
-            expect_mcp_error(-32602, "Invalid collection name")
-          end
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "User not found")
+        end
+
+        it "returns error for invalid collection name" do
+          request = paginate_timeline_request("paginate-8", alice.id, {"name" => "does_not_exist"})
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Invalid collection name")
         end
 
         context "with an object in the timeline" do

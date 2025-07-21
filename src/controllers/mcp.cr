@@ -13,7 +13,7 @@ class MCPError < Exception
   end
 end
 
-class McpController
+class MCPController
   include Ktistec::Controller
 
   skip_auth ["/mcp"], POST
@@ -320,7 +320,7 @@ class McpController
               "description" => JSON::Any.new("Number of items per page (optional, defaults to 10, maximum 1000)"),
               "minimum" => JSON::Any.new(1),
               "maximum" => JSON::Any.new(20)
-            })
+            }),
           }),
           "required" => JSON::Any.new([JSON::Any.new("user"), JSON::Any.new("name")])
         })

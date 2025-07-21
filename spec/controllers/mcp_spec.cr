@@ -342,7 +342,7 @@ Spectator.describe MCPController do
         parsed = JSON.parse(response.body)
 
         tools = parsed["result"]["tools"].as_a
-        expect(tools.size).to eq(1)
+        expect(tools.size).to eq(2)
 
         tool = tools.first
         expect(tool["name"]).to eq("paginate_collection")
@@ -367,6 +367,7 @@ Spectator.describe MCPController do
 
     context "with tools/call request" do
       let(tools_call_request) { %Q|{"jsonrpc": "2.0", "id": "call-1", "method": "tools/call", "params": {"name": "nonexistent_tool"}}| }
+      let_create!(account, named: alice, username: "alice")
 
       it "returns protocol error for invalid tool name" do
         post "/mcp", JSON_HEADERS, tools_call_request
@@ -374,8 +375,6 @@ Spectator.describe MCPController do
       end
 
       context "with paginate_collection tool" do
-        let_create!(account, named: alice, username: "alice")
-
         def paginate_timeline_request(id, user_id, args = {} of String => String | Int32)
           base_args = {"user" => "ktistec://users/#{user_id}", "name" => "timeline"}
           args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
@@ -534,6 +533,137 @@ Spectator.describe MCPController do
 
             post "/mcp", JSON_HEADERS, request
             expect_mcp_error(-32602, "Size cannot exceed 20")
+          end
+        end
+      end
+
+      context "with count_collection_since tool" do
+        def count_timeline_since_request(id, user_id, args = {} of String => String | Int32)
+          base_args = {"user" => "ktistec://users/#{user_id}", "name" => "timeline"}
+          args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
+          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "count_collection_since", "arguments": {#{args_json}}}}|
+        end
+
+        def expect_count_response(expected_count)
+          expect(response.status_code).to eq(200)
+          parsed = JSON.parse(response.body)
+          result = parsed["result"]
+          content = result["content"].as_a
+          expect(content.size).to eq(1)
+          data = JSON.parse(content.first["text"].as_s)
+          expect(data["count"]).to eq(expected_count)
+        end
+
+        it "returns error for missing arguments" do
+          request = %Q|{"jsonrpc": "2.0", "id": "count-1", "method": "tools/call", "params": {"name": "count_collection_since"}}|
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Missing arguments")
+        end
+
+        it "returns error for missing required arguments" do
+          request = %Q|{"jsonrpc": "2.0", "id": "count-2", "method": "tools/call", "params": {"name": "count_collection_since", "arguments": {}}}|
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Missing user URI, collection name, since timestamp")
+        end
+
+        it "returns error for missing user URI" do
+          request = count_timeline_since_request("count-3", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+          request = request.gsub(%Q|"user": "ktistec://users/#{alice.id}", |, "")
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Missing user URI")
+        end
+
+        it "returns error for missing collection name" do
+          request = count_timeline_since_request("count-4", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+          request = request.gsub(%Q|, "name": "timeline"|, "")
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Missing collection name")
+        end
+
+        it "returns error for invalid user URI" do
+          request = count_timeline_since_request("count-6", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+          request = request.gsub(%Q|"ktistec://users/#{alice.id}"|, %Q|"invalid://uri"|)
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Invalid user URI format")
+        end
+
+        it "returns error for non-existent user" do
+          request = count_timeline_since_request("count-7", 999999, {"since" => "2024-01-01T00:00:00Z"})
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "User not found")
+        end
+
+        it "returns error for invalid collection name" do
+          request = count_timeline_since_request("count-8", alice.id, {"name" => "does_not_exist", "since" => "2024-01-01T00:00:00Z"})
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Invalid collection name")
+        end
+
+        it "returns error for missing since timestamp" do
+          request = count_timeline_since_request("count-5", alice.id)
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Missing since timestamp")
+        end
+
+        it "returns error for invalid since timestamp" do
+          request = count_timeline_since_request("count-9", alice.id, {"since" => "invalid-timestamp"})
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Invalid timestamp format")
+        end
+
+        it "returns zero count for empty timeline" do
+          request = count_timeline_since_request("count-10", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+
+          post "/mcp", JSON_HEADERS, request
+          expect_count_response(0)
+        end
+
+        context "with objects in timeline" do
+          let_create(object, named: object1)
+          let_create(object, named: object2)
+          let_create(object, named: object3)
+
+          before_each do
+            put_in_timeline(alice.actor, object1)
+            put_in_timeline(alice.actor, object2)
+            put_in_timeline(alice.actor, object3)
+          end
+
+          # the `since` cutoff is decided based on the `created_at`
+          # property of the associated relationship, which is slightly
+          # later than the object's `created_at` property.
+
+          it "returns count of objects since given timestamp" do
+            since_time = object2.created_at.to_rfc3339
+            request = count_timeline_since_request("count-11", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(2)
+          end
+
+          it "returns zero count when no objects match timestamp" do
+            since_time = (object3.created_at + 1.hour).to_rfc3339
+            request = count_timeline_since_request("count-12", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(0)
+          end
+
+          it "returns total count when timestamp is before all objects" do
+            since_time = (object1.created_at - 1.hour).to_rfc3339
+            request = count_timeline_since_request("count-13", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(3)
           end
         end
       end

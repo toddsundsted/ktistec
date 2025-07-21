@@ -324,6 +324,28 @@ class MCPController
           }),
           "required" => JSON::Any.new([JSON::Any.new("user"), JSON::Any.new("name")])
         })
+      }),
+      JSON::Any.new({
+        "name" => JSON::Any.new("count_collection_since"),
+        "description" => JSON::Any.new("Count items in collections since a given time"),
+        "inputSchema" => JSON::Any.new({
+          "type" => JSON::Any.new("object"),
+          "properties" => JSON::Any.new({
+            "user" => JSON::Any.new({
+              "type" => JSON::Any.new("string"),
+              "description" => JSON::Any.new("URI of the user whose collection to count")
+            }),
+            "name" => JSON::Any.new({
+              "type" => JSON::Any.new("string"),
+              "description" => JSON::Any.new("Name of the collection to count")
+            }),
+            "since" => JSON::Any.new({
+              "type" => JSON::Any.new("string"),
+              "description" => JSON::Any.new("ISO8601 time to count from")
+            })
+          }),
+          "required" => JSON::Any.new([JSON::Any.new("user"), JSON::Any.new("name"), JSON::Any.new("since")])
+        })
       })
     ]
 
@@ -343,6 +365,8 @@ class MCPController
     case name
     when "paginate_collection"
       handle_paginate_collection_tool(params)
+    when "count_collection_since"
+      handle_count_collection_since_tool(params)
     else
       raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
@@ -398,6 +422,59 @@ class MCPController
       result_data = {
         "objects" => objects.to_a,
         "more" => timeline.more?
+      }
+
+      JSON::Any.new({
+        "content" => JSON::Any.new([JSON::Any.new({
+          "type" => JSON::Any.new("text"),
+          "text" => JSON::Any.new(result_data.to_json)
+        })])
+      })
+    else
+      raise MCPError.new("Invalid collection name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+  end
+
+  private def self.handle_count_collection_since_tool(params : JSON::Any) : JSON::Any
+    unless (arguments = params["arguments"]?)
+      raise MCPError.new("Missing arguments", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+
+    missing_fields = [] of String
+    missing_fields << "user URI" unless arguments["user"]?.try(&.as_s)
+    missing_fields << "collection name" unless arguments["name"]?.try(&.as_s)
+    missing_fields << "since timestamp" unless arguments["since"]?.try(&.as_s)
+    unless missing_fields.empty?
+      raise MCPError.new("Missing #{missing_fields.join(", ")}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+
+    user = arguments["user"].as_s
+    name = arguments["name"].as_s
+    since = arguments["since"].as_s
+
+    begin
+      time = Time.parse_rfc3339(since)
+    rescue
+      raise MCPError.new("Invalid timestamp format", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+
+    unless user.starts_with?("ktistec://users/")
+      raise MCPError.new("Invalid user URI format", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+    unless (user_id = user.sub("ktistec://users/", "").to_i64?)
+      raise MCPError.new("Invalid user ID in URI", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+    unless (account = Account.find?(user_id))
+      raise MCPError.new("User not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+
+    case name
+    when "timeline"
+      actor = account.actor
+      count = actor.timeline(since: time)
+
+      result_data = {
+        "count" => count
       }
 
       JSON::Any.new({

@@ -67,6 +67,9 @@ module Ktistec::ViewHelper
       render "src/views/partials/thread_page_thread_controls.html.slang"
     end
 
+    # NOTE: This method is redefined when running tests. It sets the
+    # `max_size` to 20, regardless of account authentication.
+
     def pagination_params(env)
       max_size = env.account? ? 1000 : 20
       {

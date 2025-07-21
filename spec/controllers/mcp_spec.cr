@@ -359,6 +359,12 @@ Spectator.describe McpController do
         expect(tool["inputSchema"]["type"]).to eq("object")
         expect(tool["inputSchema"]["required"].as_a).to contain("user")
         expect(tool["inputSchema"]["required"].as_a).to contain("name")
+
+        size_param = tool["inputSchema"]["properties"]["size"]
+        expect(size_param["type"]).to eq("integer")
+        expect(size_param["minimum"]).to eq(1)
+        expect(size_param["maximum"]).to eq(20)
+        expect(size_param["description"].as_s).to contain("defaults to 10")
       end
     end
 
@@ -469,17 +475,6 @@ Spectator.describe McpController do
           end
         end
 
-        it "returns error for invalid page number" do
-          request = %Q|{"jsonrpc": "2.0", "id": "paginate-7", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/1", "name": "timeline", "page": 0}}}|
-
-          post "/mcp", JSON_HEADERS, request
-          expect(response.status_code).to eq(400)
-          parsed = JSON.parse(response.body)
-
-          expect(parsed["error"]["code"]).to eq(-32602)
-          expect(parsed["error"]["message"]).to eq("Page number must be >= 1")
-        end
-
         context "with an object in the timeline" do
           let_create!(:object, attributed_to: alice.actor)
 
@@ -505,9 +500,18 @@ Spectator.describe McpController do
             expect(data["objects"].as_a).to eq(["ktistec://objects/#{object.id}"])
             expect(data["more"]).to be_false
           end
+        end
 
-          it "handles valid request with page parameter" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-10", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "page": 2}}}|
+        context "with page and/or size parameters" do
+          before_each do
+            25.times do |i|
+              object = Factory.create(:object)
+              put_in_timeline(alice.actor, object)
+            end
+          end
+
+          it "returns 10 objects by default" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-1", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline"}}}|
 
             post "/mcp", JSON_HEADERS, request
             expect(response.status_code).to eq(200)
@@ -517,12 +521,106 @@ Spectator.describe McpController do
             content = result["content"].as_a
             expect(content.size).to eq(1)
 
-            text_content = content.first
-            expect(text_content["type"]).to eq("text")
+            data = JSON.parse(content.first["text"].as_s)
+            expect(data["objects"].as_a.size).to eq(10)
+            expect(data["more"]).to be_true
+          end
 
-            data = JSON.parse(text_content["text"].as_s)
-            expect(data["objects"]).to be_empty
+          it "returns the 3rd page of objects" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-10", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "page": 3}}}|
+
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            result = parsed["result"]
+            content = result["content"].as_a
+            expect(content.size).to eq(1)
+
+            data = JSON.parse(content.first["text"].as_s)
+            expect(data["objects"].as_a.size).to eq(5)
             expect(data["more"]).to be_false
+          end
+
+          it "returns specified number of objects when size is provided" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-2", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "size": 5}}}|
+
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            result = parsed["result"]
+            content = result["content"].as_a
+            expect(content.size).to eq(1)
+
+            data = JSON.parse(content.first["text"].as_s)
+            expect(data["objects"].as_a.size).to eq(5)
+            expect(data["more"]).to be_true
+          end
+
+          it "returns maximum number of objects when size equals limit" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-3", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "size": 20}}}|
+
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            result = parsed["result"]
+            content = result["content"].as_a
+            expect(content.size).to eq(1)
+
+            data = JSON.parse(content.first["text"].as_s)
+            expect(data["objects"].as_a.size).to eq(20)
+            expect(data["more"]).to be_true
+          end
+
+          it "works correctly with both page and size parameters" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-8", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "page": 2, "size": 5}}}|
+
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            result = parsed["result"]
+            content = result["content"].as_a
+            expect(content.size).to eq(1)
+
+            data = JSON.parse(content.first["text"].as_s)
+            expect(data["objects"].as_a.size).to eq(5)
+            expect(data["more"]).to be_true
+          end
+
+          it "returns error for invalid page number" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-7", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "page": 0}}}|
+
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(400)
+            parsed = JSON.parse(response.body)
+
+            expect(parsed["error"]["code"]).to eq(-32602)
+            expect(parsed["error"]["message"]).to eq("Page must be >= 1")
+          end
+
+          it "returns error for invalid size number" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-5", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "size": 0}}}|
+
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(400)
+            parsed = JSON.parse(response.body)
+
+            expect(parsed["error"]["code"]).to eq(-32602)
+            expect(parsed["error"]["message"]).to eq("Size must be >= 1")
+          end
+
+          it "returns error for invalid size number" do
+            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-7", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "size": 25}}}|
+
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(400)
+            parsed = JSON.parse(response.body)
+
+            expect(parsed["error"]["code"]).to eq(-32602)
+            expect(parsed["error"]["message"]).to eq("Size cannot exceed 20")
           end
         end
       end

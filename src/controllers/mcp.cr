@@ -314,6 +314,12 @@ class McpController
               "type" => JSON::Any.new("integer"),
               "description" => JSON::Any.new("Page number (optional, defaults to 1)"),
               "minimum" => JSON::Any.new(1)
+            }),
+            "size" => JSON::Any.new({
+              "type" => JSON::Any.new("integer"),
+              "description" => JSON::Any.new("Number of items per page (optional, defaults to 10, maximum 1000)"),
+              "minimum" => JSON::Any.new(1),
+              "maximum" => JSON::Any.new(20)
             })
           }),
           "required" => JSON::Any.new([JSON::Any.new("user"), JSON::Any.new("name")])
@@ -359,7 +365,15 @@ class McpController
 
     page = arguments["page"]?.try(&.as_i) || 1
     if page < 1
-      raise MCPError.new("Page number must be >= 1", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      raise MCPError.new("Page must be >= 1", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+
+    size = arguments["size"]?.try(&.as_i) || 10
+    if size < 1
+      raise MCPError.new("Size must be >= 1", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+    if size > 20
+      raise MCPError.new("Size cannot exceed 20", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
     unless user.starts_with?("ktistec://users/")
@@ -375,7 +389,7 @@ class McpController
     case name
     when "timeline"
       actor = account.actor
-      timeline = actor.timeline(page: page)
+      timeline = actor.timeline(page: page, size: size)
 
       objects = timeline.map do |rel|
         JSON::Any.new("ktistec://objects/#{rel.object.id}")

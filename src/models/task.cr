@@ -129,6 +129,9 @@ class Task
     end
   end
 
+  # NOTE: This method is redefined when running tests. Invoking
+  # `schedule` immediately invokes `perform`.
+
   def schedule(@next_attempt_at = nil)
     raise "Not runnable" unless runnable? || complete
     self.complete = false

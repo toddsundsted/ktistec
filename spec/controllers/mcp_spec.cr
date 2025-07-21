@@ -8,6 +8,13 @@ Spectator.describe McpController do
 
   JSON_HEADERS = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
 
+  def expect_mcp_error(code, message)
+    expect(response.status_code).to eq(400)
+    parsed = JSON.parse(response.body)
+    expect(parsed["error"]["code"]).to eq(code)
+    expect(parsed["error"]["message"]).to eq(message)
+  end
+
   describe "POST /mcp" do
     it "accepts JSON-RPC requests" do
       post "/mcp", JSON_HEADERS, %Q|{"jsonrpc": "2.0", "id": 1, "method": "test"}|
@@ -150,22 +157,14 @@ Spectator.describe McpController do
         request = %Q|{"jsonrpc": "2.0", "id": "read-3", "method": "resources/read", "params": {}}|
 
         post "/mcp", JSON_HEADERS, request
-        expect(response.status_code).to eq(400)
-        parsed = JSON.parse(response.body)
-
-        expect(parsed["error"]["code"]).to eq(-32602)
-        expect(parsed["error"]["message"]).to eq("Missing URI parameter")
+        expect_mcp_error(-32602, "Missing URI parameter")
       end
 
       it "returns error for unsupported schema" do
         request = %Q|{"jsonrpc": "2.0", "id": "read-obj-3", "method": "resources/read", "params": {"uri": "ktistec://foo/bar"}}|
 
         post "/mcp", JSON_HEADERS, request
-        expect(response.status_code).to eq(400)
-        parsed = JSON.parse(response.body)
-
-        expect(parsed["error"]["code"]).to eq(-32602)
-        expect(parsed["error"]["message"]).to eq("Unsupported URI scheme: ktistec://foo/bar")
+        expect_mcp_error(-32602, "Unsupported URI scheme: ktistec://foo/bar")
       end
 
       context "given a user" do
@@ -232,11 +231,7 @@ Spectator.describe McpController do
           request = %Q|{"jsonrpc": "2.0", "id": "read-2", "method": "resources/read", "params": {"uri": "ktistec://users/999999"}}|
 
           post "/mcp", JSON_HEADERS, request
-          expect(response.status_code).to eq(400)
-          parsed = JSON.parse(response.body)
-
-          expect(parsed["error"]["code"]).to eq(-32602)
-          expect(parsed["error"]["message"]).to eq("User not found")
+          expect_mcp_error(-32602, "User not found")
         end
       end
 
@@ -334,11 +329,7 @@ Spectator.describe McpController do
         request = %Q|{"jsonrpc": "2.0", "id": "read-obj-2", "method": "resources/read", "params": {"uri": "ktistec://objects/999999"}}|
 
         post "/mcp", JSON_HEADERS, request
-        expect(response.status_code).to eq(400)
-        parsed = JSON.parse(response.body)
-
-        expect(parsed["error"]["code"]).to eq(-32602)
-        expect(parsed["error"]["message"]).to eq("Object not found")
+        expect_mcp_error(-32602, "Object not found")
       end
     end
 
@@ -373,58 +364,55 @@ Spectator.describe McpController do
 
       it "returns protocol error for invalid tool name" do
         post "/mcp", JSON_HEADERS, tools_call_request
-        expect(response.status_code).to eq(400)
-        parsed = JSON.parse(response.body)
-
-        expect(parsed["error"]["code"]).to eq(-32602)
-        expect(parsed["error"]["message"]).to eq("Invalid tool name")
+        expect_mcp_error(-32602, "Invalid tool name")
       end
 
       context "with paginate_collection tool" do
         let_create!(account, named: alice, username: "alice")
 
+        def paginate_timeline_request(id, user_id, args = {} of String => String | Int32)
+          base_args = {"user" => "ktistec://users/#{user_id}", "name" => "timeline"}
+          args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
+          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {#{args_json}}}}|
+        end
+
+        def expect_paginated_response(expected_size, has_more = false)
+          expect(response.status_code).to eq(200)
+          parsed = JSON.parse(response.body)
+          result = parsed["result"]
+          content = result["content"].as_a
+          expect(content.size).to eq(1)
+          data = JSON.parse(content.first["text"].as_s)
+          expect(data["objects"].as_a.size).to eq(expected_size)
+          expect(data["more"]).to eq(has_more)
+        end
+
         it "returns error for missing arguments" do
           request = %Q|{"jsonrpc": "2.0", "id": "paginate-1", "method": "tools/call", "params": {"name": "paginate_collection"}}|
 
           post "/mcp", JSON_HEADERS, request
-          expect(response.status_code).to eq(400)
-          parsed = JSON.parse(response.body)
-
-          expect(parsed["error"]["code"]).to eq(-32602)
-          expect(parsed["error"]["message"]).to eq("Missing arguments")
+          expect_mcp_error(-32602, "Missing arguments")
         end
 
         it "returns error for missing arguments" do
           request = %Q|{"jsonrpc": "2.0", "id": "paginate-2", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {}}}|
 
           post "/mcp", JSON_HEADERS, request
-          expect(response.status_code).to eq(400)
-          parsed = JSON.parse(response.body)
-
-          expect(parsed["error"]["code"]).to eq(-32602)
-          expect(parsed["error"]["message"]).to eq("Missing user URI, collection name")
+          expect_mcp_error(-32602, "Missing user URI, collection name")
         end
 
         it "returns error for missing user URI" do
           request = %Q|{"jsonrpc": "2.0", "id": "paginate-1", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"name": "timeline"}}}|
 
           post "/mcp", JSON_HEADERS, request
-          expect(response.status_code).to eq(400)
-          parsed = JSON.parse(response.body)
-
-          expect(parsed["error"]["code"]).to eq(-32602)
-          expect(parsed["error"]["message"]).to eq("Missing user URI")
+          expect_mcp_error(-32602, "Missing user URI")
         end
 
         it "returns error for missing collection name" do
           request = %Q|{"jsonrpc": "2.0", "id": "paginate-3", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/1"}}}|
 
           post "/mcp", JSON_HEADERS, request
-          expect(response.status_code).to eq(400)
-          parsed = JSON.parse(response.body)
-
-          expect(parsed["error"]["code"]).to eq(-32602)
-          expect(parsed["error"]["message"]).to eq("Missing collection name")
+          expect_mcp_error(-32602, "Missing collection name")
         end
 
         context "with valid collection name" do
@@ -432,46 +420,30 @@ Spectator.describe McpController do
             request = %Q|{"jsonrpc": "2.0", "id": "paginate-4", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "invalid://uri", "name": "timeline"}}}|
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(400)
-            parsed = JSON.parse(response.body)
-
-            expect(parsed["error"]["code"]).to eq(-32602)
-            expect(parsed["error"]["message"]).to eq("Invalid user URI format")
+            expect_mcp_error(-32602, "Invalid user URI format")
           end
 
           it "returns error for invalid user ID in URI" do
             request = %Q|{"jsonrpc": "2.0", "id": "paginate-5", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/invalid", "name": "timeline"}}}|
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(400)
-            parsed = JSON.parse(response.body)
-
-            expect(parsed["error"]["code"]).to eq(-32602)
-            expect(parsed["error"]["message"]).to eq("Invalid user ID in URI")
+            expect_mcp_error(-32602, "Invalid user ID in URI")
           end
 
           it "returns error for non-existent user" do
             request = %Q|{"jsonrpc": "2.0", "id": "paginate-6", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/999999", "name": "timeline"}}}|
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(400)
-            parsed = JSON.parse(response.body)
-
-            expect(parsed["error"]["code"]).to eq(-32602)
-            expect(parsed["error"]["message"]).to eq("User not found")
+            expect_mcp_error(-32602, "User not found")
           end
         end
 
         context "with valid user URI" do
           it "returns error for invalid collection name" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-8", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "does_not_exist"}}}|
+            request = paginate_timeline_request("paginate-8", alice.id, {"name" => "does_not_exist"})
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(400)
-            parsed = JSON.parse(response.body)
-
-            expect(parsed["error"]["code"]).to eq(-32602)
-            expect(parsed["error"]["message"]).to eq("Invalid collection name")
+            expect_mcp_error(-32602, "Invalid collection name")
           end
         end
 
@@ -483,7 +455,7 @@ Spectator.describe McpController do
           end
 
           it "returns timeline objects for valid request" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-9", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline"}}}|
+            request = paginate_timeline_request("paginate-9", alice.id)
 
             post "/mcp", JSON_HEADERS, request
             expect(response.status_code).to eq(200)
@@ -511,116 +483,59 @@ Spectator.describe McpController do
           end
 
           it "returns 10 objects by default" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-1", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline"}}}|
+            request = paginate_timeline_request("paginate-size-1", alice.id)
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(200)
-            parsed = JSON.parse(response.body)
-
-            result = parsed["result"]
-            content = result["content"].as_a
-            expect(content.size).to eq(1)
-
-            data = JSON.parse(content.first["text"].as_s)
-            expect(data["objects"].as_a.size).to eq(10)
-            expect(data["more"]).to be_true
+            expect_paginated_response(10, true)
           end
 
           it "returns the 3rd page of objects" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-10", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "page": 3}}}|
+            request = paginate_timeline_request("paginate-10", alice.id, {"page" => 3})
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(200)
-            parsed = JSON.parse(response.body)
-
-            result = parsed["result"]
-            content = result["content"].as_a
-            expect(content.size).to eq(1)
-
-            data = JSON.parse(content.first["text"].as_s)
-            expect(data["objects"].as_a.size).to eq(5)
-            expect(data["more"]).to be_false
+            expect_paginated_response(5, false)
           end
 
           it "returns specified number of objects when size is provided" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-2", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "size": 5}}}|
+            request = paginate_timeline_request("paginate-size-2", alice.id, {"size" => 5})
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(200)
-            parsed = JSON.parse(response.body)
-
-            result = parsed["result"]
-            content = result["content"].as_a
-            expect(content.size).to eq(1)
-
-            data = JSON.parse(content.first["text"].as_s)
-            expect(data["objects"].as_a.size).to eq(5)
-            expect(data["more"]).to be_true
+            expect_paginated_response(5, true)
           end
 
           it "returns maximum number of objects when size equals limit" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-3", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "size": 20}}}|
+            request = paginate_timeline_request("paginate-size-3", alice.id, {"size" => 20})
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(200)
-            parsed = JSON.parse(response.body)
-
-            result = parsed["result"]
-            content = result["content"].as_a
-            expect(content.size).to eq(1)
-
-            data = JSON.parse(content.first["text"].as_s)
-            expect(data["objects"].as_a.size).to eq(20)
-            expect(data["more"]).to be_true
+            expect_paginated_response(20, true)
           end
 
           it "works correctly with both page and size parameters" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-8", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "page": 2, "size": 5}}}|
+            request = paginate_timeline_request("paginate-size-8", alice.id, {"page" => 2, "size" => 5})
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(200)
-            parsed = JSON.parse(response.body)
-
-            result = parsed["result"]
-            content = result["content"].as_a
-            expect(content.size).to eq(1)
-
-            data = JSON.parse(content.first["text"].as_s)
-            expect(data["objects"].as_a.size).to eq(5)
-            expect(data["more"]).to be_true
+            expect_paginated_response(5, true)
           end
 
           it "returns error for invalid page number" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-7", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "page": 0}}}|
+            request = paginate_timeline_request("paginate-7", alice.id, {"page" => 0})
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(400)
-            parsed = JSON.parse(response.body)
-
-            expect(parsed["error"]["code"]).to eq(-32602)
-            expect(parsed["error"]["message"]).to eq("Page must be >= 1")
+            expect_mcp_error(-32602, "Page must be >= 1")
           end
 
           it "returns error for invalid size number" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-5", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "size": 0}}}|
+            request = paginate_timeline_request("paginate-size-5", alice.id, {"size" => 0})
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(400)
-            parsed = JSON.parse(response.body)
-
-            expect(parsed["error"]["code"]).to eq(-32602)
-            expect(parsed["error"]["message"]).to eq("Size must be >= 1")
+            expect_mcp_error(-32602, "Size must be >= 1")
           end
 
           it "returns error for invalid size number" do
-            request = %Q|{"jsonrpc": "2.0", "id": "paginate-size-7", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {"user": "ktistec://users/#{alice.id}", "name": "timeline", "size": 25}}}|
+            request = paginate_timeline_request("paginate-size-7", alice.id, {"size" => 25})
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(400)
-            parsed = JSON.parse(response.body)
-
-            expect(parsed["error"]["code"]).to eq(-32602)
-            expect(parsed["error"]["message"]).to eq("Size cannot exceed 20")
+            expect_mcp_error(-32602, "Size cannot exceed 20")
           end
         end
       end

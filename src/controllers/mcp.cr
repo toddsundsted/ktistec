@@ -491,10 +491,12 @@ class MCPController
     case name
     when "timeline"
       actor = account.actor
+      current_time = Time.utc
       count = actor.timeline(since: time)
 
       result_data = {
-        "count" => count
+        "counted_at" => current_time.to_rfc3339,
+        "count" => count,
       }
 
       JSON::Any.new({

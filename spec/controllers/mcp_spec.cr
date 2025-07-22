@@ -561,6 +561,7 @@ Spectator.describe MCPController do
           content = result["content"].as_a
           expect(content.size).to eq(1)
           data = JSON.parse(content.first["text"].as_s)
+          expect(Time.parse_rfc3339(data["counted_at"].as_s)).to be_within(5.seconds).of(Time.utc)
           expect(data["count"]).to eq(expected_count)
         end
 

@@ -113,6 +113,7 @@ class RelationshipsController
           Log.trace { "[#{request_id}] checking object of delete iri=#{object_iri}" }
           headers = Ktistec::Signature.sign(account.actor, object_iri, method: :get)
           headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
+          headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
           response = HTTP::Client.get(object_iri, headers)
           if response.status_code.in?([404, 410])
             verified = true

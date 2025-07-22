@@ -27,6 +27,7 @@ module Ktistec
           client.write_timeout = 5.seconds
           client.read_timeout = 5.seconds
           signed_headers = Ktistec::Signature.sign(key_pair, url, method: :get).merge!(headers)
+          signed_headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
           response = client.get(uri.request_target, signed_headers)
           case response.status_code
           when 200

@@ -18,7 +18,11 @@ class MCPController
 
   Log = ::Log.for(self)
 
-  skip_auth ["/mcp"], POST
+  skip_auth ["/mcp"], GET, POST
+
+  get "/mcp" do |env|
+    method_not_allowed ["POST"]
+  end
 
   private macro mcp_response(status_code, response)
     env.response.content_type = "application/json"

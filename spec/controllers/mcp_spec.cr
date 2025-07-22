@@ -15,6 +15,16 @@ Spectator.describe MCPController do
     expect(parsed["error"]["message"]).to eq(message)
   end
 
+  describe "GET /mcp" do
+    it "returns method not allowed" do
+      get "/mcp", JSON_HEADERS
+      expect(response.status_code).to eq(405)
+      expect(response.headers["Allow"]).to eq("POST")
+      expect(response.content_type).to contain("application/json")
+      expect(response.body).to match(/"method not allowed"/)
+    end
+  end
+
   describe "POST /mcp" do
     it "accepts JSON-RPC requests" do
       post "/mcp", JSON_HEADERS, %Q|{"jsonrpc": "2.0", "id": 1, "method": "test"}|

@@ -16,6 +16,8 @@ end
 class MCPController
   include Ktistec::Controller
 
+  Log = ::Log.for(self)
+
   skip_auth ["/mcp"], POST
 
   private macro mcp_response(status_code, response)
@@ -36,6 +38,7 @@ class MCPController
       end
 
       request = JSON::RPC::Request.from_json(json)
+      Log.debug { "new request: method=#{request.method} id=#{request.id}" }
 
       if request.notification?
         handle_notification(request)
@@ -43,19 +46,23 @@ class MCPController
       elsif (response = handle_request(request))
         mcp_response 200, response
       else
+        Log.warn { "method not found: #{request.method}" }
         error = JSON::RPC::Response::Error.new(JSON::RPC::ErrorCodes::METHOD_NOT_FOUND, "Method not found: #{request.method}")
         error_response = JSON::RPC::Response.new(request.id.not_nil!, error: error)
         mcp_response 404, error_response
       end
-    rescue JSON::ParseException
+    rescue ex: JSON::ParseException
+      Log.warn { "parse error: #{ex.message}" }
       error = JSON::RPC::Response::Error.new(JSON::RPC::ErrorCodes::PARSE_ERROR, "Parse error")
       error_response = JSON::RPC::Response.new("null", error: error)
       mcp_response 400, error_response
     rescue err : MCPError
+      Log.warn { "MCP error: #{err.message} (code=#{err.code})" }
       error = JSON::RPC::Response::Error.new(err.code, err.message || "Unknown error")
       error_response = JSON::RPC::Response.new(request.try(&.id) || "null", error: error)
       mcp_response 400, error_response
-    rescue
+    rescue ex
+      Log.warn { "internal error: #{ex.message}" }
       error = JSON::RPC::Response::Error.new(JSON::RPC::ErrorCodes::INTERNAL_ERROR, "Internal error")
       error_response = JSON::RPC::Response.new("null", error: error)
       mcp_response 500, error_response
@@ -94,6 +101,8 @@ class MCPController
 
   private def self.handle_request(request : JSON::RPC::Request) : JSON::RPC::Response?
     request_id = request.id.not_nil!
+    Log.debug { "dispatching: method=#{request.method}" }
+
     case request.method
     when "initialize"
       result = handle_initialize(request)
@@ -362,12 +371,15 @@ class MCPController
       raise MCPError.new("Missing tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
+    Log.debug { "calling tool: #{name}" }
+
     case name
     when "paginate_collection"
       handle_paginate_collection_tool(params)
     when "count_collection_since"
       handle_count_collection_since_tool(params)
     else
+      Log.warn { "unknown tool: #{name}" }
       raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
   end
@@ -409,6 +421,8 @@ class MCPController
     unless (account = Account.find?(user_id))
       raise MCPError.new("User not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
+
+    Log.debug { "paginate_collection: user=#{user} collection=#{name} page=#{page} size=#{size}" }
 
     case name
     when "timeline"
@@ -467,6 +481,8 @@ class MCPController
     unless (account = Account.find?(user_id))
       raise MCPError.new("User not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
+
+    Log.debug { "count_collection_since: user=#{user} collection=#{name} since=#{since}" }
 
     case name
     when "timeline"

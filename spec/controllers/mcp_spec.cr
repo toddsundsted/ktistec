@@ -343,6 +343,16 @@ Spectator.describe MCPController do
       end
     end
 
+    MCPController.def_tool("test_tool", "A test tool for `def_tool` macro testing", [
+      {name: "user", type: "string", description: "User ID", required: true, matches: /^[a-z]+[a-z0-9_]+$/},
+      {name: "query", type: "string", description: "Search terms", required: true},
+      {name: "limit", type: "integer", description: "Maximum results", minimum: 10, maximum: 50, default: 15},
+      {name: "include_replies", type: "boolean", description: "Include reply posts", default: false},
+      {name: "created_at", type: "time", description: "Creation timestamp"},
+    ]) do
+      {user: user, query: query, limit: limit, include_replies: include_replies, created_at: created_at, quota: 99}
+    end
+
     context "with tools/list request" do
       let(tools_list_request) { %Q|{"jsonrpc": "2.0", "id": "tools-1", "method": "tools/list"}| }
 
@@ -352,26 +362,206 @@ Spectator.describe MCPController do
         parsed = JSON.parse(response.body)
 
         tools = parsed["result"]["tools"].as_a
-        expect(tools.size).to eq(2)
+        expect(tools.size).to eq(3)
 
-        tool = tools.first
-        expect(tool["name"]).to eq("paginate_collection")
-        expect(tool["description"]).to eq("Paginate through collections of objects, activities, and actors")
-        expect(tool["inputSchema"]["type"]).to eq("object")
-        expect(tool["inputSchema"]["required"].as_a).to contain("user")
-        expect(tool["inputSchema"]["required"].as_a).to contain("name")
+        test_tool = tools[-1]
+        expect(test_tool["name"]).to eq("test_tool")
+        expect(test_tool["description"]).to eq("A test tool for `def_tool` macro testing")
 
-        page_param = tool["inputSchema"]["properties"]["page"]
-        expect(page_param["type"]).to eq("integer")
-        expect(page_param["minimum"]).to eq(1)
-        expect(page_param["maximum"]?).to be_nil
-        expect(page_param["description"].as_s).to contain("defaults to 1")
+        input_schema = test_tool["inputSchema"]
+        expect(input_schema["type"]).to eq("object")
 
-        size_param = tool["inputSchema"]["properties"]["size"]
-        expect(size_param["type"]).to eq("integer")
-        expect(size_param["minimum"]).to eq(1)
-        expect(size_param["maximum"]).to eq(20)
-        expect(size_param["description"].as_s).to contain("defaults to 10")
+        properties = input_schema["properties"]
+        expect(properties["user"]["type"]).to eq("string")
+        expect(properties["user"]["description"]).to eq("User ID")
+
+        expect(properties["query"]["type"]).to eq("string")
+        expect(properties["query"]["description"]).to eq("Search terms")
+
+        expect(properties["limit"]["type"]).to eq("integer")
+        expect(properties["limit"]["description"]).to eq("Maximum results")
+        expect(properties["limit"]["minimum"]).to eq(10)
+        expect(properties["limit"]["maximum"]).to eq(50)
+
+        expect(properties["include_replies"]["type"]).to eq("boolean")
+        expect(properties["include_replies"]["description"]).to eq("Include reply posts")
+
+        expect(properties["created_at"]["type"]).to eq("string") # "time" is represented as a JSON schema "string"
+        expect(properties["created_at"]["description"]).to eq("Creation timestamp")
+
+        required_fields = input_schema["required"].as_a.map(&.as_s)
+        expect(required_fields).to contain("user")
+        expect(required_fields).to contain("query")
+        expect(required_fields).to_not contain("limit")
+        expect(required_fields).to_not contain("include_replies")
+      end
+    end
+
+    context "test_tool validation" do
+      it "validates and extracts arguments" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("test_user"),
+            "query" => JSON::Any.new("test query"),
+            "limit" => JSON::Any.new(25),
+            "include_replies" => JSON::Any.new(true),
+          })
+        })
+
+        result = MCPController.handle_test_tool(params)
+        expect(result[:user]).to eq("test_user")
+        expect(result[:query]).to eq("test query")
+        expect(result[:limit]).to eq(25)
+        expect(result[:include_replies]).to be_true
+      end
+
+      it "supplies default values for optional arguments" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("test_user"),
+            "query" => JSON::Any.new("test query"),
+          })
+        })
+
+        result = MCPController.handle_test_tool(params)
+        expect(result[:limit]).to eq(15)
+        expect(result[:include_replies]).to be_false
+      end
+
+      it "invokes block" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("test_user"),
+            "query" => JSON::Any.new("test query"),
+            "limit" => JSON::Any.new(25),
+            "include_replies" => JSON::Any.new(true),
+          })
+        })
+
+        result = MCPController.handle_test_tool(params)
+        expect(result[:quota]).to eq(99)
+      end
+
+      it "validates missing arguments parameter" do
+        params = JSON::Any.new({} of String => JSON::Any)
+
+        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /Missing arguments/)
+      end
+
+      it "validates required arguments" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({} of String => JSON::Any),
+        })
+
+        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /Missing user, query/)
+      end
+
+      it "validates string type" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new(123),
+            "query" => JSON::Any.new("test query"),
+          })
+        })
+
+        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`user` must be a string/)
+      end
+
+      it "validates string regex" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("INVALID123"),
+            "query" => JSON::Any.new("test query"),
+          })
+        })
+
+        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`user` format is invalid/)
+      end
+
+      it "validates integer type" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("test_user"),
+            "query" => JSON::Any.new("test query"),
+            "limit" => JSON::Any.new("not_an_integer"),
+          })
+        })
+
+        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`limit` must be an integer/)
+      end
+
+      it "validates integer maximum" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("test_user"),
+            "query" => JSON::Any.new("test query"),
+            "limit" => JSON::Any.new(100),
+          })
+        })
+
+        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`limit` must be <= 50/)
+      end
+
+      it "validates integer minimum" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("test_user"),
+            "query" => JSON::Any.new("test query"),
+            "limit" => JSON::Any.new(1),
+          })
+        })
+
+        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`limit` must be >= 1/)
+      end
+
+      it "validates boolean type" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("test_user"),
+            "query" => JSON::Any.new("test query"),
+            "include_replies" => JSON::Any.new("not_a_boolean"),
+          })
+        })
+
+        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`include_replies` must be a boolean/)
+      end
+
+      it "validates time type" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("test_user"),
+            "query" => JSON::Any.new("test query"),
+            "created_at" => JSON::Any.new(123),
+          })
+        })
+
+        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`created_at` must be a time format string/)
+      end
+
+      it "validates time format" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("test_user"),
+            "query" => JSON::Any.new("test query"),
+            "created_at" => JSON::Any.new("invalid-time-format"),
+          })
+        })
+
+        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`created_at` must be a valid RFC3339 timestamp/)
+      end
+
+      it "parses valid time strings into Time objects" do
+        timestamp = "2024-01-15T10:30:00Z"
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "user" => JSON::Any.new("test_user"),
+            "query" => JSON::Any.new("test query"),
+            "created_at" => JSON::Any.new(timestamp),
+          })
+        })
+
+        result = MCPController.handle_test_tool(params)
+        expect(result[:created_at].as(Time).to_rfc3339).to eq(timestamp)
       end
     end
 
@@ -402,56 +592,18 @@ Spectator.describe MCPController do
           expect(data["more"]).to eq(has_more)
         end
 
-        it "returns error for missing arguments" do
-          request = %Q|{"jsonrpc": "2.0", "id": "paginate-1", "method": "tools/call", "params": {"name": "paginate_collection"}}|
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Missing arguments")
-        end
-
-        it "returns error for missing arguments" do
-          request = %Q|{"jsonrpc": "2.0", "id": "paginate-2", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {}}}|
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Missing user URI, collection name")
-        end
-
-        it "returns error for missing user URI" do
-          request = paginate_timeline_request("paginate-1", alice.id)
-          request = request.gsub(%Q|"user": "ktistec://users/#{alice.id}", |, "")
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Missing user URI")
-        end
-
-        it "returns error for missing collection name" do
-          request = paginate_timeline_request("paginate-3", alice.id)
-          request = request.gsub(%Q|, "name": "timeline"|, "")
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Missing collection name")
-        end
-
-        it "returns error for invalid user URI" do
-          request = paginate_timeline_request("paginate-4", alice.id)
-          request = request.gsub(%Q|"ktistec://users/#{alice.id}"|, %Q|"invalid://uri"|)
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Invalid user URI format")
-        end
-
         it "returns error for non-existent user" do
           request = paginate_timeline_request("paginate-6", 999999)
 
           post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "User not found")
+          expect_mcp_error(-32602, "`user` not found")
         end
 
         it "returns error for invalid collection name" do
           request = paginate_timeline_request("paginate-8", alice.id, {"name" => "does_not_exist"})
 
           post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Invalid collection name")
+          expect_mcp_error(-32602, "`does_not_exist` unsupported")
         end
 
         context "with an object in the timeline" do
@@ -523,27 +675,6 @@ Spectator.describe MCPController do
             post "/mcp", JSON_HEADERS, request
             expect_paginated_response(5, true)
           end
-
-          it "returns error for invalid page number" do
-            request = paginate_timeline_request("paginate-7", alice.id, {"page" => 0})
-
-            post "/mcp", JSON_HEADERS, request
-            expect_mcp_error(-32602, "Page must be >= 1")
-          end
-
-          it "returns error for invalid size number" do
-            request = paginate_timeline_request("paginate-size-5", alice.id, {"size" => 0})
-
-            post "/mcp", JSON_HEADERS, request
-            expect_mcp_error(-32602, "Size must be >= 1")
-          end
-
-          it "returns error for invalid size number" do
-            request = paginate_timeline_request("paginate-size-7", alice.id, {"size" => 25})
-
-            post "/mcp", JSON_HEADERS, request
-            expect_mcp_error(-32602, "Size cannot exceed 20")
-          end
         end
       end
 
@@ -565,70 +696,18 @@ Spectator.describe MCPController do
           expect(data["count"]).to eq(expected_count)
         end
 
-        it "returns error for missing arguments" do
-          request = %Q|{"jsonrpc": "2.0", "id": "count-1", "method": "tools/call", "params": {"name": "count_collection_since"}}|
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Missing arguments")
-        end
-
-        it "returns error for missing required arguments" do
-          request = %Q|{"jsonrpc": "2.0", "id": "count-2", "method": "tools/call", "params": {"name": "count_collection_since", "arguments": {}}}|
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Missing user URI, collection name, since timestamp")
-        end
-
-        it "returns error for missing user URI" do
-          request = count_timeline_since_request("count-3", alice.id, {"since" => "2024-01-01T00:00:00Z"})
-          request = request.gsub(%Q|"user": "ktistec://users/#{alice.id}", |, "")
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Missing user URI")
-        end
-
-        it "returns error for missing collection name" do
-          request = count_timeline_since_request("count-4", alice.id, {"since" => "2024-01-01T00:00:00Z"})
-          request = request.gsub(%Q|, "name": "timeline"|, "")
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Missing collection name")
-        end
-
-        it "returns error for invalid user URI" do
-          request = count_timeline_since_request("count-6", alice.id, {"since" => "2024-01-01T00:00:00Z"})
-          request = request.gsub(%Q|"ktistec://users/#{alice.id}"|, %Q|"invalid://uri"|)
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Invalid user URI format")
-        end
-
         it "returns error for non-existent user" do
           request = count_timeline_since_request("count-7", 999999, {"since" => "2024-01-01T00:00:00Z"})
 
           post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "User not found")
+          expect_mcp_error(-32602, "`user` not found")
         end
 
         it "returns error for invalid collection name" do
           request = count_timeline_since_request("count-8", alice.id, {"name" => "does_not_exist", "since" => "2024-01-01T00:00:00Z"})
 
           post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Invalid collection name")
-        end
-
-        it "returns error for missing since timestamp" do
-          request = count_timeline_since_request("count-5", alice.id)
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Missing since timestamp")
-        end
-
-        it "returns error for invalid since timestamp" do
-          request = count_timeline_since_request("count-9", alice.id, {"since" => "invalid-timestamp"})
-
-          post "/mcp", JSON_HEADERS, request
-          expect_mcp_error(-32602, "Invalid timestamp format")
+          expect_mcp_error(-32602, "`does_not_exist` unsupported")
         end
 
         it "returns zero count for empty timeline" do

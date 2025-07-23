@@ -307,123 +307,150 @@ class MCPController
     end
   end
 
-  private def self.handle_tools_list(request : JSON::RPC::Request) : JSON::Any
-    tools = [
-      JSON::Any.new({
-        "name" => JSON::Any.new("paginate_collection"),
-        "description" => JSON::Any.new("Paginate through collections of objects, activities, and actors"),
-        "inputSchema" => JSON::Any.new({
-          "type" => JSON::Any.new("object"),
-          "properties" => JSON::Any.new({
-            "user" => JSON::Any.new({
-              "type" => JSON::Any.new("string"),
-              "description" => JSON::Any.new("URI of the user whose collections to paginate")
-            }),
-            "name" => JSON::Any.new({
-              "type" => JSON::Any.new("string"),
-              "description" => JSON::Any.new("Name of the collection to paginate")
-            }),
-            "page" => JSON::Any.new({
-              "type" => JSON::Any.new("integer"),
-              "description" => JSON::Any.new("Page number (optional, defaults to 1)"),
-              "minimum" => JSON::Any.new(1)
-            }),
-            "size" => JSON::Any.new({
-              "type" => JSON::Any.new("integer"),
-              "description" => JSON::Any.new("Number of items per page (optional, defaults to 10, maximum 1000)"),
-              "minimum" => JSON::Any.new(1),
-              "maximum" => JSON::Any.new(20)
-            }),
-          }),
-          "required" => JSON::Any.new([JSON::Any.new("user"), JSON::Any.new("name")])
-        })
-      }),
-      JSON::Any.new({
-        "name" => JSON::Any.new("count_collection_since"),
-        "description" => JSON::Any.new("Count items in collections since a given time"),
-        "inputSchema" => JSON::Any.new({
-          "type" => JSON::Any.new("object"),
-          "properties" => JSON::Any.new({
-            "user" => JSON::Any.new({
-              "type" => JSON::Any.new("string"),
-              "description" => JSON::Any.new("URI of the user whose collection to count")
-            }),
-            "name" => JSON::Any.new({
-              "type" => JSON::Any.new("string"),
-              "description" => JSON::Any.new("Name of the collection to count")
-            }),
-            "since" => JSON::Any.new({
-              "type" => JSON::Any.new("string"),
-              "description" => JSON::Any.new("ISO8601 time to count from")
-            })
-          }),
-          "required" => JSON::Any.new([JSON::Any.new("user"), JSON::Any.new("name"), JSON::Any.new("since")])
-        })
-      })
-    ]
+  alias ToolPropertyDefinition =
+    NamedTuple(
+      name: String,
+      type: String,
+      description: String,
+      required: Bool,
+      matches: Regex?,
+      minimum: Int32?,
+      maximum: Int32?,
+      default: String | Int32 | Bool | Time | Nil,
+    )
 
-    JSON::Any.new({
-      "tools" => JSON::Any.new(tools)
-    })
+  alias ToolDefinition =
+    NamedTuple(
+      name: String,
+      description: String,
+      properties: Array(ToolPropertyDefinition),
+    )
+
+  TOOL_DEFINITIONS = [] of ToolDefinition
+
+  macro def_tool(name, description, properties = [] of ToolPropertyDefinition, &block)
+    {% TOOL_DEFINITIONS << {name: name, description: description, properties: properties} %}
+
+    def MCPController.handle_{{name.id}}(params : JSON::Any)
+      unless (arguments = params["arguments"]?)
+        raise MCPError.new("Missing arguments", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      missing_fields = [] of String
+      {% for prop in properties %}
+        {% if prop[:required] %}
+          missing_fields << {{prop[:name]}} unless arguments[{{prop[:name]}}]?
+        {% end %}
+      {% end %}
+      unless missing_fields.empty?
+        raise MCPError.new("Missing #{missing_fields.join(", ")}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      {% for prop in properties %}
+        if (value = arguments[{{prop[:name]}}]?)
+          {% if prop[:type] == "integer" %}
+            unless value.raw.is_a?(Int32) || value.raw.is_a?(Int64)
+              raise MCPError.new("`#{{{prop[:name]}}}` must be an integer", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+            end
+          {% elsif prop[:type] == "boolean" %}
+            unless value.raw.is_a?(Bool)
+              raise MCPError.new("`#{{{prop[:name]}}}` must be a boolean", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+            end
+          {% elsif prop[:type] == "string" %}
+            unless value.raw.is_a?(String)
+              raise MCPError.new("`#{{{prop[:name]}}}` must be a string", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+            end
+          {% elsif prop[:type] == "time" %}
+            unless value.raw.is_a?(String)
+              raise MCPError.new("`#{{{prop[:name]}}}` must be a time format string", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+            end
+          {% end %}
+        end
+      {% end %}
+
+      {% for prop in properties %}
+        {% if prop[:type] == "integer" %}
+          if (value = arguments[{{prop[:name]}}]?)
+            int_value = value.as_i
+            {% if prop[:minimum] %}
+              if int_value < {{prop[:minimum]}}
+                raise MCPError.new("`#{{{prop[:name]}}}` must be >= {{prop[:minimum]}}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+              end
+            {% end %}
+            {% if prop[:maximum] %}
+              if int_value > {{prop[:maximum]}}
+                raise MCPError.new("`#{{{prop[:name]}}}` must be <= {{prop[:maximum]}}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+              end
+            {% end %}
+          end
+        {% elsif prop[:type] == "string" && prop[:matches] %}
+          if (value = arguments[{{prop[:name]}}]?)
+            string_value = value.as_s
+            unless {{prop[:matches]}}.match(string_value)
+              raise MCPError.new("`#{{{prop[:name]}}}` format is invalid", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+            end
+          end
+        {% elsif prop[:type] == "time" %}
+          if (value = arguments[{{prop[:name]}}]?)
+            time_string = value.as_s
+            begin
+              Time.parse_rfc3339(time_string)
+            rescue
+              raise MCPError.new("`#{{{prop[:name]}}}` must be a valid RFC3339 timestamp", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+            end
+          end
+        {% end %}
+      {% end %}
+
+      {% for prop in properties %}
+        {{prop[:name].id}} =
+          {% if prop[:required] %} \
+            {% if prop[:type] == "string" %}
+              arguments[{{prop[:name]}}].as_s
+            {% elsif prop[:type] == "integer" %}
+              arguments[{{prop[:name]}}].as_i
+            {% elsif prop[:type] == "boolean" %}
+              arguments[{{prop[:name]}}].as_bool
+            {% elsif prop[:type] == "time" %}
+              Time.parse_rfc3339(arguments[{{prop[:name]}}].as_s)
+            {% end %}
+          {% else %}
+            {% if prop[:type] == "string" %}
+              arguments[{{prop[:name]}}]?.try(&.as_s) || {{prop[:default]}}
+            {% elsif prop[:type] == "integer" %}
+              arguments[{{prop[:name]}}]?.try(&.as_i) || {{prop[:default]}}
+            {% elsif prop[:type] == "boolean" %}
+              arguments[{{prop[:name]}}]?.try(&.as_bool) || {{prop[:default]}}
+            {% elsif prop[:type] == "time" %}
+              arguments[{{prop[:name]}}]? ? Time.parse_rfc3339(arguments[{{prop[:name]}}].as_s) : {{prop[:default]}}
+            {% end %}
+          {% end %}
+      {% end %}
+
+      {% if block %}
+        {{block.body}}
+      {% else %}
+        {
+          {% for prop in properties %}
+            {{prop[:name].id}}: {{prop[:name].id}},
+          {% end %}
+        }
+      {% end %}
+    end
   end
 
-  private def self.handle_tools_call(request : JSON::RPC::Request) : JSON::Any
-    unless (params = request.params)
-      raise MCPError.new("Missing params", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-    unless (name = params["name"]?.try(&.as_s))
-      raise MCPError.new("Missing tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
+  USER_REGEX = /^ktistec:\/\/users\/(\d+)$/
+  NAME_REGEX = /^([a-zA-Z0-9_-]+)$/
 
-    Log.debug { "calling tool: #{name}" }
-
-    case name
-    when "paginate_collection"
-      handle_paginate_collection_tool(params)
-    when "count_collection_since"
-      handle_count_collection_since_tool(params)
-    else
-      Log.warn { "unknown tool: #{name}" }
-      raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-  end
-
-  private def self.handle_paginate_collection_tool(params : JSON::Any) : JSON::Any
-    unless (arguments = params["arguments"]?)
-      raise MCPError.new("Missing arguments", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-
-    missing_fields = [] of String
-    missing_fields << "user URI" unless arguments["user"]?.try(&.as_s)
-    missing_fields << "collection name" unless arguments["name"]?.try(&.as_s)
-    unless missing_fields.empty?
-      raise MCPError.new("Missing #{missing_fields.join(", ")}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-
-    user = arguments["user"].as_s
-    name = arguments["name"].as_s
-
-    page = arguments["page"]?.try(&.as_i) || 1
-    if page < 1
-      raise MCPError.new("Page must be >= 1", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-
-    size = arguments["size"]?.try(&.as_i) || 10
-    if size < 1
-      raise MCPError.new("Size must be >= 1", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-    if size > 20
-      raise MCPError.new("Size cannot exceed 20", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-
-    unless user.starts_with?("ktistec://users/")
-      raise MCPError.new("Invalid user URI format", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-    unless (user_id = user.sub("ktistec://users/", "").to_i64?)
-      raise MCPError.new("Invalid user ID in URI", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
+  def_tool("paginate_collection", "Paginate through collections of objects, activities, and actors", [
+    {name: "user", type: "string", description: "URI of the user whose collections to paginate", required: true, matches: USER_REGEX},
+    {name: "name", type: "string", description: "Name of the collection to paginate", required: true, matches: NAME_REGEX},
+    {name: "page", type: "integer", description: "Page number (optional, defaults to 1)", minimum: 1, default: 1},
+    {name: "size", type: "integer", description: "Number of items per page (optional, defaults to 10, maximum 1000)", minimum: 1, maximum: 20, default: 10},
+  ]) do
+    user_id = user.sub("ktistec://users/", "").to_i64
     unless (account = Account.find?(user_id))
-      raise MCPError.new("User not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      raise MCPError.new("`user` not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
     Log.debug { "paginate_collection: user=#{user} collection=#{name} page=#{page} size=#{size}" }
@@ -449,41 +476,18 @@ class MCPController
         })])
       })
     else
-      raise MCPError.new("Invalid collection name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
   end
 
-  private def self.handle_count_collection_since_tool(params : JSON::Any) : JSON::Any
-    unless (arguments = params["arguments"]?)
-      raise MCPError.new("Missing arguments", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-
-    missing_fields = [] of String
-    missing_fields << "user URI" unless arguments["user"]?.try(&.as_s)
-    missing_fields << "collection name" unless arguments["name"]?.try(&.as_s)
-    missing_fields << "since timestamp" unless arguments["since"]?.try(&.as_s)
-    unless missing_fields.empty?
-      raise MCPError.new("Missing #{missing_fields.join(", ")}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-
-    user = arguments["user"].as_s
-    name = arguments["name"].as_s
-    since = arguments["since"].as_s
-
-    begin
-      time = Time.parse_rfc3339(since)
-    rescue
-      raise MCPError.new("Invalid timestamp format", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-
-    unless user.starts_with?("ktistec://users/")
-      raise MCPError.new("Invalid user URI format", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
-    unless (user_id = user.sub("ktistec://users/", "").to_i64?)
-      raise MCPError.new("Invalid user ID in URI", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
+  def_tool("count_collection_since", "Count items in collections since a given time", [
+    {name: "user", type: "string", description: "URI of the user whose collection to count", required: true, matches: USER_REGEX},
+    {name: "name", type: "string", description: "Name of the collection to count", required: true, matches: NAME_REGEX},
+    {name: "since", type: "time", description: "Time (RFC3339) to count from", required: true},
+  ]) do
+    user_id = user.sub("ktistec://users/", "").to_i64
     unless (account = Account.find?(user_id))
-      raise MCPError.new("User not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      raise MCPError.new("`user` not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
     Log.debug { "count_collection_since: user=#{user} collection=#{name} since=#{since}" }
@@ -492,7 +496,7 @@ class MCPController
     when "timeline"
       actor = account.actor
       current_time = Time.utc
-      count = actor.timeline(since: time)
+      count = actor.timeline(since: since)
 
       result_data = {
         "counted_at" => current_time.to_rfc3339,
@@ -506,7 +510,69 @@ class MCPController
         })])
       })
     else
-      raise MCPError.new("Invalid collection name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+  end
+
+  private def self.handle_tools_list(request : JSON::RPC::Request) : JSON::Any
+    {% begin %}
+    tools = [
+      {% for tool in TOOL_DEFINITIONS %}
+        JSON::Any.new({
+          "name" => JSON::Any.new({{tool[:name]}}),
+          "description" => JSON::Any.new({{tool[:description]}}),
+          "inputSchema" => JSON::Any.new({
+            "type" => JSON::Any.new("object"),
+            "properties" => JSON::Any.new({
+              {% for prop in tool[:properties] %}
+                {{prop[:name]}} => JSON::Any.new({
+                  "type" => JSON::Any.new({{prop[:type] == "time" ? "string" : prop[:type]}}),
+                  "description" => JSON::Any.new({{prop[:description]}}),
+                  {% if prop[:minimum] %}
+                    "minimum" => JSON::Any.new({{prop[:minimum]}}),
+                  {% end %}
+                  {% if prop[:maximum] %}
+                    "maximum" => JSON::Any.new({{prop[:maximum]}}),
+                  {% end %}
+                }),
+              {% end %}
+            }),
+            "required" => JSON::Any.new([
+              {% for prop in tool[:properties] %}
+                {% if prop[:required] %}
+                  JSON::Any.new({{prop[:name]}}),
+                {% end %}
+              {% end %}
+            ])
+          })
+        }),
+      {% end %}
+    ]
+
+    JSON::Any.new({
+      "tools" => JSON::Any.new(tools)
+    })
+    {% end %}
+  end
+
+  private def self.handle_tools_call(request : JSON::RPC::Request) : JSON::Any
+    unless (params = request.params)
+      raise MCPError.new("Missing params", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+    unless (name = params["name"]?.try(&.as_s))
+      raise MCPError.new("Missing tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    end
+
+    Log.debug { "calling tool: #{name}" }
+
+    case name
+    when "paginate_collection"
+      handle_paginate_collection(params)
+    when "count_collection_since"
+      handle_count_collection_since(params)
+    else
+      Log.warn { "unknown tool: #{name}" }
+      raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
   end
 end

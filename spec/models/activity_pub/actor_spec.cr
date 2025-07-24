@@ -618,28 +618,38 @@ Spectator.describe ActivityPub::Actor do
     create_draft(4)
     create_draft(5)
 
+    let(since) { KTISTEC_EPOCH }
+
     it "instantiates the correct subclass" do
       expect(subject.drafts(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.drafts(since: since)).to eq(5)
     end
 
     it "filters out deleted posts" do
       note5.delete!
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
       note5.block!
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "filters out published posts" do
       note5.assign(published: Time.utc).save
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "includes only posts attributed to subject" do
       note5.assign(attributed_to: other).save
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "paginates the results" do

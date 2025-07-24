@@ -74,33 +74,19 @@ class MCPController
   end
 
   private def self.handle_initialize(request : JSON::RPC::Request) : JSON::Any
-    JSON.parse(
-      JSON.build do |json|
-        json.object do
-          json.field "protocolVersion", "2025-03-26"
-          json.field "capabilities" do
-            json.object do
-              json.field "resources" do
-                json.object {}
-              end
-              json.field "resourceTemplates" do
-                json.object {}
-              end
-              json.field "tools" do
-                json.object {}
-              end
-            end
-          end
-          json.field "serverInfo" do
-            json.object do
-              json.field "name", "Ktistec MCP Server"
-              json.field "version", "1.0.0"
-            end
-          end
-          json.field "instructions", "Provides access to ActivityPub actors, objects, and collections"
-        end
-      end
-    )
+    JSON::Any.new({
+      "protocolVersion" => JSON::Any.new("2025-03-26"),
+      "serverInfo" => JSON::Any.new({
+        "name" => JSON::Any.new("Ktistec MCP Server"),
+        "version" => JSON::Any.new(Ktistec::VERSION)
+      }),
+      "instructions" => JSON::Any.new("Provides access to ActivityPub actors, objects, and collections."),
+      "capabilities" => JSON::Any.new({
+        "resources" => JSON::Any.new({} of String => JSON::Any),
+        "resourceTemplates" => JSON::Any.new({} of String => JSON::Any),
+        "tools" => JSON::Any.new({} of String => JSON::Any)
+      }),
+    })
   end
 
   private def self.handle_request(request : JSON::RPC::Request) : JSON::RPC::Response?
@@ -266,7 +252,7 @@ class MCPController
         text_data["image"] = JSON::Any.new(image)
       end
       if (attachments = actor.attachments.presence)
-        text_data["attachments"] = JSON::Any.new(attachments.map { |a| JSON.parse(a.to_json) })
+        text_data["attachments"] = JSON::Any.new(attachments.map { |a| attachment_to_json_any(a) })
       end
       if (urls = actor.urls.presence)
         text_data["urls"] = JSON::Any.new(urls.map { |u| JSON::Any.new(u) })
@@ -574,5 +560,12 @@ class MCPController
       Log.warn { "unknown tool: #{name}" }
       raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
+  end
+
+  private def self.attachment_to_json_any(attachment : ActivityPub::Actor::Attachment) : JSON::Any
+    JSON::Any.new({
+      "name" => JSON::Any.new(attachment.name),
+      "value" => JSON::Any.new(attachment.value)
+    })
   end
 end

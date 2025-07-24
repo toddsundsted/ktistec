@@ -64,7 +64,7 @@ Spectator.describe MCPController do
         result = parsed["result"]
         expect(result["protocolVersion"]).to eq("2025-03-26")
         expect(result["serverInfo"]["name"]).to eq("Ktistec MCP Server")
-        expect(result["serverInfo"]["version"]).to eq("1.0.0")
+        expect(result["serverInfo"]["version"]).to eq(Ktistec::VERSION)
         expect(result["capabilities"]["resources"]).to be_a(JSON::Any)
         expect(result["capabilities"]["tools"]).to be_a(JSON::Any)
         expect(result["instructions"]).to be_a(JSON::Any)
@@ -229,7 +229,6 @@ Spectator.describe MCPController do
           expect(attachments.size).to eq(1)
 
           attachment = attachments.first
-          expect(attachment["type"]).to eq("PropertyValue")
           expect(attachment["name"]).to eq("Website")
           expect(attachment["value"]).to eq("https://example.com")
 

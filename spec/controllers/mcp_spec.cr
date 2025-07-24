@@ -588,6 +588,10 @@ Spectator.describe MCPController do
           paginate_request(id, user_id, "posts", args)
         end
 
+        def paginate_drafts_request(id, user_id, args = {} of String => String | Int32)
+          paginate_request(id, user_id, "drafts", args)
+        end
+
         def expect_paginated_response(expected_size, has_more = false)
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
@@ -640,6 +644,18 @@ Spectator.describe MCPController do
 
           it "returns posts objects for valid request" do
             request = paginate_posts_request("paginate-posts-1", alice.id)
+
+            post "/mcp", JSON_HEADERS, request
+            objects = expect_paginated_response(1, false)
+            expect(objects).to eq(["ktistec://objects/#{object.id}"])
+          end
+        end
+
+        context "with a draft object for actor" do
+          let_create!(:object, attributed_to: alice.actor, published: nil)
+
+          it "returns draft objects for valid request" do
+            request = paginate_drafts_request("paginate-drafts-1", alice.id)
 
             post "/mcp", JSON_HEADERS, request
             objects = expect_paginated_response(1, false)
@@ -705,6 +721,10 @@ Spectator.describe MCPController do
 
         def count_posts_since_request(id, user_id, args = {} of String => String | Int32)
           count_since_request(id, user_id, "posts", args)
+        end
+
+        def count_drafts_since_request(id, user_id, args = {} of String => String | Int32)
+          count_since_request(id, user_id, "drafts", args)
         end
 
         def expect_count_response(expected_count)
@@ -818,6 +838,36 @@ Spectator.describe MCPController do
           it "returns total count when timestamp is before all posts" do
             since_time = (object1.created_at - 1.hour).to_rfc3339
             request = count_posts_since_request("count-posts-3", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(3)
+          end
+        end
+
+        context "with draft objects for actor" do
+          let_create!(:object, named: object1, attributed_to: alice.actor, published: nil)
+          let_create!(:object, named: object2, attributed_to: alice.actor, published: nil)
+          let_create!(:object, named: object3, attributed_to: alice.actor, published: nil)
+
+          it "returns count of drafts since given timestamp" do
+            since_time = (object2.created_at - 1.second).to_rfc3339
+            request = count_drafts_since_request("count-drafts-1", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(2)
+          end
+
+          it "returns zero count when no drafts match timestamp" do
+            since_time = (object3.created_at + 1.hour).to_rfc3339
+            request = count_drafts_since_request("count-drafts-2", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(0)
+          end
+
+          it "returns total count when timestamp is before all drafts" do
+            since_time = (object1.created_at - 1.hour).to_rfc3339
+            request = count_drafts_since_request("count-drafts-3", alice.id, {"since" => since_time})
 
             post "/mcp", JSON_HEADERS, request
             expect_count_response(3)

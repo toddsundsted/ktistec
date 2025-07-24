@@ -465,6 +465,12 @@ class MCPController
           JSON::Any.new("ktistec://objects/#{post.id}")
         end
         {objects, posts.more?}
+      when "drafts"
+        drafts = actor.drafts(page: page, size: size)
+        objects = drafts.map do |draft|
+          JSON::Any.new("ktistec://objects/#{draft.id}")
+        end
+        {objects, drafts.more?}
       else
         raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
@@ -503,6 +509,8 @@ class MCPController
         actor.timeline(since: since)
       when "posts"
         actor.all_posts(since: since)
+      when "drafts"
+        actor.drafts(since: since)
       else
         raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end

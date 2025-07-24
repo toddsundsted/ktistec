@@ -80,7 +80,15 @@ class MCPController
         "name" => JSON::Any.new("Ktistec MCP Server"),
         "version" => JSON::Any.new(Ktistec::VERSION)
       }),
-      "instructions" => JSON::Any.new("Provides access to ActivityPub actors, objects, and collections."),
+      "instructions" => JSON::Any.new(
+        "This server provides access to ActivityPub actors, objects, and collections from a Ktistec" \
+        "instance. Use the resources to read user profiles and individual posts/objects. Use the " \
+        "tools to paginate through collections (like timelines) and count new items since specific " \
+        "timestamps. This is particularly useful for monitoring ActivityPub feeds, tracking new " \
+        "content, and analyzing social media activity patterns. The server supports both local and " \
+        "federated ActivityPub content, with automatic translation support and rich media attachment " \
+        "handling."
+      ),
       "capabilities" => JSON::Any.new({
         "resources" => JSON::Any.new({} of String => JSON::Any),
         "resourceTemplates" => JSON::Any.new({} of String => JSON::Any),

@@ -449,48 +449,37 @@ class MCPController
 
     Log.debug { "paginate_collection: user=#{user} collection=#{name} page=#{page} size=#{size}" }
 
-    case name
-    when "timeline"
-      actor = account.actor
-      timeline = actor.timeline(page: page, size: size)
+    actor = account.actor
 
-      objects = timeline.map do |rel|
-        JSON::Any.new("ktistec://objects/#{rel.object.id}")
+    objects, more =
+      case name
+      when "timeline"
+        timeline = actor.timeline(page: page, size: size)
+        objects = timeline.map do |rel|
+          JSON::Any.new("ktistec://objects/#{rel.object.id}")
+        end
+        {objects, timeline.more?}
+      when "posts"
+        posts = actor.all_posts(page: page, size: size)
+        objects = posts.map do |post|
+          JSON::Any.new("ktistec://objects/#{post.id}")
+        end
+        {objects, posts.more?}
+      else
+        raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
-      result_data = {
-        "objects" => objects.to_a,
-        "more" => timeline.more?
-      }
+    result_data = {
+      "objects" => objects.to_a,
+      "more" => more,
+    }
 
-      JSON::Any.new({
-        "content" => JSON::Any.new([JSON::Any.new({
-          "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new(result_data.to_json)
-        })])
-      })
-    when "posts"
-      actor = account.actor
-      posts = actor.all_posts(page: page, size: size)
-
-      objects = posts.map do |post|
-        JSON::Any.new("ktistec://objects/#{post.id}")
-      end
-
-      result_data = {
-        "objects" => objects.to_a,
-        "more" => posts.more?
-      }
-
-      JSON::Any.new({
-        "content" => JSON::Any.new([JSON::Any.new({
-          "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new(result_data.to_json)
-        })])
-      })
-    else
-      raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
+    JSON::Any.new({
+      "content" => JSON::Any.new([JSON::Any.new({
+        "type" => JSON::Any.new("text"),
+        "text" => JSON::Any.new(result_data.to_json)
+      })])
+    })
   end
 
   def_tool("count_collection_since", "Count items in collections since a given time", [
@@ -505,42 +494,30 @@ class MCPController
 
     Log.debug { "count_collection_since: user=#{user} collection=#{name} since=#{since}" }
 
-    case name
-    when "timeline"
-      actor = account.actor
-      current_time = Time.utc
-      count = actor.timeline(since: since)
+    current_time = Time.utc
+    actor = account.actor
 
-      result_data = {
-        "counted_at" => current_time.to_rfc3339,
-        "count" => count,
-      }
+    count =
+      case name
+      when "timeline"
+        actor.timeline(since: since)
+      when "posts"
+        actor.all_posts(since: since)
+      else
+        raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
 
-      JSON::Any.new({
-        "content" => JSON::Any.new([JSON::Any.new({
-          "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new(result_data.to_json)
-        })])
-      })
-    when "posts"
-      actor = account.actor
-      current_time = Time.utc
-      count = actor.all_posts(since: since)
+    result_data = {
+      "counted_at" => current_time.to_rfc3339,
+      "count" => count,
+    }
 
-      result_data = {
-        "counted_at" => current_time.to_rfc3339,
-        "count" => count,
-      }
-
-      JSON::Any.new({
-        "content" => JSON::Any.new([JSON::Any.new({
-          "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new(result_data.to_json)
-        })])
-      })
-    else
-      raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-    end
+    JSON::Any.new({
+      "content" => JSON::Any.new([JSON::Any.new({
+        "type" => JSON::Any.new("text"),
+        "text" => JSON::Any.new(result_data.to_json)
+      })])
+    })
   end
 
   private def self.handle_tools_list(request : JSON::RPC::Request) : JSON::Any

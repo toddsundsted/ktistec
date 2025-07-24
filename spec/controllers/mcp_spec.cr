@@ -574,16 +574,18 @@ Spectator.describe MCPController do
       end
 
       context "with paginate_collection tool" do
-        def paginate_timeline_request(id, user_id, args = {} of String => String | Int32)
-          base_args = {"user" => "ktistec://users/#{user_id}", "name" => "timeline"}
+        private def paginate_request(id, user_id, collection, args)
+          base_args = {"user" => "ktistec://users/#{user_id}", "name" => collection}
           args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
           %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {#{args_json}}}}|
         end
 
+        def paginate_timeline_request(id, user_id, args = {} of String => String | Int32)
+          paginate_request(id, user_id, "timeline", args)
+        end
+
         def paginate_posts_request(id, user_id, args = {} of String => String | Int32)
-          base_args = {"user" => "ktistec://users/#{user_id}", "name" => "posts"}
-          args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
-          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {#{args_json}}}}|
+          paginate_request(id, user_id, "posts", args)
         end
 
         def expect_paginated_response(expected_size, has_more = false)
@@ -595,6 +597,7 @@ Spectator.describe MCPController do
           data = JSON.parse(content.first["text"].as_s)
           expect(data["objects"].as_a.size).to eq(expected_size)
           expect(data["more"]).to eq(has_more)
+          data["objects"].as_a
         end
 
         it "returns error for non-existent user" do
@@ -622,19 +625,8 @@ Spectator.describe MCPController do
             request = paginate_timeline_request("paginate-9", alice.id)
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(200)
-            parsed = JSON.parse(response.body)
-
-            result = parsed["result"]
-            content = result["content"].as_a
-            expect(content.size).to eq(1)
-
-            text_content = content.first
-            expect(text_content["type"]).to eq("text")
-
-            data = JSON.parse(text_content["text"].as_s)
-            expect(data["objects"].as_a).to eq(["ktistec://objects/#{object.id}"])
-            expect(data["more"]).to be_false
+            objects = expect_paginated_response(1, false)
+            expect(objects).to eq(["ktistec://objects/#{object.id}"])
           end
         end
 
@@ -650,19 +642,8 @@ Spectator.describe MCPController do
             request = paginate_posts_request("paginate-posts-1", alice.id)
 
             post "/mcp", JSON_HEADERS, request
-            expect(response.status_code).to eq(200)
-            parsed = JSON.parse(response.body)
-
-            result = parsed["result"]
-            content = result["content"].as_a
-            expect(content.size).to eq(1)
-
-            text_content = content.first
-            expect(text_content["type"]).to eq("text")
-
-            data = JSON.parse(text_content["text"].as_s)
-            expect(data["objects"].as_a).to eq(["ktistec://objects/#{object.id}"])
-            expect(data["more"]).to be_false
+            objects = expect_paginated_response(1, false)
+            expect(objects).to eq(["ktistec://objects/#{object.id}"])
           end
         end
 
@@ -712,16 +693,18 @@ Spectator.describe MCPController do
       end
 
       context "with count_collection_since tool" do
-        def count_timeline_since_request(id, user_id, args = {} of String => String | Int32)
-          base_args = {"user" => "ktistec://users/#{user_id}", "name" => "timeline"}
+        private def count_since_request(id, user_id, collection, args)
+          base_args = {"user" => "ktistec://users/#{user_id}", "name" => collection}
           args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
           %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "count_collection_since", "arguments": {#{args_json}}}}|
         end
 
+        def count_timeline_since_request(id, user_id, args = {} of String => String | Int32)
+          count_since_request(id, user_id, "timeline", args)
+        end
+
         def count_posts_since_request(id, user_id, args = {} of String => String | Int32)
-          base_args = {"user" => "ktistec://users/#{user_id}", "name" => "posts"}
-          args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
-          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "count_collection_since", "arguments": {#{args_json}}}}|
+          count_since_request(id, user_id, "posts", args)
         end
 
         def expect_count_response(expected_count)

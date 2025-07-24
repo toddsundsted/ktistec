@@ -580,6 +580,12 @@ Spectator.describe MCPController do
           %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {#{args_json}}}}|
         end
 
+        def paginate_posts_request(id, user_id, args = {} of String => String | Int32)
+          base_args = {"user" => "ktistec://users/#{user_id}", "name" => "posts"}
+          args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
+          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {#{args_json}}}}|
+        end
+
         def expect_paginated_response(expected_size, has_more = false)
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
@@ -614,6 +620,34 @@ Spectator.describe MCPController do
 
           it "returns timeline objects for valid request" do
             request = paginate_timeline_request("paginate-9", alice.id)
+
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            result = parsed["result"]
+            content = result["content"].as_a
+            expect(content.size).to eq(1)
+
+            text_content = content.first
+            expect(text_content["type"]).to eq("text")
+
+            data = JSON.parse(text_content["text"].as_s)
+            expect(data["objects"].as_a).to eq(["ktistec://objects/#{object.id}"])
+            expect(data["more"]).to be_false
+          end
+        end
+
+        context "with an object in actor's posts" do
+          let_create!(:object, attributed_to: alice.actor)
+          let_create!(:create, actor: alice.actor, object: object)
+
+          before_each do
+            put_in_outbox(alice.actor, create)
+          end
+
+          it "returns posts objects for valid request" do
+            request = paginate_posts_request("paginate-posts-1", alice.id)
 
             post "/mcp", JSON_HEADERS, request
             expect(response.status_code).to eq(200)
@@ -684,6 +718,12 @@ Spectator.describe MCPController do
           %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "count_collection_since", "arguments": {#{args_json}}}}|
         end
 
+        def count_posts_since_request(id, user_id, args = {} of String => String | Int32)
+          base_args = {"user" => "ktistec://users/#{user_id}", "name" => "posts"}
+          args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
+          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "count_collection_since", "arguments": {#{args_json}}}}|
+        end
+
         def expect_count_response(expected_count)
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
@@ -729,7 +769,8 @@ Spectator.describe MCPController do
 
           # the `since` cutoff is decided based on the `created_at`
           # property of the associated relationship, which is slightly
-          # later than the object's `created_at` property.
+          # later than the object's `created_at` property, so the
+          # following works...
 
           it "returns count of objects since given timestamp" do
             since_time = object2.created_at.to_rfc3339
@@ -750,6 +791,50 @@ Spectator.describe MCPController do
           it "returns total count when timestamp is before all objects" do
             since_time = (object1.created_at - 1.hour).to_rfc3339
             request = count_timeline_since_request("count-13", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(3)
+          end
+        end
+
+        context "with objects in actor's posts" do
+          let_create(:object, named: object1, attributed_to: alice.actor)
+          let_create(:object, named: object2, attributed_to: alice.actor)
+          let_create(:object, named: object3, attributed_to: alice.actor)
+          let_create(:create, named: create1, actor: alice.actor, object: object1)
+          let_create(:create, named: create2, actor: alice.actor, object: object2)
+          let_create(:create, named: create3, actor: alice.actor, object: object3)
+
+          before_each do
+            put_in_outbox(alice.actor, create1)
+            put_in_outbox(alice.actor, create2)
+            put_in_outbox(alice.actor, create3)
+          end
+
+          # the `since` cutoff is decided based on the `created_at`
+          # property of the associated relationship, which is slightly
+          # later than the object's `created_at` property, so the
+          # following works...
+
+          it "returns count of posts since given timestamp" do
+            since_time = object2.created_at.to_rfc3339
+            request = count_posts_since_request("count-posts-1", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(2)
+          end
+
+          it "returns zero count when no posts match timestamp" do
+            since_time = (object3.created_at + 1.hour).to_rfc3339
+            request = count_posts_since_request("count-posts-2", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(0)
+          end
+
+          it "returns total count when timestamp is before all posts" do
+            since_time = (object1.created_at - 1.hour).to_rfc3339
+            request = count_posts_since_request("count-posts-3", alice.id, {"since" => since_time})
 
             post "/mcp", JSON_HEADERS, request
             expect_count_response(3)

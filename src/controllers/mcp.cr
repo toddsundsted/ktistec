@@ -469,6 +469,25 @@ class MCPController
           "text" => JSON::Any.new(result_data.to_json)
         })])
       })
+    when "posts"
+      actor = account.actor
+      posts = actor.all_posts(page: page, size: size)
+
+      objects = posts.map do |post|
+        JSON::Any.new("ktistec://objects/#{post.id}")
+      end
+
+      result_data = {
+        "objects" => objects.to_a,
+        "more" => posts.more?
+      }
+
+      JSON::Any.new({
+        "content" => JSON::Any.new([JSON::Any.new({
+          "type" => JSON::Any.new("text"),
+          "text" => JSON::Any.new(result_data.to_json)
+        })])
+      })
     else
       raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
@@ -491,6 +510,22 @@ class MCPController
       actor = account.actor
       current_time = Time.utc
       count = actor.timeline(since: since)
+
+      result_data = {
+        "counted_at" => current_time.to_rfc3339,
+        "count" => count,
+      }
+
+      JSON::Any.new({
+        "content" => JSON::Any.new([JSON::Any.new({
+          "type" => JSON::Any.new("text"),
+          "text" => JSON::Any.new(result_data.to_json)
+        })])
+      })
+    when "posts"
+      actor = account.actor
+      current_time = Time.utc
+      count = actor.all_posts(since: since)
 
       result_data = {
         "counted_at" => current_time.to_rfc3339,

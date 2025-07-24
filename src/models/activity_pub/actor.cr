@@ -503,6 +503,29 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
+    # Returns the count of the actor's posts since the given date.
+    #
+    # See `#all_posts(page, size)` for further details.
+    #
+    def all_posts(since : Time)
+      query = <<-QUERY
+         SELECT count(r.id)
+           FROM objects AS o
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+            AND r.type = '#{Relationship::Content::Outbox}'
+          WHERE r.from_iri = ?
+            #{common_filters_on("o", "t", "a")}
+            AND r.created_at > ?
+      QUERY
+      Relationship::Content::Outbox.scalar(query, iri, since).as(Int64)
+    end
+
     private alias Timeline = Relationship::Content::Timeline
 
     # Returns entries in the actor's timeline.

@@ -145,16 +145,22 @@ Spectator.describe MCPController do
     context "with resources/templates/list request" do
       let(templates_list_request) { %Q|{"jsonrpc": "2.0", "id": "templates-1", "method": "resources/templates/list"}| }
 
-      it "returns object template" do
+      it "returns actor and object templates" do
         post "/mcp", JSON_HEADERS, templates_list_request
         expect(response.status_code).to eq(200)
         parsed = JSON.parse(response.body)
 
         result = parsed["result"]
         templates = result["resourceTemplates"].as_a
-        expect(templates.size).to eq(1)
+        expect(templates.size).to eq(2)
 
-        object_template = templates.first
+        actor_template = templates[0]
+        expect(actor_template["uriTemplate"]).to eq("ktistec://actors/{id}")
+        expect(actor_template["name"]).to eq("Actor")
+        expect(actor_template["description"]).to eq("ActivityPub actors")
+        expect(actor_template["mimeType"]).to eq("application/json")
+
+        object_template = templates[1]
         expect(object_template["uriTemplate"]).to eq("ktistec://objects/{id}")
         expect(object_template["name"]).to eq("Object")
         expect(object_template["description"]).to eq("ActivityPub objects")
@@ -241,6 +247,49 @@ Spectator.describe MCPController do
 
           post "/mcp", JSON_HEADERS, request
           expect_mcp_error(-32602, "User not found")
+        end
+      end
+
+      context "given an actor" do
+        let_create!(
+          actor,
+          name: "Test Actor",
+          summary: "This is a summary",
+          icon: "https://example.com/icon.png",
+          image: "https://example.com/image.png"
+        )
+        let(uri) { "ktistec://actors/#{actor.id}" }
+
+        it "returns actor content" do
+          request = %Q|{"jsonrpc": "2.0", "id": "read-actor-1", "method": "resources/read", "params": {"uri": "#{uri}"}}|
+
+          post "/mcp", JSON_HEADERS, request
+          expect(response.status_code).to eq(200)
+
+          parsed = JSON.parse(response.body)
+          result = parsed["result"]
+          contents = result["contents"].as_a
+          expect(contents.size).to eq(1)
+
+          content = contents.first
+          expect(content["uri"]).to eq(uri)
+          expect(content["mimeType"]).to eq("application/json")
+          expect(content["name"]).to eq("Test Actor")
+
+          text = content["text"].as_s
+          json = JSON.parse(text)
+
+          expect(json["name"]).to eq("Test Actor")
+          expect(json["summary"]).to eq("This is a summary")
+          expect(json["icon"]).to eq("https://example.com/icon.png")
+          expect(json["image"]).to eq("https://example.com/image.png")
+        end
+
+        it "returns error for invalid actor URI" do
+          request = %Q|{"jsonrpc": "2.0", "id": "read-actor-2", "method": "resources/read", "params": {"uri": "ktistec://actors/999999"}}|
+
+          post "/mcp", JSON_HEADERS, request
+          expect_mcp_error(-32602, "Actor not found")
         end
       end
 

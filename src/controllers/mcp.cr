@@ -152,6 +152,12 @@ class MCPController
   private def self.handle_resources_templates_list(request : JSON::RPC::Request) : JSON::Any
     templates = [
       JSON::Any.new({
+        "uriTemplate" => JSON::Any.new("ktistec://actors/{id}"),
+        "mimeType" => JSON::Any.new("application/json"),
+        "name" => JSON::Any.new("Actor"),
+        "description" => JSON::Any.new("ActivityPub actors"),
+      }),
+      JSON::Any.new({
         "uriTemplate" => JSON::Any.new("ktistec://objects/{id}"),
         "mimeType" => JSON::Any.new("application/json"),
         "name" => JSON::Any.new("Object"),
@@ -278,6 +284,29 @@ class MCPController
       JSON::Any.new({
         "contents" => JSON::Any.new([
           JSON::Any.new(user_data)
+        ])
+      })
+
+    elsif uri =~ /^ktistec:\/\/actors\/(\d+)$/
+      unless (actor_id = $1.to_i64?)
+        raise MCPError.new("Invalid actor ID in URI: #{$1}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+      unless (actor = ActivityPub::Actor.find?(actor_id))
+        raise MCPError.new("Actor not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      text_data = actor_contents(actor)
+
+      actor_data = {
+        "uri" => JSON::Any.new(uri),
+        "mimeType" => JSON::Any.new("application/json"),
+        "name" => JSON::Any.new(actor.name || "Actor #{actor.id}"),
+        "text" => JSON::Any.new(text_data.to_json)
+      }
+
+      JSON::Any.new({
+        "contents" => JSON::Any.new([
+          JSON::Any.new(actor_data)
         ])
       })
 

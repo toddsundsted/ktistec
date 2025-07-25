@@ -226,6 +226,7 @@ Spectator.describe MCPController do
           text = user["text"].as_s
           json = JSON.parse(text)
 
+          expect(json["url"]).to eq(alice.iri)
           expect(json["name"]).to eq("Alice")
           expect(json["summary"]).to eq("Alice's summary")
           expect(json["icon"]).to eq("https://example.com/icon.png")
@@ -279,6 +280,7 @@ Spectator.describe MCPController do
           text = content["text"].as_s
           json = JSON.parse(text)
 
+          expect(json["url"]).to eq(actor.iri)
           expect(json["name"]).to eq("Test Actor")
           expect(json["summary"]).to eq("This is a summary")
           expect(json["icon"]).to eq("https://example.com/icon.png")
@@ -296,9 +298,15 @@ Spectator.describe MCPController do
       context "given an object" do
         let_create!(
           object,
+          named: root,
+        )
+        let_create!(
+          object,
           name: "Test Object",
           summary: "This is a summary",
           language: "en",
+          published: Time.utc(2024, 1, 1, 12, 0, 0),
+          in_reply_to: root,
         )
         let(uri) { "ktistec://objects/#{object.id}" }
         let(request) { %Q|{"jsonrpc": "2.0", "id": "read-obj-1", "method": "resources/read", "params": {"uri": "#{uri}"}}| }
@@ -320,9 +328,15 @@ Spectator.describe MCPController do
           text = content["text"].as_s
           json = JSON.parse(text)
 
+          expect(json["url"]).to eq(object.iri)
           expect(json["name"]).to eq("Test Object")
           expect(json["summary"]).to eq("This is a summary")
           expect(json["language"]).to eq("en")
+          expect(json["published"]).to eq("2024-01-01T12:00:00Z")
+          expect(json["attributed_to"]).to eq("ktistec://actors/#{object.attributed_to.id}")
+          expect(json["in_reply_to"]).to eq("ktistec://objects/#{root.id}")
+          expect(json["likes"]?).to be_nil
+          expect(json["announcements"]?).to be_nil
         end
 
         context "with HTML content" do
@@ -379,6 +393,48 @@ Spectator.describe MCPController do
             expect(json["content"]).to eq("This is translated content")
             expect(json["original_language"]).to eq("en")
             expect(json["is_translated"]).to eq(true)
+          end
+        end
+
+        context "with a like" do
+          let_create(:actor, named: liker)
+          let_create!(:like, actor: liker, object: object)
+
+          it "includes likes field in object JSON" do
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            text = parsed["result"]["contents"].as_a.first["text"].as_s
+            json = JSON.parse(text)
+
+            likes = json["likes"].as_h
+            expect(likes["count"]).to eq(1)
+
+            actors = likes["actors"].as_a
+            expect(actors.size).to eq(1)
+            expect(actors.first["uri"]).to eq("ktistec://actors/#{liker.id}")
+          end
+        end
+
+        context "with an announcement" do
+          let_create(:actor, named: announcer)
+          let_create!(:announce, actor: announcer, object: object)
+
+          it "includes announcements field in object JSON" do
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            text = parsed["result"]["contents"].as_a.first["text"].as_s
+            json = JSON.parse(text)
+
+            announcements = json["announcements"].as_h
+            expect(announcements["count"]).to eq(1)
+
+            actors = announcements["actors"].as_a
+            expect(actors.size).to eq(1)
+            expect(actors.first["uri"]).to eq("ktistec://actors/#{announcer.id}")
           end
         end
       end

@@ -172,6 +172,8 @@ class MCPController
   private def self.actor_contents(actor : ActivityPub::Actor) : Hash(String, JSON::Any)
     contents = Hash(String, JSON::Any).new
 
+    contents["uri"] = JSON::Any.new("ktistec://actors/#{actor.id}")
+    contents["url"] = JSON::Any.new(actor.iri)
     if (name = actor.name)
       contents["name"] = JSON::Any.new(name)
     end
@@ -219,7 +221,7 @@ class MCPController
     contents = Hash(String, JSON::Any).new
 
     contents["uri"] = JSON::Any.new("ktistec://objects/#{object.id}")
-
+    contents["url"] = JSON::Any.new(object.iri)
     if name
       contents["name"] = JSON::Any.new(name)
     end
@@ -234,6 +236,15 @@ class MCPController
     end
     if object.language
       contents["language"] = JSON::Any.new(object.language)
+    end
+    if (published = object.published)
+      contents["published"] = JSON::Any.new(published.to_rfc3339)
+    end
+    if (attributed_to = object.attributed_to?)
+      contents["attributed_to"] = JSON::Any.new("ktistec://actors/#{attributed_to.id}")
+    end
+    if (in_reply_to = object.in_reply_to?)
+      contents["in_reply_to"] = JSON::Any.new("ktistec://objects/#{in_reply_to.id}")
     end
 
     if filtered_attachments && !filtered_attachments.empty?
@@ -250,6 +261,28 @@ class MCPController
     if translation
       contents["is_translated"] = JSON::Any.new(true)
       contents["original_language"] = JSON::Any.new(object.language || "")
+    end
+
+    likes = ActivityPub::Activity::Like.where(object_iri: object.iri).to_a
+    if likes.any?
+      actors_data = likes.map do |like|
+        JSON::Any.new({"uri" => JSON::Any.new("ktistec://actors/#{like.actor.id}")})
+      end
+      contents["likes"] = JSON::Any.new({
+        "count" => JSON::Any.new(likes.size.to_i64),
+        "actors" => JSON::Any.new(actors_data)
+      })
+    end
+
+    announces = ActivityPub::Activity::Announce.where(object_iri: object.iri).to_a
+    if announces.any?
+      actors_data = announces.map do |announce|
+        JSON::Any.new({"uri" => JSON::Any.new("ktistec://actors/#{announce.actor.id}")})
+      end
+      contents["announcements"] = JSON::Any.new({
+        "count" => JSON::Any.new(announces.size.to_i64),
+        "actors" => JSON::Any.new(actors_data)
+      })
     end
 
     contents

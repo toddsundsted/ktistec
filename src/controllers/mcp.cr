@@ -163,7 +163,32 @@ class MCPController
     })
   end
 
-  private def self.process_object_content(object : ActivityPub::Object) : Hash(String, JSON::Any)
+  private def self.actor_contents(actor : ActivityPub::Actor) : Hash(String, JSON::Any)
+    contents = Hash(String, JSON::Any).new
+
+    if (name = actor.name)
+      contents["name"] = JSON::Any.new(name)
+    end
+    if (summary = actor.summary)
+      contents["summary"] = JSON::Any.new(summary)
+    end
+    if (icon = actor.icon)
+      contents["icon"] = JSON::Any.new(icon)
+    end
+    if (image = actor.image)
+      contents["image"] = JSON::Any.new(image)
+    end
+    if (attachments = actor.attachments.presence)
+      contents["attachments"] = JSON::Any.new(attachments.map { |a| attachment_to_json_any(a) })
+    end
+    if (urls = actor.urls.presence)
+      contents["urls"] = JSON::Any.new(urls.map { |u| JSON::Any.new(u) })
+    end
+
+    contents
+  end
+
+  private def self.object_contents(object : ActivityPub::Object) : Hash(String, JSON::Any)
     translation = object.translations.first?
     name = translation.try(&.name).presence || object.name.presence
     summary = translation.try(&.summary).presence || object.summary.presence
@@ -185,23 +210,24 @@ class MCPController
     end
     filtered_attachments = object.attachments.try(&.reject { |a| a.url.in?(embedded_urls) })
 
-    result = Hash(String, JSON::Any).new
-    result["uri"] = JSON::Any.new("ktistec://objects/#{object.id}")
+    contents = Hash(String, JSON::Any).new
+
+    contents["uri"] = JSON::Any.new("ktistec://objects/#{object.id}")
 
     if name
-      result["name"] = JSON::Any.new(name)
+      contents["name"] = JSON::Any.new(name)
     end
     if summary
-      result["summary"] = JSON::Any.new(summary)
+      contents["summary"] = JSON::Any.new(summary)
     end
     if content
-      result["content"] = JSON::Any.new(content)
+      contents["content"] = JSON::Any.new(content)
     end
     if object.media_type
-      result["media_type"] = JSON::Any.new(object.media_type)
+      contents["media_type"] = JSON::Any.new(object.media_type)
     end
     if object.language
-      result["language"] = JSON::Any.new(object.language)
+      contents["language"] = JSON::Any.new(object.language)
     end
 
     if filtered_attachments && !filtered_attachments.empty?
@@ -212,15 +238,15 @@ class MCPController
           "caption" => JSON::Any.new(attachment.caption || "")
         })
       end
-      result["attachments"] = JSON::Any.new(attachment_data)
+      contents["attachments"] = JSON::Any.new(attachment_data)
     end
 
     if translation
-      result["is_translated"] = JSON::Any.new(true)
-      result["original_language"] = JSON::Any.new(object.language || "")
+      contents["is_translated"] = JSON::Any.new(true)
+      contents["original_language"] = JSON::Any.new(object.language || "")
     end
 
-    result
+    contents
   end
 
   private def self.handle_resources_read(request : JSON::RPC::Request) : JSON::Any
@@ -239,33 +265,15 @@ class MCPController
         raise MCPError.new("User not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
+      actor = account.actor
+      text_data = actor_contents(actor)
+
       user_data = {
         "uri" => JSON::Any.new(uri),
         "mimeType" => JSON::Any.new("application/json"),
         "name" => JSON::Any.new(account.username),
+        "text" => JSON::Any.new(text_data.to_json)
       }
-
-      actor = account.actor
-      text_data = {} of String => JSON::Any
-      if (name = actor.name)
-        text_data["name"] = JSON::Any.new(name)
-      end
-      if (summary = actor.summary)
-        text_data["summary"] = JSON::Any.new(summary)
-      end
-      if (icon = actor.icon)
-        text_data["icon"] = JSON::Any.new(icon)
-      end
-      if (image = actor.image)
-        text_data["image"] = JSON::Any.new(image)
-      end
-      if (attachments = actor.attachments.presence)
-        text_data["attachments"] = JSON::Any.new(attachments.map { |a| attachment_to_json_any(a) })
-      end
-      if (urls = actor.urls.presence)
-        text_data["urls"] = JSON::Any.new(urls.map { |u| JSON::Any.new(u) })
-      end
-      user_data["text"] = JSON::Any.new(text_data.to_json)
 
       JSON::Any.new({
         "contents" => JSON::Any.new([
@@ -281,7 +289,7 @@ class MCPController
         raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
-      text_data = process_object_content(object)
+      text_data = object_contents(object)
 
       object_data = {
         "uri" => JSON::Any.new(uri),

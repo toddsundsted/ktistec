@@ -453,6 +453,39 @@ class MCPController
 
     objects, more =
       case name
+      when "notifications"
+        notifications = actor.notifications(page: page, size: size)
+        objects = notifications.map do |notification|
+          case notification
+          when Relationship::Content::Notification::Mention
+            JSON::Any.new({
+              "type" => JSON::Any.new("mention"),
+              "object" => JSON::Any.new("ktistec://objects/#{notification.object.id}"),
+              "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+            })
+          when Relationship::Content::Notification::Reply
+            JSON::Any.new({
+              "type" => JSON::Any.new("reply"),
+              "object" => JSON::Any.new("ktistec://objects/#{notification.object.id}"),
+              "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+            })
+          when Relationship::Content::Notification::Follow
+            response = notification.activity.as(ActivityPub::Activity::Follow).accepted_or_rejected?
+            status = response ?
+              "#{response.class.name.split("::").last.downcase}ed" :
+              "new"
+            JSON::Any.new({
+              "type" => JSON::Any.new("follow"),
+              "status" => JSON::Any.new(status),
+              "actor" => JSON::Any.new("ktistec://actors/#{notification.activity.actor.id}"),
+              "object" => JSON::Any.new("ktistec://users/#{notification.owner.id}"),
+              "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+            })
+          else
+            next
+          end
+        end
+        {objects.compact, notifications.more?}
       when "timeline"
         timeline = actor.timeline(page: page, size: size)
         objects = timeline.map do |rel|
@@ -505,6 +538,8 @@ class MCPController
 
     count =
       case name
+      when "notifications"
+        actor.notifications(since: since)
       when "timeline"
         actor.timeline(since: since)
       when "posts"

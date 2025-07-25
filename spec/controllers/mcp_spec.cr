@@ -580,6 +580,10 @@ Spectator.describe MCPController do
           %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {#{args_json}}}}|
         end
 
+        def paginate_notifications_request(id, user_id, args = {} of String => String | Int32)
+          paginate_request(id, user_id, "notifications", args)
+        end
+
         def paginate_timeline_request(id, user_id, args = {} of String => String | Int32)
           paginate_request(id, user_id, "timeline", args)
         end
@@ -616,6 +620,104 @@ Spectator.describe MCPController do
 
           post "/mcp", JSON_HEADERS, request
           expect_mcp_error(-32602, "`does_not_exist` unsupported")
+        end
+
+        context "with a mention in the notifications" do
+          let_create(:object, attributed_to: alice.actor)
+          let_create(:create, actor: alice.actor, object: object)
+
+          before_each do
+            put_in_notifications(alice.actor, mention: create)
+          end
+
+          it "returns notifications objects for valid request" do
+            request = paginate_notifications_request("paginate-notifications-1", alice.id)
+
+            post "/mcp", JSON_HEADERS, request
+            notifications = expect_paginated_response(1, false)
+            expect(notifications.size).to eq(1)
+
+            mention = notifications.first
+            expect(mention["type"]).to eq("mention")
+            expect(mention["object"]).to eq("ktistec://objects/#{object.id}")
+            expect(mention["created_at"]).not_to be_nil
+          end
+        end
+
+        context "with a reply in the notifications" do
+          let_create(:object, attributed_to: alice.actor)
+          let_create(:create, actor: alice.actor, object: object)
+
+          before_each do
+            put_in_notifications(alice.actor, reply: create)
+          end
+
+          it "returns reply notification for valid request" do
+            request = paginate_notifications_request("paginate-notifications-2", alice.id)
+
+            post "/mcp", JSON_HEADERS, request
+            notifications = expect_paginated_response(1, false)
+            expect(notifications.size).to eq(1)
+
+            reply = notifications.first
+            expect(reply["type"]).to eq("reply")
+            expect(reply["object"]).to eq("ktistec://objects/#{object.id}")
+            expect(reply["created_at"]).not_to be_nil
+          end
+        end
+
+        context "with a follow in the notifications" do
+          let_create(:actor, named: bob)
+          let_create(:follow, actor: bob, object: alice.actor)
+
+          before_each do
+            put_in_notifications(alice.actor, follow)
+          end
+
+          it "returns follow notification for valid request" do
+            request = paginate_notifications_request("paginate-notifications-3", alice.id)
+
+            post "/mcp", JSON_HEADERS, request
+            notifications = expect_paginated_response(1, false)
+            expect(notifications.size).to eq(1)
+
+            follow_notification = notifications.first
+            expect(follow_notification["type"]).to eq("follow")
+            expect(follow_notification["status"]).to eq("new")
+            expect(follow_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
+            expect(follow_notification["object"]).to eq("ktistec://users/#{alice.actor.id}")
+            expect(follow_notification["created_at"]).not_to be_nil
+          end
+
+          context "that is accepted" do
+            let_create!(:accept, actor: alice.actor, object: follow)
+
+            it "returns accepted follow notification" do
+              request = paginate_notifications_request("paginate-notifications-4", alice.id)
+
+              post "/mcp", JSON_HEADERS, request
+              notifications = expect_paginated_response(1, false)
+              expect(notifications.size).to eq(1)
+
+              follow_notification = notifications.first
+              expect(follow_notification["status"]).to eq("accepted")
+            end
+          end
+
+          context "that is rejected" do
+            let_create!(:reject, actor: alice.actor, object: follow)
+
+            it "returns rejected follow notification" do
+              request = paginate_notifications_request("paginate-notifications-5", alice.id)
+
+              post "/mcp", JSON_HEADERS, request
+              notifications = expect_paginated_response(1, false)
+              expect(notifications.size).to eq(1)
+
+              follow_notification = notifications.first
+              expect(follow_notification["status"]).to eq("rejected")
+            end
+          end
         end
 
         context "with an object in the timeline" do
@@ -715,6 +817,10 @@ Spectator.describe MCPController do
           %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "count_collection_since", "arguments": {#{args_json}}}}|
         end
 
+        def count_notifications_since_request(id, user_id, args = {} of String => String | Int32)
+          count_since_request(id, user_id, "notifications", args)
+        end
+
         def count_timeline_since_request(id, user_id, args = {} of String => String | Int32)
           count_since_request(id, user_id, "timeline", args)
         end
@@ -759,10 +865,54 @@ Spectator.describe MCPController do
           expect_count_response(0)
         end
 
-        context "with objects in timeline" do
+        context "with notifications" do
           let_create(object, named: object1)
           let_create(object, named: object2)
           let_create(object, named: object3)
+          let_create(create, named: create1, actor: alice.actor, object: object1)
+          let_create(create, named: create2, actor: alice.actor, object: object2)
+          let_create(create, named: create3, actor: alice.actor, object: object3)
+
+          before_each do
+            put_in_notifications(alice.actor, mention: create1)
+            put_in_notifications(alice.actor, mention: create2)
+            put_in_notifications(alice.actor, mention: create3)
+          end
+
+          # the `since` cutoff is decided based on the `created_at`
+          # property of the associated relationship, which is slightly
+          # later than the activity's `created_at` property, so the
+          # following works...
+
+          it "returns count of notifications since given timestamp" do
+            since_time = create2.created_at.to_rfc3339
+            request = count_notifications_since_request("count-notifications-1", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(2)
+          end
+
+          it "returns zero count when no notifications match timestamp" do
+            since_time = (create3.created_at + 1.hour).to_rfc3339
+            request = count_notifications_since_request("count-notifications-2", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(0)
+          end
+
+          it "returns total count when timestamp is before all notifications" do
+            since_time = (create1.created_at - 1.hour).to_rfc3339
+            request = count_notifications_since_request("count-notifications-3", alice.id, {"since" => since_time})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(3)
+          end
+        end
+
+        context "with objects in timeline" do
+          let_create(object, named: object1, attributed_to: alice.actor)
+          let_create(object, named: object2, attributed_to: alice.actor)
+          let_create(object, named: object3, attributed_to: alice.actor)
 
           before_each do
             put_in_timeline(alice.actor, object1)

@@ -3,6 +3,7 @@ require "openssl_ext"
 
 require "../framework/model"
 require "../framework/model/**"
+require "./oauth2/provider/access_token"
 require "./activity_pub/actor"
 require "./last_time"
 require "./session"
@@ -131,6 +132,8 @@ class Account
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri
 
   has_many sessions
+
+  has_many oauth_access_tokens, class_name: OAuth2::Provider::AccessToken
 
   has_many last_times
 

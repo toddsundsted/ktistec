@@ -1,5 +1,6 @@
 require "../../../framework/model"
 require "../../../framework/model/**"
+require "./access_token"
 
 module OAuth2
   module Provider
@@ -57,6 +58,8 @@ module OAuth2
       #
       @[Persistent]
       property scope : String
+
+      has_many access_tokens
     end
   end
 end

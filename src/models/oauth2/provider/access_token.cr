@@ -1,5 +1,7 @@
 require "../../../framework/model"
 require "../../../framework/model/**"
+require "../../account"
+require "./client"
 
 module OAuth2
   module Provider
@@ -25,7 +27,8 @@ module OAuth2
       # identifies *which application* this token was issued to.
       #
       @[Persistent]
-      property client_id : Int64
+      property client_id : Int64?
+      belongs_to client
 
       # The account ID.
       #
@@ -33,7 +36,8 @@ module OAuth2
       # *which user* the token represents.
       #
       @[Persistent]
-      property account_id : Int64
+      property account_id : Int64?
+      belongs_to account
 
       # The expiration.
       #

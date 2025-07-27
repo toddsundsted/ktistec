@@ -203,6 +203,10 @@ module ActivityPub
       published.nil? && local?
     end
 
+    def reply?
+      !in_reply_to_iri.nil?
+    end
+
     def display_link
       urls.try(&.first?) || iri
     end

@@ -307,7 +307,7 @@ class ObjectsController
 
   private def self.get_object(env, iri_or_id)
     if (object = ActivityPub::Object.find?(iri_or_id, include_deleted: true))
-      if (object.visible && !object.draft?) ||
+      if (object.visible && !object.draft? && !object.reply?) ||
          ((account = env.account?) &&
           (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
         object

@@ -749,6 +749,10 @@ Spectator.describe MCPController do
           paginate_request(id, user_id, "drafts", args)
         end
 
+        def paginate_hashtag_request(id, user_id, hashtag, args = {} of String => String | Int32)
+          paginate_request(id, user_id, "hashtag##{hashtag}", args)
+        end
+
         def expect_paginated_response(expected_size, has_more = false)
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
@@ -961,6 +965,57 @@ Spectator.describe MCPController do
             expect_paginated_response(5, true)
           end
         end
+
+        context "with a hashtag collection" do
+          let_create!(
+            :object,
+            named: tagged_post,
+            attributed_to: alice.actor,
+            content: "Post with #technology hashtag",
+            published: Time.utc(2024, 1, 1, 10, 0, 0)
+          )
+          let_create!(
+            :hashtag,
+            name: "technology",
+            subject: tagged_post
+          )
+
+          it "returns hashtag objects for valid hashtag" do
+            request = paginate_hashtag_request("paginate-hashtag-1", alice.id, "technology")
+
+            post "/mcp", JSON_HEADERS, request
+            objects = expect_paginated_response(1, false)
+            expect(objects.first).to eq("ktistec://objects/#{tagged_post.id}")
+          end
+
+          it "returns error for non-existent hashtag" do
+            request = paginate_hashtag_request("paginate-hashtag-2", alice.id, "nonexistent")
+
+            post "/mcp", JSON_HEADERS, request
+            expect_mcp_error(-32602, "Hashtag 'nonexistent' not found")
+          end
+
+          it "supports pagination for hashtag collections" do
+            post2 = Factory.create(
+              :object,
+              attributed_to: alice.actor,
+              content: "Another #technology post",
+              published: Time.utc(2024, 1, 2, 10, 0, 0)
+            )
+            Factory.create(
+              :hashtag,
+              name: "technology",
+              subject: post2
+            )
+
+            request = paginate_hashtag_request("paginate-hashtag-3", alice.id, "technology", {"size" => 1})
+
+            post "/mcp", JSON_HEADERS, request
+            objects = expect_paginated_response(1, true)
+            # returns most recent post first
+            expect(objects.first).to eq("ktistec://objects/#{post2.id}")
+          end
+        end
       end
 
       context "with count_collection_since tool" do
@@ -984,6 +1039,10 @@ Spectator.describe MCPController do
 
         def count_drafts_since_request(id, user_id, args = {} of String => String | Int32)
           count_since_request(id, user_id, "drafts", args)
+        end
+
+        def count_hashtag_since_request(id, user_id, hashtag, args = {} of String => String | Int32)
+          count_since_request(id, user_id, "hashtag##{hashtag}", args)
         end
 
         def expect_count_response(expected_count)
@@ -1174,6 +1233,37 @@ Spectator.describe MCPController do
 
             post "/mcp", JSON_HEADERS, request
             expect_count_response(3)
+          end
+        end
+
+        context "with a hashtag collection" do
+          let_create!(
+            :object,
+            named: tagged_post,
+            attributed_to: alice.actor,
+            content: "Post with #testhashtag",
+            published: Time.utc(2024, 1, 1, 10, 0, 0)
+          )
+          let_create!(
+            :hashtag,
+            name: "testhashtag",
+            subject: tagged_post
+          )
+
+          # time-based counting not supported
+
+          it "returns error for valid hashtag" do
+            request = count_hashtag_since_request("count-hashtag-1", alice.id, "testhashtag", {"since" => "2024-01-01T00:00:00Z"})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_mcp_error(-32602, "Counting not supported for hashtag collections")
+          end
+
+          it "returns error for non-existent hashtag" do
+            request = count_hashtag_since_request("count-hashtag-2", alice.id, "nonexistent", {"since" => "2024-01-01T00:00:00Z"})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_mcp_error(-32602, "Hashtag 'nonexistent' not found")
           end
         end
       end

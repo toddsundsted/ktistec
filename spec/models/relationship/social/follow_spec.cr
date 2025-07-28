@@ -112,6 +112,58 @@ Spectator.describe Relationship::Social::Follow do
     end
   end
 
+  context ".followers_since" do
+    let_create(:actor, named: followed_actor)
+    let_create(:actor, named: follower1)
+    let_create(:actor, named: follower2)
+
+    context "with followers created at different times" do
+      let_create!(:follow_relationship, named: old_follow, actor: follower1, object: followed_actor, created_at: 2.days.ago)
+      let_create!(:follow_relationship, named: new_follow, actor: follower2, object: followed_actor, created_at: 1.hour.ago)
+
+      it "returns count since timestamp" do
+        count = described_class.followers_since(followed_actor.iri, 1.day.ago)
+        expect(count).to eq(1)
+      end
+
+      it "returns total number" do
+        count = described_class.followers_since(followed_actor.iri, 3.days.ago)
+        expect(count).to eq(2)
+      end
+
+      it "returns zero" do
+        count = described_class.followers_since(followed_actor.iri, Time.utc)
+        expect(count).to eq(0)
+      end
+    end
+  end
+
+  context ".following_since" do
+    let_create(:actor, named: following_actor)
+    let_create(:actor, named: followed1)
+    let_create(:actor, named: followed2)
+
+    context "with following created at different times" do
+      let_create!(:follow_relationship, named: old_follow, actor: following_actor, object: followed1, created_at: 2.days.ago)
+      let_create!(:follow_relationship, named: new_follow, actor: following_actor, object: followed2, created_at: 1.hour.ago)
+
+      it "returns count since timestamp" do
+        count = described_class.following_since(following_actor.iri, 1.day.ago)
+        expect(count).to eq(1)
+      end
+
+      it "returns total number" do
+        count = described_class.following_since(following_actor.iri, 3.days.ago)
+        expect(count).to eq(2)
+      end
+
+      it "returns zero" do
+        count = described_class.following_since(following_actor.iri, Time.utc)
+        expect(count).to eq(0)
+      end
+    end
+  end
+
   describe "#accepted?" do
     let_create!(:follow_relationship)
 

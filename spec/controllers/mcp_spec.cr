@@ -753,6 +753,10 @@ Spectator.describe MCPController do
           paginate_request(id, user_id, "hashtag##{hashtag}", args)
         end
 
+        def paginate_mention_request(id, user_id, mention, args = {} of String => String | Int32)
+          paginate_request(id, user_id, "mention@#{mention}", args)
+        end
+
         def expect_paginated_response(expected_size, has_more = false)
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
@@ -1016,6 +1020,56 @@ Spectator.describe MCPController do
             expect(objects.first).to eq("ktistec://objects/#{post2.id}")
           end
         end
+
+        context "with a mention collection" do
+          let_create!(
+            :object,
+            named: mentioned_post,
+            attributed_to: alice.actor,
+            content: "Hey @testuser@example.com check this out!",
+            published: Time.utc(2024, 1, 1, 10, 0, 0)
+          )
+          let_create!(:mention,
+            name: "testuser@example.com",
+            subject: mentioned_post
+          )
+
+          it "returns mention objects for valid mention" do
+            request = paginate_mention_request("paginate-mention-1", alice.id, "testuser@example.com")
+
+            post "/mcp", JSON_HEADERS, request
+            objects = expect_paginated_response(1, false)
+            expect(objects.first).to eq("ktistec://objects/#{mentioned_post.id}")
+          end
+
+          it "returns error for non-existent mention" do
+            request = paginate_mention_request("paginate-mention-2", alice.id, "nonexistent@example.com")
+
+            post "/mcp", JSON_HEADERS, request
+            expect_mcp_error(-32602, "Mention 'nonexistent@example.com' not found")
+          end
+
+          it "supports pagination for mention collections" do
+            post2 = Factory.create(
+              :object,
+              attributed_to: alice.actor,
+              content: "Another post mentioning @testuser@example.com",
+              published: Time.utc(2024, 1, 2, 10, 0, 0)
+            )
+            Factory.create(
+              :mention,
+              name: "testuser@example.com",
+              subject: post2
+            )
+
+            request = paginate_mention_request("paginate-mention-3", alice.id, "testuser@example.com", {"size" => 1})
+
+            post "/mcp", JSON_HEADERS, request
+            objects = expect_paginated_response(1, true)
+            # returns most recent post first
+            expect(objects.first).to eq("ktistec://objects/#{post2.id}")
+          end
+        end
       end
 
       context "with count_collection_since tool" do
@@ -1043,6 +1097,10 @@ Spectator.describe MCPController do
 
         def count_hashtag_since_request(id, user_id, hashtag, args = {} of String => String | Int32)
           count_since_request(id, user_id, "hashtag##{hashtag}", args)
+        end
+
+        def count_mention_since_request(id, user_id, mention, args = {} of String => String | Int32)
+          count_since_request(id, user_id, "mention@#{mention}", args)
         end
 
         def expect_count_response(expected_count)
@@ -1264,6 +1322,37 @@ Spectator.describe MCPController do
 
             post "/mcp", JSON_HEADERS, request
             expect_mcp_error(-32602, "Hashtag 'nonexistent' not found")
+          end
+        end
+
+        context "with a mention collection" do
+          let_create!(
+            :object,
+            named: mentioned_post,
+            attributed_to: alice.actor,
+            content: "Post mentioning @testuser@example.com",
+            published: Time.utc(2024, 1, 1, 10, 0, 0)
+          )
+          let_create!(
+            :mention,
+            name: "testuser@example.com",
+            subject: mentioned_post
+          )
+
+          # time-based counting not supported
+
+          it "returns error for valid mention" do
+            request = count_mention_since_request("count-mention-1", alice.id, "testuser@example.com", {"since" => "2024-01-01T00:00:00Z"})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_mcp_error(-32602, "Counting not supported for mention collections")
+          end
+
+          it "returns error for non-existent mention" do
+            request = count_mention_since_request("count-mention-2", alice.id, "nonexistent@example.com", {"since" => "2024-01-01T00:00:00Z"})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_mcp_error(-32602, "Mention 'nonexistent@example.com' not found")
           end
         end
       end

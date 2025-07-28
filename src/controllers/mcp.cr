@@ -3,6 +3,7 @@ require "../utils/json_rpc"
 require "../models/account"
 require "../models/activity_pub/object"
 require "../models/tag/hashtag"
+require "../models/tag/mention"
 
 require "markd"
 
@@ -532,7 +533,7 @@ class MCPController
   end
 
   USER_REGEX = /^ktistec:\/\/users\/(\d+)$/
-  NAME_REGEX = /^([a-zA-Z0-9_-]+|hashtag#[a-zA-Z0-9_-]+)$/
+  NAME_REGEX = /^([a-zA-Z0-9_-]+|hashtag#[a-zA-Z0-9_-]+|mention@[a-zA-Z0-9_@.-]+)$/
 
   def_tool("paginate_collection", "Paginate through collections of objects, activities, and actors", [
     {name: "user", type: "string", description: "URI of the user whose collections to paginate", required: true, matches: USER_REGEX},
@@ -613,6 +614,16 @@ class MCPController
             JSON::Any.new("ktistec://objects/#{obj.id}")
           end
           {objects, hashtag_objects.more?}
+        elsif name.starts_with?("mention@")
+          mention = name.sub("mention@", "")
+          unless Tag::Mention.most_recent_object(mention)
+            raise MCPError.new("Mention '#{mention}' not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+          end
+          mention_objects = Tag::Mention.all_objects(mention, page: page, size: size)
+          objects = mention_objects.map do |obj|
+            JSON::Any.new("ktistec://objects/#{obj.id}")
+          end
+          {objects, mention_objects.more?}
         else
           raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
         end
@@ -663,6 +674,12 @@ class MCPController
             raise MCPError.new("Hashtag '#{hashtag}' not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
           end
           raise MCPError.new("Counting not supported for hashtag collections", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+        elsif name.starts_with?("mention@")
+          mention = name.sub("mention@", "")
+          unless Tag::Mention.most_recent_object(mention)
+            raise MCPError.new("Mention '#{mention}' not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+          end
+          raise MCPError.new("Counting not supported for mention collections", JSON::RPC::ErrorCodes::INVALID_PARAMS)
         else
           raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
         end

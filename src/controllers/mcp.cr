@@ -2,6 +2,7 @@ require "../framework/controller"
 require "../utils/json_rpc"
 require "../models/account"
 require "../models/activity_pub/object"
+require "../models/relationship/social/follow"
 require "../models/tag/hashtag"
 require "../models/tag/mention"
 
@@ -615,6 +616,24 @@ class MCPController
           JSON::Any.new("ktistec://objects/#{announced_object.id}")
         end
         {objects, announcements.more?}
+      when "followers"
+        followers = Relationship::Social::Follow.followers_for(actor.iri, page: page, size: size)
+        objects = followers.map do |relationship|
+          JSON::Any.new({
+            "actor" => JSON::Any.new("ktistec://actors/#{relationship.actor.id}"),
+            "confirmed" => JSON::Any.new(relationship.confirmed)
+          })
+        end
+        {objects, followers.more?}
+      when "following"
+        following = Relationship::Social::Follow.following_for(actor.iri, page: page, size: size)
+        objects = following.map do |relationship|
+          JSON::Any.new({
+            "actor" => JSON::Any.new("ktistec://actors/#{relationship.object.id}"),
+            "confirmed" => JSON::Any.new(relationship.confirmed)
+          })
+        end
+        {objects, following.more?}
       else
         if name.starts_with?("hashtag#")
           hashtag = name.sub("hashtag#", "")
@@ -683,6 +702,10 @@ class MCPController
         raise MCPError.new("Counting not supported for likes collection", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       when "announcements"
         raise MCPError.new("Counting not supported for announcements collections", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      when "followers"
+        Relationship::Social::Follow.followers_since(actor.iri, since)
+      when "following"
+        Relationship::Social::Follow.following_since(actor.iri, since)
       else
         if name.starts_with?("hashtag#")
           hashtag = name.sub("hashtag#", "")

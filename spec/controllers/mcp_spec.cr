@@ -765,6 +765,14 @@ Spectator.describe MCPController do
           paginate_request(id, user_id, "announcements", args)
         end
 
+        def paginate_followers_request(id, user_id, args = {} of String => String | Int32)
+          paginate_request(id, user_id, "followers", args)
+        end
+
+        def paginate_following_request(id, user_id, args = {} of String => String | Int32)
+          paginate_request(id, user_id, "following", args)
+        end
+
         def expect_paginated_response(expected_size, has_more = false)
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
@@ -1154,6 +1162,128 @@ Spectator.describe MCPController do
             end
           end
         end
+
+        context "for followers" do
+          let_create(:actor, named: follower)
+
+          it "is empty given no followers" do
+            request = paginate_followers_request("paginate-followers-1", alice.id)
+
+            post "/mcp", JSON_HEADERS, request
+            objects = expect_paginated_response(0, false)
+            expect(objects).to be_empty
+          end
+
+          context "with a follower" do
+            let_create!(:follow_relationship, named: nil, actor: follower, object: alice.actor, confirmed: true)
+
+            it "returns follower relationships" do
+              request = paginate_followers_request("paginate-followers-2", alice.id)
+
+              post "/mcp", JSON_HEADERS, request
+              objects = expect_paginated_response(1, false)
+              expect(objects.size).to eq(1)
+
+              relationship = objects.first.as_h
+              expect(relationship["actor"]).to eq("ktistec://actors/#{follower.id}")
+              expect(relationship["confirmed"]).to eq(true)
+            end
+
+            context "and an unconfirmed follower" do
+              let_create(:actor, named: unconfirmed_follower)
+              let_create!(:follow_relationship, named: nil, actor: unconfirmed_follower, object: alice.actor, confirmed: false)
+
+              it "includes both confirmed and unconfirmed followers" do
+                request = paginate_followers_request("paginate-followers-3", alice.id)
+
+                post "/mcp", JSON_HEADERS, request
+                objects = expect_paginated_response(2, false)
+                expect(objects.size).to eq(2)
+
+                unconfirmed_relationship = objects[0].as_h
+                expect(unconfirmed_relationship["actor"]).to eq("ktistec://actors/#{unconfirmed_follower.id}")
+                expect(unconfirmed_relationship["confirmed"]).to eq(false)
+
+                confirmed_relationship = objects[1].as_h
+                expect(confirmed_relationship["actor"]).to eq("ktistec://actors/#{follower.id}")
+                expect(confirmed_relationship["confirmed"]).to eq(true)
+              end
+
+              it "supports pagination for followers collection" do
+                request = paginate_followers_request("paginate-followers-4", alice.id, {"size" => 1})
+
+                post "/mcp", JSON_HEADERS, request
+                objects = expect_paginated_response(1, true)
+                expect(objects.size).to eq(1)
+
+                # returns most recent follower first
+                relationship = objects.first.as_h
+                expect(relationship["actor"]).to eq("ktistec://actors/#{unconfirmed_follower.id}")
+              end
+            end
+          end
+        end
+
+        context "for following" do
+          let_create(:actor, named: followed_actor)
+
+          it "is empty given no following" do
+            request = paginate_following_request("paginate-following-1", alice.id)
+
+            post "/mcp", JSON_HEADERS, request
+            objects = expect_paginated_response(0, false)
+            expect(objects).to be_empty
+          end
+
+          context "with following" do
+            let_create!(:follow_relationship, named: nil, actor: alice.actor, object: followed_actor, confirmed: true)
+
+            it "returns following relationships" do
+              request = paginate_following_request("paginate-following-2", alice.id)
+
+              post "/mcp", JSON_HEADERS, request
+              objects = expect_paginated_response(1, false)
+              expect(objects.size).to eq(1)
+
+              relationship = objects.first.as_h
+              expect(relationship["actor"]).to eq("ktistec://actors/#{followed_actor.id}")
+              expect(relationship["confirmed"]).to eq(true)
+            end
+
+            context "and an unconfirmed following" do
+              let_create(:actor, named: unconfirmed_followed)
+              let_create!(:follow_relationship, named: nil, actor: alice.actor, object: unconfirmed_followed, confirmed: false)
+
+              it "includes both confirmed and unconfirmed following" do
+                request = paginate_following_request("paginate-following-3", alice.id)
+
+                post "/mcp", JSON_HEADERS, request
+                objects = expect_paginated_response(2, false)
+                expect(objects.size).to eq(2)
+
+                unconfirmed_relationship = objects[0].as_h
+                expect(unconfirmed_relationship["actor"]).to eq("ktistec://actors/#{unconfirmed_followed.id}")
+                expect(unconfirmed_relationship["confirmed"]).to eq(false)
+
+                confirmed_relationship = objects[1].as_h
+                expect(confirmed_relationship["actor"]).to eq("ktistec://actors/#{followed_actor.id}")
+                expect(confirmed_relationship["confirmed"]).to eq(true)
+              end
+
+              it "supports pagination for following collection" do
+                request = paginate_following_request("paginate-following-4", alice.id, {"size" => 1})
+
+                post "/mcp", JSON_HEADERS, request
+                objects = expect_paginated_response(1, true)
+                expect(objects.size).to eq(1)
+
+                # returns most recent following first
+                relationship = objects.first.as_h
+                expect(relationship["actor"]).to eq("ktistec://actors/#{unconfirmed_followed.id}")
+              end
+            end
+          end
+        end
       end
 
       context "with count_collection_since tool" do
@@ -1193,6 +1323,14 @@ Spectator.describe MCPController do
 
         def count_announcements_since_request(id, user_id, args = {} of String => String | Int32)
           count_since_request(id, user_id, "announcements", args)
+        end
+
+        def count_followers_since_request(id, user_id, args = {} of String => String | Int32)
+          count_since_request(id, user_id, "followers", args)
+        end
+
+        def count_following_since_request(id, user_id, args = {} of String => String | Int32)
+          count_since_request(id, user_id, "following", args)
         end
 
         def expect_count_response(expected_count)
@@ -1463,6 +1601,62 @@ Spectator.describe MCPController do
 
             post "/mcp", JSON_HEADERS, request
             expect_mcp_error(-32602, "Counting not supported for announcements collections")
+          end
+        end
+
+        context "with followers collection" do
+          it "returns zero count" do
+            request = count_followers_since_request("count-followers-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(0)
+          end
+
+          context "with followers" do
+            let_create(:actor, named: follower)
+            let_create!(:follow_relationship, actor: follower, object: alice.actor, created_at: Time.utc(2024, 1, 2))
+
+            it "returns count of followers" do
+              request = count_followers_since_request("count-followers-2", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+
+              post "/mcp", JSON_HEADERS, request
+              expect_count_response(1)
+            end
+
+            it "returns zero count" do
+              request = count_followers_since_request("count-followers-3", alice.id, {"since" => "2024-01-03T00:00:00Z"})
+
+              post "/mcp", JSON_HEADERS, request
+              expect_count_response(0)
+            end
+          end
+        end
+
+        context "with following collection" do
+          it "returns zero count" do
+            request = count_following_since_request("count-following-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_count_response(0)
+          end
+
+          context "with following" do
+            let_create(:actor, named: followed_actor)
+            let_create!(:follow_relationship, actor: alice.actor, object: followed_actor, created_at: Time.utc(2024, 1, 2))
+
+            it "returns count of following" do
+              request = count_following_since_request("count-following-2", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+
+              post "/mcp", JSON_HEADERS, request
+              expect_count_response(1)
+            end
+
+            it "returns zero count" do
+              request = count_following_since_request("count-following-3", alice.id, {"since" => "2024-01-03T00:00:00Z"})
+
+              post "/mcp", JSON_HEADERS, request
+              expect_count_response(0)
+            end
           end
         end
       end

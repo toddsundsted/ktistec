@@ -757,6 +757,10 @@ Spectator.describe MCPController do
           paginate_request(id, user_id, "mention@#{mention}", args)
         end
 
+        def paginate_likes_request(id, user_id, args = {} of String => String | Int32)
+          paginate_request(id, user_id, "likes", args)
+        end
+
         def expect_paginated_response(expected_size, has_more = false)
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
@@ -1070,6 +1074,44 @@ Spectator.describe MCPController do
             expect(objects.first).to eq("ktistec://objects/#{post2.id}")
           end
         end
+
+        context "with a liked object" do
+          let_create(:object, named: liked_post, attributed_to: alice.actor)
+
+          it "is empty" do
+            request = paginate_likes_request("paginate-likes-1", alice.id)
+
+            post "/mcp", JSON_HEADERS, request
+            objects = expect_paginated_response(0, false)
+            expect(objects).to be_empty
+          end
+
+          context "and a like" do
+            let_create!(:like, named: nil, actor: alice.actor, object: liked_post)
+
+            it "returns liked objects" do
+              request = paginate_likes_request("paginate-likes-2", alice.id)
+
+              post "/mcp", JSON_HEADERS, request
+              objects = expect_paginated_response(1, false)
+              expect(objects.first).to eq("ktistec://objects/#{liked_post.id}")
+            end
+
+            context "and another liked object" do
+              let_create(:object, named: post, attributed_to: alice.actor)
+              let_create!(:like, named: nil, actor: alice.actor, object: post)
+
+              it "supports pagination for likes collection" do
+                request = paginate_likes_request("paginate-likes-3", alice.id, {"size" => 1})
+
+                post "/mcp", JSON_HEADERS, request
+                objects = expect_paginated_response(1, true)
+                # returns most recent like first
+                expect(objects.first).to eq("ktistec://objects/#{post.id}")
+              end
+            end
+          end
+        end
       end
 
       context "with count_collection_since tool" do
@@ -1101,6 +1143,10 @@ Spectator.describe MCPController do
 
         def count_mention_since_request(id, user_id, mention, args = {} of String => String | Int32)
           count_since_request(id, user_id, "mention@#{mention}", args)
+        end
+
+        def count_likes_since_request(id, user_id, args = {} of String => String | Int32)
+          count_since_request(id, user_id, "likes", args)
         end
 
         def expect_count_response(expected_count)
@@ -1353,6 +1399,15 @@ Spectator.describe MCPController do
 
             post "/mcp", JSON_HEADERS, request
             expect_mcp_error(-32602, "Mention 'nonexistent@example.com' not found")
+          end
+        end
+
+        context "with likes collection" do
+          it "returns error for likes collection" do
+            request = count_likes_since_request("count-likes-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_mcp_error(-32602, "Counting not supported for likes collection")
           end
         end
       end

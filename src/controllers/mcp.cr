@@ -285,6 +285,33 @@ class MCPController
       })
     end
 
+    replies = object.replies(for_actor: nil) # `for_actor` is a dummy parameter
+    if replies.any?
+      objects_data = replies.map do |reply|
+        reply_data = {
+          "uri" => JSON::Any.new("ktistec://objects/#{reply.id}"),
+          "author" => JSON::Any.new("ktistec://actors/#{reply.attributed_to.id}")
+        }
+        if (published = reply.published)
+          reply_data["published"] = JSON::Any.new(published.to_rfc3339)
+        end
+        if (content = reply.content.presence)
+          preview = Ktistec::Util.render_as_text(content)
+          if preview.size > 100
+            preview = preview[0...100].rstrip + "..."
+          end
+          if (preview = preview.presence)
+            reply_data["preview"] = JSON::Any.new(preview)
+          end
+        end
+        JSON::Any.new(reply_data)
+      end
+      contents["replies"] = JSON::Any.new({
+        "count" => JSON::Any.new(replies.size.to_i64),
+        "objects" => JSON::Any.new(objects_data)
+      })
+    end
+
     contents
   end
 

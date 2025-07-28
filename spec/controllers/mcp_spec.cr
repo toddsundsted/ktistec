@@ -337,6 +337,7 @@ Spectator.describe MCPController do
           expect(json["in_reply_to"]).to eq("ktistec://objects/#{root.id}")
           expect(json["likes"]?).to be_nil
           expect(json["announcements"]?).to be_nil
+          expect(json["replies"]?).to be_nil
         end
 
         context "with HTML content" do
@@ -435,6 +436,53 @@ Spectator.describe MCPController do
             actors = announcements["actors"].as_a
             expect(actors.size).to eq(1)
             expect(actors.first["uri"]).to eq("ktistec://actors/#{announcer.id}")
+          end
+        end
+
+        context "with replies" do
+          let_create(:actor, named: replier)
+          let_create!(:object,
+            named: reply1,
+            attributed_to: replier,
+            in_reply_to: object,
+            content: "This is the first reply with some content that might be quite long and should be truncated because it is long.",
+            published: Time.utc(2024, 1, 2, 10, 0, 0)
+          )
+          let_create!(:object,
+            named: reply2,
+            attributed_to: replier,
+            in_reply_to: object,
+            content: "Short reply",
+            published: Time.utc(2024, 1, 2, 11, 0, 0)
+          )
+
+          it "includes replies field in object JSON" do
+            post "/mcp", JSON_HEADERS, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            text = parsed["result"]["contents"].as_a.first["text"].as_s
+            json = JSON.parse(text)
+
+            replies = json["replies"].as_h
+            expect(replies["count"]).to eq(2)
+
+            objects = replies["objects"].as_a
+            expect(objects.size).to eq(2)
+
+            # the replies should be ordered by `published`
+
+            first_reply = objects[0]
+            expect(first_reply["uri"]).to eq("ktistec://objects/#{reply2.id}")
+            expect(first_reply["author"]).to eq("ktistec://actors/#{replier.id}")
+            expect(first_reply["published"]).to eq("2024-01-02T11:00:00Z")
+            expect(first_reply["preview"]).to eq("Short reply")
+
+            second_reply = objects[1]
+            expect(second_reply["uri"]).to eq("ktistec://objects/#{reply1.id}")
+            expect(second_reply["author"]).to eq("ktistec://actors/#{replier.id}")
+            expect(second_reply["published"]).to eq("2024-01-02T10:00:00Z")
+            expect(second_reply["preview"]).to eq("This is the first reply with some content that might be quite long and should be truncated because i...")
           end
         end
       end

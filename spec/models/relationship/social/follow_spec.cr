@@ -66,6 +66,52 @@ Spectator.describe Relationship::Social::Follow do
     end
   end
 
+  context ".followers_for" do
+    let_create(:actor, named: followed_actor)
+    let_create(:actor, named: follower1)
+    let_create(:actor, named: follower2)
+
+    context "with multiple followers" do
+      let_create!(:follow_relationship, named: nil, actor: follower1, object: followed_actor, confirmed: true)
+      let_create!(:follow_relationship, named: nil, actor: follower2, object: followed_actor, confirmed: false)
+
+      it "returns followers for the given actor" do
+        followers = described_class.followers_for(followed_actor.iri)
+        expect(followers.size).to eq(2)
+        expect(followers.map(&.from_iri)).to contain_exactly(follower1.iri, follower2.iri)
+      end
+
+      it "supports pagination" do
+        followers = described_class.followers_for(followed_actor.iri, page: 1, size: 1)
+        expect(followers.size).to eq(1)
+        expect(followers.more?).to be_true
+      end
+    end
+  end
+
+  context ".following_for" do
+    let_create(:actor, named: following_actor)
+    let_create(:actor, named: followed1)
+    let_create(:actor, named: followed2)
+
+    context "with multiple following" do
+      let_create!(:follow_relationship, named: nil, actor: following_actor, object: followed1, confirmed: true)
+      let_create!(:follow_relationship, named: nil, actor: following_actor, object: followed2, confirmed: false)
+
+      it "returns following for the given actor" do
+        following = described_class.following_for(following_actor.iri)
+        expect(following.size).to eq(2)
+        expect(following.map(&.to_iri)).to contain_exactly(followed1.iri, followed2.iri)
+      end
+
+      it "supports pagination" do
+        following = described_class.following_for(following_actor.iri, page: 1, size: 1)
+        expect(following.size).to eq(1)
+        expect(following.more?).to be_true
+      end
+    end
+  end
+
   describe "#accepted?" do
     let_create!(:follow_relationship)
 

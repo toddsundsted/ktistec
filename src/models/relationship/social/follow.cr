@@ -24,6 +24,39 @@ class Relationship
         ActivityPub::Activity::Follow.where(QUERY, from_iri, to_iri).first?
       end
 
+      private def self.follow_query(direction)
+        <<-QUERY
+          SELECT #{columns}
+            FROM relationships
+           WHERE type = '#{self}'
+             AND #{direction} = ?
+          ORDER BY id DESC
+           LIMIT ? OFFSET ?
+        QUERY
+      end
+
+      # Returns followers.
+      #
+      # Returns relationships where the actor is being followed (`to_iri`).
+      #
+      # Results are ordered by most recent first.
+      #
+      def self.followers_for(actor_iri : String, page = 1, size = 10)
+        query = follow_query("to_iri")
+        query_and_paginate(query, actor_iri, page: page, size: size)
+      end
+
+      # Returns following.
+      #
+      # Returns relationships where the actor is following others (`from_iri`).
+      #
+      # Results are ordered by most recent first.
+      #
+      def self.following_for(actor_iri : String, page = 1, size = 10)
+        query = follow_query("from_iri")
+        query_and_paginate(query, actor_iri, page: page, size: size)
+      end
+
       # Returns true if the follow relationship has been accepted.
       #
       def accepted?

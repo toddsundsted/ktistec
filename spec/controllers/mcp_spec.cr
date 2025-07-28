@@ -761,6 +761,10 @@ Spectator.describe MCPController do
           paginate_request(id, user_id, "likes", args)
         end
 
+        def paginate_announcements_request(id, user_id, args = {} of String => String | Int32)
+          paginate_request(id, user_id, "announcements", args)
+        end
+
         def expect_paginated_response(expected_size, has_more = false)
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
@@ -1112,6 +1116,44 @@ Spectator.describe MCPController do
             end
           end
         end
+
+        context "with an announced object" do
+          let_create(:object, named: announced_post, attributed_to: alice.actor)
+
+          it "is empty" do
+            request = paginate_announcements_request("paginate-announcements-1", alice.id)
+
+            post "/mcp", JSON_HEADERS, request
+            objects = expect_paginated_response(0, false)
+            expect(objects).to be_empty
+          end
+
+          context "and an announcement" do
+            let_create!(:announce, named: nil, actor: alice.actor, object: announced_post)
+
+            it "returns announced objects" do
+              request = paginate_announcements_request("paginate-announcements-2", alice.id)
+
+              post "/mcp", JSON_HEADERS, request
+              objects = expect_paginated_response(1, false)
+              expect(objects.first).to eq("ktistec://objects/#{announced_post.id}")
+            end
+
+            context "and another announced object" do
+              let_create(:object, named: post, attributed_to: alice.actor)
+              let_create!(:announce, named: nil, actor: alice.actor, object: post)
+
+              it "supports pagination for announcements collection" do
+                request = paginate_announcements_request("paginate-announcements-3", alice.id, {"size" => 1})
+
+                post "/mcp", JSON_HEADERS, request
+                objects = expect_paginated_response(1, true)
+                # returns most recent announcement first
+                expect(objects.first).to eq("ktistec://objects/#{post.id}")
+              end
+            end
+          end
+        end
       end
 
       context "with count_collection_since tool" do
@@ -1147,6 +1189,10 @@ Spectator.describe MCPController do
 
         def count_likes_since_request(id, user_id, args = {} of String => String | Int32)
           count_since_request(id, user_id, "likes", args)
+        end
+
+        def count_announcements_since_request(id, user_id, args = {} of String => String | Int32)
+          count_since_request(id, user_id, "announcements", args)
         end
 
         def expect_count_response(expected_count)
@@ -1408,6 +1454,15 @@ Spectator.describe MCPController do
 
             post "/mcp", JSON_HEADERS, request
             expect_mcp_error(-32602, "Counting not supported for likes collection")
+          end
+        end
+
+        context "with announcements collection" do
+          it "returns error for announcements collection (time-based counting not supported)" do
+            request = count_announcements_since_request("count-announcements-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+
+            post "/mcp", JSON_HEADERS, request
+            expect_mcp_error(-32602, "Counting not supported for announcements collections")
           end
         end
       end

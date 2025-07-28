@@ -609,6 +609,12 @@ class MCPController
           JSON::Any.new("ktistec://objects/#{liked_object.id}")
         end
         {objects, likes.more?}
+      when "announcements"
+        announcements = actor.announces(page: page, size: size)
+        objects = announcements.map do |announced_object|
+          JSON::Any.new("ktistec://objects/#{announced_object.id}")
+        end
+        {objects, announcements.more?}
       else
         if name.starts_with?("hashtag#")
           hashtag = name.sub("hashtag#", "")
@@ -675,6 +681,8 @@ class MCPController
         actor.drafts(since: since)
       when "likes"
         raise MCPError.new("Counting not supported for likes collection", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      when "announcements"
+        raise MCPError.new("Counting not supported for announcements collections", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       else
         if name.starts_with?("hashtag#")
           hashtag = name.sub("hashtag#", "")

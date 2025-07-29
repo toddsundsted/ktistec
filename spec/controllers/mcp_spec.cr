@@ -112,12 +112,18 @@ Spectator.describe MCPController do
     context "with resources/list request" do
       let(resources_list_request) { %Q|{"jsonrpc": "2.0", "id": "resources-1", "method": "resources/list"}| }
 
-      it "handles no resources gracefully" do
+      it "returns the information resource" do
         post "/mcp", JSON_HEADERS, resources_list_request
         expect(response.status_code).to eq(200)
         parsed = JSON.parse(response.body)
 
-        expect(parsed["result"]["resources"].as_a).to be_empty
+        resources = parsed["result"]["resources"].as_a
+        expect(resources.size).to eq(1)
+
+        info_resource = resources.first
+        expect(info_resource["uri"]).to eq("ktistec://information")
+        expect(info_resource["name"]).to eq("Instance Information")
+        expect(info_resource["mimeType"]).to eq("application/json")
       end
 
       context "given two users" do
@@ -131,12 +137,9 @@ Spectator.describe MCPController do
 
           result = parsed["result"]
           resources = result["resources"].as_a
-          expect(resources.size).to eq(2)
+          expect(resources.size).to eq(3)
 
-          uris = resources.map(&.["uri"].as_s)
-          expect(uris).to all(start_with("ktistec://users/"))
-
-          names = resources.map(&.["name"].as_s)
+          names = resources.select(&.["uri"].as_s.starts_with?("ktistec://users/")).map(&.["name"].as_s)
           expect(names).to contain_exactly("alice", "bob")
         end
       end
@@ -181,6 +184,56 @@ Spectator.describe MCPController do
 
         post "/mcp", JSON_HEADERS, request
         expect_mcp_error(-32602, "Unsupported URI scheme: ktistec://foo/bar")
+      end
+
+      it "returns information data for valid URI" do
+        request = %Q|{"jsonrpc": "2.0", "id": "read-info-1", "method": "resources/read", "params": {"uri": "ktistec://information"}}|
+
+        post "/mcp", JSON_HEADERS, request
+        expect(response.status_code).to eq(200)
+        parsed = JSON.parse(response.body)
+
+        result = parsed["result"]
+        contents = result["contents"].as_a
+        expect(contents.size).to eq(1)
+
+        info_data = contents.first
+        expect(info_data["uri"]).to eq("ktistec://information")
+        expect(info_data["name"]).to eq("Instance Information")
+        expect(info_data["mimeType"]).to eq("application/json")
+
+        data = JSON.parse(info_data["text"].as_s)
+
+        # basic instance information
+        expect(data["version"]).to eq(Ktistec::VERSION)
+        expect(data["host"]).to eq(Ktistec.host)
+        expect(data["description"]).to eq("Ktistec ActivityPub Server Model Context Protocol (MCP) Interface")
+
+        # supported collections
+        collections = data["collections"].as_a.map(&.as_s)
+        expected_collections = ["posts", "drafts", "timeline", "notifications", "likes", "announcements", "followers", "following"]
+        expect(collections).to contain_exactly(*expected_collections)
+
+        # supported collection formats
+        formats = data["collection_formats"].as_h
+        expect(formats["hashtag"]).to eq(%q(hashtag#{name}))
+        expect(formats["mention"]).to eq(%q(mention@{name}))
+
+        # supported object types
+        object_types = data["object_types"].as_a.map(&.as_s)
+        all_types = {{(ActivityPub::Object.all_subclasses << ActivityPub::Object).map(&.stringify.split("::").last)}}
+        expect(object_types).to contain_exactly(*all_types)
+
+        # supported actor types
+        actor_types = data["actor_types"].as_a.map(&.as_s)
+        all_types = {{(ActivityPub::Actor.all_subclasses << ActivityPub::Actor).map(&.stringify.split("::").last)}}
+        expect(actor_types).to contain_exactly(*all_types)
+
+        # statistics
+        stats = data["statistics"].as_h
+        expect(stats["total_users"]).to be_a(JSON::Any)
+        expect(stats["total_actors"]).to be_a(JSON::Any)
+        expect(stats["total_objects"]).to be_a(JSON::Any)
       end
 
       context "given a user" do

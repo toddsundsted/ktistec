@@ -138,15 +138,22 @@ class MCPController
   end
 
   private def self.handle_resources_list(request : JSON::RPC::Request) : JSON::Any
-    resources =
-      Account.all.map do |account|
-        resource = {
-          "uri" => JSON::Any.new("ktistec://users/#{account.id}"),
-          "mimeType" => JSON::Any.new("application/json"),
-          "name" => JSON::Any.new(account.username),
-        }
-        JSON::Any.new(resource)
-      end
+    resources = [] of JSON::Any
+
+    resources << JSON::Any.new({
+      "uri" => JSON::Any.new("ktistec://information"),
+      "mimeType" => JSON::Any.new("application/json"),
+      "name" => JSON::Any.new("Instance Information"),
+    })
+
+    Account.all.each do |account|
+      resources << JSON::Any.new({
+        "uri" => JSON::Any.new("ktistec://users/#{account.id}"),
+        "mimeType" => JSON::Any.new("application/json"),
+        "name" => JSON::Any.new(account.username),
+      })
+    end
+
     JSON::Any.new({
       "resources" => JSON::Any.new(resources)
     })
@@ -170,6 +177,50 @@ class MCPController
     JSON::Any.new({
       "resourceTemplates" => JSON::Any.new(templates)
     })
+  end
+
+  private def self.instance_information() : Hash(String, JSON::Any)
+    contents = Hash(String, JSON::Any).new
+
+    # basic instance information
+    contents["version"] = JSON::Any.new(Ktistec::VERSION)
+    contents["host"] = JSON::Any.new(Ktistec.host)
+    contents["description"] = JSON::Any.new("Ktistec ActivityPub Server Model Context Protocol (MCP) Interface")
+
+    # supported collections
+    collections = [
+      "posts", "drafts",
+      "timeline", "notifications",
+      "likes", "announcements",
+      "followers", "following",
+    ]
+    contents["collections"] = JSON::Any.new(collections.map { |c| JSON::Any.new(c) })
+
+    # supported collection formats
+    collection_formats = {
+      "hashtag" => %q(hashtag#{name}),
+      "mention" => %q(mention@{name})
+    }
+    contents["collection_formats"] = JSON::Any.new(
+      collection_formats.transform_values { |v| JSON::Any.new(v) }
+    )
+
+    # supported object types
+    object_types = ActivityPub::Object.all_subtypes.map(&.split("::").last)
+    contents["object_types"] = JSON::Any.new(object_types.map { |t| JSON::Any.new(t) })
+
+    # supported actor types
+    actor_types = ActivityPub::Actor.all_subtypes.map(&.split("::").last)
+    contents["actor_types"] = JSON::Any.new(actor_types.map { |t| JSON::Any.new(t) })
+
+    # statistics
+    contents["statistics"] = JSON::Any.new({
+      "total_users" => JSON::Any.new(Account.all.size.to_i64),
+      "total_actors" => JSON::Any.new(ActivityPub::Actor.all.size.to_i64),
+      "total_objects" => JSON::Any.new(ActivityPub::Object.all.size.to_i64)
+    })
+
+    contents
   end
 
   private def self.actor_contents(actor : ActivityPub::Actor) : Hash(String, JSON::Any)
@@ -393,6 +444,22 @@ class MCPController
       JSON::Any.new({
         "contents" => JSON::Any.new([
           JSON::Any.new(object_data)
+        ])
+      })
+
+    elsif uri == "ktistec://information"
+      text_data = instance_information()
+
+      information_data = {
+        "uri" => JSON::Any.new(uri),
+        "mimeType" => JSON::Any.new("application/json"),
+        "name" => JSON::Any.new("Instance Information"),
+        "text" => JSON::Any.new(text_data.to_json)
+      }
+
+      JSON::Any.new({
+        "contents" => JSON::Any.new([
+          JSON::Any.new(information_data)
         ])
       })
 

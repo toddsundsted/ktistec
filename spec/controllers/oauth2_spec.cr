@@ -167,7 +167,7 @@ Spectator.describe OAuth2Controller do
             client_secret: Random::Secure.urlsafe_base64,
             redirect_uris: "https://example.com/callback",
             client_name: "Provisional Client",
-            scope: "all"
+            scope: "mcp"
           )
         end
 
@@ -198,7 +198,7 @@ Spectator.describe OAuth2Controller do
 
       let(state) { random_string }
       let(code_challenge) { random_string }
-      let(body) { "client_id=#{client.client_id}&redirect_uri=#{client.redirect_uris}&response_type=code&scope=all&state=#{state}&code_challenge=#{code_challenge}&code_challenge_method=S256" }
+      let(body) { "client_id=#{client.client_id}&redirect_uri=#{client.redirect_uris}&response_type=code&scope=mcp&state=#{state}&code_challenge=#{code_challenge}&code_challenge_method=S256" }
 
       it "redirects to the client with a code" do
         post "/oauth/authorize", headers: HTML_HEADERS, body: body
@@ -268,7 +268,7 @@ Spectator.describe OAuth2Controller do
             client_secret: Random::Secure.urlsafe_base64,
             redirect_uris: "https://example.com/callback",
             client_name: "Provisional Client",
-            scope: "all"
+            scope: "mcp"
           )
         end
 

@@ -72,7 +72,7 @@ class OAuth2Controller
       client_secret: Random::Secure.urlsafe_base64,
       redirect_uris: redirect_uris.join(" "),
       client_name: client_name,
-      scope: "all"
+      scope: "mcp"
     )
 
     @@provisional_clients.push(client)
@@ -143,7 +143,7 @@ class OAuth2Controller
       bad_request "Unsupported `response_type`"
     end
 
-    scope = env.params.query["scope"]? || "all"
+    scope = env.params.query["scope"]? || "mcp"
 
     ok "oauth/authorize",
       env: env,
@@ -287,7 +287,7 @@ class OAuth2Controller
       client_id: client.id,
       account_id: auth_code.account_id,
       expires_at: Time.utc + 1.hour,
-      scope: "all",
+      scope: "mcp",
     ).save
 
     env.response.content_type = "application/json"

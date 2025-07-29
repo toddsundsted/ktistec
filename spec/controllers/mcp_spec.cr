@@ -281,7 +281,8 @@ Spectator.describe MCPController do
           text = user["text"].as_s
           json = JSON.parse(text)
 
-          expect(json["url"]).to eq(alice.iri)
+          expect(json["external_url"]).to eq(alice.iri)
+          expect(json["internal_url"]).to eq("https://test.test/remote/actors/#{alice.id}")
           expect(json["name"]).to eq("Alice")
           expect(json["summary"]).to eq("Alice's summary")
           expect(json["icon"]).to eq("https://example.com/icon.png")
@@ -336,7 +337,8 @@ Spectator.describe MCPController do
           text = content["text"].as_s
           json = JSON.parse(text)
 
-          expect(json["url"]).to eq(actor.iri)
+          expect(json["external_url"]).to eq(actor.iri)
+          expect(json["internal_url"]).to eq("https://test.test/remote/actors/#{actor.id}")
           expect(json["name"]).to eq("Test Actor")
           expect(json["summary"]).to eq("This is a summary")
           expect(json["icon"]).to eq("https://example.com/icon.png")
@@ -385,7 +387,8 @@ Spectator.describe MCPController do
           text = content["text"].as_s
           json = JSON.parse(text)
 
-          expect(json["url"]).to eq(object.iri)
+          expect(json["external_url"]).to eq(object.iri)
+          expect(json["internal_url"]).to eq("https://test.test/remote/objects/#{object.id}")
           expect(json["name"]).to eq("Test Object")
           expect(json["summary"]).to eq("This is a summary")
           expect(json["language"]).to eq("en")

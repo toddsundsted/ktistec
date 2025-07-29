@@ -227,7 +227,8 @@ class MCPController
     contents = Hash(String, JSON::Any).new
 
     contents["uri"] = JSON::Any.new("ktistec://actors/#{actor.id}")
-    contents["url"] = JSON::Any.new(actor.iri)
+    contents["external_url"] = JSON::Any.new(actor.iri)
+    contents["internal_url"] = JSON::Any.new("#{Ktistec.host}/remote/actors/#{actor.id}")
     if (name = actor.name)
       contents["name"] = JSON::Any.new(name)
     end
@@ -276,7 +277,8 @@ class MCPController
     contents = Hash(String, JSON::Any).new
 
     contents["uri"] = JSON::Any.new("ktistec://objects/#{object.id}")
-    contents["url"] = JSON::Any.new(object.iri)
+    contents["external_url"] = JSON::Any.new(object.iri)
+    contents["internal_url"] = JSON::Any.new("#{Ktistec.host}/remote/objects/#{object.id}")
     if name
       contents["name"] = JSON::Any.new(name)
     end

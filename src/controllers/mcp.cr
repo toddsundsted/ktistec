@@ -246,6 +246,7 @@ class MCPController
     if (urls = actor.urls.presence)
       contents["urls"] = JSON::Any.new(urls.map { |u| JSON::Any.new(u) })
     end
+    contents["type"] = JSON::Any.new(actor.class.to_s.split("::").last)
 
     contents
   end
@@ -300,6 +301,7 @@ class MCPController
     if (in_reply_to = object.in_reply_to?)
       contents["in_reply_to"] = JSON::Any.new("ktistec://objects/#{in_reply_to.id}")
     end
+    contents["type"] = JSON::Any.new(object.class.to_s.split("::").last)
 
     if filtered_attachments && !filtered_attachments.empty?
       attachment_data = filtered_attachments.map do |attachment|

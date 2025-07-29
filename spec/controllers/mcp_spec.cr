@@ -1,4 +1,5 @@
 require "../../src/controllers/mcp"
+require "../../src/models/activity_pub/actor/person"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"
@@ -238,7 +239,8 @@ Spectator.describe MCPController do
 
       context "given a user" do
         let_create!(
-          actor,
+          person,
+          named: actor,
           username: "alice",
           name: "Alice",
           summary: "Alice's summary",
@@ -284,6 +286,7 @@ Spectator.describe MCPController do
           expect(json["summary"]).to eq("Alice's summary")
           expect(json["icon"]).to eq("https://example.com/icon.png")
           expect(json["image"]).to eq("https://example.com/image.png")
+          expect(json["type"]).to eq("Person")
 
           attachments = json["attachments"].as_a
           expect(attachments.size).to eq(1)
@@ -338,6 +341,7 @@ Spectator.describe MCPController do
           expect(json["summary"]).to eq("This is a summary")
           expect(json["icon"]).to eq("https://example.com/icon.png")
           expect(json["image"]).to eq("https://example.com/image.png")
+          expect(json["type"]).to eq("Actor")
         end
 
         it "returns error for invalid actor URI" do
@@ -388,6 +392,7 @@ Spectator.describe MCPController do
           expect(json["published"]).to eq("2024-01-01T12:00:00Z")
           expect(json["attributed_to"]).to eq("ktistec://actors/#{object.attributed_to.id}")
           expect(json["in_reply_to"]).to eq("ktistec://objects/#{root.id}")
+          expect(json["type"]).to eq("Object")
           expect(json["likes"]?).to be_nil
           expect(json["announcements"]?).to be_nil
           expect(json["replies"]?).to be_nil

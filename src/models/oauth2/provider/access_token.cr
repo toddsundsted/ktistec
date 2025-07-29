@@ -54,6 +54,24 @@ module OAuth2
       #
       @[Persistent]
       property scope : String
+
+      # Finds an access token given its token string.
+      #
+      def self.find_by_token?(token : String)
+        find?(token: token)
+      end
+
+      # Checks if the access token is valid (not expired).
+      #
+      def valid?
+        Time.utc < expires_at
+      end
+
+      # Checks if the access token has "mcp" scope.
+      #
+      def has_mcp_scope?
+        scope.split.includes?("mcp")
+      end
     end
   end
 end

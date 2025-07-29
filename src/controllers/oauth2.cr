@@ -70,8 +70,8 @@ class OAuth2Controller
     client = OAuth2::Provider::Client.new(
       client_id: Random::Secure.urlsafe_base64,
       client_secret: Random::Secure.urlsafe_base64,
-      redirect_uris: redirect_uris.join(" "),
       client_name: client_name,
+      redirect_uris: redirect_uris.join(" "),
       scope: "mcp"
     )
 
@@ -86,7 +86,7 @@ class OAuth2Controller
       "client_id" => client.client_id,
       "client_secret" => client.client_secret,
       "client_name" => client.client_name,
-      "redirect_uris" => client.redirect_uris,
+      "redirect_uris" => client.redirect_uris.split,
     }.to_json)
   end
 

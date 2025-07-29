@@ -536,7 +536,7 @@ class MCPController
   USER_REGEX = /^ktistec:\/\/users\/(\d+)$/
   NAME_REGEX = /^([a-zA-Z0-9_-]+|hashtag#[a-zA-Z0-9_-]+|mention@[a-zA-Z0-9_@.-]+)$/
 
-  def_tool("paginate_collection", "Paginate through collections of objects, activities, and actors", [
+  def_tool("paginate_collection", "Paginate through collections of ActivityPub objects, activities, and actors. Use this tool when you want to inspect the contents of a collection.", [
     {name: "user", type: "string", description: "URI of the user whose collections to paginate", required: true, matches: USER_REGEX},
     {name: "name", type: "string", description: "Name of the collection to paginate", required: true, matches: NAME_REGEX},
     {name: "page", type: "integer", description: "Page number (optional, defaults to 1)", minimum: 1, default: 1},
@@ -673,7 +673,7 @@ class MCPController
     })
   end
 
-  def_tool("count_collection_since", "Count items in collections since a given time", [
+  def_tool("count_collection_since", "Count items in ActivityPub collections since a given time. Use this tool when you want to know if new items have been added in the last day/week/month.", [
     {name: "user", type: "string", description: "URI of the user whose collection to count", required: true, matches: USER_REGEX},
     {name: "name", type: "string", description: "Name of the collection to count", required: true, matches: NAME_REGEX},
     {name: "since", type: "time", description: "Time (RFC3339) to count from", required: true},

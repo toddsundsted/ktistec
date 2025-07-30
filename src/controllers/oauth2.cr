@@ -54,7 +54,7 @@ class OAuth2Controller
     redirect_uris.each do |uri_string|
       begin
         uri = URI.parse(uri_string)
-        unless uri.scheme == "https"
+        unless uri.scheme == "https" || uri.host == "localhost"
           error = "all `redirect_uris` must use https"
           break
         end

@@ -5,6 +5,7 @@ require "../models/activity_pub/object"
 require "../models/relationship/social/follow"
 require "../models/tag/hashtag"
 require "../models/tag/mention"
+require "../models/oauth2/provider/access_token"
 
 require "markd"
 
@@ -23,8 +24,18 @@ class MCPController
 
   skip_auth ["/mcp"], GET, POST
 
-  get "/mcp" do |env|
-    method_not_allowed ["POST"]
+  def self.authenticate_request(env) : Account?
+    if (auth_header = env.request.headers["Authorization"]?)
+      if auth_header.starts_with?("Bearer ")
+        if (access_token = OAuth2::Provider::AccessToken.find?(token: auth_header[7..-1]))
+          if access_token.scope.split.includes?("mcp")
+            if Time.utc < access_token.expires_at
+              access_token.account
+            end
+          end
+        end
+      end
+    end
   end
 
   private macro mcp_response(status_code, response)
@@ -32,7 +43,15 @@ class MCPController
     halt env, status_code: {{status_code}}, response: {{response}}.try(&.to_json)
   end
 
+  get "/mcp" do |env|
+    unauthorized unless authenticate_request(env)
+
+    method_not_allowed ["POST"]
+  end
+
   post "/mcp" do |env|
+    unauthorized unless authenticate_request(env)
+
     unless accepts?("application/json")
       bad_request "Bad Request"
     end

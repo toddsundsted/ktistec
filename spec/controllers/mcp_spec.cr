@@ -1,5 +1,7 @@
 require "../../src/controllers/mcp"
 require "../../src/models/activity_pub/actor/person"
+require "../../src/models/oauth2/provider/access_token"
+require "../../src/models/oauth2/provider/client"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"
@@ -7,7 +9,80 @@ require "../spec_helper/controller"
 Spectator.describe MCPController do
   setup_spec
 
-  JSON_HEADERS = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
+  let(account) { register }
+
+  let_create!(
+    oauth2_provider_client,
+    named: client,
+  )
+  let_create!(
+    oauth2_provider_access_token,
+    token: "oauth_token_123",
+    account: account,
+    client: client,
+    expires_at: expires_at,
+    scope: scope,
+  )
+
+  let(expires_at) { Time.utc + 1.hour }
+  let(scope) { "mcp" }
+
+  def authenticated_headers
+    HTTP::Headers{
+      "Authorization" => "Bearer oauth_token_123",
+      "Content-Type" => "application/json",
+      "Accept" => "application/json",
+    }
+  end
+
+  describe ".authenticate_request" do
+    let(env) do
+      env_factory("POST", "/mcp").tap do |env|
+        env.request.headers["Authorization"] = "Bearer oauth_token_123"
+      end
+    end
+
+    it "returns account" do
+      result = described_class.authenticate_request(env)
+      expect(result).to eq(account)
+    end
+
+    context "authorization header is missing" do
+      let(env) { env_factory("POST", "/mcp") }
+
+      it "returns nil" do
+        result = described_class.authenticate_request(env)
+        expect(result).to be_nil
+      end
+    end
+
+    context "authorization header does not hold a bearer token" do
+      let(env) { super.tap { |env| env.request.headers["Authorization"] = "Basic abc123" } }
+
+      it "returns nil" do
+        result = described_class.authenticate_request(env)
+        expect(result).to be_nil
+      end
+    end
+
+    context "access token does not include mcp scope" do
+      let(scope) { "foobar" }
+
+      it "returns nil" do
+        result = described_class.authenticate_request(env)
+        expect(result).to be_nil
+      end
+    end
+
+    context "access token is expired" do
+      let(expires_at) { Time.utc - 1.hour }
+
+      it "returns nil" do
+        result = described_class.authenticate_request(env)
+        expect(result).to be_nil
+      end
+    end
+  end
 
   def expect_mcp_error(code, message)
     expect(response.status_code).to eq(400)
@@ -18,7 +93,7 @@ Spectator.describe MCPController do
 
   describe "GET /mcp" do
     it "returns method not allowed" do
-      get "/mcp", JSON_HEADERS
+      get "/mcp", authenticated_headers
       expect(response.status_code).to eq(405)
       expect(response.headers["Allow"]).to eq("POST")
       expect(response.content_type).to contain("application/json")
@@ -28,7 +103,7 @@ Spectator.describe MCPController do
 
   describe "POST /mcp" do
     it "accepts JSON-RPC requests" do
-      post "/mcp", JSON_HEADERS, %Q|{"jsonrpc": "2.0", "id": 1, "method": "test"}|
+      post "/mcp", authenticated_headers, %Q|{"jsonrpc": "2.0", "id": 1, "method": "test"}|
       expect(response.status_code).to eq(404)
     end
 
@@ -55,7 +130,7 @@ Spectator.describe MCPController do
       }
 
       it "returns proper MCP initialize response" do
-        post "/mcp", JSON_HEADERS, json
+        post "/mcp", authenticated_headers, json
         expect(response.status_code).to eq(200)
 
         parsed = JSON.parse(response.body)
@@ -76,7 +151,7 @@ Spectator.describe MCPController do
       let(json) { %Q|{"jsonrpc": "2.0", "id": "unknown-1", "method": "unknown/method"}| }
 
       it "returns method not found error" do
-        post "/mcp", JSON_HEADERS, json
+        post "/mcp", authenticated_headers, json
         expect(response.status_code).to eq(404)
         parsed = JSON.parse(response.body)
 
@@ -92,7 +167,7 @@ Spectator.describe MCPController do
       let(json) { %Q|{"invalid": json}| }
 
       it "returns parse error" do
-        post "/mcp", JSON_HEADERS, json
+        post "/mcp", authenticated_headers, json
         expect(response.status_code).to eq(400)
 
         parsed = JSON.parse(response.body)
@@ -105,7 +180,7 @@ Spectator.describe MCPController do
 
     context "with invalid content type" do
       it "returns 400" do
-        post "/mcp", HTTP::Headers{"Accept" => "text/html"}, "test"
+        post "/mcp", authenticated_headers.merge!({"Accept" => "text/html"}), "test"
         expect(response.status_code).to eq(400)
       end
     end
@@ -114,12 +189,12 @@ Spectator.describe MCPController do
       let(resources_list_request) { %Q|{"jsonrpc": "2.0", "id": "resources-1", "method": "resources/list"}| }
 
       it "returns the information resource" do
-        post "/mcp", JSON_HEADERS, resources_list_request
+        post "/mcp", authenticated_headers, resources_list_request
         expect(response.status_code).to eq(200)
         parsed = JSON.parse(response.body)
 
         resources = parsed["result"]["resources"].as_a
-        expect(resources.size).to eq(1)
+        expect(resources.size).to eq(2) # information & an account for authentication
 
         info_resource = resources.first
         expect(info_resource["uri"]).to eq("ktistec://information")
@@ -132,16 +207,16 @@ Spectator.describe MCPController do
         let_create!(account, named: bob, username: "bob")
 
         it "returns both users" do
-          post "/mcp", JSON_HEADERS, resources_list_request
+          post "/mcp", authenticated_headers, resources_list_request
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
 
           result = parsed["result"]
           resources = result["resources"].as_a
-          expect(resources.size).to eq(3)
+          expect(resources.size).to eq(4) # information, an account for authentication, alice & bob
 
           names = resources.select(&.["uri"].as_s.starts_with?("ktistec://users/")).map(&.["name"].as_s)
-          expect(names).to contain_exactly("alice", "bob")
+          expect(names).to contain("alice", "bob")
         end
       end
     end
@@ -150,7 +225,7 @@ Spectator.describe MCPController do
       let(templates_list_request) { %Q|{"jsonrpc": "2.0", "id": "templates-1", "method": "resources/templates/list"}| }
 
       it "returns actor and object templates" do
-        post "/mcp", JSON_HEADERS, templates_list_request
+        post "/mcp", authenticated_headers, templates_list_request
         expect(response.status_code).to eq(200)
         parsed = JSON.parse(response.body)
 
@@ -176,21 +251,21 @@ Spectator.describe MCPController do
       it "returns error for missing URI parameter" do
         request = %Q|{"jsonrpc": "2.0", "id": "read-3", "method": "resources/read", "params": {}}|
 
-        post "/mcp", JSON_HEADERS, request
+        post "/mcp", authenticated_headers, request
         expect_mcp_error(-32602, "Missing URI parameter")
       end
 
       it "returns error for unsupported schema" do
         request = %Q|{"jsonrpc": "2.0", "id": "read-obj-3", "method": "resources/read", "params": {"uri": "ktistec://foo/bar"}}|
 
-        post "/mcp", JSON_HEADERS, request
+        post "/mcp", authenticated_headers, request
         expect_mcp_error(-32602, "Unsupported URI scheme: ktistec://foo/bar")
       end
 
       it "returns information data for valid URI" do
         request = %Q|{"jsonrpc": "2.0", "id": "read-info-1", "method": "resources/read", "params": {"uri": "ktistec://information"}}|
 
-        post "/mcp", JSON_HEADERS, request
+        post "/mcp", authenticated_headers, request
         expect(response.status_code).to eq(200)
         parsed = JSON.parse(response.body)
 
@@ -266,7 +341,7 @@ Spectator.describe MCPController do
           uri = "ktistec://users/#{alice.id}"
           request = %Q|{"jsonrpc": "2.0", "id": "read-1", "method": "resources/read", "params": {"uri": "#{uri}"}}|
 
-          post "/mcp", JSON_HEADERS, request
+          post "/mcp", authenticated_headers, request
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
 
@@ -303,7 +378,7 @@ Spectator.describe MCPController do
         it "returns error for invalid user URI" do
           request = %Q|{"jsonrpc": "2.0", "id": "read-2", "method": "resources/read", "params": {"uri": "ktistec://users/999999"}}|
 
-          post "/mcp", JSON_HEADERS, request
+          post "/mcp", authenticated_headers, request
           expect_mcp_error(-32602, "User not found")
         end
       end
@@ -321,7 +396,7 @@ Spectator.describe MCPController do
         it "returns actor content" do
           request = %Q|{"jsonrpc": "2.0", "id": "read-actor-1", "method": "resources/read", "params": {"uri": "#{uri}"}}|
 
-          post "/mcp", JSON_HEADERS, request
+          post "/mcp", authenticated_headers, request
           expect(response.status_code).to eq(200)
 
           parsed = JSON.parse(response.body)
@@ -349,7 +424,7 @@ Spectator.describe MCPController do
         it "returns error for invalid actor URI" do
           request = %Q|{"jsonrpc": "2.0", "id": "read-actor-2", "method": "resources/read", "params": {"uri": "ktistec://actors/999999"}}|
 
-          post "/mcp", JSON_HEADERS, request
+          post "/mcp", authenticated_headers, request
           expect_mcp_error(-32602, "Actor not found")
         end
       end
@@ -371,7 +446,7 @@ Spectator.describe MCPController do
         let(request) { %Q|{"jsonrpc": "2.0", "id": "read-obj-1", "method": "resources/read", "params": {"uri": "#{uri}"}}| }
 
         it "returns object data for valid URI" do
-          post "/mcp", JSON_HEADERS, request
+          post "/mcp", authenticated_headers, request
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
 
@@ -405,7 +480,7 @@ Spectator.describe MCPController do
           before_each { object.assign(media_type: "text/html", content: "<h1>This is the content</h1>").save }
 
           it "returns HTML content" do
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect(response.status_code).to eq(200)
             parsed = JSON.parse(response.body)
 
@@ -421,7 +496,7 @@ Spectator.describe MCPController do
           before_each { object.assign(media_type: "text/markdown", content: "# This is the content").save }
 
           it "returns HTML content" do
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect(response.status_code).to eq(200)
             parsed = JSON.parse(response.body)
 
@@ -443,7 +518,7 @@ Spectator.describe MCPController do
           )
 
           it "uses translation content over original content" do
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect(response.status_code).to eq(200)
             parsed = JSON.parse(response.body)
 
@@ -463,7 +538,7 @@ Spectator.describe MCPController do
           let_create!(:like, actor: liker, object: object)
 
           it "includes likes field in object JSON" do
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect(response.status_code).to eq(200)
             parsed = JSON.parse(response.body)
 
@@ -484,7 +559,7 @@ Spectator.describe MCPController do
           let_create!(:announce, actor: announcer, object: object)
 
           it "includes announcements field in object JSON" do
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect(response.status_code).to eq(200)
             parsed = JSON.parse(response.body)
 
@@ -518,7 +593,7 @@ Spectator.describe MCPController do
           )
 
           it "includes replies field in object JSON" do
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect(response.status_code).to eq(200)
             parsed = JSON.parse(response.body)
 
@@ -551,7 +626,7 @@ Spectator.describe MCPController do
       it "returns error for invalid object URI" do
         request = %Q|{"jsonrpc": "2.0", "id": "read-obj-2", "method": "resources/read", "params": {"uri": "ktistec://objects/999999"}}|
 
-        post "/mcp", JSON_HEADERS, request
+        post "/mcp", authenticated_headers, request
         expect_mcp_error(-32602, "Object not found")
       end
     end
@@ -570,7 +645,7 @@ Spectator.describe MCPController do
       let(tools_list_request) { %Q|{"jsonrpc": "2.0", "id": "tools-1", "method": "tools/list"}| }
 
       it "returns tools" do
-        post "/mcp", JSON_HEADERS, tools_list_request
+        post "/mcp", authenticated_headers, tools_list_request
         expect(response.status_code).to eq(200)
         parsed = JSON.parse(response.body)
 
@@ -783,7 +858,7 @@ Spectator.describe MCPController do
       let_create!(account, named: alice, username: "alice")
 
       it "returns protocol error for invalid tool name" do
-        post "/mcp", JSON_HEADERS, tools_call_request
+        post "/mcp", authenticated_headers, tools_call_request
         expect_mcp_error(-32602, "Invalid tool name")
       end
 
@@ -849,14 +924,14 @@ Spectator.describe MCPController do
         it "returns error for non-existent user" do
           request = paginate_timeline_request("paginate-6", 999999)
 
-          post "/mcp", JSON_HEADERS, request
+          post "/mcp", authenticated_headers, request
           expect_mcp_error(-32602, "`user` not found")
         end
 
         it "returns error for invalid collection name" do
           request = paginate_timeline_request("paginate-8", alice.id, {"name" => "does_not_exist"})
 
-          post "/mcp", JSON_HEADERS, request
+          post "/mcp", authenticated_headers, request
           expect_mcp_error(-32602, "`does_not_exist` unsupported")
         end
 
@@ -871,7 +946,7 @@ Spectator.describe MCPController do
           it "returns notifications objects for valid request" do
             request = paginate_notifications_request("paginate-notifications-1", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
             expect(notifications.size).to eq(1)
 
@@ -893,7 +968,7 @@ Spectator.describe MCPController do
           it "returns reply notification for valid request" do
             request = paginate_notifications_request("paginate-notifications-2", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
             expect(notifications.size).to eq(1)
 
@@ -915,7 +990,7 @@ Spectator.describe MCPController do
           it "returns follow notification for valid request" do
             request = paginate_notifications_request("paginate-notifications-3", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
             expect(notifications.size).to eq(1)
 
@@ -933,7 +1008,7 @@ Spectator.describe MCPController do
             it "returns accepted follow notification" do
               request = paginate_notifications_request("paginate-notifications-4", alice.id)
 
-              post "/mcp", JSON_HEADERS, request
+              post "/mcp", authenticated_headers, request
               notifications = expect_paginated_response(1, false)
               expect(notifications.size).to eq(1)
 
@@ -948,7 +1023,7 @@ Spectator.describe MCPController do
             it "returns rejected follow notification" do
               request = paginate_notifications_request("paginate-notifications-5", alice.id)
 
-              post "/mcp", JSON_HEADERS, request
+              post "/mcp", authenticated_headers, request
               notifications = expect_paginated_response(1, false)
               expect(notifications.size).to eq(1)
 
@@ -968,7 +1043,7 @@ Spectator.describe MCPController do
           it "returns timeline objects for valid request" do
             request = paginate_timeline_request("paginate-9", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
             expect(objects).to eq(["ktistec://objects/#{object.id}"])
           end
@@ -985,7 +1060,7 @@ Spectator.describe MCPController do
           it "returns posts objects for valid request" do
             request = paginate_posts_request("paginate-posts-1", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
             expect(objects).to eq(["ktistec://objects/#{object.id}"])
           end
@@ -997,7 +1072,7 @@ Spectator.describe MCPController do
           it "returns draft objects for valid request" do
             request = paginate_drafts_request("paginate-drafts-1", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
             expect(objects).to eq(["ktistec://objects/#{object.id}"])
           end
@@ -1014,35 +1089,35 @@ Spectator.describe MCPController do
           it "returns 10 objects by default" do
             request = paginate_timeline_request("paginate-size-1", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_paginated_response(10, true)
           end
 
           it "returns the 3rd page of objects" do
             request = paginate_timeline_request("paginate-10", alice.id, {"page" => 3})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_paginated_response(5, false)
           end
 
           it "returns specified number of objects when size is provided" do
             request = paginate_timeline_request("paginate-size-2", alice.id, {"size" => 5})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_paginated_response(5, true)
           end
 
           it "returns maximum number of objects when size equals limit" do
             request = paginate_timeline_request("paginate-size-3", alice.id, {"size" => 20})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_paginated_response(20, true)
           end
 
           it "works correctly with both page and size parameters" do
             request = paginate_timeline_request("paginate-size-8", alice.id, {"page" => 2, "size" => 5})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_paginated_response(5, true)
           end
         end
@@ -1064,7 +1139,7 @@ Spectator.describe MCPController do
           it "returns hashtag objects for valid hashtag" do
             request = paginate_hashtag_request("paginate-hashtag-1", alice.id, "technology")
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
             expect(objects.first).to eq("ktistec://objects/#{tagged_post.id}")
           end
@@ -1072,7 +1147,7 @@ Spectator.describe MCPController do
           it "returns error for non-existent hashtag" do
             request = paginate_hashtag_request("paginate-hashtag-2", alice.id, "nonexistent")
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Hashtag 'nonexistent' not found")
           end
 
@@ -1091,7 +1166,7 @@ Spectator.describe MCPController do
 
             request = paginate_hashtag_request("paginate-hashtag-3", alice.id, "technology", {"size" => 1})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, true)
             # returns most recent post first
             expect(objects.first).to eq("ktistec://objects/#{post2.id}")
@@ -1114,7 +1189,7 @@ Spectator.describe MCPController do
           it "returns mention objects for valid mention" do
             request = paginate_mention_request("paginate-mention-1", alice.id, "testuser@example.com")
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
             expect(objects.first).to eq("ktistec://objects/#{mentioned_post.id}")
           end
@@ -1122,7 +1197,7 @@ Spectator.describe MCPController do
           it "returns error for non-existent mention" do
             request = paginate_mention_request("paginate-mention-2", alice.id, "nonexistent@example.com")
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Mention 'nonexistent@example.com' not found")
           end
 
@@ -1141,7 +1216,7 @@ Spectator.describe MCPController do
 
             request = paginate_mention_request("paginate-mention-3", alice.id, "testuser@example.com", {"size" => 1})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, true)
             # returns most recent post first
             expect(objects.first).to eq("ktistec://objects/#{post2.id}")
@@ -1154,7 +1229,7 @@ Spectator.describe MCPController do
           it "is empty" do
             request = paginate_likes_request("paginate-likes-1", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(0, false)
             expect(objects).to be_empty
           end
@@ -1165,7 +1240,7 @@ Spectator.describe MCPController do
             it "returns liked objects" do
               request = paginate_likes_request("paginate-likes-2", alice.id)
 
-              post "/mcp", JSON_HEADERS, request
+              post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
               expect(objects.first).to eq("ktistec://objects/#{liked_post.id}")
             end
@@ -1177,7 +1252,7 @@ Spectator.describe MCPController do
               it "supports pagination for likes collection" do
                 request = paginate_likes_request("paginate-likes-3", alice.id, {"size" => 1})
 
-                post "/mcp", JSON_HEADERS, request
+                post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
                 # returns most recent like first
                 expect(objects.first).to eq("ktistec://objects/#{post.id}")
@@ -1192,7 +1267,7 @@ Spectator.describe MCPController do
           it "is empty" do
             request = paginate_announcements_request("paginate-announcements-1", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(0, false)
             expect(objects).to be_empty
           end
@@ -1203,7 +1278,7 @@ Spectator.describe MCPController do
             it "returns announced objects" do
               request = paginate_announcements_request("paginate-announcements-2", alice.id)
 
-              post "/mcp", JSON_HEADERS, request
+              post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
               expect(objects.first).to eq("ktistec://objects/#{announced_post.id}")
             end
@@ -1215,7 +1290,7 @@ Spectator.describe MCPController do
               it "supports pagination for announcements collection" do
                 request = paginate_announcements_request("paginate-announcements-3", alice.id, {"size" => 1})
 
-                post "/mcp", JSON_HEADERS, request
+                post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
                 # returns most recent announcement first
                 expect(objects.first).to eq("ktistec://objects/#{post.id}")
@@ -1230,7 +1305,7 @@ Spectator.describe MCPController do
           it "is empty given no followers" do
             request = paginate_followers_request("paginate-followers-1", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(0, false)
             expect(objects).to be_empty
           end
@@ -1241,7 +1316,7 @@ Spectator.describe MCPController do
             it "returns follower relationships" do
               request = paginate_followers_request("paginate-followers-2", alice.id)
 
-              post "/mcp", JSON_HEADERS, request
+              post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
               expect(objects.size).to eq(1)
 
@@ -1257,7 +1332,7 @@ Spectator.describe MCPController do
               it "includes both confirmed and unconfirmed followers" do
                 request = paginate_followers_request("paginate-followers-3", alice.id)
 
-                post "/mcp", JSON_HEADERS, request
+                post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(2, false)
                 expect(objects.size).to eq(2)
 
@@ -1273,7 +1348,7 @@ Spectator.describe MCPController do
               it "supports pagination for followers collection" do
                 request = paginate_followers_request("paginate-followers-4", alice.id, {"size" => 1})
 
-                post "/mcp", JSON_HEADERS, request
+                post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
                 expect(objects.size).to eq(1)
 
@@ -1291,7 +1366,7 @@ Spectator.describe MCPController do
           it "is empty given no following" do
             request = paginate_following_request("paginate-following-1", alice.id)
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(0, false)
             expect(objects).to be_empty
           end
@@ -1302,7 +1377,7 @@ Spectator.describe MCPController do
             it "returns following relationships" do
               request = paginate_following_request("paginate-following-2", alice.id)
 
-              post "/mcp", JSON_HEADERS, request
+              post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
               expect(objects.size).to eq(1)
 
@@ -1318,7 +1393,7 @@ Spectator.describe MCPController do
               it "includes both confirmed and unconfirmed following" do
                 request = paginate_following_request("paginate-following-3", alice.id)
 
-                post "/mcp", JSON_HEADERS, request
+                post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(2, false)
                 expect(objects.size).to eq(2)
 
@@ -1334,7 +1409,7 @@ Spectator.describe MCPController do
               it "supports pagination for following collection" do
                 request = paginate_following_request("paginate-following-4", alice.id, {"size" => 1})
 
-                post "/mcp", JSON_HEADERS, request
+                post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
                 expect(objects.size).to eq(1)
 
@@ -1408,21 +1483,21 @@ Spectator.describe MCPController do
         it "returns error for non-existent user" do
           request = count_timeline_since_request("count-7", 999999, {"since" => "2024-01-01T00:00:00Z"})
 
-          post "/mcp", JSON_HEADERS, request
+          post "/mcp", authenticated_headers, request
           expect_mcp_error(-32602, "`user` not found")
         end
 
         it "returns error for invalid collection name" do
           request = count_timeline_since_request("count-8", alice.id, {"name" => "does_not_exist", "since" => "2024-01-01T00:00:00Z"})
 
-          post "/mcp", JSON_HEADERS, request
+          post "/mcp", authenticated_headers, request
           expect_mcp_error(-32602, "`does_not_exist` unsupported")
         end
 
         it "returns zero count for empty timeline" do
           request = count_timeline_since_request("count-10", alice.id, {"since" => "2024-01-01T00:00:00Z"})
 
-          post "/mcp", JSON_HEADERS, request
+          post "/mcp", authenticated_headers, request
           expect_count_response(0)
         end
 
@@ -1449,7 +1524,7 @@ Spectator.describe MCPController do
             since_time = create2.created_at.to_rfc3339
             request = count_notifications_since_request("count-notifications-1", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(2)
           end
 
@@ -1457,7 +1532,7 @@ Spectator.describe MCPController do
             since_time = (create3.created_at + 1.hour).to_rfc3339
             request = count_notifications_since_request("count-notifications-2", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(0)
           end
 
@@ -1465,7 +1540,7 @@ Spectator.describe MCPController do
             since_time = (create1.created_at - 1.hour).to_rfc3339
             request = count_notifications_since_request("count-notifications-3", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(3)
           end
         end
@@ -1490,7 +1565,7 @@ Spectator.describe MCPController do
             since_time = object2.created_at.to_rfc3339
             request = count_timeline_since_request("count-11", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(2)
           end
 
@@ -1498,7 +1573,7 @@ Spectator.describe MCPController do
             since_time = (object3.created_at + 1.hour).to_rfc3339
             request = count_timeline_since_request("count-12", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(0)
           end
 
@@ -1506,7 +1581,7 @@ Spectator.describe MCPController do
             since_time = (object1.created_at - 1.hour).to_rfc3339
             request = count_timeline_since_request("count-13", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(3)
           end
         end
@@ -1534,7 +1609,7 @@ Spectator.describe MCPController do
             since_time = object2.created_at.to_rfc3339
             request = count_posts_since_request("count-posts-1", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(2)
           end
 
@@ -1542,7 +1617,7 @@ Spectator.describe MCPController do
             since_time = (object3.created_at + 1.hour).to_rfc3339
             request = count_posts_since_request("count-posts-2", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(0)
           end
 
@@ -1550,7 +1625,7 @@ Spectator.describe MCPController do
             since_time = (object1.created_at - 1.hour).to_rfc3339
             request = count_posts_since_request("count-posts-3", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(3)
           end
         end
@@ -1564,7 +1639,7 @@ Spectator.describe MCPController do
             since_time = (object2.created_at - 1.second).to_rfc3339
             request = count_drafts_since_request("count-drafts-1", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(2)
           end
 
@@ -1572,7 +1647,7 @@ Spectator.describe MCPController do
             since_time = (object3.created_at + 1.hour).to_rfc3339
             request = count_drafts_since_request("count-drafts-2", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(0)
           end
 
@@ -1580,7 +1655,7 @@ Spectator.describe MCPController do
             since_time = (object1.created_at - 1.hour).to_rfc3339
             request = count_drafts_since_request("count-drafts-3", alice.id, {"since" => since_time})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(3)
           end
         end
@@ -1604,14 +1679,14 @@ Spectator.describe MCPController do
           it "returns error for valid hashtag" do
             request = count_hashtag_since_request("count-hashtag-1", alice.id, "testhashtag", {"since" => "2024-01-01T00:00:00Z"})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Counting not supported for hashtag collections")
           end
 
           it "returns error for non-existent hashtag" do
             request = count_hashtag_since_request("count-hashtag-2", alice.id, "nonexistent", {"since" => "2024-01-01T00:00:00Z"})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Hashtag 'nonexistent' not found")
           end
         end
@@ -1635,14 +1710,14 @@ Spectator.describe MCPController do
           it "returns error for valid mention" do
             request = count_mention_since_request("count-mention-1", alice.id, "testuser@example.com", {"since" => "2024-01-01T00:00:00Z"})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Counting not supported for mention collections")
           end
 
           it "returns error for non-existent mention" do
             request = count_mention_since_request("count-mention-2", alice.id, "nonexistent@example.com", {"since" => "2024-01-01T00:00:00Z"})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Mention 'nonexistent@example.com' not found")
           end
         end
@@ -1651,7 +1726,7 @@ Spectator.describe MCPController do
           it "returns error for likes collection" do
             request = count_likes_since_request("count-likes-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Counting not supported for likes collection")
           end
         end
@@ -1660,7 +1735,7 @@ Spectator.describe MCPController do
           it "returns error for announcements collection (time-based counting not supported)" do
             request = count_announcements_since_request("count-announcements-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Counting not supported for announcements collections")
           end
         end
@@ -1669,7 +1744,7 @@ Spectator.describe MCPController do
           it "returns zero count" do
             request = count_followers_since_request("count-followers-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(0)
           end
 
@@ -1680,14 +1755,14 @@ Spectator.describe MCPController do
             it "returns count of followers" do
               request = count_followers_since_request("count-followers-2", alice.id, {"since" => "2024-01-01T00:00:00Z"})
 
-              post "/mcp", JSON_HEADERS, request
+              post "/mcp", authenticated_headers, request
               expect_count_response(1)
             end
 
             it "returns zero count" do
               request = count_followers_since_request("count-followers-3", alice.id, {"since" => "2024-01-03T00:00:00Z"})
 
-              post "/mcp", JSON_HEADERS, request
+              post "/mcp", authenticated_headers, request
               expect_count_response(0)
             end
           end
@@ -1697,7 +1772,7 @@ Spectator.describe MCPController do
           it "returns zero count" do
             request = count_following_since_request("count-following-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
 
-            post "/mcp", JSON_HEADERS, request
+            post "/mcp", authenticated_headers, request
             expect_count_response(0)
           end
 
@@ -1708,14 +1783,14 @@ Spectator.describe MCPController do
             it "returns count of following" do
               request = count_following_since_request("count-following-2", alice.id, {"since" => "2024-01-01T00:00:00Z"})
 
-              post "/mcp", JSON_HEADERS, request
+              post "/mcp", authenticated_headers, request
               expect_count_response(1)
             end
 
             it "returns zero count" do
               request = count_following_since_request("count-following-3", alice.id, {"since" => "2024-01-03T00:00:00Z"})
 
-              post "/mcp", JSON_HEADERS, request
+              post "/mcp", authenticated_headers, request
               expect_count_response(0)
             end
           end

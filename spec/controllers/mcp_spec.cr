@@ -102,11 +102,6 @@ Spectator.describe MCPController do
   end
 
   describe "POST /mcp" do
-    it "accepts JSON-RPC requests" do
-      post "/mcp", authenticated_headers, %Q|{"jsonrpc": "2.0", "id": 1, "method": "test"}|
-      expect(response.status_code).to eq(404)
-    end
-
     context "with MCP initialize request" do
       let(json) {
         %Q|
@@ -147,6 +142,21 @@ Spectator.describe MCPController do
       end
     end
 
+    context "with invalid JSON" do
+      let(json) { %Q|{"invalid": json}| }
+
+      it "returns parse error" do
+        post "/mcp", authenticated_headers, json
+        expect(response.status_code).to eq(400)
+
+        parsed = JSON.parse(response.body)
+        expect(parsed["jsonrpc"]).to eq("2.0")
+        expect(parsed["id"]).to eq("null")
+        expect(parsed["error"]["code"]).to eq(-32700)
+        expect(parsed["error"]["message"]).to eq("Parse error")
+      end
+    end
+
     context "with unknown method" do
       let(json) { %Q|{"jsonrpc": "2.0", "id": "unknown-1", "method": "unknown/method"}| }
 
@@ -160,21 +170,6 @@ Spectator.describe MCPController do
         expect(parsed["error"]["code"]).to eq(-32601)
         expect(parsed["error"]["message"].as_s).to contain("Method not found")
         expect(parsed["error"]["message"].as_s).to contain("unknown/method")
-      end
-    end
-
-    context "with invalid JSON" do
-      let(json) { %Q|{"invalid": json}| }
-
-      it "returns parse error" do
-        post "/mcp", authenticated_headers, json
-        expect(response.status_code).to eq(400)
-
-        parsed = JSON.parse(response.body)
-        expect(parsed["jsonrpc"]).to eq("2.0")
-        expect(parsed["id"]).to eq("null")
-        expect(parsed["error"]["code"]).to eq(-32700)
-        expect(parsed["error"]["message"]).to eq("Parse error")
       end
     end
 
@@ -336,6 +331,22 @@ Spectator.describe MCPController do
           username: "alice",
           actor: actor,
         )
+        let_create!(
+          oauth2_provider_access_token,
+          token: "alice_oauth_token_123",
+          account: alice,
+          client: client,
+          expires_at: expires_at,
+          scope: scope,
+        )
+
+        def authenticated_headers
+          HTTP::Headers{
+            "Authorization" => "Bearer alice_oauth_token_123",
+            "Content-Type" => "application/json",
+            "Accept" => "application/json",
+          }
+        end
 
         it "returns user data for valid URI" do
           uri = "ktistec://users/#{alice.id}"
@@ -379,7 +390,7 @@ Spectator.describe MCPController do
           request = %Q|{"jsonrpc": "2.0", "id": "read-2", "method": "resources/read", "params": {"uri": "ktistec://users/999999"}}|
 
           post "/mcp", authenticated_headers, request
-          expect_mcp_error(-32602, "User not found")
+          expect_mcp_error(-32602, "Access denied to user")
         end
       end
 
@@ -696,7 +707,7 @@ Spectator.describe MCPController do
           })
         })
 
-        result = MCPController.handle_test_tool(params)
+        result = MCPController.handle_test_tool(params, account)
         expect(result[:user]).to eq("test_user")
         expect(result[:query]).to eq("test query")
         expect(result[:limit]).to eq(25)
@@ -711,7 +722,7 @@ Spectator.describe MCPController do
           })
         })
 
-        result = MCPController.handle_test_tool(params)
+        result = MCPController.handle_test_tool(params, account)
         expect(result[:limit]).to eq(15)
         expect(result[:include_replies]).to be_false
       end
@@ -726,14 +737,14 @@ Spectator.describe MCPController do
           })
         })
 
-        result = MCPController.handle_test_tool(params)
+        result = MCPController.handle_test_tool(params, account)
         expect(result[:quota]).to eq(99)
       end
 
       it "validates missing arguments parameter" do
         params = JSON::Any.new({} of String => JSON::Any)
 
-        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /Missing arguments/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /Missing arguments/)
       end
 
       it "validates required arguments" do
@@ -741,7 +752,7 @@ Spectator.describe MCPController do
           "arguments" => JSON::Any.new({} of String => JSON::Any),
         })
 
-        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /Missing user, query/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /Missing user, query/)
       end
 
       it "validates string type" do
@@ -752,7 +763,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`user` must be a string/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`user` must be a string/)
       end
 
       it "validates string regex" do
@@ -763,7 +774,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`user` format is invalid/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`user` format is invalid/)
       end
 
       it "validates integer type" do
@@ -775,7 +786,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`limit` must be an integer/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be an integer/)
       end
 
       it "validates integer maximum" do
@@ -787,7 +798,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`limit` must be <= 50/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be <= 50/)
       end
 
       it "validates integer minimum" do
@@ -799,7 +810,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`limit` must be >= 1/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be >= 1/)
       end
 
       it "validates boolean type" do
@@ -811,7 +822,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`include_replies` must be a boolean/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`include_replies` must be a boolean/)
       end
 
       it "validates time type" do
@@ -823,7 +834,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`created_at` must be a time format string/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a time format string/)
       end
 
       it "validates time format" do
@@ -835,7 +846,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params) }.to raise_error(MCPError, /`created_at` must be a valid RFC3339 timestamp/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a valid RFC3339 timestamp/)
       end
 
       it "parses valid time strings into Time objects" do
@@ -848,14 +859,13 @@ Spectator.describe MCPController do
           })
         })
 
-        result = MCPController.handle_test_tool(params)
+        result = MCPController.handle_test_tool(params, account)
         expect(result[:created_at].as(Time).to_rfc3339).to eq(timestamp)
       end
     end
 
     context "with tools/call request" do
       let(tools_call_request) { %Q|{"jsonrpc": "2.0", "id": "call-1", "method": "tools/call", "params": {"name": "nonexistent_tool"}}| }
-      let_create!(account, named: alice, username: "alice")
 
       it "returns protocol error for invalid tool name" do
         post "/mcp", authenticated_headers, tools_call_request
@@ -863,50 +873,50 @@ Spectator.describe MCPController do
       end
 
       context "with paginate_collection tool" do
-        private def paginate_request(id, user_id, collection, args)
-          base_args = {"user" => "ktistec://users/#{user_id}", "name" => collection}
+        private def paginate_request(id, collection, args)
+          base_args = {"name" => collection}
           args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
           %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "paginate_collection", "arguments": {#{args_json}}}}|
         end
 
-        def paginate_notifications_request(id, user_id, args = {} of String => String | Int32)
-          paginate_request(id, user_id, "notifications", args)
+        def paginate_notifications_request(id, args = {} of String => String | Int32)
+          paginate_request(id, "notifications", args)
         end
 
-        def paginate_timeline_request(id, user_id, args = {} of String => String | Int32)
-          paginate_request(id, user_id, "timeline", args)
+        def paginate_timeline_request(id, args = {} of String => String | Int32)
+          paginate_request(id, "timeline", args)
         end
 
-        def paginate_posts_request(id, user_id, args = {} of String => String | Int32)
-          paginate_request(id, user_id, "posts", args)
+        def paginate_posts_request(id, args = {} of String => String | Int32)
+          paginate_request(id, "posts", args)
         end
 
-        def paginate_drafts_request(id, user_id, args = {} of String => String | Int32)
-          paginate_request(id, user_id, "drafts", args)
+        def paginate_drafts_request(id, args = {} of String => String | Int32)
+          paginate_request(id, "drafts", args)
         end
 
-        def paginate_hashtag_request(id, user_id, hashtag, args = {} of String => String | Int32)
-          paginate_request(id, user_id, "hashtag##{hashtag}", args)
+        def paginate_hashtag_request(id, hashtag, args = {} of String => String | Int32)
+          paginate_request(id, "hashtag##{hashtag}", args)
         end
 
-        def paginate_mention_request(id, user_id, mention, args = {} of String => String | Int32)
-          paginate_request(id, user_id, "mention@#{mention}", args)
+        def paginate_mention_request(id, mention, args = {} of String => String | Int32)
+          paginate_request(id, "mention@#{mention}", args)
         end
 
-        def paginate_likes_request(id, user_id, args = {} of String => String | Int32)
-          paginate_request(id, user_id, "likes", args)
+        def paginate_likes_request(id, args = {} of String => String | Int32)
+          paginate_request(id, "likes", args)
         end
 
-        def paginate_announcements_request(id, user_id, args = {} of String => String | Int32)
-          paginate_request(id, user_id, "announcements", args)
+        def paginate_announcements_request(id, args = {} of String => String | Int32)
+          paginate_request(id, "announcements", args)
         end
 
-        def paginate_followers_request(id, user_id, args = {} of String => String | Int32)
-          paginate_request(id, user_id, "followers", args)
+        def paginate_followers_request(id, args = {} of String => String | Int32)
+          paginate_request(id, "followers", args)
         end
 
-        def paginate_following_request(id, user_id, args = {} of String => String | Int32)
-          paginate_request(id, user_id, "following", args)
+        def paginate_following_request(id, args = {} of String => String | Int32)
+          paginate_request(id, "following", args)
         end
 
         def expect_paginated_response(expected_size, has_more = false)
@@ -921,30 +931,23 @@ Spectator.describe MCPController do
           data["objects"].as_a
         end
 
-        it "returns error for non-existent user" do
-          request = paginate_timeline_request("paginate-6", 999999)
-
-          post "/mcp", authenticated_headers, request
-          expect_mcp_error(-32602, "`user` not found")
-        end
-
         it "returns error for invalid collection name" do
-          request = paginate_timeline_request("paginate-8", alice.id, {"name" => "does_not_exist"})
+          request = paginate_timeline_request("paginate-8", {"name" => "does_not_exist"})
 
           post "/mcp", authenticated_headers, request
           expect_mcp_error(-32602, "`does_not_exist` unsupported")
         end
 
         context "with a mention in the notifications" do
-          let_create(:object, attributed_to: alice.actor)
-          let_create(:create, actor: alice.actor, object: object)
+          let_create(:object, attributed_to: account.actor)
+          let_create(:create, actor: account.actor, object: object)
 
           before_each do
-            put_in_notifications(alice.actor, mention: create)
+            put_in_notifications(account.actor, mention: create)
           end
 
           it "returns notifications objects for valid request" do
-            request = paginate_notifications_request("paginate-notifications-1", alice.id)
+            request = paginate_notifications_request("paginate-notifications-1")
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
@@ -958,15 +961,15 @@ Spectator.describe MCPController do
         end
 
         context "with a reply in the notifications" do
-          let_create(:object, attributed_to: alice.actor)
-          let_create(:create, actor: alice.actor, object: object)
+          let_create(:object, attributed_to: account.actor)
+          let_create(:create, actor: account.actor, object: object)
 
           before_each do
-            put_in_notifications(alice.actor, reply: create)
+            put_in_notifications(account.actor, reply: create)
           end
 
           it "returns reply notification for valid request" do
-            request = paginate_notifications_request("paginate-notifications-2", alice.id)
+            request = paginate_notifications_request("paginate-notifications-2")
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
@@ -981,14 +984,14 @@ Spectator.describe MCPController do
 
         context "with a follow in the notifications" do
           let_create(:actor, named: bob)
-          let_create(:follow, actor: bob, object: alice.actor)
+          let_create(:follow, actor: bob, object: account.actor)
 
           before_each do
-            put_in_notifications(alice.actor, follow)
+            put_in_notifications(account.actor, follow)
           end
 
           it "returns follow notification for valid request" do
-            request = paginate_notifications_request("paginate-notifications-3", alice.id)
+            request = paginate_notifications_request("paginate-notifications-3")
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
@@ -998,15 +1001,15 @@ Spectator.describe MCPController do
             expect(follow_notification["type"]).to eq("follow")
             expect(follow_notification["status"]).to eq("new")
             expect(follow_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
-            expect(follow_notification["object"]).to eq("ktistec://users/#{alice.actor.id}")
+            expect(follow_notification["object"]).to eq("ktistec://users/#{account.actor.id}")
             expect(follow_notification["created_at"]).not_to be_nil
           end
 
           context "that is accepted" do
-            let_create!(:accept, actor: alice.actor, object: follow)
+            let_create!(:accept, actor: account.actor, object: follow)
 
             it "returns accepted follow notification" do
-              request = paginate_notifications_request("paginate-notifications-4", alice.id)
+              request = paginate_notifications_request("paginate-notifications-4")
 
               post "/mcp", authenticated_headers, request
               notifications = expect_paginated_response(1, false)
@@ -1018,10 +1021,10 @@ Spectator.describe MCPController do
           end
 
           context "that is rejected" do
-            let_create!(:reject, actor: alice.actor, object: follow)
+            let_create!(:reject, actor: account.actor, object: follow)
 
             it "returns rejected follow notification" do
-              request = paginate_notifications_request("paginate-notifications-5", alice.id)
+              request = paginate_notifications_request("paginate-notifications-5")
 
               post "/mcp", authenticated_headers, request
               notifications = expect_paginated_response(1, false)
@@ -1034,14 +1037,14 @@ Spectator.describe MCPController do
         end
 
         context "with an object in the timeline" do
-          let_create!(:object, attributed_to: alice.actor)
+          let_create!(:object, attributed_to: account.actor)
 
           before_each do
-            put_in_timeline(alice.actor, object)
+            put_in_timeline(account.actor, object)
           end
 
           it "returns timeline objects for valid request" do
-            request = paginate_timeline_request("paginate-9", alice.id)
+            request = paginate_timeline_request("paginate-9")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
@@ -1050,15 +1053,15 @@ Spectator.describe MCPController do
         end
 
         context "with an object in actor's posts" do
-          let_create!(:object, attributed_to: alice.actor)
-          let_create!(:create, actor: alice.actor, object: object)
+          let_create!(:object, attributed_to: account.actor)
+          let_create!(:create, actor: account.actor, object: object)
 
           before_each do
-            put_in_outbox(alice.actor, create)
+            put_in_outbox(account.actor, create)
           end
 
           it "returns posts objects for valid request" do
-            request = paginate_posts_request("paginate-posts-1", alice.id)
+            request = paginate_posts_request("paginate-posts-1")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
@@ -1067,10 +1070,10 @@ Spectator.describe MCPController do
         end
 
         context "with a draft object for actor" do
-          let_create!(:object, attributed_to: alice.actor, published: nil)
+          let_create!(:object, attributed_to: account.actor, published: nil)
 
           it "returns draft objects for valid request" do
-            request = paginate_drafts_request("paginate-drafts-1", alice.id)
+            request = paginate_drafts_request("paginate-drafts-1")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
@@ -1082,40 +1085,40 @@ Spectator.describe MCPController do
           before_each do
             25.times do |i|
               object = Factory.create(:object)
-              put_in_timeline(alice.actor, object)
+              put_in_timeline(account.actor, object)
             end
           end
 
           it "returns 10 objects by default" do
-            request = paginate_timeline_request("paginate-size-1", alice.id)
+            request = paginate_timeline_request("paginate-size-1")
 
             post "/mcp", authenticated_headers, request
             expect_paginated_response(10, true)
           end
 
           it "returns the 3rd page of objects" do
-            request = paginate_timeline_request("paginate-10", alice.id, {"page" => 3})
+            request = paginate_timeline_request("paginate-10", {"page" => 3})
 
             post "/mcp", authenticated_headers, request
             expect_paginated_response(5, false)
           end
 
           it "returns specified number of objects when size is provided" do
-            request = paginate_timeline_request("paginate-size-2", alice.id, {"size" => 5})
+            request = paginate_timeline_request("paginate-size-2", {"size" => 5})
 
             post "/mcp", authenticated_headers, request
             expect_paginated_response(5, true)
           end
 
           it "returns maximum number of objects when size equals limit" do
-            request = paginate_timeline_request("paginate-size-3", alice.id, {"size" => 20})
+            request = paginate_timeline_request("paginate-size-3", {"size" => 20})
 
             post "/mcp", authenticated_headers, request
             expect_paginated_response(20, true)
           end
 
           it "works correctly with both page and size parameters" do
-            request = paginate_timeline_request("paginate-size-8", alice.id, {"page" => 2, "size" => 5})
+            request = paginate_timeline_request("paginate-size-8", {"page" => 2, "size" => 5})
 
             post "/mcp", authenticated_headers, request
             expect_paginated_response(5, true)
@@ -1126,7 +1129,7 @@ Spectator.describe MCPController do
           let_create!(
             :object,
             named: tagged_post,
-            attributed_to: alice.actor,
+            attributed_to: account.actor,
             content: "Post with #technology hashtag",
             published: Time.utc(2024, 1, 1, 10, 0, 0)
           )
@@ -1137,7 +1140,7 @@ Spectator.describe MCPController do
           )
 
           it "returns hashtag objects for valid hashtag" do
-            request = paginate_hashtag_request("paginate-hashtag-1", alice.id, "technology")
+            request = paginate_hashtag_request("paginate-hashtag-1", "technology")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
@@ -1145,7 +1148,7 @@ Spectator.describe MCPController do
           end
 
           it "returns error for non-existent hashtag" do
-            request = paginate_hashtag_request("paginate-hashtag-2", alice.id, "nonexistent")
+            request = paginate_hashtag_request("paginate-hashtag-2", "nonexistent")
 
             post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Hashtag 'nonexistent' not found")
@@ -1154,7 +1157,7 @@ Spectator.describe MCPController do
           it "supports pagination for hashtag collections" do
             post2 = Factory.create(
               :object,
-              attributed_to: alice.actor,
+              attributed_to: account.actor,
               content: "Another #technology post",
               published: Time.utc(2024, 1, 2, 10, 0, 0)
             )
@@ -1164,7 +1167,7 @@ Spectator.describe MCPController do
               subject: post2
             )
 
-            request = paginate_hashtag_request("paginate-hashtag-3", alice.id, "technology", {"size" => 1})
+            request = paginate_hashtag_request("paginate-hashtag-3", "technology", {"size" => 1})
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, true)
@@ -1177,7 +1180,7 @@ Spectator.describe MCPController do
           let_create!(
             :object,
             named: mentioned_post,
-            attributed_to: alice.actor,
+            attributed_to: account.actor,
             content: "Hey @testuser@example.com check this out!",
             published: Time.utc(2024, 1, 1, 10, 0, 0)
           )
@@ -1187,7 +1190,7 @@ Spectator.describe MCPController do
           )
 
           it "returns mention objects for valid mention" do
-            request = paginate_mention_request("paginate-mention-1", alice.id, "testuser@example.com")
+            request = paginate_mention_request("paginate-mention-1", "testuser@example.com")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
@@ -1195,7 +1198,7 @@ Spectator.describe MCPController do
           end
 
           it "returns error for non-existent mention" do
-            request = paginate_mention_request("paginate-mention-2", alice.id, "nonexistent@example.com")
+            request = paginate_mention_request("paginate-mention-2", "nonexistent@example.com")
 
             post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Mention 'nonexistent@example.com' not found")
@@ -1204,7 +1207,7 @@ Spectator.describe MCPController do
           it "supports pagination for mention collections" do
             post2 = Factory.create(
               :object,
-              attributed_to: alice.actor,
+              attributed_to: account.actor,
               content: "Another post mentioning @testuser@example.com",
               published: Time.utc(2024, 1, 2, 10, 0, 0)
             )
@@ -1214,7 +1217,7 @@ Spectator.describe MCPController do
               subject: post2
             )
 
-            request = paginate_mention_request("paginate-mention-3", alice.id, "testuser@example.com", {"size" => 1})
+            request = paginate_mention_request("paginate-mention-3", "testuser@example.com", {"size" => 1})
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, true)
@@ -1224,10 +1227,10 @@ Spectator.describe MCPController do
         end
 
         context "with a liked object" do
-          let_create(:object, named: liked_post, attributed_to: alice.actor)
+          let_create(:object, named: liked_post, attributed_to: account.actor)
 
           it "is empty" do
-            request = paginate_likes_request("paginate-likes-1", alice.id)
+            request = paginate_likes_request("paginate-likes-1")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(0, false)
@@ -1235,10 +1238,10 @@ Spectator.describe MCPController do
           end
 
           context "and a like" do
-            let_create!(:like, named: nil, actor: alice.actor, object: liked_post)
+            let_create!(:like, named: nil, actor: account.actor, object: liked_post)
 
             it "returns liked objects" do
-              request = paginate_likes_request("paginate-likes-2", alice.id)
+              request = paginate_likes_request("paginate-likes-2")
 
               post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
@@ -1246,11 +1249,11 @@ Spectator.describe MCPController do
             end
 
             context "and another liked object" do
-              let_create(:object, named: post, attributed_to: alice.actor)
-              let_create!(:like, named: nil, actor: alice.actor, object: post)
+              let_create(:object, named: post, attributed_to: account.actor)
+              let_create!(:like, named: nil, actor: account.actor, object: post)
 
               it "supports pagination for likes collection" do
-                request = paginate_likes_request("paginate-likes-3", alice.id, {"size" => 1})
+                request = paginate_likes_request("paginate-likes-3", {"size" => 1})
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
@@ -1262,10 +1265,10 @@ Spectator.describe MCPController do
         end
 
         context "with an announced object" do
-          let_create(:object, named: announced_post, attributed_to: alice.actor)
+          let_create(:object, named: announced_post, attributed_to: account.actor)
 
           it "is empty" do
-            request = paginate_announcements_request("paginate-announcements-1", alice.id)
+            request = paginate_announcements_request("paginate-announcements-1")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(0, false)
@@ -1273,10 +1276,10 @@ Spectator.describe MCPController do
           end
 
           context "and an announcement" do
-            let_create!(:announce, named: nil, actor: alice.actor, object: announced_post)
+            let_create!(:announce, named: nil, actor: account.actor, object: announced_post)
 
             it "returns announced objects" do
-              request = paginate_announcements_request("paginate-announcements-2", alice.id)
+              request = paginate_announcements_request("paginate-announcements-2")
 
               post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
@@ -1284,11 +1287,11 @@ Spectator.describe MCPController do
             end
 
             context "and another announced object" do
-              let_create(:object, named: post, attributed_to: alice.actor)
-              let_create!(:announce, named: nil, actor: alice.actor, object: post)
+              let_create(:object, named: post, attributed_to: account.actor)
+              let_create!(:announce, named: nil, actor: account.actor, object: post)
 
               it "supports pagination for announcements collection" do
-                request = paginate_announcements_request("paginate-announcements-3", alice.id, {"size" => 1})
+                request = paginate_announcements_request("paginate-announcements-3", {"size" => 1})
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
@@ -1303,7 +1306,7 @@ Spectator.describe MCPController do
           let_create(:actor, named: follower)
 
           it "is empty given no followers" do
-            request = paginate_followers_request("paginate-followers-1", alice.id)
+            request = paginate_followers_request("paginate-followers-1")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(0, false)
@@ -1311,10 +1314,10 @@ Spectator.describe MCPController do
           end
 
           context "with a follower" do
-            let_create!(:follow_relationship, named: nil, actor: follower, object: alice.actor, confirmed: true)
+            let_create!(:follow_relationship, named: nil, actor: follower, object: account.actor, confirmed: true)
 
             it "returns follower relationships" do
-              request = paginate_followers_request("paginate-followers-2", alice.id)
+              request = paginate_followers_request("paginate-followers-2")
 
               post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
@@ -1327,10 +1330,10 @@ Spectator.describe MCPController do
 
             context "and an unconfirmed follower" do
               let_create(:actor, named: unconfirmed_follower)
-              let_create!(:follow_relationship, named: nil, actor: unconfirmed_follower, object: alice.actor, confirmed: false)
+              let_create!(:follow_relationship, named: nil, actor: unconfirmed_follower, object: account.actor, confirmed: false)
 
               it "includes both confirmed and unconfirmed followers" do
-                request = paginate_followers_request("paginate-followers-3", alice.id)
+                request = paginate_followers_request("paginate-followers-3")
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(2, false)
@@ -1346,7 +1349,7 @@ Spectator.describe MCPController do
               end
 
               it "supports pagination for followers collection" do
-                request = paginate_followers_request("paginate-followers-4", alice.id, {"size" => 1})
+                request = paginate_followers_request("paginate-followers-4", {"size" => 1})
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
@@ -1364,7 +1367,7 @@ Spectator.describe MCPController do
           let_create(:actor, named: followed_actor)
 
           it "is empty given no following" do
-            request = paginate_following_request("paginate-following-1", alice.id)
+            request = paginate_following_request("paginate-following-1")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(0, false)
@@ -1372,10 +1375,10 @@ Spectator.describe MCPController do
           end
 
           context "with following" do
-            let_create!(:follow_relationship, named: nil, actor: alice.actor, object: followed_actor, confirmed: true)
+            let_create!(:follow_relationship, named: nil, actor: account.actor, object: followed_actor, confirmed: true)
 
             it "returns following relationships" do
-              request = paginate_following_request("paginate-following-2", alice.id)
+              request = paginate_following_request("paginate-following-2")
 
               post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
@@ -1388,10 +1391,10 @@ Spectator.describe MCPController do
 
             context "and an unconfirmed following" do
               let_create(:actor, named: unconfirmed_followed)
-              let_create!(:follow_relationship, named: nil, actor: alice.actor, object: unconfirmed_followed, confirmed: false)
+              let_create!(:follow_relationship, named: nil, actor: account.actor, object: unconfirmed_followed, confirmed: false)
 
               it "includes both confirmed and unconfirmed following" do
-                request = paginate_following_request("paginate-following-3", alice.id)
+                request = paginate_following_request("paginate-following-3")
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(2, false)
@@ -1407,7 +1410,7 @@ Spectator.describe MCPController do
               end
 
               it "supports pagination for following collection" do
-                request = paginate_following_request("paginate-following-4", alice.id, {"size" => 1})
+                request = paginate_following_request("paginate-following-4", {"size" => 1})
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
@@ -1423,50 +1426,50 @@ Spectator.describe MCPController do
       end
 
       context "with count_collection_since tool" do
-        private def count_since_request(id, user_id, collection, args)
-          base_args = {"user" => "ktistec://users/#{user_id}", "name" => collection}
+        private def count_since_request(id, collection, args)
+          base_args = {"name" => collection}
           args_json = base_args.merge(args).map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
           %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "count_collection_since", "arguments": {#{args_json}}}}|
         end
 
-        def count_notifications_since_request(id, user_id, args = {} of String => String | Int32)
-          count_since_request(id, user_id, "notifications", args)
+        def count_notifications_since_request(id, args = {} of String => String | Int32)
+          count_since_request(id, "notifications", args)
         end
 
-        def count_timeline_since_request(id, user_id, args = {} of String => String | Int32)
-          count_since_request(id, user_id, "timeline", args)
+        def count_timeline_since_request(id, args = {} of String => String | Int32)
+          count_since_request(id, "timeline", args)
         end
 
-        def count_posts_since_request(id, user_id, args = {} of String => String | Int32)
-          count_since_request(id, user_id, "posts", args)
+        def count_posts_since_request(id, args = {} of String => String | Int32)
+          count_since_request(id, "posts", args)
         end
 
-        def count_drafts_since_request(id, user_id, args = {} of String => String | Int32)
-          count_since_request(id, user_id, "drafts", args)
+        def count_drafts_since_request(id, args = {} of String => String | Int32)
+          count_since_request(id, "drafts", args)
         end
 
-        def count_hashtag_since_request(id, user_id, hashtag, args = {} of String => String | Int32)
-          count_since_request(id, user_id, "hashtag##{hashtag}", args)
+        def count_hashtag_since_request(id, hashtag, args = {} of String => String | Int32)
+          count_since_request(id, "hashtag##{hashtag}", args)
         end
 
-        def count_mention_since_request(id, user_id, mention, args = {} of String => String | Int32)
-          count_since_request(id, user_id, "mention@#{mention}", args)
+        def count_mention_since_request(id, mention, args = {} of String => String | Int32)
+          count_since_request(id, "mention@#{mention}", args)
         end
 
-        def count_likes_since_request(id, user_id, args = {} of String => String | Int32)
-          count_since_request(id, user_id, "likes", args)
+        def count_likes_since_request(id, args = {} of String => String | Int32)
+          count_since_request(id, "likes", args)
         end
 
-        def count_announcements_since_request(id, user_id, args = {} of String => String | Int32)
-          count_since_request(id, user_id, "announcements", args)
+        def count_announcements_since_request(id, args = {} of String => String | Int32)
+          count_since_request(id, "announcements", args)
         end
 
-        def count_followers_since_request(id, user_id, args = {} of String => String | Int32)
-          count_since_request(id, user_id, "followers", args)
+        def count_followers_since_request(id, args = {} of String => String | Int32)
+          count_since_request(id, "followers", args)
         end
 
-        def count_following_since_request(id, user_id, args = {} of String => String | Int32)
-          count_since_request(id, user_id, "following", args)
+        def count_following_since_request(id, args = {} of String => String | Int32)
+          count_since_request(id, "following", args)
         end
 
         def expect_count_response(expected_count)
@@ -1480,22 +1483,15 @@ Spectator.describe MCPController do
           expect(data["count"]).to eq(expected_count)
         end
 
-        it "returns error for non-existent user" do
-          request = count_timeline_since_request("count-7", 999999, {"since" => "2024-01-01T00:00:00Z"})
-
-          post "/mcp", authenticated_headers, request
-          expect_mcp_error(-32602, "`user` not found")
-        end
-
         it "returns error for invalid collection name" do
-          request = count_timeline_since_request("count-8", alice.id, {"name" => "does_not_exist", "since" => "2024-01-01T00:00:00Z"})
+          request = count_timeline_since_request("count-8", {"name" => "does_not_exist", "since" => "2024-01-01T00:00:00Z"})
 
           post "/mcp", authenticated_headers, request
           expect_mcp_error(-32602, "`does_not_exist` unsupported")
         end
 
         it "returns zero count for empty timeline" do
-          request = count_timeline_since_request("count-10", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+          request = count_timeline_since_request("count-10", {"since" => "2024-01-01T00:00:00Z"})
 
           post "/mcp", authenticated_headers, request
           expect_count_response(0)
@@ -1505,14 +1501,14 @@ Spectator.describe MCPController do
           let_create(object, named: object1)
           let_create(object, named: object2)
           let_create(object, named: object3)
-          let_create(create, named: create1, actor: alice.actor, object: object1)
-          let_create(create, named: create2, actor: alice.actor, object: object2)
-          let_create(create, named: create3, actor: alice.actor, object: object3)
+          let_create(create, named: create1, actor: account.actor, object: object1)
+          let_create(create, named: create2, actor: account.actor, object: object2)
+          let_create(create, named: create3, actor: account.actor, object: object3)
 
           before_each do
-            put_in_notifications(alice.actor, mention: create1)
-            put_in_notifications(alice.actor, mention: create2)
-            put_in_notifications(alice.actor, mention: create3)
+            put_in_notifications(account.actor, mention: create1)
+            put_in_notifications(account.actor, mention: create2)
+            put_in_notifications(account.actor, mention: create3)
           end
 
           # the `since` cutoff is decided based on the `created_at`
@@ -1522,7 +1518,7 @@ Spectator.describe MCPController do
 
           it "returns count of notifications since given timestamp" do
             since_time = create2.created_at.to_rfc3339
-            request = count_notifications_since_request("count-notifications-1", alice.id, {"since" => since_time})
+            request = count_notifications_since_request("count-notifications-1", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(2)
@@ -1530,7 +1526,7 @@ Spectator.describe MCPController do
 
           it "returns zero count when no notifications match timestamp" do
             since_time = (create3.created_at + 1.hour).to_rfc3339
-            request = count_notifications_since_request("count-notifications-2", alice.id, {"since" => since_time})
+            request = count_notifications_since_request("count-notifications-2", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(0)
@@ -1538,7 +1534,7 @@ Spectator.describe MCPController do
 
           it "returns total count when timestamp is before all notifications" do
             since_time = (create1.created_at - 1.hour).to_rfc3339
-            request = count_notifications_since_request("count-notifications-3", alice.id, {"since" => since_time})
+            request = count_notifications_since_request("count-notifications-3", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(3)
@@ -1546,14 +1542,14 @@ Spectator.describe MCPController do
         end
 
         context "with objects in timeline" do
-          let_create(object, named: object1, attributed_to: alice.actor)
-          let_create(object, named: object2, attributed_to: alice.actor)
-          let_create(object, named: object3, attributed_to: alice.actor)
+          let_create(object, named: object1, attributed_to: account.actor)
+          let_create(object, named: object2, attributed_to: account.actor)
+          let_create(object, named: object3, attributed_to: account.actor)
 
           before_each do
-            put_in_timeline(alice.actor, object1)
-            put_in_timeline(alice.actor, object2)
-            put_in_timeline(alice.actor, object3)
+            put_in_timeline(account.actor, object1)
+            put_in_timeline(account.actor, object2)
+            put_in_timeline(account.actor, object3)
           end
 
           # the `since` cutoff is decided based on the `created_at`
@@ -1563,7 +1559,7 @@ Spectator.describe MCPController do
 
           it "returns count of objects since given timestamp" do
             since_time = object2.created_at.to_rfc3339
-            request = count_timeline_since_request("count-11", alice.id, {"since" => since_time})
+            request = count_timeline_since_request("count-11", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(2)
@@ -1571,7 +1567,7 @@ Spectator.describe MCPController do
 
           it "returns zero count when no objects match timestamp" do
             since_time = (object3.created_at + 1.hour).to_rfc3339
-            request = count_timeline_since_request("count-12", alice.id, {"since" => since_time})
+            request = count_timeline_since_request("count-12", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(0)
@@ -1579,7 +1575,7 @@ Spectator.describe MCPController do
 
           it "returns total count when timestamp is before all objects" do
             since_time = (object1.created_at - 1.hour).to_rfc3339
-            request = count_timeline_since_request("count-13", alice.id, {"since" => since_time})
+            request = count_timeline_since_request("count-13", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(3)
@@ -1587,17 +1583,17 @@ Spectator.describe MCPController do
         end
 
         context "with objects in actor's posts" do
-          let_create(:object, named: object1, attributed_to: alice.actor)
-          let_create(:object, named: object2, attributed_to: alice.actor)
-          let_create(:object, named: object3, attributed_to: alice.actor)
-          let_create(:create, named: create1, actor: alice.actor, object: object1)
-          let_create(:create, named: create2, actor: alice.actor, object: object2)
-          let_create(:create, named: create3, actor: alice.actor, object: object3)
+          let_create(:object, named: object1, attributed_to: account.actor)
+          let_create(:object, named: object2, attributed_to: account.actor)
+          let_create(:object, named: object3, attributed_to: account.actor)
+          let_create(:create, named: create1, actor: account.actor, object: object1)
+          let_create(:create, named: create2, actor: account.actor, object: object2)
+          let_create(:create, named: create3, actor: account.actor, object: object3)
 
           before_each do
-            put_in_outbox(alice.actor, create1)
-            put_in_outbox(alice.actor, create2)
-            put_in_outbox(alice.actor, create3)
+            put_in_outbox(account.actor, create1)
+            put_in_outbox(account.actor, create2)
+            put_in_outbox(account.actor, create3)
           end
 
           # the `since` cutoff is decided based on the `created_at`
@@ -1607,7 +1603,7 @@ Spectator.describe MCPController do
 
           it "returns count of posts since given timestamp" do
             since_time = object2.created_at.to_rfc3339
-            request = count_posts_since_request("count-posts-1", alice.id, {"since" => since_time})
+            request = count_posts_since_request("count-posts-1", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(2)
@@ -1615,7 +1611,7 @@ Spectator.describe MCPController do
 
           it "returns zero count when no posts match timestamp" do
             since_time = (object3.created_at + 1.hour).to_rfc3339
-            request = count_posts_since_request("count-posts-2", alice.id, {"since" => since_time})
+            request = count_posts_since_request("count-posts-2", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(0)
@@ -1623,7 +1619,7 @@ Spectator.describe MCPController do
 
           it "returns total count when timestamp is before all posts" do
             since_time = (object1.created_at - 1.hour).to_rfc3339
-            request = count_posts_since_request("count-posts-3", alice.id, {"since" => since_time})
+            request = count_posts_since_request("count-posts-3", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(3)
@@ -1631,13 +1627,13 @@ Spectator.describe MCPController do
         end
 
         context "with draft objects for actor" do
-          let_create!(:object, named: object1, attributed_to: alice.actor, published: nil)
-          let_create!(:object, named: object2, attributed_to: alice.actor, published: nil)
-          let_create!(:object, named: object3, attributed_to: alice.actor, published: nil)
+          let_create!(:object, named: object1, attributed_to: account.actor, published: nil)
+          let_create!(:object, named: object2, attributed_to: account.actor, published: nil)
+          let_create!(:object, named: object3, attributed_to: account.actor, published: nil)
 
           it "returns count of drafts since given timestamp" do
             since_time = (object2.created_at - 1.second).to_rfc3339
-            request = count_drafts_since_request("count-drafts-1", alice.id, {"since" => since_time})
+            request = count_drafts_since_request("count-drafts-1", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(2)
@@ -1645,7 +1641,7 @@ Spectator.describe MCPController do
 
           it "returns zero count when no drafts match timestamp" do
             since_time = (object3.created_at + 1.hour).to_rfc3339
-            request = count_drafts_since_request("count-drafts-2", alice.id, {"since" => since_time})
+            request = count_drafts_since_request("count-drafts-2", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(0)
@@ -1653,7 +1649,7 @@ Spectator.describe MCPController do
 
           it "returns total count when timestamp is before all drafts" do
             since_time = (object1.created_at - 1.hour).to_rfc3339
-            request = count_drafts_since_request("count-drafts-3", alice.id, {"since" => since_time})
+            request = count_drafts_since_request("count-drafts-3", {"since" => since_time})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(3)
@@ -1664,7 +1660,7 @@ Spectator.describe MCPController do
           let_create!(
             :object,
             named: tagged_post,
-            attributed_to: alice.actor,
+            attributed_to: account.actor,
             content: "Post with #testhashtag",
             published: Time.utc(2024, 1, 1, 10, 0, 0)
           )
@@ -1677,14 +1673,14 @@ Spectator.describe MCPController do
           # time-based counting not supported
 
           it "returns error for valid hashtag" do
-            request = count_hashtag_since_request("count-hashtag-1", alice.id, "testhashtag", {"since" => "2024-01-01T00:00:00Z"})
+            request = count_hashtag_since_request("count-hashtag-1", "testhashtag", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Counting not supported for hashtag collections")
           end
 
           it "returns error for non-existent hashtag" do
-            request = count_hashtag_since_request("count-hashtag-2", alice.id, "nonexistent", {"since" => "2024-01-01T00:00:00Z"})
+            request = count_hashtag_since_request("count-hashtag-2", "nonexistent", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Hashtag 'nonexistent' not found")
@@ -1695,7 +1691,7 @@ Spectator.describe MCPController do
           let_create!(
             :object,
             named: mentioned_post,
-            attributed_to: alice.actor,
+            attributed_to: account.actor,
             content: "Post mentioning @testuser@example.com",
             published: Time.utc(2024, 1, 1, 10, 0, 0)
           )
@@ -1708,14 +1704,14 @@ Spectator.describe MCPController do
           # time-based counting not supported
 
           it "returns error for valid mention" do
-            request = count_mention_since_request("count-mention-1", alice.id, "testuser@example.com", {"since" => "2024-01-01T00:00:00Z"})
+            request = count_mention_since_request("count-mention-1", "testuser@example.com", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Counting not supported for mention collections")
           end
 
           it "returns error for non-existent mention" do
-            request = count_mention_since_request("count-mention-2", alice.id, "nonexistent@example.com", {"since" => "2024-01-01T00:00:00Z"})
+            request = count_mention_since_request("count-mention-2", "nonexistent@example.com", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Mention 'nonexistent@example.com' not found")
@@ -1724,7 +1720,7 @@ Spectator.describe MCPController do
 
         context "with likes collection" do
           it "returns error for likes collection" do
-            request = count_likes_since_request("count-likes-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+            request = count_likes_since_request("count-likes-1", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Counting not supported for likes collection")
@@ -1733,7 +1729,7 @@ Spectator.describe MCPController do
 
         context "with announcements collection" do
           it "returns error for announcements collection (time-based counting not supported)" do
-            request = count_announcements_since_request("count-announcements-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+            request = count_announcements_since_request("count-announcements-1", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
             expect_mcp_error(-32602, "Counting not supported for announcements collections")
@@ -1742,7 +1738,7 @@ Spectator.describe MCPController do
 
         context "with followers collection" do
           it "returns zero count" do
-            request = count_followers_since_request("count-followers-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+            request = count_followers_since_request("count-followers-1", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(0)
@@ -1750,17 +1746,17 @@ Spectator.describe MCPController do
 
           context "with followers" do
             let_create(:actor, named: follower)
-            let_create!(:follow_relationship, actor: follower, object: alice.actor, created_at: Time.utc(2024, 1, 2))
+            let_create!(:follow_relationship, actor: follower, object: account.actor, created_at: Time.utc(2024, 1, 2))
 
             it "returns count of followers" do
-              request = count_followers_since_request("count-followers-2", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+              request = count_followers_since_request("count-followers-2", {"since" => "2024-01-01T00:00:00Z"})
 
               post "/mcp", authenticated_headers, request
               expect_count_response(1)
             end
 
             it "returns zero count" do
-              request = count_followers_since_request("count-followers-3", alice.id, {"since" => "2024-01-03T00:00:00Z"})
+              request = count_followers_since_request("count-followers-3", {"since" => "2024-01-03T00:00:00Z"})
 
               post "/mcp", authenticated_headers, request
               expect_count_response(0)
@@ -1770,7 +1766,7 @@ Spectator.describe MCPController do
 
         context "with following collection" do
           it "returns zero count" do
-            request = count_following_since_request("count-following-1", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+            request = count_following_since_request("count-following-1", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(0)
@@ -1778,17 +1774,17 @@ Spectator.describe MCPController do
 
           context "with following" do
             let_create(:actor, named: followed_actor)
-            let_create!(:follow_relationship, actor: alice.actor, object: followed_actor, created_at: Time.utc(2024, 1, 2))
+            let_create!(:follow_relationship, actor: account.actor, object: followed_actor, created_at: Time.utc(2024, 1, 2))
 
             it "returns count of following" do
-              request = count_following_since_request("count-following-2", alice.id, {"since" => "2024-01-01T00:00:00Z"})
+              request = count_following_since_request("count-following-2", {"since" => "2024-01-01T00:00:00Z"})
 
               post "/mcp", authenticated_headers, request
               expect_count_response(1)
             end
 
             it "returns zero count" do
-              request = count_following_since_request("count-following-3", alice.id, {"since" => "2024-01-03T00:00:00Z"})
+              request = count_following_since_request("count-following-3", {"since" => "2024-01-03T00:00:00Z"})
 
               post "/mcp", authenticated_headers, request
               expect_count_response(0)

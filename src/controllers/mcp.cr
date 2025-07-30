@@ -50,7 +50,9 @@ class MCPController
   end
 
   post "/mcp" do |env|
-    unauthorized unless authenticate_request(env)
+    unless (account = authenticate_request(env))
+      unauthorized
+    end
 
     unless accepts?("application/json")
       bad_request "Bad Request"
@@ -69,7 +71,7 @@ class MCPController
       if request.notification?
         handle_notification(request)
         mcp_response 204, nil
-      elsif (response = handle_request(request))
+      elsif (response = handle_request(request, account))
         mcp_response 200, response
       else
         Log.warn { "method not found: #{request.method}" }
@@ -119,7 +121,7 @@ class MCPController
     })
   end
 
-  private def self.handle_request(request : JSON::RPC::Request) : JSON::RPC::Response?
+  private def self.handle_request(request : JSON::RPC::Request, account : Account) : JSON::RPC::Response?
     request_id = request.id.not_nil!
     Log.debug { "dispatching: method=#{request.method}" }
 
@@ -131,7 +133,7 @@ class MCPController
       result = handle_resources_list(request)
       JSON::RPC::Response.new(request_id, result)
     when "resources/read"
-      result = handle_resources_read(request)
+      result = handle_resources_read(request, account)
       JSON::RPC::Response.new(request_id, result)
     when "resources/templates/list"
       result = handle_resources_templates_list(request)
@@ -140,7 +142,7 @@ class MCPController
       result = handle_tools_list(request)
       JSON::RPC::Response.new(request_id, result)
     when "tools/call"
-      result = handle_tools_call(request)
+      result = handle_tools_call(request, account)
       JSON::RPC::Response.new(request_id, result)
     end
   end
@@ -392,7 +394,7 @@ class MCPController
     contents
   end
 
-  private def self.handle_resources_read(request : JSON::RPC::Request) : JSON::Any
+  private def self.handle_resources_read(request : JSON::RPC::Request, account : Account) : JSON::Any
     unless (params = request.params)
       raise MCPError.new("Missing params", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
@@ -404,7 +406,10 @@ class MCPController
       unless (account_id = $1.to_i64?)
         raise MCPError.new("Invalid user ID in URI: #{$1}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
-      unless (account = Account.find?(account_id))
+      unless account.id == account_id
+        raise MCPError.new("Access denied to user", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+      unless account.reload!
         raise MCPError.new("User not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
@@ -515,7 +520,7 @@ class MCPController
   macro def_tool(name, description, properties = [] of ToolPropertyDefinition, &block)
     {% TOOL_DEFINITIONS << {name: name, description: description, properties: properties} %}
 
-    def MCPController.handle_{{name.id}}(params : JSON::Any)
+    def MCPController.handle_{{name.id}}(params : JSON::Any, account : Account)
       unless (arguments = params["arguments"]?)
         raise MCPError.new("Missing arguments", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
@@ -623,21 +628,18 @@ class MCPController
     end
   end
 
-  USER_REGEX = /^ktistec:\/\/users\/(\d+)$/
   NAME_REGEX = /^([a-zA-Z0-9_-]+|hashtag#[a-zA-Z0-9_-]+|mention@[a-zA-Z0-9_@.-]+)$/
 
   def_tool("paginate_collection", "Paginate through collections of ActivityPub objects, activities, and actors. Use this tool when you want to inspect the contents of a collection.", [
-    {name: "user", type: "string", description: "URI of the user whose collections to paginate", required: true, matches: USER_REGEX},
     {name: "name", type: "string", description: "Name of the collection to paginate", required: true, matches: NAME_REGEX},
     {name: "page", type: "integer", description: "Page number (optional, defaults to 1)", minimum: 1, default: 1},
     {name: "size", type: "integer", description: "Number of items per page (optional, defaults to 10, maximum 1000)", minimum: 1, maximum: 20, default: 10},
   ]) do
-    user_id = user.sub("ktistec://users/", "").to_i64
-    unless (account = Account.find?(user_id))
-      raise MCPError.new("`user` not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    unless account.reload!
+      raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
-    Log.debug { "paginate_collection: user=#{user} collection=#{name} page=#{page} size=#{size}" }
+    Log.debug { "paginate_collection: user=ktistec://users/#{account.id} collection=#{name} page=#{page} size=#{size}" }
 
     actor = account.actor
 
@@ -764,16 +766,14 @@ class MCPController
   end
 
   def_tool("count_collection_since", "Count items in ActivityPub collections since a given time. Use this tool when you want to know if new items have been added in the last day/week/month.", [
-    {name: "user", type: "string", description: "URI of the user whose collection to count", required: true, matches: USER_REGEX},
     {name: "name", type: "string", description: "Name of the collection to count", required: true, matches: NAME_REGEX},
     {name: "since", type: "time", description: "Time (RFC3339) to count from", required: true},
   ]) do
-    user_id = user.sub("ktistec://users/", "").to_i64
-    unless (account = Account.find?(user_id))
-      raise MCPError.new("`user` not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+    unless account.reload!
+      raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
-    Log.debug { "count_collection_since: user=#{user} collection=#{name} since=#{since}" }
+    Log.debug { "count_collection_since: user=ktistec://users/#{account.id} collection=#{name} since=#{since}" }
 
     current_time = Time.utc
     actor = account.actor
@@ -868,7 +868,7 @@ class MCPController
     {% end %}
   end
 
-  private def self.handle_tools_call(request : JSON::RPC::Request) : JSON::Any
+  private def self.handle_tools_call(request : JSON::RPC::Request, account : Account) : JSON::Any
     unless (params = request.params)
       raise MCPError.new("Missing params", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
@@ -880,9 +880,9 @@ class MCPController
 
     case name
     when "paginate_collection"
-      handle_paginate_collection(params)
+      handle_paginate_collection(params, account)
     when "count_collection_since"
-      handle_count_collection_since(params)
+      handle_count_collection_since(params, account)
     else
       Log.warn { "unknown tool: #{name}" }
       raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)

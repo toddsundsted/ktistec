@@ -884,12 +884,14 @@ class MCPController
       JSON::Any.new({
         "type" => JSON::Any.new("mention"),
         "object" => JSON::Any.new("ktistec://objects/#{notification.object.id}"),
+        "action_url" => JSON::Any.new("#{Ktistec.host}/remote/objects/#{notification.object.id}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Reply
       JSON::Any.new({
         "type" => JSON::Any.new("reply"),
         "object" => JSON::Any.new("ktistec://objects/#{notification.object.id}"),
+        "action_url" => JSON::Any.new("#{Ktistec.host}/remote/objects/#{notification.object.id}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Follow
@@ -902,6 +904,7 @@ class MCPController
         "status" => JSON::Any.new(status),
         "actor" => JSON::Any.new("ktistec://actors/#{notification.activity.actor.id}"),
         "object" => JSON::Any.new("ktistec://users/#{notification.owner.id}"),
+        "action_url" => JSON::Any.new("#{Ktistec.host}/remote/actors/#{notification.activity.actor.id}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     else

@@ -975,6 +975,7 @@ Spectator.describe MCPController do
             mention = notifications.first
             expect(mention["type"]).to eq("mention")
             expect(mention["object"]).to eq("ktistec://objects/#{object.id}")
+            expect(mention["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
             expect(mention["created_at"]).not_to be_nil
           end
         end
@@ -997,6 +998,7 @@ Spectator.describe MCPController do
             reply = notifications.first
             expect(reply["type"]).to eq("reply")
             expect(reply["object"]).to eq("ktistec://objects/#{object.id}")
+            expect(reply["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
             expect(reply["created_at"]).not_to be_nil
           end
         end
@@ -1021,6 +1023,7 @@ Spectator.describe MCPController do
             expect(follow_notification["status"]).to eq("new")
             expect(follow_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
             expect(follow_notification["object"]).to eq("ktistec://users/#{account.actor.id}")
+            expect(follow_notification["action_url"]).to eq("#{Ktistec.host}/remote/actors/#{bob.id}")
             expect(follow_notification["created_at"]).not_to be_nil
           end
 

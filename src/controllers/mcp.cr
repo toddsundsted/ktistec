@@ -909,6 +909,22 @@ class MCPController
         "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_actor_path(notification.activity.actor)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
+    when Relationship::Content::Notification::Like
+      JSON::Any.new({
+        "type" => JSON::Any.new("like"),
+        "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
+        "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
+        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+        "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+      })
+    when Relationship::Content::Notification::Announce
+      JSON::Any.new({
+        "type" => JSON::Any.new("announce"),
+        "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
+        "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
+        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+        "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+      })
     else
       nil
     end

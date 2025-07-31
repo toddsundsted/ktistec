@@ -1058,6 +1058,56 @@ Spectator.describe MCPController do
           end
         end
 
+        context "with a like in the notifications" do
+          let_create(:actor, named: bob)
+          let_create(:object, attributed_to: account.actor)
+          let_create(:like, actor: bob, object: object)
+
+          before_each do
+            put_in_notifications(account.actor, like)
+          end
+
+          it "returns like notification for valid request" do
+            request = paginate_notifications_request("paginate-notifications-6")
+
+            post "/mcp", authenticated_headers, request
+            notifications = expect_paginated_response(1, false)
+            expect(notifications.size).to eq(1)
+
+            like_notification = notifications.first
+            expect(like_notification["type"]).to eq("like")
+            expect(like_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
+            expect(like_notification["object"]).to eq("ktistec://objects/#{object.id}")
+            expect(like_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
+            expect(like_notification["created_at"]).not_to be_nil
+          end
+        end
+
+        context "with an announce in the notifications" do
+          let_create(:actor, named: bob)
+          let_create(:object, attributed_to: account.actor)
+          let_create(:announce, actor: bob, object: object)
+
+          before_each do
+            put_in_notifications(account.actor, announce)
+          end
+
+          it "returns announce notification for valid request" do
+            request = paginate_notifications_request("paginate-notifications-7")
+
+            post "/mcp", authenticated_headers, request
+            notifications = expect_paginated_response(1, false)
+            expect(notifications.size).to eq(1)
+
+            announce_notification = notifications.first
+            expect(announce_notification["type"]).to eq("announce")
+            expect(announce_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
+            expect(announce_notification["object"]).to eq("ktistec://objects/#{object.id}")
+            expect(announce_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
+            expect(announce_notification["created_at"]).not_to be_nil
+          end
+        end
+
         context "with an object in the timeline" do
           let_create!(:object, attributed_to: account.actor)
 

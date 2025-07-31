@@ -208,13 +208,21 @@ class MCPController
     })
   end
 
-  private def self.instance_information() : Hash(String, JSON::Any)
+  private def self.instance_information(account : Account) : Hash(String, JSON::Any)
     contents = Hash(String, JSON::Any).new
 
     # basic instance information
     contents["version"] = JSON::Any.new(Ktistec::VERSION)
     contents["host"] = JSON::Any.new(Ktistec.host)
     contents["description"] = JSON::Any.new("Ktistec ActivityPub Server Model Context Protocol (MCP) Interface")
+
+    # authenticated user information
+    contents["authenticated_user"] = JSON::Any.new({
+      "uri" => JSON::Any.new("ktistec://users/#{account.id}"),
+      "username" => JSON::Any.new(account.username),
+      "language" => JSON::Any.new(account.language || ""),
+      "timezone" => JSON::Any.new(account.timezone)
+    })
 
     # supported collections
     collections = [
@@ -484,7 +492,7 @@ class MCPController
       })
 
     elsif uri == "ktistec://information"
-      text_data = instance_information()
+      text_data = instance_information(account)
 
       information_data = {
         "uri" => JSON::Any.new(uri),

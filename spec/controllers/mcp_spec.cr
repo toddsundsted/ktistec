@@ -292,6 +292,13 @@ Spectator.describe MCPController do
         expect(data["host"]).to eq(Ktistec.host)
         expect(data["description"]).to eq("Ktistec ActivityPub Server Model Context Protocol (MCP) Interface")
 
+        # authenticated user information
+        auth_user = data["authenticated_user"].as_h
+        expect(auth_user["uri"]).to eq("ktistec://users/#{account.id}")
+        expect(auth_user["username"]).to eq(account.username)
+        expect(auth_user["language"]).to be_a(JSON::Any)
+        expect(auth_user["timezone"]).to be_a(JSON::Any)
+
         # supported collections
         collections = data["collections"].as_a.map(&.as_s)
         expected_collections = ["posts", "drafts", "timeline", "notifications", "likes", "announcements", "followers", "following"]

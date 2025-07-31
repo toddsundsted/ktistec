@@ -215,7 +215,7 @@ class MCPController
 
     # basic instance information
     contents["version"] = JSON::Any.new(Ktistec::VERSION)
-    contents["host"] = JSON::Any.new(Ktistec.host)
+    contents["host"] = JSON::Any.new(host)
     contents["description"] = JSON::Any.new("Ktistec ActivityPub Server Model Context Protocol (MCP) Interface")
 
     # authenticated user information
@@ -267,7 +267,7 @@ class MCPController
 
     contents["uri"] = JSON::Any.new(mcp_actor_path(actor))
     contents["external_url"] = JSON::Any.new(actor.iri)
-    contents["internal_url"] = JSON::Any.new("#{Ktistec.host}#{remote_actor_path(actor)}")
+    contents["internal_url"] = JSON::Any.new("#{host}#{remote_actor_path(actor)}")
     if (name = actor.name)
       contents["name"] = JSON::Any.new(name)
     end
@@ -317,7 +317,7 @@ class MCPController
 
     contents["uri"] = JSON::Any.new(mcp_object_path(object))
     contents["external_url"] = JSON::Any.new(object.iri)
-    contents["internal_url"] = JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}")
+    contents["internal_url"] = JSON::Any.new("#{host}#{remote_object_path(object)}")
     if name
       contents["name"] = JSON::Any.new(name)
     end
@@ -886,14 +886,14 @@ class MCPController
       JSON::Any.new({
         "type" => JSON::Any.new("mention"),
         "object" => JSON::Any.new(mcp_object_path(notification.object)),
-        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
+        "action_url" => JSON::Any.new("#{host}#{remote_object_path(notification.object)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Reply
       JSON::Any.new({
         "type" => JSON::Any.new("reply"),
         "object" => JSON::Any.new(mcp_object_path(notification.object)),
-        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
+        "action_url" => JSON::Any.new("#{host}#{remote_object_path(notification.object)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Follow
@@ -906,7 +906,7 @@ class MCPController
         "status" => JSON::Any.new(status),
         "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
         "object" => JSON::Any.new(mcp_user_path(notification.owner)),
-        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_actor_path(notification.activity.actor)}"),
+        "action_url" => JSON::Any.new("#{host}#{remote_actor_path(notification.activity.actor)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Like
@@ -914,7 +914,7 @@ class MCPController
         "type" => JSON::Any.new("like"),
         "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
         "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
-        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+        "action_url" => JSON::Any.new("#{host}#{remote_object_path(notification.activity.object)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Announce
@@ -922,28 +922,28 @@ class MCPController
         "type" => JSON::Any.new("announce"),
         "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
         "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
-        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+        "action_url" => JSON::Any.new("#{host}#{remote_object_path(notification.activity.object)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Follow::Hashtag
       JSON::Any.new({
         "type" => JSON::Any.new("follow_hashtag"),
         "hashtag" => JSON::Any.new(notification.name),
-        "action_url" => JSON::Any.new("#{Ktistec.host}#{hashtag_path(notification.name)}"),
+        "action_url" => JSON::Any.new("#{host}#{hashtag_path(notification.name)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Follow::Mention
       JSON::Any.new({
         "type" => JSON::Any.new("follow_mention"),
         "mention" => JSON::Any.new(notification.name),
-        "action_url" => JSON::Any.new("#{Ktistec.host}#{mention_path(notification.name)}"),
+        "action_url" => JSON::Any.new("#{host}#{mention_path(notification.name)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Follow::Thread
       JSON::Any.new({
         "type" => JSON::Any.new("follow_thread"),
         "thread" => JSON::Any.new(notification.object.thread),
-        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_thread_path(notification.object, anchor: false)}"),
+        "action_url" => JSON::Any.new("#{host}#{remote_thread_path(notification.object, anchor: false)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     else

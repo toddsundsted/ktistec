@@ -926,4 +926,20 @@ module Ktistec::ViewHelper
   macro remote_interaction_path
     "/remote-interaction"
   end
+
+  macro mcp_user_path(account)
+    "ktistec://users/#{{{account}}.id}"
+  end
+
+  macro mcp_actor_path(actor)
+    "ktistec://actors/#{{{actor}}.id}"
+  end
+
+  macro mcp_object_path(object)
+    "ktistec://objects/#{{{object}}.id}"
+  end
+
+  macro mcp_information_path
+    "ktistec://information"
+  end
 end

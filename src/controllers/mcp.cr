@@ -6,6 +6,7 @@ require "../models/relationship/social/follow"
 require "../models/tag/hashtag"
 require "../models/tag/mention"
 require "../models/oauth2/provider/access_token"
+require "../views/view_helper"
 
 require "markd"
 
@@ -19,6 +20,7 @@ end
 
 class MCPController
   include Ktistec::Controller
+  include Ktistec::ViewHelper
 
   Log = ::Log.for(self)
 
@@ -119,7 +121,7 @@ class MCPController
         "particularly useful for monitoring ActivityPub feeds, tracking new content, and analyzing " \
         "social media activity patterns. The server supports both local and federated ActivityPub " \
         "content, with automatic translation support, and rich media attachment handling. For more " \
-        "information about the server read the ktistec://information resource."
+        "information about the server read the #{mcp_information_path} resource."
       ),
       "capabilities" => JSON::Any.new({
         "resources" => JSON::Any.new({} of String => JSON::Any),
@@ -170,14 +172,14 @@ class MCPController
     resources = [] of JSON::Any
 
     resources << JSON::Any.new({
-      "uri" => JSON::Any.new("ktistec://information"),
+      "uri" => JSON::Any.new(mcp_information_path),
       "mimeType" => JSON::Any.new("application/json"),
       "name" => JSON::Any.new("Instance Information"),
     })
 
     Account.all.each do |account|
       resources << JSON::Any.new({
-        "uri" => JSON::Any.new("ktistec://users/#{account.id}"),
+        "uri" => JSON::Any.new(mcp_user_path(account)),
         "mimeType" => JSON::Any.new("application/json"),
         "name" => JSON::Any.new(account.username),
       })
@@ -218,7 +220,7 @@ class MCPController
 
     # authenticated user information
     contents["authenticated_user"] = JSON::Any.new({
-      "uri" => JSON::Any.new("ktistec://users/#{account.id}"),
+      "uri" => JSON::Any.new(mcp_user_path(account)),
       "username" => JSON::Any.new(account.username),
       "language" => JSON::Any.new(account.language || ""),
       "timezone" => JSON::Any.new(account.timezone)
@@ -263,9 +265,9 @@ class MCPController
   private def self.actor_contents(actor : ActivityPub::Actor) : Hash(String, JSON::Any)
     contents = Hash(String, JSON::Any).new
 
-    contents["uri"] = JSON::Any.new("ktistec://actors/#{actor.id}")
+    contents["uri"] = JSON::Any.new(mcp_actor_path(actor))
     contents["external_url"] = JSON::Any.new(actor.iri)
-    contents["internal_url"] = JSON::Any.new("#{Ktistec.host}/remote/actors/#{actor.id}")
+    contents["internal_url"] = JSON::Any.new("#{Ktistec.host}#{remote_actor_path(actor)}")
     if (name = actor.name)
       contents["name"] = JSON::Any.new(name)
     end
@@ -313,9 +315,9 @@ class MCPController
 
     contents = Hash(String, JSON::Any).new
 
-    contents["uri"] = JSON::Any.new("ktistec://objects/#{object.id}")
+    contents["uri"] = JSON::Any.new(mcp_object_path(object))
     contents["external_url"] = JSON::Any.new(object.iri)
-    contents["internal_url"] = JSON::Any.new("#{Ktistec.host}/remote/objects/#{object.id}")
+    contents["internal_url"] = JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}")
     if name
       contents["name"] = JSON::Any.new(name)
     end
@@ -335,10 +337,10 @@ class MCPController
       contents["published"] = JSON::Any.new(published.to_rfc3339)
     end
     if (attributed_to = object.attributed_to?)
-      contents["attributed_to"] = JSON::Any.new("ktistec://actors/#{attributed_to.id}")
+      contents["attributed_to"] = JSON::Any.new(mcp_actor_path(attributed_to))
     end
     if (in_reply_to = object.in_reply_to?)
-      contents["in_reply_to"] = JSON::Any.new("ktistec://objects/#{in_reply_to.id}")
+      contents["in_reply_to"] = JSON::Any.new(mcp_object_path(in_reply_to))
     end
     contents["type"] = JSON::Any.new(object.class.to_s.split("::").last)
 
@@ -361,7 +363,7 @@ class MCPController
     likes = ActivityPub::Activity::Like.where(object_iri: object.iri).to_a
     if likes.any?
       actors_data = likes.map do |like|
-        JSON::Any.new({"uri" => JSON::Any.new("ktistec://actors/#{like.actor.id}")})
+        JSON::Any.new({"uri" => JSON::Any.new(mcp_actor_path(like.actor))})
       end
       contents["likes"] = JSON::Any.new({
         "count" => JSON::Any.new(likes.size.to_i64),
@@ -372,7 +374,7 @@ class MCPController
     announces = ActivityPub::Activity::Announce.where(object_iri: object.iri).to_a
     if announces.any?
       actors_data = announces.map do |announce|
-        JSON::Any.new({"uri" => JSON::Any.new("ktistec://actors/#{announce.actor.id}")})
+        JSON::Any.new({"uri" => JSON::Any.new(mcp_actor_path(announce.actor))})
       end
       contents["announcements"] = JSON::Any.new({
         "count" => JSON::Any.new(announces.size.to_i64),
@@ -384,8 +386,8 @@ class MCPController
     if replies.any?
       objects_data = replies.map do |reply|
         reply_data = {
-          "uri" => JSON::Any.new("ktistec://objects/#{reply.id}"),
-          "author" => JSON::Any.new("ktistec://actors/#{reply.attributed_to.id}")
+          "uri" => JSON::Any.new(mcp_object_path(reply)),
+          "author" => JSON::Any.new(mcp_actor_path(reply.attributed_to))
         }
         if (published = reply.published)
           reply_data["published"] = JSON::Any.new(published.to_rfc3339)
@@ -491,7 +493,7 @@ class MCPController
         ])
       })
 
-    elsif uri == "ktistec://information"
+    elsif uri == mcp_information_path
       text_data = instance_information(account)
 
       information_data = {
@@ -655,7 +657,7 @@ class MCPController
       raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
-    Log.debug { "paginate_collection: user=ktistec://users/#{account.id} collection=#{name} page=#{page} size=#{size}" }
+    Log.debug { "paginate_collection: user=#{mcp_user_path(account)} collection=#{name} page=#{page} size=#{size}" }
 
     actor = account.actor
 
@@ -670,38 +672,38 @@ class MCPController
       when "timeline"
         timeline = actor.timeline(page: page, size: size)
         objects = timeline.map do |rel|
-          JSON::Any.new("ktistec://objects/#{rel.object.id}")
+          JSON::Any.new(mcp_object_path(rel.object))
         end
         {objects, timeline.more?}
       when "posts"
         posts = actor.all_posts(page: page, size: size)
         objects = posts.map do |post|
-          JSON::Any.new("ktistec://objects/#{post.id}")
+          JSON::Any.new(mcp_object_path(post))
         end
         {objects, posts.more?}
       when "drafts"
         drafts = actor.drafts(page: page, size: size)
         objects = drafts.map do |draft|
-          JSON::Any.new("ktistec://objects/#{draft.id}")
+          JSON::Any.new(mcp_object_path(draft))
         end
         {objects, drafts.more?}
       when "likes"
         likes = actor.likes(page: page, size: size)
         objects = likes.map do |liked_object|
-          JSON::Any.new("ktistec://objects/#{liked_object.id}")
+          JSON::Any.new(mcp_object_path(liked_object))
         end
         {objects, likes.more?}
       when "announcements"
         announcements = actor.announces(page: page, size: size)
         objects = announcements.map do |announced_object|
-          JSON::Any.new("ktistec://objects/#{announced_object.id}")
+          JSON::Any.new(mcp_object_path(announced_object))
         end
         {objects, announcements.more?}
       when "followers"
         followers = Relationship::Social::Follow.followers_for(actor.iri, page: page, size: size)
         objects = followers.map do |relationship|
           JSON::Any.new({
-            "actor" => JSON::Any.new("ktistec://actors/#{relationship.actor.id}"),
+            "actor" => JSON::Any.new(mcp_actor_path(relationship.actor)),
             "confirmed" => JSON::Any.new(relationship.confirmed)
           })
         end
@@ -710,7 +712,7 @@ class MCPController
         following = Relationship::Social::Follow.following_for(actor.iri, page: page, size: size)
         objects = following.map do |relationship|
           JSON::Any.new({
-            "actor" => JSON::Any.new("ktistec://actors/#{relationship.object.id}"),
+            "actor" => JSON::Any.new(mcp_actor_path(relationship.object)),
             "confirmed" => JSON::Any.new(relationship.confirmed)
           })
         end
@@ -723,7 +725,7 @@ class MCPController
           end
           hashtag_objects = Tag::Hashtag.all_objects(hashtag, page: page, size: size)
           objects = hashtag_objects.map do |obj|
-            JSON::Any.new("ktistec://objects/#{obj.id}")
+            JSON::Any.new(mcp_object_path(obj))
           end
           {objects, hashtag_objects.more?}
         elsif name.starts_with?("mention@")
@@ -733,7 +735,7 @@ class MCPController
           end
           mention_objects = Tag::Mention.all_objects(mention, page: page, size: size)
           objects = mention_objects.map do |obj|
-            JSON::Any.new("ktistec://objects/#{obj.id}")
+            JSON::Any.new(mcp_object_path(obj))
           end
           {objects, mention_objects.more?}
         else
@@ -762,7 +764,7 @@ class MCPController
       raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
-    Log.debug { "count_collection_since: user=ktistec://users/#{account.id} collection=#{name} since=#{since}" }
+    Log.debug { "count_collection_since: user=#{mcp_user_path(account)} collection=#{name} since=#{since}" }
 
     current_time = Time.utc
     actor = account.actor
@@ -883,15 +885,15 @@ class MCPController
     when Relationship::Content::Notification::Mention
       JSON::Any.new({
         "type" => JSON::Any.new("mention"),
-        "object" => JSON::Any.new("ktistec://objects/#{notification.object.id}"),
-        "action_url" => JSON::Any.new("#{Ktistec.host}/remote/objects/#{notification.object.id}"),
+        "object" => JSON::Any.new(mcp_object_path(notification.object)),
+        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Reply
       JSON::Any.new({
         "type" => JSON::Any.new("reply"),
-        "object" => JSON::Any.new("ktistec://objects/#{notification.object.id}"),
-        "action_url" => JSON::Any.new("#{Ktistec.host}/remote/objects/#{notification.object.id}"),
+        "object" => JSON::Any.new(mcp_object_path(notification.object)),
+        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     when Relationship::Content::Notification::Follow
@@ -902,9 +904,9 @@ class MCPController
       JSON::Any.new({
         "type" => JSON::Any.new("follow"),
         "status" => JSON::Any.new(status),
-        "actor" => JSON::Any.new("ktistec://actors/#{notification.activity.actor.id}"),
-        "object" => JSON::Any.new("ktistec://users/#{notification.owner.id}"),
-        "action_url" => JSON::Any.new("#{Ktistec.host}/remote/actors/#{notification.activity.actor.id}"),
+        "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
+        "object" => JSON::Any.new(mcp_user_path(notification.owner)),
+        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_actor_path(notification.activity.actor)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
     else

@@ -925,6 +925,27 @@ class MCPController
         "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
         "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
       })
+    when Relationship::Content::Notification::Follow::Hashtag
+      JSON::Any.new({
+        "type" => JSON::Any.new("follow_hashtag"),
+        "hashtag" => JSON::Any.new(notification.name),
+        "action_url" => JSON::Any.new("#{Ktistec.host}#{hashtag_path(notification.name)}"),
+        "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+      })
+    when Relationship::Content::Notification::Follow::Mention
+      JSON::Any.new({
+        "type" => JSON::Any.new("follow_mention"),
+        "mention" => JSON::Any.new(notification.name),
+        "action_url" => JSON::Any.new("#{Ktistec.host}#{mention_path(notification.name)}"),
+        "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+      })
+    when Relationship::Content::Notification::Follow::Thread
+      JSON::Any.new({
+        "type" => JSON::Any.new("follow_thread"),
+        "thread" => JSON::Any.new(notification.object.thread),
+        "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_thread_path(notification.object, anchor: false)}"),
+        "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+      })
     else
       nil
     end

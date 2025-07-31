@@ -2,6 +2,9 @@ require "../../src/controllers/mcp"
 require "../../src/models/activity_pub/actor/person"
 require "../../src/models/oauth2/provider/access_token"
 require "../../src/models/oauth2/provider/client"
+require "../../src/models/relationship/content/notification/follow/thread"
+require "../../src/models/relationship/content/notification/follow/hashtag"
+require "../../src/models/relationship/content/notification/follow/mention"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"
@@ -1105,6 +1108,61 @@ Spectator.describe MCPController do
             expect(announce_notification["object"]).to eq("ktistec://objects/#{object.id}")
             expect(announce_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
             expect(announce_notification["created_at"]).not_to be_nil
+          end
+        end
+
+        context "with a new post to a followed hashtag in the notifications" do
+          let_create!(:notification_follow_hashtag, owner: account.actor, name: "rails")
+
+          it "returns follow hashtag notification for valid request" do
+            request = paginate_notifications_request("paginate-notifications-9")
+
+            post "/mcp", authenticated_headers, request
+            notifications = expect_paginated_response(1, false)
+            expect(notifications.size).to eq(1)
+
+            follow_hashtag_notification = notifications.first
+            expect(follow_hashtag_notification["type"]).to eq("follow_hashtag")
+            expect(follow_hashtag_notification["hashtag"]).to eq("rails")
+            expect(follow_hashtag_notification["action_url"]).to eq("#{Ktistec.host}/tags/rails")
+            expect(follow_hashtag_notification["created_at"]).not_to be_nil
+          end
+        end
+
+        context "with a new post to a followed mention in the notifications" do
+          let_create!(:notification_follow_mention, owner: account.actor, name: "alice@example.com")
+
+          it "returns follow mention notification for valid request" do
+            request = paginate_notifications_request("paginate-notifications-10")
+
+            post "/mcp", authenticated_headers, request
+            notifications = expect_paginated_response(1, false)
+            expect(notifications.size).to eq(1)
+
+            follow_mention_notification = notifications.first
+            expect(follow_mention_notification["type"]).to eq("follow_mention")
+            expect(follow_mention_notification["mention"]).to eq("alice@example.com")
+            expect(follow_mention_notification["action_url"]).to eq("#{Ktistec.host}/mentions/alice@example.com")
+            expect(follow_mention_notification["created_at"]).not_to be_nil
+          end
+        end
+
+        context "with a new post to a followed thread in the notifications" do
+          let_create(:object, attributed_to: account.actor)
+          let_create!(:notification_follow_thread, owner: account.actor, object: object)
+
+          it "returns follow thread notification for valid request" do
+            request = paginate_notifications_request("paginate-notifications-8")
+
+            post "/mcp", authenticated_headers, request
+            notifications = expect_paginated_response(1, false)
+            expect(notifications.size).to eq(1)
+
+            follow_thread_notification = notifications.first
+            expect(follow_thread_notification["type"]).to eq("follow_thread")
+            expect(follow_thread_notification["thread"]).to eq(object.thread)
+            expect(follow_thread_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}/thread")
+            expect(follow_thread_notification["created_at"]).not_to be_nil
           end
         end
 

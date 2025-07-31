@@ -35,6 +35,18 @@ Spectator.describe MCPController do
     }
   end
 
+  describe ".protocol_version" do
+    it "returns the client protocol version" do
+      result = described_class.protocol_version("2025-03-26", ["2024-11-05", "2025-03-26", "2025-06-18"])
+      expect(result).to eq("2025-03-26")
+    end
+
+    it "returns the latest protocol version the server supports" do
+      result = described_class.protocol_version("2024-01-01", ["2024-11-05", "2025-03-26", "2025-06-18"])
+      expect(result).to eq("2025-06-18")
+    end
+  end
+
   describe ".authenticate_request" do
     let(env) do
       env_factory("POST", "/mcp").tap do |env|

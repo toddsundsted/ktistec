@@ -24,6 +24,12 @@ class MCPController
 
   skip_auth ["/mcp"], GET, POST
 
+  SERVER_VERSIONS = %w[2024-11-05 2025-03-26 2025-06-18]
+
+  def self.protocol_version(client_version, server_versions = SERVER_VERSIONS)
+    client_version.in?(server_versions) ? client_version : server_versions.sort.last
+  end
+
   def self.authenticate_request(env) : Account?
     if (auth_header = env.request.headers["Authorization"]?)
       if auth_header.starts_with?("Bearer ")
@@ -98,8 +104,10 @@ class MCPController
   end
 
   private def self.handle_initialize(request : JSON::RPC::Request) : JSON::Any
+    client_version = request.params.not_nil!["protocolVersion"].as_s
+    server_version = protocol_version(client_version)
     JSON::Any.new({
-      "protocolVersion" => JSON::Any.new("2025-03-26"),
+      "protocolVersion" => JSON::Any.new(server_version),
       "serverInfo" => JSON::Any.new({
         "name" => JSON::Any.new("Ktistec MCP Server"),
         "version" => JSON::Any.new(Ktistec::VERSION)

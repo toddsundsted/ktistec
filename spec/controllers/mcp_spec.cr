@@ -244,16 +244,24 @@ Spectator.describe MCPController do
         expect(templates.size).to eq(2)
 
         actor_template = templates[0]
-        expect(actor_template["uriTemplate"]).to eq("ktistec://actors/{id}")
-        expect(actor_template["name"]).to eq("Actor")
-        expect(actor_template["description"]).to eq("ActivityPub actors")
+        expect(actor_template["uriTemplate"]).to eq("ktistec://actors/{id*}")
         expect(actor_template["mimeType"]).to eq("application/json")
+        expect(actor_template["description"]).to eq(
+          "Retrieve ActivityPub actor profiles including name, summary, icon, attachments, and URLs. Supports single ID " \
+          "(ktistec://actors/123) or comma-separated IDs for batch retrieval (ktistec://actors/123,456,789)."
+        )
+        expect(actor_template["title"]).to eq("ActivityPub Actor")
+        expect(actor_template["name"]).to eq("Actor")
 
         object_template = templates[1]
-        expect(object_template["uriTemplate"]).to eq("ktistec://objects/{id}")
-        expect(object_template["name"]).to eq("Object")
-        expect(object_template["description"]).to eq("ActivityPub objects")
+        expect(object_template["uriTemplate"]).to eq("ktistec://objects/{id*}")
         expect(object_template["mimeType"]).to eq("application/json")
+        expect(object_template["description"]).to eq(
+          "Access ActivityPub posts/objects with name, summary, content, metadata, and relationships. Supports single ID " \
+          "(ktistec://objects/123) or comma-separated IDs for batch retrieval (ktistec://objects/123,456,789)."
+        )
+        expect(object_template["title"]).to eq("ActivityPub Object")
+        expect(object_template["name"]).to eq("Object")
       end
     end
 
@@ -419,20 +427,24 @@ Spectator.describe MCPController do
       context "given an actor" do
         let_create!(
           actor,
+          named: other,
+          name: "Other Actor",
+        )
+        let_create!(
+          actor,
           name: "Test Actor",
           summary: "This is a summary",
           icon: "https://example.com/icon.png",
           image: "https://example.com/image.png"
         )
         let(uri) { "ktistec://actors/#{actor.id}" }
+        let(request) { %Q|{"jsonrpc": "2.0", "id": "read-actor-1", "method": "resources/read", "params": {"uri": "#{uri}"}}| }
 
         it "returns actor content" do
-          request = %Q|{"jsonrpc": "2.0", "id": "read-actor-1", "method": "resources/read", "params": {"uri": "#{uri}"}}|
-
           post "/mcp", authenticated_headers, request
           expect(response.status_code).to eq(200)
-
           parsed = JSON.parse(response.body)
+
           result = parsed["result"]
           contents = result["contents"].as_a
           expect(contents.size).to eq(1)
@@ -454,6 +466,31 @@ Spectator.describe MCPController do
           expect(json["type"]).to eq("Actor")
         end
 
+        context "and multiple actors in the URI" do
+          let(uri) { "ktistec://actors/#{other.id},#{actor.id}" }
+          let(request) { %Q|{"jsonrpc": "2.0", "id": "read-actors-multiple", "method": "resources/read", "params": {"uri": "#{uri}"}}| }
+
+          it "returns multiple actor contents" do
+            post "/mcp", authenticated_headers, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            result = parsed["result"]
+            contents = result["contents"].as_a
+            expect(contents.size).to eq(2)
+
+            first_content = contents.find { |c| c["name"] == "Other Actor" }
+            first_content = first_content.not_nil! # ensure it exists
+            expect(first_content["uri"]).to eq("ktistec://actors/#{other.id}")
+            expect(first_content["mimeType"]).to eq("application/json")
+
+            second_content = contents.find { |c| c["name"] == "Test Actor" }
+            second_content = second_content.not_nil! # ensure it exists
+            expect(second_content["uri"]).to eq("ktistec://actors/#{actor.id}")
+            expect(second_content["mimeType"]).to eq("application/json")
+          end
+        end
+
         it "returns error for invalid actor URI" do
           request = %Q|{"jsonrpc": "2.0", "id": "read-actor-2", "method": "resources/read", "params": {"uri": "ktistec://actors/999999"}}|
 
@@ -466,6 +503,7 @@ Spectator.describe MCPController do
         let_create!(
           object,
           named: root,
+          name: "Root Object",
         )
         let_create!(
           object,
@@ -478,7 +516,7 @@ Spectator.describe MCPController do
         let(uri) { "ktistec://objects/#{object.id}" }
         let(request) { %Q|{"jsonrpc": "2.0", "id": "read-obj-1", "method": "resources/read", "params": {"uri": "#{uri}"}}| }
 
-        it "returns object data for valid URI" do
+        it "returns object content" do
           post "/mcp", authenticated_headers, request
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
@@ -507,6 +545,31 @@ Spectator.describe MCPController do
           expect(json["likes"]?).to be_nil
           expect(json["announcements"]?).to be_nil
           expect(json["replies"]?).to be_nil
+        end
+
+        context "and multiple objects in the URI" do
+          let(uri) { "ktistec://objects/#{root.id},#{object.id}" }
+          let(request) { %Q|{"jsonrpc": "2.0", "id": "read-objects-multiple", "method": "resources/read", "params": {"uri": "#{uri}"}}| }
+
+          it "returns multiple object contents" do
+            post "/mcp", authenticated_headers, request
+            expect(response.status_code).to eq(200)
+            parsed = JSON.parse(response.body)
+
+            result = parsed["result"]
+            contents = result["contents"].as_a
+            expect(contents.size).to eq(2)
+
+            first_content = contents.find { |c| c["name"] == "Root Object" }
+            first_content = first_content.not_nil! # ensure it exists
+            expect(first_content["uri"]).to eq("ktistec://objects/#{root.id}")
+            expect(first_content["mimeType"]).to eq("application/json")
+
+            second_content = contents.find { |c| c["name"] == "Test Object" }
+            second_content = second_content.not_nil! # ensure it exists
+            expect(second_content["uri"]).to eq("ktistec://objects/#{object.id}")
+            expect(second_content["mimeType"]).to eq("application/json")
+          end
         end
 
         context "with HTML content" do
@@ -654,13 +717,13 @@ Spectator.describe MCPController do
             expect(second_reply["preview"]).to eq("This is the first reply with some content that might be quite long and should be truncated because i...")
           end
         end
-      end
 
-      it "returns error for invalid object URI" do
-        request = %Q|{"jsonrpc": "2.0", "id": "read-obj-2", "method": "resources/read", "params": {"uri": "ktistec://objects/999999"}}|
+        it "returns error for invalid object URI" do
+          request = %Q|{"jsonrpc": "2.0", "id": "read-obj-2", "method": "resources/read", "params": {"uri": "ktistec://objects/999999"}}|
 
-        post "/mcp", authenticated_headers, request
-        expect_mcp_error(-32602, "Object not found")
+          post "/mcp", authenticated_headers, request
+          expect_mcp_error(-32602, "Object not found")
+        end
       end
     end
 

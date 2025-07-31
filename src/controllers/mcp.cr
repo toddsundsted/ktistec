@@ -193,16 +193,24 @@ class MCPController
   private def self.handle_resources_templates_list(request : JSON::RPC::Request) : JSON::Any
     templates = [
       JSON::Any.new({
-        "uriTemplate" => JSON::Any.new("ktistec://actors/{id}"),
+        "uriTemplate" => JSON::Any.new("ktistec://actors/{id*}"),
         "mimeType" => JSON::Any.new("application/json"),
+        "description" => JSON::Any.new(
+          "Retrieve ActivityPub actor profiles including name, summary, icon, attachments, and URLs. Supports single ID " \
+          "(ktistec://actors/123) or comma-separated IDs for batch retrieval (ktistec://actors/123,456,789)."
+        ),
+        "title" => JSON::Any.new("ActivityPub Actor"),
         "name" => JSON::Any.new("Actor"),
-        "description" => JSON::Any.new("ActivityPub actors"),
       }),
       JSON::Any.new({
-        "uriTemplate" => JSON::Any.new("ktistec://objects/{id}"),
+        "uriTemplate" => JSON::Any.new("ktistec://objects/{id*}"),
         "mimeType" => JSON::Any.new("application/json"),
+        "description" => JSON::Any.new(
+          "Access ActivityPub posts/objects with name, summary, content, metadata, and relationships. Supports single ID " \
+          "(ktistec://objects/123) or comma-separated IDs for batch retrieval (ktistec://objects/123,456,789)."
+        ),
+        "title" => JSON::Any.new("ActivityPub Object"),
         "name" => JSON::Any.new("Object"),
-        "description" => JSON::Any.new("ActivityPub objects"),
       })
     ]
     JSON::Any.new({
@@ -447,50 +455,50 @@ class MCPController
         ])
       })
 
-    elsif uri =~ /^ktistec:\/\/actors\/(\d+)$/
-      unless (actor_id = $1.to_i64?)
-        raise MCPError.new("Invalid actor ID in URI: #{$1}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-      end
-      unless (actor = ActivityPub::Actor.find?(actor_id))
-        raise MCPError.new("Actor not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-      end
+    elsif uri =~ /^ktistec:\/\/actors\/(\d+(,\d+)*)$/
+      contents =
+        $1.split(",").map(&.to_i64).map do |actor_id|
+          unless (actor = ActivityPub::Actor.find?(actor_id))
+            raise MCPError.new("Actor not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+          end
 
-      text_data = actor_contents(actor)
+          text_data = actor_contents(actor)
 
-      actor_data = {
-        "uri" => JSON::Any.new(uri),
-        "mimeType" => JSON::Any.new("application/json"),
-        "name" => JSON::Any.new(actor.name || "Actor #{actor.id}"),
-        "text" => JSON::Any.new(text_data.to_json)
-      }
+          actor_data = {
+            "uri" => JSON::Any.new(mcp_actor_path(actor)),
+            "mimeType" => JSON::Any.new("application/json"),
+            "name" => JSON::Any.new(actor.name || "Actor #{actor.id}"),
+            "text" => JSON::Any.new(text_data.to_json)
+          }
+
+          JSON::Any.new(actor_data)
+        end
 
       JSON::Any.new({
-        "contents" => JSON::Any.new([
-          JSON::Any.new(actor_data)
-        ])
+        "contents" => JSON::Any.new(contents)
       })
 
-    elsif uri =~ /^ktistec:\/\/objects\/(\d+)$/
-      unless (object_id = $1.to_i64?)
-        raise MCPError.new("Invalid object ID in URI: #{$1}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-      end
-      unless (object = ActivityPub::Object.find?(object_id))
-        raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-      end
+    elsif uri =~ /^ktistec:\/\/objects\/(\d+(,\d+)*)$/
+      contents =
+        $1.split(",").map(&.to_i64).map do |object_id|
+          unless (object = ActivityPub::Object.find?(object_id))
+            raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+          end
 
-      text_data = object_contents(object)
+          text_data = object_contents(object)
 
-      object_data = {
-        "uri" => JSON::Any.new(uri),
-        "mimeType" => JSON::Any.new("application/json"),
-        "name" => JSON::Any.new(object.name || "Object #{object.id}"),
-        "text" => JSON::Any.new(text_data.to_json)
-      }
+          object_data = {
+            "uri" => JSON::Any.new(mcp_object_path(object)),
+            "mimeType" => JSON::Any.new("application/json"),
+            "name" => JSON::Any.new(object.name || "Object #{object.id}"),
+            "text" => JSON::Any.new(text_data.to_json)
+          }
+
+          JSON::Any.new(object_data)
+        end
 
       JSON::Any.new({
-        "contents" => JSON::Any.new([
-          JSON::Any.new(object_data)
-        ])
+        "contents" => JSON::Any.new(contents)
       })
 
     elsif uri == mcp_information_path

@@ -20,7 +20,7 @@ dependencies:
     version: ~> 0.20
   libxml_ext:
     github: toddsundsted/libxml_ext
-    version: ~> 0.1.0
+    version: 0.1.2
   openssl_ext:
     github: toddsundsted/openssl_ext
     version: ~> 0.1.6
@@ -42,7 +42,7 @@ development_dependencies:
     gitlab: arctic-fox/spectator
     version: ~> 0.12.0
 
-crystal: 1.2.2
+crystal: "< 1.17.0"
 
 libraries:
   libsqlite3: ">= 3.11.0"

@@ -286,16 +286,16 @@ class OAuth2Controller
       token: Random::Secure.urlsafe_base64,
       client_id: client.id,
       account_id: auth_code.account_id,
-      expires_at: Time.utc + 1.hour,
+      expires_at: Time.utc + 1.day,
       scope: "mcp",
     ).save
 
     env.response.content_type = "application/json"
     env.response.print({
-      access_token: access_token.token,
       token_type: "Bearer",
-      expires_in: 3600,
-      scope: access_token.scope
+      access_token: access_token.token,
+      expires_in: 1.day.to_i,
+      scope: access_token.scope,
     }.to_json)
   end
 end

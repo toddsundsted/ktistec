@@ -44,6 +44,7 @@ module OAuth2
       # A timestamp that indicates when the access token becomes invalid.
       #
       @[Persistent]
+      @[Insignificant]
       property expires_at : Time
 
       # Scopes.

@@ -272,7 +272,7 @@ class RelationshipsController
       end
     when ActivityPub::Activity::Reject
       if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: false).save
+        follow.assign(confirmed: true).save
       end
     when ActivityPub::Activity::Undo
       case (object = activity.object)

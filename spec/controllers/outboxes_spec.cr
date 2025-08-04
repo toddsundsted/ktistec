@@ -1023,7 +1023,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "on reject" do
-        let_create!(:follow_relationship, named: :relationship, actor: other, object: actor, confirmed: true)
+        let_create!(:follow_relationship, named: :relationship, actor: other, object: actor, confirmed: false)
         let_create!(:follow, actor: other, object: actor)
 
         it "returns 400 if a follow activity does not exist" do

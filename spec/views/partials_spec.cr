@@ -101,16 +101,16 @@ Spectator.describe "partials" do
     end
   end
 
-  macro follow(from, to, confirmed = true)
+  macro follow(from, to, confirmed = true, follow_activity = nil, follow_relationship = nil)
     let_create!(
       :follow,
-      named: nil,
+      named: {{follow_activity}},
       actor: {{from}},
       object: {{to}}
     )
     let_create!(
       :follow_relationship,
-      named: nil,
+      named: {{follow_relationship}},
       actor: {{from}},
       object: {{to}},
       confirmed: {{confirmed}}
@@ -319,6 +319,82 @@ Spectator.describe "partials" do
 
       it "renders a button to follow" do
         expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+      end
+
+      context "having not accepted or rejected a follow" do
+        follow(actor, account.actor, confirmed: false)
+
+        it "renders a button to accept" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Accept")
+        end
+
+        it "renders a button to reject" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject")
+        end
+
+        it "renders a button to follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+        end
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+        end
+      end
+
+      context "having accepted a follow" do
+        follow(actor, account.actor, confirmed: true, follow_activity: follow_activity)
+
+        let_create!(:accept, actor: account.actor, object: follow_activity)
+
+        it "does not render a button to accept" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Accept")
+        end
+
+        it "does not render a button to reject" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Reject")
+        end
+
+        it "renders a button to reject instead" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject Instead")
+        end
+
+        it "renders a button to follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+        end
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+        end
+      end
+
+      context "having rejected a follow" do
+        follow(actor, account.actor, confirmed: true, follow_activity: follow_activity)
+
+        let_create!(:reject, actor: account.actor, object: follow_activity)
+
+        it "does not render a button to accept" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Accept")
+        end
+
+        it "does not render a button to reject" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Reject")
+        end
+
+        it "does not render a button to reject instead" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Reject Instead")
+        end
+
+        it "renders a button to accept now" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Accept Instead")
+        end
+
+        it "renders a button to follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+        end
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+        end
       end
 
       context "and actor is blocked" do

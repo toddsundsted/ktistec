@@ -40,6 +40,44 @@ Spectator.describe ActivityPub::Activity::Follow do
         expect(subject.accepted_or_rejected?).to eq(reject)
       end
     end
+
+    context "state change scenarios" do
+      context "when follow is first accepted then rejected" do
+        let_create!(:accept, object: subject)
+        let_create!(:reject, object: subject)
+
+        it "should return the most recent reject activity" do
+          expect(subject.accepted_or_rejected?).to eq(reject)
+        end
+      end
+
+      context "when follow is first rejected then accepted" do
+        let_create!(:reject, object: subject)
+        let_create!(:accept, object: subject)
+
+        it "should return the most recent accept activity" do
+          expect(subject.accepted_or_rejected?).to eq(accept)
+        end
+      end
+
+      context "when multiple accepts are received" do
+        let_create!(:accept, named: :first_accept, object: subject)
+        let_create!(:accept, named: :second_accept, object: subject)
+
+        it "should return the most recent accept activity" do
+          expect(subject.accepted_or_rejected?).to eq(second_accept)
+        end
+      end
+
+      context "when multiple rejects are received" do
+        let_create!(:reject, named: :first_reject, object: subject)
+        let_create!(:reject, named: :second_reject, object: subject)
+
+        it "should return the most recent reject activity" do
+          expect(subject.accepted_or_rejected?).to eq(second_reject)
+        end
+      end
+    end
   end
 
   context "validations" do

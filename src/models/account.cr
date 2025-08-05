@@ -33,7 +33,7 @@ class Account
   @[Assignable]
   @password : String?
 
-  # Password encryption and key generation should be expensive
+  # NOTE: Password encryption and key generation should be expensive
   # operations in normal use cases. Parameterize `cost` and `size` so
   # that they can be redefined in test, where the expense just makes
   # the tests run more slowly.

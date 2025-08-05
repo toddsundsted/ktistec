@@ -40,6 +40,13 @@ Spectator.describe ObjectsController do
     attributed_to: actor,
     local: true
   )
+  let_create(
+    :object, named: :reply,
+    in_reply_to: visible,
+    attributed_to: actor,
+    published: Time.utc,
+    local: true
+  )
 
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
@@ -130,6 +137,11 @@ Spectator.describe ObjectsController do
       expect(response.status_code).to eq(404)
     end
 
+    it "returns 404 if object is a reply" do
+      get "/objects/#{reply.uid}"
+      expect(response.status_code).to eq(404)
+    end
+
     it "returns 404 if object is remote" do
       get "/objects/#{remote.uid}"
       expect(response.status_code).to eq(404)
@@ -216,6 +228,11 @@ Spectator.describe ObjectsController do
       expect(response.status_code).to eq(404)
     end
 
+    it "returns 404 if object is a reply" do
+      get "/objects/#{reply.uid}/replies"
+      expect(response.status_code).to eq(404)
+    end
+
     it "returns 404 if object is remote" do
       get "/objects/#{remote.uid}/replies"
       expect(response.status_code).to eq(404)
@@ -255,6 +272,11 @@ Spectator.describe ObjectsController do
 
     it "returns 404 if object is not visible" do
       get "/objects/#{notvisible.uid}/thread"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if object is a reply" do
+      get "/objects/#{reply.uid}/thread"
       expect(response.status_code).to eq(404)
     end
 

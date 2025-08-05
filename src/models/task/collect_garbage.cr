@@ -214,6 +214,10 @@ class Task
       SQL
     end
 
+    # NOTE: this use of "thread" is okay, because if a thread is
+    # followed (or fetched), its objects have been migrated as part of
+    # the process.
+
     def self.objects_associated_with_followed_content
       <<-SQL
       SELECT DISTINCT t.subject_iri AS iri FROM tags t
@@ -274,17 +278,47 @@ class Task
       SQL
     end
 
+    # Finds all objects that are part of the same thread as any
+    # preserved object.
+    #
+    # Uses the "thread" column when available; falls back to the
+    # "in_reply_to_iri" column for legacy threads.
+    #
     def self.objects_in_threads
       <<-SQL
-      SELECT DISTINCT o1.iri FROM objects o1
-      WHERE o1.thread IS NOT NULL
-      AND o1.thread IN (
-        SELECT DISTINCT o2.thread FROM objects o2
-        WHERE o2.thread IS NOT NULL
-        AND o2.iri IN (
-          #{objects_to_preserve}
-        )
-      )
+      SELECT DISTINCT o.iri FROM objects o
+      WHERE
+        -- objects in modern threads
+        (o.thread IS NOT NULL
+         AND o.thread IN (
+           SELECT DISTINCT p.thread FROM objects p
+            WHERE p.thread IS NOT NULL
+              AND p.iri IN (#{objects_to_preserve})
+         ))
+        OR
+        -- objects in legacy threads. find root and traverse
+        (o.thread IS NULL
+         AND o.iri IN (
+           -- find common root
+           WITH RECURSIVE reply_chain(iri, root_iri) AS (
+             -- objects that aren't replies (roots)
+             SELECT o1.iri, o1.iri as root_iri
+               FROM objects o1
+              WHERE o1.thread IS NULL AND o1.in_reply_to_iri IS NULL
+             UNION
+             -- recursive case: objects that are replies
+             SELECT o2.iri, rc.root_iri
+               FROM objects o2, reply_chain rc
+              WHERE o2.thread IS NULL AND o2.in_reply_to_iri = rc.iri
+           )
+           SELECT DISTINCT rc.iri
+             FROM reply_chain rc
+            WHERE rc.root_iri IN (
+             SELECT DISTINCT rc2.root_iri
+               FROM reply_chain rc2
+              WHERE rc2.iri IN (#{objects_to_preserve})
+           )
+         ))
       SQL
     end
 

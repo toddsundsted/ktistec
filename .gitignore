@@ -1,3 +1,6 @@
+/lib/
+/log/
+/node_modules/
 /public/uploads/*
 !/public/uploads/.keep
 ktistec.db

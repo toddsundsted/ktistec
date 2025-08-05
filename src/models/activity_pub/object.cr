@@ -203,6 +203,10 @@ module ActivityPub
       published.nil? && local?
     end
 
+    def reply?
+      !in_reply_to_iri.nil?
+    end
+
     def display_link
       urls.try(&.first?) || iri
     end
@@ -474,6 +478,34 @@ module ActivityPub
     @[Assignable]
     property depth : Int32 = 0
 
+    # This method sorts the objects in a thread by generating a
+    # special position value for each object, which acts as a
+    # lexicographically sortable, hierarchical key.
+    #
+    # 1. It uses a recursive SQL query to walk through the thread,
+    #    starting from the root post.
+    #
+    # 2. For each object, it constructs a position string that looks
+    #    like a path (e.g., .00...123.00...456). Each number is the
+    #    zero-padded `id` of an object in the thread. When sorted
+    #    lexicographically, this string naturally orders the thread by
+    #    reply depth and creation order.
+    #
+    # 3. It prioritizes self-replies (replies from authors to
+    #    themselves). When a reply's author is the same as its
+    #    parent's author, the query negates the reply's `id` before
+    #    adding it to the position string (e.g., .-00...789).
+    #
+    # In a lexicographical sort, a string containing a minus sign (-)
+    # comes before a string with a digit in the same position. This
+    # forces all of the author's own replies to be sorted immediately
+    # after their parent post and before any other replies at the same
+    # level.
+    #
+    # Note: In SQLite v3.38.0, the `printf` function was renamed to
+    # `format`. The original `printf` name was retained for backwards
+    # compatibility.
+    #
     private def thread_query_with_recursive
       query = <<-QUERY
       WITH RECURSIVE
@@ -490,8 +522,10 @@ module ActivityPub
        replies_to(iri, position, depth) AS (
            SELECT * FROM (SELECT iri, '', 0 FROM ancestors_of ORDER BY depth DESC LIMIT 1)
             UNION
-           SELECT o.iri, r.position || '.' || o.id, r.depth + 1 AS depth
+           SELECT o.iri, printf('%s.%020d', r.position, CASE WHEN p.iri IS NOT NULL AND o.attributed_to_iri = p.attributed_to_iri THEN -o.id ELSE o.id END), r.depth + 1 AS depth
              FROM objects AS o, replies_to AS r
+        LEFT JOIN objects AS p
+               ON p.iri = r.iri
              JOIN actors AS a
                ON a.iri = o.attributed_to_iri
             WHERE o.in_reply_to_iri = r.iri

@@ -331,7 +331,7 @@ Example:
 
     outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
     activity="{\"type\":\"Follow\",\"object\":\"https://example.com/actors/alice\"}"
-    curl -s -H "Authorization Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
 
 ### Undoing an Activity
 
@@ -348,7 +348,7 @@ Example:
 
     outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
     activity="{\"type\":\"Undo\",\"object\":\"https://example.com/activities/123\"}"
-    curl -s -H "Authorization Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
 
 ### Deleting
 
@@ -365,7 +365,7 @@ Example:
 
     outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
     activity="{\"type\":\"Delete\",\"object\":\"https://example.com/123\"}"
-    curl -s -H "Authorization Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
 
 ## Prerequisites
 

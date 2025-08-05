@@ -102,6 +102,8 @@ module ActivityPub
 
     has_many filter_terms, inverse_of: actor
 
+    # the implementation of attachments follows Mastodon's design
+
     struct Attachment
       include JSON::Serializable
 
@@ -133,7 +135,6 @@ module ActivityPub
           self.following = "#{host}/actors/#{username}/following"
           self.followers = "#{host}/actors/#{username}/followers"
           self.urls = ["#{host}/@#{username}"]
-          self.attachments = [] of Attachment
         end
       end
     end
@@ -273,6 +274,12 @@ module ActivityPub
       )
     end
 
+    # Returns the actor's draft posts.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    # Includes only unpublished posts attributed to this actor.
+    #
     def drafts(page = 1, size = 10)
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
@@ -284,6 +291,22 @@ module ActivityPub
           LIMIT ? OFFSET ?
       QUERY
       Object.query_and_paginate(query, iri, page: page, size: size)
+    end
+
+    # Returns the count of the actor's drafts since the given date.
+    #
+    # See `#drafts(page, size)` for further details.
+    #
+    def drafts(since : Time)
+      query = <<-QUERY
+         SELECT count(o.id)
+           FROM objects AS o
+          WHERE o.attributed_to_iri = ?
+            AND o.published IS NULL
+            #{common_filters_on("o")}
+            AND o.created_at > ?
+      QUERY
+      Object.scalar(query, iri, since).as(Int64)
     end
 
     protected def self.content(iri, mailbox, inclusion = nil, exclusion = nil, page = 1, size = 10, public = true, replies = true)
@@ -502,6 +525,29 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
+    # Returns the count of the actor's posts since the given date.
+    #
+    # See `#all_posts(page, size)` for further details.
+    #
+    def all_posts(since : Time)
+      query = <<-QUERY
+         SELECT count(r.id)
+           FROM objects AS o
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+            AND r.type = '#{Relationship::Content::Outbox}'
+          WHERE r.from_iri = ?
+            #{common_filters_on("o", "t", "a")}
+            AND r.created_at > ?
+      QUERY
+      Relationship::Content::Outbox.scalar(query, iri, since).as(Int64)
+    end
+
     private alias Timeline = Relationship::Content::Timeline
 
     # Returns entries in the actor's timeline.
@@ -715,9 +761,12 @@ private module ActorModelHelper
       "icon" => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
       "image" => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
       "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
-      "attachments" => attachments_from_json_ld(
-        json.dig?("https://www.w3.org/ns/activitystreams#attachment")
-      )
+      "attachments" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
+        name = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
+        type = Ktistec::JSON_LD.dig?(attachment, "@type").presence
+        value = Ktistec::JSON_LD.dig?(attachment, "http://schema.org#value").presence
+        ActivityPub::Actor::Attachment.new(name, type, value) if name && type && value
+      end
     }.compact
   end
 
@@ -740,21 +789,6 @@ private module ActorModelHelper
       elsif icons
         icons.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
       end
-    end
-  end
-
-  def self.attachments_from_json_ld(entry)
-    entry_not_nil = (entry.try(&.as_a) || [] of JSON::Any).not_nil!
-
-    entry_not_nil.reduce([] of ActivityPub::Actor::Attachment) do |memo, a|
-      name = (Ktistec::JSON_LD.dig?(a, "https://www.w3.org/ns/activitystreams#name", "und") || "").not_nil!
-      type = (a.dig?("@type").try(&.as_s) || "").not_nil!
-      value = (a.dig?("http://schema.org#value").try(&.as_s) || "").not_nil!
-
-      unless name.empty? || value.empty?
-        memo << ActivityPub::Actor::Attachment.new(name, type, value)
-      end
-      memo
     end
   end
 end

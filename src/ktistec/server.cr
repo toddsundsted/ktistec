@@ -1,3 +1,7 @@
+{% if compare_versions(Crystal::VERSION, "1.17.0") >= 0 %}
+  {% raise "Due to a library incompatibility, Crystal version #{Crystal::VERSION} is not currently supported" %}
+{% end %}
+
 require "../rules/**"
 require "../framework/**"
 require "../models/**"

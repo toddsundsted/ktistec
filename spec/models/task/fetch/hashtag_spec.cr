@@ -75,11 +75,13 @@ Spectator.describe Task::Fetch::Hashtag do
 
     macro let_build_object(index, *tags)
       let_build(
-        :object, named: object{{index}},
+        :object,
+        named: object{{index}},
         hashtags: [
           {% for tag in tags %}
             Factory.build(
-              :hashtag, named: nil,
+              :hashtag,
+              created_at: Time.utc,
               name: {{tag.split("/").last}},
               href: {{tag}}
             ),

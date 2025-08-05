@@ -65,4 +65,96 @@ Spectator.describe Relationship::Social::Follow do
       end
     end
   end
+
+  describe "#accepted?" do
+    let_create!(:follow_relationship)
+
+    context "when no follow activity exists" do
+      it "returns false" do
+        expect(follow_relationship.accepted?).to be_falsey
+      end
+    end
+
+    context "when follow activity exists but no accept/reject" do
+      let_create!(:follow, actor: follow_relationship.actor, object: follow_relationship.object)
+
+      it "returns false" do
+        expect(follow_relationship.accepted?).to be_falsey
+      end
+    end
+
+    context "when follow activity has been accepted" do
+      let_create!(:follow, actor: follow_relationship.actor, object: follow_relationship.object)
+      let_create!(:accept, actor: follow_relationship.object, object: follow)
+
+      it "returns true" do
+        expect(follow_relationship.accepted?).to be_truthy
+      end
+    end
+
+    context "when follow activity has been rejected" do
+      let_create!(:follow, actor: follow_relationship.actor, object: follow_relationship.object)
+      let_create!(:reject, actor: follow_relationship.object, object: follow)
+
+      it "returns false" do
+        expect(follow_relationship.accepted?).to be_falsey
+      end
+    end
+  end
+
+  describe "#rejected?" do
+    let_create!(:follow_relationship)
+
+    context "when no follow activity exists" do
+      it "returns false" do
+        expect(follow_relationship.rejected?).to be_falsey
+      end
+    end
+
+    context "when follow activity exists but no accept/reject" do
+      let_create!(:follow, actor: follow_relationship.actor, object: follow_relationship.object)
+
+      it "returns false" do
+        expect(follow_relationship.rejected?).to be_falsey
+      end
+    end
+
+    context "when follow activity has been accepted" do
+      let_create!(:follow, actor: follow_relationship.actor, object: follow_relationship.object)
+      let_create!(:accept, actor: follow_relationship.object, object: follow)
+
+      it "returns false" do
+        expect(follow_relationship.rejected?).to be_falsey
+      end
+    end
+
+    context "when follow activity has been rejected" do
+      let_create!(:follow, actor: follow_relationship.actor, object: follow_relationship.object)
+      let_create!(:reject, actor: follow_relationship.object, object: follow)
+
+      it "returns true" do
+        expect(follow_relationship.rejected?).to be_truthy
+      end
+    end
+  end
+
+  describe "#pending?" do
+    let_create!(:follow_relationship)
+
+    context "when confirmed is false" do
+      before_each { follow_relationship.assign(confirmed: false).save }
+
+      it "returns true" do
+        expect(follow_relationship.pending?).to be_truthy
+      end
+    end
+
+    context "when confirmed is true" do
+      before_each { follow_relationship.assign(confirmed: true).save }
+
+      it "returns false" do
+        expect(follow_relationship.pending?).to be_falsey
+      end
+    end
+  end
 end

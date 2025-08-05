@@ -419,16 +419,38 @@ Spectator.describe Task::CollectGarbage do
       let_create!(object, named: root)
       let_create!(object, named: reply1, in_reply_to: root)
       let_create!(object, named: reply2, in_reply_to: reply1)
+      let_create!(object, named: reply3, in_reply_to: root)
 
       it "does not return any objects" do
-        expect(results).not_to have(root.iri, reply1.iri, reply2.iri)
+        expect(results).not_to have(root.iri, reply1.iri, reply2.iri, reply3.iri)
       end
 
       context "given object attributed to user" do
         before_each { reply1.assign(attributed_to: actor).save }
 
         it "returns all objects" do
-          expect(results).to have(root.iri, reply1.iri, reply2.iri)
+          expect(results).to have(root.iri, reply1.iri, reply2.iri, reply3.iri)
+        end
+
+        # A legacy thread is set of objects related by their
+        # `in_reply_to_iri` values, but whose `thread` values are
+        # `nil` (legacy threads are lazily migrated when followed or
+        # fetched).
+
+        context "but thread is legacy" do
+          before_each do
+            Ktistec.database.exec(
+              "UPDATE objects SET thread = NULL WHERE iri IN (?, ?, ?, ?)",
+              root.iri,
+              reply1.iri,
+              reply2.iri,
+              reply3.iri,
+            )
+          end
+
+          it "returns all objects" do
+            expect(results).to have(root.iri, reply1.iri, reply2.iri, reply3.iri)
+          end
         end
       end
 

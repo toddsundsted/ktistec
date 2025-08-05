@@ -932,7 +932,7 @@ Spectator.describe RelationshipsController do
     end
 
     context "on reject" do
-      let_create!(:follow_relationship, named: :relationship, actor: actor, object: other, confirmed: true)
+      let_create!(:follow_relationship, named: :relationship, actor: actor, object: other, confirmed: false)
       let_create(:follow, actor: actor, object: other)
       let_build(:reject, actor: other, object: follow)
 

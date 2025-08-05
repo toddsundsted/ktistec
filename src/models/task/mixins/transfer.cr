@@ -46,6 +46,7 @@ class Task
         elsif (inbox = actor.inbox)
           body = activity.to_json_ld
           headers = Ktistec::Signature.sign(transferer, inbox, body, Ktistec::Constants::CONTENT_TYPE_HEADER)
+          headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
           begin
             uri = URI.parse(inbox)
             client = HTTP::Client.new(uri)

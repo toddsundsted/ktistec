@@ -23,6 +23,31 @@ class Relationship
       def activity?
         ActivityPub::Activity::Follow.where(QUERY, from_iri, to_iri).first?
       end
+
+      # Returns true if the follow relationship has been accepted.
+      #
+      def accepted?
+        if (follow_activity = self.activity?)
+          follow_activity.accepted_or_rejected?.is_a?(ActivityPub::Activity::Accept)
+        end
+      end
+
+      # Returns true if the follow relationship has been rejected.
+      #
+      def rejected?
+        if (follow_activity = self.activity?)
+          follow_activity.accepted_or_rejected?.is_a?(ActivityPub::Activity::Reject)
+        end
+      end
+
+      # Returns true if the follow relationship is pending.
+      #
+      # A follow is pending if it has not been accepted or rejected
+      # (confirmed = false).
+      #
+      def pending?
+        !confirmed
+      end
     end
   end
 end

@@ -9,7 +9,7 @@ class ActivityPub::Activity
 
     belongs_to object, class_name: ActivityPub::Actor, foreign_key: object_iri, primary_key: iri
 
-    private QUERY = "object_iri = ? AND type IN ('#{Accept}', '#{Reject}') LIMIT 1"
+    private QUERY = "object_iri = ? AND type IN ('#{Accept}', '#{Reject}') ORDER BY id DESC LIMIT 1"
 
     def accepted_or_rejected?
       ActivityPub::Activity.where(QUERY, iri).first?

@@ -84,6 +84,16 @@ class Account
   end
 end
 
+module ViewHelper
+  def pagination_params(env)
+    max_size = 20 # override the limit to 20 for testing instead of 1000
+    {
+      page: Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
+      size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, max_size)
+    }
+  end
+end
+
 class Task
   def schedule(next_attempt_at = nil)
     previous_def(next_attempt_at).tap { perform } # always perform when testing

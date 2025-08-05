@@ -1,35 +1,81 @@
-abstract class Factory
-  macro build(type, **options)
-    {{type.id}}_factory({{options.double_splat}})
-  end
+# Use factories to build or create (build and save) test objects for
+# use in specs.
 
-  macro create(type, **options)
-    {{type.id}}_factory({{options.double_splat}}).save
-  end
-end
+# `KTISTEC_EPOCH` is used to generate unique but reproducible
+# timestamps for test data so tests are deterministic.
 
 KTISTEC_EPOCH = Time.utc(2016, 2, 15, 10, 20, 0)
 
+# `KTISTEC_FACTORY_STATE` holds factory state.
+
 KTISTEC_FACTORY_STATE = {:nonce => 0, :moment => 0}
 
-macro let_build(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
-  {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
+# A `Factory` with two macros:
+#
+# `build(type, **options): When invoked, this macro expands to a call
+# to the factory method for the given type, passing all options through.
+#
+# `create(type, **options)`: Same as build, but after building the
+# object, it also saves the object.
+#
+# Typically, do not use these macros directly. Use the four macros
+# below.
+
+abstract class Factory
+  macro build(type, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
+    {{type.id}}_factory(created_at: {{created_at}}, {{options.double_splat}})
+  end
+
+  macro create(type, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
+    {{type.id}}_factory(created_at: {{created_at}}, {{options.double_splat}}).save
+  end
 end
 
-macro let_build!(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
+# Four additional macros to simplify test setup, inspired by RSpec’s
+# `let`/`let!` helpers.
+#
+# Each macro generates a `let` or `let!` block for a test object:
+# `let` defines a lazy-evaluated variable; `let!` is eager (evaluated
+# at the start of the section of specs).
+#
+# The macros accept a type (e.g., `:actor` or `actor`), an optional
+# identifier name via the `named` parameter (by default, the name is
+# the name of the type), a `created_at` timestamp (the default is
+# successive epoch + 1s, 2s, ... times), and any number of additional
+# options for the underlying factory.
+#
+# If `named` is not provided, a unique, anonymous name is generated
+# using the `nonce` counter.
+#
+# Use these macros at the top of `describe` and `context` blocks to
+# introduce test objects. For example:
+#
+#   let_create(object) # creates an object named `object`
+#
+# To assign a different name, or to create an anonymous object, used
+# the `named` parameter, as follows:
+#
+#   let_create(object, named: post) # assigns the object to `post`
+#   let_create(object, named: nil)  # is anonymous
+
+macro let_build(type, named = false, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let!({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
+  let({{(named || type).id}}) { Factory.build({{type}}, {{options.double_splat}}) }
 end
 
-macro let_create(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
+macro let_build!(type, named = false, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
+  let!({{(named || type).id}}) { Factory.build({{type}}, {{options.double_splat}}) }
 end
 
-macro let_create!(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
+macro let_create(type, named = false, **options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let!({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
+  let({{(named || type).id}}) { Factory.create({{type}}, {{options.double_splat}}) }
+end
+
+macro let_create!(type, named = false, **options)
+  {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
+  let!({{(named || type).id}}) { Factory.create({{type}}, {{options.double_splat}}) }
 end
 
 def base_url(iri, thing, local = nil)
@@ -48,6 +94,9 @@ def base_url(iri, thing, local = nil)
   uri = URI.parse(url.as(String))
   "#{uri.scheme}://#{uri.host}"
 end
+
+# Available factories are identified by methods that end in `_factory`
+# below (e.g. `actor`, `object`).
 
 # actor factories
 
@@ -346,7 +395,13 @@ def account_factory(clazz = Account, actor_iri = nil, actor = false, username = 
   clazz.new(**{actor_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, actor: actor, username: username, password: password, language: language}.merge(options))
 end
 
-# other helpers
+# Helpers methods for common operations.
+#
+# Use the `put_in_...` methods to add objects to common collections.
+# Use `do_follow` to create a new social follow.  Use `register` to
+# create a registered actor.  This is a common pattern:
+#
+#     let(actor) { register.actor }
 
 def put_in_inbox(owner : ActivityPub::Actor, activity : ActivityPub::Activity)
   Factory.create(:inbox_relationship, owner: owner, activity: activity)

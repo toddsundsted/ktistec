@@ -40,10 +40,6 @@ Spectator.describe ActivityPub::Actor do
       expect{subject.assign(username: "foobar").save}.to change{subject.urls}
     end
 
-    it "assigns attachments" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.attachments}
-    end
-
     it "doesn't assign if the actor isn't local" do
       expect{subject.assign(iri: "https://remote/object", username: "foobar").save}.not_to change{subject.urls}
     end
@@ -622,28 +618,38 @@ Spectator.describe ActivityPub::Actor do
     create_draft(4)
     create_draft(5)
 
+    let(since) { KTISTEC_EPOCH }
+
     it "instantiates the correct subclass" do
       expect(subject.drafts(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.drafts(since: since)).to eq(5)
     end
 
     it "filters out deleted posts" do
       note5.delete!
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
       note5.block!
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "filters out published posts" do
       note5.assign(published: Time.utc).save
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "includes only posts attributed to subject" do
       note5.assign(attributed_to: other).save
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "paginates the results" do
@@ -1060,49 +1066,64 @@ Spectator.describe ActivityPub::Actor do
     post(4)
     post(5)
 
+    let(since) { KTISTEC_EPOCH }
+
     it "instantiates the correct subclass" do
       expect(subject.all_posts(1, 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "returns the count" do
+      expect(subject.all_posts(since: since)).to eq(5)
+      expect(subject.all_posts(since: object1.created_at)).to eq(4)
     end
 
     it "filters out deleted posts" do
       object5.delete!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
       object5.block!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     it "filters out posts by deleted actors" do
       actor5.delete!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     it "filters out posts by blocked actors" do
       actor5.block!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     it "includes non-public posts" do
       object5.assign(visible: false).save
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
+      expect(subject.all_posts(since: since)).to eq(5)
     end
 
     it "includes replies" do
       object5.assign(in_reply_to: object3).save
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
+      expect(subject.all_posts(since: since)).to eq(5)
     end
 
     it "filters out posts belonging to undone activities" do
       activity5.undo!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     # only local (not cached) actors have an outbox
     it "filters out posts that are not in an outbox" do
       outbox5.destroy
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     let_build(:create, actor: subject, object: object5)
@@ -1140,6 +1161,7 @@ Spectator.describe ActivityPub::Actor do
 
     it "returns the count" do
       expect(subject.timeline(since: since)).to eq(5)
+      expect(subject.timeline(since: timeline1.created_at)).to eq(4)
     end
 
     it "filters out deleted posts" do
@@ -1267,6 +1289,7 @@ Spectator.describe ActivityPub::Actor do
 
     it "returns the count" do
       expect(subject.notifications(since: since)).to eq(5)
+      expect(subject.notifications(since: notification1.created_at)).to eq(4)
     end
 
     it "filters out undone activities" do

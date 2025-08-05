@@ -1,6 +1,26 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.8]
+### Added
+- Send "User-Agent" header on outbound HTTP requests.
+- Add accept/reject action buttons to top panel on actor pages.
+
+### Fixed
+- Add index on "username" on "actors" table. (fixes regression introduced in [e659e84a](https://github.com/toddsundsted/ktistec/commit/e659e84a))
+- Rejection now correctly sets follow relationships as confirmed.
+- Correctly handle legacy threads during garbage collection.
+
+### Changed
+- Prioritize the author's self-replies in thread view.
+
+### Other
+- Temporarily support only Crystal versions 1.16.3 and below.
+
+Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
+- https://github.com/toddsundsted/libxml_ext/issues/1
+- https://github.com/crystal-lang/crystal/pull/16055
+
 ## [v2.4.7]
 ### Added
 - Option for garbage collection on startup (see README).
@@ -345,6 +365,7 @@ All notable changes to this project are documented in this file.
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.4.8]: https://github.com/toddsundsted/ktistec/compare/3bfb77d0...66f99cb2
 [v2.4.7]: https://github.com/toddsundsted/ktistec/compare/c8a59be3...0261e9d3
 [v2.4.6]: https://github.com/toddsundsted/ktistec/compare/70d67e74...c51a664c
 [v2.4.5]: https://github.com/toddsundsted/ktistec/compare/2eb2560a...04aaaba9

@@ -223,6 +223,9 @@ body { display: flex; flex-direction: column; }
 
 /** small actor partial **/
 .ui.actor.card {
+    > .content.placeholder {
+        background-color: #f9fafb;
+    }
     > .content:first-child {
         position: relative;
         min-height: 8rem;
@@ -251,14 +254,6 @@ body { display: flex; flex-direction: column; }
         color: rgba(0,0,0,.6);
         line-height: 3rem;
         font-size: 3rem;
-    }
-    > .summary.content {
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-    }
-    > .summary.content > * {
-        display: inline;
     }
 }
 

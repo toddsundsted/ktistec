@@ -428,6 +428,8 @@ class MCPController
       raise MCPError.new("Missing URI parameter", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
 
+    Log.debug { "reading resource: user=#{mcp_user_path(account)} uri=#{uri}" }
+
     if uri =~ /^ktistec:\/\/users\/(\d+)$/
       unless (account_id = $1.to_i64?)
         raise MCPError.new("Invalid user ID in URI: #{$1}", JSON::RPC::ErrorCodes::INVALID_PARAMS)

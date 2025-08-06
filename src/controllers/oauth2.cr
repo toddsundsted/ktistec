@@ -282,6 +282,9 @@ class OAuth2Controller
         end
       end
 
+    # track client activity
+    client.assign(last_accessed_at: Time.utc).save
+
     access_token = OAuth2::Provider::AccessToken.new(
       token: Random::Secure.urlsafe_base64,
       client_id: client.id,

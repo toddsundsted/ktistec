@@ -59,6 +59,16 @@ module OAuth2
       @[Persistent]
       property scope : String
 
+      # Last accessed timestamp.
+      #
+      # Records when this client last accessed the server (when it
+      # exchanged an authorization code for an access token). Used for
+      # tracking client activity and identifying unused clients.
+      #
+      @[Persistent]
+      @[Insignificant]
+      property last_accessed_at : Time?
+
       has_many access_tokens
     end
   end

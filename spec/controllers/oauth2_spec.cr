@@ -350,6 +350,11 @@ Spectator.describe OAuth2Controller do
       expect(json_body["expires_in"]?).to eq(3600 * 24)
     end
 
+    it "updates the client's last_accessed_at timestamp" do
+      expect { post "/oauth/token", headers: HTML_HEADERS, body: body }.to change { test_client.reload!.last_accessed_at }.from(nil)
+      expect(test_client.reload!.last_accessed_at).to be_close(Time.utc, delta: 1.second)
+    end
+
     it "deletes the authorization code after use" do
       post "/oauth/token", headers: HTML_HEADERS, body: body
       expect(OAuth2Controller.authorization_codes.has_key?(code)).to be_false

@@ -4,7 +4,14 @@ require "./mixins/singleton"
 class Task
   # Cleans up OAuth data.
   #
-  # Cleans up expired access tokens and orphaned clients.
+  # This task implements the following cleanup rules:
+  #
+  # **Expired Access Tokens**:
+  # 1. Delete access tokens where "expires_at < current_time"
+  #
+  # **Inactive Clients**:
+  # 1. Delete clients created more than 1 month ago AND never accessed
+  # 2. Delete clients that were last accessed more than four months ago
   #
   class CleanOauth < Task
     include Singleton
@@ -36,16 +43,15 @@ class Task
       result = Ktistec.database.exec(
         <<-SQL
         DELETE FROM oauth_clients
-         WHERE created_at < datetime('now', '-1 hour')
-           AND id NOT IN (
-          SELECT DISTINCT client_id
-            FROM oauth_access_tokens
-           WHERE expires_at >= datetime('now')
-        )
+         WHERE (
+           (last_accessed_at IS NULL AND created_at < datetime('now', '-1 month'))
+            OR
+           (last_accessed_at < datetime('now', '-4 months'))
+         )
         SQL
       )
       deleted_count = result.rows_affected.to_i
-      Log.info { "Deleted #{deleted_count} orphaned OAuth clients" }
+      Log.info { "Deleted #{deleted_count} inactive clients" }
       deleted_count
     end
   end

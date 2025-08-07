@@ -9,7 +9,7 @@ require "random"
 class OAuth2Controller
   include Ktistec::Controller
 
-  skip_auth ["/oauth/register", "/oauth/token"], POST
+  skip_auth ["/oauth/register", "/oauth/token"], OPTIONS, POST
 
   # In-memory provisional ring buffer for newly registered clients.
   #
@@ -21,6 +21,18 @@ class OAuth2Controller
   # Size of the in-memory provisional storage ring buffer.
   #
   class_property provisional_client_buffer_size = 20
+
+  private macro set_headers
+    env.response.headers.add("Access-Control-Allow-Origin", "*")
+    env.response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+    env.response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type, MCP-Protocol-Version")
+    env.response.content_type = "application/json"
+  end
+
+  options "/oauth/register" do |env|
+    set_headers
+    no_content
+  end
 
   post "/oauth/register" do |env|
     body = env.request.body.not_nil!
@@ -80,14 +92,15 @@ class OAuth2Controller
       @@provisional_clients.shift
     end
 
+    set_headers
     env.response.status_code = 201
-    env.response.content_type = "application/json"
-    env.response.print({
+
+    {
       "client_id" => client.client_id,
       "client_secret" => client.client_secret,
       "client_name" => client.client_name,
       "redirect_uris" => client.redirect_uris.split,
-    }.to_json)
+    }.to_json
   end
 
   record AuthorizationCode,
@@ -221,6 +234,11 @@ class OAuth2Controller
     env.response.redirect redirect_uri.to_s
   end
 
+  options "/oauth/token" do |env|
+    set_headers
+    no_content
+  end
+
   post "/oauth/token" do |env|
     grant_type = env.params.body["grant_type"]?.presence
     unless grant_type == "authorization_code"
@@ -293,12 +311,13 @@ class OAuth2Controller
       scope: "mcp",
     ).save
 
-    env.response.content_type = "application/json"
-    env.response.print({
+    set_headers
+
+    {
       token_type: "Bearer",
       access_token: access_token.token,
       expires_in: 1.day.to_i,
       scope: access_token.scope,
-    }.to_json)
+    }.to_json
   end
 end

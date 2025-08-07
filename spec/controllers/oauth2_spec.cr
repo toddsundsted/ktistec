@@ -118,15 +118,6 @@ Spectator.describe OAuth2Controller do
         expect(response.body).to contain(state)
       end
 
-      context "without a state" do
-        let(query) { super.gsub(/&state=(.+?)&/, "&") }
-
-        it "returns a bad request" do
-          get "/oauth/authorize?#{query}", headers: HTML_HEADERS
-          expect(response.status_code).to eq(400)
-        end
-      end
-
       context "without a code_challenge" do
         let(query) { super.gsub(/&code_challenge=(.+?)&/, "&") }
 
@@ -217,15 +208,6 @@ Spectator.describe OAuth2Controller do
         expect(response.status_code).to eq(302)
         expect(response.headers["Location"]).to match(%r|code=[a-zA-Z0-9+/_-]+|)
         expect(response.headers["Location"]).to contain("state=#{state}")
-      end
-
-      context "without a state" do
-        let(body) { super.gsub(/&state=(.+?)&/, "&") }
-
-        it "returns a bad request" do
-          post "/oauth/authorize", headers: HTML_HEADERS, body: body
-          expect(response.status_code).to eq(400)
-        end
       end
 
       context "without a code_challenge" do

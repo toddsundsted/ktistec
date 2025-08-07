@@ -122,9 +122,6 @@ class OAuth2Controller
 
   get "/oauth/authorize" do |env|
     state = env.params.query["state"]?.presence
-    unless state
-      bad_request "`state` is required"
-    end
 
     code_challenge = env.params.query["code_challenge"]?.presence
     unless code_challenge
@@ -171,9 +168,6 @@ class OAuth2Controller
 
   post "/oauth/authorize" do |env|
     state = env.params.body["state"]?.presence
-    unless state
-      bad_request "`state` is required"
-    end
 
     code_challenge = env.params.body["code_challenge"]?.presence
     unless code_challenge

@@ -9,6 +9,8 @@ require "random"
 class OAuth2Controller
   include Ktistec::Controller
 
+  Log = ::Log.for(self)
+
   skip_auth ["/oauth/register", "/oauth/token"], OPTIONS, POST
 
   # In-memory provisional ring buffer for newly registered clients.
@@ -39,13 +41,17 @@ class OAuth2Controller
     begin
       json = JSON.parse(body)
     rescue JSON::ParseException
+      Log.debug { "Invalid JSON" }
       bad_request "Invalid JSON"
     end
 
     client_name_raw = json["client_name"]?
     redirect_uris_raw = json["redirect_uris"]?
 
+    Log.trace { "register[POST]: client_name=#{client_name_raw}, redirect_uris=#{redirect_uris_raw}" }
+
     unless (client_name = client_name_raw.try(&.as_s).presence)
+      Log.debug { "`client_name` is required" }
       bad_request "`client_name` is required"
     end
 
@@ -55,10 +61,12 @@ class OAuth2Controller
       elsif (redirect_uris_as_array = redirect_uris_raw.as_a?)
         redirect_uris = redirect_uris_as_array.map(&.as_s)
       else
+        Log.debug { "`redirect_uris` must be a string or array of strings" }
         bad_request "`redirect_uris` must be a string or array of strings"
       end
     end
     unless redirect_uris
+      Log.debug { "`redirect_uris` is required" }
       bad_request "`redirect_uris` is required"
     end
 
@@ -76,6 +84,7 @@ class OAuth2Controller
       end
     end
     if error
+      Log.debug { error }
       bad_request error
     end
 
@@ -121,39 +130,53 @@ class OAuth2Controller
   end
 
   get "/oauth/authorize" do |env|
+    client_id = env.params.query["client_id"]?.presence
+    redirect_uri = env.params.query["redirect_uri"]?.presence
+    response_type = env.params.query["response_type"]?.presence
     state = env.params.query["state"]?.presence
+    scope = env.params.query["scope"]? || "mcp"
+
+    Log.trace do
+      "authorize[GET]: " \
+      "client_id=#{client_id}, " \
+      "redirect_uri=#{redirect_uri}, " \
+      "response_type=#{response_type}, " \
+      "state_present=#{!!state}, " \
+      "scope=#{scope}"
+    end
 
     code_challenge = env.params.query["code_challenge"]?.presence
     unless code_challenge
+      Log.debug { "`code_challenge` is required" }
       bad_request "`code_challenge` is required"
     end
 
     code_challenge_method = env.params.query["code_challenge_method"]?.presence
     unless code_challenge_method == "S256"
+      Log.debug { "Unsupported `code_challenge_method`: #{code_challenge_method}" }
       bad_request "Unsupported `code_challenge_method`"
     end
 
-    client_id = env.params.query["client_id"]?.presence
-    redirect_uri = env.params.query["redirect_uri"]?.presence
     unless client_id && redirect_uri
+      Log.debug { "`client_id` and `redirect_uri` are required" }
       bad_request "`client_id` and `redirect_uri` are required"
     end
 
     client = find_client(client_id)
     unless client
+      Log.debug { "Invalid `client_id`: #{client_id}" }
       bad_request "Invalid `client_id`"
     end
 
     unless client.redirect_uris.split.includes?(redirect_uri)
+      Log.debug { "Invalid `redirect_uri`: #{redirect_uri}" }
       bad_request "Invalid `redirect_uri`"
     end
 
-    response_type = env.params.query["response_type"]?.presence
     unless response_type == "code"
+      Log.debug { "Unsupported `response_type`: #{response_type}" }
       bad_request "Unsupported `response_type`"
     end
-
-    scope = env.params.query["scope"]? || "mcp"
 
     ok "oauth/authorize",
       env: env,
@@ -167,35 +190,49 @@ class OAuth2Controller
   end
 
   post "/oauth/authorize" do |env|
+    client_id = env.params.body["client_id"]?.presence
+    redirect_uri = env.params.body["redirect_uri"]?.presence
+    response_type = env.params.body["response_type"]?.presence
     state = env.params.body["state"]?.presence
+
+    Log.trace do
+      "authorize[POST]: " \
+      "client_id=#{client_id}, " \
+      "redirect_uri=#{redirect_uri}, " \
+      "response_type=#{response_type}, " \
+      "state_present=#{!!state}"
+    end
 
     code_challenge = env.params.body["code_challenge"]?.presence
     unless code_challenge
+      Log.debug { "`code_challenge` is required" }
       bad_request "`code_challenge` is required"
     end
 
     code_challenge_method = env.params.body["code_challenge_method"]?.presence
     unless code_challenge_method && code_challenge_method == "S256"
+      Log.debug { "Unsupported `code_challenge_method`: #{code_challenge_method}" }
       bad_request "Unsupported `code_challenge_method`"
     end
 
-    client_id = env.params.body["client_id"]?.presence
-    redirect_uri = env.params.body["redirect_uri"]?.presence
     unless client_id && redirect_uri
+      Log.debug { "`client_id` and `redirect_uri` are required" }
       bad_request "`client_id` and `redirect_uri` are required"
     end
 
     client = find_client(client_id)
     unless client
+      Log.debug { "Invalid `client_id`: #{client_id}" }
       bad_request "Invalid `client_id`"
     end
 
     unless client.redirect_uris.split.includes?(redirect_uri)
+      Log.debug { "Invalid `redirect_uri`: #{redirect_uri}" }
       bad_request "Invalid `redirect_uri`"
     end
 
-    response_type = env.params.body["response_type"]?.presence
     unless response_type == "code"
+      Log.debug { "Unsupported `response_type`: #{response_type}" }
       bad_request "Unsupported `response_type`"
     end
 
@@ -235,35 +272,55 @@ class OAuth2Controller
 
   post "/oauth/token" do |env|
     grant_type = env.params.body["grant_type"]?.presence
+    code = env.params.body["code"]?.presence
+    redirect_uri = env.params.body["redirect_uri"]?.presence
+    code_verifier = env.params.body["code_verifier"]?.presence
+    auth_header = env.request.headers["Authorization"]?.presence
+    client_id_param = env.params.body["client_id"]?.presence
+
+    Log.trace do
+      "token[POST]: " \
+      "grant_type=#{grant_type}, " \
+      "code_present=#{!!code}, " \
+      "redirect_uri=#{redirect_uri}, " \
+      "code_verifier_present=#{!!code_verifier}, " \
+      "auth_basic=#{auth_header && auth_header.starts_with?("Basic ")}, " \
+      "client_id_param=#{client_id_param}"
+    end
+
     unless grant_type == "authorization_code"
+      Log.debug { "Unsupported `grant_type`: #{grant_type}" }
       bad_request "Unsupported `grant_type`"
     end
 
-    code = env.params.body["code"]?.presence
     unless code
+      Log.debug { "`code` is required" }
       bad_request "`code` is required"
     end
 
     auth_code = @@authorization_codes.delete(code)
     unless auth_code
+      Log.debug { "Invalid `code`" }
       bad_request "Invalid `code`"
     end
     if auth_code.expires_at < Time.utc
+      Log.debug { "Expired `code`" }
       bad_request "Expired `code`"
     end
 
-    redirect_uri = env.params.body["redirect_uri"]?.presence
     unless redirect_uri && redirect_uri == auth_code.redirect_uri
+      Log.debug { "Invalid `redirect_uri`: provided=#{redirect_uri} expected=#{auth_code.redirect_uri}" }
       bad_request "Invalid `redirect_uri`"
     end
 
-    code_verifier = env.params.body["code_verifier"]?.presence
     unless code_verifier
+      Log.debug { "`code_verifier` is required" }
       bad_request "`code_verifier` is required"
     end
 
     code_challenge = Base64.urlsafe_encode(Digest::SHA256.digest(code_verifier), padding: false)
     unless code_challenge == auth_code.code_challenge
+      Log.debug { "Invalid `code_verifier`" }
       bad_request "Invalid `code_verifier`"
     end
 
@@ -276,11 +333,13 @@ class OAuth2Controller
         if c && client_secret == c.client_secret
           c
         else
+          Log.debug { "Invalid client credentials" }
           unauthorized "Invalid client credentials"
         end
       else
-        client_id = env.params.body["client_id"]?.presence
+        client_id = client_id_param
         unless client_id && client_id == auth_code.client_id
+          Log.debug { "Invalid `client_id`" }
           bad_request "Invalid `client_id`"
         end
 
@@ -290,6 +349,7 @@ class OAuth2Controller
         if client_secret && c && client_secret == c.client_secret
           c
         else
+          Log.debug { "Invalid `client_secret`" }
           unauthorized "Invalid `client_secret`"
         end
       end

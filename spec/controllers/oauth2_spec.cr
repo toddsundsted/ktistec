@@ -53,18 +53,6 @@ Spectator.describe OAuth2Controller do
         post "/oauth/register", headers: JSON_HEADERS, body: body.to_json
         expect(response.status_code).to eq(400)
       end
-
-      it "rejects a redirect_uri that does not use https" do
-        body["redirect_uris"] = "http://client.example.com/callback"
-        post "/oauth/register", headers: JSON_HEADERS, body: body.to_json
-        expect(response.status_code).to eq(400)
-      end
-
-      it "accepts a redirect_uris to localhost" do
-        body["redirect_uris"] = "http://localhost:4000/callback"
-        post "/oauth/register", headers: JSON_HEADERS, body: body.to_json
-        expect(response.status_code).to eq(201)
-      end
     end
 
     it "rejects malformed JSON" do

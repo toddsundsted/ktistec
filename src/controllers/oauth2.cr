@@ -70,22 +70,20 @@ class OAuth2Controller
       bad_request "`redirect_uris` is required"
     end
 
-    error = nil
+    errors = [] of String
     redirect_uris.each do |uri_string|
       begin
         uri = URI.parse(uri_string)
-        unless uri.scheme == "https" || uri.host == "localhost"
-          error = "all `redirect_uris` must use https"
-          break
+        unless uri.scheme.presence && uri.host.presence
+          errors << uri_string
         end
       rescue URI::Error
-        error = "`redirect_uris` must be valid URIs"
-        break
+        errors << uri_string
       end
     end
-    if error
-      Log.debug { error }
-      bad_request error
+    unless errors.empty?
+      Log.debug { "`redirect_uris` must be valid URIs: #{errors.join(", ")}" }
+      bad_request "`redirect_uris` must be valid URIs"
     end
 
     client = OAuth2::Provider::Client.new(

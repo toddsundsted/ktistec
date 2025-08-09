@@ -24,7 +24,7 @@ class MCPController
 
   Log = ::Log.for("mcp")
 
-  skip_auth ["/mcp"], GET, POST
+  skip_auth ["/mcp"], OPTIONS, GET, POST
 
   SERVER_VERSIONS = %w[2024-11-05 2025-03-26 2025-06-18]
 
@@ -51,13 +51,30 @@ class MCPController
     halt env, status_code: {{status_code}}, response: {{response}}.try(&.to_json)
   end
 
+  private macro set_headers
+    env.response.headers.add("Access-Control-Allow-Origin", "*")
+    env.response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    env.response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type, MCP-Protocol-Version")
+    env.response.content_type = "application/json"
+  end
+
+  options "/mcp" do |env|
+    set_headers
+
+    no_content
+  end
+
   get "/mcp" do |env|
+    set_headers
+
     unauthorized unless authenticate_request(env)
 
     method_not_allowed ["POST"]
   end
 
   post "/mcp" do |env|
+    set_headers
+
     unless (account = authenticate_request(env))
       unauthorized
     end

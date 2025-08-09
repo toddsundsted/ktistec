@@ -33,10 +33,13 @@ class OAuth2Controller
 
   options "/oauth/register" do |env|
     set_headers
+
     no_content
   end
 
   post "/oauth/register" do |env|
+    set_headers
+
     body = env.request.body.not_nil!
     begin
       json = JSON.parse(body)
@@ -99,7 +102,6 @@ class OAuth2Controller
       @@provisional_clients.shift
     end
 
-    set_headers
     env.response.status_code = 201
 
     {
@@ -265,10 +267,13 @@ class OAuth2Controller
 
   options "/oauth/token" do |env|
     set_headers
+
     no_content
   end
 
   post "/oauth/token" do |env|
+    set_headers
+
     grant_type = env.params.body["grant_type"]?.presence
     code = env.params.body["code"]?.presence
     redirect_uri = env.params.body["redirect_uri"]?.presence
@@ -363,8 +368,6 @@ class OAuth2Controller
       expires_at: Time.utc + 1.day,
       scope: "mcp",
     ).save
-
-    set_headers
 
     {
       token_type: "Bearer",

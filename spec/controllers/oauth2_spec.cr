@@ -330,6 +330,19 @@ Spectator.describe OAuth2Controller do
       expect(OAuth2Controller.authorization_codes.has_key?(code)).to be_false
     end
 
+    context "without a client_secret" do
+      let(body) { super.gsub(/&client_secret=[^&]+/, "") }
+
+      it "returns an access token" do
+        expect { post "/oauth/token", headers: HTML_HEADERS, body: body }.to change { OAuth2::Provider::AccessToken.count }.by(1)
+        expect(response.status_code).to eq(200)
+        json_body = JSON.parse(response.body)
+        expect(json_body["access_token"]?).not_to be_nil
+        expect(json_body["token_type"]?).to eq("Bearer")
+        expect(json_body["expires_in"]?).to eq(3600 * 24)
+      end
+    end
+
     context "with basic authentication" do
       let(credentials) { Base64.strict_encode("#{test_client.client_id}:#{test_client.client_secret}") }
 
@@ -346,9 +359,13 @@ Spectator.describe OAuth2Controller do
         expect(json_body["expires_in"]?).to eq(3600 * 24)
       end
 
-      it "deletes the authorization code after use" do
-        post "/oauth/token", headers: headers, body: body
-        expect(OAuth2Controller.authorization_codes.has_key?(code)).to be_false
+      context "and invalid credentials" do
+        let(credentials) { Base64.strict_encode("invalid_client:invalid_secret") }
+
+        it "returns an error" do
+          post "/oauth/token", headers: headers, body: body
+          expect(response.status_code).to eq(401)
+        end
       end
     end
 

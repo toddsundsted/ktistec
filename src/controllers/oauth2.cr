@@ -9,7 +9,7 @@ require "random"
 class OAuth2Controller
   include Ktistec::Controller
 
-  Log = ::Log.for(self)
+  Log = ::Log.for("oauth2")
 
   skip_auth ["/oauth/register", "/oauth/token"], OPTIONS, POST
 
@@ -326,30 +326,31 @@ class OAuth2Controller
       if (auth = env.request.headers["Authorization"]?) && auth.starts_with?("Basic ")
         credentials = Base64.decode_string(auth[6..-1])
         client_id, client_secret = credentials.split(':', 2)
-
         c = OAuth2::Provider::Client.find?(client_id: client_id)
-        if c && client_secret == c.client_secret
-          c
-        else
+        unless c && client_secret == c.client_secret
           Log.debug { "Invalid client credentials" }
           unauthorized "Invalid client credentials"
         end
+        c
       else
         client_id = client_id_param
         unless client_id && client_id == auth_code.client_id
           Log.debug { "Invalid `client_id`" }
           bad_request "Invalid `client_id`"
         end
-
-        client_secret = env.params.body["client_secret"]?.presence
-
         c = OAuth2::Provider::Client.find?(client_id: client_id)
-        if client_secret && c && client_secret == c.client_secret
-          c
-        else
-          Log.debug { "Invalid `client_secret`" }
-          unauthorized "Invalid `client_secret`"
+        unless c
+          Log.debug { "Invalid `client_id`" }
+          bad_request "Invalid `client_id`"
         end
+        client_secret = env.params.body["client_secret"]?.presence
+        if client_secret
+          unless client_secret == c.client_secret
+            Log.debug { "Invalid `client_secret`" }
+            unauthorized "Invalid `client_secret`"
+          end
+        end
+        c
       end
 
     # track client activity

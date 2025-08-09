@@ -132,8 +132,9 @@ class Task
   # NOTE: This method is redefined when running tests. Invoking
   # `schedule` immediately invokes `perform`.
 
-  def schedule(@next_attempt_at = nil)
+  def schedule(next_attempt_at = nil)
     raise "Not runnable" unless runnable? || complete
+    self.next_attempt_at = next_attempt_at if next_attempt_at
     self.complete = false
     TaskWorker.schedule(self)
   end

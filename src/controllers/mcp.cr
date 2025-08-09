@@ -22,7 +22,7 @@ class MCPController
   include Ktistec::Controller
   include Ktistec::ViewHelper
 
-  Log = ::Log.for(self)
+  Log = ::Log.for("mcp")
 
   skip_auth ["/mcp"], GET, POST
 

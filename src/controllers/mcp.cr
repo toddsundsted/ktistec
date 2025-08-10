@@ -24,7 +24,7 @@ class MCPController
 
   Log = ::Log.for("mcp")
 
-  skip_auth ["/mcp"], OPTIONS, GET, POST
+  skip_auth ["/mcp"], OPTIONS, GET, POST # skip the built-in authentication and implement custom authentication
 
   SERVER_VERSIONS = %w[2024-11-05 2025-03-26 2025-06-18]
 
@@ -132,13 +132,15 @@ class MCPController
         "version" => JSON::Any.new(Ktistec::VERSION)
       }),
       "instructions" => JSON::Any.new(
-        "This server provides access to ActivityPub objects, activities, actors, and collections " \
-        "in a Ktistec instance. Use resources to read user profiles and posts. Use tools to paginate " \
-        "through collections (like timelines) and count new items since specific times. This is " \
-        "particularly useful for monitoring ActivityPub feeds, tracking new content, and analyzing " \
-        "social media activity patterns. The server supports both local and federated ActivityPub " \
-        "content, with automatic translation support, and rich media attachment handling. For more " \
-        "information about the server read the #{mcp_information_path} resource."
+        "This server provides access to the ActivityPub objects, activities, actors, and collections " \
+        "in a Ktistec server. Use tools to paginate through collections (like the user's timeline) and " \
+        "to check for (count) new posts. Use resources (or the read resources tool) to read user " \
+        "profiles and posts. These tools are useful for monitoring ActivityPub feeds, tracking new " \
+        "content, and analyzing social media activity patterns. The server supports both local and " \
+        "federated ActivityPub content, with language translation support, and rich media attachment " \
+        "handling. After reading this, the first steps you should take are: 1) list the resources and " \
+        "tools this server supports and 2) read the information resource (#{mcp_information_path}) for " \
+        "more detail about this server, including collections supported and their naming conventions."
       ),
       "capabilities" => JSON::Any.new({
         "resources" => JSON::Any.new({} of String => JSON::Any),
@@ -252,22 +254,26 @@ class MCPController
     })
 
     # supported collections
-    collections = [
-      "posts", "drafts",
-      "timeline", "notifications",
-      "likes", "announcements",
-      "followers", "following",
-    ]
-    contents["collections"] = JSON::Any.new(collections.map { |c| JSON::Any.new(c) })
+    contents["collections"] = JSON::Any.new([
+      JSON::Any.new("posts"),
+      JSON::Any.new("drafts"),
+      JSON::Any.new("timeline"),
+      JSON::Any.new("notifications"),
+      JSON::Any.new("likes"),
+      JSON::Any.new("announcements"),
+      JSON::Any.new("followers"),
+      JSON::Any.new("following"),
+    ])
 
-    # supported collection formats
-    collection_formats = {
-      "hashtag" => %q(hashtag#{name}),
-      "mention" => %q(mention@{name})
-    }
-    contents["collection_formats"] = JSON::Any.new(
-      collection_formats.transform_values { |v| JSON::Any.new(v) }
-    )
+    # supported formatted collections
+    contents["collection_formats"] = JSON::Any.new({
+      "hashtag" => JSON::Any.new(%q(hashtag#{name})),
+      "mention" => JSON::Any.new(%q(mention@{name})),
+      "examples" => JSON::Any.new({
+        "hashtag#krypton" => JSON::Any.new("The collection of posts tagged with #krypton"),
+        "mention@mxyzptlk" => JSON::Any.new("The collection of posts mentioning the user @mxyzptlk"),
+      }),
+    })
 
     # supported object types
     object_types = ActivityPub::Object.all_subtypes.map(&.split("::").last)

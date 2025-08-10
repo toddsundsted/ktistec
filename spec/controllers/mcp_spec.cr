@@ -1227,7 +1227,6 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
-            expect(notifications.size).to eq(1)
 
             mention = notifications.first
             expect(mention["type"]).to eq("mention")
@@ -1250,7 +1249,6 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
-            expect(notifications.size).to eq(1)
 
             reply = notifications.first
             expect(reply["type"]).to eq("reply")
@@ -1273,7 +1271,6 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
-            expect(notifications.size).to eq(1)
 
             follow_notification = notifications.first
             expect(follow_notification["type"]).to eq("follow")
@@ -1292,7 +1289,6 @@ Spectator.describe MCPController do
 
               post "/mcp", authenticated_headers, request
               notifications = expect_paginated_response(1, false)
-              expect(notifications.size).to eq(1)
 
               follow_notification = notifications.first
               expect(follow_notification["status"]).to eq("accepted")
@@ -1307,7 +1303,6 @@ Spectator.describe MCPController do
 
               post "/mcp", authenticated_headers, request
               notifications = expect_paginated_response(1, false)
-              expect(notifications.size).to eq(1)
 
               follow_notification = notifications.first
               expect(follow_notification["status"]).to eq("rejected")
@@ -1329,7 +1324,6 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
-            expect(notifications.size).to eq(1)
 
             like_notification = notifications.first
             expect(like_notification["type"]).to eq("like")
@@ -1354,7 +1348,6 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
-            expect(notifications.size).to eq(1)
 
             announce_notification = notifications.first
             expect(announce_notification["type"]).to eq("announce")
@@ -1373,7 +1366,6 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
-            expect(notifications.size).to eq(1)
 
             follow_hashtag_notification = notifications.first
             expect(follow_hashtag_notification["type"]).to eq("follow_hashtag")
@@ -1391,7 +1383,6 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
-            expect(notifications.size).to eq(1)
 
             follow_mention_notification = notifications.first
             expect(follow_mention_notification["type"]).to eq("follow_mention")
@@ -1410,7 +1401,6 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             notifications = expect_paginated_response(1, false)
-            expect(notifications.size).to eq(1)
 
             follow_thread_notification = notifications.first
             expect(follow_thread_notification["type"]).to eq("follow_thread")
@@ -1705,7 +1695,6 @@ Spectator.describe MCPController do
 
               post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
-              expect(objects.size).to eq(1)
 
               relationship = objects.first.as_h
               expect(relationship["actor"]).to eq("ktistec://actors/#{follower.id}")
@@ -1721,7 +1710,6 @@ Spectator.describe MCPController do
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(2, false)
-                expect(objects.size).to eq(2)
 
                 unconfirmed_relationship = objects[0].as_h
                 expect(unconfirmed_relationship["actor"]).to eq("ktistec://actors/#{unconfirmed_follower.id}")
@@ -1737,7 +1725,6 @@ Spectator.describe MCPController do
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
-                expect(objects.size).to eq(1)
 
                 # returns most recent follower first
                 relationship = objects.first.as_h
@@ -1766,7 +1753,6 @@ Spectator.describe MCPController do
 
               post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
-              expect(objects.size).to eq(1)
 
               relationship = objects.first.as_h
               expect(relationship["actor"]).to eq("ktistec://actors/#{followed_actor.id}")
@@ -1782,7 +1768,6 @@ Spectator.describe MCPController do
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(2, false)
-                expect(objects.size).to eq(2)
 
                 unconfirmed_relationship = objects[0].as_h
                 expect(unconfirmed_relationship["actor"]).to eq("ktistec://actors/#{unconfirmed_followed.id}")
@@ -1798,7 +1783,6 @@ Spectator.describe MCPController do
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
-                expect(objects.size).to eq(1)
 
                 # returns most recent following first
                 relationship = objects.first.as_h

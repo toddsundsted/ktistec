@@ -734,50 +734,137 @@ Spectator.describe MCPController do
       {name: "include_replies", type: "boolean", description: "Include reply posts", default: false},
       {name: "created_at", type: "time", description: "Creation timestamp"},
     ]) do
-      {user: user, query: query, limit: limit, include_replies: include_replies, created_at: created_at, quota: 99}
+      JSON::Any.new({
+        "user" => JSON::Any.new(user),
+        "query" => JSON::Any.new(query),
+        "limit" => JSON::Any.new(limit),
+        "include_replies" => JSON::Any.new(include_replies),
+        "created_at" => created_at ? JSON::Any.new(created_at.to_rfc3339) : JSON::Any.new(nil),
+        "quota" => JSON::Any.new(99),
+      })
+    end
+
+    MCPController.def_tool("test_array_tool", "A test tool for array parameter testing", [
+      {name: "tags", type: "array", description: "Array of string tags", required: true, items: "string", min_items: 1, max_items: 8, unique_items: true},
+      {name: "scores", type: "array", description: "Array of integer scores", required: false, items: "integer", min_items: 0, max_items: 4, default: [] of Int32},
+      {name: "flags", type: "array", description: "Array of boolean flags", required: false, items: "boolean", default: [] of Bool},
+    ]) do
+      # ensure that they are properly typed arrays
+      tag_count = tags.size
+      score_sum = scores.sum
+      flag_count = flags.count(true)
+
+      JSON::Any.new({
+        "tag_count" => JSON::Any.new(tag_count),
+        "score_sum" => JSON::Any.new(score_sum),
+        "flag_count" => JSON::Any.new(flag_count),
+      })
     end
 
     context "with tools/list request" do
       let(tools_list_request) { %Q|{"jsonrpc": "2.0", "id": "tools-1", "method": "tools/list"}| }
 
-      it "returns tools" do
+      it "returns test tools" do
         post "/mcp", authenticated_headers, tools_list_request
         expect(response.status_code).to eq(200)
         parsed = JSON.parse(response.body)
 
         tools = parsed["result"]["tools"].as_a
-        expect(tools.size).to eq(3)
+        expect(tools.size).to eq(5)
 
-        test_tool = tools[-1]
-        expect(test_tool["name"]).to eq("test_tool")
-        expect(test_tool["description"]).to eq("A test tool for `def_tool` macro testing")
+        expect(tools[-2]["name"]).to eq("test_tool")
+        expect(tools[-1]["name"]).to eq("test_array_tool")
+      end
 
-        input_schema = test_tool["inputSchema"]
-        expect(input_schema["type"]).to eq("object")
+      context "test_tool" do
+        let(test_tool) do
+          post "/mcp", authenticated_headers, tools_list_request
+          expect(response.status_code).to eq(200)
+          parsed = JSON.parse(response.body)
+          tools = parsed["result"]["tools"].as_a
+          tools[-2]
+        end
 
-        properties = input_schema["properties"]
-        expect(properties["user"]["type"]).to eq("string")
-        expect(properties["user"]["description"]).to eq("User ID")
+        it "returns the definition" do
+          expect(test_tool["name"]).to eq("test_tool")
+          expect(test_tool["description"]).to eq("A test tool for `def_tool` macro testing")
 
-        expect(properties["query"]["type"]).to eq("string")
-        expect(properties["query"]["description"]).to eq("Search terms")
+          input_schema = test_tool["inputSchema"]
+          expect(input_schema["type"]).to eq("object")
 
-        expect(properties["limit"]["type"]).to eq("integer")
-        expect(properties["limit"]["description"]).to eq("Maximum results")
-        expect(properties["limit"]["minimum"]).to eq(10)
-        expect(properties["limit"]["maximum"]).to eq(50)
+          properties = input_schema["properties"]
 
-        expect(properties["include_replies"]["type"]).to eq("boolean")
-        expect(properties["include_replies"]["description"]).to eq("Include reply posts")
+          expect(properties["user"]["type"]).to eq("string")
+          expect(properties["user"]["description"]).to eq("User ID")
 
-        expect(properties["created_at"]["type"]).to eq("string") # "time" is represented as a JSON schema "string"
-        expect(properties["created_at"]["description"]).to eq("Creation timestamp")
+          expect(properties["query"]["type"]).to eq("string")
+          expect(properties["query"]["description"]).to eq("Search terms")
 
-        required_fields = input_schema["required"].as_a.map(&.as_s)
-        expect(required_fields).to contain("user")
-        expect(required_fields).to contain("query")
-        expect(required_fields).to_not contain("limit")
-        expect(required_fields).to_not contain("include_replies")
+          expect(properties["limit"]["type"]).to eq("integer")
+          expect(properties["limit"]["description"]).to eq("Maximum results")
+          expect(properties["limit"]["minimum"]).to eq(10)
+          expect(properties["limit"]["maximum"]).to eq(50)
+
+          expect(properties["include_replies"]["type"]).to eq("boolean")
+          expect(properties["include_replies"]["description"]).to eq("Include reply posts")
+
+          expect(properties["created_at"]["type"]).to eq("string") # "time" is represented as a JSON schema "string"
+          expect(properties["created_at"]["description"]).to eq("Creation timestamp")
+
+          required_fields = input_schema["required"].as_a.map(&.as_s)
+          expect(required_fields).to contain("user")
+          expect(required_fields).to contain("query")
+          expect(required_fields).to_not contain("limit")
+          expect(required_fields).to_not contain("include_replies")
+        end
+      end
+
+      context "test_array_tool" do
+        let(test_array_tool) do
+          post "/mcp", authenticated_headers, tools_list_request
+          expect(response.status_code).to eq(200)
+          parsed = JSON.parse(response.body)
+          tools = parsed["result"]["tools"].as_a
+          tools[-1]
+        end
+
+        it "returns the definition" do
+          expect(test_array_tool["name"]).to eq("test_array_tool")
+          expect(test_array_tool["description"]).to eq("A test tool for array parameter testing")
+
+          input_schema = test_array_tool["inputSchema"]
+          expect(input_schema["type"]).to eq("object")
+
+          properties = input_schema["properties"]
+
+          tags_schema = properties["tags"]
+          expect(tags_schema["type"]).to eq("array")
+          expect(tags_schema["description"]).to eq("Array of string tags")
+          expect(tags_schema["items"]["type"]).to eq("string")
+          expect(tags_schema["minItems"]).to eq(1)
+          expect(tags_schema["maxItems"]).to eq(8)
+          expect(tags_schema["uniqueItems"]).to eq(true)
+
+          scores_schema = properties["scores"]
+          expect(scores_schema["type"]).to eq("array")
+          expect(scores_schema["description"]).to eq("Array of integer scores")
+          expect(scores_schema["items"]["type"]).to eq("integer")
+          expect(scores_schema["minItems"]).to eq(0)
+          expect(scores_schema["maxItems"]).to eq(4)
+
+          flags_schema = properties["flags"]
+          expect(flags_schema["type"]).to eq("array")
+          expect(flags_schema["description"]).to eq("Array of boolean flags")
+          expect(flags_schema["items"]["type"]).to eq("boolean")
+          expect(flags_schema["minItems"]?).to be_nil
+          expect(flags_schema["maxItems"]?).to be_nil
+          expect(flags_schema["uniqueItems"]?).to be_nil
+
+          required_fields = input_schema["required"].as_a.map(&.as_s)
+          expect(required_fields).to contain("tags")
+          expect(required_fields).to_not contain("scores")
+          expect(required_fields).to_not contain("flags")
+        end
       end
     end
 
@@ -793,10 +880,10 @@ Spectator.describe MCPController do
         })
 
         result = MCPController.handle_test_tool(params, account)
-        expect(result[:user]).to eq("test_user")
-        expect(result[:query]).to eq("test query")
-        expect(result[:limit]).to eq(25)
-        expect(result[:include_replies]).to be_true
+        expect(result["user"].as_s).to eq("test_user")
+        expect(result["query"].as_s).to eq("test query")
+        expect(result["limit"].as_i).to eq(25)
+        expect(result["include_replies"].as_bool).to be_true
       end
 
       it "supplies default values for optional arguments" do
@@ -808,8 +895,8 @@ Spectator.describe MCPController do
         })
 
         result = MCPController.handle_test_tool(params, account)
-        expect(result[:limit]).to eq(15)
-        expect(result[:include_replies]).to be_false
+        expect(result["limit"].as_i).to eq(15)
+        expect(result["include_replies"].as_bool).to be_false
       end
 
       it "invokes block" do
@@ -823,7 +910,7 @@ Spectator.describe MCPController do
         })
 
         result = MCPController.handle_test_tool(params, account)
-        expect(result[:quota]).to eq(99)
+        expect(result["quota"].as_i).to eq(99)
       end
 
       it "validates missing arguments parameter" do
@@ -919,7 +1006,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a time format string/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a RFC3339 timestamp/)
       end
 
       it "validates time format" do
@@ -931,7 +1018,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a valid RFC3339 timestamp/)
+        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a RFC3339 timestamp/)
       end
 
       it "parses valid time strings into Time objects" do
@@ -945,7 +1032,111 @@ Spectator.describe MCPController do
         })
 
         result = MCPController.handle_test_tool(params, account)
-        expect(result[:created_at].as(Time).to_rfc3339).to eq(timestamp)
+        expect(result["created_at"].as_s).to eq(timestamp)
+      end
+    end
+
+    context "test_array_tool validation" do
+      it "accepts valid arrays" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "tags" => JSON::Any.new(["unique", "valid", "strings"].map { |s| JSON::Any.new(s) }),
+            "scores" => JSON::Any.new([1, 2, 3].map { |i| JSON::Any.new(i) }),
+            "flags" => JSON::Any.new([true, false, true].map { |b| JSON::Any.new(b) }),
+          })
+        })
+
+        result = MCPController.handle_test_array_tool(params, account)
+
+        expect(result["tag_count"].as_i).to eq(3)
+        expect(result["score_sum"].as_i).to eq(6)
+        expect(result["flag_count"].as_i).to eq(2)
+      end
+
+      it "handles default array values" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "tags" => JSON::Any.new(["tag1", "tag2"].map { |s| JSON::Any.new(s) }),
+            # scores parameter is optional, so it can be omitted to test the default value
+            # flags parameter is optional, so it can be omitted to test the default value
+          })
+        })
+
+        result = MCPController.handle_test_array_tool(params, account)
+        expect(result["score_sum"].as_i).to eq(0)
+        expect(result["flag_count"].as_i).to eq(0)
+      end
+
+      it "validates array type" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "tags" => JSON::Any.new("not_an_array"),
+          })
+        })
+
+        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` must be an array/)
+      end
+
+      it "validates string array item types" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "tags" => JSON::Any.new([JSON::Any.new(123), JSON::Any.new("valid_string")]),
+          })
+        })
+
+        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`tags\[0\]` must be a string/)
+      end
+
+      it "validates integer array item types" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "tags" => JSON::Any.new(["valid", "array"].map { |s| JSON::Any.new(s) }),
+            "scores" => JSON::Any.new([JSON::Any.new(1), JSON::Any.new("not_an_integer"), JSON::Any.new(3)]),
+          })
+        })
+
+        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`scores\[1\]` must be an integer/)
+      end
+
+      it "validates boolean array item types" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "tags" => JSON::Any.new(["valid", "array"].map { |s| JSON::Any.new(s) }),
+            "flags" => JSON::Any.new([JSON::Any.new(true), JSON::Any.new(false), JSON::Any.new("not_a_boolean")]),
+          })
+        })
+
+        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`flags\[2\]` must be a boolean/)
+      end
+
+      it "validates minimum array size" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "tags" => JSON::Any.new([] of JSON::Any),
+          })
+        })
+
+        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` size must be >= 1/)
+      end
+
+      it "validates maximum array size" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "tags" => JSON::Any.new(["1", "2", "3", "4", "5", "6", "7", "8", "9"].map { |s| JSON::Any.new(s) }),
+          })
+        })
+
+        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` size must be <= 8/)
+      end
+
+      it "validates unique items constraint" do
+        params = JSON::Any.new({
+          "arguments" => JSON::Any.new({
+            "tags" => JSON::Any.new(["unique", "array", "unique"].map { |s| JSON::Any.new(s) }),
+          })
+        })
+
+        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` items must be unique/)
       end
     end
 

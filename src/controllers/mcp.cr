@@ -550,7 +550,12 @@ class MCPController
       matches: Regex?,
       minimum: Int32?,
       maximum: Int32?,
-      default: String | Int32 | Bool | Time | Nil,
+      default: String | Int32 | Bool | Time | Array(String) | Array(Int32) | Array(Bool) | Nil,
+      # array-specific properties
+      items: String?,           # type of array items ("string", "integer")
+      min_items: Int32?,        # minimum array length
+      max_items: Int32?,        # maximum array length
+      unique_items: Bool?,      # whether array elements must be unique
     )
 
   alias ToolDefinition =
@@ -565,7 +570,7 @@ class MCPController
   macro def_tool(name, description, properties = [] of ToolPropertyDefinition, &block)
     {% TOOL_DEFINITIONS << {name: name, description: description, properties: properties} %}
 
-    def MCPController.handle_{{name.id}}(params : JSON::Any, account : Account)
+    def MCPController.handle_{{name.id}}(params : JSON::Any, account : Account) : JSON::Any
       unless (arguments = params["arguments"]?)
         raise MCPError.new("Missing arguments", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
@@ -596,7 +601,11 @@ class MCPController
             end
           {% elsif prop[:type] == "time" %}
             unless value.raw.is_a?(String)
-              raise MCPError.new("`#{{{prop[:name]}}}` must be a time format string", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+              raise MCPError.new("`#{{{prop[:name]}}}` must be a RFC3339 timestamp", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+            end
+          {% elsif prop[:type] == "array" %}
+            unless value.raw.is_a?(Array)
+              raise MCPError.new("`#{{{prop[:name]}}}` must be an array", JSON::RPC::ErrorCodes::INVALID_PARAMS)
             end
           {% end %}
         end
@@ -630,8 +639,48 @@ class MCPController
             begin
               Time.parse_rfc3339(time_string)
             rescue
-              raise MCPError.new("`#{{{prop[:name]}}}` must be a valid RFC3339 timestamp", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+              raise MCPError.new("`#{{{prop[:name]}}}` must be a RFC3339 timestamp", JSON::RPC::ErrorCodes::INVALID_PARAMS)
             end
+          end
+        {% elsif prop[:type] == "array" %}
+          if (value = arguments[{{prop[:name]}}]?)
+            array_value = value.as_a
+
+            {% if prop[:min_items] %}
+              if array_value.size < {{prop[:min_items]}}
+                raise MCPError.new("`#{{{prop[:name]}}}` size must be >= {{prop[:min_items]}}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+              end
+            {% end %}
+            {% if prop[:max_items] %}
+              if array_value.size > {{prop[:max_items]}}
+                raise MCPError.new("`#{{{prop[:name]}}}` size must be <= {{prop[:max_items]}}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+              end
+            {% end %}
+
+            {% if prop[:items] %}
+              array_value.each_with_index do |item, index|
+                {% if prop[:items] == "string" %}
+                  unless item.raw.is_a?(String)
+                    raise MCPError.new("`#{{{prop[:name]}}}[#{index}]` must be a string", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                  end
+                {% elsif prop[:items] == "integer" %}
+                  unless item.raw.is_a?(Int32) || item.raw.is_a?(Int64)
+                    raise MCPError.new("`#{{{prop[:name]}}}[#{index}]` must be an integer", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                  end
+                {% elsif prop[:items] == "boolean" %}
+                  unless item.raw.is_a?(Bool)
+                    raise MCPError.new("`#{{{prop[:name]}}}[#{index}]` must be a boolean", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                  end
+                {% end %}
+              end
+            {% end %}
+
+            {% if prop[:unique_items] %}
+              string_items = array_value.map(&.to_s)
+              if string_items.size != string_items.uniq.size
+                raise MCPError.new("`#{{{prop[:name]}}}` items must be unique", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+              end
+            {% end %}
           end
         {% end %}
       {% end %}
@@ -647,6 +696,16 @@ class MCPController
               arguments[{{prop[:name]}}].as_bool
             {% elsif prop[:type] == "time" %}
               Time.parse_rfc3339(arguments[{{prop[:name]}}].as_s)
+            {% elsif prop[:type] == "array" %}
+              {% if prop[:items] == "string" %}
+                arguments[{{prop[:name]}}].as_a.map(&.as_s)
+              {% elsif prop[:items] == "integer" %}
+                arguments[{{prop[:name]}}].as_a.map(&.as_i)
+              {% elsif prop[:items] == "boolean" %}
+                arguments[{{prop[:name]}}].as_a.map(&.as_bool)
+              {% else %}
+                arguments[{{prop[:name]}}].as_a
+              {% end %}
             {% end %}
           {% else %}
             {% if prop[:type] == "string" %}
@@ -657,6 +716,16 @@ class MCPController
               arguments[{{prop[:name]}}]?.try(&.as_bool) || {{prop[:default]}}
             {% elsif prop[:type] == "time" %}
               arguments[{{prop[:name]}}]? ? Time.parse_rfc3339(arguments[{{prop[:name]}}].as_s) : {{prop[:default]}}
+            {% elsif prop[:type] == "array" %}
+              {% if prop[:items] == "string" %}
+                arguments[{{prop[:name]}}]?.try(&.as_a.map(&.as_s)) || {{prop[:default]}}
+              {% elsif prop[:items] == "integer" %}
+                arguments[{{prop[:name]}}]?.try(&.as_a.map(&.as_i)) || {{prop[:default]}}
+              {% elsif prop[:items] == "boolean" %}
+                arguments[{{prop[:name]}}]?.try(&.as_a.map(&.as_bool)) || {{prop[:default]}}
+              {% else %}
+                arguments[{{prop[:name]}}]?.try(&.as_a) || {{prop[:default]}}
+              {% end %}
             {% end %}
           {% end %}
       {% end %}
@@ -856,16 +925,37 @@ class MCPController
             "type" => JSON::Any.new("object"),
             "properties" => JSON::Any.new({
               {% for prop in tool[:properties] %}
-                {{prop[:name]}} => JSON::Any.new({
-                  "type" => JSON::Any.new({{prop[:type] == "time" ? "string" : prop[:type]}}),
-                  "description" => JSON::Any.new({{prop[:description]}}),
-                  {% if prop[:minimum] %}
-                    "minimum" => JSON::Any.new({{prop[:minimum]}}),
-                  {% end %}
-                  {% if prop[:maximum] %}
-                    "maximum" => JSON::Any.new({{prop[:maximum]}}),
-                  {% end %}
-                }),
+                {% if prop[:type] == "array" %}
+                  {{prop[:name]}} => JSON::Any.new({
+                    "type" => JSON::Any.new("array"),
+                    "description" => JSON::Any.new({{prop[:description]}}),
+                    {% if prop[:items] %}
+                      "items" => JSON::Any.new({
+                        "type" => JSON::Any.new({{prop[:items]}})
+                      }),
+                    {% end %}
+                    {% if prop[:min_items] %}
+                      "minItems" => JSON::Any.new({{prop[:min_items]}}),
+                    {% end %}
+                    {% if prop[:max_items] %}
+                      "maxItems" => JSON::Any.new({{prop[:max_items]}}),
+                    {% end %}
+                    {% if prop[:unique_items] %}
+                      "uniqueItems" => JSON::Any.new({{prop[:unique_items]}}),
+                    {% end %}
+                  }),
+                {% else %}
+                  {{prop[:name]}} => JSON::Any.new({
+                    "type" => JSON::Any.new({{prop[:type] == "time" ? "string" : prop[:type]}}),
+                    "description" => JSON::Any.new({{prop[:description]}}),
+                    {% if prop[:minimum] %}
+                      "minimum" => JSON::Any.new({{prop[:minimum]}}),
+                    {% end %}
+                    {% if prop[:maximum] %}
+                      "maximum" => JSON::Any.new({{prop[:maximum]}}),
+                    {% end %}
+                  }),
+                {% end %}
               {% end %}
             }),
             "required" => JSON::Any.new([

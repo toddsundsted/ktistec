@@ -744,10 +744,12 @@ class MCPController
 
   NAME_REGEX = /^([a-zA-Z0-9_-]+|hashtag#[a-zA-Z0-9_-]+|mention@[a-zA-Z0-9_@.-]+)$/
 
-  def_tool("paginate_collection", "Paginate through collections of ActivityPub objects, activities, and actors. Use this tool when you want to inspect the contents of a collection.", [
-    {name: "name", type: "string", description: "Name of the collection to paginate", required: true, matches: NAME_REGEX},
-    {name: "page", type: "integer", description: "Page number (optional, defaults to 1)", minimum: 1, default: 1},
-    {name: "size", type: "integer", description: "Number of items per page (optional, defaults to 10, maximum 1000)", minimum: 1, maximum: 20, default: 10},
+  def_tool(
+    "paginate_collection",
+    "Paginate through collections of ActivityPub objects, activities, and actors. Use this tool when you want to inspect the contents of a collection.", [
+      {name: "name", type: "string", description: "Name of the collection to paginate", required: true, matches: NAME_REGEX},
+      {name: "page", type: "integer", description: "Page number (optional, defaults to 1)", minimum: 1, default: 1},
+      {name: "size", type: "integer", description: "Number of items per page (optional, defaults to 10, maximum 1000)", minimum: 1, maximum: 20, default: 10},
   ]) do
     unless account.reload!
       raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -852,9 +854,11 @@ class MCPController
     })
   end
 
-  def_tool("count_collection_since", "Count items in ActivityPub collections since a given time. Use this tool when you want to know if new items have been added in the last day/week/month.", [
-    {name: "name", type: "string", description: "Name of the collection to count", required: true, matches: NAME_REGEX},
-    {name: "since", type: "time", description: "Time (RFC3339) to count from", required: true},
+  def_tool(
+    "count_collection_since",
+    "Count items in ActivityPub collections since a given time. Use this tool when you want to know if new items have been added in the last day/week/month.", [
+      {name: "name", type: "string", description: "Name of the collection to count", required: true, matches: NAME_REGEX},
+      {name: "since", type: "time", description: "Time (RFC3339) to count from", required: true},
   ]) do
     unless account.reload!
       raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -904,6 +908,54 @@ class MCPController
     result_data = {
       "counted_at" => current_time.to_rfc3339,
       "count" => count,
+    }
+
+    JSON::Any.new({
+      "content" => JSON::Any.new([JSON::Any.new({
+        "type" => JSON::Any.new("text"),
+        "text" => JSON::Any.new(result_data.to_json)
+      })])
+    })
+  end
+
+  def_tool(
+    "read_resources",
+    "Read one or more resources by URI (format \"ktistec://{resource}/{id*}\"). Supports all resource types including " \
+    "templated resources (actors, objects) and static resources (information, users). Supports batched reads (comma-separated " \
+    "IDs of resources of the same type). Use this tool as a universal fallback when resources are not supported by an MCP " \
+    "client.", [
+      {name: "uris", type: "array", description: "Resource URIs to read (e.g., ['ktistec://actors/123,456', 'ktistec://objects/456,789'])", required: true, items: "string"},
+  ]) do
+    Log.debug { "read_resources: user=#{mcp_user_path(account)} uris=#{uris}" }
+
+    resources_data = uris.map do |uri|
+
+      # NOTE: create a fake JSON::RPC::Request to reuse existing resource reading logic
+      fake_params = JSON::Any.new({
+        "uri" => JSON::Any.new(uri)
+      })
+      fake_request = JSON::RPC::Request.new(
+        "resources/read",
+        "fake-id",
+        fake_params
+      )
+
+      # reuse existing handle_resources_read logic
+      result = handle_resources_read(fake_request, account)
+      contents = result["contents"].as_a
+
+      # extract the resource data from each content item
+      contents.map do |content|
+        resource_data = JSON.parse(content["text"].as_s)
+        {
+          "uri" => content["uri"],
+          "data" => resource_data
+        }
+      end
+    end.flatten
+
+    result_data = {
+      "resources" => resources_data,
     }
 
     JSON::Any.new({
@@ -991,6 +1043,8 @@ class MCPController
       handle_paginate_collection(params, account)
     when "count_collection_since"
       handle_count_collection_since(params, account)
+    when "read_resources"
+      handle_read_resources(params, account)
     else
       Log.warn { "unknown tool: #{name}" }
       raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)

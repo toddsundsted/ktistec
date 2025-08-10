@@ -2176,6 +2176,106 @@ Spectator.describe MCPController do
           end
         end
       end
+
+      context "with read_resources tool" do
+        let_create(:actor, named: test_actor)
+        let_create(:object, named: test_object, attributed_to: account.actor)
+
+        private def read_resources_request(id, uris)
+          json_uris = uris.map(&.inspect).join(", ")
+          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "read_resources", "arguments": {"uris": [#{json_uris}]}}}|
+        end
+
+        def expect_resources_response(expected_size)
+          expect(response.status_code).to eq(200)
+          parsed = JSON.parse(response.body)
+          data = JSON.parse(parsed["result"]["content"][0]["text"].as_s)
+          resources = data["resources"].as_a
+          expect(resources.size).to eq(expected_size)
+          resources
+        end
+
+        it "reads single actor resource" do
+          request = read_resources_request("read-1", ["ktistec://actors/#{test_actor.id}"])
+
+          post "/mcp", authenticated_headers, request
+
+          resources = expect_resources_response(1)
+          expect(resources[0]["uri"]).to eq("ktistec://actors/#{test_actor.id}")
+        end
+
+        it "reads single object resource" do
+          request = read_resources_request("read-2", ["ktistec://objects/#{test_object.id}"])
+
+          post "/mcp", authenticated_headers, request
+
+          resources = expect_resources_response(1)
+          expect(resources[0]["uri"]).to eq("ktistec://objects/#{test_object.id}")
+        end
+
+        it "reads information resource" do
+          request = read_resources_request("read-3", ["ktistec://information"])
+
+          post "/mcp", authenticated_headers, request
+
+          resources = expect_resources_response(1)
+          expect(resources[0]["uri"]).to eq("ktistec://information")
+        end
+
+        it "reads multiple different resource types" do
+          request = read_resources_request("read-4", ["ktistec://actors/#{test_actor.id}", "ktistec://objects/#{test_object.id}", "ktistec://information"])
+
+          post "/mcp", authenticated_headers, request
+
+          resources = expect_resources_response(3)
+          uris = resources.map(&.["uri"].as_s)
+          expect(uris).to contain("ktistec://actors/#{test_actor.id}")
+          expect(uris).to contain("ktistec://objects/#{test_object.id}")
+          expect(uris).to contain("ktistec://information")
+        end
+
+        context "and multiple actors" do
+          let_create(:actor, named: test_actor2)
+          let_create(:actor, named: test_actor3)
+
+          it "reads batched resources" do
+            request = read_resources_request("read-5", ["ktistec://actors/#{test_actor.id},#{test_actor2.id},#{test_actor3.id}"])
+
+            post "/mcp", authenticated_headers, request
+
+            resources = expect_resources_response(3)
+            uris = resources.map(&.["uri"].as_s)
+            expect(uris).to contain("ktistec://actors/#{test_actor.id}")
+            expect(uris).to contain("ktistec://actors/#{test_actor2.id}")
+            expect(uris).to contain("ktistec://actors/#{test_actor3.id}")
+          end
+        end
+
+        context "and multiple objects" do
+          let_create(:object, named: test_object2, attributed_to: account.actor)
+          let_create(:object, named: test_object3, attributed_to: account.actor)
+
+          it "reads batched resources" do
+            request = read_resources_request("read-6", ["ktistec://objects/#{test_object.id},#{test_object2.id},#{test_object3.id}"])
+
+            post "/mcp", authenticated_headers, request
+
+            resources = expect_resources_response(3)
+            uris = resources.map(&.["uri"].as_s)
+            expect(uris).to contain("ktistec://objects/#{test_object.id}")
+            expect(uris).to contain("ktistec://objects/#{test_object2.id}")
+            expect(uris).to contain("ktistec://objects/#{test_object3.id}")
+          end
+        end
+
+        it "handles invalid resource URI" do
+          request = read_resources_request("read-7", ["ktistec://invalid/123"])
+
+          post "/mcp", authenticated_headers, request
+
+          expect_mcp_error(-32602, "Unsupported URI scheme: ktistec://invalid/123")
+        end
+      end
     end
   end
 end

@@ -902,13 +902,13 @@ class MCPController
           unless Tag::Hashtag.most_recent_object(hashtag)
             raise MCPError.new("Hashtag '#{hashtag}' not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
           end
-          raise MCPError.new("Counting not supported for hashtag collections", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+          Tag::Hashtag.all_objects(hashtag, since)
         elsif name.starts_with?("mention@")
           mention = name.sub("mention@", "")
           unless Tag::Mention.most_recent_object(mention)
             raise MCPError.new("Mention '#{mention}' not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
           end
-          raise MCPError.new("Counting not supported for mention collections", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+          Tag::Mention.all_objects(mention, since)
         else
           raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
         end

@@ -171,6 +171,67 @@ Spectator.describe Tag::Hashtag do
     end
   end
 
+  describe ".all_objects with since parameter" do
+    create_tagged_object(1, "foo")
+    create_tagged_object(2, "foo", "bar")
+    create_tagged_object(3, "foo")
+
+    let(since) { Time.utc(2016, 2, 15, 10, 30, 0) }
+
+    before_each do
+      described_class.where(name: "foo", subject_iri: object1.iri).first.assign(created_at: since - 1.5.hours).save
+      described_class.where(name: "foo", subject_iri: object2.iri).first.assign(created_at: since + 30.minutes).save
+      described_class.where(name: "bar", subject_iri: object2.iri).first.assign(created_at: since + 30.minutes).save
+      described_class.where(name: "foo", subject_iri: object3.iri).first.assign(created_at: since + 1.5.hours).save
+    end
+
+    it "returns count of objects tagged since given time" do
+      expect(described_class.all_objects("foo", since)).to eq(2)
+    end
+
+    it "returns count of objects tagged since given time" do
+      expect(described_class.all_objects("bar", since)).to eq(1)
+    end
+
+    it "returns zero when no objects tagged since given time" do
+      expect(described_class.all_objects("foo", since + 3.hours)).to eq(0)
+    end
+
+    it "returns zero for non-existent tag" do
+      expect(described_class.all_objects("nonexistent", since - 3.hours)).to eq(0)
+    end
+
+    it "filters out draft objects" do
+      object2.assign(published: nil).save
+      expect(described_class.all_objects("foo", since)).to eq(1)
+    end
+
+    it "filters out deleted objects" do
+      object2.delete!
+      expect(described_class.all_objects("foo", since)).to eq(1)
+    end
+
+    it "filters out blocked objects" do
+      object2.block!
+      expect(described_class.all_objects("foo", since)).to eq(1)
+    end
+
+    it "filters out objects with deleted attributed to actors" do
+      author.delete!
+      expect(described_class.all_objects("foo", since)).to eq(0)
+    end
+
+    it "filters out objects with blocked attributed to actors" do
+      author.block!
+      expect(described_class.all_objects("foo", since)).to eq(0)
+    end
+
+    it "filters out objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.all_objects("foo", since)).to eq(0)
+    end
+  end
+
   describe ".all_objects_count" do
     create_tagged_object(1, "foo", "bar")
     create_tagged_object(2, "foo")

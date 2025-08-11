@@ -2036,16 +2036,15 @@ Spectator.describe MCPController do
           let_create!(
             :hashtag,
             name: "testhashtag",
-            subject: tagged_post
+            subject: tagged_post,
+            created_at: Time.utc(2024, 1, 1, 10, 0, 0)
           )
 
-          # time-based counting not supported
-
-          it "returns error for valid hashtag" do
+          it "returns count for valid hashtag" do
             request = count_hashtag_since_request("count-hashtag-1", "testhashtag", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
-            expect_mcp_error(-32602, "Counting not supported for hashtag collections")
+            expect_count_response(1)
           end
 
           it "returns error for non-existent hashtag" do
@@ -2067,16 +2066,15 @@ Spectator.describe MCPController do
           let_create!(
             :mention,
             name: "testuser@example.com",
-            subject: mentioned_post
+            subject: mentioned_post,
+            created_at: Time.utc(2024, 1, 1, 10, 0, 0)
           )
 
-          # time-based counting not supported
-
-          it "returns error for valid mention" do
+          it "returns count for valid mention" do
             request = count_mention_since_request("count-mention-1", "testuser@example.com", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
-            expect_mcp_error(-32602, "Counting not supported for mention collections")
+            expect_count_response(1)
           end
 
           it "returns error for non-existent mention" do

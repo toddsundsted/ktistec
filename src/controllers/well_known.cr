@@ -119,12 +119,16 @@ class WellKnownController
     env.response.content_type = "application/json"
   end
 
-  options "/.well-known/oauth-protected-resource/mcp" do |env|
+  # Provide both path-specific and fallback OAuth protected resource
+  # metadata endpoints, for clients that do not correctly implement the
+  # RFC 9728 (OAuth 2.0 Protected Resource Metadata) specification.
+
+  options "/.well-known/oauth-protected-resource/*" do |env|
     set_cors_headers
     no_content
   end
 
-  get "/.well-known/oauth-protected-resource/mcp" do |env|
+  get "/.well-known/oauth-protected-resource/*" do |env|
     message = {
       resource: host,
       authorization_servers: [host],

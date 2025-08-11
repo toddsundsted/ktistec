@@ -189,44 +189,48 @@ Spectator.describe WellKnownController do
     end
   end
 
-  context "oauth-protected-resource/mcp" do
-    it "returns 200" do
-      get "/.well-known/oauth-protected-resource/mcp"
-      expect(response.status_code).to eq(200)
-    end
+  {% begin %}
+    {% for path in ["oauth-protected-resource", "oauth-protected-resource/mcp"] %}
+      context {{path}} do
+        it "returns 200" do
+          get "/.well-known/{{path.id}}"
+          expect(response.status_code).to eq(200)
+        end
 
-    it "returns the resource identifier" do
-      get "/.well-known/oauth-protected-resource/mcp"
-      expect(JSON.parse(response.body)["resource"]).to eq("https://test.test")
-    end
+        it "returns the resource identifier" do
+          get "/.well-known/{{path.id}}"
+          expect(JSON.parse(response.body)["resource"]).to eq("https://test.test")
+        end
 
-    it "returns the authorization servers" do
-      get "/.well-known/oauth-protected-resource/mcp"
-      expect(JSON.parse(response.body)["authorization_servers"]).to eq(["https://test.test"])
-    end
+        it "returns the authorization servers" do
+          get "/.well-known/{{path.id}}"
+          expect(JSON.parse(response.body)["authorization_servers"]).to eq(["https://test.test"])
+        end
 
-    it "returns the scopes supported" do
-      get "/.well-known/oauth-protected-resource/mcp"
-      expect(JSON.parse(response.body)["scopes_supported"]).to eq(["mcp"])
-    end
+        it "returns the scopes supported" do
+          get "/.well-known/{{path.id}}"
+          expect(JSON.parse(response.body)["scopes_supported"]).to eq(["mcp"])
+        end
 
-    it "returns the bearer methods supported" do
-      get "/.well-known/oauth-protected-resource/mcp"
-      expect(JSON.parse(response.body)["bearer_methods_supported"]).to eq(["header"])
-    end
+        it "returns the bearer methods supported" do
+          get "/.well-known/{{path.id}}"
+          expect(JSON.parse(response.body)["bearer_methods_supported"]).to eq(["header"])
+        end
 
-    it "sets CORS headers" do
-      get "/.well-known/oauth-protected-resource/mcp"
-      expect(response.headers["Access-Control-Allow-Origin"]).to eq("*")
-      expect(response.headers["Access-Control-Allow-Methods"]).to eq("OPTIONS, GET")
-      expect(response.headers["Access-Control-Allow-Headers"]).to match(/MCP-Protocol-Version/)
-    end
+        it "sets CORS headers" do
+          get "/.well-known/{{path.id}}"
+          expect(response.headers["Access-Control-Allow-Origin"]).to eq("*")
+          expect(response.headers["Access-Control-Allow-Methods"]).to eq("OPTIONS, GET")
+          expect(response.headers["Access-Control-Allow-Headers"]).to match(/MCP-Protocol-Version/)
+        end
 
-    it "sets the content type" do
-      get "/.well-known/oauth-protected-resource/mcp"
-      expect(response.headers["Content-Type"]).to eq("application/json")
-    end
-  end
+        it "sets the content type" do
+          get "/.well-known/{{path.id}}"
+          expect(response.headers["Content-Type"]).to eq("application/json")
+        end
+      end
+    {% end %}
+  {% end %}
 
   context "oauth-authorization-server" do
     it "returns 200" do

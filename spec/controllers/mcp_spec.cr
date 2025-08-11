@@ -398,7 +398,8 @@ Spectator.describe MCPController do
           json = JSON.parse(text)
 
           expect(json["external_url"]).to eq(alice.iri)
-          expect(json["internal_url"]).to eq("https://test.test/remote/actors/#{alice.id}")
+          expect(json["internal_url"]).to eq("https://test.test/remote/actors/#{alice.actor.id}")
+          expect(json["actor_uri"]).to eq("ktistec://actors/#{alice.actor.id}")
           expect(json["name"]).to eq("Alice")
           expect(json["summary"]).to eq("Alice's summary")
           expect(json["icon"]).to eq("https://example.com/icon.png")

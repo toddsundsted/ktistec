@@ -467,6 +467,9 @@ class MCPController
       actor = account.actor
       text_data = actor_contents(actor)
 
+      # splice in the URI of the related actor resource
+      text_data["actor_uri"] = JSON::Any.new(mcp_actor_path(account.actor))
+
       user_data = {
         "uri" => JSON::Any.new(uri),
         "mimeType" => JSON::Any.new("application/json"),

@@ -586,7 +586,7 @@ class MCPController
   macro def_tool(name, description, properties = [] of ToolPropertyDefinition, &block)
     {% TOOL_DEFINITIONS << {name: name, description: description, properties: properties} %}
 
-    def MCPController.handle_{{name.id}}(params : JSON::Any, account : Account) : JSON::Any
+    def MCPController.handle_tool_{{name.id}}(params : JSON::Any, account : Account) : JSON::Any
       unless (arguments = params["arguments"]?)
         raise MCPError.new("Missing arguments", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
@@ -1056,11 +1056,11 @@ class MCPController
 
     case name
     when "paginate_collection"
-      handle_paginate_collection(params, account)
+      handle_tool_paginate_collection(params, account)
     when "count_collection_since"
-      handle_count_collection_since(params, account)
+      handle_tool_count_collection_since(params, account)
     when "read_resources"
-      handle_read_resources(params, account)
+      handle_tool_read_resources(params, account)
     else
       Log.warn { "unknown tool: #{name}" }
       raise MCPError.new("Invalid tool name", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -1088,7 +1088,7 @@ class MCPController
   macro def_prompt(name, title = nil, description = nil, arguments = [] of PromptArgumentDefinition, &block)
     {% PROMPT_DEFINITIONS << {name: name, title: title, description: description, arguments: arguments} %}
 
-    def MCPController.handle_{{name.id}}(arguments : JSON::Any, account : Account) : JSON::Any
+    def MCPController.handle_prompt_{{name.id}}(arguments : JSON::Any, account : Account) : JSON::Any
       missing_fields = [] of String
       {% for arg in arguments %}
         {% if arg[:required] %}

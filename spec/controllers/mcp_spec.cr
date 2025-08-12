@@ -881,7 +881,7 @@ Spectator.describe MCPController do
           })
         })
 
-        result = MCPController.handle_test_tool(params, account)
+        result = MCPController.handle_tool_test_tool(params, account)
         expect(result["user"].as_s).to eq("test_user")
         expect(result["query"].as_s).to eq("test query")
         expect(result["limit"].as_i).to eq(25)
@@ -896,7 +896,7 @@ Spectator.describe MCPController do
           })
         })
 
-        result = MCPController.handle_test_tool(params, account)
+        result = MCPController.handle_tool_test_tool(params, account)
         expect(result["limit"].as_i).to eq(15)
         expect(result["include_replies"].as_bool).to be_false
       end
@@ -911,14 +911,14 @@ Spectator.describe MCPController do
           })
         })
 
-        result = MCPController.handle_test_tool(params, account)
+        result = MCPController.handle_tool_test_tool(params, account)
         expect(result["quota"].as_i).to eq(99)
       end
 
       it "validates missing arguments parameter" do
         params = JSON::Any.new({} of String => JSON::Any)
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /Missing arguments/)
+        expect { MCPController.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /Missing arguments/)
       end
 
       it "validates required arguments" do
@@ -926,7 +926,7 @@ Spectator.describe MCPController do
           "arguments" => JSON::Any.new({} of String => JSON::Any),
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /Missing user, query/)
+        expect { MCPController.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /Missing user, query/)
       end
 
       it "validates string type" do
@@ -937,7 +937,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`user` must be a string/)
+        expect { MCPController.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`user` must be a string/)
       end
 
       it "validates string regex" do
@@ -948,7 +948,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`user` format is invalid/)
+        expect { MCPController.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`user` format is invalid/)
       end
 
       it "validates integer type" do
@@ -960,7 +960,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be an integer/)
+        expect { MCPController.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be an integer/)
       end
 
       it "validates integer maximum" do
@@ -972,7 +972,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be <= 50/)
+        expect { MCPController.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be <= 50/)
       end
 
       it "validates integer minimum" do
@@ -984,7 +984,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be >= 1/)
+        expect { MCPController.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be >= 1/)
       end
 
       it "validates boolean type" do
@@ -996,7 +996,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`include_replies` must be a boolean/)
+        expect { MCPController.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`include_replies` must be a boolean/)
       end
 
       it "validates time type" do
@@ -1008,7 +1008,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a RFC3339 timestamp/)
+        expect { MCPController.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a RFC3339 timestamp/)
       end
 
       it "validates time format" do
@@ -1020,7 +1020,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a RFC3339 timestamp/)
+        expect { MCPController.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a RFC3339 timestamp/)
       end
 
       it "parses valid time strings into Time objects" do
@@ -1033,7 +1033,7 @@ Spectator.describe MCPController do
           })
         })
 
-        result = MCPController.handle_test_tool(params, account)
+        result = MCPController.handle_tool_test_tool(params, account)
         expect(result["created_at"].as_s).to eq(timestamp)
       end
     end
@@ -1048,7 +1048,7 @@ Spectator.describe MCPController do
           })
         })
 
-        result = MCPController.handle_test_array_tool(params, account)
+        result = MCPController.handle_tool_test_array_tool(params, account)
 
         expect(result["tag_count"].as_i).to eq(3)
         expect(result["score_sum"].as_i).to eq(6)
@@ -1064,7 +1064,7 @@ Spectator.describe MCPController do
           })
         })
 
-        result = MCPController.handle_test_array_tool(params, account)
+        result = MCPController.handle_tool_test_array_tool(params, account)
         expect(result["score_sum"].as_i).to eq(0)
         expect(result["flag_count"].as_i).to eq(0)
       end
@@ -1076,7 +1076,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` must be an array/)
+        expect { MCPController.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` must be an array/)
       end
 
       it "validates string array item types" do
@@ -1086,7 +1086,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`tags\[0\]` must be a string/)
+        expect { MCPController.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`tags\[0\]` must be a string/)
       end
 
       it "validates integer array item types" do
@@ -1097,7 +1097,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`scores\[1\]` must be an integer/)
+        expect { MCPController.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`scores\[1\]` must be an integer/)
       end
 
       it "validates boolean array item types" do
@@ -1108,7 +1108,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`flags\[2\]` must be a boolean/)
+        expect { MCPController.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`flags\[2\]` must be a boolean/)
       end
 
       it "validates minimum array size" do
@@ -1118,7 +1118,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` size must be >= 1/)
+        expect { MCPController.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` size must be >= 1/)
       end
 
       it "validates maximum array size" do
@@ -1128,7 +1128,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` size must be <= 8/)
+        expect { MCPController.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` size must be <= 8/)
       end
 
       it "validates unique items constraint" do
@@ -1138,7 +1138,7 @@ Spectator.describe MCPController do
           })
         })
 
-        expect { MCPController.handle_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` items must be unique/)
+        expect { MCPController.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` items must be unique/)
       end
     end
 
@@ -2336,7 +2336,7 @@ Spectator.describe MCPController do
           "style" => JSON::Any.new("technical"),
         })
 
-        result = MCPController.handle_test_prompt(arguments, account)
+        result = MCPController.handle_prompt_test_prompt(arguments, account)
         messages = result.as_a
         expect(messages.size).to eq(2)
         message = messages[0]
@@ -2357,7 +2357,7 @@ Spectator.describe MCPController do
           # style parameter is optional
         })
 
-        result = MCPController.handle_test_prompt(arguments, account)
+        result = MCPController.handle_prompt_test_prompt(arguments, account)
         message = result.as_a[0]
         content = message["content"]
         expect(content["text"].as_s).to eq("Please discuss ActivityPub protocol.")
@@ -2366,7 +2366,7 @@ Spectator.describe MCPController do
       it "validates required arguments" do
         arguments = JSON::Any.new({} of String => JSON::Any)
 
-        expect { MCPController.handle_test_prompt(arguments, account) }.to raise_error(MCPError, /Missing topic/)
+        expect { MCPController.handle_prompt_test_prompt(arguments, account) }.to raise_error(MCPError, /Missing topic/)
       end
     end
 

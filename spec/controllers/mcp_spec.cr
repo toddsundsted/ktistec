@@ -153,6 +153,7 @@ Spectator.describe MCPController do
         expect(result["serverInfo"]["version"]).to eq(Ktistec::VERSION)
         expect(result["capabilities"]["resources"]).to be_a(JSON::Any)
         expect(result["capabilities"]["tools"]).to be_a(JSON::Any)
+        expect(result["capabilities"]["prompts"]).to be_a(JSON::Any)
         expect(result["instructions"]).to be_a(JSON::Any)
       end
     end
@@ -2258,6 +2259,123 @@ Spectator.describe MCPController do
 
           expect_mcp_error(-32602, "Unsupported URI scheme: ktistec://invalid/123")
         end
+      end
+    end
+
+    MCPController.def_prompt("test_prompt", "Test Prompt", "A test prompt for `def_prompt` macro testing", [
+      {name: "topic", title: "Topic", description: "The main topic to discuss", required: true},
+      {name: "style", title: "Style", description: "Communication style", required: false},
+    ]) do
+      style_text = style.empty? ? "" : " in a #{style} style"
+      JSON::Any.new([
+        JSON::Any.new({
+          "role" => JSON::Any.new("user"),
+          "content" => JSON::Any.new({
+            "type" => JSON::Any.new("text"),
+            "text" => JSON::Any.new("Please discuss #{topic}#{style_text}.")
+          })
+        }),
+        JSON::Any.new({
+          "role" => JSON::Any.new("assistant"),
+          "content" => JSON::Any.new({
+            "type" => JSON::Any.new("text"),
+            "text" => JSON::Any.new("The request cost is 0.01 KTs.")
+          })
+        }),
+      ])
+    end
+
+    context "with prompts/list request" do
+      let(prompts_list_request) { %Q|{"jsonrpc": "2.0", "id": "prompts-1", "method": "prompts/list"}| }
+
+      it "returns test prompts" do
+        post "/mcp", authenticated_headers, prompts_list_request
+        expect(response.status_code).to eq(200)
+        parsed = JSON.parse(response.body)
+
+        prompts = parsed["result"]["prompts"].as_a
+        expect(prompts.size).to eq(1)
+
+        expect(prompts[0]["name"]).to eq("test_prompt")
+      end
+
+      context "test_prompt" do
+        let(test_prompt) do
+          post "/mcp", authenticated_headers, prompts_list_request
+          expect(response.status_code).to eq(200)
+          parsed = JSON.parse(response.body)
+          prompts = parsed["result"]["prompts"].as_a
+          prompts[-1]
+        end
+
+        it "returns the definition" do
+          expect(test_prompt["name"]).to eq("test_prompt")
+          expect(test_prompt["title"]).to eq("Test Prompt")
+          expect(test_prompt["description"]).to eq("A test prompt for `def_prompt` macro testing")
+
+          arguments = test_prompt["arguments"].as_a
+          expect(arguments.size).to eq(2)
+
+          expect(arguments[0]["name"]).to eq("topic")
+          expect(arguments[0]["title"]).to eq("Topic")
+          expect(arguments[0]["description"]).to eq("The main topic to discuss")
+          expect(arguments[0]["required"]).to be_true
+
+          expect(arguments[1]["name"]).to eq("style")
+          expect(arguments[1]["title"]).to eq("Style")
+          expect(arguments[1]["description"]).to eq("Communication style")
+          expect(arguments[1]["required"]).to be_false
+        end
+      end
+    end
+
+    context "test_prompt validation" do
+      it "validates and extracts arguments" do
+        arguments = JSON::Any.new({
+          "topic" => JSON::Any.new("ActivityPub federation"),
+          "style" => JSON::Any.new("technical"),
+        })
+
+        result = MCPController.handle_test_prompt(arguments, account)
+        messages = result.as_a
+        expect(messages.size).to eq(2)
+        message = messages[0]
+        expect(message["role"].as_s).to eq("user")
+        content = message["content"]
+        expect(content["type"].as_s).to eq("text")
+        expect(content["text"].as_s).to eq("Please discuss ActivityPub federation in a technical style.")
+        message = messages[1]
+        expect(message["role"].as_s).to eq("assistant")
+        content = message["content"]
+        expect(content["type"].as_s).to eq("text")
+        expect(content["text"].as_s).to eq("The request cost is 0.01 KTs.")
+      end
+
+      it "handles optional arguments" do
+        arguments = JSON::Any.new({
+          "topic" => JSON::Any.new("ActivityPub protocol"),
+          # style parameter is optional
+        })
+
+        result = MCPController.handle_test_prompt(arguments, account)
+        message = result.as_a[0]
+        content = message["content"]
+        expect(content["text"].as_s).to eq("Please discuss ActivityPub protocol.")
+      end
+
+      it "validates required arguments" do
+        arguments = JSON::Any.new({} of String => JSON::Any)
+
+        expect { MCPController.handle_test_prompt(arguments, account) }.to raise_error(MCPError, /Missing topic/)
+      end
+    end
+
+    context "with prompts/get request" do
+      let(prompts_get_request) { %Q|{"jsonrpc": "2.0", "id": "prompt-get-1", "method": "prompts/get", "params": {"name": "nonexistent_prompt"}}| }
+
+      it "returns protocol error for invalid tool name" do
+        post "/mcp", authenticated_headers, prompts_get_request
+        expect_mcp_error(-32602, "Invalid prompt name")
       end
     end
   end

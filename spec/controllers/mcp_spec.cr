@@ -2294,9 +2294,9 @@ Spectator.describe MCPController do
         parsed = JSON.parse(response.body)
 
         prompts = parsed["result"]["prompts"].as_a
-        expect(prompts.size).to eq(1)
+        expect(prompts.size).to eq(2)
 
-        expect(prompts[0]["name"]).to eq("test_prompt")
+        expect(prompts[-1]["name"]).to eq("test_prompt")
       end
 
       context "test_prompt" do
@@ -2376,6 +2376,28 @@ Spectator.describe MCPController do
       it "returns protocol error for invalid tool name" do
         post "/mcp", authenticated_headers, prompts_get_request
         expect_mcp_error(-32602, "Invalid prompt name")
+      end
+    end
+
+    context "with whats_new prompt" do
+      let(whats_new_request) { %Q|{"jsonrpc": "2.0", "id": "whats-new-1", "method": "prompts/get", "params": {"name": "whats_new"}}| }
+
+      context "given a account timezone" do
+        before_each { account.assign(timezone: "America/New_York").save }
+
+        it "returns prompt with timezone instructions" do
+          post "/mcp", authenticated_headers, whats_new_request
+          expect(response.status_code).to eq(200)
+          parsed = JSON.parse(response.body)
+
+          result = parsed["result"]
+          messages = result["messages"].as_a
+          expect(messages.size).to eq(1)
+
+          instructions = messages[0]["content"]["text"].as_s
+
+          expect(instructions).to contain("Convert UTC to America/New_York timezone")
+        end
       end
     end
   end

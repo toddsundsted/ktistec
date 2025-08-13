@@ -10,6 +10,7 @@ class Task
   # 1. Delete access tokens where "expires_at < current_time"
   #
   # **Inactive Clients**:
+  # Note: Manually created clients are always preserved.
   # 1. Delete clients created more than 1 month ago AND never accessed
   # 2. Delete clients that were last accessed more than four months ago
   #
@@ -43,11 +44,12 @@ class Task
       result = Ktistec.database.exec(
         <<-SQL
         DELETE FROM oauth_clients
-         WHERE (
-           (last_accessed_at IS NULL AND created_at < datetime('now', '-1 month'))
-            OR
-           (last_accessed_at < datetime('now', '-4 months'))
-         )
+         WHERE manual = 0
+           AND (
+             (last_accessed_at IS NULL AND created_at < datetime('now', '-1 month'))
+              OR
+             (last_accessed_at < datetime('now', '-4 months'))
+           )
         SQL
       )
       deleted_count = result.rows_affected.to_i

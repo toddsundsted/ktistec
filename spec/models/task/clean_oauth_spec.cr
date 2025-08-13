@@ -75,6 +75,20 @@ Spectator.describe Task::CleanOauth do
         remaining_clients = OAuth2::Provider::Client.all
         expect(remaining_clients).to contain_exactly(has_been_accessed)
       end
+
+      context "when client was manually created" do
+        before_each do
+          never_been_accessed.assign(manual: true).save
+        end
+
+        it "does not delete the manual client" do
+          result = subject.cleanup_orphaned_clients
+          expect(result).to eq(0)
+
+          remaining_clients = OAuth2::Provider::Client.all
+          expect(remaining_clients).to contain_exactly(has_been_accessed, never_been_accessed)
+        end
+      end
     end
 
     context "with a client that was accessed more than four months ago" do
@@ -99,6 +113,20 @@ Spectator.describe Task::CleanOauth do
 
         remaining_clients = OAuth2::Provider::Client.all
         expect(remaining_clients).to contain_exactly(accessed_recently)
+      end
+
+      context "when client was manually created" do
+        before_each do
+          not_accessed_recently.assign(manual: true).save
+        end
+
+        it "does not delete the manual client" do
+          result = subject.cleanup_orphaned_clients
+          expect(result).to eq(0)
+
+          remaining_clients = OAuth2::Provider::Client.all
+          expect(remaining_clients).to contain_exactly(accessed_recently, not_accessed_recently)
+        end
       end
 
     end

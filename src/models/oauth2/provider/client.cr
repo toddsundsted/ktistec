@@ -69,6 +69,15 @@ module OAuth2
       @[Insignificant]
       property last_accessed_at : Time?
 
+      # Manual registration flag.
+      #
+      # Indicates whether this client was registered manually by an
+      # administrator (true) or through dynamic client registration
+      # (false).
+      #
+      @[Persistent]
+      property manual : Bool { false }
+
       has_many access_tokens
     end
   end

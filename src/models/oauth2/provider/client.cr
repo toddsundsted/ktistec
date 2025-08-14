@@ -104,6 +104,10 @@ module OAuth2
       def after_validate
         self.redirect_uris = self.redirect_uris.split.join(" ")
       end
+
+      def before_destroy
+        access_tokens.each(&.destroy)
+      end
     end
   end
 end

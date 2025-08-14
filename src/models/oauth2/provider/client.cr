@@ -79,6 +79,31 @@ module OAuth2
       property manual : Bool { false }
 
       has_many access_tokens
+
+      validates(client_name) { "must be present" unless client_name.presence }
+
+      validates(redirect_uris) do
+        unless redirect_uris.presence
+          "must be present"
+        else
+          errors =
+            redirect_uris.split.map do |uri|
+              begin
+                parsed_uri = URI.parse(uri)
+                unless parsed_uri.scheme.presence && parsed_uri.host.presence
+                  uri
+                end
+              rescue URI::Error
+                uri
+              end
+            end.compact
+          "invalid URIs: #{errors.join(", ")}" if errors.presence
+        end
+      end
+
+      def after_validate
+        self.redirect_uris = self.redirect_uris.split.join(" ")
+      end
     end
   end
 end

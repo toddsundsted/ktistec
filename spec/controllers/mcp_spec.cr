@@ -1523,11 +1523,12 @@ Spectator.describe MCPController do
             expect(objects.first).to eq("ktistec://objects/#{tagged_post.id}")
           end
 
-          it "returns error for non-existent hashtag" do
+          it "returns empty result for non-existent hashtag" do
             request = paginate_hashtag_request("paginate-hashtag-2", "nonexistent")
 
             post "/mcp", authenticated_headers, request
-            expect_mcp_error(-32602, "Hashtag 'nonexistent' not found")
+            objects = expect_paginated_response(0, false)
+            expect(objects.size).to eq(0)
           end
 
           it "supports pagination for hashtag collections" do
@@ -1573,11 +1574,12 @@ Spectator.describe MCPController do
             expect(objects.first).to eq("ktistec://objects/#{mentioned_post.id}")
           end
 
-          it "returns error for non-existent mention" do
+          it "returns empty result for non-existent mention" do
             request = paginate_mention_request("paginate-mention-2", "nonexistent@example.com")
 
             post "/mcp", authenticated_headers, request
-            expect_mcp_error(-32602, "Mention 'nonexistent@example.com' not found")
+            objects = expect_paginated_response(0, false)
+            expect(objects.size).to eq(0)
           end
 
           it "supports pagination for mention collections" do
@@ -2048,11 +2050,11 @@ Spectator.describe MCPController do
             expect_count_response(1)
           end
 
-          it "returns error for non-existent hashtag" do
+          it "returns 0 for non-existent hashtag" do
             request = count_hashtag_since_request("count-hashtag-2", "nonexistent", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
-            expect_mcp_error(-32602, "Hashtag 'nonexistent' not found")
+            expect_count_response(0)
           end
         end
 
@@ -2078,11 +2080,11 @@ Spectator.describe MCPController do
             expect_count_response(1)
           end
 
-          it "returns error for non-existent mention" do
+          it "returns 0 for non-existent mention" do
             request = count_mention_since_request("count-mention-2", "nonexistent@example.com", {"since" => "2024-01-01T00:00:00Z"})
 
             post "/mcp", authenticated_headers, request
-            expect_mcp_error(-32602, "Mention 'nonexistent@example.com' not found")
+            expect_count_response(0)
           end
         end
 

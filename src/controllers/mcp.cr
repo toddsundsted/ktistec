@@ -834,9 +834,6 @@ class MCPController
       else
         if name.starts_with?("hashtag#")
           hashtag = name.sub("hashtag#", "")
-          unless Tag::Hashtag.most_recent_object(hashtag)
-            raise MCPError.new("Hashtag '#{hashtag}' not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-          end
           hashtag_objects = Tag::Hashtag.all_objects(hashtag, page: page, size: size)
           objects = hashtag_objects.map do |obj|
             JSON::Any.new(mcp_object_path(obj))
@@ -844,9 +841,6 @@ class MCPController
           {objects, hashtag_objects.more?}
         elsif name.starts_with?("mention@")
           mention = name.sub("mention@", "")
-          unless Tag::Mention.most_recent_object(mention)
-            raise MCPError.new("Mention '#{mention}' not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-          end
           mention_objects = Tag::Mention.all_objects(mention, page: page, size: size)
           objects = mention_objects.map do |obj|
             JSON::Any.new(mcp_object_path(obj))
@@ -906,15 +900,9 @@ class MCPController
       else
         if name.starts_with?("hashtag#")
           hashtag = name.sub("hashtag#", "")
-          unless Tag::Hashtag.most_recent_object(hashtag)
-            raise MCPError.new("Hashtag '#{hashtag}' not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-          end
           Tag::Hashtag.all_objects(hashtag, since)
         elsif name.starts_with?("mention@")
           mention = name.sub("mention@", "")
-          unless Tag::Mention.most_recent_object(mention)
-            raise MCPError.new("Mention '#{mention}' not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-          end
           Tag::Mention.all_objects(mention, since)
         else
           raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)

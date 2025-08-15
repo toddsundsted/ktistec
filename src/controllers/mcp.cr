@@ -95,7 +95,7 @@ class MCPController
 
       if request.notification?
         handle_notification(request)
-        mcp_response 204, nil
+        mcp_response 202, nil
       elsif (response = handle_request(request, account))
         mcp_response 200, response
       else

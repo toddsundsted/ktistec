@@ -1413,7 +1413,7 @@ Spectator.describe MCPController do
         end
 
         context "with an object in the timeline" do
-          let_create!(:object, attributed_to: account.actor)
+          let_create!(:object, attributed_to: account.actor, published: Time.utc)
 
           before_each do
             put_in_timeline(account.actor, object)
@@ -1424,12 +1424,20 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
-            expect(objects).to eq(["ktistec://objects/#{object.id}"])
+
+            expect(objects.size).to eq(1)
+            object_data = objects.first.as_h
+            expect(object_data["uri"]).to eq("ktistec://objects/#{object.id}")
+            expect(object_data["external_url"]).to eq(object.iri)
+            expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
+            expect(object_data["type"]).to eq("Object")
+            expect(object_data["attributed_to"]).to eq("ktistec://actors/#{object.attributed_to.id}")
+            expect(object_data["published"]).not_to be_nil
           end
         end
 
         context "with an object in actor's posts" do
-          let_create!(:object, attributed_to: account.actor)
+          let_create!(:object, attributed_to: account.actor, published: Time.utc)
           let_create!(:create, actor: account.actor, object: object)
 
           before_each do
@@ -1441,19 +1449,35 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
-            expect(objects).to eq(["ktistec://objects/#{object.id}"])
+
+            expect(objects.size).to eq(1)
+            object_data = objects.first.as_h
+            expect(object_data["uri"]).to eq("ktistec://objects/#{object.id}")
+            expect(object_data["external_url"]).to eq(object.iri)
+            expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
+            expect(object_data["type"]).to eq("Object")
+            expect(object_data["attributed_to"]).to eq("ktistec://actors/#{object.attributed_to.id}")
+            expect(object_data["published"]).not_to be_nil
           end
         end
 
         context "with a draft object for actor" do
-          let_create!(:object, attributed_to: account.actor, published: nil)
+          let_create!(:object, attributed_to: account.actor, published: nil, content: "Draft content")
 
           it "returns draft objects for valid request" do
             request = paginate_drafts_request("paginate-drafts-1")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
-            expect(objects).to eq(["ktistec://objects/#{object.id}"])
+
+            expect(objects.size).to eq(1)
+            object_data = objects.first.as_h
+            expect(object_data["uri"]).to eq("ktistec://objects/#{object.id}")
+            expect(object_data["external_url"]).to eq(object.iri)
+            expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
+            expect(object_data["type"]).to eq("Object")
+            expect(object_data["attributed_to"]).to eq("ktistec://actors/#{object.attributed_to.id}")
+            expect(object_data["content"]).to eq("Draft content")
           end
         end
 
@@ -1520,7 +1544,16 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
-            expect(objects.first).to eq("ktistec://objects/#{tagged_post.id}")
+
+            expect(objects.size).to eq(1)
+            object_data = objects.first.as_h
+            expect(object_data["uri"]).to eq("ktistec://objects/#{tagged_post.id}")
+            expect(object_data["external_url"]).to eq(tagged_post.iri)
+            expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{tagged_post.id}")
+            expect(object_data["type"]).to eq("Object")
+            expect(object_data["attributed_to"]).to eq("ktistec://actors/#{tagged_post.attributed_to.id}")
+            expect(object_data["content"]).to eq("Post with #technology hashtag")
+            expect(object_data["published"]).not_to be_nil
           end
 
           it "returns empty result for non-existent hashtag" do
@@ -1549,7 +1582,14 @@ Spectator.describe MCPController do
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, true)
             # returns most recent post first
-            expect(objects.first).to eq("ktistec://objects/#{post2.id}")
+            object_data = objects.first.as_h
+            expect(object_data["uri"]).to eq("ktistec://objects/#{post2.id}")
+            expect(object_data["external_url"]).to eq(post2.iri)
+            expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{post2.id}")
+            expect(object_data["type"]).to eq("Object")
+            expect(object_data["attributed_to"]).to eq("ktistec://actors/#{post2.attributed_to.id}")
+            expect(object_data["content"]).to eq("Another #technology post")
+            expect(object_data["published"]).not_to be_nil
           end
         end
 
@@ -1571,7 +1611,16 @@ Spectator.describe MCPController do
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, false)
-            expect(objects.first).to eq("ktistec://objects/#{mentioned_post.id}")
+
+            expect(objects.size).to eq(1)
+            object_data = objects.first.as_h
+            expect(object_data["uri"]).to eq("ktistec://objects/#{mentioned_post.id}")
+            expect(object_data["external_url"]).to eq(mentioned_post.iri)
+            expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{mentioned_post.id}")
+            expect(object_data["type"]).to eq("Object")
+            expect(object_data["attributed_to"]).to eq("ktistec://actors/#{mentioned_post.attributed_to.id}")
+            expect(object_data["content"]).to eq("Hey @testuser@example.com check this out!")
+            expect(object_data["published"]).not_to be_nil
           end
 
           it "returns empty result for non-existent mention" do
@@ -1600,12 +1649,19 @@ Spectator.describe MCPController do
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(1, true)
             # returns most recent post first
-            expect(objects.first).to eq("ktistec://objects/#{post2.id}")
+            object_data = objects.first.as_h
+            expect(object_data["uri"]).to eq("ktistec://objects/#{post2.id}")
+            expect(object_data["external_url"]).to eq(post2.iri)
+            expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{post2.id}")
+            expect(object_data["type"]).to eq("Object")
+            expect(object_data["attributed_to"]).to eq("ktistec://actors/#{post2.attributed_to.id}")
+            expect(object_data["content"]).to eq("Another post mentioning @testuser@example.com")
+            expect(object_data["published"]).not_to be_nil
           end
         end
 
         context "with a liked object" do
-          let_create(:object, named: liked_post, attributed_to: account.actor)
+          let_create(:object, named: liked_post, attributed_to: account.actor, published: Time.utc)
 
           it "is empty" do
             request = paginate_likes_request("paginate-likes-1")
@@ -1623,7 +1679,15 @@ Spectator.describe MCPController do
 
               post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
-              expect(objects.first).to eq("ktistec://objects/#{liked_post.id}")
+
+              expect(objects.size).to eq(1)
+              object_data = objects.first.as_h
+              expect(object_data["uri"]).to eq("ktistec://objects/#{liked_post.id}")
+              expect(object_data["external_url"]).to eq(liked_post.iri)
+              expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{liked_post.id}")
+              expect(object_data["type"]).to eq("Object")
+              expect(object_data["attributed_to"]).to eq("ktistec://actors/#{liked_post.attributed_to.id}")
+              expect(object_data["published"]).not_to be_nil
             end
 
             context "and another liked object" do
@@ -1636,14 +1700,15 @@ Spectator.describe MCPController do
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
                 # returns most recent like first
-                expect(objects.first).to eq("ktistec://objects/#{post.id}")
+                object_data = objects.first.as_h
+                expect(object_data["uri"]).to eq("ktistec://objects/#{post.id}")
               end
             end
           end
         end
 
         context "with an announced object" do
-          let_create(:object, named: announced_post, attributed_to: account.actor)
+          let_create(:object, named: announced_post, attributed_to: account.actor, published: Time.utc)
 
           it "is empty" do
             request = paginate_announcements_request("paginate-announcements-1")
@@ -1661,7 +1726,15 @@ Spectator.describe MCPController do
 
               post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
-              expect(objects.first).to eq("ktistec://objects/#{announced_post.id}")
+
+              expect(objects.size).to eq(1)
+              object_data = objects.first.as_h
+              expect(object_data["uri"]).to eq("ktistec://objects/#{announced_post.id}")
+              expect(object_data["external_url"]).to eq(announced_post.iri)
+              expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{announced_post.id}")
+              expect(object_data["type"]).to eq("Object")
+              expect(object_data["attributed_to"]).to eq("ktistec://actors/#{announced_post.attributed_to.id}")
+              expect(object_data["published"]).not_to be_nil
             end
 
             context "and another announced object" do
@@ -1674,7 +1747,8 @@ Spectator.describe MCPController do
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
                 # returns most recent announcement first
-                expect(objects.first).to eq("ktistec://objects/#{post.id}")
+                object_data = objects.first.as_h
+                expect(object_data["uri"]).to eq("ktistec://objects/#{post.id}")
               end
             end
           end

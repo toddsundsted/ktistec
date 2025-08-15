@@ -134,8 +134,8 @@ class MCPController
       "instructions" => JSON::Any.new(
         "This server provides access to the ActivityPub objects, activities, actors, and collections " \
         "in a Ktistec server. Use tools to paginate through collections (like the user's timeline) and " \
-        "to check for (count) new posts. Use resources (or the read resources tool) to read user " \
-        "profiles and posts. These tools are useful for monitoring ActivityPub feeds, tracking new " \
+        "to check for (count) new posts. Use resources (or the read resources tool) to read actor profiles " \
+        "and replies to posts. These tools are useful for monitoring ActivityPub feeds, tracking new " \
         "content, and analyzing social media activity patterns. The server supports both local and " \
         "federated ActivityPub content, with language translation support, and rich media attachment " \
         "handling. After reading this, the first steps you should take are: 1) list the resources and " \
@@ -786,31 +786,31 @@ class MCPController
       when "timeline"
         timeline = actor.timeline(page: page, size: size)
         objects = timeline.map do |rel|
-          JSON::Any.new(mcp_object_path(rel.object))
+          JSON::Any.new(object_contents(rel.object))
         end
         {objects, timeline.more?}
       when "posts"
         posts = actor.all_posts(page: page, size: size)
         objects = posts.map do |post|
-          JSON::Any.new(mcp_object_path(post))
+          JSON::Any.new(object_contents(post))
         end
         {objects, posts.more?}
       when "drafts"
         drafts = actor.drafts(page: page, size: size)
         objects = drafts.map do |draft|
-          JSON::Any.new(mcp_object_path(draft))
+          JSON::Any.new(object_contents(draft))
         end
         {objects, drafts.more?}
       when "likes"
         likes = actor.likes(page: page, size: size)
         objects = likes.map do |liked_object|
-          JSON::Any.new(mcp_object_path(liked_object))
+          JSON::Any.new(object_contents(liked_object))
         end
         {objects, likes.more?}
       when "announcements"
         announcements = actor.announces(page: page, size: size)
         objects = announcements.map do |announced_object|
-          JSON::Any.new(mcp_object_path(announced_object))
+          JSON::Any.new(object_contents(announced_object))
         end
         {objects, announcements.more?}
       when "followers"
@@ -836,14 +836,14 @@ class MCPController
           hashtag = name.sub("hashtag#", "")
           hashtag_objects = Tag::Hashtag.all_objects(hashtag, page: page, size: size)
           objects = hashtag_objects.map do |obj|
-            JSON::Any.new(mcp_object_path(obj))
+            JSON::Any.new(object_contents(obj))
           end
           {objects, hashtag_objects.more?}
         elsif name.starts_with?("mention@")
           mention = name.sub("mention@", "")
           mention_objects = Tag::Mention.all_objects(mention, page: page, size: size)
           objects = mention_objects.map do |obj|
-            JSON::Any.new(mcp_object_path(obj))
+            JSON::Any.new(object_contents(obj))
           end
           {objects, mention_objects.more?}
         else
@@ -1258,20 +1258,15 @@ MCPController.def_prompt("whats_new", "What's New Social Media Activity Summary"
     "   - Call: `count_collection_since(name: \"notifications\", since: \"[cutoff_timestamp]\")`",
     "   - Record the count for context",
     "",
-    "## Step 3: Fetch Content URIs",
+    "## Step 3: Fetch Content",
     "",
     "1. **Get timeline content details** (if timeline count > 0):",
     "   - Call: `paginate_collection(name: \"timeline\", page: 1, size: [count])`",
-    "   - Extract actor URIs and object URIs from the response",
+    "   - Returns object data",
     "",
     "2. **Get notification details** (if notifications count > 0):",
     "   - Call: `paginate_collection(name: \"notifications\", page: 1, size: [count])`",
-    "   - Extract actor URIs and object URIs from the response",
-    "",
-    "3. **Batch read all actors and objects**:",
-    "   - Call: `read_resources(uris: [all collected URIs from steps 1 & 2])`",
-    "   - **URI format**: `ktistec://actors/{id*}` and `ktistec://objects/{id*}`",
-    "   - **Example**: `ktistec://objects/123,456,789` for multiple at once",
+    "   - Returns data specific to each type of notification",
     "",
     "## Step 4: Output",
     "Generate summary output in Markdown in this exact format:",

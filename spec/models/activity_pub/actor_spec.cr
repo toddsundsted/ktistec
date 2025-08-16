@@ -518,33 +518,44 @@ Spectator.describe ActivityPub::Actor do
     create_like(4)
     create_like(5)
 
+    let(since) { KTISTEC_EPOCH }
+
     it "instantiates the correct subclass" do
       expect(subject.likes(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.likes(since: since)).to eq(5)
     end
 
     it "filters out deleted posts" do
       note5.delete!
       expect(subject.likes(1, 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
       note5.block!
       expect(subject.likes(1, 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
     end
 
     it "filters out posts by deleted actors" do
       note5.attributed_to.delete!
       expect(subject.likes(1, 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
     end
 
     it "filters out posts by blocked actors" do
       note5.attributed_to.block!
       expect(subject.likes(1, 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
     end
 
     it "filters out posts if the like has been undone" do
       like5.undo!
       expect(subject.likes(1, 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
     end
 
     it "paginates the results" do
@@ -568,33 +579,44 @@ Spectator.describe ActivityPub::Actor do
     create_announce(4)
     create_announce(5)
 
+    let(since) { KTISTEC_EPOCH }
+
     it "instantiates the correct subclass" do
       expect(subject.announces(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.announces(since: since)).to eq(5)
     end
 
     it "filters out deleted posts" do
       note5.delete!
       expect(subject.announces(1, 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
       note5.block!
       expect(subject.announces(1, 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
     end
 
     it "filters out posts by deleted actors" do
       note5.attributed_to.delete!
       expect(subject.announces(1, 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
     end
 
     it "filters out posts by blocked actors" do
       note5.attributed_to.block!
       expect(subject.announces(1, 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
     end
 
     it "filters out posts if the announce has been undone" do
       announce5.undo!
       expect(subject.announces(1, 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
     end
 
     it "paginates the results" do

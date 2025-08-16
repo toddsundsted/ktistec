@@ -122,6 +122,10 @@ def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **
   )
 end
 
+def person_factory(**options)
+  actor_factory(ActivityPub::Actor::Person, **options)
+end
+
 # object factories
 
 def object_factory(clazz = ActivityPub::Object, iri = nil, attributed_to_iri = nil, attributed_to = false, visible = true, local = nil, **options)

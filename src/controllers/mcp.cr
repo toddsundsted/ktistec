@@ -890,9 +890,9 @@ class MCPController
       when "drafts"
         actor.drafts(since: since)
       when "likes"
-        raise MCPError.new("Counting not supported for likes collection", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+        actor.likes(since: since)
       when "announcements"
-        raise MCPError.new("Counting not supported for announcements collections", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+        actor.announces(since: since)
       when "followers"
         Relationship::Social::Follow.followers_since(actor.iri, since)
       when "following"

@@ -260,6 +260,28 @@ module ActivityPub
       QUERY
     end
 
+    private def activity_count_query(type)
+      query = <<-QUERY
+         SELECT count(o.id)
+           FROM objects AS o
+           JOIN actors AS c
+             ON c.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+          WHERE a.actor_iri = ?
+            AND a.type = '#{type}'
+            #{common_filters_on("o", "c", "a")}
+            AND a.created_at > ?
+      QUERY
+    end
+
+    # Returns the objects that this actor has liked.
+    #
+    # Returns objects in reverse chronological order (most recent
+    # first). Filters out deleted/blocked objects, and objects by
+    # deleted/blocked actors. Also filters out likes that have been
+    # undone.
+    #
     def likes(page = 1, size = 10)
       Object.query_and_paginate(
         activity_query(ActivityPub::Activity::Like),
@@ -267,11 +289,42 @@ module ActivityPub
       )
     end
 
+    # Returns the count of objects that this actor has liked since the
+    # given date.
+    #
+    # See `#likes(page, size)` for further details.
+    #
+    def likes(since : Time)
+      Object.scalar(
+        activity_count_query(ActivityPub::Activity::Like),
+        iri, since
+      ).as(Int64)
+    end
+
+    # Returns the objects that this actor has announced (boosted).
+    #
+    # Returns objects in reverse chronological order (most recent
+    # first). Filters out deleted/blocked objects, and objects by
+    # deleted/blocked actors. Also filters out announces that have
+    # been undone.
+    #
     def announces(page = 1, size = 10)
       Object.query_and_paginate(
         activity_query(ActivityPub::Activity::Announce),
         self.iri, page: page, size: size
       )
+    end
+
+    # Returns the count of objects that this actor has announced
+    # (boosted) since the given date.
+    #
+    # See `#announces(page, size)` for further details.
+    #
+    def announces(since : Time)
+      Object.scalar(
+        activity_count_query(ActivityPub::Activity::Announce),
+        iri, since
+      ).as(Int64)
     end
 
     # Returns the actor's draft posts.

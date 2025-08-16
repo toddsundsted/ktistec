@@ -2163,20 +2163,60 @@ Spectator.describe MCPController do
         end
 
         context "with likes collection" do
-          it "returns error for likes collection" do
-            request = count_likes_since_request("count-likes-1", {"since" => "2024-01-01T00:00:00Z"})
+          let_create!(
+            :like,
+            named: nil,
+            actor: account.actor,
+            created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+          )
+          let_create!(
+            :like,
+            named: nil,
+            actor: account.actor,
+            created_at: Time.utc(2024, 1, 1, 12, 0, 0)
+          )
+
+          it "returns count for likes collection" do
+            request = count_likes_since_request("count-likes-1", {"since" => "2024-01-01T09:00:00Z"})
 
             post "/mcp", authenticated_headers, request
-            expect_mcp_error(-32602, "Counting not supported for likes collection")
+            expect_count_response(2)
+          end
+
+          it "returns count for likes collection" do
+            request = count_likes_since_request("count-likes-2", {"since" => "2024-01-01T11:00:00Z"})
+
+            post "/mcp", authenticated_headers, request
+            expect_count_response(1)
           end
         end
 
         context "with announcements collection" do
-          it "returns error for announcements collection (time-based counting not supported)" do
-            request = count_announcements_since_request("count-announcements-1", {"since" => "2024-01-01T00:00:00Z"})
+          let_create!(
+            :announce,
+            named: nil,
+            actor: account.actor,
+            created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+          )
+          let_create!(
+            :announce,
+            named: nil,
+            actor: account.actor,
+            created_at: Time.utc(2024, 1, 1, 12, 0, 0)
+          )
+
+          it "returns count for announcements collection" do
+            request = count_announcements_since_request("count-announcements-1", {"since" => "2024-01-01T09:00:00Z"})
 
             post "/mcp", authenticated_headers, request
-            expect_mcp_error(-32602, "Counting not supported for announcements collections")
+            expect_count_response(2)
+          end
+
+          it "returns count for announcements collection" do
+            request = count_announcements_since_request("count-announcements-2", {"since" => "2024-01-01T11:00:00Z"})
+
+            post "/mcp", authenticated_headers, request
+            expect_count_response(1)
           end
         end
 

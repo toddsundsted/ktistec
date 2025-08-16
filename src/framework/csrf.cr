@@ -95,6 +95,6 @@ module Ktistec
   end
 
   add_handler CSRF.new(
-    allowed_routes: ["/actors/:username/inbox"]
+    allowed_routes: ["/actors/:username/inbox", "/oauth/token"]
   )
 end

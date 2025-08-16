@@ -26,7 +26,7 @@
     <body class="dimmable">
         <%= render "src/views/partials/modals.html.slang" %>
         <%= render "src/views/partials/header.html.slang" %>
-        <div class="ui text container">
+        <div class="<%= env.request.path.starts_with?("/admin/") ? "ui container" : "ui text container" %>">
             <%= content %>
         </div>
         <%= render "src/views/partials/footer.html.slang" %>

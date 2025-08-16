@@ -395,6 +395,16 @@ def account_factory(clazz = Account, actor_iri = nil, actor = false, username = 
   clazz.new(**{actor_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, actor: actor, username: username, password: password, language: language}.merge(options))
 end
 
+# oauth2 factories
+
+def oauth2_provider_client_factory(clazz = OAuth2::Provider::Client, **options)
+  clazz.new(**{client_id: random_string, client_secret: random_string, client_name: random_string, redirect_uris: "https://example.com/callback", scope: "read"}.merge(options))
+end
+
+def oauth2_provider_access_token_factory(clazz = OAuth2::Provider::AccessToken, *, client, account, **options)
+  clazz.new(**{token: "token", client_id: client.id, account_id: account.id, expires_at: Time.utc, scope: "read"}.merge(options))
+end
+
 # Helpers methods for common operations.
 #
 # Use the `put_in_...` methods to add objects to common collections.

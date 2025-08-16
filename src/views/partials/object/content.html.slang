@@ -57,7 +57,8 @@ crystal:
     - if (name = translation.try(&.name).presence || object.name.presence)
       .extra.text
         - if object.external?
-          a href=object.display_link target="_blank" : strong = name
+          a href=object.display_link target="_blank"
+            strong = name
         - else
           strong = name
     - if (summary = translation.try(&.summary).presence || object.summary.presence)

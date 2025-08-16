@@ -1,4 +1,5 @@
 require "../../src/models/task"
+require "../../src/models/task/mixins/singleton"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
@@ -17,6 +18,25 @@ Spectator.describe Task do
       source_iri: "https://test.test/source",
       subject_iri: "https://test.test/subject"
     )
+  end
+
+  describe ".schedule_unless_exists" do
+    class SingletonTask < ::Task
+      include ::Task::Singleton
+
+      def perform
+        # no-op
+      end
+    end
+
+    let(future_time) { 1.day.from_now }
+
+    let!(task) { SingletonTask.instance.assign(next_attempt_at: future_time) }
+
+    it "does not reset next_attempt_at" do
+      SingletonTask.schedule_unless_exists
+      expect(task.reload!.next_attempt_at).to be_close(future_time.to_utc, delta: 1.millisecond)
+    end
   end
 
   describe "#gone?" do

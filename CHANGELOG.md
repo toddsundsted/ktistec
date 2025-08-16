@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.9]
+### Fixed
+- Don't reset `next_attempt_at` in tasks when server restarts.
+- Fix incorrect syntax for inline tags in Slang templates.
+
 ## [v2.4.8]
 ### Added
 - Send "User-Agent" header on outbound HTTP requests.
@@ -365,6 +370,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+[v2.4.9]: https://github.com/toddsundsted/ktistec/compare/9b9e7b1d...198a1578
 [v2.4.8]: https://github.com/toddsundsted/ktistec/compare/3bfb77d0...66f99cb2
 [v2.4.7]: https://github.com/toddsundsted/ktistec/compare/c8a59be3...0261e9d3
 [v2.4.6]: https://github.com/toddsundsted/ktistec/compare/70d67e74...c51a664c

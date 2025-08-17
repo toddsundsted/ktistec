@@ -267,7 +267,7 @@ class MCPController
       JSON::Any.new("timeline"),
       JSON::Any.new("notifications"),
       JSON::Any.new("likes"),
-      JSON::Any.new("announcements"),
+      JSON::Any.new("announces"),
       JSON::Any.new("followers"),
       JSON::Any.new("following"),
     ])
@@ -414,7 +414,7 @@ class MCPController
       actors_data = announces.map do |announce|
         JSON::Any.new({"uri" => JSON::Any.new(mcp_actor_path(announce.actor))})
       end
-      contents["announcements"] = JSON::Any.new({
+      contents["announces"] = JSON::Any.new({
         "count" => JSON::Any.new(announces.size.to_i64),
         "actors" => JSON::Any.new(actors_data)
       })
@@ -807,12 +807,12 @@ class MCPController
           JSON::Any.new(object_contents(liked_object))
         end
         {objects, likes.more?}
-      when "announcements"
-        announcements = actor.announces(page: page, size: size)
-        objects = announcements.map do |announced_object|
+      when "announces"
+        announces = actor.announces(page: page, size: size)
+        objects = announces.map do |announced_object|
           JSON::Any.new(object_contents(announced_object))
         end
-        {objects, announcements.more?}
+        {objects, announces.more?}
       when "followers"
         followers = Relationship::Social::Follow.followers_for(actor.iri, page: page, size: size)
         objects = followers.map do |relationship|
@@ -891,7 +891,7 @@ class MCPController
         actor.drafts(since: since)
       when "likes"
         actor.likes(since: since)
-      when "announcements"
+      when "announces"
         actor.announces(since: since)
       when "followers"
         Relationship::Social::Follow.followers_since(actor.iri, since)

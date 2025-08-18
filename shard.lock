@@ -1,0 +1,58 @@
+version: 2.0
+shards:
+  backtracer:
+    git: https://github.com/sija/backtracer.cr.git
+    version: 1.2.4
+
+  db:
+    git: https://github.com/crystal-lang/crystal-db.git
+    version: 0.13.1
+
+  exception_page:
+    git: https://github.com/crystal-loot/exception_page.git
+    version: 0.4.1
+
+  host_meta:
+    git: https://github.com/toddsundsted/host_meta.git
+    version: 0.2.4
+
+  kemal:
+    git: https://github.com/kemalcr/kemal.git
+    version: 1.5.0
+
+  libxml_ext:
+    git: https://github.com/toddsundsted/libxml_ext.git
+    version: 0.1.2
+
+  markd:
+    git: https://github.com/icyleaf/markd.git
+    version: 0.5.0
+
+  openssl_ext:
+    git: https://github.com/toddsundsted/openssl_ext.git
+    version: 0.1.6
+
+  radix:
+    git: https://github.com/luislavena/radix.git
+    version: 0.4.1
+
+  school:
+    git: https://github.com/toddsundsted/school.git
+    version: 0.2.4
+
+  slang:
+    git: https://github.com/toddsundsted/slang.git
+    version: 2.0.2
+
+  spectator:
+    git: https://gitlab.com/arctic-fox/spectator.git
+    version: 0.12.1
+
+  sqlite3:
+    git: https://github.com/crystal-lang/crystal-sqlite3.git
+    version: 0.21.0
+
+  web_finger:
+    git: https://github.com/toddsundsted/web_finger.git
+    version: 0.2.6
+

@@ -313,7 +313,7 @@ Spectator.describe MCPController do
 
         # supported collections
         collections = data["collections"].as_a.map(&.as_s)
-        expected_collections = ["posts", "drafts", "timeline", "notifications", "likes", "announcements", "followers", "following"]
+        expected_collections = ["posts", "drafts", "timeline", "notifications", "likes", "announces", "followers", "following"]
         expect(collections).to contain_exactly(*expected_collections)
 
         # supported collection formats
@@ -545,7 +545,7 @@ Spectator.describe MCPController do
           expect(json["in_reply_to"]).to eq("ktistec://objects/#{root.id}")
           expect(json["type"]).to eq("Object")
           expect(json["likes"]?).to be_nil
-          expect(json["announcements"]?).to be_nil
+          expect(json["announces"]?).to be_nil
           expect(json["replies"]?).to be_nil
         end
 
@@ -652,11 +652,11 @@ Spectator.describe MCPController do
           end
         end
 
-        context "with an announcement" do
+        context "with an announce" do
           let_create(:actor, named: announcer)
           let_create!(:announce, actor: announcer, object: object)
 
-          it "includes announcements field in object JSON" do
+          it "includes announces field in object JSON" do
             post "/mcp", authenticated_headers, request
             expect(response.status_code).to eq(200)
             parsed = JSON.parse(response.body)
@@ -664,10 +664,10 @@ Spectator.describe MCPController do
             text = parsed["result"]["contents"].as_a.first["text"].as_s
             json = JSON.parse(text)
 
-            announcements = json["announcements"].as_h
-            expect(announcements["count"]).to eq(1)
+            announces = json["announces"].as_h
+            expect(announces["count"]).to eq(1)
 
-            actors = announcements["actors"].as_a
+            actors = announces["actors"].as_a
             expect(actors.size).to eq(1)
             expect(actors.first["uri"]).to eq("ktistec://actors/#{announcer.id}")
           end
@@ -1185,8 +1185,8 @@ Spectator.describe MCPController do
           paginate_request(id, "likes", args)
         end
 
-        def paginate_announcements_request(id, args = {} of String => String | Int32)
-          paginate_request(id, "announcements", args)
+        def paginate_announces_request(id, args = {} of String => String | Int32)
+          paginate_request(id, "announces", args)
         end
 
         def paginate_followers_request(id, args = {} of String => String | Int32)
@@ -1711,18 +1711,18 @@ Spectator.describe MCPController do
           let_create(:object, named: announced_post, attributed_to: account.actor, published: Time.utc)
 
           it "is empty" do
-            request = paginate_announcements_request("paginate-announcements-1")
+            request = paginate_announces_request("paginate-announces-1")
 
             post "/mcp", authenticated_headers, request
             objects = expect_paginated_response(0, false)
             expect(objects).to be_empty
           end
 
-          context "and an announcement" do
+          context "and an announce" do
             let_create!(:announce, named: nil, actor: account.actor, object: announced_post)
 
             it "returns announced objects" do
-              request = paginate_announcements_request("paginate-announcements-2")
+              request = paginate_announces_request("paginate-announces-2")
 
               post "/mcp", authenticated_headers, request
               objects = expect_paginated_response(1, false)
@@ -1741,12 +1741,12 @@ Spectator.describe MCPController do
               let_create(:object, named: post, attributed_to: account.actor)
               let_create!(:announce, named: nil, actor: account.actor, object: post)
 
-              it "supports pagination for announcements collection" do
-                request = paginate_announcements_request("paginate-announcements-3", {"size" => 1})
+              it "supports pagination for announces collection" do
+                request = paginate_announces_request("paginate-announces-3", {"size" => 1})
 
                 post "/mcp", authenticated_headers, request
                 objects = expect_paginated_response(1, true)
-                # returns most recent announcement first
+                # returns most recent announce first
                 object_data = objects.first.as_h
                 expect(object_data["uri"]).to eq("ktistec://objects/#{post.id}")
               end
@@ -1906,8 +1906,8 @@ Spectator.describe MCPController do
           count_since_request(id, "likes", args)
         end
 
-        def count_announcements_since_request(id, args = {} of String => String | Int32)
-          count_since_request(id, "announcements", args)
+        def count_announces_since_request(id, args = {} of String => String | Int32)
+          count_since_request(id, "announces", args)
         end
 
         def count_followers_since_request(id, args = {} of String => String | Int32)
@@ -2191,7 +2191,7 @@ Spectator.describe MCPController do
           end
         end
 
-        context "with announcements collection" do
+        context "with announces collection" do
           let_create!(
             :announce,
             named: nil,
@@ -2205,15 +2205,15 @@ Spectator.describe MCPController do
             created_at: Time.utc(2024, 1, 1, 12, 0, 0)
           )
 
-          it "returns count for announcements collection" do
-            request = count_announcements_since_request("count-announcements-1", {"since" => "2024-01-01T09:00:00Z"})
+          it "returns count for announces collection" do
+            request = count_announces_since_request("count-announces-1", {"since" => "2024-01-01T09:00:00Z"})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(2)
           end
 
-          it "returns count for announcements collection" do
-            request = count_announcements_since_request("count-announcements-2", {"since" => "2024-01-01T11:00:00Z"})
+          it "returns count respecting since timestamp" do
+            request = count_announces_since_request("count-announces-2", {"since" => "2024-01-01T11:00:00Z"})
 
             post "/mcp", authenticated_headers, request
             expect_count_response(1)

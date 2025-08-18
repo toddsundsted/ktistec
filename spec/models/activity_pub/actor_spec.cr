@@ -1223,17 +1223,17 @@ Spectator.describe ActivityPub::Actor do
     context "given a prior create not in timeline" do
       let_create!(:create, actor: actor5, object: object5)
 
-      it "includes announcements by default" do
+      it "includes announces by default" do
         expect(subject.timeline(page: 1, size: 2)).to eq([timeline5, timeline4])
         expect(subject.timeline(since: since)).to eq(5)
       end
 
-      it "includes announcements" do
+      it "includes announces" do
         expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Announce], page: 1, size: 2)).to eq([timeline5, timeline4])
         expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Announce])).to eq(5)
       end
 
-      it "filters out announcements" do
+      it "filters out announces" do
         expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Create], page: 1, size: 2)).to be_empty
         expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create])).to eq(0)
       end

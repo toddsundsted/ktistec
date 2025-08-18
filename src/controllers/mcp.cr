@@ -1240,68 +1240,66 @@ end
 MCPController.def_prompt("whats_new", "What's New Social Media Activity Summary", "Generate Ktistec social media activity summary with workflow instructions") do
   timezone = account.timezone.empty? ? "UTC" : account.timezone
 
-  instructions = [
-    "# Generate a comprehensive \"What's New\" summary for the user by following these steps:",
-    "",
-    "## Step 1: Determine Time Range for Summary",
-    "1. Determine the cutoff time for new data:",
-    "   - **First preference**: Use the date and time from the last summary generated",
-    "   - **Fallback**: Use the evening of the previous day (e.g., yesterday at 6:00 PM in #{timezone})",
-    "   - Convert your chosen cutoff time to RFC 3339 format for API calls",
-    "",
-    "## Step 2: Collect Data",
-    "1. **Count new timeline posts** since the cutoff time:",
-    "   - Call: `count_collection_since(name: \"timeline\", since: \"[cutoff_timestamp]\")`",
-    "   - Record the count for context",
-    "",
-    "2. **Count new notifications** since the cutoff time:",
-    "   - Call: `count_collection_since(name: \"notifications\", since: \"[cutoff_timestamp]\")`",
-    "   - Record the count for context",
-    "",
-    "## Step 3: Fetch Content",
-    "",
-    "1. **Get timeline content details** (if timeline count > 0):",
-    "   - Call: `paginate_collection(name: \"timeline\", page: 1, size: [count])`",
-    "   - Returns object data",
-    "",
-    "2. **Get notification details** (if notifications count > 0):",
-    "   - Call: `paginate_collection(name: \"notifications\", page: 1, size: [count])`",
-    "   - Returns data specific to each type of notification",
-    "",
-    "## Step 4: Output",
-    "Generate summary output in Markdown in this exact format:",
-    "",
-    "```",
-    "# 🌟 What's New",
-    "## Day, Mon DD YYYY • H:MM AM/PM #{timezone}",
-    "",
-    "[Highlights based on any interests the user has expressed]",
-    "[Organized content summaries with emoji headers, attribution, engagement counts]",
-    "[Call to action for any new follow request announcements]",
-    "```",
-    "",
-    "### Formatting Requirements",
-    "  - Group posts by topic/theme",
-    "  - Convert UTC to #{timezone} timezone",
-    "  - Present handles in @username@domain format",
-    "  - Include reply/like/boost/share counts for engagement",
-    "  - Translate non-English posts, but indicate '(translated from [language])'",
-    "  - Render important links",
-    "",
-    "### Error Handling",
-    "  - If MCP tools return 'Unauthorized': Ask the user to reauthorize, do not generate report",
-    "  - If MCP fail: Be clear about what went wrong, do not generate fake data",
-    "",
-    "### Success Criteria",
-    "✓ **Complete ALL tool use before generating summary**",
-    "✓ Use exact header format with current date and time in #{timezone}",
-    "✓ Group similar content together with descriptive emoji headers",
-    "✓ Attribute all content properly using @username@domain format",
-    "",
-    "**Important note:** If the user later asks: \"What's new?\", repeat these steps."
-  ]
+  instructions = <<-INSTRUCTIONS
+  # Generate a comprehensive "What's New" summary for the user by following these steps:
 
-  instructions_text = instructions.join("\n")
+  ## Step 1: Determine Time Range for Summary
+  1. Determine the cutoff time for new data:
+     - **First preference**: Use the date and time from the last summary generated
+     - **Fallback**: Use the evening of the previous day (e.g., yesterday at 6:00 PM in #{timezone})
+     - Convert your chosen cutoff time to RFC 3339 format for API calls
+
+  ## Step 2: Collect Data
+  1. **Count new timeline posts** since the cutoff time:
+     - Call: `count_collection_since(name: "timeline", since: "[cutoff_timestamp]")`
+     - Record the count for context
+
+  2. **Count new notifications** since the cutoff time:
+     - Call: `count_collection_since(name: "notifications", since: "[cutoff_timestamp]")`
+     - Record the count for context
+
+  ## Step 3: Fetch Content
+
+  1. **Get timeline content details** (if timeline count > 0):
+     - Call: `paginate_collection(name: "timeline", page: 1, size: [count])`
+     - Returns object data
+
+  2. **Get notification details** (if notifications count > 0):
+     - Call: `paginate_collection(name: "notifications", page: 1, size: [count])`
+     - Returns data specific to each type of notification
+
+  ## Step 4: Output
+  Generate summary output in Markdown in this exact format:
+
+  ```
+  # 🌟 What's New
+  ## Day, Mon DD YYYY • H:MM AM/PM #{timezone}
+
+  [Highlights based on any interests the user has expressed]
+  [Organized content summaries with emoji headers, attribution, engagement counts]
+  [Call to action for any new follow requests]
+  ```
+
+  ### Formatting Requirements
+    - Group posts by topic/theme
+    - Convert UTC to #{timezone} timezone
+    - Present handles in @username@domain format
+    - Include reply/like/boost/share counts for engagement
+    - Translate non-English posts, but indicate '(translated from [language])'
+    - Render important links
+
+  ### Error Handling
+    - If MCP tools return 'Unauthorized': Ask the user to reauthorize, do not generate report
+    - If MCP fail: Be clear about what went wrong, do not generate fake data
+
+  ### Success Criteria
+  ✓ **Complete ALL tool use before generating summary**
+  ✓ Use exact header format with current date and time in #{timezone}
+  ✓ Group similar content together with descriptive emoji headers
+  ✓ Attribute all content properly using @username@domain format
+
+  **Important note:** If the user later asks: "What's new?", repeat these steps.
+  INSTRUCTIONS
 
   JSON::Any.new({
     "messages" => JSON::Any.new([
@@ -1309,7 +1307,7 @@ MCPController.def_prompt("whats_new", "What's New Social Media Activity Summary"
         "role" => JSON::Any.new("user"),
         "content" => JSON::Any.new({
           "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new(instructions_text)
+          "text" => JSON::Any.new(instructions)
         })
       })
     ])

@@ -133,6 +133,30 @@ class Prompt
     prompts
   end
 
+  # Substitutes variables in templates.
+  #
+  def self.substitute(template : String, arguments : Hash(String, String), context : Hash(String, String)) : String
+    result = template
+
+    # NOTE: use control characters \u0001 and \u0002 as temporary placeholders for escaped delimiters
+    result = result.gsub("\\{{", "\u0001").gsub("\\}}", "\u0002")
+
+    variables = result.scan(/\{\{(\w+)\}\}/).map(&.[1])
+    missing_variables = variables.reject { |var| arguments.has_key?(var) || context.has_key?(var) }
+    unless missing_variables.empty?
+      raise Exception.new("Missing variables: #{missing_variables.join(", ")}")
+    end
+
+    arguments.each do |key, value|
+      result = result.gsub("{{#{key}}}", value)
+    end
+    context.each do |key, value|
+      result = result.gsub("{{#{key}}}", value)
+    end
+
+    result.gsub("\u0001", "{{").gsub("\u0002", "}}")
+  end
+
   private def self.default_prompts_dir : String
     File.join(Dir.current, "etc", "prompts")
   end

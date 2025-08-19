@@ -76,6 +76,52 @@ Spectator.describe Prompt do
     end
   end
 
+  describe ".substitute" do
+    it "raises error for missing variables" do
+      template = "Hello {{unknown}} and {{missing}}"
+      arguments = {} of String => String
+      context = {} of String => String
+
+      expect { Prompt.substitute(template, arguments, context) }.to raise_error(Exception, /unknown, missing/)
+    end
+
+    it "substitutes variables from arguments and context" do
+      template = "Hello {{name}}, you have {{count}} messages in your {{collection}}"
+      arguments = {"name" => "Alice", "count" => "5"}
+      context = {"collection" => "inbox"}
+
+      result = Prompt.substitute(template, arguments, context)
+      expect(result).to eq("Hello Alice, you have 5 messages in your inbox")
+    end
+
+    it "allows arguments to override context variables" do
+      template = "Hello {{name}}"
+      arguments = {"name" => "Alice"}
+      context = {"name" => "Bob"}
+
+      result = Prompt.substitute(template, arguments, context)
+      expect(result).to eq("Hello Alice")
+    end
+
+    it "handles escaped braces" do
+      template = "Use \\{{variable}} for substitution"
+      arguments = {} of String => String
+      context = {} of String => String
+
+      result = Prompt.substitute(template, arguments, context)
+      expect(result).to eq("Use {{variable}} for substitution")
+    end
+
+    it "permits escaped closing braces" do
+      template = "Use \\{{variable\\}} for substitution"
+      arguments = {} of String => String
+      context = {} of String => String
+
+      result = Prompt.substitute(template, arguments, context)
+      expect(result).to eq("Use {{variable}} for substitution")
+    end
+  end
+
   describe ".from_yaml and #to_yaml" do
     it "can deserialize and serialize a prompt" do
       yaml = <<-YAML

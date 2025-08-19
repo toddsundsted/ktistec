@@ -250,7 +250,8 @@ class MCPController
 
     # basic instance information
     contents["version"] = JSON::Any.new(Ktistec::VERSION)
-    contents["host"] = JSON::Any.new(host)
+    contents["host"] = JSON::Any.new(Ktistec.host)
+    contents["site"] = JSON::Any.new(Ktistec.site)
     contents["description"] = JSON::Any.new("Ktistec ActivityPub Server Model Context Protocol (MCP) Interface")
 
     # authenticated user information
@@ -1206,6 +1207,8 @@ class MCPController
     context = {
       "language" => account.language || "",
       "timezone" => account.timezone || "UTC",
+      "host" => Ktistec.host,
+      "site" => Ktistec.site,
     }
 
     messages = [] of JSON::Any

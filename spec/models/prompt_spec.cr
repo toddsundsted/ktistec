@@ -76,6 +76,50 @@ Spectator.describe Prompt do
     end
   end
 
+  describe ".find" do
+    it "raises error for missing prompt" do
+      expect { Prompt.find("missing") }.to raise_error(Exception, /missing/)
+    end
+
+    it "finds prompt by name" do
+      make_prompt("test_prompt")
+
+      prompt = Prompt.find("test_prompt")
+      expect(prompt.name).to eq("test_prompt")
+    end
+
+    it "finds newly created prompts" do
+      Prompt.all
+
+      make_prompt("new_prompt")
+
+      prompt = Prompt.find("new_prompt")
+      expect(prompt.name).to eq("new_prompt")
+    end
+  end
+
+  describe ".find?" do
+    it "returns nil for missing prompt" do
+      expect(Prompt.find?("missing")).to be_nil
+    end
+
+    it "finds prompt by name" do
+      make_prompt("test_prompt")
+
+      prompt = Prompt.find?("test_prompt")
+      expect(prompt.not_nil!.name).to eq("test_prompt")
+    end
+
+    it "finds newly created prompts" do
+      Prompt.all
+
+      make_prompt("new_prompt")
+
+      prompt = Prompt.find?("new_prompt")
+      expect(prompt.not_nil!.name).to eq("new_prompt")
+    end
+  end
+
   describe ".substitute" do
     it "raises error for missing variables" do
       template = "Hello {{unknown}} and {{missing}}"

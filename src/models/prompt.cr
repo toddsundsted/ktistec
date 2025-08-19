@@ -93,6 +93,22 @@ class Prompt
     @@cached_prompts
   end
 
+  # Finds prompt by name.
+  #
+  # Raises exception if not found.
+  #
+  def self.find(name : String) : Prompt
+    all.find { |prompt| prompt.name == name } || raise Exception.new("Prompt not found: #{name}")
+  end
+
+  # Finds prompt by name.
+  #
+  # Returns `nil` if not found.
+  #
+  def self.find?(name : String) : Prompt?
+    all.find { |prompt| prompt.name == name }
+  end
+
   # Gets the latest modification time of all YAML files in the
   # prompts directory.
   #

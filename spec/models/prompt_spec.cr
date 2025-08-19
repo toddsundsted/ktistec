@@ -1,8 +1,81 @@
+require "file_utils"
+
 require "../../src/models/prompt"
 
 require "../spec_helper/base"
 
+class Prompt
+  def self.reset!
+    @@cached_prompts = [] of Prompt
+    @@cache_timestamp = Time::UNIX_EPOCH
+  end
+
+  @@temp_dir = File.join(File.tempname, "prompts", "test")
+
+  # discard private visibility and create temporary directory for testing
+  def self.default_prompts_dir : String
+    Dir.mkdir_p(@@temp_dir) unless Dir.exists?(@@temp_dir)
+    @@temp_dir
+  end
+end
+
 Spectator.describe Prompt do
+  def make_prompt(name)
+    yaml = %Q({name: "#{name}", arguments: [], messages: []})
+    File.write(File.join(Prompt.default_prompts_dir, "#{name}.yml"), yaml)
+  end
+
+  before_each do
+    Prompt.reset!
+  end
+
+  after_each do
+    FileUtils.rm_rf(Prompt.default_prompts_dir)
+  end
+
+  describe ".all" do
+    it "loads prompts" do
+      make_prompt("test_prompt")
+
+      prompts = Prompt.all
+      expect(prompts.size).to eq(1)
+
+      test_prompt = prompts.first
+      expect(test_prompt.name).to eq("test_prompt")
+    end
+
+    it "loads new prompts" do
+      make_prompt("test_prompt")
+
+      prompts = Prompt.all
+      expect(prompts.size).to eq(1)
+
+      make_prompt("new_prompt")
+
+      prompts = Prompt.all
+      expect(prompts.size).to eq(2)
+
+      new_prompt = prompts.last
+      expect(new_prompt.name).to eq("new_prompt")
+    end
+
+    it "caches prompts" do
+      make_prompt("test_prompt")
+
+      first_prompts = Prompt.all
+      second_prompts = Prompt.all
+
+      expect(second_prompts).to be(first_prompts)
+      expect(second_prompts.size).to be(first_prompts.size)
+      expect(second_prompts.last).to be(first_prompts.last)
+    end
+
+    it "handles no prompts" do
+      prompts = Prompt.all
+      expect(prompts.size).to eq(0)
+    end
+  end
+
   describe ".from_yaml and #to_yaml" do
     it "can deserialize and serialize a prompt" do
       yaml = <<-YAML

@@ -5,6 +5,9 @@ require "log"
 #
 class Prompt
   include YAML::Serializable
+  include YAML::Serializable::Strict
+
+  Log = ::Log.for(self)
 
   enum Role
     User
@@ -27,6 +30,7 @@ class Prompt
 
   struct Argument
     include YAML::Serializable
+    include YAML::Serializable::Strict
 
     getter name : String
     getter title : String?
@@ -39,6 +43,7 @@ class Prompt
 
   struct Content
     include YAML::Serializable
+    include YAML::Serializable::Strict
 
     getter type : ContentType
     getter text : String?
@@ -52,6 +57,7 @@ class Prompt
 
   struct Message
     include YAML::Serializable
+    include YAML::Serializable::Strict
 
     getter role : Role
     getter content : Content
@@ -67,5 +73,67 @@ class Prompt
   getter messages : Array(Message)
 
   def initialize(@name : String, @title : String? = nil, @description : String? = nil, @arguments = [] of Argument, @messages = [] of Message)
+  end
+
+  @@cached_prompts : Array(Prompt) = [] of Prompt
+  @@cache_timestamp : Time = Time::UNIX_EPOCH
+
+  # Returns all prompts.
+  #
+  # Load prompts if cache is empty or outdated.
+  #
+  def self.all : Array(Prompt)
+    current_mtime = get_directory_mtime
+
+    if current_mtime && current_mtime > @@cache_timestamp
+      @@cached_prompts = load_prompts
+      @@cache_timestamp = current_mtime
+    end
+
+    @@cached_prompts
+  end
+
+  # Gets the latest modification time of all YAML files in the
+  # prompts directory.
+  #
+  # Returns `nil` if the directory does not exist or is empty.
+  #
+  private def self.get_directory_mtime : Time?
+    prompts_dir = default_prompts_dir
+
+    if Dir.exists?(prompts_dir)
+      Dir.glob(File.join(prompts_dir, "*.yml"))
+        .map { |f| File.info(f).modification_time }
+        .max?
+    end
+  end
+
+  # Loads prompts.
+  #
+  # Returns prompts ordered by file modification time.
+  #
+  private def self.load_prompts : Array(Prompt)
+    prompts_dir = default_prompts_dir
+
+    prompts = [] of Prompt
+
+    if Dir.exists?(prompts_dir)
+      Dir.glob(File.join(prompts_dir, "*.yml"))
+        .sort_by { |f| File.info(f).modification_time }
+        .each do |file_path|
+          begin
+            yaml = File.read(file_path)
+            prompts << Prompt.from_yaml(yaml)
+          rescue ex
+            Log.warn { "Failed to load prompt #{file_path}: #{ex.message}" }
+          end
+      end
+    end
+
+    prompts
+  end
+
+  private def self.default_prompts_dir : String
+    File.join(Dir.current, "etc", "prompts")
   end
 end

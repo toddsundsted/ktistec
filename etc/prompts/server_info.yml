@@ -1,0 +1,40 @@
+# etc/prompts/server_info.yml
+name: "server_info"
+title: "Server Information Summary"
+description: "Provides a comprehensive overview of the Ktistec server instance including version, capabilities, and statistics"
+arguments: []
+messages:
+  - role: "user"
+    content:
+      type: "text"
+      text: |
+        Please read the Ktistec server information for {{site}} and
+        provide a friendly summary for the user.
+
+        First, call: `read_resources(["ktistec://information"])`
+
+        Then, based on the information resource you retrieve, provide
+        a summary that includes:
+
+        ## Server Overview
+        - Server version and build information
+        - Instance name (host name and site name)
+
+        ## Capabilities & Features
+        - Available MCP tools and resources
+        - Supported ActivityPub collections
+        - Any special features
+
+        ## Statistics & Activity
+        - User count and activity metrics
+        - Content statistics (posts, likes, follows, etc.)
+        - Any other relevant usage data
+
+        ## Quick Start
+        - Brief explanation of what users can do with this server
+        - Mention key MCP tools they can use to explore content
+
+        Format your response in a friendly, conversational tone that
+        would be helpful to both new users exploring the server and
+        existing users who want a quick overview of current status and
+        capabilities.

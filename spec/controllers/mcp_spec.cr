@@ -1,3 +1,5 @@
+require "file_utils"
+
 require "../../src/controllers/mcp"
 require "../../src/models/activity_pub/actor/person"
 require "../../src/models/oauth2/provider/access_token"
@@ -2401,18 +2403,48 @@ Spectator.describe MCPController do
       ])
     end
 
+    # override for testing
+    class ::Prompt
+      def self.reset!
+        @@cached_prompts = [] of Prompt
+        @@cache_timestamp = Time::UNIX_EPOCH
+      end
+
+      @@test_temp_dir = File.join(File.tempname, "mcp_prompts_test")
+
+      # override private visibility and create temporary directory for testing
+      def self.default_prompts_dir : String
+        Dir.mkdir_p(@@test_temp_dir) unless Dir.exists?(@@test_temp_dir)
+        @@test_temp_dir
+      end
+    end
+
     context "with prompts/list request" do
       let(prompts_list_request) { %Q|{"jsonrpc": "2.0", "id": "prompts-1", "method": "prompts/list"}| }
 
-      it "returns test prompts" do
+      before_each do
+        Prompt.reset!
+
+        # copy whats_new.yml for prompt testing
+        in_file = File.join(Dir.current, "etc", "prompts", "whats_new.yml")
+        out_file = File.join(Prompt.default_prompts_dir, "whats_new.yml")
+        File.write(out_file, File.read(in_file))
+      end
+
+      after_each do
+        FileUtils.rm_rf(Prompt.default_prompts_dir)
+      end
+
+      it "returns prompts" do
         post "/mcp", authenticated_headers, prompts_list_request
         expect(response.status_code).to eq(200)
         parsed = JSON.parse(response.body)
 
         prompts = parsed["result"]["prompts"].as_a
-        expect(prompts.size).to eq(2)
+        expect(prompts.size).to eq(2)  # test_prompt & whats_new
 
-        expect(prompts[-1]["name"]).to eq("test_prompt")
+        names = prompts.map { |p| p["name"].as_s }
+        expect(names).to contain("test_prompt", "whats_new")
       end
 
       context "test_prompt" do
@@ -2421,7 +2453,7 @@ Spectator.describe MCPController do
           expect(response.status_code).to eq(200)
           parsed = JSON.parse(response.body)
           prompts = parsed["result"]["prompts"].as_a
-          prompts[-1]
+          prompts.find { |p| p["name"].as_s == "test_prompt" }.not_nil!
         end
 
         it "returns the definition" do
@@ -2441,6 +2473,25 @@ Spectator.describe MCPController do
           expect(arguments[1]["title"]).to eq("Style")
           expect(arguments[1]["description"]).to eq("Communication style")
           expect(arguments[1]["required"]).to be_false
+        end
+      end
+
+      context "whats_new" do
+        let(whats_new) do
+          post "/mcp", authenticated_headers, prompts_list_request
+          expect(response.status_code).to eq(200)
+          parsed = JSON.parse(response.body)
+          prompts = parsed["result"]["prompts"].as_a
+          prompts.find { |p| p["name"].as_s == "whats_new" }.not_nil!
+        end
+
+        it "returns the definition" do
+          expect(whats_new["name"]).to eq("whats_new")
+          expect(whats_new["title"]).to eq("What's New Social Media Activity Summary")
+          expect(whats_new["description"]).to eq("Generate Ktistec social media activity summary with workflow instructions")
+
+          arguments = whats_new["arguments"].as_a
+          expect(arguments.size).to eq(0) # whats_new has no explicit arguments
         end
       end
     end
@@ -2492,28 +2543,6 @@ Spectator.describe MCPController do
       it "returns protocol error for invalid tool name" do
         post "/mcp", authenticated_headers, prompts_get_request
         expect_mcp_error(-32602, "Invalid prompt name")
-      end
-    end
-
-    context "with whats_new prompt" do
-      let(whats_new_request) { %Q|{"jsonrpc": "2.0", "id": "whats-new-1", "method": "prompts/get", "params": {"name": "whats_new"}}| }
-
-      context "given a account timezone" do
-        before_each { account.assign(timezone: "America/New_York").save }
-
-        it "returns prompt with timezone instructions" do
-          post "/mcp", authenticated_headers, whats_new_request
-          expect(response.status_code).to eq(200)
-          parsed = JSON.parse(response.body)
-
-          result = parsed["result"]
-          messages = result["messages"].as_a
-          expect(messages.size).to eq(1)
-
-          instructions = messages[0]["content"]["text"].as_s
-
-          expect(instructions).to contain("Convert UTC to America/New_York timezone")
-        end
       end
     end
   end

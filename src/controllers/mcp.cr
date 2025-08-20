@@ -1,22 +1,14 @@
 require "../framework/controller"
-require "../utils/json_rpc"
 require "../models/account"
-require "../models/activity_pub/object"
-require "../models/relationship/social/follow"
-require "../models/tag/hashtag"
-require "../models/tag/mention"
 require "../models/oauth2/provider/access_token"
-require "../models/prompt"
-require "../views/view_helper"
+require "../utils/json_rpc"
 require "../mcp/errors"
 require "../mcp/resources"
 require "../mcp/tools"
 require "../mcp/prompts"
 
-require "markd"
 class MCPController
   include Ktistec::Controller
-  include Ktistec::ViewHelper
 
   Log = ::Log.for("mcp")
 

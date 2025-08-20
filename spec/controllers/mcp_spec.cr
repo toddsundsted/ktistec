@@ -1,12 +1,6 @@
 require "file_utils"
 
 require "../../src/controllers/mcp"
-require "../../src/models/activity_pub/actor/person"
-require "../../src/models/oauth2/provider/access_token"
-require "../../src/models/oauth2/provider/client"
-require "../../src/models/relationship/content/notification/follow/thread"
-require "../../src/models/relationship/content/notification/follow/hashtag"
-require "../../src/models/relationship/content/notification/follow/mention"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"

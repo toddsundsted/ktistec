@@ -66,6 +66,22 @@ class RescheduleTask < Task
   end
 end
 
+class SleepTask < Task
+  @@schedule_but_dont_perform = true
+
+  def initialize(options = Hash(String, String).new)
+    options = {
+      "source_iri" => "https://test.test/source",
+      "subject_iri" => "https://test.test/subject"
+    }.merge(options)
+    super(options)
+  end
+
+  def perform
+    sleep 0.seconds
+  end
+end
+
 Spectator.describe TaskWorker do
   setup_spec
 
@@ -76,32 +92,47 @@ Spectator.describe TaskWorker do
       end
     end
 
+    # the following tests must call `TaskWorker.stop`
+
     it "signals the worker to stop" do
       expect { TaskWorker.stop }.to change { TaskWorker.running? }.from(true).to(false)
     end
-  end
 
-  before_each { FooBarTask.performed.clear }
+    context "given a scheduled task" do
+      let(task) { SleepTask.new.save.schedule }
 
-  macro create_task!(index, next_attempt_at = nil)
-    let!(task{{index}}) do
-      FooBarTask.new(
-        source_iri: "https://test.test/source",
-        subject_iri: "https://test.test/subject",
-        next_attempt_at: {{next_attempt_at}}
-      ).save
+      def spawn_and_sleep
+        spawn { TaskWorker.instance.perform(task) }
+        sleep 0.seconds
+      end
+
+      it "waits for scheduled tasks to complete" do
+        expect { spawn_and_sleep ; TaskWorker.stop }.to change { task.reload!.complete }.from(false).to(true)
+      end
     end
   end
 
-  create_task!(1, Time.utc(2016, 2, 15, 10, 20, 8))
-  create_task!(2, Time.utc(2016, 2, 15, 10, 20, 4))
-  create_task!(3, Time.utc(2016, 2, 15, 10, 20, 6))
-  create_task!(4, Time.utc(2016, 2, 15, 10, 20, 2))
-  create_task!(5)
-
-  let(now) { Time.utc(2016, 2, 15, 10, 20, 7) }
-
   describe "#work" do
+    before_each { FooBarTask.performed.clear }
+
+    macro create_task!(index, next_attempt_at = nil)
+      let!(task{{index}}) do
+        FooBarTask.new(
+          source_iri: "https://test.test/source",
+          subject_iri: "https://test.test/subject",
+          next_attempt_at: {{next_attempt_at}}
+        ).save
+      end
+    end
+
+    create_task!(1, Time.utc(2016, 2, 15, 10, 20, 8))
+    create_task!(2, Time.utc(2016, 2, 15, 10, 20, 4))
+    create_task!(3, Time.utc(2016, 2, 15, 10, 20, 6))
+    create_task!(4, Time.utc(2016, 2, 15, 10, 20, 2))
+    create_task!(5)
+
+    let(now) { Time.utc(2016, 2, 15, 10, 20, 7) }
+
     it "calls perform on all scheduled tasks" do
       described_class.new.work(now)
       expect(FooBarTask.performed).to eq([task5.id, task4.id, task2.id, task3.id])

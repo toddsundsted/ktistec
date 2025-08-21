@@ -5,6 +5,8 @@ class TaskWorker
 
   @@channel = Channel(Task).new
 
+  @@performing_tasks = 0
+
   class_getter? running : Bool = false
 
   def self.start
@@ -43,6 +45,11 @@ class TaskWorker
 
   def self.stop
     @@running = false
+    60.times do
+      break unless @@performing_tasks > 0
+      Log.info { "Waiting for #{@@performing_tasks} tasks to complete..." }
+      sleep 1.second
+    end
   end
 
   def self.schedule(task)
@@ -74,12 +81,14 @@ class TaskWorker
   end
 
   private def perform(task)
+    @@performing_tasks += 1
     next_attempt_at = task.next_attempt_at
     task.perform
   rescue ex
     message = ex.message ? "#{ex.class}: #{ex.message}" : ex.class.to_s
     task.backtrace = [message] + ex.backtrace
   ensure
+    @@performing_tasks -= 1
     task.running = false
     task.complete = true unless (task.next_attempt_at != next_attempt_at) || task.backtrace
     task.last_attempt_at = Time.utc

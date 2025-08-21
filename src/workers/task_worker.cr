@@ -5,12 +5,16 @@ class TaskWorker
 
   @@channel = Channel(Task).new
 
+  class_getter? running : Bool = false
+
   def self.start
+    @@running = true
     yield
     self.new.tap do |worker|
       spawn do
         Fiber.current.name = "TaskWorker"
         loop do
+          break unless @@running
           # try to keep the task worker alive in the face of critical,
           # but possibly transient, problems affecting the database --
           # in particular, insufficient disk space and locking. if
@@ -35,6 +39,10 @@ class TaskWorker
         end
       end
     end
+  end
+
+  def self.stop
+    @@running = false
   end
 
   def self.schedule(task)

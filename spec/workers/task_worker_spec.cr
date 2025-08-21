@@ -69,6 +69,18 @@ end
 Spectator.describe TaskWorker do
   setup_spec
 
+  describe ".stop" do
+    before_each do
+      TaskWorker.start do
+        # no-op
+      end
+    end
+
+    it "signals the worker to stop" do
+      expect { TaskWorker.stop }.to change { TaskWorker.running? }.from(true).to(false)
+    end
+  end
+
   before_each { FooBarTask.performed.clear }
 
   macro create_task!(index, next_attempt_at = nil)

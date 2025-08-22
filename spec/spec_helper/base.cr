@@ -94,9 +94,25 @@ module ViewHelper
   end
 end
 
+# NOTE: when testing, avoid managing concurrency by calling `perform`
+# immediately after `schedule`. the task worker doesn't run during
+# testing, so use task worker `perform` to mimic its behavior.
+
+class TaskWorker
+  class_property instance : self { self.new }
+
+  def perform(task)
+    previous_def(task)
+  end
+end
+
 class Task
+  class_property schedule_but_dont_perform : Bool = false
+
   def schedule(next_attempt_at = nil)
-    previous_def(next_attempt_at).tap { perform } # always perform when testing
+    previous_def(next_attempt_at).tap do |task|
+      TaskWorker.instance.perform(task) unless task.class.schedule_but_dont_perform
+    end
   end
 end
 
@@ -104,6 +120,14 @@ end
 
 module Ktistec
   @@db_uri = "sqlite3://#{File.tempname("ktistec-test", ".db")}"
+
+  class Server
+    class_setter shutting_down
+
+    def self.clear_shutdown!
+      @@shutting_down = false
+    end
+  end
 
   class Settings
     {% for property in PROPERTIES %}

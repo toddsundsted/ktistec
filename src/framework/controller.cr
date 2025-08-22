@@ -171,6 +171,7 @@ module Ktistec
     def_response_helper(unprocessable_entity, "Unprocessable Entity", 422)
     def_response_helper(server_error, "Server Error", 500)
     def_response_helper(bad_gateway, "Bad Gateway", 502)
+    def_response_helper(service_unavailable, "Service Unavailable", 503)
 
     macro created(url, *args, **opts)
       env.response.headers.add("Location", {{url}})

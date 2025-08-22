@@ -48,7 +48,23 @@ Spectator.describe StreamingController do
       sign_in
 
       it "returns 404 if the object does not exist" do
-        get "/stream/objects/1/thread"
+        get "/stream/objects/999999/thread"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "GET /stream/actors/:id" do
+    it "returns 401 if not authorized" do
+      get "/stream/actors/1"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if the actor does not exist" do
+        get "/stream/actors/999999"
         expect(response.status_code).to eq(404)
       end
     end

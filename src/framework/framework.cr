@@ -201,14 +201,33 @@ module Ktistec
   #     end
   #
   class Server
+    class_getter? shutting_down : Bool = false
+
     def self.run
       log_levels = LogLevel.all_as_hash
       ::Log.setup log_levels.transform_values(&.severity)
+
       with new yield
+
+      unless Kemal.config.env == "test"
+        Signal::INT.trap { shutdown }
+        Signal::TERM.trap { shutdown }
+      end
+
       Kemal.config.app_name = "Ktistec"
+
       # work around Kemal's handling of the command line when running specs...
       argv = (Kemal.config.env == "test") ? typeof(ARGV).new : ARGV
-      Kemal.run argv
+      Kemal.run(argv, trap_signal: false)
+    end
+
+    def self.shutdown
+      return if @@shutting_down
+      @@shutting_down = true
+      TaskWorker.stop
+      unless Kemal.config.env == "test"
+        exit(0)
+      end
     end
   end
 

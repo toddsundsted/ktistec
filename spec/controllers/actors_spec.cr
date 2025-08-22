@@ -732,7 +732,7 @@ Spectator.describe ActorsController do
 
       it "schedules the refresh task" do
         expect{post "/remote/actors/#{actor.id}/refresh"}.
-          to change{Task::RefreshActor.exists?(actor.iri)}
+          to change{Task::RefreshActor.find?(actor: actor)}
       end
 
       it "renders a turbo stream replace message" do

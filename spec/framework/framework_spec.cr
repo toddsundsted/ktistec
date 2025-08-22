@@ -152,6 +152,20 @@ Spectator.describe Ktistec::Settings do
   end
 end
 
+Spectator.describe Ktistec::Server do
+  setup_spec
+
+  after_each do
+    Ktistec::Server.clear_shutdown!
+  end
+
+  describe ".shutdown" do
+    it "returns true" do
+      expect { Ktistec::Server.shutdown }.to change { Ktistec::Server.shutting_down? }.from(false).to(true)
+    end
+  end
+end
+
 Spectator.describe Ktistec do
   describe "::VERSION" do
     it "should return the version" do

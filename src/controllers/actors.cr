@@ -145,6 +145,18 @@ class ActorsController
       Task::RefreshActor.new(source: env.account.actor, actor: actor).schedule
     end
 
-    ok
+    if accepts_turbo_stream?
+      id = "actor-#{actor.id}-refresh-button"
+      env.response.content_type = "text/vnd.turbo-stream.html"
+      String.build do |str|
+        str << %(<turbo-stream action="replace" target="#{id}">)
+        str << %(<template>)
+        str << %(<button class="ui button disabled"><i class="sync loading icon"></i> Refresh</button>)
+        str << %(</template>)
+        str << %(</turbo-stream>)
+      end
+    else
+      ok
+    end
   end
 end

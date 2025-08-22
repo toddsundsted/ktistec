@@ -869,6 +869,10 @@ module Ktistec::ViewHelper
     "#{Ktistec::ViewHelper.remote_actor_path({{actor}})}/unblock"
   end
 
+  macro refresh_remote_actor_path(actor = nil)
+    "#{Ktistec::ViewHelper.remote_actor_path({{actor}})}/refresh"
+  end
+
   macro actor_relationships_path(actor = nil, relationship = nil)
     {% if relationship %}
       "#{Ktistec::ViewHelper.actor_path({{actor}})}/#{{{relationship}}}"

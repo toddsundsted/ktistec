@@ -421,6 +421,10 @@ Spectator.describe "partials" do
         expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
       end
 
+      it "renders a button to refresh" do
+        expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Refresh")
+      end
+
       context "and actor is down" do
         before_each { actor.down! }
 

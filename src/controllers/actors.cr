@@ -105,7 +105,7 @@ class ActorsController
 
     drafts = account.actor.drafts(**pagination_params(env))
 
-    ok "objects/index", env: env, drafts: drafts ### wow, should this be called drafts instead of objects?
+    ok "objects/index", env: env, drafts: drafts
   end
 
   get "/remote/actors/:id" do |env|

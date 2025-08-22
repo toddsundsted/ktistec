@@ -200,6 +200,10 @@ module Utils::Paths
     "#{Utils::Paths.remote_actor_path({{actor}})}/unblock"
   end
 
+  macro refresh_remote_actor_path(actor = nil)
+    "#{Utils::Paths.remote_actor_path({{actor}})}/refresh"
+  end
+
   macro actor_relationships_path(actor = nil, relationship = nil)
     {% if relationship %}
       "#{Utils::Paths.actor_path({{actor}})}/#{{{relationship}}}"

@@ -734,6 +734,16 @@ Spectator.describe ActorsController do
         expect{post "/remote/actors/#{actor.id}/refresh"}.
           to change{Task::RefreshActor.exists?(actor.iri)}
       end
+
+      it "renders a turbo stream replace message" do
+        post "/remote/actors/#{actor.id}/refresh", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
+        expect(XML.parse_html(response.body).xpath_nodes("//turbo-stream[@action='replace']/@target")).to contain_exactly("actor-#{actor.id}-refresh-button")
+      end
+
+      it "it succeeds" do
+        post "/remote/actors/#{actor.id}/refresh"
+        expect(response.status_code).to eq(200)
+      end
     end
   end
 end

@@ -121,6 +121,12 @@ end
 module Ktistec
   @@db_uri = "sqlite3://#{File.tempname("ktistec-test", ".db")}"
 
+  class Server
+    def self.clear_shutdown!
+      @@shutting_down = false
+    end
+  end
+
   class Settings
     {% for property in PROPERTIES %}
       def clear_{{property.id}}

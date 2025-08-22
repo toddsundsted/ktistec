@@ -9,6 +9,10 @@ require "../spec_helper/network"
 Spectator.describe RelationshipsController do
   setup_spec
 
+  after_each do
+    Ktistec::Server.clear_shutdown!
+  end
+
   describe "POST /actors/:username/inbox" do
     let!(actor) { register.actor }
 
@@ -23,6 +27,12 @@ Spectator.describe RelationshipsController do
     it "returns 404 if account not found" do
       post "/actors/0/inbox", headers
       expect(response.status_code).to eq(404)
+    end
+
+    it "returns 503 if the server is shutting down" do
+      Ktistec::Server.shutting_down = true
+      post "/actors/#{actor.username}/inbox", headers, ""
+      expect(response.status_code).to eq(503)
     end
 
     it "returns 400 if activity is blank" do

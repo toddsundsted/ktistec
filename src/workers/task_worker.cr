@@ -1,6 +1,13 @@
 require "../models/task"
 
 class TaskWorker
+  # Raised by tasks to signal to the task worker that they are
+  # voluntarily terminating execution and should be rescheduled after
+  # the server restarts.
+  #
+  class ServerShutdownException < Exception
+  end
+
   Log = ::Log.for(self)
 
   @@channel = Channel(Task).new
@@ -84,6 +91,8 @@ class TaskWorker
     @@performing_tasks += 1
     next_attempt_at = task.next_attempt_at
     task.perform
+  rescue ServerShutdownException
+    # no-op
   rescue ex
     message = ex.message ? "#{ex.class}: #{ex.message}" : ex.class.to_s
     task.backtrace = [message] + ex.backtrace

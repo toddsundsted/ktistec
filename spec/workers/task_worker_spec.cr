@@ -11,6 +11,16 @@ class TaskWorker
   end
 end
 
+class BaseTask < Task
+  def initialize(options = Hash(String, String).new)
+    options = {
+      "source_iri" => "https://test.test/#{random_string}",
+      "subject_iri" => "https://test.test/#{random_string}"
+    }.merge(options)
+    super(options)
+  end
+end
+
 class FooBarTask < Task
   class_property performed = [] of Int64
 
@@ -19,15 +29,7 @@ class FooBarTask < Task
   end
 end
 
-class DestroyTask < Task
-  def initialize(options = Hash(String, String).new)
-    options = {
-      "source_iri" => "https://test.test/source",
-      "subject_iri" => "https://test.test/subject"
-    }.merge(options)
-    super(options)
-  end
-
+class DestroyTask < BaseTask
   # destroy the saved record, but intentionally do not change the
   # instance, itself.
 
@@ -36,15 +38,7 @@ class DestroyTask < Task
   end
 end
 
-class ExceptionTask < Task
-  def initialize(options = Hash(String, String).new)
-    options = {
-      "source_iri" => "https://test.test/source",
-      "subject_iri" => "https://test.test/subject"
-    }.merge(options)
-    super(options)
-  end
-
+class ExceptionTask < BaseTask
   # raise an exception.
 
   def perform
@@ -52,36 +46,26 @@ class ExceptionTask < Task
   end
 end
 
-class ServerShutdownExceptionTask < ExceptionTask
+class ServerShutdownExceptionTask < BaseTask
+  # raise a server shutdown exception.
+
   def perform
     raise TaskWorker::ServerShutdownException.new
   end
 end
 
-class RescheduleTask < Task
-  def initialize(options = Hash(String, String).new)
-    options = {
-      "source_iri" => "https://test.test/source",
-      "subject_iri" => "https://test.test/subject"
-    }.merge(options)
-    super(options)
-  end
+class RescheduleTask < BaseTask
+  # reschedule the task.
 
   def perform
     self.next_attempt_at = Time.utc + 10.seconds
   end
 end
 
-class SleepTask < Task
+class SleepTask < BaseTask
   @@schedule_but_dont_perform = true
 
-  def initialize(options = Hash(String, String).new)
-    options = {
-      "source_iri" => "https://test.test/source",
-      "subject_iri" => "https://test.test/subject"
-    }.merge(options)
-    super(options)
-  end
+  # sleep for a short time.
 
   def perform
     sleep 0.seconds
@@ -131,13 +115,13 @@ Spectator.describe TaskWorker do
       end
     end
 
-    create_task!(1, Time.utc(2016, 2, 15, 10, 20, 8))
-    create_task!(2, Time.utc(2016, 2, 15, 10, 20, 4))
-    create_task!(3, Time.utc(2016, 2, 15, 10, 20, 6))
-    create_task!(4, Time.utc(2016, 2, 15, 10, 20, 2))
-    create_task!(5)
-
     let(now) { Time.utc(2016, 2, 15, 10, 20, 7) }
+
+    create_task!(1, now + 1.second)
+    create_task!(2, now - 3.seconds)
+    create_task!(3, now - 1.second)
+    create_task!(4, now - 5.seconds)
+    create_task!(5)
 
     it "calls perform on all scheduled tasks" do
       described_class.new.work(now)
@@ -172,18 +156,18 @@ Spectator.describe TaskWorker do
       expect(task5.reload!.complete).to be_true
     end
 
-    it "sets complete to true unless task wasn't scheduled" do
+    it "leaves complete as false if task wasn't scheduled" do
       described_class.new.work(now)
       expect(task1.reload!.complete).to be_false
     end
 
-    it "sets complete to true unless task throws an uncaught exception" do
+    it "leaves complete as false if task throws an uncaught exception" do
       task = ExceptionTask.new.save
       described_class.new.work(now)
       expect(task.reload!.complete).to be_false
     end
 
-    it "sets complete to true unless task is rescheduled" do
+    it "leaves complete as false if task is rescheduled" do
       task = RescheduleTask.new.save
       described_class.new.work(now)
       expect(task.reload!.complete).to be_false

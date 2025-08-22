@@ -52,6 +52,12 @@ class ExceptionTask < Task
   end
 end
 
+class ServerShutdownExceptionTask < ExceptionTask
+  def perform
+    raise TaskWorker::ServerShutdownException.new
+  end
+end
+
 class RescheduleTask < Task
   def initialize(options = Hash(String, String).new)
     options = {
@@ -153,6 +159,12 @@ Spectator.describe TaskWorker do
       task = ExceptionTask.new.save
       described_class.new.work(now)
       expect(task.reload!.backtrace.not_nil!).to have(/Nil assertion failed/)
+    end
+
+    it "does not store the backtrace when task throws a server shutdown exception" do
+      task = ServerShutdownExceptionTask.new.save
+      described_class.new.work(now)
+      expect(task.reload!.backtrace).to be_nil
     end
 
     it "sets complete to true" do

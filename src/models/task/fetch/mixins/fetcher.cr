@@ -19,6 +19,9 @@ class Task
     # Saves/caches fetched objects.
     #
     private def find_or_fetch_object(iri, *, include_deleted = false, include_blocked = false)
+      if Ktistec::Server.shutting_down?
+        raise TaskWorker::ServerShutdownException.new
+      end
       fetched = false
       if (object = check_object(iri))
         if (object.deleted? && !include_deleted) || (object.blocked? && !include_blocked)

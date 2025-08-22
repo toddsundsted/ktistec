@@ -228,7 +228,7 @@ module Ktistec::ViewHelper
 
   # General purpose form-powered button.
   #
-  macro form_button(arg1, action = nil, method = "POST", form_class = "ui inline form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
+  macro form_button(arg1, action = nil, method = "POST", form_id = nil, form_class = "ui inline form", button_id = nil, button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
     {% if block %}
       {% action = arg1 %}
       %block =
@@ -250,6 +250,9 @@ module Ktistec::ViewHelper
       %csrf = ""
     {% end %}
     %form_attrs = [
+      {% if form_id %}
+        %Q|id="#{{{form_id}}}"|,
+      {% end %}
       %Q|class="#{{{form_class}}}"|,
       %Q|action="#{{{action}}}"|,
       %Q|method="#{{{method}}}"|,
@@ -260,6 +263,9 @@ module Ktistec::ViewHelper
       {% end %}
     ]
     %button_attrs = [
+      {% if button_id %}
+        %Q|id="#{{{button_id}}}"|,
+      {% end %}
       %Q|class="#{{{button_class}}}"|,
       {% if button_data %}
         {% for key, value in button_data %}

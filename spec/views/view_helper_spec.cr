@@ -302,7 +302,7 @@ Spectator.describe "helpers" do
 
   describe "form_button" do
     subject do
-      XML.parse_html(form_button("/foobar", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }, PARSER_OPTIONS).document
+      XML.parse_html(form_button("/foobar", method: "PUT", form_id: "woof", form_class: "blarg", button_id: "beep", button_class: "honk", csrf: "CSRF") { "<div/>" }, PARSER_OPTIONS).document
     end
 
     it "emits a form with nested content" do
@@ -321,8 +321,16 @@ Spectator.describe "helpers" do
       expect(subject.xpath_nodes("/form/@method")).to contain_exactly("PUT")
     end
 
+    it "specifies the form id " do
+      expect(subject.xpath_nodes("/form/@id")).to contain_exactly("woof")
+    end
+
     it "specifies the form class" do
       expect(subject.xpath_nodes("/form/@class")).to contain_exactly("blarg")
+    end
+
+    it "specifies the button id" do
+      expect(subject.xpath_nodes("/form/button/@id")).to contain_exactly("beep")
     end
 
     it "specifies the button class" do

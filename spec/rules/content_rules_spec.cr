@@ -39,6 +39,7 @@ Spectator.describe ContentRules do
   let_build(:actor, named: other)
   let_build(:object, attributed_to: other)
   let_create(:create, actor: other, object: object)
+  let_create(:update, actor: other, object: object)
   let_create(:announce, actor: other, object: object)
   let_create(:like, actor: other, object: object)
   let_create(:follow, actor: other, object: owner)
@@ -193,11 +194,21 @@ Spectator.describe ContentRules do
           expect(owner.notifications.map(&.object_or_activity)).to have(object)
         end
 
+        it "adds the object to the notifications" do
+          run(owner, update)
+          expect(owner.notifications.map(&.object_or_activity)).to have(object)
+        end
+
         context "and is attributed to the owner" do
           before_each { object.assign(attributed_to: owner) }
 
           it "does not add the object to the notifications" do
             run(owner, create)
+            expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
+          end
+
+          it "does not add the object to the notifications" do
+            run(owner, update)
             expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
           end
         end
@@ -239,11 +250,21 @@ Spectator.describe ContentRules do
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
 
+        it "adds the object to the notifications" do
+          run(owner, update)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
         context "and is attributed to the owner" do
           before_each { object.assign(attributed_to: owner) }
 
           it "does not add the object to the notifications" do
             run(owner, create)
+            expect(owner.notifications.map(&.object_or_activity)).to be_empty
+          end
+
+          it "does not add the object to the notifications" do
+            run(owner, update)
             expect(owner.notifications.map(&.object_or_activity)).to be_empty
           end
         end
@@ -701,7 +722,7 @@ Spectator.describe ContentRules do
       end
     end
 
-    context "given notifications with mention already added" do
+    context "given notifications with mention added via create" do
       before_each do
         put_in_notifications(owner, mention: create)
       end
@@ -737,7 +758,29 @@ Spectator.describe ContentRules do
       end
     end
 
-    context "given notifications with reply already added" do
+    context "given notifications with mention added via update" do
+      before_each do
+        put_in_notifications(owner, mention: update)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+
+      it "removes the mention from the notifications" do
+        run(owner, delete)
+        expect(Notification.where(from_iri: owner.iri)).to be_empty
+      end
+
+      context "and an unrelated delete" do
+        let_create(:delete, named: unrelated)
+
+        it "does not remove the mention from the notifications" do
+          run(owner, unrelated)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+      end
+    end
+
+    context "given notifications with reply added via create" do
       before_each do
         put_in_notifications(owner, reply: create)
       end
@@ -768,6 +811,28 @@ Spectator.describe ContentRules do
 
         it "does not remove the reply from the notifications" do
           run(owner, undo)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+      end
+    end
+
+    context "given notifications with reply added via update" do
+      before_each do
+        put_in_notifications(owner, reply: update)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+
+      it "removes the reply from the notifications" do
+        run(owner, delete)
+        expect(Notification.where(from_iri: owner.iri)).to be_empty
+      end
+
+      context "and an unrelated delete" do
+        let_create(:delete, named: unrelated)
+
+        it "does not remove the reply from the notifications" do
+          run(owner, unrelated)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
       end

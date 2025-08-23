@@ -119,13 +119,13 @@ Spectator.describe ActorsController do
         end
       end
     end
-  end
 
-  describe "filter preferences" do
-    it "does not store filter preferences" do
-      get "/actors/#{actor.username}?filters=custom-filter", ACCEPT_HTML
-      expect(response.status_code).to eq(200)
-      expect(Global.session).to be_nil
+    describe "filter preferences" do
+      it "does not store filter preferences" do
+        get "/actors/#{actor.username}?filters=custom-filter", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+        expect(Global.session).to be_nil
+      end
     end
   end
 

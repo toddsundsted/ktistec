@@ -1383,5 +1383,33 @@ Spectator.describe ActivityPub::Actor do
       expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar").handle).to eq("foobar@test.test")
       expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar").handle).to eq("foobar@remote")
     end
+
+    it "returns '[blocked]' when actor is blocked" do
+      expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar", blocked_at: Time.utc).handle).to eq("[blocked]")
+      expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar", blocked_at: Time.utc).handle).to eq("[blocked]")
+    end
+  end
+
+  describe "#display_name" do
+    let_build(:actor, name: "John Doe", username: "john")
+
+    it "returns name when available" do
+      expect(actor.display_name).to eq("John Doe")
+    end
+
+    it "returns username when name is blank" do
+      actor.name = nil
+      expect(actor.display_name).to eq("john")
+    end
+
+    it "returns iri when name and username are blank" do
+      actor.name = actor.username = nil
+      expect(actor.display_name).to eq(actor.iri)
+    end
+
+    it "returns '[blocked]' when actor is blocked" do
+      actor.block!
+      expect(actor.display_name).to eq("[blocked]")
+    end
   end
 end

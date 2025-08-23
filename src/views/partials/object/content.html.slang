@@ -121,25 +121,22 @@ crystal:
   .meta
     - if account && object.deleted?
       - if object.cached?
-        a.source target="_blank" href=object.display_link
-          button.ui.mini.iconic.button
-            i.external.arrow.icon
-            | Source
+        a.ui.mini.iconic.button.source target="_blank" href=object.display_link
+          i.external.arrow.icon
+          | Source
     - elsif account && object.blocked?
       == form_button unblock_object_path(object), button_class: "ui button mini iconic" do
         i.times.icon
         | Unblock
       - if object.cached?
-        a.source target="_blank" href=object.display_link
-          button.ui.mini.iconic.button
-            i.external.arrow.icon
-            | Source
+        a.ui.mini.iconic.button.source target="_blank" href=object.display_link
+          i.external.arrow.icon
+          | Source
     - elsif account && (author.blocked? || actor.blocked?)
       - if object.cached?
-        a.source target="_blank" href=object.display_link
-          button.ui.mini.iconic.button
-            i.external.arrow.icon
-            | Source
+        a.ui.mini.iconic.button.source target="_blank" href=object.display_link
+          i.external.arrow.icon
+          | Source
     - elsif account && object.draft?
       a data-turbo-frame="_top" href=edit_object_path(object)
         button.ui.mini.iconic.button
@@ -212,10 +209,9 @@ crystal:
           i.times.icon
           | Block
       - if object.cached?
-        a.source target="_blank" href=object.display_link
-          button.ui.mini.iconic.button
-            i.external.arrow.icon
-            | Source
+        a.ui.mini.iconic.button.source target="_blank" href=object.display_link
+          i.external.arrow.icon
+          | Source
     - elsif object.local?
       - object.with_statistics!.with_replies_count!(approved_by: object.attributed_to)
       - if (c = object.replies_count) > 0 || object.in_reply_to?.try(&.approved_by?(object.attributed_to))

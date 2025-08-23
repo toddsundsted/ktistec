@@ -179,6 +179,7 @@ class Task
         end
       count = 0
       start = Time.monotonic
+      shutting_down = false
       begin
         maximum.times do
           # It's possible to have two tasks following two parts of a
@@ -204,6 +205,9 @@ class Task
           Ktistec::Topic{thread}.notify_subscribers(object.id.to_s)
           count += 1
         end
+      rescue ex : TaskWorker::ServerShutdownException
+        shutting_down = true
+        raise ex
       ensure
         duration = (Time.monotonic - start).total_seconds
         duration = sprintf("%.3f", duration)
@@ -212,6 +216,8 @@ class Task
           # ensure that when this instance is eventually saved, it too
           # is set as complete.
           self.complete = true
+        elsif shutting_down
+          Log.debug { "perform [#{id}] - server shutting down! - #{duration} seconds, #{count} fetched" }
         else
           Log.debug { "perform [#{id}] - complete - #{duration} seconds, #{count} fetched" }
         end

@@ -96,14 +96,30 @@ addEventListener("turbo:before-morph-element", (event) => {
 // them, which ensures they are recreated when the page refreshes.
 
 // to prevent the monitor from spamming the server during maintenance
-// or other downtime events, delay the start of the check for 60
+// or other downtime events, delay the start of the check for 6 * 10
 // seconds. then check every 10 seconds. after refreshing the page,
-// again delay the start of the check for 60 seconds. note that this
-// code will not be reloaded if the page is refreshed.
+// again delay the start of the check for 6 * 10 seconds. note that
+// this code will not be reloaded if the page is refreshed.
 
 ;(function () {
   let counter = 0
   let closed = false
+  let checking = false
+
+  function checkConnectivity(callback) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+    fetch(window.location.origin, { method: 'HEAD', cache: 'no-store', signal: controller.signal })
+      .then(response => {
+        clearTimeout(timeoutId)
+        callback(response.status >= 200)
+      })
+      .catch(error => {
+        clearTimeout(timeoutId)
+        callback(false)
+      })
+  }
 
   setInterval(function () {
     counter = counter + 1
@@ -113,11 +129,21 @@ addEventListener("turbo:before-morph-element", (event) => {
         closed = true
       }
     })
-    if (counter > 5 && closed) {
-      console.log("counter", counter, "closed", closed, "|", "refreshing", window.location.href)
-      session.refresh(window.location.href)
-      counter = 0
-      closed = false
+
+    if (counter > 5 && closed && !checking) {
+      checking = true
+      checkConnectivity(function (isOnline) {
+        if (isOnline) {
+          console.debug("counter", counter, "closed", closed, "|", "refreshing", window.location.href)
+          session.refresh(window.location.href)
+          counter = 0
+          closed = false
+          checking = false
+        } else {
+          console.debug("counter", counter, "closed", closed, "|", "server unreachable, waiting to refresh", window.location.href)
+          checking = false
+        }
+      })
     }
   }, 10000)
 })()

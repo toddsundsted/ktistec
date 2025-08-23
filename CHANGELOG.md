@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.10]
+### Added
+- Support manually refreshing actor information. (fixes [#112](https://github.com/toddsundsted/ktistec/issues/112))
+- Add link to log level settings to the navigation bar.
+
+### Fixed
+- Allow source links to be dragged to the address bar. (fixes [#109](https://github.com/toddsundsted/ktistec/issues/109))
+- Fix missing reply/mention notifications for non-create activities.
+- Ensure the network is up before attempting to refresh a page.
+
+### Changed
+- Block actor handle and display name when actor or post is blocked.
+- Gracefully shut down the server.
+
 ## [v2.4.9]
 ### Fixed
 - Don't reset `next_attempt_at` in tasks when server restarts.
@@ -370,6 +384,8 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove the "@" format URL from actor aliases.
 - Remove `prefix` parameter from initialize and assign.
 
+## Footnotes
+[v2.4.10]: https://github.com/toddsundsted/ktistec/compare/d7341dd1...a99a66e2
 [v2.4.9]: https://github.com/toddsundsted/ktistec/compare/9b9e7b1d...198a1578
 [v2.4.8]: https://github.com/toddsundsted/ktistec/compare/3bfb77d0...66f99cb2
 [v2.4.7]: https://github.com/toddsundsted/ktistec/compare/c8a59be3...0261e9d3

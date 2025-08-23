@@ -224,6 +224,11 @@ module Ktistec
     def self.shutdown
       return if @@shutting_down
       @@shutting_down = true
+      Log.info { "#{Kemal.config.app_name} is going to take a rest!" } if Kemal.config.shutdown_message
+      if server = Kemal.config.server
+        server.close unless server.closed?
+        Kemal.config.running = false
+      end
       TaskWorker.stop
       unless Kemal.config.env == "test"
         exit(0)

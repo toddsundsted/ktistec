@@ -78,6 +78,54 @@ Spectator.describe ActorsController do
           expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
         end
       end
+
+      describe "filter preferences" do
+        it "stores filter preferences in session" do
+          get "/actors/#{actor.username}?filters=custom-filter", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(Global.session.not_nil!.string?("timeline_filters")).to eq("custom-filter")
+        end
+
+        it "handles empty filters gracefully" do
+          Global.session.not_nil!.delete("timeline_filters")
+          get "/actors/#{actor.username}", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+        end
+
+        it "handles empty filters gracefully" do
+          Global.session.not_nil!.string("timeline_filters", "")
+          get "/actors/#{actor.username}", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+        end
+
+        it "uses stored filters and redirects" do
+          Global.session.not_nil!.string("timeline_filters", "custom-filter")
+          get "/actors/#{actor.username}", ACCEPT_HTML
+          expect(response.status_code).to eq(302)
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}?filters=custom-filter")
+        end
+
+        it "removes the query string" do
+          Global.session.not_nil!.string("timeline_filters", "custom-filter")
+          get "/actors/#{actor.username}?filters=", ACCEPT_HTML
+          expect(response.status_code).to eq(302)
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}")
+        end
+
+        it "clears stored filters" do
+          Global.session.not_nil!.string("timeline_filters", "custom-filter")
+          get "/actors/#{actor.username}?filters=", ACCEPT_HTML
+          expect(Global.session.not_nil!.string?("timeline_filters")).to be_nil
+        end
+      end
+    end
+  end
+
+  describe "filter preferences" do
+    it "does not store filter preferences" do
+      get "/actors/#{actor.username}?filters=custom-filter", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      expect(Global.session).to be_nil
     end
   end
 

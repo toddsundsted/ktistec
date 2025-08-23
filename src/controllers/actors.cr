@@ -21,6 +21,25 @@ class ActorsController
 
     actor = account.actor
 
+    if env.account?
+      if env.params.query.has_key?("filters")
+        filters = env.params.query.fetch_all("filters").reject(&.empty?)
+        if filters.any?
+          env.session.string("timeline_filters", filters.join(","))
+        else
+          env.session.delete("timeline_filters")
+          redirect "/actors/#{username}"
+        end
+      else
+        if filters = env.session.string?("timeline_filters")
+          unless filters.empty?
+            query_string = %Q|filters=#{filters.split(",").join("&filters=")}|
+            redirect "/actors/#{username}?#{query_string}"
+          end
+        end
+      end
+    end
+
     ok "actors/actor", env: env, actor: actor
   end
 

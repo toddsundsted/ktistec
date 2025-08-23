@@ -1,16 +1,29 @@
 require "../models/task"
 
 class TaskWorker
+  # Raised by tasks to signal to the task worker that they are
+  # voluntarily terminating execution and should be rescheduled after
+  # the server restarts.
+  #
+  class ServerShutdownException < Exception
+  end
+
   Log = ::Log.for(self)
 
   @@channel = Channel(Task).new
 
+  @@performing_tasks = 0
+
+  class_getter? running : Bool = false
+
   def self.start
+    @@running = true
     yield
     self.new.tap do |worker|
       spawn do
         Fiber.current.name = "TaskWorker"
         loop do
+          break unless @@running
           # try to keep the task worker alive in the face of critical,
           # but possibly transient, problems affecting the database --
           # in particular, insufficient disk space and locking. if
@@ -34,6 +47,15 @@ class TaskWorker
           end
         end
       end
+    end
+  end
+
+  def self.stop
+    @@running = false
+    60.times do
+      break unless @@performing_tasks > 0
+      Log.info { "Waiting for #{@@performing_tasks} tasks to complete..." }
+      sleep 1.second
     end
   end
 
@@ -66,12 +88,16 @@ class TaskWorker
   end
 
   private def perform(task)
+    @@performing_tasks += 1
     next_attempt_at = task.next_attempt_at
     task.perform
+  rescue ServerShutdownException
+    # no-op
   rescue ex
     message = ex.message ? "#{ex.class}: #{ex.message}" : ex.class.to_s
     task.backtrace = [message] + ex.backtrace
   ensure
+    @@performing_tasks -= 1
     task.running = false
     task.complete = true unless (task.next_attempt_at != next_attempt_at) || task.backtrace
     task.last_attempt_at = Time.utc

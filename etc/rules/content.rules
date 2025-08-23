@@ -137,9 +137,9 @@ end
 
 ## Mailbox Notifications
 
-rule "create/reply"
+rule "object activity/reply"
   condition activity, InMailboxOf, actor
-  condition CreateActivity, activity, object: object
+  condition ObjectActivity, activity, object: object
   condition Object, object, attributed_to: not actor
   condition Object, object, in_reply_to: other
   condition Object, other, attributed_to: actor
@@ -151,14 +151,13 @@ end
 rule "delete/reply"
   condition delete, InMailboxOf, actor
   condition DeleteActivity, delete, object: object
-  condition CreateActivity, activity, object: object
   any NotificationReply, owner: actor, object: object
   retract NotificationReply, owner: actor, object: object
 end
 
-rule "create/mention"
+rule "object activity/mention"
   condition activity, InMailboxOf, actor
-  condition CreateActivity, activity, object: object
+  condition ObjectActivity, activity, object: object
   condition Object, object, attributed_to: not actor
   any Mention, mention, subject: object, href: actor.iri
   none NotificationMention, owner: actor, object: object
@@ -169,7 +168,6 @@ end
 rule "delete/mention"
   condition delete, InMailboxOf, actor
   condition DeleteActivity, delete, object: object
-  condition CreateActivity, activity, object: object
   any NotificationMention, owner: actor, object: object
   retract NotificationMention, owner: actor, object: object
 end

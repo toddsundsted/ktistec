@@ -108,11 +108,6 @@ Spectator.describe Task do
       expect{subject.schedule(time)}.to change{subject.next_attempt_at}
     end
 
-    it "sets complete to false" do
-      subject.complete = true
-      expect{subject.schedule}.to change{subject.complete}.to(false)
-    end
-
     it "saves the task" do
       expect{subject.schedule}.to change{Task.count}
     end

@@ -16,6 +16,10 @@ class RelationshipsController
   post "/actors/:username/inbox" do |env|
     request_id = env.request.object_id
 
+    if Ktistec::Server.shutting_down?
+      service_unavailable
+    end
+
     unless (account = get_account(env))
       not_found
     end

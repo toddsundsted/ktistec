@@ -183,6 +183,20 @@ class StreamingController
     end
   end
 
+  get "/stream/actors/:id" do |env|
+    id = env.params.url["id"].to_i64
+    unless (actor = ActivityPub::Actor.find?(id))
+      not_found
+    end
+    setup_response(env.response)
+    subscribe "/actor/refresh" do |subject, value|
+      case subject
+      when "/actor/refresh"
+        stream_refresh(env.response)
+      end
+    end
+  end
+
   get "/stream/actor/homepage" do |env|
     setup_response(env.response)
     if env.request.headers["Last-Event-ID"]? =~ /^(\d+):(\d+)$/ && (seconds = $1.to_i?) && (count = $2.to_i?)

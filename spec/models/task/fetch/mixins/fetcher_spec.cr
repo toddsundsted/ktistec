@@ -290,6 +290,17 @@ Spectator.describe Task::Fetch::Fetcher do
             to be_true
         end
       end
+
+      context "when the server is shutting down" do
+        after_each do
+          Ktistec::Server.clear_shutdown!
+        end
+
+        it "raises an exception" do
+          Ktistec::Server.shutdown
+          expect{ subject.find_or_fetch_object(object.iri).first }.to raise_error(TaskWorker::ServerShutdownException)
+        end
+      end
     end
   end
 

@@ -9,6 +9,10 @@ require "../spec_helper/network"
 Spectator.describe RelationshipsController do
   setup_spec
 
+  after_each do
+    Ktistec::Server.clear_shutdown!
+  end
+
   describe "POST /actors/:username/inbox" do
     let!(actor) { register.actor }
 
@@ -23,6 +27,12 @@ Spectator.describe RelationshipsController do
     it "returns 404 if account not found" do
       post "/actors/0/inbox", headers
       expect(response.status_code).to eq(404)
+    end
+
+    it "returns 503 if the server is shutting down" do
+      Ktistec::Server.shutting_down = true
+      post "/actors/#{actor.username}/inbox", headers, ""
+      expect(response.status_code).to eq(503)
     end
 
     it "returns 400 if activity is blank" do
@@ -636,7 +646,7 @@ Spectator.describe RelationshipsController do
         end
       end
 
-      context "and the object's a reply" do
+      context "and the object's a reply to some object" do
         before_each do
           note.assign(
             in_reply_to: Factory.build(:object)
@@ -647,6 +657,20 @@ Spectator.describe RelationshipsController do
           create.object = note
           expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
             not_to change{Timeline.count(from_iri: actor.iri)}
+        end
+      end
+
+      context "and the object's a reply to the actor's object" do
+        before_each do
+          note.assign(
+            in_reply_to: Factory.create(:object, attributed_to: actor)
+          ).save
+        end
+
+        it "puts the object in the actor's notifications" do
+          create.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+            to change{Notification.count(from_iri: actor.iri)}.by(1)
         end
       end
 
@@ -788,6 +812,30 @@ Spectator.describe RelationshipsController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
           expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "and the object's a reply to the actor's object" do
+        before_each do
+          note.assign(
+            in_reply_to: Factory.create(:object, attributed_to: actor)
+          ).save
+        end
+
+        it "puts the object in the actor's notifications" do
+          update.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
+            to change{Notification.count(from_iri: actor.iri)}.by(1)
+        end
+      end
+
+      context "and object mentions the actor" do
+        let_build(:note, attributed_to: other, mentions: [Factory.build(:mention, name: "local recipient", href: actor.iri)])
+
+        it "puts the activity in the actor's notifications" do
+          update.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
+            to change{Notification.count(from_iri: actor.iri)}.by(1)
         end
       end
     end
@@ -1146,6 +1194,33 @@ Spectator.describe RelationshipsController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the object was a reply to the actor's object" do
+          before_each do
+            note.assign(
+              in_reply_to: Factory.create(:object, attributed_to: actor)
+            ).save
+            Factory.create(:notification_reply, owner: actor, object: note)
+          end
+
+          it "removes the reply notification" do
+            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
+              to change{Notification.count(from_iri: actor.iri)}.by(-1)
+          end
+        end
+
+        context "and the object mentioned the actor" do
+          let_build(:note, attributed_to: other, mentions: [Factory.build(:mention, name: "local recipient", href: actor.iri)])
+
+          before_each do
+            Factory.create(:notification_mention, owner: actor, object: note)
+          end
+
+          it "removes the mention notification" do
+            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
+              to change{Notification.count(from_iri: actor.iri)}.by(-1)
+          end
         end
 
         context "using a tombstone" do

@@ -71,7 +71,8 @@ posts. Draft posts aren't visible until you publish them.
 ### Threaded replies
 
 Threaded replies make it easier to follow discussions with many
-posts.
+posts. To keep the author's first posts together, the author's
+self-replies are prioritized in the thread view.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/eaxx1q.png" width=460>
 
@@ -111,8 +112,10 @@ mnemonics for users (and yourself).
 
 The Fediverse is a distributed social network. You can follow other
 users on other servers from your timeline or by searching for them by
-name. Ktistec is also compatible with the "remote follow" protocol
-used by Mastodon and other servers.
+name. You can also approve or deny follow requests and manually
+refresh an actor's profile directly from their profile page. Ktistec
+is also compatible with the "remote follow" protocol used by Mastodon
+and other servers.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/88hvqq.png" width=460>
 
@@ -140,8 +143,10 @@ timeline and notifications. Filter terms match on the text of a post
 ### Blocking
 
 Ktistec gives you control over what you see. Blocking authors removes
-them and their posts from your timeline. Blocking posts removes
-individual posts.
+them and their posts from your timeline, and obscures their handle and
+display name. Blocking posts removes individual posts. The user
+interface makes it clear when content is unavailable because it has
+been deleted or blocked.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/42fwx6.png" width=460>
 

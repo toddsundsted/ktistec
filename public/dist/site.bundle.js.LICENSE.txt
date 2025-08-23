@@ -1,13 +1,13 @@
 /*!
- * lightgallery | 2.7.2 | September 20th 2023
+ * lightgallery | 2.8.3 | March 1st 2025
  * http://www.lightgalleryjs.com/
  * Copyright (c) 2020 Sachin Neravath;
  * @license GPLv3
  */
 
 /*!
-Turbo 8.0.4
-Copyright © 2024 37signals LLC
+Turbo 8.0.13
+Copyright © 2025 37signals LLC
  */
 
 /*! *****************************************************************************
@@ -24,3 +24,5 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
+
+/*! @license DOMPurify 3.2.5 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.2.5/LICENSE */

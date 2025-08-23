@@ -139,16 +139,16 @@ module ActivityPub
       end
     end
 
+    def handle
+      blocked? ? "[blocked]" : %Q|#{username}@#{URI.parse(iri).host}|
+    end
+
     def display_name
-      name.presence || username.presence || iri
+      blocked? ? "[blocked]" : (name.presence || username.presence || iri)
     end
 
     def display_link
       urls.try(&.first?) || iri
-    end
-
-    def handle
-      %Q|#{username}@#{URI.parse(iri).host}|
     end
 
     def self.match?(account)

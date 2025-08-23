@@ -531,6 +531,20 @@ Spectator.describe ActorsController do
         get "/actors/#{actor.username}/timeline", ACCEPT_JSON
         expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
       end
+
+      describe "turbo-stream-source pagination" do
+        it "includes turbo-stream-source on first page" do
+          get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).to contain("turbo-stream-source")
+        end
+
+        it "excludes turbo-stream-source on subsequent pages" do
+          get "/actors/#{actor.username}/timeline?page=2", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).to_not contain("turbo-stream-source")
+        end
+      end
     end
   end
 

@@ -421,11 +421,11 @@ def put_in_outbox(owner : ActivityPub::Actor, object : ActivityPub::Object)
   Factory.create(:outbox_relationship, owner: owner, activity: activity)
 end
 
-def put_in_notifications(owner : ActivityPub::Actor, *, mention : ActivityPub::Activity::Create)
+def put_in_notifications(owner : ActivityPub::Actor, *, mention : ActivityPub::Activity::ObjectActivity)
   Factory.create(:notification_mention, owner: owner, object: mention.object)
 end
 
-def put_in_notifications(owner : ActivityPub::Actor, *, reply : ActivityPub::Activity::Create)
+def put_in_notifications(owner : ActivityPub::Actor, *, reply : ActivityPub::Activity::ObjectActivity)
   Factory.create(:notification_reply, owner: owner, object: reply.object)
 end
 

@@ -39,6 +39,19 @@ Spectator.describe Admin::AccountsController do
         get "/admin/accounts", headers
         expect(response.body).to contain(account.username)
       end
+
+      context "given two registered accounts" do
+        let!(other) { register }
+
+        it "shows indicator only for the authenticated user" do
+          get "/admin/accounts", headers
+          expect(response.body).to contain(account.username)
+          expect(response.body).to contain(other.username)
+          body = XML.parse_html(response.body)
+          expect(body.xpath_nodes("//table/tbody/tr[@id='account-#{account.id}']//i/@class")).to contain("large yellow chess queen icon")
+          expect(body.xpath_nodes("//table/tbody/tr[@id='account-#{other.id}']//i/@class")).not_to contain("large yellow chess queen icon")
+        end
+      end
     end
   end
 

@@ -192,6 +192,26 @@ Spectator.describe HomeController do
           # no local actors, only posts on this page
         end
 
+        after_each { Ktistec.set_default_settings }
+
+        context "without a site description" do
+          before_each { Ktistec.settings.clear_description }
+
+          it "does not display site description" do
+            get "/", HTML_HEADERS
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'ui basic segment')]")).to be_empty
+          end
+        end
+
+        context "with a site description" do
+          before_each { Ktistec.settings.assign({"description" => "<p>Welcome to our server!</p>"}).save }
+
+          it "displays site description" do
+            get "/", HTML_HEADERS
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'ui basic segment')]//p").first).to eq("Welcome to our server!")
+          end
+        end
+
         it "renders a list of local actors" do
           get "/", JSON_HEADERS
           expect(response.status_code).to eq(200)

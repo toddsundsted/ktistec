@@ -1,3 +1,5 @@
+- if (description = Ktistec.settings.description.presence)
+  .ui.basic.segment == description
 section.ui.feed data-controller="icon-load-error"
   - objects.each do |object|
     crystal:

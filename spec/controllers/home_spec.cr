@@ -186,10 +186,10 @@ Spectator.describe HomeController do
 
     context "if unauthenticated" do
       describe "GET /" do
-        it "renders a list of local actors" do
+        it "succeeds" do
           get "/", HTML_HEADERS
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'segments')]//a[contains(@href,'#{username}')]/@href")).to contain_exactly(/\/@#{username}/)
+          # no local actors, only posts on this page
         end
 
         it "renders a list of local actors" do

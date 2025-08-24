@@ -349,7 +349,7 @@ module Ktistec::ViewHelper
     HTML
   end
 
-  macro input_tag(label, model, field, class _class = "", type = "text", placeholder = nil, data = nil)
+  macro input_tag(label, model, field, class _class = "", type = "text", placeholder = nil, autofocus = nil, data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -369,6 +369,9 @@ module Ktistec::ViewHelper
       %Q|value="#{%value}"|,
       {% if placeholder %}
         %Q|placeholder="#{{{placeholder}}}"|,
+      {% end %}
+      {% if autofocus %}
+        %Q|autofocus|,
       {% end %}
       {% if data %}
         {% for key, value in data %}

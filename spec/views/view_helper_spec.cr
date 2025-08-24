@@ -574,6 +574,98 @@ Spectator.describe "helpers" do
         expect(subject.xpath_nodes("/div/input/@value")).to contain_exactly(%q|Value with ampersand & "quotes".|)
       end
     end
+
+    context "given autofocus" do
+      subject do
+        XML.parse_html(input_tag("Label", model, field, autofocus: true), PARSER_OPTIONS).document
+      end
+
+      it "specifies the autofocus attribute" do
+        expect(subject.xpath_nodes("/div/input/@autofocus")).not_to be_empty
+      end
+    end
+  end
+
+  describe "textarea_tag" do
+    subject do
+      XML.parse_html(textarea_tag("Label", model, :field, class: "blarg", rows: 4, placeholder: "quoz"), PARSER_OPTIONS).document
+    end
+
+    it "emits div containing label and textarea tags" do
+      expect(subject.xpath_nodes("/div[label][textarea]")).not_to be_empty
+    end
+
+    it "emits a label tag with the label text" do
+      expect(subject.xpath_nodes("/div/label/text()")).to contain_exactly("Label")
+    end
+
+    it "emits a textarea tag with the specified name" do
+      expect(subject.xpath_nodes("/div/textarea/@name")).to contain_exactly("field")
+    end
+
+    it "emits a textarea tag with the associated text" do
+      expect(subject.xpath_nodes("/div/textarea/text()")).to contain_exactly("Value")
+    end
+
+    it "specifies the class" do
+      expect(subject.xpath_nodes("/div/textarea/@class")).to contain_exactly("blarg")
+    end
+
+    it "overrides the default rows" do
+      expect(subject.xpath_nodes("/div/textarea/@rows")).to contain_exactly("4")
+    end
+
+    it "specifies the placeholder" do
+      expect(subject.xpath_nodes("/div/textarea/@placeholder")).to contain_exactly("quoz")
+    end
+
+    it "sets the error class" do
+      expect(subject.xpath_nodes("/div/@class")).to contain_exactly("field error")
+    end
+
+    context "given data attributes" do
+      subject do
+        XML.parse_html(textarea_tag("Label", model, :field, data: {"foo" => "bar", "abc" => "xyz"}), PARSER_OPTIONS).document
+      end
+
+      it "emits data attributes" do
+        expect(subject.xpath_nodes("/div/textarea/@*[starts-with(name(),'data-')]")).to contain_exactly("bar", "xyz")
+      end
+    end
+
+    context "given a nil model" do
+      subject do
+        XML.parse_html(textarea_tag("Label", nil, :field), PARSER_OPTIONS).document
+      end
+
+      it "emits a textarea tag with the specified name" do
+        expect(subject.xpath_nodes("/div/textarea/@name")).to contain_exactly("field")
+      end
+
+      it "does not set the error class" do
+        expect(subject.xpath_nodes("/div/@class")).to contain_exactly("field")
+      end
+    end
+
+    context "given a value with HTML characters" do
+      before_each do
+        model.field = %q|Value with <tags> & "quotes".|
+      end
+
+      it "emits a textarea tag with the associated value" do
+        expect(subject.xpath_nodes("/div/textarea/text()")).to contain_exactly(%q|Value with <tags> & "quotes".|)
+      end
+    end
+
+    context "given autofocus" do
+      subject do
+        XML.parse_html(textarea_tag("Label", model, :field, autofocus: true), PARSER_OPTIONS).document
+      end
+
+      it "specifies the autofocus attribute" do
+        expect(subject.xpath_nodes("/div/textarea/@autofocus")).not_to be_empty
+      end
+    end
   end
 
   describe "select_tag" do

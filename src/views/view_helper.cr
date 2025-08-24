@@ -387,6 +387,43 @@ module Ktistec::ViewHelper
     HTML
   end
 
+  macro textarea_tag(label, model, field, class _class = "", rows = 4, placeholder = nil, autofocus = nil, data = nil)
+    {% if model %}
+      %classes =
+        {{model}}.errors.has_key?("{{field.id}}") ?
+          "field error" :
+          "field"
+      %name = {{field.id.stringify}}
+      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
+    {% else %}
+      %classes = "field"
+      %name = {{field.id.stringify}}
+      %value = nil
+    {% end %}
+    %attributes = [
+      %Q|class="#{{{_class}}}"|,
+      %Q|name="#{%name}"|,
+      %Q|rows="#{{{rows}}}"|,
+      {% if placeholder %}
+        %Q|placeholder="#{{{placeholder}}}"|,
+      {% end %}
+      {% if autofocus %}
+        %Q|autofocus|,
+      {% end %}
+      {% if data %}
+        {% for key, value in data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
+    <<-HTML
+    <div class="#{%classes}">\
+    <label>#{{{label}}}</label>\
+    <textarea #{%attributes.join(" ")}>#{%value}</textarea>\
+    </div>
+    HTML
+  end
+
   macro select_tag(label, model, field, options, selected = nil, class _class = "ui selection dropdown", data = nil)
     {% if model %}
       %classes =

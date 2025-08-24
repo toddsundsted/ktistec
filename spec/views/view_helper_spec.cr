@@ -506,7 +506,7 @@ Spectator.describe "helpers" do
 
   describe "input_tag" do
     subject do
-      XML.parse_html(input_tag("Label", model, field, class: "blarg", type: "foobar", placeholder: "quoz"), PARSER_OPTIONS).document
+      XML.parse_html(input_tag("Label", model, field, id: "woof", class: "blarg", type: "foobar", placeholder: "quoz"), PARSER_OPTIONS).document
     end
 
     it "emits div containing label and input tags" do
@@ -523,6 +523,10 @@ Spectator.describe "helpers" do
 
     it "emits an input tag with the associated value" do
       expect(subject.xpath_nodes("/div/input/@value")).to contain_exactly("Value")
+    end
+
+    it "specifies the id" do
+      expect(subject.xpath_nodes("/div/input/@id")).to contain_exactly("woof")
     end
 
     it "specifies the class" do
@@ -588,7 +592,7 @@ Spectator.describe "helpers" do
 
   describe "textarea_tag" do
     subject do
-      XML.parse_html(textarea_tag("Label", model, :field, class: "blarg", rows: 4, placeholder: "quoz"), PARSER_OPTIONS).document
+      XML.parse_html(textarea_tag("Label", model, :field, id: "woof", class: "blarg", rows: 4, placeholder: "quoz"), PARSER_OPTIONS).document
     end
 
     it "emits div containing label and textarea tags" do
@@ -605,6 +609,10 @@ Spectator.describe "helpers" do
 
     it "emits a textarea tag with the associated text" do
       expect(subject.xpath_nodes("/div/textarea/text()")).to contain_exactly("Value")
+    end
+
+    it "specifies the id" do
+      expect(subject.xpath_nodes("/div/textarea/@id")).to contain_exactly("woof")
     end
 
     it "specifies the class" do
@@ -670,7 +678,7 @@ Spectator.describe "helpers" do
 
   describe "select_tag" do
     subject do
-      XML.parse_html(select_tag("Label", model, field, {one: "One", two: "Two"}, class: "blarg"), PARSER_OPTIONS).document
+      XML.parse_html(select_tag("Label", model, field, {one: "One", two: "Two"}, id: "woof", class: "blarg"), PARSER_OPTIONS).document
     end
 
     it "emits div containing label and select tags" do
@@ -709,6 +717,10 @@ Spectator.describe "helpers" do
       it "emits an option tag with the option selected" do
         expect(subject.xpath_nodes("/div/select/option[@selected]/text()")).to contain_exactly("Two")
       end
+    end
+
+    it "specifies the id" do
+      expect(subject.xpath_nodes("/div/select/@id")).to contain_exactly("woof")
     end
 
     it "specifies the class" do

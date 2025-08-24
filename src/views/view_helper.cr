@@ -353,7 +353,7 @@ module Ktistec::ViewHelper
     HTML
   end
 
-  macro input_tag(label, model, field, class _class = "", type = "text", placeholder = nil, autofocus = nil, data = nil)
+  macro input_tag(label, model, field, id = nil, class _class = "", type = "text", placeholder = nil, autofocus = nil, data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -371,6 +371,9 @@ module Ktistec::ViewHelper
       %Q|type="#{{{type}}}"|,
       %Q|name="#{%name}"|,
       %Q|value="#{%value}"|,
+      {% if id %}
+        %Q|id="#{{{id}}}"|,
+      {% end %}
       {% if placeholder %}
         %Q|placeholder="#{{{placeholder}}}"|,
       {% end %}
@@ -391,7 +394,7 @@ module Ktistec::ViewHelper
     HTML
   end
 
-  macro textarea_tag(label, model, field, class _class = "", rows = 4, placeholder = nil, autofocus = nil, data = nil)
+  macro textarea_tag(label, model, field, id = nil, class _class = "", rows = 4, placeholder = nil, autofocus = nil, data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -408,6 +411,9 @@ module Ktistec::ViewHelper
       %Q|class="#{{{_class}}}"|,
       %Q|name="#{%name}"|,
       %Q|rows="#{{{rows}}}"|,
+      {% if id %}
+        %Q|id="#{{{id}}}"|,
+      {% end %}
       {% if placeholder %}
         %Q|placeholder="#{{{placeholder}}}"|,
       {% end %}
@@ -428,7 +434,7 @@ module Ktistec::ViewHelper
     HTML
   end
 
-  macro select_tag(label, model, field, options, selected = nil, class _class = "ui selection dropdown", data = nil)
+  macro select_tag(label, model, field, options, selected = nil, id = nil, class _class = "ui selection dropdown", data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -444,6 +450,9 @@ module Ktistec::ViewHelper
     %attributes = [
       %Q|class="#{{{_class}}}"|,
       %Q|name="#{%name}"|,
+      {% if id %}
+        %Q|id="#{{{id}}}"|,
+      {% end %}
       {% if data %}
         {% for key, value in data %}
           %Q|data-{{key.id}}="#{{{value}}}"|,

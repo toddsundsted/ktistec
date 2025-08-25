@@ -455,14 +455,15 @@ Spectator.describe SettingsController do
             not_to change{Ktistec.settings.site}
         end
 
-        it "updates description via form submission" do
+        it "changes the description" do
           expect {post "/settings/service", headers, "description=<p>Server+description</p>"}.
             to change{Ktistec.settings.description}
         end
 
-        context "given a footer" do
-          it "clears description when empty" do
-            Ktistec.settings.assign({"description" => "<p>Server description</p>"}).save
+        context "given a description" do
+          before_each { Ktistec.settings.assign({"description" => "<p>Server description</p>"}).save }
+
+          it "clears the description if blank" do
             expect {post "/settings/service", headers, "description="}.
               to change{Ktistec.settings.description}.from("<p>Server description</p>").to("")
           end
@@ -476,7 +477,7 @@ Spectator.describe SettingsController do
         context "given a footer" do
           before_each { Ktistec.settings.assign({"footer" => "Copyright Blah Blah"}).save }
 
-          it "changes the footer if blank" do
+          it "clears the footer if blank" do
             expect {post "/settings/service", headers, "footer="}.
               to change{Ktistec.settings.footer}.from("Copyright Blah Blah").to("")
           end

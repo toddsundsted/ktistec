@@ -190,10 +190,17 @@ module Ktistec
         {% end %}
       end
 
-      # Returns type and all subtypes.
+      # Returns type and all concrete (non-abstract) subtypes.
       #
       def all_subtypes
-        {{(@type.all_subclasses << @type).map(&.stringify)}}
+        {% begin %}
+          {% subtypes = (@type.all_subclasses << @type).reject(&.abstract?) %}
+          {% if subtypes.empty? %}
+            [] of String
+          {% else %}
+            {{subtypes.map(&.stringify)}}
+          {% end %}
+        {% end %}
       end
 
       # Returns the count of saved instances.

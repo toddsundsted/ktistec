@@ -292,6 +292,10 @@ Spectator.describe Ktistec do
       Ktistec.settings.assign({"host" => "https://test.test/", "site" => "Test", "description" => "Server Description", "footer" => "Copyright"}).save
     end
 
+    after_each do
+      Ktistec.set_default_settings
+    end
+
     describe ".host" do
       it "returns the host" do
         expect(Ktistec.host).to eq("https://test.test")

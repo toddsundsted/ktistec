@@ -62,7 +62,7 @@ h1 Site Settings
 == form_tag(settings, "/settings/service") do
   == error_messages(settings)
   == input_tag("Site Name", settings, site)
-  == textarea_tag("Description", settings, description)
+  == trix_editor("Description", settings, description)
   == input_tag("Footer", settings, footer)
   crystal:
     can_deepl = ENV["DEEPL_API_KEY"]?

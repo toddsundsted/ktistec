@@ -756,6 +756,58 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "trix_editor" do
+    subject do
+      XML.parse_html(trix_editor("Label", model, field, id: "woof", class: "blarg"), PARSER_OPTIONS).document
+    end
+
+    it "emits div containing label, trix-editor and textarea tags" do
+      expect(subject.xpath_nodes("/div[label][trix-editor][textarea]")).not_to be_empty
+    end
+
+    it "includes data-turbo-permanent on field" do
+      expect(subject.xpath_nodes("/div/@data-turbo-permanent")).to contain_exactly("true")
+    end
+
+    it "emits a label tag with the label text" do
+      expect(subject.xpath_nodes("/div/label/text()")).to contain_exactly("Label")
+    end
+
+    it "emits a trix-editor with the specified input attribute" do
+      expect(subject.xpath_nodes("/div/trix-editor/@input")).to contain_exactly("woof")
+    end
+
+    it "specifies the custom class on trix-editor" do
+      expect(subject.xpath_nodes("/div/trix-editor/@class")).to contain_exactly("blarg")
+    end
+
+    it "emits a textarea with the associated value" do
+      expect(subject.xpath_nodes("/div/textarea/text()")).to contain_exactly("Value")
+    end
+
+    it "emits a textarea with the specified id" do
+      expect(subject.xpath_nodes("/div/textarea/@id")).to contain_exactly("woof")
+    end
+
+    it "emits a textarea with the specified name" do
+      expect(subject.xpath_nodes("/div/textarea/@name")).to contain_exactly("field")
+    end
+
+    it "sets the error class" do
+      expect(subject.xpath_nodes("/div/@class")).to contain_exactly("field error")
+    end
+
+    context "given a nil model" do
+      subject do
+        XML.parse_html(trix_editor("Label", nil, field), PARSER_OPTIONS).document
+      end
+
+      it "does not set the error class" do
+        expect(subject.xpath_nodes("/div/@class")).to contain_exactly("field")
+      end
+    end
+  end
+
   describe "submit_button" do
     subject do
       XML.parse_html(submit_button("Text", class: "blarg"), PARSER_OPTIONS).document

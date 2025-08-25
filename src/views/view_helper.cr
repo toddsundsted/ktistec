@@ -474,6 +474,42 @@ module Ktistec::ViewHelper
     HTML
   end
 
+  macro trix_editor(label, model, field, id = nil, class _class = "")
+    {% if model %}
+      %classes =
+        {{model}}.errors.has_key?("{{field.id}}") ?
+          "field error" :
+          "field"
+      %name = {{field.id.stringify}}
+      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
+    {% else %}
+      %classes = "field"
+      %name = {{field.id.stringify}}
+      %value = nil
+    {% end %}
+    %id = {{id}} || "#{%name}-#{Time.utc.to_unix_ms}"
+    %trix_editor_attributes = [
+      %Q|data-controller="trix"|,
+      %Q|data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove"|,
+      %Q|input="#{%id}"|,
+      {% if _class %}
+        %Q|class="#{{{_class}}}"|,
+      {% end %}
+    ]
+    %textarea_attributes = [
+      %Q|id="#{%id}"|,
+      %Q|name="#{%name}"|,
+      %Q|rows="4"|,
+    ]
+    <<-HTML
+    <div class="#{%classes}" data-turbo-permanent="true">\
+    <label>#{{{label}}}</label>\
+    <trix-editor #{%trix_editor_attributes.join(" ")}></trix-editor>\
+    <textarea #{%textarea_attributes.join(" ")}>#{%value}</textarea>\
+    </div>
+    HTML
+  end
+
   macro submit_button(value = "Submit", class _class = "ui primary button")
     %Q|<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">|
   end

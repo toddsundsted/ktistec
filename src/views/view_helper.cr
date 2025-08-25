@@ -353,7 +353,7 @@ module Ktistec::ViewHelper
     HTML
   end
 
-  macro input_tag(label, model, field, class _class = "", type = "text", placeholder = nil, autofocus = nil, data = nil)
+  macro input_tag(label, model, field, id = nil, class _class = "", type = "text", placeholder = nil, autofocus = nil, data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -371,6 +371,9 @@ module Ktistec::ViewHelper
       %Q|type="#{{{type}}}"|,
       %Q|name="#{%name}"|,
       %Q|value="#{%value}"|,
+      {% if id %}
+        %Q|id="#{{{id}}}"|,
+      {% end %}
       {% if placeholder %}
         %Q|placeholder="#{{{placeholder}}}"|,
       {% end %}
@@ -391,7 +394,47 @@ module Ktistec::ViewHelper
     HTML
   end
 
-  macro select_tag(label, model, field, options, selected = nil, class _class = "ui selection dropdown", data = nil)
+  macro textarea_tag(label, model, field, id = nil, class _class = "", rows = 4, placeholder = nil, autofocus = nil, data = nil)
+    {% if model %}
+      %classes =
+        {{model}}.errors.has_key?("{{field.id}}") ?
+          "field error" :
+          "field"
+      %name = {{field.id.stringify}}
+      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
+    {% else %}
+      %classes = "field"
+      %name = {{field.id.stringify}}
+      %value = nil
+    {% end %}
+    %attributes = [
+      %Q|class="#{{{_class}}}"|,
+      %Q|name="#{%name}"|,
+      %Q|rows="#{{{rows}}}"|,
+      {% if id %}
+        %Q|id="#{{{id}}}"|,
+      {% end %}
+      {% if placeholder %}
+        %Q|placeholder="#{{{placeholder}}}"|,
+      {% end %}
+      {% if autofocus %}
+        %Q|autofocus|,
+      {% end %}
+      {% if data %}
+        {% for key, value in data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
+    <<-HTML
+    <div class="#{%classes}">\
+    <label>#{{{label}}}</label>\
+    <textarea #{%attributes.join(" ")}>#{%value}</textarea>\
+    </div>
+    HTML
+  end
+
+  macro select_tag(label, model, field, options, selected = nil, id = nil, class _class = "ui selection dropdown", data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -407,6 +450,9 @@ module Ktistec::ViewHelper
     %attributes = [
       %Q|class="#{{{_class}}}"|,
       %Q|name="#{%name}"|,
+      {% if id %}
+        %Q|id="#{{{id}}}"|,
+      {% end %}
       {% if data %}
         {% for key, value in data %}
           %Q|data-{{key.id}}="#{{{value}}}"|,
@@ -424,6 +470,42 @@ module Ktistec::ViewHelper
     <div class="#{%classes}">\
     <label>#{{{label}}}</label>\
     <select #{%attributes.join(" ")}>#{%options.join("")}</select>\
+    </div>
+    HTML
+  end
+
+  macro trix_editor(label, model, field, id = nil, class _class = "")
+    {% if model %}
+      %classes =
+        {{model}}.errors.has_key?("{{field.id}}") ?
+          "field error" :
+          "field"
+      %name = {{field.id.stringify}}
+      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
+    {% else %}
+      %classes = "field"
+      %name = {{field.id.stringify}}
+      %value = nil
+    {% end %}
+    %id = {{id}} || "#{%name}-#{Time.utc.to_unix_ms}"
+    %trix_editor_attributes = [
+      %Q|data-controller="trix"|,
+      %Q|data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change"|,
+      %Q|input="#{%id}"|,
+      {% if _class %}
+        %Q|class="#{{{_class}}}"|,
+      {% end %}
+    ]
+    %textarea_attributes = [
+      %Q|id="#{%id}"|,
+      %Q|name="#{%name}"|,
+      %Q|rows="4"|,
+    ]
+    <<-HTML
+    <div class="#{%classes}" data-turbo-permanent>\
+    <label>#{{{label}}}</label>\
+    <trix-editor #{%trix_editor_attributes.join(" ")}></trix-editor>\
+    <textarea #{%textarea_attributes.join(" ")}>#{%value}</textarea>\
     </div>
     HTML
   end

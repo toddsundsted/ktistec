@@ -28,9 +28,10 @@
   - [Building](#building)
     - [SQLite3 Compatibility](#sqlite3-compatibility)
     - [Running Tests](#running-tests)
-  - [Usage](#usage)
+  - [Setup, Configuration, and Usage](#setup-configuration-and-usage)
     - [Command Line Options](#command-line-options)
-    - [Configuring Translation](#configuring-translation)
+    - [Site Description](#site-description)
+    - [Translation](#translation)
   - [Contributors](#contributors)
   - [Copyright and License](#copyright-and-license)
 
@@ -524,7 +525,7 @@ If you change the code, you should run the tests:
 
 `$ crystal spec`
 
-## Usage
+## Setup, Configuration, and Usage
 
 The server runs on port 3000. If you're planning on running it in
 production, you should put Nginx or Apache in front of it. Don't
@@ -593,7 +594,21 @@ It also:
 
 **Consider backing up your database before using this option!**
 
-### Configuring Translation
+### Site Description
+
+Ktistec supports a customizable site description on your home
+page.
+
+<img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/6j98as.png" width=640>
+
+Edit your site description using the same rich text editor you use for
+authoring posts:
+
+1. Visit Site Settings on the settings page
+2. Use the rich text editor to change the site description
+3. Press Update
+
+### Translation
 
 First, ensure you've set your language in Account Settings on
 the settings page. Your  language must be a valid [IETF BCP 47

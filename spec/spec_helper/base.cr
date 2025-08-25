@@ -130,7 +130,9 @@ module Ktistec
   end
 
   class Settings
-    {% for property in PROPERTIES %}
+    {% for property, type in PROPERTIES %}
+      setter {{property.id}} : {{type.id}}?
+
       def clear_{{property.id}}
         Ktistec.database.exec("DELETE FROM options WHERE key = ?", "{{property.id}}")
         @{{property.id}} = nil
@@ -149,6 +151,7 @@ module Ktistec
     Ktistec.settings.assign({
       "host" => "https://test.test/",
       "site" => "Test",
+      "description" => nil,
       "footer" => nil,
     }).save
   end

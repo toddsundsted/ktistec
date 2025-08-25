@@ -89,6 +89,10 @@ Spectator.describe Ktistec::Settings do
       subject.clear_footer
       expect{subject.assign({"footer" => "FOOTER"})}.to change{subject.footer}
     end
+
+    it "increments the nonce" do
+      expect{ subject.assign({} of String => String) }.to change{ subject.class.nonce }.by(1)
+    end
   end
 
   describe "#save" do

@@ -91,10 +91,13 @@ module Ktistec
       assign(values)
     end
 
+    class_getter nonce = 0_i64
+
     def assign(options)
       {% for property, type in PROPERTIES %}
         @{{property.id}} = options["{{property.id}}"].as({{type.id}}?) if options.has_key?("{{property.id}}")
       {% end %}
+      @@nonce += 1
       self
     end
 

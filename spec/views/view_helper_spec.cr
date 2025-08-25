@@ -766,7 +766,7 @@ Spectator.describe "helpers" do
     end
 
     it "includes data-turbo-permanent on field" do
-      expect(subject.xpath_nodes("/div/@data-turbo-permanent")).to contain_exactly("true")
+      expect(subject.xpath_nodes("/div/@data-turbo-permanent")).to_not be_empty
     end
 
     it "emits a label tag with the label text" do

@@ -490,7 +490,7 @@ module Ktistec::ViewHelper
     %id = {{id}} || "#{%name}-#{Time.utc.to_unix_ms}"
     %trix_editor_attributes = [
       %Q|data-controller="trix"|,
-      %Q|data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove"|,
+      %Q|data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change"|,
       %Q|input="#{%id}"|,
       {% if _class %}
         %Q|class="#{{{_class}}}"|,
@@ -502,7 +502,7 @@ module Ktistec::ViewHelper
       %Q|rows="4"|,
     ]
     <<-HTML
-    <div class="#{%classes}" data-turbo-permanent="true">\
+    <div class="#{%classes}" data-turbo-permanent>\
     <label>#{{{label}}}</label>\
     <trix-editor #{%trix_editor_attributes.join(" ")}></trix-editor>\
     <textarea #{%textarea_attributes.join(" ")}>#{%value}</textarea>\

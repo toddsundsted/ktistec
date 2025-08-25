@@ -76,7 +76,7 @@ module Ktistec
     }
 
     {% for property, type in PROPERTIES %}
-      property {{property.id}} : {{type.id}}?
+      getter {{property.id}} : {{type.id}}?
     {% end %}
 
     getter errors = Hash(String, Array(String)).new

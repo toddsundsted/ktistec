@@ -25,14 +25,14 @@ Spectator.describe SettingsController do
           expect(response.status_code).to eq(200)
         end
 
-        it "renders a form" do
+        it "renders a form for name, summary, image, and icon" do
           get "/settings", headers
           expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='name']][.//input[@name='summary']][.//input[@name='image']][.//input[@name='icon']]")).not_to be_empty
         end
 
-        it "renders a form" do
+        it "renders a form for description, footer, and site" do
           get "/settings", headers
-          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='footer']][.//input[@name='site']]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//form[.//textarea[@name='description']][.//input[@name='footer']][.//input[@name='site']]")).not_to be_empty
         end
 
         before_each do
@@ -105,7 +105,7 @@ Spectator.describe SettingsController do
 
         it "renders an object" do
           get "/settings", headers
-          expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon", "footer", "site")
+          expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon", "description", "footer", "site")
         end
       end
     end
@@ -453,6 +453,19 @@ Spectator.describe SettingsController do
         it "does not change the site" do
           expect {post "/settings/service", headers, "site="}.
             not_to change{Ktistec.settings.site}
+        end
+
+        it "updates description via form submission" do
+          expect {post "/settings/service", headers, "description=<p>Server+description</p>"}.
+            to change{Ktistec.settings.description}
+        end
+
+        context "given a footer" do
+          it "clears description when empty" do
+            Ktistec.settings.assign({"description" => "<p>Server description</p>"}).save
+            expect {post "/settings/service", headers, "description="}.
+              to change{Ktistec.settings.description}.from("<p>Server description</p>").to("")
+          end
         end
 
         it "changes the footer" do

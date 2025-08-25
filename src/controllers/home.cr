@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../services/description_enhancer"
 require "../models/activity_pub/activity/follow"
 require "../models/activity_pub/actor/person"
 

@@ -84,6 +84,20 @@ Spectator.describe MentionsController do
         get "/mentions/remote"
         expect(response.status_code).to eq(404)
       end
+
+      describe "turbo-stream-source pagination" do
+        it "includes turbo-stream-source on first page" do
+          get "/mentions/foo%40remote", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).to contain("turbo-stream-source")
+        end
+
+        it "includes turbo-stream-source on page=1" do
+          get "/mentions/foo%40remote?page=1", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).to contain("turbo-stream-source")
+        end
+      end
     end
   end
 

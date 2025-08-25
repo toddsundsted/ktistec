@@ -4,7 +4,7 @@ p Usernames can be any length and can consist of any combination of letters, num
 p Passwords must be at least six characters long, and must consist of at least one letter, one number and one symbol.
 == form_tag(account, "/") do
   == error_messages(account)
-  == input_tag("Username", account, username)
+  == input_tag("Username", account, username, autofocus: true)
   == input_tag("Password", account, password, type: "password")
   == input_tag("Display Name", actor, name)
   == input_tag("Summary", actor, summary)

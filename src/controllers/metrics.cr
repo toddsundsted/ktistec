@@ -62,7 +62,8 @@ class MetricsController
             in Granularity::Daily
               point.timestamp.in(timezone).at_beginning_of_day
             in Granularity::Weekly
-              point.timestamp.in(timezone).at_beginning_of_week
+              # SEE: https://github.com/crystal-lang/crystal/issues/16112
+              self.class.safe_at_beginning_of_week(point.timestamp.in(timezone))
             in Granularity::Monthly
               point.timestamp.in(timezone).at_beginning_of_month
             in Granularity::Yearly
@@ -79,6 +80,34 @@ class MetricsController
           (value[0] / value[1]).to_i32
         end
       end.transform_keys(&.to_s("%Y-%m-%d"))
+    end
+
+    # Returns a copy of `time` representing the beginning of the week.
+    #
+    # This implementation is DST-safe. See:
+    # https://github.com/crystal-lang/crystal/issues/16112
+    #
+    def self.safe_at_beginning_of_week(time : Time, start_day : Time::DayOfWeek = :monday) : Time
+      days_back = (time.day_of_week.value - start_day.value) % 7
+
+      # instead of subtracting days (which crosses DST boundaries
+      # incorrectly), reconstruct the date directly using date
+      # arithmetic.
+      year, month, day = time.date
+      day = day - days_back
+
+      # handle year/month underflow
+      if day < 1
+        if month == 1
+          year -= 1
+          month = 12
+        else
+          month -= 1
+        end
+        day += Time.days_in_month(year, month)
+      end
+
+      Time.local(year, month, day, location: time.location)
     end
   end
 

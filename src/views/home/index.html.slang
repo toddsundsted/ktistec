@@ -1,9 +1,11 @@
 section.ui.feed data-controller="icon-load-error"
   - # take advantage of existing feed styling for presentation #
   - if (description = Ktistec::DescriptionEnhancer.enhanced_description.presence)
-    .ui.basic.segment.event
-      .content
-        == description
+    .ui.segments
+      .ui.segment.event
+        .content data-controller="image-gallery"
+          .text
+            == description
   - objects.each do |object|
     crystal:
       activity = object.activities.first?

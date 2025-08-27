@@ -522,19 +522,52 @@ module MCP
       end
     end
 
+    private def self.notification_status(notification) : JSON::Any
+      owner = notification.owner
+      object = notification.object
+
+      reactions = [] of String
+
+      liked = announced = false
+      inclusion = [ActivityPub::Activity::Like, ActivityPub::Activity::Announce]
+      activities = object.activities(inclusion: inclusion).select do |activity|
+        if activity.actor == owner
+          liked = true if activity.is_a?(ActivityPub::Activity::Like)
+          announced = true if activity.is_a?(ActivityPub::Activity::Announce)
+          break if liked && announced
+        end
+      end
+      reactions << "liked" if liked
+      reactions << "announced" if announced
+
+      replies = object.replies(for_actor: owner).any? { |reply| reply.attributed_to == owner }
+      reactions << "replied" if replies
+
+      if reactions.empty?
+        JSON::Any.new("new")
+      else
+        JSON::Any.new(reactions.map { |r| JSON::Any.new(r) })
+      end
+    end
+
     private def self.notification_to_json_any(notification) : JSON::Any?
       case notification
       when Relationship::Content::Notification::Mention
         JSON::Any.new({
           "type" => JSON::Any.new("mention"),
+          "status" => notification_status(notification),
           "object" => JSON::Any.new(mcp_object_path(notification.object)),
+          "actor" => JSON::Any.new(mcp_actor_path(notification.object.attributed_to)),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       when Relationship::Content::Notification::Reply
         JSON::Any.new({
           "type" => JSON::Any.new("reply"),
+          "status" => notification_status(notification),
           "object" => JSON::Any.new(mcp_object_path(notification.object)),
+          "actor" => JSON::Any.new(mcp_actor_path(notification.object.attributed_to)),
+          "parent" => JSON::Any.new(mcp_object_path(notification.object.in_reply_to.not_nil!)),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
@@ -581,18 +614,27 @@ module MCP
           "hashtag" => JSON::Any.new(notification.name),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{hashtag_path(notification.name)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
-        })
+        }).tap do |json|
+          if (latest_object = Tag::Hashtag.most_recent_object(notification.name))
+            json.as_h["latest_object"] = JSON::Any.new(mcp_object_path(latest_object))
+          end
+        end
       when Relationship::Content::Notification::Follow::Mention
         JSON::Any.new({
           "type" => JSON::Any.new("follow_mention"),
           "mention" => JSON::Any.new(notification.name),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{mention_path(notification.name)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
-        })
+        }).tap do |json|
+          if (latest_object = Tag::Mention.most_recent_object(notification.name))
+            json.as_h["latest_object"] = JSON::Any.new(mcp_object_path(latest_object))
+          end
+        end
       when Relationship::Content::Notification::Follow::Thread
         JSON::Any.new({
           "type" => JSON::Any.new("follow_thread"),
           "thread" => JSON::Any.new(notification.object.thread),
+          "latest_object" => JSON::Any.new(mcp_object_path(notification.object)),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_thread_path(notification.object, anchor: false)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })

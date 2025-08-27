@@ -8,6 +8,8 @@ Spectator.describe MCP::Tools do
 
   let!(account) { register }
 
+  let(now) { Time.utc }
+
   MCP::Tools.def_tool("test_tool", "A test tool for `def_tool` macro testing", [
     {name: "user", type: "string", description: "User ID", required: true, matches: /^[a-z]+[a-z0-9_]+$/},
     {name: "query", type: "string", description: "Search terms", required: true},
@@ -493,8 +495,8 @@ Spectator.describe MCP::Tools do
       end
 
       context "with a mention in the notifications" do
-        let_create(:object, attributed_to: account.actor)
-        let_create(:create, actor: account.actor, object: object)
+        let_create(:object)
+        let_create(:create, object: object)
 
         before_each do
           put_in_notifications(account.actor, mention: create)
@@ -507,15 +509,31 @@ Spectator.describe MCP::Tools do
 
           mention = notifications.first
           expect(mention["type"]).to eq("mention")
+          expect(mention["status"]).to eq("new")
           expect(mention["object"]).to eq("ktistec://objects/#{object.id}")
+          expect(mention["actor"]).to eq("ktistec://actors/#{object.attributed_to.id}")
           expect(mention["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(mention["created_at"]).not_to be_nil
+        end
+
+        context "with a like" do
+          let_create!(:like, actor: account.actor, object: object)
+
+          it "returns liked status" do
+            request = paginate_notifications_request("paginate-notifications-liked-1")
+
+            notifications = expect_paginated_response(request, 1, false)
+
+            mention = notifications.first
+            expect(mention["status"]).to eq(["liked"])
+          end
         end
       end
 
       context "with a reply in the notifications" do
-        let_create(:object, attributed_to: account.actor)
-        let_create(:create, actor: account.actor, object: object)
+        let_create(:object, named: :parent, attributed_to: account.actor)
+        let_create(:object, in_reply_to: parent)
+        let_create(:create, object: object)
 
         before_each do
           put_in_notifications(account.actor, reply: create)
@@ -528,9 +546,38 @@ Spectator.describe MCP::Tools do
 
           reply = notifications.first
           expect(reply["type"]).to eq("reply")
+          expect(reply["status"]).to eq("new")
           expect(reply["object"]).to eq("ktistec://objects/#{object.id}")
+          expect(reply["actor"]).to eq("ktistec://actors/#{object.attributed_to.id}")
+          expect(reply["parent"]).to eq("ktistec://objects/#{object.in_reply_to.id}")
           expect(reply["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(reply["created_at"]).not_to be_nil
+        end
+
+        context "with a reply" do
+          let_create!(:object, named: :user_reply, attributed_to: account.actor, in_reply_to: object)
+
+          it "returns replied status" do
+            request = paginate_notifications_request("paginate-notifications-replied-1")
+
+            notifications = expect_paginated_response(request, 1, false)
+
+            reply = notifications.first
+            expect(reply["status"]).to eq(["replied"])
+          end
+        end
+
+        context "with an announce" do
+          let_create!(:announce, actor: account.actor, object: object)
+
+          it "returns announced status" do
+            request = paginate_notifications_request("paginate-notifications-announced-1")
+
+            notifications = expect_paginated_response(request, 1, false)
+
+            reply = notifications.first
+            expect(reply["status"]).to eq(["announced"])
+          end
         end
       end
 
@@ -653,6 +700,8 @@ Spectator.describe MCP::Tools do
       end
 
       context "with a new post to a followed hashtag in the notifications" do
+        let_create!(:object, content: "Post about #rails programming", published: now)
+        let_create!(:hashtag, subject: object, name: "rails")
         let_create!(:notification_follow_hashtag, owner: account.actor, name: "rails")
 
         it "returns follow hashtag notification for valid request" do
@@ -663,12 +712,17 @@ Spectator.describe MCP::Tools do
           follow_hashtag_notification = notifications.first
           expect(follow_hashtag_notification["type"]).to eq("follow_hashtag")
           expect(follow_hashtag_notification["hashtag"]).to eq("rails")
+          expect(follow_hashtag_notification["latest_object"]).to eq("ktistec://objects/#{object.id}")
           expect(follow_hashtag_notification["action_url"]).to eq("#{Ktistec.host}/tags/rails")
           expect(follow_hashtag_notification["created_at"]).not_to be_nil
+          created_at = Time.parse_rfc3339(follow_hashtag_notification["created_at"].as_s)
+          expect(created_at).to be_within(1.second).of(notification_follow_hashtag.created_at)
         end
       end
 
       context "with a new post to a followed mention in the notifications" do
+        let_create!(:object, content: "Hello @alice@example.com how are you?", published: now)
+        let_create!(:mention, subject: object, name: "alice@example.com")
         let_create!(:notification_follow_mention, owner: account.actor, name: "alice@example.com")
 
         it "returns follow mention notification for valid request" do
@@ -679,8 +733,10 @@ Spectator.describe MCP::Tools do
           follow_mention_notification = notifications.first
           expect(follow_mention_notification["type"]).to eq("follow_mention")
           expect(follow_mention_notification["mention"]).to eq("alice@example.com")
+          expect(follow_mention_notification["latest_object"]).to eq("ktistec://objects/#{object.id}")
           expect(follow_mention_notification["action_url"]).to eq("#{Ktistec.host}/mentions/alice@example.com")
-          expect(follow_mention_notification["created_at"]).not_to be_nil
+          created_at = Time.parse_rfc3339(follow_mention_notification["created_at"].as_s)
+          expect(created_at).to be_within(1.second).of(notification_follow_mention.created_at)
         end
       end
 
@@ -696,13 +752,15 @@ Spectator.describe MCP::Tools do
           follow_thread_notification = notifications.first
           expect(follow_thread_notification["type"]).to eq("follow_thread")
           expect(follow_thread_notification["thread"]).to eq(object.thread)
+          expect(follow_thread_notification["latest_object"]).to eq("ktistec://objects/#{object.id}")
           expect(follow_thread_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}/thread")
-          expect(follow_thread_notification["created_at"]).not_to be_nil
+          created_at = Time.parse_rfc3339(follow_thread_notification["created_at"].as_s)
+          expect(created_at).to be_within(1.second).of(notification_follow_thread.created_at)
         end
       end
 
       context "with an object in the timeline" do
-        let_create!(:object, attributed_to: account.actor, published: Time.utc)
+        let_create!(:object, attributed_to: account.actor, published: now)
 
         before_each do
           put_in_timeline(account.actor, object)
@@ -725,7 +783,7 @@ Spectator.describe MCP::Tools do
       end
 
       context "with an object in actor's posts" do
-        let_create!(:object, attributed_to: account.actor, published: Time.utc)
+        let_create!(:object, attributed_to: account.actor, published: now)
         let_create!(:create, actor: account.actor, object: object)
 
         before_each do
@@ -947,7 +1005,7 @@ Spectator.describe MCP::Tools do
       end
 
       context "with a liked object" do
-        let_create(:object, named: liked_post, attributed_to: account.actor, published: Time.utc)
+        let_create(:object, named: liked_post, attributed_to: account.actor, published: now)
 
         it "is empty" do
           request = paginate_likes_request("paginate-likes-1")
@@ -1035,7 +1093,7 @@ Spectator.describe MCP::Tools do
       end
 
       context "with an announced object" do
-        let_create(:object, named: announced_post, attributed_to: account.actor, published: Time.utc)
+        let_create(:object, named: announced_post, attributed_to: account.actor, published: now)
 
         it "is empty" do
           request = paginate_announces_request("paginate-announces-1")
@@ -1239,7 +1297,7 @@ Spectator.describe MCP::Tools do
         content = response["content"].as_a
         expect(content.size).to eq(1)
         data = JSON.parse(content.first["text"].as_s)
-        expect(Time.parse_rfc3339(data["counted_at"].as_s)).to be_within(5.seconds).of(Time.utc)
+        expect(Time.parse_rfc3339(data["counted_at"].as_s)).to be_within(5.seconds).of(now)
         expect(data["count"]).to eq(expected_count)
       end
 

@@ -579,8 +579,8 @@ module MCP
         JSON::Any.new({
           "type" => JSON::Any.new("follow"),
           "status" => JSON::Any.new(status),
-          "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
-          "object" => JSON::Any.new(mcp_user_path(notification.owner)),
+          "follower" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
+          "followee" => JSON::Any.new(mcp_user_path(notification.owner)),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_actor_path(notification.activity.actor)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })

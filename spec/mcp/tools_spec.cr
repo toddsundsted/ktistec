@@ -597,8 +597,8 @@ Spectator.describe MCP::Tools do
           follow_notification = notifications.first
           expect(follow_notification["type"]).to eq("follow")
           expect(follow_notification["status"]).to eq("new")
-          expect(follow_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
-          expect(follow_notification["object"]).to eq("ktistec://users/#{account.id}")
+          expect(follow_notification["follower"]).to eq("ktistec://actors/#{bob.id}")
+          expect(follow_notification["followee"]).to eq("ktistec://users/#{account.id}")
           expect(follow_notification["action_url"]).to eq("#{Ktistec.host}/remote/actors/#{bob.id}")
           expect(follow_notification["created_at"]).not_to be_nil
         end

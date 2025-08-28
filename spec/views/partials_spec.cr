@@ -306,7 +306,7 @@ Spectator.describe "partials" do
       end
 
       context "and following actor" do
-        follow(account.actor, actor)
+        follow(account.actor, actor, follow_activity: follow_activity, follow_relationship: follow_relationship)
 
         it "renders a button to unfollow" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
@@ -314,6 +314,32 @@ Spectator.describe "partials" do
 
         it "does not render a button to block" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Block")
+        end
+
+        context "when follow request is pending" do
+          before_each do
+            follow_relationship.assign(confirmed: false).save
+          end
+
+          it "displays pending follow request status" do
+            expect(subject.xpath_nodes("//div[contains(@class,'information')]/text()")).to have(/request .* pending/)
+          end
+        end
+
+        context "when follow request was accepted" do
+          let_create!(:accept, actor: actor, object: follow_activity)
+
+          it "displays accepted follow request status with timestamp" do
+            expect(subject.xpath_nodes("//div[contains(@class,'information')]/text()")).to have(/accepted .* ago/)
+          end
+        end
+
+        context "when follow request was rejected" do
+          let_create!(:reject, actor: actor, object: follow_activity)
+
+          it "displays rejected follow request status with timestamp" do
+            expect(subject.xpath_nodes("//div[contains(@class,'information')]/text()")).to have(/rejected .* ago/)
+          end
         end
       end
 
@@ -426,7 +452,7 @@ Spectator.describe "partials" do
       end
 
       it "renders the last refresh time" do
-        expect(subject.xpath_nodes("//div[contains(@class, 'information')]/text()")).to have(/Refreshed/)
+        expect(subject.xpath_nodes("//div[contains(@class, 'information')]/text()")).to have(/refreshed/)
       end
 
       context "and actor is down" do

@@ -186,10 +186,30 @@ Spectator.describe HomeController do
 
     context "if unauthenticated" do
       describe "GET /" do
-        it "renders a list of local actors" do
+        it "succeeds" do
           get "/", HTML_HEADERS
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'segments')]//a[contains(@href,'#{username}')]/@href")).to contain_exactly(/\/@#{username}/)
+          # no local actors, only posts on this page
+        end
+
+        after_each { Ktistec.set_default_settings }
+
+        context "without a site description" do
+          before_each { Ktistec.settings.clear_description }
+
+          it "does not display site description" do
+            get "/", HTML_HEADERS
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'ui segment event')]")).to be_empty
+          end
+        end
+
+        context "with a site description" do
+          before_each { Ktistec.settings.assign({"description" => "<p>Welcome to our server!</p>"}).save }
+
+          it "displays site description" do
+            get "/", HTML_HEADERS
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'ui segment event')]//p").first).to eq("Welcome to our server!")
+          end
         end
 
         it "renders a list of local actors" do

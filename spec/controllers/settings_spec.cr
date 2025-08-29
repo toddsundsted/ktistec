@@ -25,14 +25,14 @@ Spectator.describe SettingsController do
           expect(response.status_code).to eq(200)
         end
 
-        it "renders a form" do
+        it "renders a form for name, summary, image, and icon" do
           get "/settings", headers
           expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='name']][.//input[@name='summary']][.//input[@name='image']][.//input[@name='icon']]")).not_to be_empty
         end
 
-        it "renders a form" do
+        it "renders a form for description, footer, and site" do
           get "/settings", headers
-          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='footer']][.//input[@name='site']]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//form[.//textarea[@name='description']][.//input[@name='footer']][.//input[@name='site']]")).not_to be_empty
         end
 
         before_each do
@@ -105,7 +105,7 @@ Spectator.describe SettingsController do
 
         it "renders an object" do
           get "/settings", headers
-          expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon", "footer", "site")
+          expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon", "description", "footer", "site")
         end
       end
     end
@@ -455,6 +455,20 @@ Spectator.describe SettingsController do
             not_to change{Ktistec.settings.site}
         end
 
+        it "changes the description" do
+          expect {post "/settings/service", headers, "description=<p>Server+description</p>"}.
+            to change{Ktistec.settings.description}
+        end
+
+        context "given a description" do
+          before_each { Ktistec.settings.assign({"description" => "<p>Server description</p>"}).save }
+
+          it "clears the description if blank" do
+            expect {post "/settings/service", headers, "description="}.
+              to change{Ktistec.settings.description}.from("<p>Server description</p>").to("")
+          end
+        end
+
         it "changes the footer" do
           expect {post "/settings/service", headers, "footer=Copyright+Blah+Blah"}.
             to change{Ktistec.settings.footer}
@@ -463,7 +477,7 @@ Spectator.describe SettingsController do
         context "given a footer" do
           before_each { Ktistec.settings.assign({"footer" => "Copyright Blah Blah"}).save }
 
-          it "changes the footer if blank" do
+          it "clears the footer if blank" do
             expect {post "/settings/service", headers, "footer="}.
               to change{Ktistec.settings.footer}.from("Copyright Blah Blah").to("")
           end

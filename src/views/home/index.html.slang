@@ -1,6 +1,11 @@
-- accounts.map(&.actor).each do |actor|
-  == _view_src_views_partials_actor_panel_html_slang(env, actor)
 section.ui.feed data-controller="icon-load-error"
+  - # take advantage of existing feed styling for presentation #
+  - if (description = Ktistec::DescriptionEnhancer.enhanced_description.presence)
+    .ui.segments
+      .ui.segment.event
+        .content data-controller="image-gallery"
+          .text
+            == description
   - objects.each do |object|
     crystal:
       activity = object.activities.first?

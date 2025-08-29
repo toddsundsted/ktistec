@@ -1,6 +1,24 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.11]
+### Added
+- Support a "site description" on the unauthenticated home page.
+- Support autofocus on onboarding and authentication forms.
+- Add `trix_editor` view helper.
+
+### Changed
+- Remove accounts from unauthenticated home page.
+- Persist timeline filters in session.
+
+### Fixed
+- Work around bug in `at_beginning_of_week`. (see [crystal-lang/crystal#16112](https://github.com/crystal-lang/crystal/issues/16112))
+- Exclude abstract classes from `all_types` output. (fixes [#104](https://github.com/toddsundsted/ktistec/issues/104))
+
+### Other
+- Disable streaming updates on pages other than the first. (fixes [#118](https://github.com/toddsundsted/ktistec/issues/118))
+- Pin Crystal version at 1.16.3 in Docker build. (see [libxml_ext#1](https://github.com/toddsundsted/libxml_ext/issues/1))
+
 ## [v2.4.10]
 ### Added
 - Support manually refreshing actor information. (fixes [#112](https://github.com/toddsundsted/ktistec/issues/112))
@@ -385,6 +403,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v2.4.11]: https://github.com/toddsundsted/ktistec/compare/157d70d1...fe9aab2c
 [v2.4.10]: https://github.com/toddsundsted/ktistec/compare/d7341dd1...a99a66e2
 [v2.4.9]: https://github.com/toddsundsted/ktistec/compare/9b9e7b1d...198a1578
 [v2.4.8]: https://github.com/toddsundsted/ktistec/compare/3bfb77d0...66f99cb2

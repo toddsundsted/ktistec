@@ -183,6 +183,10 @@ Spectator.describe Ktistec::Model do
     it "returns type and all subtypes" do
       expect(NotNilModel.all_subtypes).to contain("NotNilModel", "AnotherModel")
     end
+
+    it "excludes abstract types" do
+      expect(AbstractModel.all_subtypes).to be_empty
+    end
   end
 
   describe ".query_and_paginate" do

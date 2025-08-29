@@ -93,6 +93,20 @@ Spectator.describe TagsController do
         expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).
           to contain_exactly(object5.iri, object4.iri, object3.iri, object2.iri, object1.iri)
       end
+
+      describe "turbo-stream-source pagination" do
+        it "includes turbo-stream-source on first page" do
+          get "/tags/foo", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).to contain("turbo-stream-source")
+        end
+
+        it "includes turbo-stream-source on page=1" do
+          get "/tags/foo?page=1", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).to contain("turbo-stream-source")
+        end
+      end
     end
 
     it "returns 404 if no tagged objects exist" do

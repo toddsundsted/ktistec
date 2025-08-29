@@ -69,13 +69,14 @@ module Ktistec
     PROPERTIES = {
       host: String,
       site: String,
+      description: String,
       footer: String,
       translator_service: String,
       translator_url: String,
     }
 
     {% for property, type in PROPERTIES %}
-      property {{property.id}} : {{type.id}}?
+      getter {{property.id}} : {{type.id}}?
     {% end %}
 
     getter errors = Hash(String, Array(String)).new
@@ -90,10 +91,13 @@ module Ktistec
       assign(values)
     end
 
+    class_getter nonce = 0_i64
+
     def assign(options)
       {% for property, type in PROPERTIES %}
         @{{property.id}} = options["{{property.id}}"].as({{type.id}}?) if options.has_key?("{{property.id}}")
       {% end %}
+      @@nonce += 1
       self
     end
 
@@ -224,6 +228,11 @@ module Ktistec
     def self.shutdown
       return if @@shutting_down
       @@shutting_down = true
+      Log.info { "#{Kemal.config.app_name} is going to take a rest!" } if Kemal.config.shutdown_message
+      if server = Kemal.config.server
+        server.close unless server.closed?
+        Kemal.config.running = false
+      end
       TaskWorker.stop
       unless Kemal.config.env == "test"
         exit(0)

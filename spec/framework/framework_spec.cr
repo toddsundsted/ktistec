@@ -60,10 +60,12 @@ Spectator.describe Ktistec::Settings do
 
     Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", "host", "HOST")
     Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", "site", "SITE")
+    Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", "description", "DESCRIPTION")
     Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", "footer", "FOOTER")
 
     expect(subject.host).to eq("HOST")
     expect(subject.site).to eq("SITE")
+    expect(subject.description).to eq("DESCRIPTION")
     expect(subject.footer).to eq("FOOTER")
   end
 
@@ -78,18 +80,28 @@ Spectator.describe Ktistec::Settings do
       expect{subject.assign({"site" => "SITE"})}.to change{subject.site}
     end
 
+    it "sets the description" do
+      subject.clear_description
+      expect{subject.assign({"description" => "DESCRIPTION"})}.to change{subject.description}
+    end
+
     it "sets the footer" do
       subject.clear_footer
       expect{subject.assign({"footer" => "FOOTER"})}.to change{subject.footer}
+    end
+
+    it "increments the nonce" do
+      expect{ subject.assign({} of String => String) }.to change{ subject.class.nonce }.by(1)
     end
   end
 
   describe "#save" do
     it "persists assigned values to the database" do
-      subject.assign({"host" => "https://test.test/", "site" => "Test", "footer" => "Copyright"}).save
+      subject.assign({"host" => "https://test.test/", "site" => "Test", "description" => "Server Description", "footer" => "Copyright"}).save
 
       expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "host")).to eq("https://test.test")
       expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "site")).to eq("Test")
+      expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "description")).to eq("Server Description")
       expect(Ktistec.database.scalar("SELECT value FROM options WHERE key = ?", "footer")).to eq("Copyright")
     end
   end
@@ -277,7 +289,11 @@ Spectator.describe Ktistec do
 
   context "given initialized settings" do
     before_each do
-      Ktistec.settings.assign({"host" => "https://test.test/", "site" => "Test", "footer" => "Copyright"}).save
+      Ktistec.settings.assign({"host" => "https://test.test/", "site" => "Test", "description" => "Server Description", "footer" => "Copyright"}).save
+    end
+
+    after_each do
+      Ktistec.set_default_settings
     end
 
     describe ".host" do
@@ -289,6 +305,12 @@ Spectator.describe Ktistec do
     describe ".site" do
       it "returns the site" do
         expect(Ktistec.site).to eq("Test")
+      end
+    end
+
+    describe ".description" do
+      it "generates description convenience method" do
+        expect(Ktistec.description).to eq("Server Description")
       end
     end
 

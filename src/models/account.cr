@@ -166,4 +166,19 @@ class Account
     last_time.assign(timestamp: time).save
     self
   end
+
+  # Returns count of monthly active accounts (accounts with any
+  # activity in the last 30 days).
+  #
+  def self.monthly_active_accounts_count
+    query = <<-QUERY
+        SELECT COUNT(DISTINCT a.id)
+          FROM accounts AS a
+          JOIN activities AS t
+            ON t.actor_iri = a.iri
+         WHERE t.published >= ?
+           AND t.undone_at IS NULL
+    QUERY
+    Account.scalar(query, 30.days.ago).as(Int64)
+  end
 end

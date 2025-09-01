@@ -137,6 +137,11 @@ Spectator.describe WellKnownController do
   end
 
   context "nodeinfo" do
+    before_each do
+      WellKnownController.cached_posts_count = WellKnownController::CachedPostsCount.new(0, 0)
+      WellKnownController.cached_mau_count = WellKnownController::CachedMAUCount.new(0, 0)
+    end
+
     it "returns 200" do
       get "/.well-known/nodeinfo"
       expect(response.status_code).to eq(200)
@@ -178,8 +183,18 @@ Spectator.describe WellKnownController do
 
     it "returns usage" do
       get "/.well-known/nodeinfo/2.1"
-      message = {"users" => {"total" => 1}, "localPosts" => 0}
+      message = {"users" => {"total" => 1, "activeMonth" => 0}, "localPosts" => 0}
       expect(JSON.parse(response.body)["usage"].as_h).to eq(message)
+    end
+
+    context "with a recent activity" do
+      let_create!(:activity, named: nil, actor: account.actor, published: 15.days.ago)
+
+      it "returns MAU count of 1" do
+        get "/.well-known/nodeinfo/2.1"
+        usage = JSON.parse(response.body)["usage"].as_h
+        expect(usage["users"].as_h["activeMonth"]).to eq(1)
+      end
     end
 
     it "returns metadata" do

@@ -646,10 +646,21 @@ Spectator.describe MCP::Tools do
 
           like_notification = notifications.first
           expect(like_notification["type"]).to eq("like")
-          expect(like_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
+          expect(like_notification["total_likes"]).to eq(1)
           expect(like_notification["object"]).to eq("ktistec://objects/#{object.id}")
           expect(like_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(like_notification["created_at"]).not_to be_nil
+
+          latest_likes = like_notification["latest_likes"].as_h
+          expect(latest_likes["count"]).to eq(1)
+
+          actors = latest_likes["actors"].as_a
+          expect(actors.size).to eq(1)
+
+          actor = actors.first
+          expect(actor["uri"]).to eq("ktistec://actors/#{bob.id}")
+          expect(actor["handle"]).to eq(bob.handle)
+          expect(actor["liked_at"]).not_to be_nil
         end
       end
 
@@ -669,10 +680,21 @@ Spectator.describe MCP::Tools do
 
           dislike_notification = notifications.first
           expect(dislike_notification["type"]).to eq("dislike")
-          expect(dislike_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
+          expect(dislike_notification["total_dislikes"]).to eq(1)
           expect(dislike_notification["object"]).to eq("ktistec://objects/#{object.id}")
           expect(dislike_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(dislike_notification["created_at"]).not_to be_nil
+
+          latest_dislikes = dislike_notification["latest_dislikes"].as_h
+          expect(latest_dislikes["count"]).to eq(1)
+
+          actors = latest_dislikes["actors"].as_a
+          expect(actors.size).to eq(1)
+
+          actor = actors.first
+          expect(actor["uri"]).to eq("ktistec://actors/#{bob.id}")
+          expect(actor["handle"]).to eq(bob.handle)
+          expect(actor["disliked_at"]).not_to be_nil
         end
       end
 
@@ -692,10 +714,21 @@ Spectator.describe MCP::Tools do
 
           announce_notification = notifications.first
           expect(announce_notification["type"]).to eq("announce")
-          expect(announce_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
+          expect(announce_notification["total_announces"]).to eq(1)
           expect(announce_notification["object"]).to eq("ktistec://objects/#{object.id}")
           expect(announce_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(announce_notification["created_at"]).not_to be_nil
+
+          latest_announces = announce_notification["latest_announces"].as_h
+          expect(latest_announces["count"]).to eq(1)
+
+          actors = latest_announces["actors"].as_a
+          expect(actors.size).to eq(1)
+
+          actor = actors.first
+          expect(actor["uri"]).to eq("ktistec://actors/#{bob.id}")
+          expect(actor["handle"]).to eq(bob.handle)
+          expect(actor["announced_at"]).not_to be_nil
         end
       end
 

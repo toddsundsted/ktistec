@@ -585,27 +585,69 @@ module MCP
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       when Relationship::Content::Notification::Like
+        object = notification.activity.object
+        likes = object.activities(inclusion: ActivityPub::Activity::Like)
+        # five latest likes
+        latest_likes = likes.reverse.first(5).map do |like|
+          JSON::Any.new({
+            "uri" => JSON::Any.new(mcp_actor_path(like.actor)),
+            "handle" => JSON::Any.new(like.actor.handle),
+            "liked_at" => JSON::Any.new(like.created_at.to_rfc3339),
+          })
+        end
         JSON::Any.new({
           "type" => JSON::Any.new("like"),
-          "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
-          "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
-          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+          "total_likes" => JSON::Any.new(likes.size),
+          "latest_likes" => JSON::Any.new({
+            "count" => JSON::Any.new(latest_likes.size),
+            "actors" => JSON::Any.new(latest_likes)
+          }),
+          "object" => JSON::Any.new(mcp_object_path(object)),
+          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       when Relationship::Content::Notification::Dislike
+        object = notification.activity.object
+        dislikes = object.activities(inclusion: ActivityPub::Activity::Dislike)
+        # five latest dislikes
+        latest_dislikes = dislikes.reverse.first(5).map do |dislike|
+          JSON::Any.new({
+            "uri" => JSON::Any.new(mcp_actor_path(dislike.actor)),
+            "handle" => JSON::Any.new(dislike.actor.handle),
+            "disliked_at" => JSON::Any.new(dislike.created_at.to_rfc3339),
+          })
+        end
         JSON::Any.new({
           "type" => JSON::Any.new("dislike"),
-          "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
-          "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
-          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+          "total_dislikes" => JSON::Any.new(dislikes.size),
+          "latest_dislikes" => JSON::Any.new({
+            "count" => JSON::Any.new(latest_dislikes.size),
+            "actors" => JSON::Any.new(latest_dislikes)
+          }),
+          "object" => JSON::Any.new(mcp_object_path(object)),
+          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       when Relationship::Content::Notification::Announce
+        object = notification.activity.object
+        announces = object.activities(inclusion: ActivityPub::Activity::Announce)
+        # five latest announces
+        latest_announces = announces.reverse.first(5).map do |announce|
+          JSON::Any.new({
+            "uri" => JSON::Any.new(mcp_actor_path(announce.actor)),
+            "handle" => JSON::Any.new(announce.actor.handle),
+            "announced_at" => JSON::Any.new(announce.created_at.to_rfc3339),
+          })
+        end
         JSON::Any.new({
           "type" => JSON::Any.new("announce"),
-          "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
-          "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
-          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+          "total_announces" => JSON::Any.new(announces.size),
+          "latest_announces" => JSON::Any.new({
+            "count" => JSON::Any.new(latest_announces.size),
+            "actors" => JSON::Any.new(latest_announces)
+          }),
+          "object" => JSON::Any.new(mcp_object_path(object)),
+          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       when Relationship::Content::Notification::Follow::Hashtag

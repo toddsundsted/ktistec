@@ -319,6 +319,26 @@ Spectator.describe Ktistec::Model do
     it "raises an error if strict is true and property is not a property" do
       expect{FooBarModel.new(foo: "").assign({"key" => "Key"}, _strict: true)}.to raise_error(Ktistec::Model::TypeError, /is not a property/)
     end
+
+    # assigns a new property value
+
+    it "indicates the property value is changed" do
+      expect{not_nil.assign(val: "VAL")}.to change{not_nil.changed?(:val)}.from(false).to(true)
+    end
+
+    it "indicates the property value is changed" do
+      expect{foo_bar.assign({"foo" => "FOO"})}.to change{foo_bar.changed?(:foo)}.from(false).to(true)
+    end
+
+    # reassigns the existing property value
+
+    it "indicates the property value is not changed" do
+      expect{not_nil.assign(val: "Val")}.not_to change{not_nil.changed?(:val)}
+    end
+
+    it "indicates the property value is not changed" do
+      expect{foo_bar.assign({"foo" => "Foo"})}.not_to change{foo_bar.changed?(:foo)}
+    end
   end
 
   describe "#==" do

@@ -673,9 +673,18 @@ module Ktistec
           if properties.has_key?(key)
             options.delete(key)
             if (o = properties[key]).is_a?(typeof(self.{{v}}))
-              @changed << {{v.symbolize}}
               if self.responds_to?({{"#{v}=".id.symbolize}})
-                self.{{v}} = o.as(typeof(self.{{v}}))
+                if self.responds_to?({{"#{v}?".id.symbolize}}) # more effectively handles the `nil` case
+                  unless self.{{v}}? == o
+                    self.{{v}} = o.as(typeof(self.{{v}}))
+                    @changed << {{v.symbolize}}
+                  end
+                else
+                  unless @{{v.id}} == o
+                    self.{{v}} = o.as(typeof(self.{{v}}))
+                    @changed << {{v.symbolize}}
+                  end
+                end
               else
                 raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
               end
@@ -701,9 +710,18 @@ module Ktistec
           if properties.has_key?(key)
             options.delete(key)
             if (o = properties[key]).is_a?(typeof(self.{{v}}))
-              @changed << {{v.symbolize}}
               if self.responds_to?({{"#{v}=".id.symbolize}})
-                self.{{v}} = o.as(typeof(self.{{v}}))
+                if self.responds_to?({{"#{v}?".id.symbolize}}) # more effectively handles the `nil` case
+                  unless self.{{v}}? == o
+                    self.{{v}} = o.as(typeof(self.{{v}}))
+                    @changed << {{v.symbolize}}
+                  end
+                else
+                  unless self.{{v}} == o
+                    self.{{v}} = o.as(typeof(self.{{v}}))
+                    @changed << {{v.symbolize}}
+                  end
+                end
               else
                 raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
               end

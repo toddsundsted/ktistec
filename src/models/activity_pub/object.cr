@@ -157,7 +157,7 @@ module ActivityPub
 
     def before_validate
       if changed?(:source)
-        clear!(:source)
+        clear_changed!(:source)
         if (source = self.source) && local?
           media_type = source.media_type.split(";").map(&.strip).first?
           if media_type == "text/html"

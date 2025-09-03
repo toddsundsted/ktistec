@@ -272,7 +272,7 @@ module Ktistec
                     end
                   {% end %}
                   {{subclass}}.allocate.tap do |instance|
-                    instance.as({{subclass}}).__for_internal_use_only(options).clear!
+                    instance.as({{subclass}}).__for_internal_use_only(options).clear_changed!
                   end
                 {% end %}
             {% end %}
@@ -283,7 +283,7 @@ module Ktistec
               else
                 options = rs.read(**self.persistent_columns.merge(additional_columns))
                 self.allocate.tap do |instance|
-                  instance.as(self).__for_internal_use_only(options).clear!
+                  instance.as(self).__for_internal_use_only(options).clear_changed!
                 end
             {% end %}
             end
@@ -293,7 +293,7 @@ module Ktistec
             {% else %}
               options = rs.read(**self.persistent_columns.merge(additional_columns))
               self.allocate.tap do |instance|
-                instance.as(self).__for_internal_use_only(options).clear!
+                instance.as(self).__for_internal_use_only(options).clear_changed!
               end
             {% end %}
           {% end %}
@@ -520,10 +520,20 @@ module Ktistec
     @[Persistent]
     property id : Int64? = nil
 
+    # Tracks changed model properties.
+    #
     @changed : Set(Symbol)
 
     def changed!(*properties : Symbol)
       properties.each { |property| @changed << property }
+    end
+
+    def clear_changed!
+      @changed.clear
+    end
+
+    def clear_changed!(*properties : Symbol)
+      @changed -= properties
     end
 
     def changed?
@@ -532,14 +542,6 @@ module Ktistec
 
     def changed?(*properties : Symbol)
       new_record? || properties.any?(&.in?(@changed))
-    end
-
-    def clear!
-      @changed.clear
-    end
-
-    def clear!(*properties : Symbol)
-      @changed -= properties
     end
 
     # Initializes the new instance.
@@ -790,7 +792,7 @@ module Ktistec
             elsif {{name.id}}_.responds_to?(:_has_many_setter_for_{{inverse_of.id}})
               {{name.id}}_._has_many_setter_for_{{inverse_of.id}}({{name.id}}_.{{inverse_of.id}} << self, false)
             end
-            {{name.id}}_.clear!({{inverse_of.id.symbolize}})
+            {{name.id}}_.clear_changed!({{inverse_of.id.symbolize}})
           end
         {% end %}
         {{name.id}}_
@@ -836,7 +838,7 @@ module Ktistec
           {% if inverse_of %}
             if update_associations
               n._belongs_to_setter_for_{{inverse_of.id}}(self, false)
-              n.clear!({{inverse_of.id.symbolize}}, {{foreign_key.id.symbolize}})
+              n.clear_changed!({{inverse_of.id.symbolize}}, {{foreign_key.id.symbolize}})
             end
           {% end %}
         end
@@ -871,7 +873,7 @@ module Ktistec
         {% if inverse_of %}
           if update_associations
             {{name.id}}_._belongs_to_setter_for_{{inverse_of.id}}(self, false)
-            {{name.id}}_.clear!({{inverse_of.id.symbolize}}, {{foreign_key.id.symbolize}})
+            {{name.id}}_.clear_changed!({{inverse_of.id.symbolize}}, {{foreign_key.id.symbolize}})
           end
         {% end %}
         {{name.id}}_
@@ -1088,14 +1090,14 @@ module Ktistec
               if (model = {{method.body.last}})
                 model.{{method.body[2].id}} = @id
                 model.update_property({{method.body[2].id.symbolize}}, @id) unless model.new_record?
-                model.clear!({{method.body[2]}})
+                model.clear_changed!({{method.body[2]}})
               end
             {% elsif method.body[0] == :has_many && method.body[1] == :id %}
               if (models = {{method.body.last}})
                 models.each do |model|
                   model.{{method.body[2].id}} = @id
                   model.update_property({{method.body[2].id.symbolize}}, @id) unless model.new_record?
-                  model.clear!({{method.body[2]}})
+                  model.clear_changed!({{method.body[2]}})
                 end
               end
             {% end %}
@@ -1123,7 +1125,7 @@ module Ktistec
       {% end %}
       # dup but don't maintain a linked list of previously saved records
       @saved_record = self.dup.clear_saved_record
-      clear!
+      clear_changed!
     end
 
     # Updates and persists property value.

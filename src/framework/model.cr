@@ -522,6 +522,26 @@ module Ktistec
 
     @changed : Set(Symbol)
 
+    def changed!(*properties : Symbol)
+      properties.each { |property| @changed << property }
+    end
+
+    def changed?
+      new_record? || !@changed.empty?
+    end
+
+    def changed?(*properties : Symbol)
+      new_record? || properties.any?(&.in?(@changed))
+    end
+
+    def clear!
+      @changed.clear
+    end
+
+    def clear!(*properties : Symbol)
+      @changed -= properties
+    end
+
     # Initializes the new instance.
     #
     # Sets instance variables directly to skip side effects.
@@ -1173,26 +1193,6 @@ module Ktistec
 
     def new_record?
       @id.nil?
-    end
-
-    def changed!(*properties : Symbol)
-      properties.each { |property| @changed << property }
-    end
-
-    def changed?
-      new_record? || !@changed.empty?
-    end
-
-    def changed?(*properties : Symbol)
-      new_record? || properties.any?(&.in?(@changed))
-    end
-
-    def clear!
-      @changed.clear
-    end
-
-    def clear!(*properties : Symbol)
-      @changed -= properties
     end
 
     protected def clear_saved_record

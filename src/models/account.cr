@@ -75,7 +75,7 @@ class Account
 
   def before_validate
     if changed?(:username)
-      clear!(:username)
+      clear_changed!(:username)
       if (username = self.username)
         host = Ktistec.host
         self.iri = "#{host}/actors/#{username}"
@@ -101,7 +101,7 @@ class Account
 
   def before_save
     if changed?(:actor)
-      clear!(:actor)
+      clear_changed!(:actor)
       if (actor = self.actor?) && actor.pem_public_key.nil? && actor.pem_private_key.nil?
         keypair = OpenSSL::RSA.generate(self.size, 17)
         actor.pem_public_key = keypair.public_key.to_pem

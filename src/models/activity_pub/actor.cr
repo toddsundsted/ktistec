@@ -126,7 +126,7 @@ module ActivityPub
 
     def before_validate
       if changed?(:username)
-        clear!(:username)
+        clear_changed!(:username)
         if (username = self.username) && ((iri.blank? && new_record?) || local?)
           host = Ktistec.host
           self.iri = "#{host}/actors/#{username}"

@@ -496,3 +496,256 @@ Spectator.describe ActivityPub::Collection do
     end
   end
 end
+
+Spectator.describe ActivityPub::Collection::ModelHelper do
+  let(json) do
+    <<-JSON
+      {
+        "@context":[
+          "https://www.w3.org/ns/activitystreams"
+        ],
+        "@id":"https://test.test/foo_bar",
+        "totalItems":0,
+        "first":{
+          "id":"first link",
+          "@type":"Collection"
+        },
+        "last":{
+          "id":"last link",
+          "@type":"Collection"
+        },
+        "prev":{
+          "id":"prev link",
+          "@type":"Collection"
+        },
+        "next":{
+          "id":"next link",
+          "@type":"Collection"
+        },
+        "current":{
+          "id":"current link",
+          "@type":"Collection"
+        }
+      }
+    JSON
+  end
+
+  describe ".from_json_ld" do
+    let(activity) { described_class.from_json_ld(json) }
+
+    context "first tests" do
+      it "populates first_iri" do
+        expect(activity["first_iri"]).to eq("first link")
+      end
+
+      it "does not populate first" do
+        expect(activity.has_key?("first")).to be_false
+      end
+
+      context "given first with the same host" do
+        let(json) { super.gsub(%q|"id":"first link",|, %q|"id":"https://test.test/first",|) }
+
+        it "populates first" do
+          expect(activity["first"]).to be_a(ActivityPub::Collection)
+          expect(activity["first"].as(ActivityPub::Collection).iri).to eq("https://test.test/first")
+        end
+      end
+
+      context "given collection without an id" do
+        let(json) { super.gsub(%q|"id":"first link",|, %q|"id":"https://test.test/first",|).gsub(%q|"@id":"https://test.test/foo_bar",|, "") }
+
+        it "does not populate first" do
+          expect(activity.has_key?("first")).to be_false
+        end
+      end
+
+      context "given first with a different host" do
+        let(json) { super.gsub(%q|"id":"first link",|, %q|"id":"https://different/first",|) }
+
+        it "does not populate first" do
+          expect(activity.has_key?("first")).to be_false
+        end
+      end
+
+      context "given first without an id" do
+        let(json) { super.gsub(%q|"id":"first link",|, "") }
+
+        it "populates first" do
+          expect(activity["first"]).to be_a(ActivityPub::Collection)
+        end
+      end
+    end
+
+    context "last tests" do
+      it "populates last_iri" do
+        expect(activity["last_iri"]).to eq("last link")
+      end
+
+      it "does not populate last" do
+        expect(activity.has_key?("last")).to be_false
+      end
+
+      context "given last with the same host" do
+        let(json) { super.gsub(%q|"id":"last link",|, %q|"id":"https://test.test/last",|) }
+
+        it "populates last" do
+          expect(activity["last"]).to be_a(ActivityPub::Collection)
+          expect(activity["last"].as(ActivityPub::Collection).iri).to eq("https://test.test/last")
+        end
+      end
+
+      context "given collection without an id" do
+        let(json) { super.gsub(%q|"id":"last link",|, %q|"id":"https://test.test/last",|).gsub(%q|"@id":"https://test.test/foo_bar",|, "") }
+
+        it "does not populate last" do
+          expect(activity.has_key?("last")).to be_false
+        end
+      end
+
+      context "given last with a different host" do
+        let(json) { super.gsub(%q|"id":"last link",|, %q|"id":"https://different/last",|) }
+
+        it "does not populate last" do
+          expect(activity.has_key?("last")).to be_false
+        end
+      end
+
+      context "given last without an id" do
+        let(json) { super.gsub(%q|"id":"last link",|, "") }
+
+        it "populates last" do
+          expect(activity["last"]).to be_a(ActivityPub::Collection)
+        end
+      end
+    end
+
+    context "prev tests" do
+      it "populates prev_iri" do
+        expect(activity["prev_iri"]).to eq("prev link")
+      end
+
+      it "does not populate prev" do
+        expect(activity.has_key?("prev")).to be_false
+      end
+
+      context "given prev with the same host" do
+        let(json) { super.gsub(%q|"id":"prev link",|, %q|"id":"https://test.test/prev",|) }
+
+        it "populates prev" do
+          expect(activity["prev"]).to be_a(ActivityPub::Collection)
+          expect(activity["prev"].as(ActivityPub::Collection).iri).to eq("https://test.test/prev")
+        end
+      end
+
+      context "given collection without an id" do
+        let(json) { super.gsub(%q|"id":"prev link",|, %q|"id":"https://test.test/prev",|).gsub(%q|"@id":"https://test.test/foo_bar",|, "") }
+
+        it "does not populate prev" do
+          expect(activity.has_key?("prev")).to be_false
+        end
+      end
+
+      context "given prev with a different host" do
+        let(json) { super.gsub(%q|"id":"prev link",|, %q|"id":"https://different/prev",|) }
+
+        it "does not populate prev" do
+          expect(activity.has_key?("prev")).to be_false
+        end
+      end
+
+      context "given prev without an id" do
+        let(json) { super.gsub(%q|"id":"prev link",|, "") }
+
+        it "populates prev" do
+          expect(activity["prev"]).to be_a(ActivityPub::Collection)
+        end
+      end
+    end
+
+    context "next tests" do
+      it "populates next_iri" do
+        expect(activity["next_iri"]).to eq("next link")
+      end
+
+      it "does not populate next" do
+        expect(activity.has_key?("next")).to be_false
+      end
+
+      context "given next with the same host" do
+        let(json) { super.gsub(%q|"id":"next link",|, %q|"id":"https://test.test/next",|) }
+
+        it "populates next" do
+          expect(activity["next"]).to be_a(ActivityPub::Collection)
+          expect(activity["next"].as(ActivityPub::Collection).iri).to eq("https://test.test/next")
+        end
+      end
+
+      context "given collection without an id" do
+        let(json) { super.gsub(%q|"id":"next link",|, %q|"id":"https://test.test/next",|).gsub(%q|"@id":"https://test.test/foo_bar",|, "") }
+
+        it "does not populate next" do
+          expect(activity.has_key?("next")).to be_false
+        end
+      end
+
+      context "given next with a different host" do
+        let(json) { super.gsub(%q|"id":"next link",|, %q|"id":"https://different/next",|) }
+
+        it "does not populate next" do
+          expect(activity.has_key?("next")).to be_false
+        end
+      end
+
+      context "given next without an id" do
+        let(json) { super.gsub(%q|"id":"next link",|, "") }
+
+        it "populates next" do
+          expect(activity["next"]).to be_a(ActivityPub::Collection)
+        end
+      end
+    end
+
+    context "current tests" do
+      it "populates current_iri" do
+        expect(activity["current_iri"]).to eq("current link")
+      end
+
+      it "does not populate current" do
+        expect(activity.has_key?("current")).to be_false
+      end
+
+      context "given current with the same host" do
+        let(json) { super.gsub(%q|"id":"current link",|, %q|"id":"https://test.test/current",|) }
+
+        it "populates current" do
+          expect(activity["current"]).to be_a(ActivityPub::Collection)
+          expect(activity["current"].as(ActivityPub::Collection).iri).to eq("https://test.test/current")
+        end
+      end
+
+      context "given collection without an id" do
+        let(json) { super.gsub(%q|"id":"current link",|, %q|"id":"https://test.test/current",|).gsub(%q|"@id":"https://test.test/foo_bar",|, "") }
+
+        it "does not populate current" do
+          expect(activity.has_key?("current")).to be_false
+        end
+      end
+
+      context "given current with a different host" do
+        let(json) { super.gsub(%q|"id":"current link",|, %q|"id":"https://different/current",|) }
+
+        it "does not populate current" do
+          expect(activity.has_key?("current")).to be_false
+        end
+      end
+
+      context "given current without an id" do
+        let(json) { super.gsub(%q|"id":"current link",|, "") }
+
+        it "populates current" do
+          expect(activity["current"]).to be_a(ActivityPub::Collection)
+        end
+      end
+    end
+  end
+end

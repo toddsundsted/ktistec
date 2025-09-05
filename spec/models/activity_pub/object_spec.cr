@@ -104,12 +104,6 @@ Spectator.describe ActivityPub::Object do
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
     end
-
-    it "caches the replies" do
-      object = described_class.from_json_ld(json)
-      expect(object.replies).to be_a(ActivityPub::Collection)
-      expect(object.replies.iri).to eq("replies link")
-    end
   end
 
   let(json) do
@@ -1394,6 +1388,69 @@ Spectator.describe ActivityPub::Object do
 
     it "returns tags" do
       expect(subject.tags).to contain_exactly(hashtag, mention)
+    end
+  end
+end
+
+Spectator.describe ActivityPub::Object::ModelHelper do
+  let(json) do
+    <<-JSON
+      {
+        "@context":[
+          "https://www.w3.org/ns/activitystreams"
+        ],
+        "@id":"https://test.test/object",
+        "@type":"FooBarObject",
+        "replies":{
+          "@id":"replies link",
+          "@type":"Collection"
+        }
+      }
+    JSON
+  end
+
+  describe ".from_json_ld" do
+    let(object) { described_class.from_json_ld(json) }
+
+    it "populates replies_iri" do
+      expect(object["replies_iri"]).to eq("replies link")
+    end
+
+    it "does not populate replies" do
+      expect(object.has_key?("replies")).to be_false
+    end
+
+    context "given a replies collection with the same host" do
+      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"@id":"https://test.test/replies",|) }
+
+      it "populates replies" do
+        expect(object["replies"]).to be_a(ActivityPub::Collection)
+        expect(object["replies"].as(ActivityPub::Collection).iri).to eq("https://test.test/replies")
+      end
+    end
+
+    context "given object without an id" do  # should never happen, but...
+      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"@id":"https://test.test/replies",|).gsub(%q|"@id":"https://test.test/object",|, "") }
+
+      it "does not populate replies" do
+        expect(object.has_key?("replies")).to be_false
+      end
+    end
+
+    context "given replies with a different host" do
+      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"id":"https://different/replies",|) }
+
+      it "does not populate replies" do
+        expect(object.has_key?("replies")).to be_false
+      end
+    end
+
+    context "given replies without an id" do
+      let(json) { super.gsub(%q|"@id":"replies link",|, "") }
+
+      it "populates replies" do
+        expect(object["replies"]).to be_a(ActivityPub::Collection)
+      end
     end
   end
 end

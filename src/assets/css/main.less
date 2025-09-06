@@ -14,6 +14,13 @@ body { display: flex; flex-direction: column; }
 /* remove visible outlines on focused menu items */
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 
+/* navigation icons */
+nav.ui.top.fixed.inverted.navigation.menu .item {
+    .icon {
+        margin-right: 0.5em;
+    }
+}
+
 /* compact menus should be flex, too */
 .ui > .compact.menu { display: flex; }
 
@@ -173,6 +180,40 @@ body { display: flex; flex-direction: column; }
 
 /** mobile improvements **/
 @media screen and (max-width: 599px) {
+    /* Navigation icon-only mode on mobile */
+    nav.ui.top.fixed.inverted.navigation.menu {
+        .ui.text.container {
+            display: flex;
+
+            > .item {
+                display: flex;
+                text-align: center;
+                justify-content: center;
+                align-items: center;
+                flex: 25%;
+
+                .text { display: none; }
+                .icon { margin: 0; }
+            }
+
+            .compact.menu {
+                flex: 25%;
+
+                .ui.simple.dropdown.item {
+                    width: 100%;
+                    text-align: center;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+
+                    .text { display: none; }
+                    .dropdown.icon { margin-left: 0.25em; }
+                    .icon:not(.dropdown) { margin: 0; }
+                }
+            }
+        }
+    }
+
     /* Full-width mobile pagination */
     .ui.text.container .ui.secondary.pagination.menu {
         display: flex;

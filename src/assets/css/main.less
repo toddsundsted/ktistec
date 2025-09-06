@@ -171,6 +171,44 @@ body { display: flex; flex-direction: column; }
     }
 }
 
+/** mobile improvements **/
+@media screen and (max-width: 599px) {
+    /* Full-width mobile pagination */
+    .ui.text.container .ui.secondary.pagination.menu {
+        display: flex;
+        flex-direction: row;
+        font-size: 115%;
+
+        .item {
+            flex: 50%;
+
+            .icon {
+                width: 100%;
+            }
+        }
+    }
+
+    /* Enhanced mobile typography */
+    .ui.feed .event > .content {
+        font-size: 105%;
+        line-height: 1.4;
+    }
+
+    /* Mobile-optimized spacing and touch targets */
+    /* 44px is Apple's minimum touch target */
+    .ui.feed .event {
+        margin-bottom: 1.5rem;
+    }
+
+    .ui.secondary.menu {
+        font-size: 110%;
+
+        > .item {
+            min-height: 44px;
+        }
+    }
+}
+
 /** thread page **/
 .ui.thread.segments {
     margin-top: 1rem !important;

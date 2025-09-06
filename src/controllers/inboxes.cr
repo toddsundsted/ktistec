@@ -103,7 +103,7 @@ class RelationshipsController
     # activity that can't otherwise be verified, check on the object
     # or actor.  if the activity is an update, and the object exists,
     # or the activity is a delete, but the object or actor does not
-    # exit, consider the activity valid.
+    # exist, consider the activity verified.
 
     unless verified
       if (object_iri = activity.object_iri)

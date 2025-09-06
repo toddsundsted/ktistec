@@ -144,7 +144,7 @@ Spectator.describe Ktistec::Util do
     end
   end
 
-  describe ",distance_of_time_in_words" do
+  describe ".distance_of_time_in_words" do
     def self.test_pairs
       [
         {14.seconds, "less than a minute"},

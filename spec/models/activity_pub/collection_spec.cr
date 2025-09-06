@@ -39,7 +39,7 @@ Spectator.describe ActivityPub::Collection do
     end
   end
 
-  let(model) { ActivityPubModel.new(iri: "item link") }
+  let(model) { ActivityPubModel.new(iri: "https://test.test/item") }
 
   let(json) do
     <<-JSON
@@ -93,13 +93,13 @@ Spectator.describe ActivityPub::Collection do
           "items":[
             {
               "type":"ActivityPubModel",
-              "id":"item link"
+              "id":"https://test.test/item"
             }
           ]
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items_iris).to eq(["item link"])
+      expect(collection.items_iris).to eq(["https://test.test/item"])
       expect(collection.items).to eq([model])
     end
 
@@ -111,13 +111,13 @@ Spectator.describe ActivityPub::Collection do
           "orderedItems":[
             {
               "type":"ActivityPubModel",
-              "id":"item link"
+              "id":"https://test.test/item"
             }
           ]
         }
       JSON
       collection = described_class.from_json_ld(json).save
-      expect(collection.items_iris).to eq(["item link"])
+      expect(collection.items_iris).to eq(["https://test.test/item"])
       expect(collection.items).to eq([model])
     end
 
@@ -255,13 +255,13 @@ Spectator.describe ActivityPub::Collection do
           "items":[
             {
               "type":"ActivityPubModel",
-              "id":"item link"
+              "id":"https://test.test/item"
             }
           ]
         }
       JSON
       collection = described_class.new.from_json_ld(json).save
-      expect(collection.items_iris).to eq(["item link"])
+      expect(collection.items_iris).to eq(["https://test.test/item"])
       expect(collection.items).to eq([model])
     end
 
@@ -273,13 +273,13 @@ Spectator.describe ActivityPub::Collection do
           "orderedItems":[
             {
               "type":"ActivityPubModel",
-              "id":"item link"
+              "id":"https://test.test/item"
             }
           ]
         }
       JSON
       collection = described_class.new.from_json_ld(json).save
-      expect(collection.items_iris).to eq(["item link"])
+      expect(collection.items_iris).to eq(["https://test.test/item"])
       expect(collection.items).to eq([model])
     end
 
@@ -744,6 +744,52 @@ Spectator.describe ActivityPub::Collection::ModelHelper do
 
         it "populates current" do
           expect(activity["current"]).to be_a(ActivityPub::Collection)
+        end
+      end
+    end
+
+    context "items tests" do
+      let(json) do
+        <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "@id":"https://test.test/collection",
+            "items":[
+              "string item id",
+              {
+                "@id":"https://different.host/object",
+                "@type":"Object"
+              },
+              {
+                "@id":"https://test.test/object",
+                "@type":"Object"
+              }
+            ]
+          }
+        JSON
+      end
+
+      let(object) { ActivityPub::Object.new(iri: "https://test.test/object") }
+
+      it "populates items_iris" do
+        expect(activity["items_iris"]).to eq(["string item id", "https://different.host/object", "https://test.test/object"])
+      end
+
+      it "populates items" do
+        expect(activity["items"]).to eq(["string item id", "https://different.host/object", object])
+      end
+
+      context "given collection without an id" do
+        let(json) { super.gsub(%q|"@id":"https://test.test/collection",|, "") }
+
+        it "populates items_iris" do
+          expect(activity["items_iris"]).to eq(["string item id", "https://different.host/object", "https://test.test/object"])
+        end
+
+        it "populates items" do
+          expect(activity["items"]).to eq(["string item id", "https://different.host/object", "https://test.test/object"])
         end
       end
     end

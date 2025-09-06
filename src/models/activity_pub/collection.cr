@@ -122,12 +122,12 @@ module ActivityPub
 
       def self.from_json_ld(json : JSON::Any | String | IO)
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
-        collection_host = (collection_iri = json.dig?("@id").try(&.as_s?)) ? URI.parse(collection_iri).host : nil
+        collection_host = (collection_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(collection_iri) : nil
         {
           "iri" => json.dig?("@id").try(&.as_s),
           "items_iris" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
           "items" => if (items = json.dig?("https://www.w3.org/ns/activitystreams#items"))
-            map_items(items)
+            map_items(items, collection_host)
           end,
           "total_items" => json.dig?("https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i64),
           # pick up the collection's id and the embedded collection if hosts match or anonymous
@@ -136,7 +136,7 @@ module ActivityPub
           end,
           "first" => if first && first.as_h?
             if (first_iri = first.dig?("@id").try(&.as_s?))
-              if URI.parse(first_iri).host == collection_host
+              if parse_host(first_iri) == collection_host
                 ActivityPub::Collection.from_json_ld(first)
               end
             else
@@ -149,7 +149,7 @@ module ActivityPub
           end,
           "last" => if last && last.as_h?
             if (last_iri = last.dig?("@id").try(&.as_s?))
-              if URI.parse(last_iri).host == collection_host
+              if parse_host(last_iri) == collection_host
                 ActivityPub::Collection.from_json_ld(last)
               end
             else
@@ -162,7 +162,7 @@ module ActivityPub
           end,
           "prev" => if prev && prev.as_h?
             if (prev_iri = prev.dig?("@id").try(&.as_s?))
-              if URI.parse(prev_iri).host == collection_host
+              if parse_host(prev_iri) == collection_host
                 ActivityPub::Collection.from_json_ld(prev)
               end
             else
@@ -175,7 +175,7 @@ module ActivityPub
           end,
           "next" => if _next && _next.as_h?
             if (next_iri = _next.dig?("@id").try(&.as_s?))
-              if URI.parse(next_iri).host == collection_host
+              if parse_host(next_iri) == collection_host
                 ActivityPub::Collection.from_json_ld(_next)
               end
             else
@@ -188,7 +188,7 @@ module ActivityPub
           end,
           "current" => if current && current.as_h?
             if (current_iri = current.dig?("@id").try(&.as_s?))
-              if URI.parse(current_iri).host == collection_host
+              if parse_host(current_iri) == collection_host
                 ActivityPub::Collection.from_json_ld(current)
               end
             else
@@ -198,18 +198,29 @@ module ActivityPub
         }.compact
       end
 
-      def self.map_items(items)
+      private def self.map_items(items, collection_host)
         ([] of ActivityPub | String).tap do |array|
           items.as_a.each do |item|
             if item.as_s?
               array << item.as_s
             elsif item.as_h?
-              array << ActivityPub.from_json_ld(item)
+              if (item_id = item.dig?("@id").try(&.as_s?))
+                if parse_host(item_id) == collection_host
+                  array << ActivityPub.from_json_ld(item)
+                else
+                  array << item_id
+                end
+              end
             else
               raise TypeCastError.new("unsupported JSON type")
             end
           end
         end
+      end
+
+      private def self.parse_host(uri)
+        URI.parse(uri).host
+      rescue URI::Error
       end
     end
   end

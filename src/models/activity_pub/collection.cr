@@ -102,73 +102,125 @@ module ActivityPub
     end
 
     def to_json_ld(recursive = true)
-      CollectionModelHelper.to_json_ld(self, recursive)
+      ModelHelper.to_json_ld(self, recursive)
     end
 
     def from_json_ld(json)
-      self.assign(CollectionModelHelper.from_json_ld(json))
+      self.assign(ModelHelper.from_json_ld(json))
     end
 
     def self.map(json, **options)
-      CollectionModelHelper.from_json_ld(json)
+      ModelHelper.from_json_ld(json)
     end
-  end
-end
 
-private module CollectionModelHelper
-  include Ktistec::ViewHelper
+    module ModelHelper
+      include Ktistec::ViewHelper
 
-  def self.to_json_ld(collection, recursive)
-    render "src/views/collections/collection.json.ecr"
-  end
-
-  def self.from_json_ld(json : JSON::Any | String | IO)
-    json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
-    {
-      "iri" => json.dig?("@id").try(&.as_s),
-      "items_iris" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
-      "items" => if (items = json.dig?("https://www.w3.org/ns/activitystreams#items"))
-        map_items(items)
-      end,
-      "total_items" => json.dig?("https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i64),
-      # pick up the collection's id or the embedded collection
-      "first_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#first"),
-      "first" => if (first = json.dig?("https://www.w3.org/ns/activitystreams#first")) && first.as_h?
-        ActivityPub::Collection.from_json_ld(first)
-      end,
-      # pick up the collection's id or the embedded collection
-      "last_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#last"),
-      "last" => if (last = json.dig?("https://www.w3.org/ns/activitystreams#last")) && last.as_h?
-        ActivityPub::Collection.from_json_ld(last)
-      end,
-      # pick up the collection's id or the embedded collection
-      "prev_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#prev"),
-      "prev" => if (prev = json.dig?("https://www.w3.org/ns/activitystreams#prev")) && prev.as_h?
-        ActivityPub::Collection.from_json_ld(prev)
-      end,
-      # pick up the collection's id or the embedded collection
-      "next_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#next"),
-      "next" => if (_next = json.dig?("https://www.w3.org/ns/activitystreams#next")) && _next.as_h?
-        ActivityPub::Collection.from_json_ld(_next)
-      end,
-      # pick up the collection's id or the embedded collection
-      "current_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#current"),
-      "current" => if (current = json.dig?("https://www.w3.org/ns/activitystreams#current")) && current.as_h?
-        ActivityPub::Collection.from_json_ld(current)
+      def self.to_json_ld(collection, recursive)
+        render "src/views/collections/collection.json.ecr"
       end
-    }.compact
-  end
 
-  def self.map_items(items)
-    ([] of ActivityPub | String).tap do |array|
-      items.as_a.each do |item|
-        if item.as_s?
-          array << item.as_s
-        elsif item.as_h?
-          array << ActivityPub.from_json_ld(item)
-        else
-          raise TypeCastError.new("unsupported JSON type")
+      def self.from_json_ld(json : JSON::Any | String | IO)
+        json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+        collection_host = (collection_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(collection_iri) : nil
+        {
+          "iri" => json.dig?("@id").try(&.as_s),
+          "items_iris" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
+          "items" => if (items = json.dig?("https://www.w3.org/ns/activitystreams#items"))
+            map_items(items, collection_host)
+          end,
+          "total_items" => json.dig?("https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i64),
+          # pick up the collection's id and the embedded collection if hosts match or anonymous
+          "first_iri" => if (first = json.dig?("https://www.w3.org/ns/activitystreams#first"))
+            first.as_s? || first.dig?("@id").try(&.as_s?)
+          end,
+          "first" => if first && first.as_h?
+            if (first_iri = first.dig?("@id").try(&.as_s?))
+              if parse_host(first_iri) == collection_host
+                ActivityPub::Collection.from_json_ld(first)
+              end
+            else
+              ActivityPub::Collection.from_json_ld(first)
+            end
+          end,
+          # pick up the collection's id and the embedded collection if hosts match or anonymous
+          "last_iri" => if (last = json.dig?("https://www.w3.org/ns/activitystreams#last"))
+            last.as_s? || last.dig?("@id").try(&.as_s?)
+          end,
+          "last" => if last && last.as_h?
+            if (last_iri = last.dig?("@id").try(&.as_s?))
+              if parse_host(last_iri) == collection_host
+                ActivityPub::Collection.from_json_ld(last)
+              end
+            else
+              ActivityPub::Collection.from_json_ld(last)
+            end
+          end,
+          # pick up the collection's id and the embedded collection if hosts match or anonymous
+          "prev_iri" => if (prev = json.dig?("https://www.w3.org/ns/activitystreams#prev"))
+            prev.as_s? || prev.dig?("@id").try(&.as_s?)
+          end,
+          "prev" => if prev && prev.as_h?
+            if (prev_iri = prev.dig?("@id").try(&.as_s?))
+              if parse_host(prev_iri) == collection_host
+                ActivityPub::Collection.from_json_ld(prev)
+              end
+            else
+              ActivityPub::Collection.from_json_ld(prev)
+            end
+          end,
+          # pick up the collection's id and the embedded collection if hosts match or anonymous
+          "next_iri" => if (_next = json.dig?("https://www.w3.org/ns/activitystreams#next"))
+            _next.as_s? || _next.dig?("@id").try(&.as_s?)
+          end,
+          "next" => if _next && _next.as_h?
+            if (next_iri = _next.dig?("@id").try(&.as_s?))
+              if parse_host(next_iri) == collection_host
+                ActivityPub::Collection.from_json_ld(_next)
+              end
+            else
+              ActivityPub::Collection.from_json_ld(_next)
+            end
+          end,
+          # pick up the collection's id and the embedded collection if hosts match or anonymous
+          "current_iri" => if (current = json.dig?("https://www.w3.org/ns/activitystreams#current"))
+            current.as_s? || current.dig?("@id").try(&.as_s?)
+          end,
+          "current" => if current && current.as_h?
+            if (current_iri = current.dig?("@id").try(&.as_s?))
+              if parse_host(current_iri) == collection_host
+                ActivityPub::Collection.from_json_ld(current)
+              end
+            else
+              ActivityPub::Collection.from_json_ld(current)
+            end
+          end
+        }.compact
+      end
+
+      private def self.map_items(items, collection_host)
+        ([] of ActivityPub | String).tap do |array|
+          items.as_a.each do |item|
+            if item.as_s?
+              array << item.as_s
+            elsif item.as_h?
+              if (item_id = item.dig?("@id").try(&.as_s?))
+                if parse_host(item_id) == collection_host
+                  array << ActivityPub.from_json_ld(item)
+                else
+                  array << item_id
+                end
+              end
+            else
+              raise TypeCastError.new("unsupported JSON type")
+            end
+          end
         end
+      end
+
+      private def self.parse_host(uri)
+        URI.parse(uri).host
+      rescue URI::Error
       end
     end
   end

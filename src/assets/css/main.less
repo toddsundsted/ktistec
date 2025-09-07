@@ -197,11 +197,16 @@ nav.ui.top.fixed.inverted.navigation.menu .item {
         .ui.text.container {
             display: flex;
 
+            justify-content: center;
+
+            &:has(.item:first-child:last-of-type + .menu) {
+                justify-content: flex-start;
+            }
+
             > .item {
                 display: flex;
                 text-align: center;
-                justify-content: center;
-                align-items: center;
+                justify-content: inherit;
                 flex: 25%;
 
                 .text { display: none; }

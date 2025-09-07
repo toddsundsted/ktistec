@@ -1,27 +1,38 @@
 - if env.account?.try(&.actor) == actor
-  - filters = env.params.query.fetch_all("filters")
+  crystal:
+    count = actor.notifications(since: env.account.last_notifications_checked_at)
+    filters = env.params.query.fetch_all("filters")
   .ui.stackable.secondary.menu
-    a.item href=actor_relationships_path(actor, "posts") Posts
-    a.item href=actor_relationships_path(actor, "drafts") Drafts
-    .item.notifications
-      a.ui href=actor_relationships_path(actor, "notifications") Notifications
-      - if (count = actor.notifications(since: env.account.last_notifications_checked_at)) > 0
-        .ui.mini.transitional.horizontal.circular.red.label= count
-    a.item href=actor_relationships_path(actor, "followers") Followers
-    a.item href=actor_relationships_path(actor, "following") Following
-    a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"
-      i.horizontal.sliders.icon
-      form.menu data-controller="checkbox-submit" data-turbo-frame="main-timeline" data-turbo-action="replace"
-        == params_to_inputs(env.params.query, exclude: ["filters"])
-        input type="hidden" name="filters" value=""
-        .item
-          .ui.slider.checkbox
-            input type="checkbox" name="filters" value="no-shares" data-action="change->checkbox-submit#change" checked=filters.includes?("no-shares")
-            label Don't include shared posts
-        .item
-          .ui.slider.checkbox
-            input type="checkbox" name="filters" value="no-replies" data-action="change->checkbox-submit#change" checked=filters.includes?("no-replies")
-            label Don't include replies
+    input.menu-toggle-checkbox type="checkbox" id="menu-toggle"
+    .mobile-menu-toggle
+      label for="menu-toggle"
+        i.bars.icon
+        span.title Collections and Filters
+        - if count > 0
+          .ui.mini.transitional.horizontal.circular.red.label= count
+    .menu-items
+      a.item href=actor_relationships_path(actor, "posts") Posts
+      a.item href=actor_relationships_path(actor, "drafts") Drafts
+      .item.notifications
+        a.ui href=actor_relationships_path(actor, "notifications") Notifications
+        - if count > 0
+          .ui.mini.transitional.horizontal.circular.red.label= count
+      a.item href=actor_relationships_path(actor, "followers") Followers
+      a.item href=actor_relationships_path(actor, "following") Following
+      a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"
+        i.horizontal.sliders.icon
+        .menu
+          form data-controller="checkbox-submit" data-turbo-frame="main-timeline" data-turbo-action="replace"
+            == params_to_inputs(env.params.query, exclude: ["filters"])
+            input type="hidden" name="filters" value=""
+            .item
+              .ui.slider.checkbox
+                input type="checkbox" name="filters" value="no-shares" data-action="change->checkbox-submit#change" checked=filters.includes?("no-shares")
+                label Don't include shared posts
+            .item
+              .ui.slider.checkbox
+                input type="checkbox" name="filters" value="no-replies" data-action="change->checkbox-submit#change" checked=filters.includes?("no-replies")
+                label Don't include replies
   - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
   == render "src/views/partials/editor.html.slang"
   crystal:

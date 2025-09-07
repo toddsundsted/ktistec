@@ -14,6 +14,13 @@ body { display: flex; flex-direction: column; }
 /* remove visible outlines on focused menu items */
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 
+/* navigation icons */
+nav.ui.top.fixed.inverted.navigation.menu .item {
+    .icon {
+        margin-right: 0.5em;
+    }
+}
+
 /* compact menus should be flex, too */
 .ui > .compact.menu { display: flex; }
 
@@ -168,6 +175,143 @@ body { display: flex; flex-direction: column; }
     @media screen and (min-width: 1200px) {          /* desktops & larger */
     }
     @media screen and (min-width: 1800px) {          /* wide desktops & larger */
+    }
+}
+
+.ui.text.container .ui.stackable.secondary.menu {
+    .mobile-menu-toggle, .menu-toggle-checkbox {
+        display: none;
+    }
+    .menu-items {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        width: 100%;
+    }
+}
+
+/** mobile improvements **/
+@media screen and (max-width: 599px) {
+    /* Navigation icon-only mode on mobile */
+    nav.ui.top.fixed.inverted.navigation.menu {
+        .ui.text.container {
+            display: flex;
+
+            > .item {
+                display: flex;
+                text-align: center;
+                justify-content: center;
+                align-items: center;
+                flex: 25%;
+
+                .text { display: none; }
+                .icon { margin: 0; }
+            }
+
+            .compact.menu {
+                flex: 25%;
+
+                .ui.simple.dropdown.item {
+                    width: 100%;
+                    text-align: center;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+
+                    .text { display: none; }
+                    .dropdown.icon { margin-left: 0.25em; }
+                    .icon:not(.dropdown) { margin: 0; }
+                }
+            }
+        }
+    }
+
+    /* Collapsible secondary menu */
+    .ui.text.container .ui.stackable.secondary.menu {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        font-size: 105%;
+        position: relative;
+
+        .mobile-menu-toggle {
+            display: block !important;
+            margin-bottom: 0.5rem;
+
+            label {
+                display: block;
+                background-color: #2185d0;
+                color: #fff;
+                padding: 0.75rem 1rem;
+                border-radius: 3px;
+                cursor: pointer;
+                position: relative;
+
+                .label {
+                    font-size: 70% !important;
+                    margin-left: 0.75rem !important;
+                }
+            }
+        }
+
+        .menu-items {
+            display: none !important;
+            position: relative;
+            background: white;
+            border-radius: 3px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 0.5rem 0;
+            margin-top: -0.5rem;
+
+            .item {
+                font-size: initial;
+                width: 100%;
+                margin: 0px !important;
+                padding: 0.5rem 1rem;
+            }
+        }
+
+        .menu-toggle-checkbox:checked ~ .menu-items {
+            display: block !important;
+        }
+
+        .menu-toggle-checkbox:checked ~ .mobile-menu-toggle label .label {
+            display: none;
+        }
+    }
+
+    /* Full-width mobile pagination */
+    .ui.text.container .ui.secondary.pagination.menu {
+        display: flex;
+        flex-direction: row;
+        font-size: 115%;
+
+        .item {
+            flex: 50%;
+
+            .icon {
+                width: 100%;
+            }
+        }
+    }
+
+    /* Enhanced mobile typography */
+    .ui.feed .event > .content {
+        font-size: 105%;
+        line-height: 1.4;
+    }
+
+    /* Mobile-optimized spacing and touch targets */
+    /* 44px is Apple's minimum touch target */
+    .ui.feed .event {
+        margin-bottom: 1.5rem;
+    }
+
+    .ui.secondary.menu {
+        font-size: 110%;
+
+        > .item {
+            min-height: 44px;
+        }
     }
 }
 

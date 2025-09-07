@@ -178,6 +178,18 @@ nav.ui.top.fixed.inverted.navigation.menu .item {
     }
 }
 
+.ui.text.container .ui.stackable.secondary.menu {
+    .mobile-menu-toggle, .menu-toggle-checkbox {
+        display: none;
+    }
+    .menu-items {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        width: 100%;
+    }
+}
+
 /** mobile improvements **/
 @media screen and (max-width: 599px) {
     /* Navigation icon-only mode on mobile */
@@ -211,6 +223,59 @@ nav.ui.top.fixed.inverted.navigation.menu .item {
                     .icon:not(.dropdown) { margin: 0; }
                 }
             }
+        }
+    }
+
+    /* Collapsible secondary menu */
+    .ui.text.container .ui.stackable.secondary.menu {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        font-size: 105%;
+        position: relative;
+
+        .mobile-menu-toggle {
+            display: block !important;
+            margin-bottom: 0.5rem;
+
+            label {
+                display: block;
+                background-color: #2185d0;
+                color: #fff;
+                padding: 0.75rem 1rem;
+                border-radius: 3px;
+                cursor: pointer;
+                position: relative;
+
+                .label {
+                    font-size: 70% !important;
+                    margin-left: 0.75rem !important;
+                }
+            }
+        }
+
+        .menu-items {
+            display: none !important;
+            position: relative;
+            background: white;
+            border-radius: 3px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 0.5rem 0;
+            margin-top: -0.5rem;
+
+            .item {
+                font-size: initial;
+                width: 100%;
+                margin: 0px !important;
+                padding: 0.5rem 1rem;
+            }
+        }
+
+        .menu-toggle-checkbox:checked ~ .menu-items {
+            display: block !important;
+        }
+
+        .menu-toggle-checkbox:checked ~ .mobile-menu-toggle label .label {
+            display: none;
         }
     }
 

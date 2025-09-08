@@ -9,14 +9,18 @@
         i.bars.icon
         span.title Collections and Filters
         - if count > 0
-          .ui.mini.transitional.horizontal.circular.red.label= count
+          span.ui.mini.transitional.horizontal.circular.red.label= count
+        - else
+          span.invisible.label
     .menu-items
       a.item href=actor_relationships_path(actor, "posts") Posts
       a.item href=actor_relationships_path(actor, "drafts") Drafts
       .item.notifications
         a.ui href=actor_relationships_path(actor, "notifications") Notifications
         - if count > 0
-          .ui.mini.transitional.horizontal.circular.red.label= count
+          span.ui.mini.transitional.horizontal.circular.red.label= count
+        - else
+          span.invisible.label
       a.item href=actor_relationships_path(actor, "followers") Followers
       a.item href=actor_relationships_path(actor, "following") Following
       a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"

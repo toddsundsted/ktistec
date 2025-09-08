@@ -27,8 +27,14 @@ class StreamingController
   # Renders action to replace the notifications count.
   #
   def self.replace_notifications_count(io, account)
-    body = render "src/views/partials/notifications-count.html.slang"
-    stream_replace(io, selector: ".ui.menu > .item.notifications", body: body)
+    body =
+      if (count = account.actor.notifications(since: account.last_notifications_checked_at)) > 0
+        %Q|<span class="ui mini transitional horizontal circular red label">#{count}</span>|
+      else
+        %Q|<span class="invisible label"></span>|
+      end
+    stream_replace(io, selector: ".ui.menu .mobile-menu-toggle .label", body: body)
+    stream_replace(io, selector: ".ui.menu .item.notifications .label", body: body)
   end
 
   # Renders action to replace the refresh posts message.

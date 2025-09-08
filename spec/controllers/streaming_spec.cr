@@ -115,14 +115,17 @@ Spectator.describe StreamingController do
       end
     end
 
-    it "renders a Turbo Stream action" do
+    it "renders Turbo Stream actions" do
       expect(subject).to eq <<-HTML
-      data: <turbo-stream action="replace" targets=".ui.menu > .item.notifications">
+      data: <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label">
       data: <template>
-      data: <div class="item notifications">\
-      <a class="ui" href="/actors/#{account.username}/notifications">Notifications</a>\
-      <div class="ui mini transitional horizontal circular red label">1</div>\
-      </div>
+      data: <span class="ui mini transitional horizontal circular red label">1</span>
+      data: </template>
+      data: </turbo-stream>
+
+      data: <turbo-stream action="replace" targets=".ui.menu .item.notifications .label">
+      data: <template>
+      data: <span class="ui mini transitional horizontal circular red label">1</span>
       data: </template>
       data: </turbo-stream>
       \n

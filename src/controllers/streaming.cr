@@ -292,26 +292,30 @@ class StreamingController
   {% end %}
 
   def self.stream_action(io : IO, body : String?, action : String, target : String?, selector : String?, id : String | Bool | Nil = false)
-    if target && !selector
-      io.puts %Q|data: <turbo-stream action="#{action}" target="#{target}">|
-    elsif selector && !target
-      io.puts %Q|data: <turbo-stream action="#{action}" targets="#{selector}">|
-    else
-      io.puts %Q|data: <turbo-stream action="#{action}">|
-    end
-    if body
-      io.puts "data: <template>"
-      body.each_line do |line|
-        io.puts "data: #{line}"
+    String.build do |str|
+      if target && !selector
+        str << %Q|<turbo-stream action="#{action}" target="#{target}">|
+      elsif selector && !target
+        str << %Q|<turbo-stream action="#{action}" targets="#{selector}">|
+      else
+        str << %Q|<turbo-stream action="#{action}">|
       end
-      io.puts "data: </template>"
+      if body
+        str << "<template>"
+        str << body
+        str << "</template>"
+      end
+      str << "</turbo-stream>"
+    end.split("\n").each do |line|
+      io.puts "data: #{line}"
     end
-    io.puts "data: </turbo-stream>"
+
     if id.nil?
       io.puts "id"
     elsif id.is_a?(String)
       io.puts "id: #{id}"
     end
+
     io.puts
     io.flush
   end

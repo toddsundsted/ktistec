@@ -319,6 +319,26 @@ Spectator.describe Ktistec::Model do
     it "raises an error if strict is true and property is not a property" do
       expect{FooBarModel.new(foo: "").assign({"key" => "Key"}, _strict: true)}.to raise_error(Ktistec::Model::TypeError, /is not a property/)
     end
+
+    # assigns a new property value
+
+    it "indicates the property value is changed" do
+      expect{not_nil.assign(val: "VAL")}.to change{not_nil.changed?(:val)}.from(false).to(true)
+    end
+
+    it "indicates the property value is changed" do
+      expect{foo_bar.assign({"foo" => "FOO"})}.to change{foo_bar.changed?(:foo)}.from(false).to(true)
+    end
+
+    # reassigns the existing property value
+
+    it "indicates the property value is not changed" do
+      expect{not_nil.assign(val: "Val")}.not_to change{not_nil.changed?(:val)}
+    end
+
+    it "indicates the property value is not changed" do
+      expect{foo_bar.assign({"foo" => "Foo"})}.not_to change{foo_bar.changed?(:foo)}
+    end
   end
 
   describe "#==" do
@@ -725,7 +745,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "performs the validations even if unchanged if called directly" do
-      new_model = NotNilModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+      new_model = NotNilModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear_changed!)
       expect(new_model.valid?).to be_false
       expect(new_model.errors).to eq({"key" => ["is not capitalized"], "val" => ["is not capitalized"]})
     end
@@ -761,7 +781,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "does not validate the associated instance if it's unchanged" do
-      not_nil_model = NotNilModel.new(id: 9999_i64, val: "").tap(&.clear!)
+      not_nil_model = NotNilModel.new(id: 9999_i64, val: "").tap(&.clear_changed!)
       foo_bar_model = FooBarModel.new(not_nil_model: not_nil_model)
       expect(foo_bar_model.valid?).to be_true
       expect(not_nil_model.errors).to be_empty
@@ -785,7 +805,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "runs the callback even if unchanged if called directly" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear_changed!)
         expect{all_caps_model.valid?}.to change{all_caps_model.before_validate_called}.to(true)
       end
 
@@ -795,7 +815,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "does not run the callback on associated instance if it's unchanged" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear_changed!)
         expect{FooBarModel.new(not_nil_model: all_caps_model).valid?}.not_to change{all_caps_model.before_validate_called}
       end
     end
@@ -817,7 +837,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "runs the callback even if unchanged if called directly" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear_changed!)
         expect{all_caps_model.valid?}.to change{all_caps_model.after_validate_called}.to(true)
       end
 
@@ -827,7 +847,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "does not run the callback on associated instance if it's unchanged" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear!)
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "key", val: "val").tap(&.clear_changed!)
         expect{FooBarModel.new(not_nil_model: all_caps_model).valid?}.not_to change{all_caps_model.after_validate_called}
       end
     end
@@ -851,7 +871,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "saves a new instance even if unchanged if saved directly" do
-        new_model = FooBarModel.new(id: 9999_i64, foo: "Foo", bar: "Bar").tap(&.clear!)
+        new_model = FooBarModel.new(id: 9999_i64, foo: "Foo", bar: "Bar").tap(&.clear_changed!)
         expect(new_model.changed?).to be_false
         expect{new_model.save}.to change{FooBarModel.find?(foo: "Foo", bar: "Bar")}
       end
@@ -890,7 +910,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "doesn't save the associated instance if it's unchanged" do
-        another_model = AnotherModel.new(id: 9999_i64, val: "Val").tap(&.clear!)
+        another_model = AnotherModel.new(id: 9999_i64, val: "Val").tap(&.clear_changed!)
         expect(another_model.changed?).to be_false
         expect{DerivedModel.new(not_nil_model: another_model).save}.not_to change{AnotherModel.count}
       end
@@ -918,7 +938,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "updates the instance even if unchanged if saved directly" do
-        saved_model = FooBarModel.new.save.assign(foo: "Foo", bar: "Bar").tap(&.clear!)
+        saved_model = FooBarModel.new.save.assign(foo: "Foo", bar: "Bar").tap(&.clear_changed!)
         expect(saved_model.changed?).to be_false
         expect{saved_model.save}.to change{FooBarModel.find?(foo: "Foo", bar: "Bar")}
       end
@@ -957,7 +977,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "doesn't save the associated instance if it's unchanged" do
-        another_model = AnotherModel.new(id: 9999_i64, val: "Val").tap(&.clear!)
+        another_model = AnotherModel.new(id: 9999_i64, val: "Val").tap(&.clear_changed!)
         expect(another_model.changed?).to be_false
         expect{DerivedModel.new.save.assign(not_nil_model: another_model).save}.not_to change{AnotherModel.count}
       end
@@ -1007,7 +1027,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "does not run the callback on associated instance if it's not a new record" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val") #.tap(&.clear!)
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val") #.tap(&.clear_changed!)
         expect{FooBarModel.new(not_nil_model: all_caps_model).save}.not_to change{all_caps_model.before_create_called}.from(false)
       end
     end
@@ -1085,7 +1105,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "runs the callback even if unchanged if called directly" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!)
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear_changed!)
         expect{all_caps_model.save}.to change{all_caps_model.before_save_called}.to(true)
       end
 
@@ -1095,7 +1115,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "does not run the callback on associated instance if it's unchanged" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!)
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear_changed!)
         expect{FooBarModel.new(not_nil_model: all_caps_model).save}.not_to change{all_caps_model.before_save_called}
       end
     end
@@ -1107,7 +1127,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "runs the callback even if unchanged if called directly" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!)
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear_changed!)
         expect{all_caps_model.save}.to change{all_caps_model.after_save_called}.to(true)
       end
 
@@ -1117,7 +1137,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "does not run the callback on associated instance if it's unchanged" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear!)
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val").tap(&.clear_changed!)
         expect{FooBarModel.new(not_nil_model: all_caps_model).save}.not_to change{all_caps_model.after_save_called}
       end
     end
@@ -1247,7 +1267,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "returns true if the record is new even if it was cleared" do
-      expect(not_nil_model.tap(&.clear!).changed?).to be_true
+      expect(not_nil_model.tap(&.clear_changed!).changed?).to be_true
     end
 
     it "returns false if the record has not been changed" do
@@ -1259,7 +1279,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "returns false if the record has been cleared after it was changed" do
-      expect(not_nil_model.save.assign(val: "Baz").tap(&.clear!).changed?).to be_false
+      expect(not_nil_model.save.assign(val: "Baz").tap(&.clear_changed!).changed?).to be_false
     end
 
     it "returns false if the record has been saved" do
@@ -1337,11 +1357,11 @@ Spectator.describe Ktistec::Model do
     end
 
     it "returns false if the property has been cleared after it was changed" do
-      expect(not_nil_model.save.assign(key: "Foo").tap(&.clear!(:key)).changed?(:key)).to be_false
+      expect(not_nil_model.save.assign(key: "Foo").tap(&.clear_changed!(:key)).changed?(:key)).to be_false
     end
 
     it "returns true if the property has been changed" do
-      expect(not_nil_model.save.assign(key: "Foo").tap(&.clear!(:val)).changed?(:key)).to be_true
+      expect(not_nil_model.save.assign(key: "Foo").tap(&.clear_changed!(:val)).changed?(:key)).to be_true
     end
   end
 

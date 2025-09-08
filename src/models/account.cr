@@ -75,7 +75,7 @@ class Account
 
   def before_validate
     if changed?(:username)
-      clear!(:username)
+      clear_changed!(:username)
       if (username = self.username)
         host = Ktistec.host
         self.iri = "#{host}/actors/#{username}"
@@ -101,7 +101,7 @@ class Account
 
   def before_save
     if changed?(:actor)
-      clear!(:actor)
+      clear_changed!(:actor)
       if (actor = self.actor?) && actor.pem_public_key.nil? && actor.pem_private_key.nil?
         keypair = OpenSSL::RSA.generate(self.size, 17)
         actor.pem_public_key = keypair.public_key.to_pem
@@ -165,5 +165,20 @@ class Account
       LastTime.new(account: self, name: LAST_NOTIFICATIONS_CHECKED_AT)
     last_time.assign(timestamp: time).save
     self
+  end
+
+  # Returns count of monthly active accounts (accounts with any
+  # activity in the last 30 days).
+  #
+  def self.monthly_active_accounts_count
+    query = <<-QUERY
+        SELECT COUNT(DISTINCT a.id)
+          FROM accounts AS a
+          JOIN activities AS t
+            ON t.actor_iri = a.iri
+         WHERE t.published >= ?
+           AND t.undone_at IS NULL
+    QUERY
+    Account.scalar(query, 30.days.ago).as(Int64)
   end
 end

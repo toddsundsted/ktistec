@@ -1,6 +1,21 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.12]
+### Added
+- Add follow request status to the actor panel.
+- Compute and cache monthly active accounts.
+
+### Changed
+- (Internal) Only consider properties with changed values as "changed".
+- (Internal) Only deserialize embedded ActivityPub objects if hosts match.
+
+### Fixed
+- Remove line breaks in Turbo Stream output.
+
+### Other
+- Many excellent mobile enhancements. (thanks [@JayVii](https://social.jayvii.de/@jayvii))
+
 ## [v2.4.11]
 ### Added
 - Support a "site description" on the unauthenticated home page.
@@ -403,6 +418,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v2.4.12]: https://github.com/toddsundsted/ktistec/compare/2d0e9500...4f0ea229
 [v2.4.11]: https://github.com/toddsundsted/ktistec/compare/157d70d1...fe9aab2c
 [v2.4.10]: https://github.com/toddsundsted/ktistec/compare/d7341dd1...a99a66e2
 [v2.4.9]: https://github.com/toddsundsted/ktistec/compare/9b9e7b1d...198a1578

@@ -18,50 +18,6 @@ Spectator.describe ActivityPub::Activity do
     end
   end
 
-  context "given embedded objects" do
-    let(json) do
-      <<-JSON
-        {
-          "@context":[
-            "https://www.w3.org/ns/activitystreams"
-          ],
-          "@id":"https://test.test/foo_bar",
-          "@type":"FooBarActivity",
-          "actor":{
-            "id":"actor link",
-            "type":"Actor"
-          },
-          "object":{
-            "@id":"object link",
-            "@type":"Object"
-          },
-          "target":{
-            "@id":"target link",
-            "@type":"Activity"
-          }
-        }
-      JSON
-    end
-
-    it "caches the actor" do
-      activity = described_class.from_json_ld(json).as(FooBarActivity)
-      expect(activity.actor).to be_a(ActivityPub::Actor)
-      expect(activity.actor.iri).to eq("actor link")
-    end
-
-    it "caches the object" do
-      activity = described_class.from_json_ld(json).as(FooBarActivity)
-      expect(activity.object).to be_a(ActivityPub::Object)
-      expect(activity.object.iri).to eq("object link")
-    end
-
-    it "caches the target" do
-      activity = described_class.from_json_ld(json).as(FooBarActivity)
-      expect(activity.target).to be_a(ActivityPub::Activity)
-      expect(activity.target.iri).to eq("target link")
-    end
-  end
-
   let(json) do
     <<-JSON
       {
@@ -163,6 +119,87 @@ Spectator.describe ActivityPub::Activity do
       expect(json["actor"].as_s?).to be_truthy
       expect(json["object"].as_s?).to be_truthy
       expect(json["target"].as_s?).to be_truthy
+    end
+  end
+end
+
+Spectator.describe ActivityPub::Activity::ModelHelper do
+  let(json) do
+    <<-JSON
+      {
+        "@context":[
+          "https://www.w3.org/ns/activitystreams"
+        ],
+        "@id":"https://test.test/foo_bar",
+        "@type":"FooBarActivity",
+        "actor":{
+          "id":"actor link",
+          "type":"Actor"
+        },
+        "object":{
+          "@id":"object link",
+          "@type":"Object"
+        },
+        "target":{
+          "@id":"target link",
+          "@type":"Activity"
+        }
+      }
+    JSON
+  end
+
+  describe ".from_json_ld" do
+    let(activity) { described_class.from_json_ld(json) }
+
+    it "populates actor_iri" do
+      expect(activity["actor_iri"]).to eq("actor link")
+    end
+
+    it "does not populate actor" do
+      expect(activity.has_key?("actor")).to be_false
+    end
+
+    context "given an actor with the same host" do
+      let(json) { super.gsub(%q|"id":"actor link"|, %q|"id":"https://test.test/actor"|) }
+
+      it "populates actor" do
+        expect(activity["actor"]).to be_a(ActivityPub::Actor)
+        expect(activity["actor"].as(ActivityPub::Actor).iri).to eq("https://test.test/actor")
+      end
+    end
+
+    it "populates object_iri" do
+      expect(activity["object_iri"]).to eq("object link")
+    end
+
+    it "does not populate object" do
+      expect(activity.has_key?("object")).to be_false
+    end
+
+    context "given an object with the same host" do
+      let(json) { super.gsub(%q|"@id":"object link"|, %q|"@id":"https://test.test/object"|) }
+
+      it "populates object" do
+        expect(activity["object"]).to be_a(ActivityPub::Object)
+        expect(activity["object"].as(ActivityPub::Object).iri).to eq("https://test.test/object")
+      end
+    end
+
+    it "populates target_iri" do
+      expect(activity["target_iri"]).to eq("target link")
+    end
+
+    it "does not populate target" do
+      expect(activity.has_key?("target")).to be_false
+    end
+
+    context "given a target with the same host" do
+      let(json) { super.gsub(%q|"@id":"target link"|, %q|"@id":"https://test.test/target"|) }
+
+      it "populates target" do
+        expect(activity["target"]).to be_a(ActivityPub::Activity)
+        expect(activity["target"].as(ActivityPub::Activity).iri).to eq("https://test.test/target")
+      end
     end
   end
 end

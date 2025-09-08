@@ -95,11 +95,10 @@ Spectator.describe StreamingController do
 
     it "renders a Turbo Stream action" do
       expect(subject).to eq <<-HTML
-      data: <turbo-stream action="replace" targets=":is(i,img)[data-actor-id='#{actor.id}']">
-      data: <template>
-      data: <img src="#{actor.icon}">
-      data: </template>
-      data: </turbo-stream>
+      data: \
+      <turbo-stream action="replace" targets=":is(i,img)[data-actor-id='#{actor.id}']"><template>\
+      <img src="#{actor.icon}">\
+      </template></turbo-stream>
       \n
       HTML
     end
@@ -115,16 +114,17 @@ Spectator.describe StreamingController do
       end
     end
 
-    it "renders a Turbo Stream action" do
+    it "renders Turbo Stream actions" do
       expect(subject).to eq <<-HTML
-      data: <turbo-stream action="replace" targets=".ui.menu > .item.notifications">
-      data: <template>
-      data: <div class="item notifications">\
-      <a class="ui" href="/actors/#{account.username}/notifications">Notifications</a>\
-      <div class="ui mini transitional horizontal circular red label">1</div>\
-      </div>
-      data: </template>
-      data: </turbo-stream>
+      data: \
+      <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
+      <span class="ui mini transitional horizontal circular red label">1</span>\
+      </template></turbo-stream>
+
+      data: \
+      <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
+      <span class="ui mini transitional horizontal circular red label">1</span>\
+      </template></turbo-stream>
       \n
       HTML
     end
@@ -139,14 +139,13 @@ Spectator.describe StreamingController do
 
     it "renders a Turbo Stream action" do
       expect(subject).to eq <<-HTML
-      data: <turbo-stream action="replace" target="refresh-posts-message">
-      data: <template>
-      data: <div id="refresh-posts-message" class="ui info icon message"><i class="sync icon"></i>\
+      data: \
+      <turbo-stream action="replace" target="refresh-posts-message"><template>\
+      <div id="refresh-posts-message" class="ui info icon message"><i class="sync icon"></i>\
       <div class="content"><div class="header">There are new posts!</div>\
       <p><a href="" data-turbo-prefetch="false" data-turbo-action="replace">Refresh</a></p>\
-      </div></div>
-      data: </template>
-      data: </turbo-stream>
+      </div></div>\
+      </template></turbo-stream>
       \n
       HTML
     end
@@ -179,13 +178,12 @@ Spectator.describe StreamingController do
         described_class.stream_action(io, body: "<br>\n<br>\n<br>", action: "foobar", target: "target", selector: nil)
       end
       expect(str).to eq <<-HTML
-      data: <turbo-stream action="foobar" target="target">
-      data: <template>
+      data: \
+      <turbo-stream action="foobar" target="target"><template>\
+      <br>
       data: <br>
-      data: <br>
-      data: <br>
-      data: </template>
-      data: </turbo-stream>
+      data: <br>\
+      </template></turbo-stream>
       \n
       HTML
     end
@@ -195,13 +193,12 @@ Spectator.describe StreamingController do
         described_class.stream_action(io, body: "<br>\n<br>\n<br>", action: "foobar", selector: "target", target: nil)
       end
       expect(str).to eq <<-HTML
-      data: <turbo-stream action="foobar" targets="target">
-      data: <template>
+      data: \
+      <turbo-stream action="foobar" targets="target"><template>\
+      <br>
       data: <br>
-      data: <br>
-      data: <br>
-      data: </template>
-      data: </turbo-stream>
+      data: <br>\
+      </template></turbo-stream>
       \n
       HTML
     end
@@ -211,8 +208,7 @@ Spectator.describe StreamingController do
         described_class.stream_action(io, body: nil, action: "foobar", id: "xyzzy", target: nil, selector: nil)
       end
       expect(str).to eq <<-HTML
-      data: <turbo-stream action="foobar">
-      data: </turbo-stream>
+      data: <turbo-stream action="foobar"></turbo-stream>
       id: xyzzy
       \n
       HTML
@@ -223,8 +219,7 @@ Spectator.describe StreamingController do
         described_class.stream_action(io, body: nil, action: "foobar", id: nil, target: nil, selector: nil)
       end
       expect(str).to eq <<-HTML
-      data: <turbo-stream action="foobar">
-      data: </turbo-stream>
+      data: <turbo-stream action="foobar"></turbo-stream>
       id
       \n
       HTML

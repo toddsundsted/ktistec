@@ -116,4 +116,35 @@ Spectator.describe Account do
       expect(subject.sessions).to be_empty
     end
   end
+
+  describe ".monthly_active_accounts_count" do
+    let!(actor) { register.actor }
+
+    context "given an activity within the last 30 days" do
+      let_create!(:activity, actor: actor, published: 15.days.ago)
+
+      it "returns a count of 1" do
+        count = described_class.monthly_active_accounts_count
+        expect(count).to eq(1)
+      end
+
+      context "that was undone" do
+        before_each { activity.undo! }
+
+        it "returns a count of 0" do
+          count = described_class.monthly_active_accounts_count
+          expect(count).to eq(0)
+        end
+      end
+    end
+
+    context "given an activity older than 30 days" do
+      let_create!(:activity, actor: actor, published: 45.days.ago)
+
+      it "returns a count of 0" do
+        count = described_class.monthly_active_accounts_count
+        expect(count).to eq(0)
+      end
+    end
+  end
 end

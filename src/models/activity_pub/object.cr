@@ -157,7 +157,7 @@ module ActivityPub
 
     def before_validate
       if changed?(:source)
-        clear!(:source)
+        clear_changed!(:source)
         if (source = self.source) && local?
           media_type = source.media_type.split(";").map(&.strip).first?
           if media_type == "text/html"
@@ -789,79 +789,93 @@ module ActivityPub
     end
 
     def to_json_ld(recursive = true)
-      ObjectModelHelper.to_json_ld(self, recursive)
+      ModelHelper.to_json_ld(self, recursive)
     end
 
     def from_json_ld(json)
-      self.assign(ObjectModelHelper.from_json_ld(json))
+      self.assign(ModelHelper.from_json_ld(json))
     end
 
     def self.map(json, **options)
-      ObjectModelHelper.from_json_ld(json)
+      ModelHelper.from_json_ld(json)
     end
-  end
-end
 
-private module ObjectModelHelper
-  include Ktistec::ViewHelper
+    module ModelHelper
+      include Ktistec::ViewHelper
 
-  def self.to_json_ld(object, recursive)
-    render "src/views/objects/object.json.ecr"
-  end
+      def self.to_json_ld(object, recursive)
+        render "src/views/objects/object.json.ecr"
+      end
 
-  def self.from_json_ld(json : JSON::Any | String | IO)
-    json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
-    {
-      "iri" => json.dig?("@id").try(&.as_s),
-      "_type" => json.dig?("@type").try(&.as_s.split("#").last),
-      "published" => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
-      "attributed_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
-      "in_reply_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
-      # either pick up the collection's id or the embedded collection
-      "replies_iri" => json.dig?("https://www.w3.org/ns/activitystreams#replies").try(&.as_s?),
-      "replies" => if (replies = json.dig?("https://www.w3.org/ns/activitystreams#replies")) && replies.as_h?
-        ActivityPub::Collection.from_json_ld(replies)
-      end,
-      "to" => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
-      "cc" => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
-      "name" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
-      "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-      "content" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
-      "media_type" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
-      "hashtags" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
-        next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Hashtag"
-        name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
-        href = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
-        Tag::Hashtag.new(name: name, href: href) if name
-      end,
-      "mentions" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
-        next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Mention"
-        name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
-        href = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
-        Tag::Mention.new(name: name, href: href) if name
-      end,
-      "attachments" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
-        url = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#url").presence
-        media_type = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#mediaType").presence
-        name = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
-        ActivityPub::Object::Attachment.new(url, media_type, name) if url && media_type
-      end,
-      "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
-      # use addressing to establish visibility
-      "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
-    }.tap do |map|
-      if (language = json.dig?("http://schema.org/inLanguage", "http://schema.org/identifier")) && (language = language.as_s?)
-        map["language"] = language
-      elsif (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
-        content.each do |language, content|
-          if language && content
-            if language != "und" && content == map["content"]?
-              map["language"] = language
-              break
+      def self.from_json_ld(json : JSON::Any | String | IO)
+        json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+        object_host = (object_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(object_iri) : nil
+        {
+          "iri" => json.dig?("@id").try(&.as_s),
+          "_type" => json.dig?("@type").try(&.as_s.split("#").last),
+          "published" => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
+          "attributed_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
+          "in_reply_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
+          # pick up the replies' id and the embedded replies if the hosts match
+          "replies_iri" => if (replies = json.dig?("https://www.w3.org/ns/activitystreams#replies"))
+            replies.as_s? || replies.dig?("@id").try(&.as_s?)
+          end,
+          "replies" => if replies && replies.as_h?
+            if (replies_iri = replies.dig?("@id").try(&.as_s?))
+              if parse_host(replies_iri) == object_host
+                ActivityPub::Collection.from_json_ld(replies)
+              end
+            else
+              ActivityPub::Collection.from_json_ld(replies)
+            end
+          end,
+          "to" => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
+          "cc" => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+          "name" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
+          "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+          "content" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
+          "media_type" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
+          "hashtags" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
+            next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Hashtag"
+            name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
+            href = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
+            Tag::Hashtag.new(name: name, href: href) if name
+          end,
+          "mentions" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
+            next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Mention"
+            name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
+            href = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
+            Tag::Mention.new(name: name, href: href) if name
+          end,
+          "attachments" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
+            url = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#url").presence
+            media_type = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#mediaType").presence
+            name = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
+            ActivityPub::Object::Attachment.new(url, media_type, name) if url && media_type
+          end,
+          "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+          # use addressing to establish visibility
+          "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
+        }.tap do |map|
+          if (language = json.dig?("http://schema.org/inLanguage", "http://schema.org/identifier")) && (language = language.as_s?)
+            map["language"] = language
+          elsif (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
+            content.each do |language, content|
+              if language && content
+                if language != "und" && content == map["content"]?
+                  map["language"] = language
+                  break
+                end
+              end
             end
           end
-        end
+        end.compact
       end
-    end.compact
+
+      private def self.parse_host(uri)
+        URI.parse(uri).host
+      rescue URI::Error
+      end
+    end
   end
 end

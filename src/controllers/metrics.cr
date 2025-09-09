@@ -141,8 +141,12 @@ class MetricsController
 
   private def self.get_range(env)
     timezone = timezone(env)
-    if (_begin = env.params.query["begin"]?.try(&.presence))
-      _begin = Time.parse(_begin, "%Y-%m-%d", timezone)
+    if env.params.query.has_key?("begin")
+      if (_begin = env.params.query["begin"]?.try(&.presence))
+        _begin = Time.parse(_begin, "%Y-%m-%d", timezone)
+      end
+    else
+      _begin = 7.days.ago.in(timezone)
     end
     if (_end = env.params.query["end"]?.try(&.presence))
       _end = Time.parse(_end, "%Y-%m-%d", timezone)

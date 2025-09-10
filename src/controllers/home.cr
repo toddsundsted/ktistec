@@ -2,11 +2,13 @@ require "../framework/controller"
 require "../services/description_enhancer"
 require "../models/activity_pub/activity/follow"
 require "../models/activity_pub/actor/person"
+require "../utils/rss"
 
 class HomeController
   include Ktistec::Controller
 
   skip_auth ["/"], GET, POST
+  skip_auth ["/feed.rss"], GET
 
   get "/" do |env|
     if !Ktistec.settings.host.presence || !Ktistec.settings.site.presence
@@ -28,6 +30,20 @@ class HomeController
     else
       redirect actor_path(account)
     end
+  end
+
+  get "/feed.rss" do |env|
+    objects = ActivityPub::Object.public_posts(**pagination_params(env))
+
+    site_name = Ktistec.site
+    site_host = Ktistec.host
+
+    env.response.content_type = "application/rss+xml; charset=utf-8"
+
+    Ktistec::RSS.generate_rss_feed(
+      objects, site_name, site_host,
+      "#{site_name}: RSS Feed"
+    )
   end
 
   post "/" do |env|

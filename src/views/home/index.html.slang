@@ -1,3 +1,5 @@
+- content_for "head" do
+  link rel="alternate" type="application/rss+xml" title="#{Ktistec.site}: RSS Feed" href="/feed.rss"
 section.ui.feed data-controller="icon-load-error"
   - # take advantage of existing feed styling for presentation #
   - if (description = Ktistec::DescriptionEnhancer.enhanced_description.presence)

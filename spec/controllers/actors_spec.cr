@@ -127,6 +127,52 @@ Spectator.describe ActorsController do
         expect(Global.session).to be_nil
       end
     end
+
+    it "includes RSS feed discovery link in HTML head when unauthenticated" do
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      html = XML.parse_html(response.body)
+      rss_link = html.xpath_node("//link[@rel='alternate'][@type='application/rss+xml'][@href='/actors/#{actor.username}/feed.rss']")
+      expect(rss_link.try(&.["title"])).to eq("#{actor.display_name}: RSS Feed")
+    end
+  end
+
+  describe "GET /actors/:username/feed.rss" do
+    it "returns 404 if not found" do
+      get "/actors/missing/feed.rss"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns correct content type" do
+      get "/actors/#{actor.username}/feed.rss"
+      expect(response.status_code).to eq(200)
+      expect(response.headers["Content-Type"]).to eq("application/rss+xml; charset=utf-8")
+    end
+
+    it "returns valid RSS" do
+      get "/actors/#{actor.username}/feed.rss"
+      expect(response.status_code).to eq(200)
+      xml = XML.parse(response.body)
+      expect(xml.xpath_node("//rss")).to_not be_nil
+      expect(xml.xpath_node("//channel")).to_not be_nil
+    end
+
+    let_build(:create, actor: actor)
+
+    it "includes public posts in RSS feed" do
+      put_in_outbox(owner: actor, activity: create)
+
+      get "/actors/#{actor.username}/feed.rss"
+      expect(response.status_code).to eq(200)
+      xml = XML.parse(response.body)
+      expect(xml.xpath_nodes("//item")).to_not be_empty
+      expect(xml.xpath_node("//item/title")).to_not be_nil
+      expect(xml.xpath_node("//item/link")).to_not be_nil
+      expect(xml.xpath_node("//item/description")).to_not be_nil
+      expect(xml.xpath_node("//item/pubDate")).to_not be_nil
+      expect(xml.xpath_node("//item/guid")).to_not be_nil
+    end
+
   end
 
   describe "GET /actors/:username/public-posts" do

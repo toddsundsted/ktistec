@@ -212,6 +212,14 @@ Spectator.describe HomeController do
           end
         end
 
+        it "includes RSS feed discovery link in HTML head" do
+          get "/", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          html = XML.parse_html(response.body)
+          rss_link = html.xpath_node("//link[@rel='alternate'][@type='application/rss+xml'][@href='/feed.rss']")
+          expect(rss_link.try(&.["title"])).to eq("Test: RSS Feed")
+        end
+
         it "renders a list of local actors" do
           get "/", JSON_HEADERS
           expect(response.status_code).to eq(200)
@@ -312,6 +320,40 @@ Spectator.describe HomeController do
         post "/", JSON_HEADERS
         expect(response.status_code).to eq(404)
       end
+    end
+  end
+
+  describe "GET /feed.rss" do
+    let!(account) { register(username, password) }
+
+    it "returns correct content type" do
+      get "/feed.rss"
+      expect(response.status_code).to eq(200)
+      expect(response.headers["Content-Type"]).to eq("application/rss+xml; charset=utf-8")
+    end
+
+    it "returns valid RSS" do
+      get "/feed.rss"
+      expect(response.status_code).to eq(200)
+      xml = XML.parse(response.body)
+      expect(xml.xpath_node("//rss")).to_not be_nil
+      expect(xml.xpath_node("//channel")).to_not be_nil
+    end
+
+    let_build(:create)
+
+    it "includes public posts" do
+      put_in_outbox(account.actor, create)
+
+      get "/feed.rss", HTML_HEADERS
+      expect(response.status_code).to eq(200)
+      xml = XML.parse(response.body)
+      expect(xml.xpath_nodes("//item")).to_not be_empty
+      expect(xml.xpath_node("//item/title")).to_not be_nil
+      expect(xml.xpath_node("//item/link")).to_not be_nil
+      expect(xml.xpath_node("//item/description")).to_not be_nil
+      expect(xml.xpath_node("//item/pubDate")).to_not be_nil
+      expect(xml.xpath_node("//item/guid")).to_not be_nil
     end
   end
 end

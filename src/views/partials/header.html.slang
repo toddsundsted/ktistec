@@ -23,7 +23,7 @@ nav.ui.top.fixed.inverted.navigation.menu
             a.item href=system_path Logging
       .right.menu
         == form_tag(nil, sessions_path, method: "DELETE", class: "form") do
-          .ui.action.input
+          .ui.input
             input.link.item type="submit" value="Sign Out"
     - elsif Account.count > 0
       a.item href=home_path

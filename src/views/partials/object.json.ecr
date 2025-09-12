@@ -1,7 +1,7 @@
 {
   "@context":[
     "https://www.w3.org/ns/activitystreams",
-    {"Hashtag":"as:Hashtag"}
+    {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}
   ],
   <%- if (published = object.published) -%>
   "published":<%= published.to_rfc3339(fraction_digits: 3).to_json %>,
@@ -28,6 +28,9 @@
   <%- end -%>
   <%- if (summary = object.summary) -%>
   "summary":<%= summary.to_json %>,
+  <%- end -%>
+  <%- if object.sensitive -%>
+  "sensitive":true,
   <%- end -%>
   <%- if (content = object.content) -%>
   "content":<%= content.to_json %>,

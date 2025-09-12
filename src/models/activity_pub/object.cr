@@ -836,6 +836,7 @@ module ActivityPub
           "cc" => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
           "name" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
           "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+          "sensitive" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool),
           "content" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
           "media_type" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
           "hashtags" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|

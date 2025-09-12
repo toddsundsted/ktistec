@@ -45,6 +45,9 @@ module ActivityPub
     property visible : Bool { false }
 
     @[Persistent]
+    property sensitive : Bool { false }
+
+    @[Persistent]
     property published : Time?
 
     @[Persistent]

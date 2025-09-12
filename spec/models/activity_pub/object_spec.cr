@@ -111,7 +111,7 @@ Spectator.describe ActivityPub::Object do
       {
         "@context":[
           "https://www.w3.org/ns/activitystreams",
-          {"Hashtag":"as:Hashtag"}
+          {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}
         ],
         "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",
@@ -123,6 +123,7 @@ Spectator.describe ActivityPub::Object do
         "cc":["cc link"],
         "name":"123",
         "summary":"abc",
+        "sensitive":true,
         "content":"abc",
         "contentMap":{
           "en":"abc"
@@ -171,6 +172,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
+      expect(object.sensitive).to be_true
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
@@ -284,6 +286,25 @@ Spectator.describe ActivityPub::Object do
         expect(object.language).to eq("en")
       end
     end
+
+    context "when sensitive property is missing" do
+      let(json) do
+        <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "@id":"https://remote/foo_bar",
+            "@type":"FooBarObject"
+          }
+        JSON
+      end
+
+      it "defaults sensitive to false" do
+        object = described_class.from_json_ld(json).save
+        expect(object.sensitive).to be_false
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -299,6 +320,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
+      expect(object.sensitive).to be_true
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
@@ -412,6 +434,25 @@ Spectator.describe ActivityPub::Object do
         expect(object.language).to eq("en")
       end
     end
+
+    context "when sensitive property is missing" do
+      let(json) do
+        <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "@id":"https://remote/foo_bar",
+            "@type":"FooBarObject"
+          }
+        JSON
+      end
+
+      it "defaults sensitive to false" do
+        object = described_class.from_json_ld(json).save
+        expect(object.sensitive).to be_false
+      end
+    end
   end
 
   describe "#to_json_ld" do
@@ -442,6 +483,22 @@ Spectator.describe ActivityPub::Object do
         mentions: [Factory.build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo")]
       ).save
       expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Mention", "name" => "@foo@test.test", "href" => "https://test.test/actors/foo"})
+    end
+
+    it "renders sensitive property when true" do
+      object = described_class.new(
+        iri: "https://test.test/object",
+        sensitive: true
+      ).save
+      expect(JSON.parse(object.to_json_ld).as_h["sensitive"]).to eq(true)
+    end
+
+    it "does not render sensitive property when false" do
+      object = described_class.new(
+        iri: "https://test.test/object",
+        sensitive: false
+      ).save
+      expect(JSON.parse(object.to_json_ld).as_h.has_key?("sensitive")).to be_false
     end
   end
 

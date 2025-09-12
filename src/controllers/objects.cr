@@ -293,6 +293,7 @@ class ObjectsController
       "language" => params["language"]?.try(&.as(String).presence),
       "name" => params["name"]?.try(&.as(String).presence),
       "summary" => params["summary"]?.try(&.as(String).presence),
+      "sensitive" => params["sensitive"]?.try(&.as(String)) == "true",
       "canonical_path" => params["canonical_path"]?.try(&.as(String).presence)
     }
   end

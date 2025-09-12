@@ -98,6 +98,7 @@ class RelationshipsController
       language = activity["language"]?.presence
       name = activity["name"]?.presence
       summary = activity["summary"]?.presence
+      sensitive = activity["sensitive"]? == "true"
       canonical_path = activity["canonical_path"]?.presence
       activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
       iri = "#{host}/objects/#{id}"
@@ -110,6 +111,7 @@ class RelationshipsController
         language: language,
         name: name,
         summary: summary,
+        sensitive: sensitive,
         canonical_path: canonical_path,
         visible: visible,
         to: to,

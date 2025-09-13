@@ -116,6 +116,7 @@ Spectator.describe ActivityPub::Object do
         "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",
         "published":"2016-02-15T10:20:30Z",
+        "updated":"2016-02-15T11:30:45Z",
         "attributedTo":"attributed to link",
         "inReplyTo":"in reply to link",
         "replies":"replies link",
@@ -164,6 +165,7 @@ Spectator.describe ActivityPub::Object do
       object = described_class.from_json_ld(json).save
       expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
+      expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.replies_iri).to eq("replies link")
@@ -312,6 +314,7 @@ Spectator.describe ActivityPub::Object do
       object = described_class.new.from_json_ld(json).save
       expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
+      expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.replies_iri).to eq("replies link")

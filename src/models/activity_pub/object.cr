@@ -51,6 +51,9 @@ module ActivityPub
     property published : Time?
 
     @[Persistent]
+    property updated : Time?
+
+    @[Persistent]
     property attributed_to_iri : String?
     belongs_to attributed_to, class_name: ActivityPub::Actor, foreign_key: attributed_to_iri, primary_key: iri
 

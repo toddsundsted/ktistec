@@ -141,9 +141,13 @@ class RelationshipsController
       unless activity.responds_to?(:valid_for_send?) && activity.valid_for_send?
         bad_request
       end
-      # after validating make published
-      time = object.published || Time.utc
-      object.published = activity.published = time
+      # after validating, set timestamps based on activity type
+      time = Time.utc
+      if activity.is_a?(ActivityPub::Activity::Update)
+        object.updated = activity.published = time
+      else
+        object.published = activity.published = time
+      end
     when "Follow"
       unless (iri = activity["object"]?) && (object = ActivityPub::Actor.find?(iri))
         bad_request

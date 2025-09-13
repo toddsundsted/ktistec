@@ -6,6 +6,9 @@
   <%- if (published = object.published) -%>
   "published":<%= published.to_rfc3339(fraction_digits: 3).to_json %>,
   <%- end -%>
+  <%- if (updated = object.updated) -%>
+  "updated":<%= updated.to_rfc3339(fraction_digits: 3).to_json %>,
+  <%- end -%>
   <%- if (attributed_to_iri = object.attributed_to_iri) -%>
   "attributedTo":<%= attributed_to_iri.to_json %>,
   <%- end -%>

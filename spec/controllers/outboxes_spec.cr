@@ -541,6 +541,16 @@ Spectator.describe RelationshipsController do
               to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
           end
 
+          it "does not change the updated timestamp" do
+            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
+              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
+          end
+
+          it "does not change the updated timestamp" do
+            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
+              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
+          end
+
           it "returns 400 if object does not exist" do
             post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=http%3A%2F%2Ftest.test%2Fdoes-not-exist"
             expect(response.status_code).to eq(400)
@@ -607,6 +617,16 @@ Spectator.describe RelationshipsController do
           it "does not change the published timestamp" do
             expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
               not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
+          end
+
+          it "changes the updated timestamp" do
+            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
+              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
+          end
+
+          it "changes the updated timestamp" do
+            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
+              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
           end
 
           it "changes the content" do

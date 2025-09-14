@@ -23,14 +23,25 @@ form.ui.form.editor id="object-#{id}" class=(has_errors ? "error" : nil) data-co
     input type="hidden" name="object" value=object.iri
   - if object.in_reply_to?
     input type="hidden" name="in-reply-to" value=object.in_reply_to_iri
-  input type="hidden" name="public" value="true"
   .field
     trix-editor data-controller="trix" data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change trix-change->has-content#check turbo:morph@document->has-content#check" input="editor-input"
     textarea#editor-input data-has-content-target="input" name="content" rows=3 = content
   - if (language = object.language.presence || env.account.language.presence)
-    .field
-      label Language
-      input type="text" name="language" value=language
+    .inline.fields
+      .four.wide.field
+        label for="public" Visibility
+        .ui.checkbox
+          input type="checkbox" name="public" value="true" checked="checked"
+          label Public
+      .twelve.wide.field
+        label Language
+        input type="text" name="language" value=language
+  - else
+    .inline.field
+      label for="public" Visibility
+      .ui.checkbox
+        input type="checkbox" name="public" value="true" checked="checked"
+        label Public
   details open=(object.name || object.summary || object.canonical_path ? true : false)
     summary Optional Settings
     .field

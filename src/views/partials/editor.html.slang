@@ -28,20 +28,38 @@ form.ui.form.editor id="object-#{id}" class=(has_errors ? "error" : nil) data-co
     textarea#editor-input data-has-content-target="input" name="content" rows=3 = content
   - if (language = object.language.presence || env.account.language.presence)
     .inline.fields
-      .four.wide.field
+      .nine.wide.field
         label for="visibility" Visibility
-        .ui.checkbox
-          input type="checkbox" name="visibility" value="public" checked="checked"
-          label Public
-      .twelve.wide.field
+        .inline.field
+          .ui.radio.checkbox
+            input#v-public type="radio" name="visibility" value="public" checked="checked"
+            label for="v-public" Public
+        .inline.field
+          .ui.radio.checkbox
+            input#v-private type="radio" name="visibility" value="private"
+            label for="v-private" Private
+        .inline.field
+          .ui.radio.checkbox
+            input#v-direct type="radio" name="visibility" value="direct"
+            label for="v-direct" Direct
+      .seven.wide.field
         label Language
         input type="text" name="language" value=language
   - else
-    .inline.field
+    .inline.fields
       label for="visibility" Visibility
-      .ui.checkbox
-        input type="checkbox" name="visibility" value="public" checked="checked"
-        label Public
+      .inline.field
+        .ui.radio.checkbox
+          input#v-public type="radio" name="visibility" value="public" checked="checked"
+          label for="v-public" Public
+      .inline.field
+        .ui.radio.checkbox
+          input#v-private type="radio" name="visibility" value="private"
+          label for="v-private" Private
+      .inline.field
+        .ui.radio.checkbox
+          input#v-direct type="radio" name="visibility" value="direct"
+          label for="v-direct" Direct
   details open=(object.name || object.summary || object.canonical_path ? true : false)
     summary Optional Settings
     .field

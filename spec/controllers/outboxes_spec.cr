@@ -792,6 +792,26 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
+        it "does not address the public collection when visibility is private" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=private"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "does not address the public collection when visibility is private" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"private"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "does not address the public collection when visibility is direct" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=direct"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "does not address the public collection when visibility is direct" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"direct"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
         it "addresses (cc) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
@@ -800,6 +820,16 @@ Spectator.describe RelationshipsController do
         it "addresses (cc) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "does not address (cc) the actor's followers when visibility is direct" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=direct"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).not_to contain(actor.followers)
+        end
+
+        it "does not address (cc) the actor's followers when visibility is direct" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"direct"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).not_to contain(actor.followers)
         end
 
         it "addresses (to) the replied to object's attributed to actor" do

@@ -334,6 +334,8 @@ class RelationshipsController
       if (followers = account.actor.followers)
         cc << followers
       end
+    when "direct"
+      # not public, no followers
     end
     {visibility == "public", to, cc}
   end

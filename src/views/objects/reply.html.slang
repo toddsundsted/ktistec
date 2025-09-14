@@ -9,7 +9,7 @@ section.ui.feed data-controller="icon-load-error"
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Publish"
     input type="hidden" name="in-reply-to" value=object.iri
-    input type="hidden" name="public" value="true"
+    input type="hidden" name="visibility" value="public"
     .field
       trix-editor data-controller="trix" data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change trix-initialize->has-content#check input->has-content#check" data-has-content-target="input" input="editor-input"
       textarea#editor-input name="content" rows=3 = mentions

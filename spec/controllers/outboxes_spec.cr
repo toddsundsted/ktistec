@@ -107,32 +107,32 @@ Spectator.describe RelationshipsController do
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&public="
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&visibility="
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","public":false}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","visibility":null}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
@@ -267,32 +267,32 @@ Spectator.describe RelationshipsController do
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&public="
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&visibility=private"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","public":false}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","visibility":"private"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
@@ -673,42 +673,42 @@ Spectator.describe RelationshipsController do
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&public="
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=private"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","public":false}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"private"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "does not create a visible object if not public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&public="
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=private"
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_false
         end
 
         it "does not create a visible object if not public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","public":false}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"private"}|
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_false
         end
 
         it "creates a visible object if public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=public"
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_true
         end
 
         it "creates a visible object if public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"public"}|
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_true
         end
 
@@ -783,12 +783,12 @@ Spectator.describe RelationshipsController do
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 

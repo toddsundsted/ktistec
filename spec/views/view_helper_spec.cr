@@ -232,7 +232,7 @@ Spectator.describe "helpers" do
     end
 
     it "emits a form with a hidden input specifying the visibility" do
-      expect(subject.xpath_nodes("/form/input[@name='public']/@value")).to contain_exactly("1")
+      expect(subject.xpath_nodes("/form/input[@name='visibility']/@value")).to contain_exactly("public")
     end
 
     it "specifies the action" do

@@ -29,18 +29,18 @@ form.ui.form.editor id="object-#{id}" class=(has_errors ? "error" : nil) data-co
   - if (language = object.language.presence || env.account.language.presence)
     .inline.fields
       .four.wide.field
-        label for="public" Visibility
+        label for="visibility" Visibility
         .ui.checkbox
-          input type="checkbox" name="public" value="true" checked="checked"
+          input type="checkbox" name="visibility" value="public" checked="checked"
           label Public
       .twelve.wide.field
         label Language
         input type="text" name="language" value=language
   - else
     .inline.field
-      label for="public" Visibility
+      label for="visibility" Visibility
       .ui.checkbox
-        input type="checkbox" name="public" value="true" checked="checked"
+        input type="checkbox" name="visibility" value="public" checked="checked"
         label Public
   details open=(object.name || object.summary || object.canonical_path ? true : false)
     summary Optional Settings

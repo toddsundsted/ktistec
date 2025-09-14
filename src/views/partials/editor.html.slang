@@ -29,37 +29,13 @@ form.ui.form.editor id="object-#{id}" class=(has_errors ? "error" : nil) data-co
   - if (language = object.language.presence || env.account.language.presence)
     .inline.fields
       .nine.wide.field
-        label for="visibility" Visibility
-        .inline.field
-          .ui.radio.checkbox
-            input#v-public type="radio" name="visibility" value="public" checked="checked"
-            label for="v-public" Public
-        .inline.field
-          .ui.radio.checkbox
-            input#v-private type="radio" name="visibility" value="private"
-            label for="v-private" Private
-        .inline.field
-          .ui.radio.checkbox
-            input#v-direct type="radio" name="visibility" value="direct"
-            label for="v-direct" Direct
+        == render "src/views/partials/visibility_controls.html.slang"
       .seven.wide.field
         label Language
         input type="text" name="language" value=language
   - else
     .inline.fields
-      label for="visibility" Visibility
-      .inline.field
-        .ui.radio.checkbox
-          input#v-public type="radio" name="visibility" value="public" checked="checked"
-          label for="v-public" Public
-      .inline.field
-        .ui.radio.checkbox
-          input#v-private type="radio" name="visibility" value="private"
-          label for="v-private" Private
-      .inline.field
-        .ui.radio.checkbox
-          input#v-direct type="radio" name="visibility" value="direct"
-          label for="v-direct" Direct
+      == render "src/views/partials/visibility_controls.html.slang"
   details open=(object.name || object.summary || object.canonical_path ? true : false)
     summary Optional Settings
     .field

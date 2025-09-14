@@ -914,7 +914,8 @@ Spectator.describe ActivityPub::Object do
     subject do
       described_class.new(
         iri: "https://test.test/objects/#{random_string}",
-        attributed_to: Factory.build(:actor)
+        attributed_to: Factory.build(:actor),
+        visible: true,
       ).save
     end
 
@@ -925,7 +926,8 @@ Spectator.describe ActivityPub::Object do
         described_class.new(
           iri: "https://test.test/objects/#{random_string}",
           attributed_to: {{actor}},
-          in_reply_to: {{object}}
+          in_reply_to: {{object}},
+          visible: true,
         ).save
       end
     end
@@ -1081,6 +1083,11 @@ Spectator.describe ActivityPub::Object do
           actor4.destroy
           expect(subject.replies(approved_by: actor)).to be_empty
         end
+
+        it "omits non-visible replies even when approved" do
+          object4.assign(visible: false).save
+          expect(subject.replies(approved_by: actor)).not_to contain(object4)
+        end
       end
     end
 
@@ -1139,6 +1146,11 @@ Spectator.describe ActivityPub::Object do
           it "doesn't include the actor's unapproved replies" do
             object4.assign(attributed_to: actor).save
             expect(subject.thread(approved_by: actor)).to eq([subject, object5])
+          end
+
+          it "doesn't include non-visible replies even when approved" do
+            object5.assign(visible: false).save
+            expect(subject.thread(approved_by: actor)).not_to contain(object5)
           end
         end
       end

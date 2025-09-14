@@ -471,6 +471,7 @@ module ActivityPub
              ON r.type = '#{Relationship::Content::Approved}'
             AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.in_reply_to_iri = ?
+            AND o.visible = 1
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
             AND a.deleted_at IS NULL
@@ -583,6 +584,7 @@ module ActivityPub
              ON r.type = '#{Relationship::Content::Approved}'
             AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
+            AND o.visible = 1
             AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
           ORDER BY t.position
       QUERY

@@ -745,6 +745,14 @@ Spectator.describe "partials" do
         end
       end
 
+      context "given a visibility selection" do
+        before_each { env.params.body["visibility"] = "direct" }
+
+        it "renders the checkbox as checked" do
+          expect(subject.xpath_nodes("//form//input[@type='radio'][@value='direct'][@checked]")).not_to be_empty
+        end
+      end
+
       context "an object with errors" do
         before_each { object.errors["object"] = ["has errors"] }
 

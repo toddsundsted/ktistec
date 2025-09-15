@@ -28,9 +28,9 @@ form.ui.form.editor id="object-#{id}" class=(has_errors ? "error" : nil) data-co
     textarea#editor-input data-has-content-target="input" name="content" rows=3 = content
   - if (language = object.language.presence || env.account.language.presence)
     .inline.fields
-      .nine.wide.field
+      .ten.wide.field
         == render "src/views/partials/visibility_controls.html.slang"
-      .seven.wide.field
+      .six.wide.field
         label Language
         input type="text" name="language" value=language
   - else

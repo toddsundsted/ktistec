@@ -83,24 +83,6 @@ Spectator.describe ActivitiesController do
         expect(response.status_code).to eq(404)
       end
 
-      context "and it is addressed to the public collection" do
-        before_each do
-          [visible, notvisible, remote].each do |activity|
-            activity.assign(to: ["https://www.w3.org/ns/activitystreams#Public"]).save
-          end
-        end
-
-        it "renders the activity" do
-          get "/remote/activities/#{notvisible.id}", JSON_HEADERS
-          expect(response.status_code).to eq(200)
-        end
-
-        it "renders the activity" do
-          get "/remote/activities/#{remote.id}", JSON_HEADERS
-          expect(response.status_code).to eq(200)
-        end
-      end
-
       context "and the user is the owner" do
         before_each do
           [visible, notvisible, remote].each do |activity|

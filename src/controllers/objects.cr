@@ -49,7 +49,9 @@ class ObjectsController
 
     redirect edit_object_path if object.draft?
 
-    replies = object.replies(for_actor: object.attributed_to)
+    replies = env.account? ?
+      object.replies(for_actor: env.account.actor) :
+      object.replies(approved_by: object.attributed_to)
 
     ok "objects/replies", env: env, object: object, replies: replies, recursive: false
   end
@@ -61,7 +63,9 @@ class ObjectsController
 
     redirect edit_object_path if object.draft?
 
-    thread = object.thread(approved_by: object.attributed_to)
+    thread = env.account? ?
+      object.thread(for_actor: env.account.actor) :
+      object.thread(approved_by: object.attributed_to)
 
     ok "objects/thread", env: env, object: object, thread: thread, follow: nil, task: nil
   end

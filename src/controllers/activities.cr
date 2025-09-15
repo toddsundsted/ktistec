@@ -25,8 +25,6 @@ class ActivitiesController
     if (activity = ActivityPub::Activity.find?(iri_or_id))
       if activity.visible
         activity
-      elsif activity.to.try(&.includes?(PUBLIC)) || activity.cc.try(&.includes?(PUBLIC))
-        activity
       elsif (iri = env.account?.try(&.iri))
         if activity.actor_iri == iri
           activity
@@ -34,6 +32,4 @@ class ActivitiesController
       end
     end
   end
-
-  private PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 end

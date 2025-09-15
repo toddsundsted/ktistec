@@ -23,17 +23,9 @@ class RelationshipsController
         bad_request
       end
       now = Time.utc
-      visible = activity["public"]? == "true"
-      to = [] of String
-      if visible
-        to << "https://www.w3.org/ns/activitystreams#Public"
-      end
+      visible, to, cc = addressing(account, activity)
       if (attributed_to = object.attributed_to?)
         to << attributed_to.iri
-      end
-      cc = [] of String
-      if (followers = account.actor.followers)
-        cc << followers
       end
       activity = ActivityPub::Activity::Announce.new(
         iri: "#{host}/activities/#{id}",
@@ -41,25 +33,17 @@ class RelationshipsController
         object: object,
         published: now,
         visible: visible,
-        to: to,
-        cc: cc
+        to: to.to_a,
+        cc: cc.to_a,
       )
     when "Like"
       unless (iri = activity["object"]?) && (object = ActivityPub::Object.find?(iri))
         bad_request
       end
       now = Time.utc
-      visible = activity["public"]? == "true"
-      to = [] of String
-      if visible
-        to << "https://www.w3.org/ns/activitystreams#Public"
-      end
+      visible, to, cc = addressing(account, activity)
       if (attributed_to = object.attributed_to?)
         to << attributed_to.iri
-      end
-      cc = [] of String
-      if (followers = account.actor.followers)
-        cc << followers
       end
       activity = ActivityPub::Activity::Like.new(
         iri: "#{host}/activities/#{id}",
@@ -67,8 +51,8 @@ class RelationshipsController
         object: object,
         published: now,
         visible: visible,
-        to: to,
-        cc: cc
+        to: to.to_a,
+        cc: cc.to_a,
       )
     when "Publish"
       unless (content = activity["content"]?)
@@ -83,17 +67,15 @@ class RelationshipsController
       if object && object.attributed_to != account.actor
         forbidden
       end
-      visible = activity["public"]? == "true"
-      to = activity["to"]?.presence.try(&.split(",")) || [] of String
+      visible, to, cc = addressing(account, activity)
+      if (_to = activity["to"]?.presence)
+        to |= _to.split(",").to_set
+      end
+      if (_cc = activity["cc"]?.presence)
+        cc |= _cc.split(",").to_set
+      end
       if (attributed_to = in_reply_to.try(&.attributed_to?))
-        to |= [attributed_to.iri]
-      end
-      if visible
-        to << "https://www.w3.org/ns/activitystreams#Public"
-      end
-      cc = activity["cc"]?.presence.try(&.split(",")) || [] of String
-      if (followers = account.actor.followers)
-        cc << followers
+        to << attributed_to.iri
       end
       language = activity["language"]?.presence
       name = activity["name"]?.presence
@@ -114,8 +96,8 @@ class RelationshipsController
         sensitive: sensitive,
         canonical_path: canonical_path,
         visible: visible,
-        to: to,
-        cc: cc
+        to: to.to_a,
+        cc: cc.to_a,
       )
       # validate ensures properties are populated from source
       unless object.valid?
@@ -338,5 +320,23 @@ class RelationshipsController
 
   private def self.get_account(env)
     Account.find?(username: env.params.url["username"]?)
+  end
+
+  private def self.addressing(account, activity, to = Set(String).new, cc = Set(String).new)
+    # defaults to private visibility
+    case (visibility = activity["visibility"]? || "private")
+    when "public"
+      to << "https://www.w3.org/ns/activitystreams#Public"
+      if (followers = account.actor.followers)
+        cc << followers
+      end
+    when "private"
+      if (followers = account.actor.followers)
+        cc << followers
+      end
+    when "direct"
+      # not public, no followers
+    end
+    {visibility == "public", to, cc}
   end
 end

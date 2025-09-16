@@ -423,6 +423,7 @@ module ActivityPub
              ON r.type = '#{Relationship::Content::Approved}'
              AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
+            AND o.visible = 1
             AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s

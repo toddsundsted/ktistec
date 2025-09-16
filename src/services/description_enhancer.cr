@@ -15,7 +15,7 @@ module Ktistec
       return nil unless description
 
       if @@nonce != nonce
-        enhancements = HTML.enhance(description)
+        enhancements = Ktistec::HTML.enhance(description)
         @@description = Ktistec::Util.sanitize(enhancements.content)
         @@nonce = nonce
       end

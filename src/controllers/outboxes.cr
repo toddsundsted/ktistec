@@ -23,7 +23,7 @@ class RelationshipsController
         bad_request
       end
       now = Time.utc
-      visible, to, cc = addressing(account, activity)
+      visible, to, cc = addressing(activity, account.actor)
       if (attributed_to = object.attributed_to?)
         to << attributed_to.iri
       end
@@ -41,7 +41,7 @@ class RelationshipsController
         bad_request
       end
       now = Time.utc
-      visible, to, cc = addressing(account, activity)
+      visible, to, cc = addressing(activity, account.actor)
       if (attributed_to = object.attributed_to?)
         to << attributed_to.iri
       end
@@ -67,7 +67,7 @@ class RelationshipsController
       if object && object.attributed_to != account.actor
         forbidden
       end
-      visible, to, cc = addressing(account, activity)
+      visible, to, cc = addressing(activity, account.actor)
       if (_to = activity["to"]?.presence)
         to |= _to.split(",").to_set
       end
@@ -320,23 +320,5 @@ class RelationshipsController
 
   private def self.get_account(env)
     Account.find?(username: env.params.url["username"]?)
-  end
-
-  private def self.addressing(account, activity, to = Set(String).new, cc = Set(String).new)
-    # defaults to private visibility
-    case (visibility = activity["visibility"]? || "private")
-    when "public"
-      to << "https://www.w3.org/ns/activitystreams#Public"
-      if (followers = account.actor.followers)
-        cc << followers
-      end
-    when "private"
-      if (followers = account.actor.followers)
-        cc << followers
-      end
-    when "direct"
-      # not public, no followers
-    end
-    {visibility == "public", to, cc}
   end
 end

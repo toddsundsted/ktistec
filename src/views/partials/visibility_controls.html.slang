@@ -1,7 +1,13 @@
 crystal:
-  _private = env.params.body["visibility"]? == "private" ? "checked" : false
-  _direct = env.params.body["visibility"]? == "direct" ? "checked" : false
-  _public = !(_private || _direct) ? "checked" : false
+  _public = _private = _direct = false
+  case visibility(object.attributed_to, object.to, object.cc)
+  when "private"
+    _private = "checked"
+  when "direct"
+    _direct = "checked"
+  else
+    _public = "checked"
+  end
 label for="visibility" Visibility
 .inline.field
   .ui.radio.checkbox

@@ -11,6 +11,7 @@
     - [Content discovery](#content-discovery)
     - [Content filtering](#content-filtering)
     - [Blocking](#blocking)
+    - [RSS feeds](#rss-feeds)
     - [Metrics](#metrics)
     - [Tasks](#tasks)
     - [Scripts](#scripts)
@@ -98,11 +99,20 @@ autocompletion.
 
 ### Control over comment visibility
 
-Ktistec promotes healthy dialog. Ktistec allows you to control which
-replies to your posts are public and visible to anonymous users, and
-which are private.
+Ktistec promotes healthy dialog and gives you comprehensive control
+over content visibility.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/b70e69.png" width=460>
+
+Control which replies to your posts are public and visible to
+anonymous users, and which are private.
+
+Mark posts as sensitive using the content warning checkbox in the
+editor. Sensitive posts are hidden behind a summary that readers can
+click to reveal the content.
+
+Send private messages directly to specific users with proper
+visibility controls.
 
 ### Pretty URLs
 
@@ -152,6 +162,12 @@ been deleted or blocked.
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/42fwx6.png" width=460>
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/epdb39.png" width=460>
+
+### RSS feeds
+
+Ktistec provides RSS feeds for easy content syndication even without
+an account in the Fediverse. RSS feeds are available on the *home
+page* and the *account pages*.
 
 ### Metrics
 
@@ -263,14 +279,15 @@ include the following fields:
 | in-reply-to | Optional. The IRI of the `object` being replied to. |
 | to          | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
 | cc          | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
-| public      | May be `true` or `false`. |
+| visibility  | Optional. Controls post visibility. Values: "public", "private", "direct". |
+| sensitive   | Optional. May be `true` or `false`. Marks content as sensitive. |
 
 By default, `cc` incldues the publishing `actor`'s followers collection.
 
 Example:
 
     outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
-    activity="{\"type\":\"Publish\",\"content\":\"this is a test\",\"public\":true}"
+    activity="{\"type\":\"Publish\",\"content\":\"this is a test\",\"visibility\":\"public\"}"
     curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
 
 Note: "publishing" an `object` encompasses both creating a new
@@ -282,13 +299,13 @@ Note: "publishing" an `object` encompasses both creating a new
 To share an `object`, `POST` a JSON `activity` to the `outbox`
 endpoint. The JSON `activity` may include the following fields:
 
-| Name   | Notes |
+| Name       | Notes |
 |-|-|
-| type   | Must be "Announce". |
-| object | The IRI of the `object` being shared. |
-| to     | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
-| cc     | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
-| public | May be `true` or `false`. |
+| type       | Must be "Announce". |
+| object     | The IRI of the `object` being shared. |
+| to         | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
+| cc         | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
+| visibility | Optional. Controls post visibility. Values: "public", "private", "direct". |
 
 By default, `to` includes the actor to which the `object` is
 attributed, and `cc` includes the publishing `actor`'s followers
@@ -297,7 +314,7 @@ collection.
 Example:
 
     outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
-    activity="{\"type\":\"Announce\",\"object\":\"https://example.com/objects/123\",\"public\":true}"
+    activity="{\"type\":\"Announce\",\"object\":\"https://example.com/objects/123\",\"visibility\":\"public\"}"
     curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
 
 ### Liking an Object
@@ -305,13 +322,13 @@ Example:
 To like an `object`, `POST` a JSON `activity` to the `outbox`
 endpoint. The JSON `activity` may include the following fields:
 
-| Name   | Notes |
+| Name       | Notes |
 |-|-|
-| type   | Must be "Like". |
-| object | The IRI of the `object` being liked. |
-| to     | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
-| cc     | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
-| public | May be `true` or `false`. |
+| type       | Must be "Like". |
+| object     | The IRI of the `object` being liked. |
+| to         | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
+| cc         | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
+| visibility | Optional. Controls post visibility. Values: "public", "private", "direct". |
 
 By default, `to` includes the actor to which the `object` is
 attributed, and `cc` includes the publishing `actor`'s followers
@@ -320,7 +337,7 @@ collection.
 Example:
 
     outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
-    activity="{\"type\":\"Like\",\"object\":\"https://example.com/objects/123\",\"public\":true}"
+    activity="{\"type\":\"Like\",\"object\":\"https://example.com/objects/123\",\"visibility\":\"public\"}"
     curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
 
 ### Following an Actor

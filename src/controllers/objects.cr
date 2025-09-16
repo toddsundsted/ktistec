@@ -292,8 +292,12 @@ class ObjectsController
 
   private def self.params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
+    visible, to, cc = addressing(params, env.account.actor)
     {
       "source" => params["content"]?.try(&.as(String).presence).try { |content| ActivityPub::Object::Source.new(content, "text/html; editor=trix") },
+      "visible" => visible,
+      "to" => to.to_a,
+      "cc" => cc.to_a,
       "language" => params["language"]?.try(&.as(String).presence),
       "name" => params["name"]?.try(&.as(String).presence),
       "summary" => params["summary"]?.try(&.as(String).presence),

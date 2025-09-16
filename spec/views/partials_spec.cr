@@ -824,6 +824,14 @@ Spectator.describe "partials" do
         end
       end
 
+      context "given visibility" do
+        before_each { env.params.json["visibility"] = "direct" }
+
+        it "renders visibility" do
+          expect(subject["visibility"]).to eq("direct")
+        end
+      end
+
       context "an object with errors" do
         before_each { object.errors["object"] = ["has errors"] }
 

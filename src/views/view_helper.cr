@@ -88,6 +88,28 @@ module Ktistec::ViewHelper
       render "src/views/partials/paginator.html.slang"
     end
 
+    PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
+    # Derives visibility and to/cc addressing from the "visibility"
+    # param.
+    #
+    def addressing(params, actor, to = Set(String).new, cc = Set(String).new)
+      case (visibility = params.fetch("visibility", "private"))
+      when "public"
+        to << PUBLIC
+        if (followers = actor.followers)
+          cc << followers
+        end
+      when "private"
+        if (followers = actor.followers)
+          cc << followers
+        end
+      else
+        # not public, no followers
+      end
+      {visibility == "public", to, cc}
+    end
+
     # Wraps a string in a link if it is a URL.
     #
     # By default, matches the weird format used by Mastodon:

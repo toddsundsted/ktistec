@@ -110,6 +110,23 @@ module Ktistec::ViewHelper
       {visibility == "public", to, cc}
     end
 
+    # Derives visibility from to/cc addressing.
+    #
+    def visibility(actor, to, cc)
+      if to || cc
+        addresses = [to, cc].compact.flatten
+        if addresses.includes?(PUBLIC)
+          "public"
+        elsif addresses.includes?(actor.followers)
+          "private"
+        else
+          "direct"
+        end
+      else
+        "public"
+      end
+    end
+
     # Wraps a string in a link if it is a URL.
     #
     # By default, matches the weird format used by Mastodon:

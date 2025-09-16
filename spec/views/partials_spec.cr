@@ -745,11 +745,35 @@ Spectator.describe "partials" do
         end
       end
 
-      context "given a visibility selection" do
-        before_each { env.params.body["visibility"] = "direct" }
+      context "visibility" do
+        PUBLIC_PATH = "//form//input[@type='radio'][@value='public'][@checked]"
+        PRIVATE_PATH = "//form//input[@type='radio'][@value='private'][@checked]"
+        DIRECT_PATH = "//form//input[@type='radio'][@value='direct'][@checked]"
 
-        it "renders the checkbox as checked" do
-          expect(subject.xpath_nodes("//form//input[@type='radio'][@value='direct'][@checked]")).not_to be_empty
+        it "renders the public checkbox as checked" do
+          expect(subject.xpath_nodes(PUBLIC_PATH)).not_to be_empty
+          expect(subject.xpath_nodes(PRIVATE_PATH)).to be_empty
+          expect(subject.xpath_nodes(DIRECT_PATH)).to be_empty
+        end
+
+        context "given an object with addressing" do
+          before_each { object.to = object.cc = [] of String }
+
+          context "when it is addressed to a specific actor" do
+            before_each { object.to = ["http://example.com/actor"] }
+
+            it "renders the direct checkbox as checked" do
+              expect(subject.xpath_nodes(DIRECT_PATH)).not_to be_empty
+            end
+          end
+
+          context "when it is addressed to the author's followers" do
+            before_each { object.cc = [object.attributed_to.followers.not_nil!] }
+
+            it "renders the private checkbox as checked" do
+              expect(subject.xpath_nodes(PRIVATE_PATH)).not_to be_empty
+            end
+          end
         end
       end
 
@@ -824,11 +848,29 @@ Spectator.describe "partials" do
         end
       end
 
-      context "given visibility" do
-        before_each { env.params.json["visibility"] = "direct" }
+      context "visibility" do
+        it "renders public visibility" do
+          expect(subject["visibility"]).to eq("public")
+        end
 
-        it "renders visibility" do
-          expect(subject["visibility"]).to eq("direct")
+        context "given an object with addressing" do
+          before_each { object.to = object.cc = [] of String }
+
+          context "when it is addressed to a specific actor" do
+            before_each { object.to = ["http://example.com/actor"] }
+
+            it "renders direct visibility" do
+              expect(subject["visibility"]).to eq("direct")
+            end
+          end
+
+          context "when it is addressed to the author's followers" do
+            before_each { object.cc = [object.attributed_to.followers.not_nil!] }
+
+            it "renders private visibility" do
+              expect(subject["visibility"]).to eq("private")
+            end
+          end
         end
       end
 

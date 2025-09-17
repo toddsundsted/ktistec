@@ -27,7 +27,8 @@
         <%= render "src/views/partials/modals.html.slang" %>
         <%= render "src/views/partials/header.html.slang" %>
         <%= render "src/views/partials/banner.html.slang" %>
-        <div class="<%= env.request.path.starts_with?("/admin/") ? "ui container" : "ui text container" %>">
+        <%- wide = (path = env.request.path).starts_with?("/.design-system") || path.starts_with?("/admin/") -%>
+        <div class="<%= wide ? "ui container" : "ui text container" %>">
             <%= content %>
         </div>
         <%= render "src/views/partials/footer.html.slang" %>

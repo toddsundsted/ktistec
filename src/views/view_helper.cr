@@ -84,6 +84,45 @@ module Ktistec::ViewHelper
       render "src/views/partials/paginator.html.slang"
     end
 
+    PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
+    # Derives visibility and to/cc addressing from the "visibility"
+    # param.
+    #
+    def addressing(params, actor, to = Set(String).new, cc = Set(String).new)
+      case (visibility = params.fetch("visibility", "private"))
+      when "public"
+        to << PUBLIC
+        if (followers = actor.followers)
+          cc << followers
+        end
+      when "private"
+        if (followers = actor.followers)
+          cc << followers
+        end
+      else
+        # not public, no followers
+      end
+      {visibility == "public", to, cc}
+    end
+
+    # Derives visibility from to/cc addressing.
+    #
+    def visibility(actor, to, cc)
+      if to || cc
+        addresses = [to, cc].compact.flatten
+        if addresses.includes?(PUBLIC)
+          "public"
+        elsif addresses.includes?(actor.followers)
+          "private"
+        else
+          "direct"
+        end
+      else
+        "public"
+      end
+    end
+
     # Wraps a string in a link if it is a URL.
     #
     # By default, matches the weird format used by Mastodon:
@@ -214,7 +253,7 @@ module Ktistec::ViewHelper
     #{%input}\
     <input type="hidden" name="object" value="#{{{object}}}">\
     <input type="hidden" name="type" value="#{{{type || text}}}">\
-    <input type="hidden" name="public" value="#{{{public}} ? 1 : nil}">\
+    <input type="hidden" name="visibility" value="#{{{public}} ? "public" : "private"}">\
     <button #{%button_attrs.join(" ")} type="submit">\
     #{%block}\
     </button>\

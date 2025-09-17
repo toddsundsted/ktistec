@@ -111,11 +111,12 @@ Spectator.describe ActivityPub::Object do
       {
         "@context":[
           "https://www.w3.org/ns/activitystreams",
-          {"Hashtag":"as:Hashtag"}
+          {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}
         ],
         "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",
         "published":"2016-02-15T10:20:30Z",
+        "updated":"2016-02-15T11:30:45Z",
         "attributedTo":"attributed to link",
         "inReplyTo":"in reply to link",
         "replies":"replies link",
@@ -123,6 +124,7 @@ Spectator.describe ActivityPub::Object do
         "cc":["cc link"],
         "name":"123",
         "summary":"abc",
+        "sensitive":true,
         "content":"abc",
         "contentMap":{
           "en":"abc"
@@ -163,6 +165,7 @@ Spectator.describe ActivityPub::Object do
       object = described_class.from_json_ld(json).save
       expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
+      expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.replies_iri).to eq("replies link")
@@ -171,6 +174,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
+      expect(object.sensitive).to be_true
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
@@ -284,6 +288,25 @@ Spectator.describe ActivityPub::Object do
         expect(object.language).to eq("en")
       end
     end
+
+    context "when sensitive property is missing" do
+      let(json) do
+        <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "@id":"https://remote/foo_bar",
+            "@type":"FooBarObject"
+          }
+        JSON
+      end
+
+      it "defaults sensitive to false" do
+        object = described_class.from_json_ld(json).save
+        expect(object.sensitive).to be_false
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -291,6 +314,7 @@ Spectator.describe ActivityPub::Object do
       object = described_class.new.from_json_ld(json).save
       expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
+      expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.replies_iri).to eq("replies link")
@@ -299,6 +323,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
+      expect(object.sensitive).to be_true
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
@@ -412,6 +437,25 @@ Spectator.describe ActivityPub::Object do
         expect(object.language).to eq("en")
       end
     end
+
+    context "when sensitive property is missing" do
+      let(json) do
+        <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "@id":"https://remote/foo_bar",
+            "@type":"FooBarObject"
+          }
+        JSON
+      end
+
+      it "defaults sensitive to false" do
+        object = described_class.from_json_ld(json).save
+        expect(object.sensitive).to be_false
+      end
+    end
   end
 
   describe "#to_json_ld" do
@@ -442,6 +486,22 @@ Spectator.describe ActivityPub::Object do
         mentions: [Factory.build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo")]
       ).save
       expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Mention", "name" => "@foo@test.test", "href" => "https://test.test/actors/foo"})
+    end
+
+    it "renders sensitive property when true" do
+      object = described_class.new(
+        iri: "https://test.test/object",
+        sensitive: true
+      ).save
+      expect(JSON.parse(object.to_json_ld).as_h["sensitive"]).to eq(true)
+    end
+
+    it "does not render sensitive property when false" do
+      object = described_class.new(
+        iri: "https://test.test/object",
+        sensitive: false
+      ).save
+      expect(JSON.parse(object.to_json_ld).as_h.has_key?("sensitive")).to be_false
     end
   end
 
@@ -854,7 +914,8 @@ Spectator.describe ActivityPub::Object do
     subject do
       described_class.new(
         iri: "https://test.test/objects/#{random_string}",
-        attributed_to: Factory.build(:actor)
+        attributed_to: Factory.build(:actor),
+        visible: true,
       ).save
     end
 
@@ -865,7 +926,8 @@ Spectator.describe ActivityPub::Object do
         described_class.new(
           iri: "https://test.test/objects/#{random_string}",
           attributed_to: {{actor}},
-          in_reply_to: {{object}}
+          in_reply_to: {{object}},
+          visible: true,
         ).save
       end
     end
@@ -1021,6 +1083,11 @@ Spectator.describe ActivityPub::Object do
           actor4.destroy
           expect(subject.replies(approved_by: actor)).to be_empty
         end
+
+        it "omits non-visible replies even when approved" do
+          object4.assign(visible: false).save
+          expect(subject.replies(approved_by: actor)).not_to contain(object4)
+        end
       end
     end
 
@@ -1079,6 +1146,11 @@ Spectator.describe ActivityPub::Object do
           it "doesn't include the actor's unapproved replies" do
             object4.assign(attributed_to: actor).save
             expect(subject.thread(approved_by: actor)).to eq([subject, object5])
+          end
+
+          it "doesn't include non-visible replies even when approved" do
+            object5.assign(visible: false).save
+            expect(subject.thread(approved_by: actor)).not_to contain(object5)
           end
         end
       end

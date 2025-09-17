@@ -14,10 +14,13 @@ body { display: flex; flex-direction: column; }
 /* remove visible outlines on focused menu items */
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 
-/* navigation icons */
-nav.ui.top.fixed.inverted.navigation.menu .item {
-    .icon {
+/* top navigation menu */
+nav.ui.top.fixed.navigation.menu {
+    .item .icon {
         margin-right: 0.5em;
+    }
+    form input {
+        border-width: 0 !important;
     }
 }
 
@@ -190,7 +193,7 @@ nav.ui.top.fixed.inverted.navigation.menu .item {
 /** mobile improvements **/
 @media screen and (max-width: 599px) {
     /* Navigation icon-only mode on mobile */
-    nav.ui.top.fixed.inverted.navigation.menu {
+    nav.ui.top.fixed.navigation.menu {
         .ui.text.container {
             display: flex;
 
@@ -462,7 +465,7 @@ nav.ui.top.fixed.inverted.navigation.menu .item {
 
 /** trix toolbar **/
 trix-toolbar {
-    position: sticky; top: 58px; padding: 0 5px;
+    position: sticky; top: 58px; padding: 0 5px; z-index: 1;
     .trix-toolbar-container {
         white-space: normal !important; margin-bottom: 1em; display: flex; flex-wrap: wrap; gap: 0.30em 0.25em;
         button { border: none !important; padding: 0.75em !important; }

@@ -23,17 +23,9 @@ class RelationshipsController
         bad_request
       end
       now = Time.utc
-      visible = activity["public"]? == "true"
-      to = [] of String
-      if visible
-        to << "https://www.w3.org/ns/activitystreams#Public"
-      end
+      visible, to, cc = addressing(activity, account.actor)
       if (attributed_to = object.attributed_to?)
         to << attributed_to.iri
-      end
-      cc = [] of String
-      if (followers = account.actor.followers)
-        cc << followers
       end
       activity = ActivityPub::Activity::Announce.new(
         iri: "#{host}/activities/#{id}",
@@ -41,25 +33,17 @@ class RelationshipsController
         object: object,
         published: now,
         visible: visible,
-        to: to,
-        cc: cc
+        to: to.to_a,
+        cc: cc.to_a,
       )
     when "Like"
       unless (iri = activity["object"]?) && (object = ActivityPub::Object.find?(iri))
         bad_request
       end
       now = Time.utc
-      visible = activity["public"]? == "true"
-      to = [] of String
-      if visible
-        to << "https://www.w3.org/ns/activitystreams#Public"
-      end
+      visible, to, cc = addressing(activity, account.actor)
       if (attributed_to = object.attributed_to?)
         to << attributed_to.iri
-      end
-      cc = [] of String
-      if (followers = account.actor.followers)
-        cc << followers
       end
       activity = ActivityPub::Activity::Like.new(
         iri: "#{host}/activities/#{id}",
@@ -67,8 +51,8 @@ class RelationshipsController
         object: object,
         published: now,
         visible: visible,
-        to: to,
-        cc: cc
+        to: to.to_a,
+        cc: cc.to_a,
       )
     when "Publish"
       unless (content = activity["content"]?)
@@ -83,21 +67,20 @@ class RelationshipsController
       if object && object.attributed_to != account.actor
         forbidden
       end
-      visible = activity["public"]? == "true"
-      to = activity["to"]?.presence.try(&.split(",")) || [] of String
+      visible, to, cc = addressing(activity, account.actor)
+      if (_to = activity["to"]?.presence)
+        to |= _to.split(",").to_set
+      end
+      if (_cc = activity["cc"]?.presence)
+        cc |= _cc.split(",").to_set
+      end
       if (attributed_to = in_reply_to.try(&.attributed_to?))
-        to |= [attributed_to.iri]
-      end
-      if visible
-        to << "https://www.w3.org/ns/activitystreams#Public"
-      end
-      cc = activity["cc"]?.presence.try(&.split(",")) || [] of String
-      if (followers = account.actor.followers)
-        cc << followers
+        to << attributed_to.iri
       end
       language = activity["language"]?.presence
       name = activity["name"]?.presence
       summary = activity["summary"]?.presence
+      sensitive = activity["sensitive"]? == "true"
       canonical_path = activity["canonical_path"]?.presence
       activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
       iri = "#{host}/objects/#{id}"
@@ -110,10 +93,11 @@ class RelationshipsController
         language: language,
         name: name,
         summary: summary,
+        sensitive: sensitive,
         canonical_path: canonical_path,
         visible: visible,
-        to: to,
-        cc: cc
+        to: to.to_a,
+        cc: cc.to_a,
       )
       # validate ensures properties are populated from source
       unless object.valid?
@@ -139,9 +123,13 @@ class RelationshipsController
       unless activity.responds_to?(:valid_for_send?) && activity.valid_for_send?
         bad_request
       end
-      # after validating make published
-      time = object.published || Time.utc
-      object.published = activity.published = time
+      # after validating, set timestamps based on activity type
+      time = Time.utc
+      if activity.is_a?(ActivityPub::Activity::Update)
+        object.updated = activity.published = time
+      else
+        object.published = activity.published = time
+      end
     when "Follow"
       unless (iri = activity["object"]?) && (object = ActivityPub::Actor.find?(iri))
         bad_request

@@ -63,7 +63,10 @@ crystal:
           strong = name
     - if (summary = translation.try(&.summary).presence || object.summary.presence)
       details.extra.text open=with_detail
-        summary = summary
+        summary
+          - if object.sensitive
+            i.red.eye.slash.icon
+          = summary
         - if with_detail
           div
             == s html

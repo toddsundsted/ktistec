@@ -58,23 +58,20 @@ canvas#charts-2 data-controller="chart"
   script#chart-datasets-2 type="application/json" data-chart-target="datasets"
     == datasets.to_json
 crystal:
-  timezone = Time::Location.load(env.account.timezone)
-  now = Time.utc.in(timezone)
   ranges = {
-    "" => "",
-    now.at_beginning_of_week.to_s("%Y-%m-%d") => "This Week",
-    now.at_beginning_of_month.to_s("%Y-%m-%d") => "This Month",
-    now.at_beginning_of_year.to_s("%Y-%m-%d") => "This Year"
+    7.days.ago.to_s("%Y-%m-%d") => "Last 7 Days",
+    30.days.ago.to_s("%Y-%m-%d") => "Last 30 Days",
+    365.days.ago.to_s("%Y-%m-%d") => "Last 365 Days",
+    "" => "All Time",
   }
   granularities = {
-    "" => "",
     "daily" => "By Day",
     "weekly" => "By Week",
-    "monthly" => "By Month"
+    "monthly" => "By Month",
   }
 == form_tag(nil, "/metrics", method: "GET", class: "ui mini form") do
   .two.fields
-    == select_tag("Range", nil, :begin, ranges, env.params.query["begin"]?)
-    == select_tag("Granularity", nil, :granularity, granularities, env.params.query["granularity"]?)
+    == select_tag("Range", nil, :begin, ranges, range.first.try(&.to_s("%Y-%m-%d")))
+    == select_tag("Granularity", nil, :granularity, granularities, granularity.to_s.split("::").last.downcase)
   == submit_button("Update", class: "ui mini primary button")
 br.transition.hidden

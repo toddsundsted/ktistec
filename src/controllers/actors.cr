@@ -1,5 +1,6 @@
 require "../framework/controller"
 require "../models/task/refresh_actor"
+require "../utils/rss"
 
 require "../models/relationship/content/follow/hashtag"
 require "../models/relationship/content/follow/mention"
@@ -10,7 +11,7 @@ require "../models/relationship/content/notification/follow/thread"
 class ActorsController
   include Ktistec::Controller
 
-  skip_auth ["/actors/:username", "/actors/:username/public-posts"], GET
+  skip_auth ["/actors/:username", "/actors/:username/public-posts", "/actors/:username/feed.rss"], GET
 
   get "/actors/:username" do |env|
     username = env.params.url["username"]
@@ -55,6 +56,28 @@ class ActorsController
     objects = actor.public_posts(**pagination_params(env))
 
     ok "actors/public_posts", env: env, actor: actor, objects: objects
+  end
+
+  get "/actors/:username/feed.rss" do |env|
+    username = env.params.url["username"]
+
+    unless (account = Account.find?(username: username))
+      not_found
+    end
+
+    actor = account.actor
+
+    objects = actor.public_posts(**pagination_params(env))
+
+    actor_name = actor.display_name
+    actor_url = actor.display_link
+
+    env.response.content_type = "application/rss+xml; charset=utf-8"
+
+    Ktistec::RSS.generate_rss_feed(
+      objects, actor_name, actor_url,
+      "#{actor_name}: RSS Feed"
+    )
   end
 
   get "/actors/:username/posts" do |env|

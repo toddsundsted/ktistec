@@ -45,7 +45,13 @@ module ActivityPub
     property visible : Bool { false }
 
     @[Persistent]
+    property sensitive : Bool { false }
+
+    @[Persistent]
     property published : Time?
+
+    @[Persistent]
+    property updated : Time?
 
     @[Persistent]
     property attributed_to_iri : String?
@@ -417,6 +423,7 @@ module ActivityPub
              ON r.type = '#{Relationship::Content::Approved}'
              AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
+            AND o.visible = 1
             AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
@@ -465,6 +472,7 @@ module ActivityPub
              ON r.type = '#{Relationship::Content::Approved}'
             AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.in_reply_to_iri = ?
+            AND o.visible = 1
             AND o.deleted_at IS NULL
             AND o.blocked_at IS NULL
             AND a.deleted_at IS NULL
@@ -577,6 +585,7 @@ module ActivityPub
              ON r.type = '#{Relationship::Content::Approved}'
             AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
+            AND o.visible = 1
             AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
           ORDER BY t.position
       QUERY
@@ -814,6 +823,7 @@ module ActivityPub
           "iri" => json.dig?("@id").try(&.as_s),
           "_type" => json.dig?("@type").try(&.as_s.split("#").last),
           "published" => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
+          "updated" => (u = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#updated")) ? Time.parse_rfc3339(u) : nil,
           "attributed_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
           "in_reply_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
           # pick up the replies' id and the embedded replies if the hosts match
@@ -833,6 +843,7 @@ module ActivityPub
           "cc" => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
           "name" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
           "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+          "sensitive" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool),
           "content" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
           "media_type" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
           "hashtags" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|

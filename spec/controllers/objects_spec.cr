@@ -212,9 +212,31 @@ Spectator.describe ObjectsController do
         notvisible.assign(in_reply_to: visible).save
       end
 
-      it "renders the collection" do
+      it "renders an empty collection" do
         get "/objects/#{visible.uid}/replies"
-        expect(JSON.parse(response.body).dig("orderedItems").as_a).to contain_exactly(notvisible.iri)
+        expect(JSON.parse(response.body).dig("orderedItems").as_a).to be_empty
+      end
+
+      context "that is approved" do
+        before_each do
+          visible.attributed_to.approve(notvisible)
+        end
+
+        it "renders an empty collection" do
+          get "/objects/#{visible.uid}/replies"
+          expect(JSON.parse(response.body).dig("orderedItems").as_a).to be_empty
+        end
+
+        context "and is visible" do
+          before_each do
+            notvisible.assign(visible: true).save
+          end
+
+          it "renders the collection" do
+            get "/objects/#{visible.uid}/replies"
+            expect(JSON.parse(response.body).dig("orderedItems").as_a).to contain_exactly(notvisible.iri)
+          end
+        end
       end
     end
 
@@ -333,7 +355,7 @@ Spectator.describe ObjectsController do
       end
     end
 
-    context "with replies" do
+    context "with a reply" do
       before_each do
         notvisible.assign(in_reply_to: visible).save
       end
@@ -348,19 +370,35 @@ Spectator.describe ObjectsController do
         expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri)
       end
 
-      context "that are approved" do
+      context "that is approved" do
         before_each do
           visible.attributed_to.approve(notvisible)
         end
 
         it "renders the collection" do
           get "/objects/#{visible.uid}/thread", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}")
         end
 
         it "renders the collection" do
           get "/objects/#{visible.uid}/thread", ACCEPT_JSON
-          expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri, notvisible.iri)
+          expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri)
+        end
+
+        context "and is visible" do
+          before_each do
+            notvisible.assign(visible: true).save
+          end
+
+          it "renders the collection" do
+            get "/objects/#{visible.uid}/thread", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
+          end
+
+          it "renders the collection" do
+            get "/objects/#{visible.uid}/thread", ACCEPT_JSON
+            expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri, notvisible.iri)
+          end
         end
       end
     end

@@ -15,9 +15,9 @@ section.ui.feed data-controller="icon-load-error"
     / don't use `object.language` -- `object` is the post being replied to!
     - if (language = env.account.language.presence)
       .inline.fields
-        .nine.wide.field
+        .ten.wide.field
           == render "src/views/partials/visibility_controls.html.slang"
-        .seven.wide.field
+        .six.wide.field
           label Language
           input type="text" name="language" value=language
     - else

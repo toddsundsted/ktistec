@@ -15,7 +15,7 @@ body { display: flex; flex-direction: column; }
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 
 /* top navigation menu */
-nav.ui.top.fixed.navigation.menu {
+nav.ui.top.navigation.menu {
     .item .icon {
         margin-right: 0.5em;
     }
@@ -193,7 +193,7 @@ nav.ui.top.fixed.navigation.menu {
 /** mobile improvements **/
 @media screen and (max-width: 599px) {
     /* Navigation icon-only mode on mobile */
-    nav.ui.top.fixed.navigation.menu {
+    nav.ui.top.navigation.menu {
         .ui.text.container {
             display: flex;
 
@@ -550,4 +550,42 @@ trix-editor {
 
 .ellipsis::after {
     content: "…";
+}
+
+/** design system **/
+.design-system-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    h2 {
+        margin-top: 0;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 0.5rem;
+        color: #333;
+    }
+    h3 {
+        margin-top: 1.5rem;
+        color: #555;
+    }
+    .component-showcase {
+        margin: 1rem 0;
+        padding: 1rem;
+        border-radius: 3px;
+        h4 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            color: #666;
+        }
+        .variation-group {
+            margin: 1rem 0;
+            .variation-label {
+                margin-bottom: 0.5rem;
+                font-weight: bold;
+                font-size: 0.9rem;
+                color: #777;
+            }
+        }
+    }
 }

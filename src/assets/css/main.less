@@ -1,6 +1,12 @@
 @import "themes/variables.less";
+@import "themes/overrides.less";
 
-@code-size: 85%;
+:root {
+    --header-height: 3.65rem;
+    --toolbar-height: 58px;
+    --touch-target-height: 44px;
+    --code-size: 85%;
+}
 
 /** global **/
 html { font-size: 16px; }
@@ -57,7 +63,7 @@ nav.ui.top.navigation.menu {
 
 /** documentation **/
 .ui.documentation {
-    code { background-color: var(--bg-accent); padding: .2em .3em; font-size: 90%; line-height: normal; }
+    code { background-color: var(--bg-accent-code); padding: .2em .3em; font-size: 90%; line-height: normal; }
 }
 
 /** timeline **/
@@ -94,7 +100,7 @@ nav.ui.top.navigation.menu {
                     img { cursor: pointer !important; }
                     i.user { font-size: 1.5em; vertical-align: text-bottom; color: var(--text-secondary); }
                     img + i, i + i {
-                        color: var(--color-lightblue);
+                        color: var(--semantic-primary);
                         position: relative;
                         left: -10px;
                         bottom: -10px;
@@ -121,8 +127,8 @@ nav.ui.top.navigation.menu {
             figcaption { text-align: center; font-style: italic; }
 
             /* other styles */
-            code { background: var(--bg-accent); padding: .2em .3em; font-size: @code-size; line-height: normal; }
-            pre { background: var(--bg-accent-alt); padding: .2em .4em; font-size: @code-size; overflow-x: auto; }
+            code { background: var(--bg-accent-code); padding: .2em .3em; font-size: var(--code-size); line-height: normal; }
+            pre { background: var(--bg-accent-pre); padding: .2em .4em; font-size: var(--code-size); overflow-x: auto; }
         }
     }
 
@@ -157,7 +163,7 @@ nav.ui.top.navigation.menu {
         height: 95px;
     }
     > .event {
-        .extra.text img.image, .extra.text audio.audio .extra.text video.video { width: 100%; }
+        .extra.text img.image, .extra.text audio.audio, .extra.text video.video { width: 100%; }
         img.extra.image, audio.extra.audio, video.extra.video { width: 100%; }
     }
     > .detailed.event {
@@ -246,8 +252,8 @@ nav.ui.top.navigation.menu {
 
             label {
                 display: block;
-                background-color: var(--bg-mobile-menu);
-                color: var(--text-mobile-menu);
+                background-color: var(--semantic-primary);
+                color: var(--text-primary-inverted);
                 padding: 0.75rem 1rem;
                 border-radius: 3px;
                 cursor: pointer;
@@ -263,9 +269,9 @@ nav.ui.top.navigation.menu {
         .menu-items {
             display: none !important;
             position: relative;
-            background: var(--color-white);
+            background: var(--bg-primary);
             border-radius: 3px;
-            box-shadow: 0 2px 4px var(--bg-shadow);
+            box-shadow: 0 2px 4px var(--border-color);
             padding: 0.5rem 0;
             margin-top: -0.5rem;
 
@@ -317,7 +323,7 @@ nav.ui.top.navigation.menu {
         font-size: 110%;
 
         > .item {
-            min-height: 44px;
+            min-height: var(--touch-target-height);
         }
     }
 }
@@ -346,9 +352,9 @@ nav.ui.top.navigation.menu {
         width: 7rem;
         height: 7rem;
         object-fit: cover;
-        background-color: var(--color-white-transparent);
+        background-color: var(--bg-transparent);
         border-radius: 3.5rem;
-        border: 3px solid var(--color-white);
+        border: 3px solid var(--bg-primary);
     }
     > .segment:first-child i {
         position: absolute;
@@ -359,7 +365,7 @@ nav.ui.top.navigation.menu {
         font-size: 5rem;
     }
     > .segment th {
-        border-right: 1px solid var(--border-accent);
+        border-right: 1px solid var(--border-color);
         text-align: right;
         font-weight: normal;
         padding-right: 1ex;
@@ -374,7 +380,7 @@ nav.ui.top.navigation.menu {
         position: absolute;
         bottom: 1em;
         right: 1em;
-        color: var(--text-information);
+        color: var(--text-muted);
         font-size: smaller;
     }
 }
@@ -382,7 +388,7 @@ nav.ui.top.navigation.menu {
 /** small actor partial **/
 .ui.actor.card {
     > .content.placeholder {
-        background-color: var(--bg-placeholder);
+        background-color: var(--bg-label);
     }
     > .content:first-child {
         position: relative;
@@ -401,9 +407,9 @@ nav.ui.top.navigation.menu {
         width: 4rem;
         height: 4rem;
         object-fit: cover;
-        background-color: var(--color-white-transparent);
+        background-color: var(--bg-transparent);
         border-radius: 2rem;
-        border: 2px solid var(--color-white);
+        border: 2px solid var(--bg-primary);
     }
     > .content:first-child i {
         position: absolute;
@@ -429,18 +435,19 @@ nav.ui.top.navigation.menu {
 
 /* additional button styles */
 /* used in posts in the timeline */
-.ui.iconic.button { background: var(--color-transparent) none !important; color: var(--text-iconic) !important; padding: 0; margin: 0; }
+.ui.iconic.button { background: var(--color-transparent) none !important; color: var(--text-secondary) !important; padding: 0; margin: 0; }
+.ui.iconic.button:hover { color: var(--text-primary) !important; }
 .ui.iconic.blue.button { color: var(--semantic-primary) !important; }
 .ui.iconic.purple.button { color: var(--color-purple) !important; }
 
 /* used on social actions */
-.ui.accept.button { background: var(--semantic-success) !important; color: var(--text-white) !important; }
-.ui.reject.button { background: var(--semantic-error) !important; color: var(--text-white) !important; }
+.ui.accept.button { background: var(--semantic-affirmative) !important; color: var(--text-white) !important; }
+.ui.reject.button { background: var(--semantic-negative) !important; color: var(--text-white) !important; }
 /* used on the timeline and elsewhere */
-.ui.dangerous.button { color: var(--color-dangerous) !important; }
-.ui.dangerous.button:hover { background-color: var(--color-dangerous-hover) !important; color: var(--text-white) !important; transition: 0.2s color ease; }
+.ui.dangerous.button { color: var(--semantic-dangerous) !important; }
+.ui.dangerous.button:hover { background-color: var(--semantic-dangerous-hover) !important; color: var(--text-white) !important; transition: 0.2s color ease; }
 .ui.dangerous.iconic.button { background-color: var(--color-transparent) !important; color: var(--text-secondary) !important; }
-.ui.dangerous.iconic.button:hover { color: var(--color-dangerous) !important; transition: 0.2s color ease; }
+.ui.dangerous.iconic.button:hover { color: var(--semantic-dangerous) !important; transition: 0.2s color ease; }
 
 /* additional styling for modals */
 .ui.modal > .header > i { margin-right: 1.0rem; }
@@ -453,7 +460,6 @@ nav.ui.top.navigation.menu {
         width: 2.05rem; height: 1.0rem;
         &:checked {
             ~ label {
-                color: var(--semantic-primary) !important;
                 &::after { left: 1.15rem; }
             }
         }
@@ -467,7 +473,7 @@ nav.ui.top.navigation.menu {
 
 /** trix toolbar **/
 trix-toolbar {
-    position: sticky; top: 58px; padding: 0 5px; z-index: 1;
+    position: sticky; top: var(--toolbar-height); padding: 0 5px; z-index: 1;
     .trix-toolbar-container {
         white-space: normal !important; margin-bottom: 1em; display: flex; flex-wrap: wrap; gap: 0.30em 0.25em;
         button { border: none !important; padding: 0.75em !important; }
@@ -477,8 +483,8 @@ trix-toolbar {
 
 /** trix editor **/
 trix-editor {
-    code { background: var(--bg-accent); padding: .2em .3em; font-size: @code-size; line-height: normal; }
-    pre { background: var(--bg-accent-alt); padding: .2em .4em; font-size: @code-size; overflow-x: auto; }
+    code { background: var(--bg-accent-code); padding: .2em .3em; font-size: var(--code-size); line-height: normal; }
+    pre { background: var(--bg-accent-pre); padding: .2em .4em; font-size: var(--code-size); overflow-x: auto; }
 
     /* fix style conflicts with semantic ui */
     .attachment__caption-editor { padding: 0 !important; border: none !important; resize: unset !important; height: unset !important; min-height: unset !important; max-height: unset !important; }
@@ -526,7 +532,7 @@ trix-editor {
 
 /** filter terms **/
 .ui.filter.term > .wildcard {
-    background-color: var(--bg-filter);
+    background-color: var(--bg-label);
     padding: 0 0.2em;
     margin: 0 0.1em;
 }

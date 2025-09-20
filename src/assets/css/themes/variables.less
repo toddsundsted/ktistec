@@ -1,56 +1,83 @@
 /**
  * Default Theme for Ktistec
  *
+ * This theme provides light and dark mode support using CSS custom properties.
+ *
  */
 
 /** CSS variables for theming **/
-
 :root {
-    --text-primary: rgba(0,0,0,.87);
-    --text-primary-inverted: rgba(255,255,255,0.9);
+    --color-transparent: transparent;
+
+    --error-text-color: #9f3a38;
+    --error-bg-color: #fff6f6;
+    --error-border-color: #e0b4b4;
+
+    --text-white: #fff;
+}
+
+/* Light mode colors (default) */
+:root {
+    --text-primary: rgba(0, 0, 0, 0.87);
+    --text-primary-inverted: rgba(255, 255, 255, 0.87);
     --text-secondary: rgba(0, 0, 0, 0.6);
     --text-muted: rgba(0, 0, 0, 0.4);
 
-    --menu-divider-inverted: rgba(255,255,255,0.08);
-
     --bg-primary: #ffffff;
-    --bg-primary-inverted: #1b1c1d;
-    --bg-secondary: #f8f9fa;
-    --bg-accent: #f3f3f3;
-    --bg-accent-alt: #f6f8fa;
     --bg-hover: rgba(0, 0, 0, 0.05);
-    --bg-card: #ffffff;
+    --bg-transparent: rgba(255, 255, 255, 0.63);
+    --bg-icon-menu: #fbfbfb;
+    --bg-accent-code: #f3f3f3;
+    --bg-accent-pre: #f6f8fa;
     --bg-input: #ffffff;
-    --bg-filter: #eeeeee;
+    --bg-label: #e8e8e8;
 
     --border-color: rgba(34, 36, 38, 0.15);
-    --border-accent: #22242626;
+
+    --anchor-color: #4183c4;
 
     --semantic-primary: #2185d0;
-    --semantic-success: #21ba45;
-    --semantic-error: #db2828;
-    --semantic-warning: #f2711c;
-    --semantic-info: #31ccec;
+    --semantic-affirmative: #21ba45;
+    --semantic-negative: #db2828;
 
-    /* Additional colors from main.less */
-    --color-white: #ffffff;
-    --color-white-transparent: rgba(255, 255, 255, 0.63);
-    --color-lightblue: lightblue;
+    --semantic-dangerous: #ff2733;
+    --semantic-dangerous-hover: #f41824;
+
     --color-blue: #1678c2;
     --color-purple: #a333c8;
-    --color-dangerous: #ff2733;
-    --color-dangerous-hover: #f41824;
     --color-yellow: yellow;
-    --color-transparent: transparent;
+}
 
-    /* Background */
-    --bg-placeholder: #f9fafb;
-    --bg-mobile-menu: #2185d0;
-    --bg-shadow: rgba(0, 0, 0, 0.1);
+/* Dark mode colors */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text-primary: #ffffff;
+        --text-primary-inverted: #000000;
+        --text-secondary: rgba(255, 255, 255, 0.7);
+        --text-muted: rgba(255, 255, 255, 0.5);
 
-    /* Text */
-    --text-white: #fff;
-    --text-mobile-menu: #fff;
-    --text-information: rgba(0, 0, 0, 0.5);
-    --text-iconic: rgba(0, 0, 0, 0.6);
+        --bg-primary: #1a1a1a;
+        --bg-hover: rgba(255, 255, 255, 0.35);
+        --bg-transparent: rgba(42, 42, 42, 0.63);
+        --bg-icon-menu: #1f1f1f;
+        --bg-accent-code: #404040;
+        --bg-accent-pre: #383838;
+        --bg-input: #2d2d2d;
+        --bg-label: #484848;
+
+        --border-color: rgba(255, 255, 255, 0.15);
+
+        --anchor-color: #4183c4;
+
+        --semantic-primary: #4dabf7;
+        --semantic-affirmative: #51cf66;
+        --semantic-negative: #ff6b6b;
+
+        --semantic-dangerous: #ff6b6b;
+        --semantic-dangerous-hover: #ff5252;
+
+        --color-blue: #4dabf7;
+        --color-purple: #c084fc;
+        --color-yellow: #ffd43b;
+    }
 }

@@ -8,6 +8,7 @@ module Admin
 
     get "/admin/accounts" do |env|
       accounts = Account.all
+
       ok "admin/accounts/index", env: env, accounts: accounts
     end
 
@@ -23,12 +24,13 @@ module Admin
     post "/admin/accounts" do |env|
       host = Ktistec.host
 
-      username = env.params.body["username"]
-      password = env.params.body["password"]
-      language = env.params.body["language"]
-      timezone = env.params.body["timezone"]
-      name = env.params.body["name"]
-      summary = env.params.body["summary"]
+      params = params(env)
+      username = params["username"]
+      password = params["password"]
+      language = params["language"]
+      timezone = params["timezone"]
+      name = params["name"]
+      summary = params["summary"]
 
       iri = "#{host}/actors/#{username}"
 
@@ -50,10 +52,26 @@ module Admin
       if account.valid?
         account.save
 
-        redirect "/admin/accounts"
+        if accepts?("text/html")
+          redirect "/admin/accounts"
+        else
+          created "/admin/accounts", "admin/accounts/show", env: env, account: account
+        end
       else
         unprocessable_entity "admin/accounts/new", env: env, account: account, actor: actor
       end
+    end
+
+    private def self.params(env)
+      params = accepts?("text/html") ? env.params.body : env.params.json
+      {
+        "username" => params["username"].as(String),
+        "password" => params["password"].as(String),
+        "name" => params["name"].as(String),
+        "summary" => params["summary"].as(String),
+        "language" => params["language"].as(String),
+        "timezone" => params["timezone"].as(String)
+      }
     end
   end
 end

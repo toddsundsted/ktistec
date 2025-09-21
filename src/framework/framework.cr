@@ -14,6 +14,7 @@ require "./ext/log"
 Log.setup_from_env
 
 require "./database"
+require "./themes"
 require "../utils/translator"
 
 module Ktistec
@@ -210,6 +211,8 @@ module Ktistec
     def self.run
       log_levels = LogLevel.all_as_hash
       ::Log.setup log_levels.transform_values(&.severity)
+
+      Themes.discover_files(Kemal.config.public_folder)
 
       with new yield
 

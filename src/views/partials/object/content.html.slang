@@ -191,14 +191,14 @@ crystal:
           form.ui.form method="POST" action=unapprove_path(object) data-controller="checkbox-submit"
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
             .ui.mini.toggle.checkbox.checked
-              input type="checkbox" name="public" checked="checked" data-action="change->checkbox-submit#change"
-              label Public
+              input id="object-#{object.id}-public" type="checkbox" name="public" checked="checked" data-action="change->checkbox-submit#change"
+              label for="object-#{object.id}-public" Public
         - else
           form.ui.form method="POST" action=approve_path(object) data-controller="checkbox-submit"
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
             .ui.mini.toggle.checkbox
-              input type="checkbox" name="public" data-action="change->checkbox-submit#change"
-              label Public
+              input id="object-#{object.id}-public" type="checkbox" name="public" data-action="change->checkbox-submit#change"
+              label for="object-#{object.id}-public" Public
       - if author == account.actor
         a data-turbo-frame="_top" href=edit_object_path(object)
           button.ui.mini.iconic.button

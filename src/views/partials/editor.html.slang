@@ -46,8 +46,8 @@ form.ui.form.editor id="object-#{id}" class=(has_errors ? "error" : nil) data-co
       textarea name="summary" rows="2" = object.summary
     .field
       .ui.checkbox
-        input type="checkbox" name="sensitive" value="true" checked=object.sensitive
-        label Content warning
+        input#content-warning type="checkbox" name="sensitive" value="true" checked=object.sensitive
+        label for="content-warning" Content warning
     .field class=(canonical_path_errors ? "error" : nil)
       label Canonical Path
       input type="text" name="canonical_path" value=object.canonical_path

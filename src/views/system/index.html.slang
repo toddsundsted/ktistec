@@ -12,36 +12,36 @@ form.ui.form method="POST" action=system_path
       - severity = log_levels[source]?.try(&.severity)
       .field
         .ui.radio.checkbox
-          input type="radio" name=source value="" checked=!!severity.nil?
-          label Default
+          input id="#{source}-default" type="radio" name=source value="" checked=!!severity.nil?
+          label for="#{source}-default" Default
       .field
         .ui.radio.checkbox
-          input type="radio" name=source value="Trace" checked=!!severity.try(&.trace?)
-          label Trace
+          input id="#{source}-trace" type="radio" name=source value="Trace" checked=!!severity.try(&.trace?)
+          label for="#{source}-trace" Trace
       .field
         .ui.radio.checkbox
-          input type="radio" name=source value="Debug" checked=!!severity.try(&.debug?)
-          label Debug
+          input id="#{source}-debug" type="radio" name=source value="Debug" checked=!!severity.try(&.debug?)
+          label for="#{source}-debug" Debug
       .field
         .ui.radio.checkbox
-          input type="radio" name=source value="Info" checked=!!severity.try(&.info?)
-          label Info
+          input id="#{source}-info" type="radio" name=source value="Info" checked=!!severity.try(&.info?)
+          label for="#{source}-info" Info
       .field
         .ui.radio.checkbox
-          input type="radio" name=source value="Notice" checked=!!severity.try(&.notice?)
-          label Notice
+          input id="#{source}-notice" type="radio" name=source value="Notice" checked=!!severity.try(&.notice?)
+          label for="#{source}-notice" Notice
       .field
         .ui.radio.checkbox
-          input type="radio" name=source value="Warn" checked=!!severity.try(&.warn?)
-          label Warn
+          input id="#{source}-warn" type="radio" name=source value="Warn" checked=!!severity.try(&.warn?)
+          label for="#{source}-warn" Warn
       .field
         .ui.radio.checkbox
-          input type="radio" name=source value="Error" checked=!!severity.try(&.error?)
-          label Error
+          input id="#{source}-error" type="radio" name=source value="Error" checked=!!severity.try(&.error?)
+          label for="#{source}-error" Error
       .field
         .ui.radio.checkbox
-          input type="radio" name=source value="Fatal" checked=!!severity.try(&.fatal?)
-          label Fatal
+          input id="#{source}-fatal" type="radio" name=source value="Fatal" checked=!!severity.try(&.fatal?)
+          label for="#{source}-fatal" Fatal
   .field
     == submit_button
 br.transition.hidden

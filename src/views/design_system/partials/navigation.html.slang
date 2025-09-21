@@ -61,18 +61,18 @@
             span.ui.mini.transitional.horizontal.circular.red.label 1
           a.item Followers
           a.item Following
-          a.ui.right.dropdown.item
+          a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"
             i.horizontal.sliders.icon
             .menu style="display: block"
               form
                 .item
                   .ui.slider.checkbox
-                    input type="checkbox" name="filters" value="no-shares"
-                    label Don't include shared posts
+                    input#timeline-no-shares type="checkbox" name="filters" value="no-shares"
+                    label for="timeline-no-shares" Don't include shared posts
                 .item
                   .ui.slider.checkbox
-                    input type="checkbox" name="filters" value="no-replies"
-                    label Don't include replies
+                    input#timeline-no-replies type="checkbox" name="filters" value="no-replies"
+                    label for="timeline-no-replies" Don't include replies
   .component-showcase
     h4 Pagination
     .ui.text.container

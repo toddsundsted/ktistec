@@ -11,7 +11,7 @@
             .summary
               a.user> = actor.display_name
               | posted
-              a.date just now
+              a.date< just now
             .extra.text
               p Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
             .meta
@@ -44,7 +44,7 @@
               a.user> = actor.display_name
               | shared a note by
               a.user< = actor.display_name
-              a.date 2 hours ago
+              a.date< 2 hours ago
             .extra.text
               p Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam, quis nostrud exercitation.
             .meta
@@ -78,7 +78,7 @@
             .summary
               a.user> = actor.display_name
               | posted
-              a.date 3 hours ago
+              a.date< 3 hours ago
             img.ui.extra.attachment.image src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600' viewBox='0 0 600 600'%3E%3Crect width='600' height='600' fill='%23f0f0f0'/%3E%3Ctext x='300' y='300' text-anchor='middle' dy='0.3em' font-family='Arial' font-size='24' fill='%23999'%3EImage Placeholder%3C/text%3E%3C/svg%3E" alt="Placeholder"
             .extra.media
               img.ui.attachment.image src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23ffffff' stroke='%23e0e0e0' stroke-width='2'/%3E%3Ccircle cx='100' cy='100' r='35' fill='%23f8f9fa' stroke='%23007bff' stroke-width='3'/%3E%3Ctext x='100' y='160' text-anchor='middle' font-family='Arial' font-size='11' fill='%23495057'%3ELight Mode%3C/text%3E%3C/svg%3E" alt="Light Mode"
@@ -116,7 +116,7 @@
             .summary
               a.user> = actor.display_name
               | posted
-              a.date href="#" 3 days ago
+              a.date< 3 days ago
             .extra.text
               p
                 | Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua via
@@ -165,7 +165,7 @@
             .summary
               a.user> = actor.display_name
               | posted
-              a.date href="#" 2 hours ago
+              a.date< 2 hours ago
             .extra.text
               p Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
             .meta
@@ -196,7 +196,7 @@
             .summary
               a.user> = actor.display_name
               | posted
-              a.date href="#" 1 hour ago
+              a.date< 1 hour ago
             .extra.text
               p Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
             .meta
@@ -226,7 +226,7 @@
             .summary
               a.user> = actor.display_name
               | posted
-              a.date href="#" 45 minutes ago
+              a.date< 45 minutes ago
             .extra.text
               p Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
             .meta
@@ -263,9 +263,9 @@
             i.user.outline.icon
           .content
             .summary
-              a.user> href="#" [blocked]
+              a.user> [blocked]
               | posted
-              a.date href="#" 4 days ago
+              a.date< 4 days ago
             .extra.text
               em This actor is blocked!
             .meta
@@ -277,9 +277,9 @@
             i.user.icon
           .content
             .summary
-              a.user> href="#" Deleted User
+              a.user> Deleted User
               | posted
-              a.date href="#" 5 days ago
+              a.date< 5 days ago
             .extra.text.deleted
               p Lorem ipsum dolor sit amet
             .extra.text

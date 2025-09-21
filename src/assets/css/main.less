@@ -90,10 +90,16 @@ nav.ui.top.navigation.menu {
             -webkit-hyphens: auto;
             hyphens: auto;
 
-            > .meta {
-                &:empty { display: none; }
-                /* actions (e.g. reply and delete) */
-                > form { display: inline; }
+            > .summary > .date {
+                font-size: 1em;
+                font-weight: 700;
+                margin: 0;
+            }
+            > .extra.text {
+                max-width: unset;
+                &.deleted {
+                    opacity: 50%;
+                }
             }
             > .detail {
                 a {
@@ -108,12 +114,10 @@ nav.ui.top.navigation.menu {
                     }
                 }
             }
-
-            > .extra.text {
-                max-width: unset;
-                &.deleted {
-                    opacity: 50%;
-                }
+            > .meta {
+                &:empty { display: none; }
+                /* actions (e.g. reply and delete) */
+                > form { display: inline; }
             }
 
             > details > summary + * {

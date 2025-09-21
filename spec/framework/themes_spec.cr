@@ -1,3 +1,5 @@
+require "file_utils"
+
 require "../../src/framework/themes"
 
 require "../spec_helper/base"
@@ -67,6 +69,60 @@ Spectator.describe Ktistec::Themes do
 <script src="/themes/file&amp;name.js"></script>)
         expect(subject).to eq(expected)
       end
+    end
+  end
+
+  describe ".discover_files" do
+    let(tmp_dir) do
+      File.join(Dir.tempdir, "themes_#{Random.new.rand(10000)}").tap do |tmp_dir|
+        Dir.mkdir(tmp_dir)
+      end
+    end
+
+    let(themes_dir) do
+      File.join(tmp_dir, "themes").tap do |themes_dir|
+        Dir.mkdir(themes_dir)
+      end
+    end
+
+    before_each do
+      described_class.css_files = [] of String
+      described_class.js_files = [] of String
+    end
+
+    after_each do
+      FileUtils.rm_rf(tmp_dir) if Dir.exists?(tmp_dir)
+    end
+
+    it "handles missing themes directory gracefully" do
+      described_class.discover_files(tmp_dir)
+
+      expect(described_class.css_files).to be_empty
+      expect(described_class.js_files).to be_empty
+    end
+
+    it "discovers CSS and JS files in themes directory" do
+      File.write(File.join(themes_dir, "02-style.css"), "/* style */")
+      File.write(File.join(themes_dir, "01-base.css"), "/* base */")
+      File.write(File.join(themes_dir, "script.js"), "// js")
+      File.write(File.join(themes_dir, "README.txt"), "ignored")
+
+      described_class.discover_files(tmp_dir)
+
+      expect(described_class.css_files).to contain_exactly("01-base.css", "02-style.css")
+      expect(described_class.js_files).to contain_exactly("script.js")
+    end
+
+    it "clears existing files before discovery" do
+      described_class.css_files = ["old.css"]
+      described_class.js_files = ["old.js"]
+
+      File.write(File.join(themes_dir, "new.css"), "/* new */")
+
+      described_class.discover_files(tmp_dir)
+
+      expect(described_class.css_files).to contain_exactly("new.css")
+      expect(described_class.js_files).to be_empty
     end
   end
 end

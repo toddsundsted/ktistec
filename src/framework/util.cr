@@ -89,7 +89,7 @@ module Ktistec
     private ATTRIBUTES = {
       a: {
         keep: ["href"],
-        remote: [{"target", "_blank"}, {"rel", "ugc"}],
+        remote: [{"target", "_blank"}, {"rel", "external ugc"}],
         local: [{"data-turbo-frame", "_top"}],
         key: "href"
       },

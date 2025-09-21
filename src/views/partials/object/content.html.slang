@@ -27,7 +27,7 @@ crystal:
         - else
           a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
           | posted
-        a.date data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
+        a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
       - else
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = actor.display_name
@@ -36,7 +36,7 @@ crystal:
         - else
           a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
           | posted
-        a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
+        a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
   - unless object.blocked? || author.blocked? || actor.blocked?
     - if attachments && (attachment = attachments.shift?)
       - if attachment.image?

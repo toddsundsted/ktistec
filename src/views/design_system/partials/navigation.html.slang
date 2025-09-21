@@ -1,4 +1,4 @@
-#layout-navigation-components.design-system-section
+#navigation-components.design-system-section
   h2 Navigation Components
   .component-showcase
     h4 Top Navigation Menu
@@ -53,25 +53,26 @@
     h4 Secondary Menu
     .ui.text.container
       .ui.stackable.secondary.menu
-        a.item Posts
-        a.item Drafts
-        .item.notifications
-          a.ui href="#" Notifications
-          span.ui.mini.transitional.horizontal.circular.red.label 1
-        a.item Followers
-        a.item Following
-        a.ui.right.dropdown.item
-          i.horizontal.sliders.icon
-          .menu
-            form
-              .item
-                .ui.slider.checkbox
-                  input type="checkbox" name="filters" value="no-shares"
-                  label Don't include shared posts
-              .item
-                .ui.slider.checkbox
-                  input type="checkbox" name="filters" value="no-replies"
-                  label Don't include replies
+        .menu-items style="display: flex"
+          a.item Posts
+          a.item Drafts
+          .item.notifications
+            a.ui href="#" Notifications
+            span.ui.mini.transitional.horizontal.circular.red.label 1
+          a.item Followers
+          a.item Following
+          a.ui.right.dropdown.item
+            i.horizontal.sliders.icon
+            .menu style="display: block"
+              form
+                .item
+                  .ui.slider.checkbox
+                    input type="checkbox" name="filters" value="no-shares"
+                    label Don't include shared posts
+                .item
+                  .ui.slider.checkbox
+                    input type="checkbox" name="filters" value="no-replies"
+                    label Don't include replies
   .component-showcase
     h4 Pagination
     .ui.text.container

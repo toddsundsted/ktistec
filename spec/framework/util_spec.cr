@@ -62,7 +62,7 @@ Spectator.describe Ktistec::Util do
 
     it "preserves href on links, adds target and rel attributes to remote links" do
       content = "<a class='foo bar' href='https://remote/index.html'>a link</a>"
-      expect(described_class.sanitize(content)).to eq("<a href='https://remote/index.html' target='_blank' rel='ugc'>a link</a>")
+      expect(described_class.sanitize(content)).to eq("<a href='https://remote/index.html' target='_blank' rel='external ugc'>a link</a>")
     end
 
     it "preserves href on links, adds data-turbo-frame attribute to local links" do

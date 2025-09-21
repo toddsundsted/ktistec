@@ -1,0 +1,17 @@
+{
+  "account": {
+    "username": <%= account.username.to_json %>,
+    "password": <%= account.password.to_json %>,
+    "language": <%= account.language.to_json %>,
+    "timezone": <%= account.timezone.to_json %>
+  },
+  "actor": {
+    "name": <%= actor.name.to_json %>,
+    "summary": <%= actor.summary.to_json %>
+  },
+  "errors": [
+    <% account.errors.each_with_index do |(key, value), index| %>
+    <%= {key => value}.to_json %><%= comma(account.errors, index) %>
+    <% end %>
+  ]
+}

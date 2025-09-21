@@ -140,8 +140,8 @@
             textarea name="summary" rows="2"
           .field
             .ui.checkbox
-              input type="checkbox" name="sensitive"
-              label Content warning
+              input#content-warning type="checkbox" name="sensitive"
+              label for="content-warning" Content warning
           .field
             label Canonical Path
             input type="text" name="canonical_path"

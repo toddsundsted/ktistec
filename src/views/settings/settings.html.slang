@@ -76,17 +76,17 @@ h1 Site Settings
       - if can_deepl
         .field
           .ui.radio.checkbox
-            input type="radio" name="translator_service" value="deepl" checked=is_deepl
-            label DeepL
+            input#deepl-service type="radio" name="translator_service" value="deepl" checked=is_deepl
+            label for="deepl-service" DeepL
       - if can_libretranslate
         .field
           .ui.radio.checkbox
-            input type="radio" name="translator_service" value="libretranslate" checked=is_libretranslate
-            label LibreTranslate
+            input#libretranslate-service type="radio" name="translator_service" value="libretranslate" checked=is_libretranslate
+            label for="libretranslate-service" LibreTranslate
       .field
         .ui.radio.checkbox
-          input type="radio" name="translator_service" value="" checked=(!is_deepl && !is_libretranslate)
-          label None
+          input#no-service type="radio" name="translator_service" value="" checked=(!is_deepl && !is_libretranslate)
+          label for="no-service" None
     .field
       label Translator Service URL
       input type="text" name="translator_url" value=settings.translator_url

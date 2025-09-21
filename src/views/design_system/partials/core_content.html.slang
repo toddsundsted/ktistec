@@ -214,8 +214,8 @@
                   | Share
               form.ui.form
                 .ui.mini.toggle.checkbox
-                  input type="checkbox" name="public" checked="checked"
-                  label Public
+                  input#public-1 type="checkbox" name="public" checked="checked"
+                  label for="public-1" Public
               a.ui.mini.iconic.button.source href="#" target="_blank"
                 i.external.arrow.icon
                 | Source
@@ -244,8 +244,8 @@
                   | Share
               form.ui.form
                 .ui.mini.toggle.checkbox
-                  input type="checkbox" name="public"
-                  label Public
+                  input#public-2 type="checkbox" name="public"
+                  label for="public-2" Public
               a href="#"
                 button.ui.mini.iconic.button
                   i.edit.icon

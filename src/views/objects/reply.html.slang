@@ -5,12 +5,12 @@ section.ui.feed data-controller="icon-load-error"
     author = object.attributed_to
     ancestors = object.ancestors
     mentions = (ancestors.map(&.attributed_to.handle).compact.uniq - [actor.handle]).map { |a| "@#{a} " }.join
-  form.ui.form data-controller="has-content" method="POST"
+  form.ui.form data-controller="trix has-content" method="POST"
     input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
     input type="hidden" name="type" value="Publish"
     input type="hidden" name="in-reply-to" value=object.iri
     .field data-turbo-permanent=true
-      trix-editor data-controller="trix" data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change trix-initialize->has-content#check input->has-content#check" data-has-content-target="input" input="editor-input"
+      trix-editor data-trix-target="trixEditor" data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change trix-initialize->has-content#check input->has-content#check" data-has-content-target="input" input="editor-input"
       textarea#editor-input name="content" rows=3 = mentions
     / don't use `object.language` -- `object` is the post being replied to!
     - if (language = env.account.language.presence)

@@ -64,7 +64,16 @@ Spectator.describe ObjectsController do
 
       it "succeeds" do
         post "/objects", FORM_DATA, "content="
-        expect(response.status_code).to eq(302)
+        expect(response.status_code).to eq(200)
+      end
+
+      context "witihout Turbo Streams" do
+        let(form_data) { FORM_DATA.dup.tap { |headers| headers["Accept"] = "text/html" } }
+
+        it "redirects" do
+          post "/objects", form_data, "content="
+          expect(response.status_code).to eq(302)
+        end
       end
 
       it "succeeds" do
@@ -603,7 +612,16 @@ Spectator.describe ObjectsController do
 
       it "succeeds" do
         post "/objects/#{draft.uid}", FORM_DATA, "content="
-        expect(response.status_code).to eq(302)
+        expect(response.status_code).to eq(200)
+      end
+
+      context "witihout Turbo Streams" do
+        let(form_data) { FORM_DATA.dup.tap { |headers| headers["Accept"] = "text/html" } }
+
+        it "redirects" do
+          post "/objects/#{draft.uid}", form_data, "content="
+          expect(response.status_code).to eq(302)
+        end
       end
 
       it "succeeds" do

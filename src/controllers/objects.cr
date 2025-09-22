@@ -27,6 +27,8 @@ class ObjectsController
 
     if accepts?("application/ld+json", "application/activity+json", "application/json")
       created object_path(object), "objects/object", env: env, object: object, recursive: false
+    elsif accepts_turbo_stream?
+      ok "partials/editor", env: env, object: object, _operation: "replace", _target: "object-new"
     else
       redirect edit_object_path(object)
     end
@@ -95,8 +97,10 @@ class ObjectsController
 
     if accepts?("application/ld+json", "application/activity+json", "application/json")
       ok "objects/object", env: env, object: object, recursive: false
+    elsif accepts_turbo_stream?
+      ok "partials/editor", env: env, object: object, _operation: "replace", _target: "object-#{object.id}"
     else
-      redirect object_path(object)
+      redirect edit_object_path(object)
     end
   end
 

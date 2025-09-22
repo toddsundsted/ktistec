@@ -7,7 +7,7 @@ crystal:
   must_be_unique = canonical_path_errors.try(&.includes?("must be unique"))
   content = object.source.try(&.content) || object.content || ""
   actor = env.account.actor
-form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controller="has-content" method="POST"
+form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controller="trix has-content" method="POST"
   - if canonical_path_errors
     .ui.error.message
       .header The Canonical Path is Invalid
@@ -24,7 +24,7 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
   - if object.in_reply_to?
     input type="hidden" name="in-reply-to" value=object.in_reply_to_iri
   .field data-turbo-permanent=true
-    trix-editor data-controller="trix" data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change trix-change->has-content#check turbo:morph@document->has-content#check" input="editor-input"
+    trix-editor data-trix-target="trixEditor" data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change trix-change->has-content#check turbo:morph@document->has-content#check" input="editor-input"
     textarea#editor-input data-has-content-target="input" name="content" rows=3 = content
   - if (language = object.language.presence || env.account.language.presence)
     .inline.fields

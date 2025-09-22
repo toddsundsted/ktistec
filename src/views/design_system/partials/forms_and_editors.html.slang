@@ -109,7 +109,7 @@
   .component-showcase
     h4 Trix Editor
     .ui.text.container
-      .ui.form.editor
+      .ui.form
         .field
           == trix_editor("Description", Ktistec.settings, description)
         .inline.fields

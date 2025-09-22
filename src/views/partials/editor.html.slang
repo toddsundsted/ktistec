@@ -56,7 +56,7 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
       button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
         | Publish Post
       - if object.new_record?
-        button.ui.button data-has-content-target="button" type="submit" formaction=objects_path
+        button.ui.button data-has-content-target="button" data-trix-target="saveDraftButton" type="submit" formaction=objects_path
           | Create Draft
       - else
         button.ui.button data-has-content-target="button" data-trix-target="saveDraftButton" type="submit" formaction=object_path(object)

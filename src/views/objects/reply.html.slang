@@ -24,5 +24,6 @@ section.ui.feed data-controller="icon-load-error"
       .inline.fields
         == render "src/views/partials/visibility_controls.html.slang"
     .ui.buttons
-      input.ui.primary.button data-has-content-target="button" type="submit" value="Reply" formaction=outbox_path(actor)
+      button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
+        | Reply
 br.transition.hidden

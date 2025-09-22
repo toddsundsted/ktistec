@@ -648,8 +648,8 @@ Spectator.describe "partials" do
             to be_empty
         end
 
-        it "includes an input to save draft" do
-          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
+        it "includes an input to create draft" do
+          expect(subject.xpath_nodes("//button[text()='Create Draft']")).
             not_to be_empty
         end
 
@@ -709,12 +709,12 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_true }
 
         it "includes an input to publish post" do
-          expect(subject.xpath_nodes("//input[@value='Publish Post']")).
+          expect(subject.xpath_nodes("//button[text()='Publish Post']")).
             not_to be_empty
         end
 
-        it "includes an input to save draft" do
-          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
+        it "includes an input to update draft" do
+          expect(subject.xpath_nodes("//button[text()='Update Draft']")).
             not_to be_empty
         end
 
@@ -730,12 +730,12 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_false }
 
         it "includes an input to update post" do
-          expect(subject.xpath_nodes("//input[@value='Update Post']")).
+          expect(subject.xpath_nodes("//button[text()='Update Post']")).
             not_to be_empty
         end
 
         it "does not include an input to save draft" do
-          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
+          expect(subject.xpath_nodes("//button[contains(text(),'Draft')]")).
             to be_empty
         end
 

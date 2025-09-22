@@ -53,13 +53,17 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
       input type="text" name="canonical_path" value=object.canonical_path
   - if object.new_record? || object.draft?
     .ui.buttons
-      input.ui.primary.button data-has-content-target="button" type="submit" value="Publish Post" formaction=outbox_path(actor)
+      button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
+        | Publish Post
       - if object.new_record?
-        input.ui.button data-has-content-target="button" type="submit" value="Save Draft" formaction=objects_path
+        button.ui.button data-has-content-target="button" type="submit" formaction=objects_path
+          | Create Draft
       - else
-        input.ui.button data-has-content-target="button" type="submit" value="Save Draft" formaction=object_path(object)
+        button.ui.button data-has-content-target="button" data-trix-target="saveDraftButton" type="submit" formaction=object_path(object)
+          | Update Draft
     - unless object.new_record?
       a.ui.teal.right.floated.button href=actor_relationships_path(actor, "drafts")
         | To Drafts
   - else
-    input.ui.primary.button data-has-content-target="button" type="submit" value="Update Post" formaction=outbox_path(actor)
+    button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
+      | Update Post

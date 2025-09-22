@@ -431,12 +431,12 @@ Spectator.describe ObjectsController do
 
         it "renders a button that submits to the outbox path" do
           get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Publish')]/@formaction").first).to eq("/actors/#{actor.username}/outbox")
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//button[contains(text(),'Publish')]/@formaction").first).to eq("/actors/#{actor.username}/outbox")
         end
 
         it "renders a button that submits to the object update path" do
           get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@formaction").first).to eq("/objects/#{draft.uid}")
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//button[contains(text(),'Update')]/@formaction").first).to eq("/objects/#{draft.uid}")
         end
 
         it "renders a textarea with the draft content" do
@@ -517,7 +517,7 @@ Spectator.describe ObjectsController do
 
         it "renders a button that submits to the outbox path" do
           get "/objects/#{visible.uid}/edit", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Update')]/@formaction").first).to eq("/actors/#{actor.username}/outbox")
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//button[contains(text(),'Update')]/@formaction").first).to eq("/actors/#{actor.username}/outbox")
         end
 
         it "does not render a button that submits to the object update path" do

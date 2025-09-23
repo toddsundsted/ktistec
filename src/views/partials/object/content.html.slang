@@ -17,7 +17,7 @@ crystal:
   .summary
     - if object.draft?
       | draft created
-      a.date = object.short_date(timezone)
+      a.date< = object.short_date(timezone)
     - else
       - if account
         - if author != actor

@@ -5,8 +5,13 @@ crystal:
   must_be_absolute = canonical_path_errors.try(&.includes?("must be absolute"))
   must_not_route = canonical_path_errors.try(&.includes?("must not match an existing route"))
   must_be_unique = canonical_path_errors.try(&.includes?("must be unique"))
-  content = object.source.try(&.content) || object.content || ""
+  content = object.source.try(&.content) || object.content || nil
   actor = env.account.actor
+- if (in_reply_to = object.in_reply_to?)
+  crystal:
+    ancestors = in_reply_to.ancestors
+    mentions = (ancestors.map(&.attributed_to.handle).compact.uniq).map { |a| "@#{a} " }.join
+    content ||= mentions
 form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controller="trix has-content" method="POST"
   - if canonical_path_errors
     .ui.error.message
@@ -36,25 +41,30 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
   - else
     .inline.fields
       == render "src/views/partials/visibility_controls.html.slang"
-  details open=(object.name || object.summary || object.canonical_path ? true : false)
-    summary Optional Settings
-    .field
-      label Title
-      input type="text" name="name" value=object.name
-    .field
-      label Summary
-      textarea name="summary" rows="2" = object.summary
-    .field
-      .ui.checkbox
-        input#content-warning type="checkbox" name="sensitive" value="true" checked=object.sensitive
-        label for="content-warning" Content warning
-    .field class=(canonical_path_errors ? "error" : nil)
-      label Canonical Path
-      input type="text" name="canonical_path" value=object.canonical_path
+  - unless object.in_reply_to_iri
+    details open=(object.name || object.summary || object.canonical_path ? true : false)
+      summary Optional Settings
+      .field
+        label Title
+        input type="text" name="name" value=object.name
+      .field
+        label Summary
+        textarea name="summary" rows="2" = object.summary
+      .field
+        .ui.checkbox
+          input#content-warning type="checkbox" name="sensitive" value="true" checked=object.sensitive
+          label for="content-warning" Content warning
+      .field class=(canonical_path_errors ? "error" : nil)
+        label Canonical Path
+        input type="text" name="canonical_path" value=object.canonical_path
   - if object.new_record? || object.draft?
     .ui.buttons
-      button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
-        | Publish Post
+      - if object.in_reply_to_iri
+        button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
+          | Send Reply
+      - else
+        button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
+          | Publish Post
       - if object.new_record?
         button.ui.button data-has-content-target="button" data-trix-target="saveDraftButton" type="submit" formaction=objects_path
           | Create Draft

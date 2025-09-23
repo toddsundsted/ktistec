@@ -19,7 +19,7 @@
   "dependencies": {
     "@hotwired/stimulus": "^3.2.2",
     "@hotwired/stimulus-webpack-helpers": "^1.0.1",
-    "@hotwired/turbo": "^8.0.4",
+    "@hotwired/turbo": "^8.0.5",
     "chart.js": "^4.4.2",
     "filepond": "^4.31.1",
     "filepond-plugin-file-validate-type": "^1.2.9",

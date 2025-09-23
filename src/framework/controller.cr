@@ -92,7 +92,7 @@ module Ktistec
     # Define a simple response helper.
     #
     macro def_response_helper(name, status_message, status_code)
-      macro {{name.id}}(_message = {{status_message}}, _status_code = {{status_code}}, _basedir = "src/views", _operation = nil, _target = nil, **opts)
+      macro {{name.id}}(_message = {{status_message}}, _status_code = {{status_code}}, _basedir = "src/views", _operation = nil, _method = nil, _target = nil, **opts)
         \{% if _message.is_a?(StringLiteral) && _message.includes?('/') %}
           \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.json.ecr") %}
             \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
@@ -114,7 +114,11 @@ module Ktistec
                 \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
                 register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
                 %body = ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
-                %body = %Q|<turbo-stream action="#{\{{_operation}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>|
+                \{% if _method %}
+                  %body = %Q|<turbo-stream action="#{\{{_operation}}}" method="#{\{{_method}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>|
+                \{% else %}
+                  %body = %Q|<turbo-stream action="#{\{{_operation}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>|
+                \{% end %}
                 halt env, status_code: \{{_status_code}}, response: %body
               end
             \{% else %}
@@ -144,7 +148,11 @@ module Ktistec
               \{% key = "_view_src_views_pages_generic_html_slang" %}
               register_view(\{{key}}, "src/views/pages/generic.html.slang", env: env, message: \{{_message}})
               %body = ::Ktistec::ViewHelper.\{{key.id}}(env: env, message: \{{_message}})
-              %body = %Q|<turbo-stream action="#{\{{_operation}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>|
+              \{% if _method %}
+                %body = %Q|<turbo-stream action="#{\{{_operation}}}" method="#{\{{_method}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>|
+              \{% else %}
+                %body = %Q|<turbo-stream action="#{\{{_operation}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>|
+              \{% end %}
               halt env, status_code: \{{_status_code}}, response: %body
             end
           \{% else %}

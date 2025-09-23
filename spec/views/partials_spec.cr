@@ -629,7 +629,6 @@ Spectator.describe "partials" do
     end
 
     let_build(:object, local: true)
-    let_build(:object, named: :original)
 
     context "if authenticated" do
       let(account) { register }
@@ -648,8 +647,8 @@ Spectator.describe "partials" do
             to be_empty
         end
 
-        it "includes an input to save draft" do
-          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
+        it "includes an input to create draft" do
+          expect(subject.xpath_nodes("//button[text()='Create Draft']")).
             not_to be_empty
         end
 
@@ -695,11 +694,32 @@ Spectator.describe "partials" do
       end
 
       context "given a reply" do
-        before_each { object.assign(in_reply_to: original).save }
+        let_build(:object, named: :original)
+        let_build(:object, named: :intermediate, in_reply_to: original)
+
+        before_each do
+          original.attributed_to.username = "actor1"
+          intermediate.attributed_to.username = "actor2"
+          object.assign(in_reply_to: intermediate).save
+        end
 
         it "renders an input with the replied to object's iri" do
           expect(subject.xpath_nodes("//input[@name='in-reply-to']/@value")).
-            to have(original.iri)
+            to have(intermediate.iri)
+        end
+
+        it "prepopulates editor with mentions" do
+          expect(subject.xpath_nodes("//textarea[@name='content']/text()").first).
+            to eq("@#{intermediate.attributed_to.handle} @#{original.attributed_to.handle} ")
+        end
+
+        it "does not render details" do
+          expect(subject.xpath_nodes("//details")).to be_empty
+        end
+
+        it "includes an input to send reply" do
+          expect(subject.xpath_nodes("//button[text()='Send Reply']")).
+            not_to be_empty
         end
       end
 
@@ -709,12 +729,12 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_true }
 
         it "includes an input to publish post" do
-          expect(subject.xpath_nodes("//input[@value='Publish Post']")).
+          expect(subject.xpath_nodes("//button[text()='Publish Post']")).
             not_to be_empty
         end
 
-        it "includes an input to save draft" do
-          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
+        it "includes an input to update draft" do
+          expect(subject.xpath_nodes("//button[text()='Update Draft']")).
             not_to be_empty
         end
 
@@ -730,12 +750,12 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_false }
 
         it "includes an input to update post" do
-          expect(subject.xpath_nodes("//input[@value='Update Post']")).
+          expect(subject.xpath_nodes("//button[text()='Update Post']")).
             not_to be_empty
         end
 
         it "does not include an input to save draft" do
-          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
+          expect(subject.xpath_nodes("//button[contains(text(),'Draft')]")).
             to be_empty
         end
 
@@ -795,7 +815,6 @@ Spectator.describe "partials" do
     end
 
     let_build(:object, local: true)
-    let_build(:object, named: :original)
 
     context "if authenticated" do
       let(account) { register }
@@ -841,6 +860,8 @@ Spectator.describe "partials" do
       end
 
       context "given a reply" do
+        let_build(:object, named: :original)
+
         before_each { object.assign(in_reply_to: original).save }
 
         it "renders the replies to object's iri" do
@@ -879,63 +900,6 @@ Spectator.describe "partials" do
 
         it "renders the errors" do
           expect(subject["errors"]["object"]).to eq(["has errors"])
-        end
-      end
-    end
-  end
-
-  describe "reply.html.slang" do
-    let(env) { env_factory("GET", "/object") }
-
-    module ::Ktistec::ViewHelper
-      def self.render_reply_html_slang(env, object)
-        render "./src/views/objects/reply.html.slang"
-      end
-    end
-
-    subject do
-      begin
-        XML.parse_html(Ktistec::ViewHelper.render_reply_html_slang(env, object))
-      rescue XML::Error
-        XML.parse_html("<div/>").document
-      end
-    end
-
-    context "if authenticated" do
-      let(account) { register }
-
-      sign_in(as: account.username)
-
-      let_build(:actor, named: :actor1, username: "actor1")
-      let_build(:actor, named: :actor2, username: "actor2")
-      let_build(:object, named: :original, attributed_to: env.account.actor)
-      let_build(:object, named: :object1, attributed_to: actor1, in_reply_to: original)
-      let_build(:object, named: :object2, attributed_to: actor2, in_reply_to: object1)
-
-      let!(object) { object2.save }
-
-      it "prepopulates editor with mentions" do
-        expect(subject.xpath_nodes("//textarea[@name='content']/text()").first).
-          to eq("@#{actor2.handle} @#{actor1.handle} ")
-      end
-
-      it "uses the default language" do
-        expect(subject.xpath_nodes("//input[@name='language']/@value").first).to eq("en")
-      end
-
-      context "if no default language is set" do
-        before_each { Global.account.not_nil!.language = nil }
-
-        it "does not render an input for language" do
-          expect(subject.xpath_nodes("//input[@name='language']")).to be_empty
-        end
-      end
-
-      context "given an assigned language" do
-        before_each { object.assign(language: "fr") }
-
-        it "uses the default language" do
-          expect(subject.xpath_nodes("//input[@name='language']/@value").first).to eq("en")
         end
       end
     end

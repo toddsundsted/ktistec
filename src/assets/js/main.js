@@ -83,9 +83,7 @@ Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
 
 addEventListener("turbo:before-morph-element", (event) => {
   const { target } = event
-  if (target.tagName == "FORM" && target.classList.contains("editor")) {
-    event.preventDefault()
-  } else if (target.tagName == "DIV" && target.classList.contains("lg-container")) {
+  if (target.tagName == "DIV" && target.classList.contains("lg-container")) {
     event.preventDefault()
   } else if (target.tagName == "IMG" && target.dataset.lgId) {
     event.preventDefault()

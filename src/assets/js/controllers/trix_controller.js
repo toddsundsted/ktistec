@@ -97,21 +97,26 @@ export default class extends Controller {
     this.lastSavedContent = this.getEditorContent()
     this.isSaving = true
 
+    saveDraftButton.click()
+
+    saveDraftButton.classList.add("disabled")
+
     const spinnerIcon = document.createElement('i')
     spinnerIcon.className = 'sync loading icon'
     saveDraftButton.prepend(spinnerIcon)
 
-    saveDraftButton.click()
-
-    // Just in case, reset button after a short delay
+    // Just in case, reset the button after a short delay
     // Note: This should be handled by the server response
     setTimeout(() => {
       this.isSaving = false
+
+      saveDraftButton.classList.remove("disabled")
+
       const spinnerIcon = saveDraftButton.querySelector('i.sync.loading.icon')
       if (spinnerIcon) {
         spinnerIcon.remove()
       }
-    }, 2000)
+    }, 1000)
   }
 
   blur(event) {

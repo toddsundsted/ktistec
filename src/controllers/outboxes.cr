@@ -81,7 +81,7 @@ class RelationshipsController
       name = activity["name"]?.presence
       summary = activity["summary"]?.presence
       sensitive = activity["sensitive"]? == "true"
-      canonical_path = activity["canonical_path"]?.presence
+      canonical_path = activity["canonical-path"]?.presence
       activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
       iri = "#{host}/objects/#{id}"
       object ||= ActivityPub::Object::Note.new(iri: iri)

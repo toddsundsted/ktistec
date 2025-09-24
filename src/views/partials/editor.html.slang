@@ -56,7 +56,7 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
           label for="content-warning" Content warning
       .field class=(canonical_path_errors ? "error" : nil)
         label Canonical Path
-        input type="text" name="canonical_path" value=object.canonical_path
+        input type="text" name="canonical-path" value=object.canonical_path
   - if object.new_record? || object.draft?
     .ui.buttons
       - if object.in_reply_to_iri

@@ -366,22 +366,22 @@ Spectator.describe RelationshipsController do
 
         context "when validation fails" do
           it "returns 422" do
-            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical_path=foo%2Fbar"
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical-path=foo%2Fbar"
             expect(response.status_code).to eq(422)
           end
 
           it "returns 422" do
-            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical_path":"foo/bar"}|
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical-path":"foo/bar"}|
             expect(response.status_code).to eq(422)
           end
 
           it "renders an error message" do
-            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical_path=foo%2Fbar"
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical-path=foo%2Fbar"
             expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]")).not_to be_empty
           end
 
           it "renders an error message" do
-            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical_path":"foo/bar"}|
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical-path":"foo/bar"}|
             expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
           end
         end
@@ -484,12 +484,12 @@ Spectator.describe RelationshipsController do
           end
 
           it "sets the canonical path" do
-            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical_path=%2Ffoo%2Fbar%2Fbaz"
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical-path=%2Ffoo%2Fbar%2Fbaz"
             expect(new_object.canonical_path).to eq("/foo/bar/baz")
           end
 
           it "sets the canonical path" do
-            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical_path":"/foo/bar/baz"}|
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical-path":"/foo/bar/baz"}|
             expect(new_object.canonical_path).to eq("/foo/bar/baz")
           end
         end

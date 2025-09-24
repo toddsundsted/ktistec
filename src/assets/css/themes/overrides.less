@@ -20,11 +20,14 @@ a {
 }
 
 /* Buttons */
-.ui.primary.button, .ui.primary.buttons .button {
+.ui.primary.button, .ui.primary.buttons .button, .ui.button {
     background-color: var(--semantic-primary);
     &:hover {
         background-color: hsl(from var(--semantic-primary) h s calc(l - 10));
     }
+}
+.ui.button {
+    color: var(--text-primary);
 }
 
 /* Cards and segments */
@@ -80,6 +83,16 @@ trix-editor {
     color: var(--semantic-primary) !important;
     &::before {
         background-color: var(--anchor-color) !important;
+    }
+}
+trix-toolbar {
+    .trix-toolbar-container {
+        button.trix-active {
+            background-color: var(--semantic-primary) !important;
+        }
+        button:hover {
+            background-color: hsl(from var(--semantic-primary) h s 50%) !important;
+        }
     }
 }
 

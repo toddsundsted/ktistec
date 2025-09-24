@@ -67,9 +67,13 @@ attachments used for compatibility with non-Ktistec servers.
 ### Draft posts
 
 Meaningful writing is an iterative process so Ktistec supports draft
-posts. Draft posts aren't visible until you publish them.
+posts. Draft posts aren't visible until you publish them. Draft posts,
+including draft replies, are automatically saved as you type.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/683hld.png" width=460>
+
+With Ktistec, you can focus on creating without worrying about losing
+your work.
 
 ### Threaded replies
 

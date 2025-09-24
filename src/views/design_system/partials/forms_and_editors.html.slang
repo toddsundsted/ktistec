@@ -144,7 +144,7 @@
               label for="content-warning" Content warning
           .field
             label Canonical Path
-            input type="text" name="canonical_path"
+            input type="text" name="canonical-path"
         .ui.buttons
           input.ui.primary.button.disabled type="submit" value="Publish Post"
           input.ui.button.disabled type="submit" value="Save Draft"

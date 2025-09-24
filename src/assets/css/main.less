@@ -1,4 +1,12 @@
-@code-size: 85%;
+@import "themes/variables.less";
+@import "themes/overrides.less";
+
+:root {
+    --header-height: 3.65rem;
+    --toolbar-height: 58px;
+    --touch-target-height: 44px;
+    --code-size: 85%;
+}
 
 /** global **/
 html { font-size: 16px; }
@@ -15,7 +23,7 @@ body { display: flex; flex-direction: column; }
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 
 /* top navigation menu */
-nav.ui.top.fixed.navigation.menu {
+nav.ui.top.navigation.menu {
     .item .icon {
         margin-right: 0.5em;
     }
@@ -32,7 +40,7 @@ nav.ui.top.fixed.navigation.menu {
     margin-bottom: 0;
     .item {
         height: 2.5em;
-        &:hover { background: rgba(0,0,0,.05); }
+        &:hover { background: var(--bg-hover); }
         > a { color: inherit; }
     }
 }
@@ -55,7 +63,7 @@ nav.ui.top.fixed.navigation.menu {
 
 /** documentation **/
 .ui.documentation {
-    code { background-color: #f3f3f3; padding: .2em .3em; font-size: 90%; line-height: normal; }
+    code { background-color: var(--bg-accent-code); padding: .2em .3em; font-size: 90%; line-height: normal; }
 }
 
 /** timeline **/
@@ -82,17 +90,23 @@ nav.ui.top.fixed.navigation.menu {
             -webkit-hyphens: auto;
             hyphens: auto;
 
-            > .meta {
-                &:empty { display: none; }
-                /* actions (e.g. reply and delete) */
-                > form { display: inline; }
+            > .summary > .date {
+                font-size: 1em;
+                font-weight: 700;
+                margin: 0;
+            }
+            > .extra.text {
+                max-width: unset;
+                &.deleted {
+                    opacity: 50%;
+                }
             }
             > .detail {
                 a {
                     img { cursor: pointer !important; }
-                    i.user { font-size: 1.5em; vertical-align: text-bottom; color: rgba(0,0,0,.6); }
+                    i.user { font-size: 1.5em; vertical-align: text-bottom; color: var(--text-secondary); }
                     img + i, i + i {
-                        color: lightblue;
+                        color: var(--semantic-primary);
                         position: relative;
                         left: -10px;
                         bottom: -10px;
@@ -100,12 +114,10 @@ nav.ui.top.fixed.navigation.menu {
                     }
                 }
             }
-
-            > .extra.text {
-                max-width: unset;
-                &.deleted {
-                    opacity: 50%;
-                }
+            > .meta {
+                &:empty { display: none; }
+                /* actions (e.g. reply and delete) */
+                > form { display: inline; }
             }
 
             > details > summary + * {
@@ -119,8 +131,8 @@ nav.ui.top.fixed.navigation.menu {
             figcaption { text-align: center; font-style: italic; }
 
             /* other styles */
-            code { background: #f3f3f3; padding: .2em .3em; font-size: @code-size; line-height: normal; }
-            pre { background: #f6f8fa; padding: .2em .4em; font-size: @code-size; overflow-x: auto; }
+            code { background: var(--bg-accent-code); padding: .2em .3em; font-size: var(--code-size); line-height: normal; }
+            pre { background: var(--bg-accent-pre); padding: .2em .4em; font-size: var(--code-size); overflow-x: auto; }
         }
     }
 
@@ -155,7 +167,7 @@ nav.ui.top.fixed.navigation.menu {
         height: 95px;
     }
     > .event {
-        .extra.text img.image, .extra.text audio.audio .extra.text video.video { width: 100%; }
+        .extra.text img.image, .extra.text audio.audio, .extra.text video.video { width: 100%; }
         img.extra.image, audio.extra.audio, video.extra.video { width: 100%; }
     }
     > .detailed.event {
@@ -193,7 +205,7 @@ nav.ui.top.fixed.navigation.menu {
 /** mobile improvements **/
 @media screen and (max-width: 599px) {
     /* Navigation icon-only mode on mobile */
-    nav.ui.top.fixed.navigation.menu {
+    nav.ui.top.navigation.menu {
         .ui.text.container {
             display: flex;
 
@@ -244,8 +256,8 @@ nav.ui.top.fixed.navigation.menu {
 
             label {
                 display: block;
-                background-color: #2185d0;
-                color: #fff;
+                background-color: var(--semantic-primary);
+                color: var(--text-primary-inverted);
                 padding: 0.75rem 1rem;
                 border-radius: 3px;
                 cursor: pointer;
@@ -261,9 +273,9 @@ nav.ui.top.fixed.navigation.menu {
         .menu-items {
             display: none !important;
             position: relative;
-            background: white;
+            background: var(--bg-primary);
             border-radius: 3px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px var(--border-color);
             padding: 0.5rem 0;
             margin-top: -0.5rem;
 
@@ -315,7 +327,7 @@ nav.ui.top.fixed.navigation.menu {
         font-size: 110%;
 
         > .item {
-            min-height: 44px;
+            min-height: var(--touch-target-height);
         }
     }
 }
@@ -344,20 +356,20 @@ nav.ui.top.fixed.navigation.menu {
         width: 7rem;
         height: 7rem;
         object-fit: cover;
-        background-color: #ffffffa0;
+        background-color: var(--bg-transparent);
         border-radius: 3.5rem;
-        border: 3px solid white;
+        border: 3px solid var(--bg-primary);
     }
     > .segment:first-child i {
         position: absolute;
         bottom: 1.5rem;
         left: 1.5rem;
-        color: rgba(0,0,0,.6);
+        color: var(--text-secondary);
         line-height: 5rem;
         font-size: 5rem;
     }
     > .segment th {
-        border-right: 1px solid #22242626;
+        border-right: 1px solid var(--border-color);
         text-align: right;
         font-weight: normal;
         padding-right: 1ex;
@@ -372,7 +384,7 @@ nav.ui.top.fixed.navigation.menu {
         position: absolute;
         bottom: 1em;
         right: 1em;
-        color: rgba(0,0,0,0.5);
+        color: var(--text-muted);
         font-size: smaller;
     }
 }
@@ -380,7 +392,7 @@ nav.ui.top.fixed.navigation.menu {
 /** small actor partial **/
 .ui.actor.card {
     > .content.placeholder {
-        background-color: #f9fafb;
+        background-color: var(--bg-label);
     }
     > .content:first-child {
         position: relative;
@@ -399,15 +411,15 @@ nav.ui.top.fixed.navigation.menu {
         width: 4rem;
         height: 4rem;
         object-fit: cover;
-        background-color: #ffffffa0;
+        background-color: var(--bg-transparent);
         border-radius: 2rem;
-        border: 2px solid white;
+        border: 2px solid var(--bg-primary);
     }
     > .content:first-child i {
         position: absolute;
         bottom: 1.5rem;
         left: 1.5rem;
-        color: rgba(0,0,0,.6);
+        color: var(--text-secondary);
         line-height: 3rem;
         font-size: 3rem;
     }
@@ -423,22 +435,23 @@ nav.ui.top.fixed.navigation.menu {
 
 /* missing styling for button elements (vs input elements) */
 /* used in sign out item in the menu */
-.ui.input > button { border: 1px solid rgba(34,36,38,.15); }
+.ui.input > button { border: 1px solid var(--border-color); }
 
 /* additional button styles */
 /* used in posts in the timeline */
-.ui.iconic.button { background: transparent none !important; color: rgba(0,0,0,0.6) !important; padding: 0; margin: 0; }
-.ui.iconic.blue.button { color: #2185d0 !important; }
-.ui.iconic.purple.button { color: #a333c8 !important; }
+.ui.iconic.button { background: var(--color-transparent) none !important; color: var(--text-secondary) !important; padding: 0; margin: 0; }
+.ui.iconic.button:hover { color: var(--text-primary) !important; }
+.ui.iconic.blue.button { color: var(--semantic-primary) !important; }
+.ui.iconic.purple.button { color: var(--color-purple) !important; }
 
 /* used on social actions */
-.ui.accept.button { background: #21ba45 !important; color: #fff !important; }
-.ui.reject.button { background: #db2828 !important; color: #fff !important; }
+.ui.accept.button { background: var(--semantic-affirmative) !important; color: var(--text-white) !important; }
+.ui.reject.button { background: var(--semantic-negative) !important; color: var(--text-white) !important; }
 /* used on the timeline and elsewhere */
-.ui.dangerous.button { color: #ff2733 !important; }
-.ui.dangerous.button:hover { background-color: #f41824 !important; color: #fff !important; transition: 0.2s color ease; }
-.ui.dangerous.iconic.button { background-color: transparent !important; color: rgba(0,0,0,.6) !important; }
-.ui.dangerous.iconic.button:hover { color: #ff2733 !important; transition: 0.2s color ease; }
+.ui.dangerous.button { color: var(--semantic-dangerous) !important; }
+.ui.dangerous.button:hover { background-color: var(--semantic-dangerous-hover) !important; color: var(--text-white) !important; transition: 0.2s color ease; }
+.ui.dangerous.iconic.button { background-color: var(--color-transparent) !important; color: var(--text-secondary) !important; }
+.ui.dangerous.iconic.button:hover { color: var(--semantic-dangerous) !important; transition: 0.2s color ease; }
 
 /* additional styling for modals */
 .ui.modal > .header > i { margin-right: 1.0rem; }
@@ -451,13 +464,13 @@ nav.ui.top.fixed.navigation.menu {
         width: 2.05rem; height: 1.0rem;
         &:checked {
             ~ label {
-                color: #2185d0 !important;
                 &::after { left: 1.15rem; }
             }
         }
     }
     label {
-        font-size: 80%; font-weight: bold; color: rgba(0,0,0,.6); padding-left: 2.5rem; min-height: 1.0rem;
+        font-size: 80%; font-weight: bold; color: var(--text-secondary); padding-left: 2.5rem; min-height: 1.0rem; cursor: pointer;
+        &:hover { color: var(--text-primary) !important; }
         &::before { width: 2.0rem; height: 1.0rem; }
         &::after { width: 1.0rem; height: 1.0rem; }
     }
@@ -465,18 +478,18 @@ nav.ui.top.fixed.navigation.menu {
 
 /** trix toolbar **/
 trix-toolbar {
-    position: sticky; top: 58px; padding: 0 5px; z-index: 1;
+    position: sticky; top: var(--toolbar-height); padding: 0 5px; z-index: 1;
     .trix-toolbar-container {
         white-space: normal !important; margin-bottom: 1em; display: flex; flex-wrap: wrap; gap: 0.30em 0.25em;
         button { border: none !important; padding: 0.75em !important; }
-        button.trix-active { background: rgba(0,0,0,.05) !important; }
+        button.trix-active { background: var(--bg-hover) !important; }
     }
 }
 
 /** trix editor **/
 trix-editor {
-    code { background: #f3f3f3; padding: .2em .3em; font-size: @code-size; line-height: normal; }
-    pre { background: #f6f8fa; padding: .2em .4em; font-size: @code-size; overflow-x: auto; }
+    code { background: var(--bg-accent-code); padding: .2em .3em; font-size: var(--code-size); line-height: normal; }
+    pre { background: var(--bg-accent-pre); padding: .2em .4em; font-size: var(--code-size); overflow-x: auto; }
 
     /* fix style conflicts with semantic ui */
     .attachment__caption-editor { padding: 0 !important; border: none !important; resize: unset !important; height: unset !important; min-height: unset !important; max-height: unset !important; }
@@ -524,13 +537,13 @@ trix-editor {
 
 /** filter terms **/
 .ui.filter.term > .wildcard {
-    background-color: #eee;
+    background-color: var(--bg-label);
     padding: 0 0.2em;
     margin: 0 0.1em;
 }
 
 /** colors **/
-.blue { color: #1678c2; }
+.blue { color: var(--color-blue); } // pretty sure this is used on the Log page
 
 /** from mastodon **/
 .invisible {
@@ -550,4 +563,42 @@ trix-editor {
 
 .ellipsis::after {
     content: "…";
+}
+
+/** design system **/
+.design-system-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    border: 1px solid hsl(from var(--border-color) h s 20%);
+    border-radius: 4px;
+    h2 {
+        margin-top: 0;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid hsl(from var(--border-color) h s 50%);
+        color: hsl(from var(--text-primary) h s 20%);
+    }
+    h3 {
+        margin-top: 1.5rem;
+        color: hsl(from var(--text-primary) h s 25%);
+    }
+    .component-showcase {
+        margin: 1rem 0;
+        padding: 1rem;
+        border-radius: 3px;
+        h4 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            color: hsl(from var(--text-primary) h s 30%);
+        }
+        .variation-group {
+            margin: 1rem 0;
+            .variation-label {
+                margin-bottom: 0.5rem;
+                font-size: 0.9rem;
+                font-weight: bold;
+                color: hsl(from var(--text-primary) h s 35%);
+            }
+        }
+    }
 }

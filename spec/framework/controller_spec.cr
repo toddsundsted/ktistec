@@ -7,7 +7,8 @@ class FooBarController
 
   skip_auth [
     "/foo/bar/accepts",
-    "/foo/bar/turbo-streams/:operation/:target",
+    "/foo/bar/turbo-streams/:target/:operation",
+    "/foo/bar/turbo-streams/:target/:operation/:method",
     "/foo/bar/turbo-stream",
     "/foo/bar/turbo-frame",
     "/foo/bar/redirect",
@@ -25,8 +26,12 @@ class FooBarController
     end
   end
 
-  get "/foo/bar/turbo-streams/:operation/:target" do |env|
-    ok "turbo-streams", _operation: env.params.url["operation"], _target: env.params.url["target"]
+  get "/foo/bar/turbo-streams/:target/:operation" do |env|
+    ok "turbo-streams", _target: env.params.url["target"], _operation: env.params.url["operation"]
+  end
+
+  get "/foo/bar/turbo-streams/:target/:operation/:method" do |env|
+    ok "turbo-streams", _target: env.params.url["target"], _operation: env.params.url["operation"], _method: env.params.url["method"]
   end
 
   get "/foo/bar/turbo-stream" do |env|
@@ -91,10 +96,17 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "GET /foo/bar/turbo-streams/:operation/:target" do
+  describe "GET /foo/bar/turbo-streams/:target/:operation" do
     it "responds with turbo-streams" do
-      get "/foo/bar/turbo-streams/append/foo-bar", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
-      expect(XML.parse_html(response.body).xpath_string("string(//turbo-stream[@action='append'][@target='foo-bar']/template//h1)")).to eq("turbo-streams")
+      get "/foo/bar/turbo-streams/foo-bar/append", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
+      expect(XML.parse_html(response.body).xpath_string("string(//turbo-stream[@target='foo-bar'][@action='append'][not(@method)]/template//h1)")).to eq("turbo-streams")
+    end
+  end
+
+  describe "GET /foo/bar/turbo-streams/:target/:operation/:method" do
+    it "responds with turbo-streams" do
+      get "/foo/bar/turbo-streams/foo-bar/append/before", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
+      expect(XML.parse_html(response.body).xpath_string("string(//turbo-stream[@target='foo-bar'][@action='append'][@method='before']/template//h1)")).to eq("turbo-streams")
     end
   end
 

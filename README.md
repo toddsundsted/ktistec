@@ -15,6 +15,7 @@
     - [Metrics](#metrics)
     - [Tasks](#tasks)
     - [Scripts](#scripts)
+  - [Theming](#theming)
   - [API](#api)
     - [A Note on ActivityPub](#a-note-on-activitypub)
     - [Publishing an Object](#publishing-an-object)
@@ -66,9 +67,13 @@ attachments used for compatibility with non-Ktistec servers.
 ### Draft posts
 
 Meaningful writing is an iterative process so Ktistec supports draft
-posts. Draft posts aren't visible until you publish them.
+posts. Draft posts aren't visible until you publish them. Draft posts,
+including draft replies, are automatically saved as you type.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/683hld.png" width=460>
+
+With Ktistec, you can focus on creating without worrying about losing
+your work.
 
 ### Threaded replies
 
@@ -204,6 +209,56 @@ output to `STDERR` will be emitted as severity `WARN`.
 
 Scripts can use the [API](#api) to communicate with the Ktistec
 server.
+
+## Theming
+
+Ktistec includes built-in theming support that allows for custom theme
+creation and automatically adapts to your browser's light/dark mode
+preference.
+
+### Built-in Theme Support
+
+Ktistec automatically switches between light and dark themes based on
+your browser's color scheme preference. The theming system uses CSS
+custom properties to provide consistent styling across all elements.
+
+### Custom Themes
+
+You can create custom themes by adding CSS and/or JavaScript files to
+the `public/themes/` directory. These files are automatically added to
+every page's HTML `head` element.
+
+#### Creating a Custom Theme
+
+1. Add `.css` and `.js` files to `public/themes/`
+2. Use CSS custom properties to override existing theme variables
+3. Restart the server—theme files are discovered at startup
+
+A simple custom theme that supports both light and dark modes:
+
+```css
+:root {
+  --text-primary: #2c3e50;
+  --bg-primary: #ecf0f1;
+  --semantic-primary: #e74c3c;
+  --anchor-color: #e67e22;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: #ecf0f1;
+    --bg-primary: #2c3e50;
+    --semantic-primary: #e74c3c;
+    --anchor-color: #f39c12;
+  }
+}
+```
+
+See `src/assets/css/themes/variables.less` for the complete list of
+available custom properties.
+
+You can preview how your custom theme affects Ktistec UI elements by
+visiting the design system page at `/.design-system`.
 
 ## API
 

@@ -16,7 +16,7 @@
       a.item href=actor_relationships_path(actor, "posts") Posts
       a.item href=actor_relationships_path(actor, "drafts") Drafts
       .item.notifications
-        a.ui href=actor_relationships_path(actor, "notifications") Notifications
+        a href=actor_relationships_path(actor, "notifications") Notifications
         - if count > 0
           span.ui.mini.transitional.horizontal.circular.red.label= count
         - else
@@ -31,12 +31,12 @@
             input type="hidden" name="filters" value=""
             .item
               .ui.slider.checkbox
-                input type="checkbox" name="filters" value="no-shares" data-action="change->checkbox-submit#change" checked=filters.includes?("no-shares")
-                label Don't include shared posts
+                input#timeline-no-shares type="checkbox" name="filters" value="no-shares" data-action="change->checkbox-submit#change" checked=filters.includes?("no-shares")
+                label for="timeline-no-shares" Don't include shared posts
             .item
               .ui.slider.checkbox
-                input type="checkbox" name="filters" value="no-replies" data-action="change->checkbox-submit#change" checked=filters.includes?("no-replies")
-                label Don't include replies
+                input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->checkbox-submit#change" checked=filters.includes?("no-replies")
+                label for="timeline-no-replies" Don't include replies
   - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
   == render "src/views/partials/editor.html.slang"
   crystal:

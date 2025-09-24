@@ -21,12 +21,15 @@
         </script>
         <link rel="stylesheet" href="/dist/site.css"/>
         <script src="/dist/site.bundle.js"></script>
+        <%= Ktistec::Themes.css_tags %>
+        <%= Ktistec::Themes.js_tags %>
         <%= head %>
     </head>
     <body class="dimmable">
         <%= render "src/views/partials/modals.html.slang" %>
         <%= render "src/views/partials/header.html.slang" %>
-        <div class="ui text container">
+        <%- wide = env.request.path.starts_with?("/.design-system") -%>
+        <div class="<%= wide ? "ui container" : "ui text container" %>">
             <%= content %>
         </div>
         <%= render "src/views/partials/footer.html.slang" %>

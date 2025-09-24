@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.14]
+### Added
+- Add design system page for previewing UI elements.
+- Support custom themes with automatic light/dark mode switching.
+- Add autosave functionality for new posts, draft posts, and replies.
+
+### Changed
+- Add external link indicators.
+
 ## [v2.4.13]
 ### Added
 - Support RSS feeds on the home page and account pages. (fixes [#14](https://github.com/toddsundsted/ktistec/issues/14))
@@ -431,6 +440,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v2.4.14]: https://github.com/toddsundsted/ktistec/compare/a77299f7...f22a2091
 [v2.4.13]: https://github.com/toddsundsted/ktistec/compare/b2d4459f...249fefa2
 [v2.4.12]: https://github.com/toddsundsted/ktistec/compare/2d0e9500...4f0ea229
 [v2.4.11]: https://github.com/toddsundsted/ktistec/compare/157d70d1...fe9aab2c

@@ -17,7 +17,7 @@ crystal:
   .summary
     - if object.draft?
       | draft created
-      a.date = object.short_date(timezone)
+      a.date< = object.short_date(timezone)
     - else
       - if account
         - if author != actor
@@ -27,7 +27,7 @@ crystal:
         - else
           a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
           | posted
-        a.date data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
+        a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
       - else
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = actor.display_name
@@ -36,7 +36,7 @@ crystal:
         - else
           a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
           | posted
-        a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
+        a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
   - unless object.blocked? || author.blocked? || actor.blocked?
     - if attachments && (attachment = attachments.shift?)
       - if attachment.image?
@@ -191,14 +191,14 @@ crystal:
           form.ui.form method="POST" action=unapprove_path(object) data-controller="checkbox-submit"
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
             .ui.mini.toggle.checkbox.checked
-              input type="checkbox" name="public" checked="checked" data-action="change->checkbox-submit#change"
-              label Public
+              input id="object-#{object.id}-public" type="checkbox" name="public" checked="checked" data-action="change->checkbox-submit#change"
+              label for="object-#{object.id}-public" Public
         - else
           form.ui.form method="POST" action=approve_path(object) data-controller="checkbox-submit"
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
             .ui.mini.toggle.checkbox
-              input type="checkbox" name="public" data-action="change->checkbox-submit#change"
-              label Public
+              input id="object-#{object.id}-public" type="checkbox" name="public" data-action="change->checkbox-submit#change"
+              label for="object-#{object.id}-public" Public
       - if author == account.actor
         a data-turbo-frame="_top" href=edit_object_path(object)
           button.ui.mini.iconic.button

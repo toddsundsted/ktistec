@@ -90,18 +90,25 @@ nav.ui.top.navigation.menu {
             -webkit-hyphens: auto;
             hyphens: auto;
 
-            > .summary > .date {
+            > details {
+                margin-top: 0.5em;
+                > summary + * {
+                    margin: 0.5em 0 0;
+                }
+            }
+
+            .summary > .date {
                 font-size: 1em;
                 font-weight: 700;
                 margin: 0;
             }
-            > .extra.text {
+            .extra.text {
                 max-width: unset;
                 &.deleted {
                     opacity: 50%;
                 }
             }
-            > .detail {
+            .detail {
                 a {
                     img { cursor: pointer !important; }
                     i.user { font-size: 1.5em; vertical-align: text-bottom; color: var(--text-secondary); }
@@ -114,14 +121,10 @@ nav.ui.top.navigation.menu {
                     }
                 }
             }
-            > .meta {
+            .meta {
                 &:empty { display: none; }
                 /* actions (e.g. reply and delete) */
                 > form { display: inline; }
-            }
-
-            > details > summary + * {
-                margin: 0.5em 0 0;
             }
 
             /* tweak margin on figures */

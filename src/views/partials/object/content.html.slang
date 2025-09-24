@@ -13,6 +13,8 @@ crystal:
       attachments.reject! { |a| a.url.in?(urls) }
     end
   end
+  is_blocked = object.blocked? || author.blocked? || actor.blocked?
+  is_deleted = object.deleted? || author.deleted? || actor.deleted?
 .content data-controller="image-gallery"
   .summary
     - if object.draft?
@@ -37,23 +39,7 @@ crystal:
           a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
-  - unless object.blocked? || author.blocked? || actor.blocked?
-    - if attachments && (attachment = attachments.shift?)
-      - if attachment.image?
-        img.ui.extra.attachment.image src=attachment.url alt=attachment.caption
-      - elsif attachment.video?
-        video.ui.extra.attachment.video src=attachment.url controls=true
-      - elsif attachment.audio?
-        audio.ui.extra.attachment.audio src=attachment.url controls=true
-      - unless attachments.empty?
-        .extra.media
-          - attachments.each do |attachment|
-            - if attachment.image?
-              img.ui.attachment.image src=attachment.url alt=attachment.caption
-            - elsif attachment.video?
-              video.ui.attachment.video src=attachment.url controls=true
-            - elsif attachment.audio?
-              audio.ui.attachment.audio src=attachment.url controls=true
+  - unless is_blocked
     - if (name = translation.try(&.name).presence || object.name.presence)
       .extra.text
         - if object.external?
@@ -62,26 +48,14 @@ crystal:
         - else
           strong = name
     - if (summary = translation.try(&.summary).presence || object.summary.presence)
-      details.extra.text open=with_detail
+      details open=with_detail
         summary
           - if object.sensitive
             i.red.eye.slash.icon
           = summary
-        - if with_detail
-          div
-            == s html
-        - else
-          div data-controller="clickable-background" data-clickable-background-href-value=href
-            == s html
+        == render "src/views/partials/object/content/body.html.slang"
     - else
-      - is_deleted = object.deleted? || author.deleted? || actor.deleted?
-      .extra.text class=(is_deleted && "deleted" || nil)
-        - if with_detail
-          div
-            == s html
-        - else
-          div data-controller="clickable-background" data-clickable-background-href-value=href
-            == s html
+      == render "src/views/partials/object/content/body.html.slang"
     - if with_detail && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq

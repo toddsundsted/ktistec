@@ -146,14 +146,14 @@ Spectator.describe "object partials" do
       before_each { object.assign(summary: "Foo Bar Baz") }
 
       it "renders the summary" do
-        expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bar Baz")
+        expect(subject.xpath_nodes("//details/summary/text()")).to have("Foo Bar Baz")
       end
 
       context "and a translation" do
         let_create!(:translation, origin: object, summary: "Foo Bàr Bàz")
 
         it "renders the translation of the summary" do
-          expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bàr Bàz")
+          expect(subject.xpath_nodes("//details/summary/text()")).to have("Foo Bàr Bàz")
         end
       end
     end

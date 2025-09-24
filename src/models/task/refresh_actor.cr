@@ -42,7 +42,7 @@ class Task
 
     def perform
       if (instance = ActivityPub::Actor.dereference?(source, actor.iri, ignore_cached: true))
-        instance.save
+        instance.save.up!
         Ktistec::Topic{"/actor/refresh"}.notify_subscribers(actor.id.to_s)
       else
         message = "failed to dereference #{actor.iri}"

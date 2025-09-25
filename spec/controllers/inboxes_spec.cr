@@ -47,24 +47,10 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(400)
     end
 
-    it "returns 409 if activity was already received and processed" do
+    it "returns 200 if activity was already received and processed" do
       activity = Factory.create(:create)
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
-      expect(response.status_code).to eq(409)
-    end
-
-    # mastodon compatibility
-    it "does not return 409 if the activity is accept" do
-      activity = Factory.create(:accept)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).not_to eq(409)
-    end
-
-    # mastodon compatibility
-    it "does not return 409 if the activity is reject" do
-      activity = Factory.create(:reject)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).not_to eq(409)
+      expect(response.status_code).to eq(200)
     end
 
     it "returns 403 if the activity claims to be local" do

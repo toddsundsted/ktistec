@@ -53,17 +53,6 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(200)
     end
 
-    it "returns 403 if the activity claims to be local" do
-      activity.assign(iri: "https://test.test/activities/foo_bar")
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).to eq(403)
-    end
-
-    it "returns 403 if the activity's actor claims to be local" do
-      activity.assign(actor_iri: actor.iri)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).to eq(403)
-    end
 
     it "returns 400 if the activity cannot be deserialized due to an unsupported type" do
       json = %q|{"type":"Activity","id":"https://remote/one","actor":{"type":"Activity","id":"https://remote/two"}}|

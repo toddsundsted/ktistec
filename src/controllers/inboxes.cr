@@ -38,10 +38,6 @@ class RelationshipsController
 
     Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
-    if activity.local?
-      forbidden
-    end
-
     # if the activity is signed but we don't have the actor's public
     # key, 1) fetch the actor, including their public key. 2) verify
     # the activity against the actor's public key (this will fail for
@@ -69,10 +65,6 @@ class RelationshipsController
     end
 
     Log.trace { "[#{request_id}] actor iri=#{actor.iri}" }
-
-    if actor.local?
-      forbidden
-    end
 
     verified = false
 

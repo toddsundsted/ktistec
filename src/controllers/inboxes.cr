@@ -248,27 +248,11 @@ class RelationshipsController
 
     # check to see if the activity already exists. if not, save it
 
-    # this prevents identical activities from being saved if the
-    # server receives the same activity multiple times. this can
-    # happen in practice because the validation steps above take time
-    # and servers acting as relays forward activities they've
-    # received, and those activities can arrive while the activity
-    # from the source is being validated, but before it is saved.
-
-    # a check and save should be atomic when using fibers for
-    # requests.
-
-    if ActivityPub::Activity.find?(activity.iri)
-      # mastodon *reissues* *IRIs* for accept and reject
-      # activities. since these are implemented as idempotent
-      # operations, don't respond with conflict.
-      unless activity.class.in?([ActivityPub::Activity::Accept, ActivityPub::Activity::Reject])
-        # respond with `ok` because presumably we responded with `ok` the first time
-        ok
-      end
+    if (temporary = ActivityPub::Activity.find?(activity.iri))
+      activity = temporary
+    else
+      activity.save
     end
-
-    activity.save
 
     Log.trace { "[#{request_id}] saved id=#{activity.id}" }
 

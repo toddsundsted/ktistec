@@ -13,6 +13,8 @@ Spectator.describe RelationshipsController do
     Ktistec::Server.clear_shutdown!
   end
 
+  PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
   describe "POST /actors/:username/inbox" do
     let!(actor) { register.actor }
 
@@ -52,7 +54,6 @@ Spectator.describe RelationshipsController do
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
       expect(response.status_code).to eq(200)
     end
-
 
     it "returns 400 if the activity cannot be deserialized due to an unsupported type" do
       json = %q|{"type":"Activity","id":"https://remote/one","actor":{"type":"Activity","id":"https://remote/two"}}|
@@ -463,8 +464,6 @@ Spectator.describe RelationshipsController do
         end
       end
 
-      PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
-
       context "and the activity is addressed to the public collection" do
         before_each do
           announce.assign(to: [PUBLIC])
@@ -683,8 +682,6 @@ Spectator.describe RelationshipsController do
           end
         end
       end
-
-      PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 
       context "and the activity is addressed to the public collection" do
         before_each do

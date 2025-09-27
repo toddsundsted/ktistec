@@ -201,4 +201,10 @@ Spectator.describe Ktistec::Model::Polymorphic do
       expect{PolymorphicModel.find(id: subclass2.id).as_a(Subclass1)}.to raise_error(Ktistec::Model::NotFound)
     end
   end
+
+  describe "#valid?" do
+    it "returns false if the type is invalid" do
+      expect(PolymorphicModel.new(type: "SubclassXYZ").valid?).to be_false
+    end
+  end
 end

@@ -19,6 +19,24 @@ module Ktistec
 
       @[Persistent]
       property type : String { {{@type.stringify}} }
+
+      # NOTE: this is implemented as if it had been created by the
+      # `validates` macro because the `validates` macro is not
+      # available if this module is being tested alone.
+
+      def _validate_type
+        {% begin %}
+          {%
+            all_types = [@type.stringify]
+            all_types += @type.all_subclasses.map(&.stringify)
+            if @type.has_constant?(:ALIASES)
+              aliases = @type.constant(:ALIASES).map { |a| "#{@type}::#{a.id}" }
+              all_types += aliases
+            end
+          %}
+          "is not valid" unless type.in?({{all_types}})
+        {% end %}
+      end
     end
   end
 end

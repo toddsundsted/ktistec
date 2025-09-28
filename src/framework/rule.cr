@@ -253,8 +253,8 @@ module Ktistec
         end
 
         # :inherit:
-        def match(bindings : School::Bindings, trace : School::TraceNode? = nil, &block : School::Bindings -> Nil) : Nil
-          match_all(bindings, trace).each do |temporary|
+        def match(context : School::Context, trace : School::TraceNode? = nil, &block : School::Bindings -> Nil) : Nil
+          match_all(context.bindings, trace).each do |temporary|
             yield temporary
           end
         end

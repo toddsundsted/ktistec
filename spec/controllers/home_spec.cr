@@ -124,17 +124,17 @@ Spectator.describe HomeController do
       end
 
       it "rerenders if params are invalid" do
-        body = "username=&password=a1!&name=&summary=&timezone=&language=en"
+        body = "username=&password=a1!&name=&summary=&timezone=&language=en&type=Invalid"
         post "/", HTML_HEADERS, body
         expect(response.status_code).to eq(422)
-        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/username is too short, password is too short/)
+        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/username is too short, password is too short, type is not valid/)
       end
 
       it "rerenders if params are invalid" do
-        body = {username: "", password: "a1!", name: "", summary: "", timezone: "", language: "en"}.to_json
+        body = {username: "", password: "a1!", name: "", summary: "", timezone: "", language: "en", type: "Invalid"}.to_json
         post "/", JSON_HEADERS, body
         expect(response.status_code).to eq(422)
-        expect(JSON.parse(response.body)["errors"].as_h).to eq({"username" => ["is too short"], "password" => ["is too short"]})
+        expect(JSON.parse(response.body)["errors"].as_h).to eq({"username" => ["is too short"], "password" => ["is too short"], "type" => ["is not valid"]})
       end
 
       let(query_string) { "username=#{username}&password=#{password}&name=&summary=&timezone=&language=en" }
@@ -149,8 +149,18 @@ Spectator.describe HomeController do
         expect{post "/", HTML_HEADERS, query_string}.to change{Account.count}.by(1)
       end
 
-      it "creates actor" do
-        expect{post "/", HTML_HEADERS, query_string}.to change{ActivityPub::Actor.count}.by(1)
+      it "creates actor of type ActivityPub::Actor::Person by default" do
+        post "/", HTML_HEADERS, query_string
+        actor = Account.find(username: username).actor
+        expect(actor.class).to eq(ActivityPub::Actor::Person)
+        expect(actor.type).to eq("ActivityPub::Actor::Person")
+      end
+
+      it "creates actor of type ActivityPub::Actor::Organization" do
+        post "/", HTML_HEADERS, query_string + "&type=ActivityPub::Actor::Organization"
+        actor = Account.find(username: username).actor
+        expect(actor.class).to eq(ActivityPub::Actor)
+        expect(actor.type).to eq("ActivityPub::Actor::Organization")
       end
 
       it "associates account and actor" do
@@ -170,8 +180,18 @@ Spectator.describe HomeController do
         expect{post "/", JSON_HEADERS, json_string}.to change{Account.count}.by(1)
       end
 
-      it "creates actor" do
-        expect{post "/", JSON_HEADERS, json_string}.to change{ActivityPub::Actor.count}.by(1)
+      it "creates actor of type ActivityPub::Actor::Person by default" do
+        post "/", JSON_HEADERS, json_string
+        actor = Account.find(username: username).actor
+        expect(actor.class).to eq(ActivityPub::Actor::Person)
+        expect(actor.type).to eq("ActivityPub::Actor::Person")
+      end
+
+      it "creates actor of type ActivityPub::Actor::Organization" do
+        post "/", JSON_HEADERS, JSON.parse(json_string).as_h.merge({"type" => "ActivityPub::Actor::Organization"}).to_json
+        actor = Account.find(username: username).actor
+        expect(actor.class).to eq(ActivityPub::Actor)
+        expect(actor.type).to eq("ActivityPub::Actor::Organization")
       end
 
       it "associates account and actor" do

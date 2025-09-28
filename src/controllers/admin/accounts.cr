@@ -6,6 +6,8 @@ module Admin
   class AccountsController
     include Ktistec::Controller
 
+    PERSON = ActivityPub::Actor::Person.to_s
+
     get "/admin/accounts" do |env|
       accounts = Account.all
 
@@ -14,7 +16,7 @@ module Admin
 
     get "/admin/accounts/new" do |env|
       account = Account.new(username: "", password: "")
-      actor = ActivityPub::Actor.new
+      actor = ActivityPub::Actor.new(type: PERSON)
 
       account.actor = actor
 
@@ -25,27 +27,9 @@ module Admin
       host = Ktistec.host
 
       params = params(env)
-      username = params["username"]
-      password = params["password"]
-      language = params["language"]
-      timezone = params["timezone"]
-      name = params["name"]
-      summary = params["summary"]
 
-      iri = "#{host}/actors/#{username}"
-
-      account = Account.new(
-        username: username,
-        password: password,
-        language: language,
-        timezone: timezone,
-      )
-      actor = ActivityPub::Actor::Person.new(
-        iri: iri,
-        username: username,
-        name: name,
-        summary: summary,
-      )
+      account = Account.new(params)
+      actor = ActivityPub::Actor.new(params)
 
       account.actor = actor
 
@@ -70,7 +54,8 @@ module Admin
         "name" => params["name"].as(String),
         "summary" => params["summary"].as(String),
         "language" => params["language"].as(String),
-        "timezone" => params["timezone"].as(String)
+        "timezone" => params["timezone"].as(String),
+        "type" => params["type"]?.try(&.as(String)) || PERSON,
       }
     end
   end

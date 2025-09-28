@@ -7,6 +7,8 @@ require "../utils/rss"
 class HomeController
   include Ktistec::Controller
 
+  PERSON = ActivityPub::Actor::Person.to_s
+
   skip_auth ["/"], GET, POST
   skip_auth ["/feed.rss"], GET
 
@@ -18,7 +20,7 @@ class HomeController
     elsif (accounts = Account.all).empty?
       # `username` and `password` properties are not nilable
       account = Account.new(username: "", password: "")
-      actor = ActivityPub::Actor.new
+      actor = ActivityPub::Actor.new(type: PERSON)
 
       account.actor = actor
 
@@ -61,7 +63,7 @@ class HomeController
       params = step_2_params(env)
 
       account = Account.new(params)
-      actor = ActivityPub::Actor::Person.new(params)
+      actor = ActivityPub::Actor.new(params)
 
       account.actor = actor
 
@@ -102,7 +104,8 @@ class HomeController
       "name" => params["name"].as(String),
       "summary" => params["summary"].as(String),
       "language" => params["language"].as(String),
-      "timezone" => params["timezone"].as(String)
+      "timezone" => params["timezone"].as(String),
+      "type" => params["type"]?.try(&.as(String)) || PERSON,
     }
   end
 end

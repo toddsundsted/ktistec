@@ -143,58 +143,93 @@ Spectator.describe Admin::AccountsController do
     context "when authorized" do
       sign_in(as: account.username)
 
+      let(form_body) { "username=testuser&password=Test123!&name=Test+User&summary=A+test+user&language=en&timezone=UTC&type=ActivityPub::Actor::Person" }
+      let(json_body) { {"username" => "testuser", "password" => "Test123!", "name" => "Test User", "summary" => "A test user", "language" => "en", "timezone" => "UTC", "type" => "ActivityPub::Actor::Person"}.to_json }
+
       it "creates a new account" do
-        body = "username=testuser&password=Test123!&name=Test+User&summary=A+test+user&language=en&timezone=UTC"
-        expect { post "/admin/accounts", http_headers, body: body }.to change { Account.count }.by(1)
+        expect { post "/admin/accounts", http_headers, body: form_body }.to change { Account.count }.by(1)
         expect(response.status_code).to eq(302)
       end
 
       it "creates a new account" do
-        body = {"username" => "testuser", "password" => "Test123@", "name" => "Test User", "summary" => "A test user", "language" => "en", "timezone" => "UTC"}.to_json
-        expect { post "/admin/accounts", json_headers, body: body }.to change { Account.count }.by(1)
+        expect { post "/admin/accounts", json_headers, body: json_body }.to change { Account.count }.by(1)
         expect(response.status_code).to eq(201)
       end
 
       it "rejects empty username" do
-        body = "username=&password=Test123!&name=Test+User&summary=A+test+user&language=en&timezone=UTC"
-        expect { post "/admin/accounts", http_headers, body: body }.not_to change { Account.count }
+        expect { post "/admin/accounts", http_headers, body: form_body.gsub("testuser", "") }.not_to change { Account.count }
         expect(response.status_code).to eq(422)
         expect(response.body).to contain("username is too short")
       end
 
       it "rejects empty username" do
-        body = {"username" => "", "password" => "Test123@", "name" => "Test User", "summary" => "A test user", "language" => "en", "timezone" => "UTC"}.to_json
-        expect { post "/admin/accounts", json_headers, body: body }.not_to change { Account.count }
+        expect { post "/admin/accounts", json_headers, body: json_body.gsub("testuser", "") }.not_to change { Account.count }
         expect(response.status_code).to eq(422)
         expect(JSON.parse(response.body)["errors"].as_a).to contain({"username" => ["is too short"]})
       end
 
       it "rejects short password" do
-        body = "username=testuser&password=short&name=Test+User&summary=A+test+user&language=en&timezone=UTC"
-        expect { post "/admin/accounts", http_headers, body: body }.not_to change { Account.count }
+        expect { post "/admin/accounts", http_headers, body: form_body.gsub("Test123!", "short") }.not_to change { Account.count }
         expect(response.status_code).to eq(422)
         expect(response.body).to contain("password is too short", "password is weak")
       end
 
       it "rejects short password" do
-        body = {"username" => "testuser", "password" => "short", "name" => "Test User", "summary" => "A test user", "language" => "en", "timezone" => "UTC"}.to_json
-        expect { post "/admin/accounts", json_headers, body: body }.not_to change { Account.count }
+        expect { post "/admin/accounts", json_headers, body: json_body.gsub("Test123!", "short") }.not_to change { Account.count }
         expect(response.status_code).to eq(422)
         expect(JSON.parse(response.body)["errors"].as_a).to contain({"password" => ["is too short", "is weak"]})
       end
 
       it "rejects weak password" do
-        body = "username=testuser&password=weak1234&name=Test+User&summary=A+test+user&language=en&timezone=UTC"
-        expect { post "/admin/accounts", http_headers, body: body }.not_to change { Account.count }
+        expect { post "/admin/accounts", http_headers, body: form_body.gsub("Test123!", "weak1234") }.not_to change { Account.count }
         expect(response.status_code).to eq(422)
         expect(response.body).to contain("password is weak")
       end
 
       it "rejects weak password" do
-        body = {"username" => "testuser", "password" => "weak1234", "name" => "Test User", "summary" => "A test user", "language" => "en", "timezone" => "UTC"}.to_json
-        expect { post "/admin/accounts", json_headers, body: body }.not_to change { Account.count }
+        expect { post "/admin/accounts", json_headers, body: json_body.gsub("Test123!", "weak1234") }.not_to change { Account.count }
         expect(response.status_code).to eq(422)
         expect(JSON.parse(response.body)["errors"].as_a).to contain({"password" => ["is weak"]})
+      end
+
+      it "creates a ActivityPub::Actor::Person" do
+        post "/admin/accounts", http_headers, body: form_body
+        actor = Account.find(username: "testuser").actor
+        expect(actor.class).to eq(ActivityPub::Actor::Person)
+        expect(actor.type).to eq("ActivityPub::Actor::Person")
+      end
+
+      it "creates a ActivityPub::Actor::Person" do
+        post "/admin/accounts", json_headers, body: json_body
+        actor = Account.find(username: "testuser").actor
+        expect(actor.class).to eq(ActivityPub::Actor::Person)
+        expect(actor.type).to eq("ActivityPub::Actor::Person")
+      end
+
+      it "creates a ActivityPub::Actor::Organization" do
+        post "/admin/accounts", http_headers, body: form_body.gsub("Person", "Organization")
+        actor = Account.find(username: "testuser").actor
+        expect(actor.class).to eq(ActivityPub::Actor)
+        expect(actor.type).to eq("ActivityPub::Actor::Organization")
+      end
+
+      it "creates a ActivityPub::Actor::Organization" do
+        post "/admin/accounts", json_headers, body: json_body.gsub("Person", "Organization")
+        actor = Account.find(username: "testuser").actor
+        expect(actor.class).to eq(ActivityPub::Actor)
+        expect(actor.type).to eq("ActivityPub::Actor::Organization")
+      end
+
+      it "rejects invalid actor type" do
+        expect { post "/admin/accounts", http_headers, body: form_body.gsub("Person", "InvalidType") }.not_to change { Account.count }
+        expect(response.status_code).to eq(422)
+        expect(response.body).to contain("type is not valid")
+      end
+
+      it "rejects invalid actor type" do
+        expect { post "/admin/accounts", json_headers, body: json_body.gsub("Person", "InvalidType") }.not_to change { Account.count }
+        expect(response.status_code).to eq(422)
+        expect(JSON.parse(response.body)["errors"].as_a).to contain({"actor.type" => ["is not valid"]})
       end
     end
   end

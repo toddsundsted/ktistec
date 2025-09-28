@@ -6,6 +6,6 @@ p Usernames can be any length and can consist of any combination of letters, num
 p Passwords must be at least six characters long, and must consist of at least one letter, one number and one symbol.
 crystal:
   form_action = "/admin/accounts"
-  button_text = "Create User"
+  button_text = "Create Account"
 == render "src/views/partials/account_form.html.slang"
 a.ui.button href="/admin/accounts" Back to Accounts

@@ -86,6 +86,8 @@ Spectator.describe Ktistec::Rule do
 
       let(bindings) { School::Bindings.new }
 
+      let(context) { School::Context.new(bindings, Set(School::Fact).new) }
+
       let(empty) { School::Bindings.new }
 
       describe "#match" do
@@ -93,11 +95,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new }
 
           it "invokes the block once for each match" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(3)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(3)
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([empty, empty, empty])
           end
         end
@@ -106,7 +108,7 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(foo: School::Var.new("foo")) }
 
           it "raises an error" do
-            expect{subject.match(bindings, &block)}.to raise_error(ArgumentError)
+            expect{subject.match(context, &block)}.to raise_error(ArgumentError)
           end
         end
 
@@ -116,11 +118,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Lit.new(model1)) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([empty])
           end
         end
@@ -129,11 +131,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Lit.new(model9999)) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -142,11 +144,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Lit.new(model_nil)) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -155,11 +157,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Var.new("target")) }
 
           it "invokes the block once for each match" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(3)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(3)
           end
 
           it "binds the target to each match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"target" => model1}, {"target" => model2}, {"target" => model3}])
           end
         end
@@ -170,11 +172,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Var.new("target")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the target to the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"target" => model1}])
           end
         end
@@ -185,11 +187,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Var.new("target")) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -200,11 +202,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Var.new("target")) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -213,11 +215,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Not.new(School::Lit.new(model1), name: "target")) }
 
           it "invokes the block once for each match" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(2)
           end
 
           it "binds the target to each match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"target" => model2}, {"target" => model3}])
           end
         end
@@ -226,11 +228,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Not.new(School::Lit.new(model_nil))) }
 
           it "invokes the block once for each match" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(3)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(3)
           end
 
           it "binds the target to each match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([empty, empty, empty])
           end
         end
@@ -239,11 +241,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Within.new(School::Lit.new(model1), School::Lit.new(model3), name: "target")) }
 
           it "invokes the block once for each match" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(2)
           end
 
           it "binds the target to each match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"target" => model1}, {"target" => model3}])
           end
         end
@@ -252,11 +254,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Within.new(School::Lit.new(model_nil))) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -267,11 +269,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(child_of: School::Lit.new(model1)) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([empty])
           end
         end
@@ -280,11 +282,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(child_of: School::Lit.new(model9999)) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -293,11 +295,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(child_of: School::Var.new("parent")) }
 
           it "invokes the block once for each match" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(2)
           end
 
           it "binds the association to each match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"parent" => model1}, {"parent" => model2}])
           end
         end
@@ -308,11 +310,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(child_of: School::Var.new("parent")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"parent" => model1}])
           end
         end
@@ -323,11 +325,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(child_of: School::Var.new("parent")) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -342,11 +344,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(child_of: School::Not.new(School::Lit.new(model1), name: "parent")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"parent" => model2}])
           end
         end
@@ -357,11 +359,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(child_of: School::Not.new(School::Var.new("model"), name: "parent")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"model" => model1, "parent" => model2}])
           end
         end
@@ -370,11 +372,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(child_of: School::Within.new(School::Lit.new(model2), name: "parent")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"parent" => model2}])
           end
         end
@@ -385,11 +387,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(child_of: School::Within.new(School::Var.new("model"), name: "parent")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"model" => model2, "parent" => model2}])
           end
         end
@@ -400,11 +402,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Lit.new(1_i64)) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([empty])
           end
         end
@@ -413,11 +415,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Lit.new(model1).id) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([empty])
           end
         end
@@ -426,11 +428,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Lit.new(model9999).id) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -439,11 +441,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Lit.new(model_nil).id) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -452,11 +454,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Var.new("id")) }
 
           it "invokes the block once for each match" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(3)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(3)
           end
 
           it "binds the property value to each match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"id" => 1_i64}, {"id" => 2_i64}, {"id" => 3_i64}])
           end
         end
@@ -467,11 +469,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Var.new("id")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"id" => 1_i64}])
           end
         end
@@ -482,11 +484,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Var.new("id")) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -497,11 +499,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Var.new("id")) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -510,11 +512,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Not.new(School::Lit.new(1_i64), name: "id")) }
 
           it "invokes the block twice" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(2)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"id" => 2_i64}, {"id" => 3_i64}])
           end
         end
@@ -525,11 +527,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Not.new(School::Var.new("value"), name: "id")) }
 
           it "invokes the block twice" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(2)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"value" => 1_i64, "id" => 2_i64}, {"value" => 1_i64, "id" => 3_i64}])
           end
         end
@@ -538,11 +540,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Within.new(School::Lit.new(2_i64), School::Lit.new(3_i64), name: "id")) }
 
           it "invokes the block twice" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(2)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"id" => 2_i64}, {"id" => 3_i64}])
           end
         end
@@ -553,11 +555,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(id: School::Within.new(School::Var.new("value"), School::Lit.new(3_i64), name: "id")) }
 
           it "invokes the block twice" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(2)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(2)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"value" => 2_i64, "id" => 2_i64}, {"value" => 2_i64, "id" => 3_i64}])
           end
         end
@@ -566,11 +568,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Strip.new(School::Lit.new("<span>th</span><span>ree</span>"), name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"name" => "three"}])
           end
         end
@@ -581,11 +583,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Strip.new(School::Var.new("value"), name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"value" => "<span>th</span><span>ree</span>", "name" => "three"}])
           end
         end
@@ -594,11 +596,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Strip.new(School::Accessor.new { "<span>th</span><span>ree</span>" }, name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"name" => "three"}])
           end
         end
@@ -607,11 +609,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Filter.new(School::Lit.new("three"), name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"name" => "three"}])
           end
         end
@@ -622,11 +624,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Filter.new(School::Var.new("value"), name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"value" => "three", "name" => "three"}])
           end
         end
@@ -635,11 +637,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Filter.new(School::Accessor.new { "three" }, name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"name" => "three"}])
           end
         end
@@ -648,11 +650,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Lit.new("<span>THREE</span>")), name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"name" => "three"}])
           end
         end
@@ -663,11 +665,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Var.new("value")), name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"value" => "<span>THREE</span>", "name" => "three"}])
           end
         end
@@ -676,11 +678,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Accessor.new { "<span>THREE</span>" }), name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"name" => "three"}])
           end
         end
@@ -693,11 +695,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Lit.new("<p>three four five</p>")), name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"name" => "%four%"}])
           end
         end
@@ -708,11 +710,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Lit.new("%")), name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"name" => %q|\%|}])
           end
         end
@@ -723,11 +725,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(name: Ktistec::Function::Filter.new(Ktistec::Function::Strip.new(School::Lit.new("\\")), name: "name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"name" => %q|\\|}])
           end
         end
@@ -740,11 +742,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(quux: School::Lit.new("test", name: "quux")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the match" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"quux" => "test"}])
           end
         end
@@ -759,11 +761,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Lit.new(model11), child_of: School::Var.new("parent")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the association" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"parent" => model2}])
           end
         end
@@ -776,11 +778,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Lit.new(model11), child_of: School::Var.new("parent")) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end
@@ -793,11 +795,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Lit.new(model11), name: School::Var.new("name")) }
 
           it "invokes the block once" do
-            expect{subject.match(bindings, &block)}.to change{yields.size}.by(1)
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
           end
 
           it "binds the association" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to eq([{"name" => "eleven"}])
           end
         end
@@ -810,11 +812,11 @@ Spectator.describe Ktistec::Rule do
           subject { RulePattern.new(School::Lit.new(model11), name: School::Var.new("name")) }
 
           it "does not invoke the block" do
-            expect{subject.match(bindings, &block)}.not_to change{yields.size}
+            expect{subject.match(context, &block)}.not_to change{yields.size}
           end
 
           it "does not bind values" do
-            subject.match(bindings, &block)
+            subject.match(context, &block)
             expect(yields).to be_empty
           end
         end

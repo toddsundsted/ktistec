@@ -52,7 +52,7 @@ Spectator.describe "object partials" do
       let_build(:actor, named: author, icon: random_string)
 
       it "renders two profile icons" do
-        expect(subject.xpath_nodes("//img/@src")).to contain_exactly(author.icon, actor.icon)
+        expect(subject.xpath_nodes("//img/@src")).to contain_exactly(actor.icon, author.icon)
       end
 
       context "and the actor is deleted" do

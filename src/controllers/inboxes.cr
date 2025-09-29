@@ -38,8 +38,11 @@ class RelationshipsController
 
     Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
-    if activity.local?
-      forbidden
+    # this is, strictly speaking, not required because this method
+    # should be idempotent, but it avoids a lot of unnecessary work
+
+    if Relationship::Content::Inbox.find?(owner: account.actor, activity: activity)
+      ok
     end
 
     # if the activity is signed but we don't have the actor's public
@@ -69,10 +72,6 @@ class RelationshipsController
     end
 
     Log.trace { "[#{request_id}] actor iri=#{actor.iri}" }
-
-    if actor.local?
-      forbidden
-    end
 
     verified = false
 
@@ -254,25 +253,13 @@ class RelationshipsController
       bad_request("Activity Not Supported")
     end
 
-    # check to see if the activity already exists and save it -- this
-    # should be atomic under fibers but is not thread-safe. this
-    # prevents duplicate activities being created if the server
-    # receives the same activity multiple times. this can happen in
-    # practice because the validation steps above take time and
-    # servers acting as relays forward activities they've received,
-    # and those activities can arrive while the original activity is
-    # being validated.
+    # check to see if the activity already exists. if not, save it
 
-    if ActivityPub::Activity.find?(activity.iri)
-      # mastodon reissues identifiers for accept and reject
-      # activities. since these are implemented, here, as idempotent
-      # operations, don't respond with conflict.
-      unless activity.class.in?([ActivityPub::Activity::Accept, ActivityPub::Activity::Reject])
-        conflict
-      end
+    if (temporary = ActivityPub::Activity.find?(activity.iri))
+      activity = temporary
+    else
+      activity.save
     end
-
-    activity.save
 
     Log.trace { "[#{request_id}] saved id=#{activity.id}" }
 

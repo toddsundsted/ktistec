@@ -78,7 +78,7 @@ Spectator.describe Relationship::Social::Follow do
       it "returns followers for the given actor" do
         followers = described_class.followers_for(followed_actor.iri)
         expect(followers.size).to eq(2)
-        expect(followers.map(&.from_iri)).to contain_exactly(follower1.iri, follower2.iri)
+        expect(followers.map(&.from_iri)).to contain_exactly(follower2.iri, follower1.iri)
       end
 
       it "supports pagination" do
@@ -101,7 +101,7 @@ Spectator.describe Relationship::Social::Follow do
       it "returns following for the given actor" do
         following = described_class.following_for(following_actor.iri)
         expect(following.size).to eq(2)
-        expect(following.map(&.to_iri)).to contain_exactly(followed1.iri, followed2.iri)
+        expect(following.map(&.to_iri)).to contain_exactly(followed2.iri, followed1.iri)
       end
 
       it "supports pagination" do

@@ -278,7 +278,7 @@ module ActivityPub
     #
     def self.public_posts(page = 1, size = 10)
       query = <<-QUERY
-          SELECT #{Object.columns(prefix: "o")}
+          SELECT DISTINCT #{Object.columns(prefix: "o")}
             FROM accounts AS c
             JOIN relationships AS r
               ON likelihood(r.from_iri = c.iri, 0.99)
@@ -309,7 +309,7 @@ module ActivityPub
     #
     def self.public_posts_count
       query = <<-QUERY
-          SELECT COUNT(o.id)
+          SELECT COUNT(DISTINCT o.id)
             FROM accounts AS c
             JOIN relationships AS r
               ON likelihood(r.from_iri = c.iri, 0.99)

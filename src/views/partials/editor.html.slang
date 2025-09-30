@@ -10,7 +10,7 @@ crystal:
 - if (in_reply_to = object.in_reply_to?)
   crystal:
     ancestors = in_reply_to.ancestors
-    mentions = (ancestors.map(&.attributed_to.handle).compact.uniq).map { |a| "@#{a} " }.join
+    mentions = (ancestors.map(&.attributed_to.handle).compact.uniq - [actor.handle]).map { |a| "@#{a} " }.join
     content ||= mentions
 form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controller="trix has-content" method="POST"
   - if canonical_path_errors

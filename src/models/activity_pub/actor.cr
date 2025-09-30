@@ -42,10 +42,10 @@ module ActivityPub
     @@table_name = "actors"
 
     ALIASES = [
-      "Application",
-      "Group",
-      "Organization",
-      "Service",
+      "ActivityPub::Actor::Application",
+      "ActivityPub::Actor::Group",
+      "ActivityPub::Actor::Organization",
+      "ActivityPub::Actor::Service",
     ]
 
     @[Persistent]

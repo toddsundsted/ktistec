@@ -7,9 +7,9 @@
   crystal:
     {% begin %}
       {%
+        aliases = ActivityPub::Actor::ALIASES
         subclasses = ActivityPub::Actor.all_subclasses.map(&.stringify)
-        aliases = ActivityPub::Actor::ALIASES.map { |a| "ActivityPub::Actor::#{a.id}" }
-        types = (subclasses + aliases).sort.reduce({} of String => String) { |h, c| h[c] = c.split("::").last ; h }
+        types = (aliases + subclasses).sort.reduce({} of String => String) { |h, c| h[c] = c.split("::").last ; h }
       %}
       types = {{types}}
     {% end %}

@@ -30,8 +30,7 @@ module Ktistec
             all_types = [@type.stringify]
             all_types += @type.all_subclasses.map(&.stringify)
             if @type.has_constant?(:ALIASES)
-              aliases = @type.constant(:ALIASES).map { |a| "#{@type}::#{a.id}" }
-              all_types += aliases
+              all_types += @type.constant(:ALIASES)
             end
           %}
           "is not valid" unless type.in?({{all_types}})

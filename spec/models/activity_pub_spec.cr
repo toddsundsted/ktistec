@@ -33,8 +33,8 @@ Spectator.describe ActivityPub do
 
     context "given aliases" do
       pre_condition do
-        expect(ActivityPub::Actor::ALIASES).to have("Organization")
-        expect(ActivityPub::Object::ALIASES).to have("Place")
+        expect(ActivityPub::Actor::ALIASES).to have("ActivityPub::Actor::Organization")
+        expect(ActivityPub::Object::ALIASES).to have("ActivityPub::Object::Place")
       end
 
       it "instantiates the base class" do

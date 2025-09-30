@@ -532,7 +532,7 @@ module ActivityPub
     #
     def public_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
+         SELECT DISTINCT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -560,7 +560,7 @@ module ActivityPub
     #
     def all_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
+         SELECT DISTINCT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri

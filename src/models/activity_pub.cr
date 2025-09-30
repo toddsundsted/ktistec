@@ -22,7 +22,7 @@ module ActivityPub
         {% for subclass in includer.all_subclasses << includer %}
           {% name = subclass.stringify.split("::").last %}
           {% if subclass == includer && includer.has_constant?(:ALIASES) %}
-            {% aliases = [name] + includer.constant(:ALIASES) %}
+            {% aliases = [name] + includer.constant(:ALIASES).map(&.split("::").last) %}
             when {{aliases.map(&.stringify).join(",").id}}
           {% else %}
             when {{name}}

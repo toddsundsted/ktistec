@@ -32,13 +32,13 @@ module ActivityPub
     #   https://www.w3.org/TR/activitystreams-vocabulary/#dfn-question
 
     ALIASES = [
-      "Audio",
-      "Event",
-      "Image",
-      "Page",
-      "Place",
-      "Question",
-      "Video",
+      "ActivityPub::Object::Audio",
+      "ActivityPub::Object::Event",
+      "ActivityPub::Object::Image",
+      "ActivityPub::Object::Page",
+      "ActivityPub::Object::Place",
+      "ActivityPub::Object::Question",
+      "ActivityPub::Object::Video",
     ]
 
     @[Persistent]

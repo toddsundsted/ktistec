@@ -19,13 +19,13 @@ module ActivityPub
     @@table_name = "activities"
 
     ALIASES = [
-      "Add",
-      "Block",
-      "Flag",
-      "Listen",
-      "Read",
-      "Remove",
-      "View",
+      "ActivityPub::Activity::Add",
+      "ActivityPub::Activity::Block",
+      "ActivityPub::Activity::Flag",
+      "ActivityPub::Activity::Listen",
+      "ActivityPub::Activity::Read",
+      "ActivityPub::Activity::Remove",
+      "ActivityPub::Activity::View",
     ]
 
     @[Persistent]

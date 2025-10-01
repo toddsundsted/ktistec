@@ -194,7 +194,7 @@ module Ktistec
       #
       def all_subtypes
         {% begin %}
-          {% subtypes = (@type.all_subclasses << @type).reject(&.abstract?) %}
+          {% subtypes = ([@type] + @type.all_subclasses).reject(&.abstract?) %}
           {% if subtypes.empty? %}
             [] of String
           {% else %}

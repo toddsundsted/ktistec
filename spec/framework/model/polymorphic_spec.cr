@@ -12,6 +12,10 @@ class PolymorphicModel
     "state",
     "stamp"
   ]
+
+  ALIASES = [
+    "Alias"
+  ]
 end
 
 class Subclass1 < PolymorphicModel
@@ -188,6 +192,12 @@ Spectator.describe Ktistec::Model::Polymorphic do
       end
     end
 
+  end
+
+  describe ".all_subtypes" do
+    it "includes the alias" do
+      expect(PolymorphicModel.all_subtypes).to have("Alias")
+    end
   end
 
   describe "#as_a" do

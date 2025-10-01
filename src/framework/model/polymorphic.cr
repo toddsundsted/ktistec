@@ -36,6 +36,27 @@ module Ktistec
           "is not valid" unless type.in?({{all_types}})
         {% end %}
       end
+
+      # NOTE: a model alias is similar to a subclass, with exceptions:
+      # significantly, queries executed via a subclass constrain their
+      # results to the subclass and its subclasses. it is not possible
+      # to do that with an alias, because there is no subclass on
+      # which to make the call.
+
+      macro finished
+        {% for includer in @type.includers %}
+          # Returns type and all concrete (non-abstract) subtypes,
+          # including any aliases defined on the type.
+          #
+          def {{includer}}.all_subtypes
+            \{% if @type.has_constant?("ALIASES") %}
+              super + ALIASES
+            \{% else %}
+              super
+            \{% end %}
+          end
+        {% end %}
+      end
     end
   end
 end

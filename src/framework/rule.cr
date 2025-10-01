@@ -338,7 +338,7 @@ module Ktistec
           {% end %}
           {% if clazz < Model::Polymorphic %}
             unless @options.has_key?("type")
-              types = {{(clazz.all_subclasses << clazz).map(&.stringify).join("','")}}
+              types = {{clazz}}.all_subtypes.join("','")
               conditions << { %Q|#{table_name}."type" IN ('#{types}')|, nil }
             end
           {% end %}

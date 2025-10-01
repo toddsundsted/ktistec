@@ -4,6 +4,13 @@ require "../spec_helper/base"
 
 class RuleModel
   include Ktistec::Model
+  include Ktistec::Model::Polymorphic
+
+  @@table_name = "rule_models"
+
+  ALIASES = [
+    "RuleAliasModel",
+  ]
 
   @[Persistent]
   property parent_id : Int64?
@@ -12,6 +19,9 @@ class RuleModel
   @[Persistent]
   property name : String?
   derived quux : String?, aliased_to: name
+end
+
+class RuleSubclassModel < RuleModel
 end
 
 Spectator.describe Ktistec::Rule do
@@ -30,6 +40,12 @@ Spectator.describe Ktistec::Rule do
     Ktistec::Rule.make_pattern(
       RulePattern,
       RuleModel,
+      associations: [child_of],
+      properties: [id, name, quux]
+    )
+    Ktistec::Rule.make_pattern(
+      RuleSubclassPattern,
+      RuleSubclassModel,
       associations: [child_of],
       properties: [id, name, quux]
     )
@@ -61,13 +77,17 @@ Spectator.describe Ktistec::Rule do
         Ktistec.database.exec <<-SQL
           CREATE TABLE IF NOT EXISTS rule_models (
             id integer PRIMARY KEY AUTOINCREMENT,
+            type varchar(63) NOT NULL,
             parent_id integer,
             name text
           )
         SQL
         Ktistec.database.exec <<-SQL
-          INSERT INTO rule_models (id, parent_id, name)
-          VALUES (1, null, 'one'), (2, 1, 'two'), (3, 2, 'three')
+          INSERT INTO rule_models
+                 (id, type, parent_id, name)
+          VALUES (1, 'RuleModel', null, 'one'),
+                 (2, 'RuleModel', 1, 'two'),
+                 (3, 'RuleModel', 2, 'three')
         SQL
       end
       after_each do
@@ -818,6 +838,44 @@ Spectator.describe Ktistec::Rule do
           it "does not bind values" do
             subject.match(context, &block)
             expect(yields).to be_empty
+          end
+        end
+
+        # subclass
+
+        context "with a target that is a parent of the rule pattern class" do
+          let(model11) { RuleModel.new(id: 11_i64, name: "eleven").save }
+
+          pre_condition { expect(model11.name).to eq("eleven") }
+
+          subject { RuleSubclassPattern.new(School::Lit.new(model11), name: School::Var.new("name")) }
+
+          it "does not invoke the block" do
+            expect{subject.match(context, &block)}.not_to change{yields.size}
+          end
+
+          it "does not bind the name" do
+            subject.match(context, &block)
+            expect(yields).to be_empty
+          end
+        end
+
+        # alias
+
+        context "with a target that is an alias of the rule pattern class" do
+          let(model11) { RuleModel.new(type: "RuleAliasModel", id: 11_i64, name: "eleven").save }
+
+          pre_condition { expect(model11.name).to eq("eleven") }
+
+          subject { RulePattern.new(School::Lit.new(model11), name: School::Var.new("name")) }
+
+          it "invokes the block once" do
+            expect{subject.match(context, &block)}.to change{yields.size}.by(1)
+          end
+
+          it "binds the name" do
+            subject.match(context, &block)
+            expect(yields).to eq([{"name" => "eleven"}])
           end
         end
       end

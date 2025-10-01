@@ -5,16 +5,16 @@ require "../../spec_helper/base"
 Spectator.describe Task::Performance do
   setup_spec
 
-  describe ".schedule_unless_exists" do
+  describe ".ensure_scheduled" do
     it "schedules a new task" do
-      expect{described_class.schedule_unless_exists}.to change{described_class.count}.by(1)
+      expect{described_class.ensure_scheduled}.to change{described_class.count}.by(1)
     end
 
     context "given an existing task" do
       before_each { described_class.new.schedule }
 
       it "does not schedule a new task" do
-        expect{described_class.schedule_unless_exists}.not_to change{described_class.count}
+        expect{described_class.ensure_scheduled}.not_to change{described_class.count}
       end
     end
   end

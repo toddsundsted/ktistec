@@ -26,12 +26,12 @@ Ktistec::Server.run do
   TaskWorker.start do
     Task.destroy_old_tasks
     Task.clean_up_running_tasks
-    Task::Backup.schedule_unless_exists
-    Task::Performance.schedule_unless_exists
-    Task::UpdateMetrics.schedule_unless_exists
-    Task::Monitor.schedule_unless_exists
-    Task::RunScripts.schedule_unless_exists
-    Task::CleanOauth.schedule_unless_exists
+    Task::Backup.ensure_scheduled
+    Task::Performance.ensure_scheduled
+    Task::UpdateMetrics.ensure_scheduled
+    Task::Monitor.ensure_scheduled
+    Task::RunScripts.ensure_scheduled
+    Task::CleanOauth.ensure_scheduled
   end
   Session.clean_up_stale_sessions
   # track server starts

@@ -125,12 +125,12 @@ Spectator.describe MCP::Resources do
 
       # supported object types
       object_types = data["object_types"].as_a.map(&.as_s)
-      all_types = {{(ActivityPub::Object.all_subclasses << ActivityPub::Object).map(&.stringify.split("::").last)}}
+      all_types = ActivityPub::Object.all_subtypes.map(&.split("::").last)
       expect(object_types).to contain_exactly(*all_types)
 
       # supported actor types
       actor_types = data["actor_types"].as_a.map(&.as_s)
-      all_types = {{(ActivityPub::Actor.all_subclasses << ActivityPub::Actor).map(&.stringify.split("::").last)}}
+      all_types = ActivityPub::Actor.all_subtypes.map(&.split("::").last)
       expect(actor_types).to contain_exactly(*all_types)
 
       # statistics

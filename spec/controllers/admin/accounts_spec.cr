@@ -44,8 +44,9 @@ Spectator.describe Admin::AccountsController do
 
       it "renders accounts table" do
         get "/admin/accounts", http_headers
-        expect(response.body).to contain("Accounts")
-        expect(response.body).to contain("Settings")
+        expect(response.body).to contain("Username")
+        expect(response.body).to contain("Created At")
+        expect(response.body).to contain("Actions")
       end
 
       it "includes the authenticated account" do

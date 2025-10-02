@@ -32,13 +32,13 @@ module ActivityPub
     #   https://www.w3.org/TR/activitystreams-vocabulary/#dfn-question
 
     ALIASES = [
-      "Audio",
-      "Event",
-      "Image",
-      "Page",
-      "Place",
-      "Question",
-      "Video",
+      "ActivityPub::Object::Audio",
+      "ActivityPub::Object::Event",
+      "ActivityPub::Object::Image",
+      "ActivityPub::Object::Page",
+      "ActivityPub::Object::Place",
+      "ActivityPub::Object::Question",
+      "ActivityPub::Object::Video",
     ]
 
     @[Persistent]
@@ -278,7 +278,7 @@ module ActivityPub
     #
     def self.public_posts(page = 1, size = 10)
       query = <<-QUERY
-          SELECT #{Object.columns(prefix: "o")}
+          SELECT DISTINCT #{Object.columns(prefix: "o")}
             FROM accounts AS c
             JOIN relationships AS r
               ON likelihood(r.from_iri = c.iri, 0.99)
@@ -309,7 +309,7 @@ module ActivityPub
     #
     def self.public_posts_count
       query = <<-QUERY
-          SELECT COUNT(o.id)
+          SELECT COUNT(DISTINCT o.id)
             FROM accounts AS c
             JOIN relationships AS r
               ON likelihood(r.from_iri = c.iri, 0.99)

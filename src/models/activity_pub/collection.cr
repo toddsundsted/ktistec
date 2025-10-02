@@ -18,9 +18,9 @@ module ActivityPub
     @@table_name = "collections"
 
     ALIASES = [
-      "CollectionPage",
-      "OrderedCollection",
-      "OrderedCollectionPage",
+      "ActivityPub::CollectionPage",
+      "ActivityPub::OrderedCollection",
+      "ActivityPub::OrderedCollectionPage",
     ]
 
     @@required_iri = false

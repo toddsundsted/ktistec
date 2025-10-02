@@ -723,6 +723,20 @@ Spectator.describe "partials" do
         end
       end
 
+      context "given a self-reply" do
+        let_build(:object, named: :original)
+
+        before_each do
+          original.attributed_to = account.actor
+          object.assign(in_reply_to: original).save
+        end
+
+        it "does not self-mention" do
+          expect(subject.xpath_nodes("//textarea[@name='content']/text()")).
+            to be_empty
+        end
+      end
+
       context "given a draft object" do
         before_each { object.save }
 

@@ -19,13 +19,6 @@
   },
   <%- end -%>
   <%- if (inbox = actor.inbox) -%>
-  <%# some services (e.g. PeerTube) expect a "shared" inbox %>
-  <%# proffer the actor's inbox %>
-  <%- if actor.local? -%>
-  "endpoints": {
-    "sharedInbox": <%= inbox.to_json %>
-  },
-  <%- end -%>
   "inbox":<%= inbox.to_json %>,
   <%- end -%>
   <%- if (outbox = actor.outbox) -%>

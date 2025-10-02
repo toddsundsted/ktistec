@@ -1,0 +1,11 @@
+{
+  "accounts": [
+    <% accounts.each_with_index do |account, index| %>
+    {
+      "id": <%= account.id %>,
+      "username": <%= account.username.to_json %>,
+      "created_at": <%= account.created_at.to_json %>
+    }<%= comma(accounts, index) %>
+    <% end %>
+  ]
+}

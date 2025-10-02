@@ -156,6 +156,22 @@ Spectator.describe Task::RefreshActor do
       end
     end
 
+    context "when actor is marked as down" do
+      before_each { actor.down! }
+
+      it "marks the actor as up" do
+        expect{subject.perform}.to change{actor.reload!.down?}.from(true).to(false)
+      end
+
+      context "and refresh fails" do
+        let(actor) { super.assign(iri: "https://remote/returns-404") }
+
+        it "does not mark the actor as up" do
+          expect{subject.perform}.not_to change{actor.reload!.down?}
+        end
+      end
+    end
+
     it "documents the error if fetch fails" do
       actor.iri = "https://remote/returns-404"
       expect{subject.perform}.

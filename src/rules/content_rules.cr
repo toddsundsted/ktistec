@@ -105,8 +105,8 @@ class ContentRules
   end
 
   def run
-    School::Fact.clear!
-    with School::Fact yield
-    self.class.domain.run
+    domain = self.class.domain.copy(independent_facts: true)
+    with domain yield
+    domain.run
   end
 end

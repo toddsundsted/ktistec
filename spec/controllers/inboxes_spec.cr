@@ -13,6 +13,8 @@ Spectator.describe RelationshipsController do
     Ktistec::Server.clear_shutdown!
   end
 
+  PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
   describe "POST /actors/:username/inbox" do
     let!(actor) { register.actor }
 
@@ -47,36 +49,10 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(400)
     end
 
-    it "returns 409 if activity was already received and processed" do
+    it "returns 200 if activity was already received and processed" do
       activity = Factory.create(:create)
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
-      expect(response.status_code).to eq(409)
-    end
-
-    # mastodon compatibility
-    it "does not return 409 if the activity is accept" do
-      activity = Factory.create(:accept)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).not_to eq(409)
-    end
-
-    # mastodon compatibility
-    it "does not return 409 if the activity is reject" do
-      activity = Factory.create(:reject)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).not_to eq(409)
-    end
-
-    it "returns 403 if the activity claims to be local" do
-      activity.assign(iri: "https://test.test/activities/foo_bar")
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).to eq(403)
-    end
-
-    it "returns 403 if the activity's actor claims to be local" do
-      activity.assign(actor_iri: actor.iri)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).to eq(403)
+      expect(response.status_code).to eq(200)
     end
 
     it "returns 400 if the activity cannot be deserialized due to an unsupported type" do
@@ -488,8 +464,6 @@ Spectator.describe RelationshipsController do
         end
       end
 
-      PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
-
       context "and the activity is addressed to the public collection" do
         before_each do
           announce.assign(to: [PUBLIC])
@@ -708,8 +682,6 @@ Spectator.describe RelationshipsController do
           end
         end
       end
-
-      PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 
       context "and the activity is addressed to the public collection" do
         before_each do

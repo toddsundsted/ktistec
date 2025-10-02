@@ -93,22 +93,22 @@ Spectator.describe ObjectsController do
 
       context "when validation fails" do
         it "returns 422 if validation fails" do
-          post "/objects", FORM_DATA, "content=foo+bar&canonical_path=foo%2Fbar"
+          post "/objects", FORM_DATA, "content=foo+bar&canonical-path=foo%2Fbar"
           expect(response.status_code).to eq(422)
         end
 
         it "returns 422 if validation fails" do
-          post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical_path":"foo/bar"}|
+          post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical-path":"foo/bar"}|
           expect(response.status_code).to eq(422)
         end
 
         it "renders an error message" do
-          post "/objects", FORM_DATA, "content=foo+bar&canonical_path=foo%2Fbar"
+          post "/objects", FORM_DATA, "content=foo+bar&canonical-path=foo%2Fbar"
           expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]")).not_to be_empty
         end
 
         it "renders an error message" do
-          post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical_path":"foo/bar"}|
+          post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical-path":"foo/bar"}|
           expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
         end
       end
@@ -491,7 +491,7 @@ Spectator.describe ObjectsController do
 
           it "renders an input with the canonical path" do
             get "/objects/#{draft.uid}/edit", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first).to eq("/foo/bar/baz")
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical-path']/@value").first).to eq("/foo/bar/baz")
           end
 
           it "renders the canonical path" do
@@ -577,7 +577,7 @@ Spectator.describe ObjectsController do
 
           it "renders an input with the canonical path" do
             get "/objects/#{visible.uid}/edit", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical_path']/@value").first).to eq("/foo/bar/baz")
+            expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical-path']/@value").first).to eq("/foo/bar/baz")
           end
 
           it "renders the canonical path" do
@@ -670,33 +670,33 @@ Spectator.describe ObjectsController do
       end
 
       it "updates the canonical path" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=%2Ffoo%2Fbar"}.
+        expect{post "/objects/#{draft.uid}", FORM_DATA, "canonical-path=%2Ffoo%2Fbar"}.
           to change{draft.reload!.canonical_path}
       end
 
       it "updates the canonical path" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"/foo/bar"}|}.
+        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical-path":"/foo/bar"}|}.
           to change{draft.reload!.canonical_path}
       end
 
       context "when validation fails" do
         it "returns 422 if validation fails" do
-          post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=foo%2Fbar"
+          post "/objects/#{draft.uid}", FORM_DATA, "canonical-path=foo%2Fbar"
           expect(response.status_code).to eq(422)
         end
 
         it "returns 422 if validation fails" do
-          post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"foo/bar"}|
+          post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical-path":"foo/bar"}|
           expect(response.status_code).to eq(422)
         end
 
         it "renders an error message" do
-          post "/objects/#{draft.uid}", FORM_DATA, "canonical_path=foo%2Fbar"
+          post "/objects/#{draft.uid}", FORM_DATA, "canonical-path=foo%2Fbar"
           expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]")).not_to be_empty
         end
 
         it "renders an error message" do
-          post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical_path":"foo/bar"}|
+          post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical-path":"foo/bar"}|
           expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
         end
       end

@@ -12,6 +12,10 @@ class PolymorphicModel
     "state",
     "stamp"
   ]
+
+  ALIASES = [
+    "Alias"
+  ]
 end
 
 class Subclass1 < PolymorphicModel
@@ -190,6 +194,12 @@ Spectator.describe Ktistec::Model::Polymorphic do
 
   end
 
+  describe ".all_subtypes" do
+    it "includes the alias" do
+      expect(PolymorphicModel.all_subtypes).to have("Alias")
+    end
+  end
+
   describe "#as_a" do
     it "returns the correct subclass" do
       expect(PolymorphicModel.find(subclass1.id).as_a(Subclass1)).to be_a(Subclass1)
@@ -199,6 +209,12 @@ Spectator.describe Ktistec::Model::Polymorphic do
     it "raises an error" do
       expect{PolymorphicModel.find(subclass2.id).as_a(Subclass1)}.to raise_error(Ktistec::Model::NotFound)
       expect{PolymorphicModel.find(id: subclass2.id).as_a(Subclass1)}.to raise_error(Ktistec::Model::NotFound)
+    end
+  end
+
+  describe "#valid?" do
+    it "returns false if the type is invalid" do
+      expect(PolymorphicModel.new(type: "SubclassXYZ").valid?).to be_false
     end
   end
 end

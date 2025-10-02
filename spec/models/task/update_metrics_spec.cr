@@ -99,6 +99,24 @@ Spectator.describe Task::UpdateMetrics do
         end
       end
 
+      context "when account has been terminated" do
+        before_each { account.destroy }
+
+        it "does not raise an error" do
+          expect{subject.perform}.not_to raise_error
+        end
+
+        it "does not create points for orphaned relationships" do
+          expect{subject.perform}.not_to change{Point.count}
+          expect(Point.chart(inbox).map(&.value)).to be_empty
+        end
+
+        it "does not set the last_id" do
+          subject.perform
+          expect(subject.last_id).not_to be_nil
+        end
+      end
+
       it "sets the last_id" do
         subject.perform
         expect(subject.last_id).to eq(inbox5.id)

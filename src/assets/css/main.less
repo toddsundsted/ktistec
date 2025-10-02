@@ -32,9 +32,6 @@ nav.ui.top.navigation.menu {
     }
 }
 
-/* compact menus should be flex, too */
-.ui > .compact.menu { display: flex; }
-
 /** menu **/
 .ui.secondary.menu {
     margin-bottom: 0;
@@ -226,22 +223,6 @@ nav.ui.top.navigation.menu {
 
                 .text { display: none; }
                 .icon { margin: 0; }
-            }
-
-            .compact.menu {
-                flex: 25%;
-
-                .ui.simple.dropdown.item {
-                    width: 100%;
-                    text-align: center;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-
-                    .text { display: none; }
-                    .dropdown.icon { margin-left: 0.25em; }
-                    .icon:not(.dropdown) { margin: 0; }
-                }
             }
         }
     }

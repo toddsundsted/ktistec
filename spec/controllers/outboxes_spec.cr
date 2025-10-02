@@ -146,14 +146,14 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
         end
 
         it "puts the activity in the actor's outbox" do
@@ -306,14 +306,14 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
         end
 
         it "puts the activity in the actor's outbox" do
@@ -752,24 +752,26 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
-        it "addresses (to) all mentioned actors" do
+        it "addresses (cc) all mentioned actors" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=@#{other.username}@test.test"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
         end
 
-        it "addresses (to) all mentioned actors" do
+        it "addresses (cc) all mentioned actors" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"@#{other.username}@test.test"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
         end
 
-        it "addresses (to) the specified actor and all mentioned actors" do
+        it "addresses (to) the specified actor and (cc) all mentioned actors" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=@#{other.username}@test.test&to=#{URI.encode_www_form(actor.iri)}"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.iri, other.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
         end
 
-        it "addresses (to) the specified actor and all mentioned actors" do
+        it "addresses (to) the specified actor and (cc) all mentioned actors" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"@#{other.username}@test.test","to":"#{actor.iri}"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.iri, other.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
         end
 
         it "addresses (cc) the specified actor" do
@@ -812,23 +814,25 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
         end
 
-        it "does not address (cc) the actor's followers when visibility is direct" do
+        it "does not address the actor's followers when visibility is direct" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=direct"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain(actor.followers)
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).not_to contain(actor.followers)
         end
 
-        it "does not address (cc) the actor's followers when visibility is direct" do
+        it "does not address the actor's followers when visibility is direct" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"direct"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain(actor.followers)
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).not_to contain(actor.followers)
         end
 

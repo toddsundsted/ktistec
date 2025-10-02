@@ -2,11 +2,11 @@ version: 2.0
 shards:
   backtracer:
     git: https://github.com/sija/backtracer.cr.git
-    version: 1.2.2
+    version: 1.2.4
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.13.1
+    version: 0.14.0
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
@@ -14,7 +14,7 @@ shards:
 
   host_meta:
     git: https://github.com/toddsundsted/host_meta.git
-    version: 0.2.3
+    version: 0.2.4
 
   kemal:
     git: https://github.com/kemalcr/kemal.git
@@ -38,21 +38,21 @@ shards:
 
   school:
     git: https://github.com/toddsundsted/school.git
-    version: 0.2.4
+    version: 0.3.1
 
   slang:
     git: https://github.com/toddsundsted/slang.git
-    version: 2.0.0
+    version: 2.0.2
 
   spectator:
     git: https://gitlab.com/arctic-fox/spectator.git
-    version: 0.12.1
+    version: 0.12.2
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
-    version: 0.21.0
+    version: 0.22.0
 
   web_finger:
     git: https://github.com/toddsundsted/web_finger.git
-    version: 0.2.5
+    version: 0.2.6
 

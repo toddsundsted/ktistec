@@ -15,17 +15,9 @@
           a.item href="#"
             i.globe.icon
             span.text Everything
-          .compact.menu
-            .ui.simple.dropdown.item
-              i.cog.icon
-              span.text Advanced
-              i.dropdown.icon
-              .menu
-                a.item href="#" Settings
-                a.item href="#" Filters
-                a.item href="#" Metrics
-                a.item href="#" Tasks
-                a.item href="#" Logging
+          a.item href="#"
+            i.cog.icon
+            span.text Admin
           .right.menu
             .form
               .ui.input

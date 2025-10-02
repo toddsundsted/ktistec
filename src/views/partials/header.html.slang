@@ -10,17 +10,9 @@ nav.ui.top.fixed.inverted.navigation.menu
       a.item href=everything_path
         i.globe.icon
         span.text Everything
-      .compact.menu
-        .ui.simple.dropdown.item
-          i.cog.icon
-          span.text Advanced
-          i.dropdown.icon
-          .menu
-            a.item href=settings_path Settings
-            a.item href=filters_path Filters
-            a.item href=metrics_path Metrics
-            a.item href=tasks_path Tasks
-            a.item href=system_path Logging
+      a.item href=admin_path
+        i.cog.icon
+        span.text Admin
       .right.menu
         == form_tag(nil, sessions_path, method: "DELETE", class: "form") do
           .ui.input

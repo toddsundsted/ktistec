@@ -112,9 +112,14 @@ module Ktistec::ViewHelper
 
     # Derives visibility from to/cc addressing.
     #
-    def visibility(actor, to, cc)
-      if to || cc
-        addresses = [to, cc].compact.flatten
+    # If the object has explicit addressing, uses that. Otherwise, if
+    # the object is a reply, inherits from the parent: public posts
+    # are public, everything else is direct.  Otherwise, defaults to
+    # public.
+    #
+    def visibility(actor, object)
+      if (addresses = [object.to, object.cc].compact).presence
+        addresses = addresses.flatten
         if addresses.includes?(PUBLIC)
           "public"
         elsif addresses.includes?(actor.followers)
@@ -122,6 +127,8 @@ module Ktistec::ViewHelper
         else
           "direct"
         end
+      elsif (in_reply_to = object.in_reply_to?) && (addresses = [in_reply_to.to, in_reply_to.cc].compact).presence
+        addresses.flatten.includes?(PUBLIC) ? "public" : "direct"
       else
         "public"
       end

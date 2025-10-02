@@ -36,11 +36,10 @@
   - [Copyright and License](#copyright-and-license)
 
 **Ktistec** is an [ActivityPub](https://www.w3.org/TR/activitypub/)
-server. It is intended for individual users, not communities of users,
-although support for additional users will be added in the future. It
-is designed to have few runtime dependencies -- for example, it uses
-SQLite as its database, instead of PostgreSQL + Redis + etc. It is
-licensed under the AGPLv3.
+server. It is intended for small numbers of trusted users (everyone is
+an administrator). It is designed to have few runtime dependencies --
+for example, it uses SQLite as its database, instead of PostgreSQL +
+Redis + etc. It is licensed under the AGPLv3.
 
 Ktistec powers [Epiktistes](https://epiktistes.com/), my low-volume
 home in the Fediverse. If you want to talk to me, I'm
@@ -277,6 +276,9 @@ The table below contains a list of supported endpoints:
 | GET    | /actors/:username/drafts    | Retrieves a page of `objects` you've saved as drafts. |
 | GET    | /actors/:username/followers | Retrieves a page of `actors` following you. |
 | GET    | /actors/:username/following | Retrieves a page of `actors` you're following. |
+| GET    | /admin/accounts             | Retrieves all user accounts. |
+| GET    | /admin/accounts/new         | Gets a representation of an account. |
+| POST   | /admin/accounts             | Creates a new user account. |
 | GET    | /lookup/activity?iri=:iri   | Looks up the `activity` in the server cache identified by `iri`. |
 | GET    | /lookup/actor?iri=:iri      | Looks up the `actor` in the server cache identified by `iri`. |
 | GET    | /lookup/object?iri=:iri     | Looks up the `object` in the server cache identified by `iri`. |
@@ -288,6 +290,60 @@ The `/sessions` endpoint is useful when doing script development
 outside of the server environment.  The scripts the Ktistec server
 runs directly do not need to create their own session -- the supplied
 `API_KEY` is sufficient.
+
+### Initial Server Configuration
+
+You can configure a new Ktistec server entirely via the API.
+
+#### Configure Server Settings
+
+First, configure the server host name and site name (no authentication
+required):
+
+    curl -X POST -H "Content-Type: application/json" \
+         -d '{"host":"https://your-domain.com","site":"Your Site Name"}' \
+         "$KTISTEC_HOST/"
+
+#### Create Primary User Account
+
+Next, create the primary user account (again, no authentication
+required).
+
+| Name     | Notes |
+|-|-|
+| username | The username for the primary account. |
+| password | The password for the primary account. |
+| name     | Optional. Display name for the account. |
+| summary  | Optional. Biography/description for the account. |
+| language | IETF BCP 47 language tag (e.g., "en", "en-US"). |
+| timezone | IANA timezone (e.g., "UTC", "America/New_York"). |
+
+Example:
+
+    curl -X POST -H "Content-Type: application/json" \
+         -d '{"username":"your_username","password":"YourSecurePassword123@","name":"Your Display Name","summary":"Your summary","language":"en","timezone":"UTC"}' \
+         "$KTISTEC_HOST/"
+
+### Admin Account Management
+
+#### List All Accounts
+
+Retrieve all user accounts:
+
+    curl -X GET -H "Authorization: Bearer $API_KEY" \
+         -H "Accept: application/json" \
+         "$KTISTEC_HOST/admin/accounts"
+
+#### Create New Account
+
+Create a new user account.
+
+Example:
+
+    curl -X POST -H "Authorization: Bearer $API_KEY" \
+         -H "Content-Type: application/json" \
+         -d '{"username":"your_username","password":"YourSecurePassword123@","name":"Your Display Name","summary":"Your summary","language":"en","timezone":"UTC"}' \
+         "$KTISTEC_HOST/admin/accounts"
 
 ### A Note on ActivityPub
 
@@ -526,10 +582,10 @@ Give the server a *site name*, too.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/kl3yf6.png" width=640>
 
-After you name the server, you create the primary user. Ktistec
-currently supports only one user. This is intentional -- one of
-Ktistec's design goals is to promote a more fully distributed
-Fediverse.
+After you name the server, you create the primary user account. The
+primary user can create additional user accounts via the admin
+interface at `/admin/accounts`. All additional users are also
+administrators.
 
 At a minimum, you need to specify the user's *username*, *password*,
 *language*, and *timezone*. You can use a single character for the
@@ -538,6 +594,10 @@ letters, numbers and symbols, for the *password* (but more than six
 characters is better). *language* is any valid IETF BCP 47 language
 tag (e.g. "en-US" or "en").  *timezone* is any valid IANA time zone
 database string (e.g. "America/New_York").
+
+You can select an ActivityPub actor type. "Person" is the
+default. Other options are "Application", "Group", "Organization",
+and "Service".
 
 *Display name* and *summary* are optional.
 

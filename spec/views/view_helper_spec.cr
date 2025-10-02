@@ -110,6 +110,67 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".addressing" do
+    let_build(:actor, local: true)
+
+    context "when visibility is public" do
+      let(params) { {"visibility" => "public"} }
+
+      it "puts public collection in to field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(to).to contain("https://www.w3.org/ns/activitystreams#Public")
+      end
+
+      it "puts followers collection in cc field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(cc).to contain(actor.followers)
+      end
+
+      it "returns visible as true" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(visible).to be_true
+      end
+    end
+
+    context "when visibility is private" do
+      let(params) { {"visibility" => "private"} }
+
+      it "puts followers collection in to field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(to).to contain(actor.followers)
+      end
+
+      it "does not put followers collection in cc field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(cc).not_to contain(actor.followers)
+      end
+
+      it "returns visible as false" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(visible).to be_false
+      end
+    end
+
+    context "when visibility is direct" do
+      let(params) { {"visibility" => "direct"} }
+
+      it "does not put anything in to field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(to).to be_empty
+      end
+
+      it "does not put anything in cc field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(cc).to be_empty
+      end
+
+      it "returns visible as false" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(visible).to be_false
+      end
+    end
+  end
+
   describe ".visibility" do
     let_build(:object, local: true)
     let(actor) { object.attributed_to }

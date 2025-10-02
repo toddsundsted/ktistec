@@ -93,7 +93,9 @@ module Ktistec::ViewHelper
     # Derives visibility and to/cc addressing from the "visibility"
     # param.
     #
-    def addressing(params, actor, to = Set(String).new, cc = Set(String).new)
+    def addressing(params, actor)
+      to = Set(String).new
+      cc = Set(String).new
       case (visibility = params.fetch("visibility", "private"))
       when "public"
         to << PUBLIC
@@ -102,7 +104,7 @@ module Ktistec::ViewHelper
         end
       when "private"
         if (followers = actor.followers)
-          cc << followers
+          to << followers
         end
       else
         # not public, no followers

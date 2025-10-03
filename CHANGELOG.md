@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v2.4.16]
+### Changed
+- Reorganize the admin menu.
+
 ## [v2.4.15]
 ### Added
 - Add support for multiple user accounts.
@@ -448,6 +452,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v2.4.16]: https://github.com/toddsundsted/ktistec/compare/db29901e...42f1a298
 [v2.4.15]: https://github.com/toddsundsted/ktistec/compare/6e5edf44...a2d1f2f1
 [v2.4.14]: https://github.com/toddsundsted/ktistec/compare/a77299f7...f22a2091
 [v2.4.13]: https://github.com/toddsundsted/ktistec/compare/b2d4459f...249fefa2

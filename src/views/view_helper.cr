@@ -849,6 +849,14 @@ module Ktistec::ViewHelper
     "/tasks"
   end
 
+  macro admin_path
+    "/admin"
+  end
+
+  macro admin_accounts_path
+    "/admin/accounts"
+  end
+
   macro remote_activity_path(activity = nil)
     {% if activity %}
       "/remote/activities/#{{{activity}}.id}"

@@ -50,6 +50,74 @@ Spectator.describe SearchesController do
 
       before_each { HTTP::Client.objects << object.assign(content: "foo bar") }
 
+      context "given a username" do
+        let_create!(:actor, named: :alice, username: "alice")
+        let_create!(:actor, named: :alicia, username: "alicia")
+        let_create!(:actor, named: :bob, username: "bob")
+
+        it "returns matching actors" do
+          get "/search?query=al", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          body = XML.parse_html(response.body)
+          usernames = body.xpath_nodes("//div[@class='ui basic segment']//a[1]").map(&.text.strip)
+          expect(usernames).to contain_exactly("alice", "alicia")
+        end
+
+        it "returns matching actors" do
+          get "/search?query=al", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          actors = JSON.parse(response.body).as_h["actors"].as_a
+          usernames = actors.map { |a| a.as_h["username"].as_s }
+          expect(usernames).to contain_exactly("alice", "alicia")
+        end
+
+        it "returns empty results when no matches found" do
+          get "/search?query=xyz", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          body = XML.parse_html(response.body)
+          expect(body.xpath_nodes("//div[contains(@class,'error message')]").first).to match(/No actors found/)
+        end
+
+        it "returns empty results when no matches found" do
+          get "/search?query=xyz", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          json = JSON.parse(response.body).as_h
+          expect(json["msg"]).to match(/No actors found/)
+        end
+
+        it "strips leading @ from username query" do
+          get "/search?query=@al", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          body = XML.parse_html(response.body)
+          usernames = body.xpath_nodes("//div[@class='ui basic segment']//a[1]").map(&.text.strip)
+          expect(usernames).to contain_exactly("alice", "alicia")
+        end
+
+        it "strips leading @ from username query" do
+          get "/search?query=@al", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          actors = JSON.parse(response.body).as_h["actors"].as_a
+          usernames = actors.map { |a| a.as_h["username"].as_s }
+          expect(usernames).to contain_exactly("alice", "alicia")
+        end
+
+        it "rejects queries longer than 100 characters" do
+          long_query = "a" * 101
+          get "/search?query=#{long_query}", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          body = XML.parse_html(response.body)
+          expect(body.xpath_nodes("//div[contains(@class,'error message')]").first).to match(/too long/)
+        end
+
+        it "rejects queries longer than 100 characters" do
+          long_query = "a" * 101
+          get "/search?query=#{long_query}", JSON_HEADERS
+          expect(response.status_code).to eq(200)
+          json = JSON.parse(response.body).as_h
+          expect(json["msg"]).to match(/too long/)
+        end
+      end
+
       context "given a handle to an actor" do
         it "retrieves and saves an actor" do
           expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)

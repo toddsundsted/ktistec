@@ -164,6 +164,26 @@ module ActivityPub
       end
     end
 
+    # Searches for actors whose username starts with the given prefix.
+    #
+    # Returns actors in alphabetical order by username. Filters out
+    # deleted and blocked actors. Treats SQL LIKE wildcards (% and _)
+    # as literal characters.
+    #
+    def self.search_by_username(prefix, limit = 10)
+      query = <<-QUERY
+        SELECT #{columns}
+          FROM actors
+         WHERE username LIKE ? ESCAPE '\\'
+           AND deleted_at IS NULL
+           AND blocked_at IS NULL
+      ORDER BY username ASC
+         LIMIT ?
+      QUERY
+      escaped_prefix = prefix.gsub("%", "\\%").gsub("_", "\\_")
+      query_all(query, "#{escaped_prefix}%", limit)
+    end
+
     def down?
       !!down_at
     end

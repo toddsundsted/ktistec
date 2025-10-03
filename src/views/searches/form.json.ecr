@@ -1,6 +1,6 @@
 {
   <%- if message -%>
-  "msg":"<%= message%>",
+  "msg":<%= message.to_json %>,
   <%- end -%>
-  "query":"<%= query %>"
+  "query":<%= query.to_json %>
 }

@@ -32,7 +32,8 @@ class Tag
 
   # Matches on tag prefix.
   #
-  # Returns results ordered by number of occurrences.
+  # Returns results ordered by number of occurrences. Treats SQL LIKE
+  # wildcards (% and _) as literal characters.
   #
   # Count is intentionally not adjusted for subjects that are deleted,
   # blocked, etc. making the value unsuitable for presentation, in
@@ -43,11 +44,12 @@ class Tag
         SELECT name, count
           FROM tag_statistics
          WHERE type = ?
-           AND name LIKE ?
+           AND name LIKE ? ESCAPE '\\'
       ORDER BY count DESC
          LIMIT ?
     QUERY
-    args = {short_type, prefix + "%", limit}
+    escaped_prefix = prefix.gsub("%", "\\%").gsub("_", "\\_")
+    args = {short_type, escaped_prefix + "%", limit}
     Internal.log_query(query, args) do
       Ktistec.database.query_all(
         query, *args,

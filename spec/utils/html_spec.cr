@@ -244,6 +244,63 @@ Spectator.describe Ktistec::HTML do
         to eq(%Q|<p><a href="#{Ktistec.host}/tags/hashtag" class="hashtag" rel="tag">#hashtag</a> <a href="https://foo.com/actors/bar" class="mention" rel="tag">@bar@foo.com</a></p>|)
     end
 
+    context "bare URLs" do
+      it "converts bare URLs to links" do
+        content = %q|<div>http://example.com</div>|
+        expect(described_class.enhance(content).content).to eq(%q|<p><a href="http://example.com">http://example.com</a></p>|)
+      end
+
+      it "converts bare HTTPS URLs to links" do
+        content = %q|<div>https://example.com</div>|
+        expect(described_class.enhance(content).content).to eq(%q|<p><a href="https://example.com">https://example.com</a></p>|)
+      end
+
+      it "preserves adjacent text" do
+        content = %q|<div>check out https://example.com for info</div>|
+        expect(described_class.enhance(content).content).to eq(%q|<p>check out <a href="https://example.com">https://example.com</a> for info</p>|)
+      end
+
+      it "handles URLs with paths, query strings, and fragments" do
+        content = %q|<div>https://example.com/path?query=value#foo-bar</div>|
+        expect(described_class.enhance(content).content).to eq(%q|<p><a href="https://example.com/path?query=value#foo-bar">https://example.com/path?query=value#foo-bar</a></p>|)
+      end
+
+      it "strips trailing punctuation" do
+        content = %q|<div>See https://example.com.</div>|
+        expect(described_class.enhance(content).content).to eq(%q|<p>See <a href="https://example.com">https://example.com</a>.</p>|)
+      end
+
+      it "handles URLs in parentheses" do
+        content = %q|<div>(see https://example.com)</div>|
+        expect(described_class.enhance(content).content).to eq(%q|<p>(see <a href="https://example.com">https://example.com</a>)</p>|)
+      end
+
+      it "handles multiple URLs in one text node" do
+        content = %q|<div>Visit https://foo.com and https://bar.com</div>|
+        expect(described_class.enhance(content).content).to eq(%q|<p>Visit <a href="https://foo.com">https://foo.com</a> and <a href="https://bar.com">https://bar.com</a></p>|)
+      end
+
+      it "handles URLs mixed with hashtags and mentions" do
+        content = %q|<div>Check https://example.com #cool @user@host.com</div>|
+        expect(described_class.enhance(content).content).to eq(%Q|<p>Check <a href="https://example.com">https://example.com</a> <a href="#{Ktistec.host}/tags/cool" class="hashtag" rel="tag">#cool</a> <a href="https://host.com/actors/user" class="mention" rel="tag">@user@host.com</a></p>|)
+      end
+
+      it "skips URLs in links" do
+        content = %q|<a href="https://example.com">https://example.com</a>|
+        expect(described_class.enhance(content).content).to eq(%q|<a href="https://example.com">https://example.com</a>|)
+      end
+
+      it "skips URLs in pre blocks" do
+        content = %q|<pre>https://example.com</pre>|
+        expect(described_class.enhance(content).content).to eq(%q|<pre>https://example.com</pre>|)
+      end
+
+      it "skips URLs in code blocks" do
+        content = %q|<code>https://example.com</code>|
+        expect(described_class.enhance(content).content).to eq(%q|<code>https://example.com</code>|)
+      end
+    end
+
     context "links to local objects/actors" do
       let_create(:actor, local: true)
       let_create(:object, owner: actor, local: true)

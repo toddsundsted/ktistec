@@ -20,11 +20,14 @@ a {
 }
 
 /* Buttons */
-.ui.primary.button, .ui.primary.buttons .button {
+.ui.primary.button, .ui.primary.buttons .button, .ui.button {
     background-color: var(--semantic-primary);
     &:hover {
         background-color: hsl(from var(--semantic-primary) h s calc(l - 10));
     }
+}
+.ui.button {
+    color: var(--text-primary);
 }
 
 /* Cards and segments */
@@ -83,6 +86,27 @@ trix-editor {
     }
 }
 
+/* Trix Toolbar */
+trix-toolbar {
+    .trix-toolbar-container {
+        button.trix-active {
+            background-color: var(--semantic-primary) !important;
+        }
+        button:hover {
+            background-color: hsl(from var(--semantic-primary) h s 50%) !important;
+        }
+    }
+    .trix-dialog {
+        background-color: var(--bg-transparent) !important;
+        color: var(--text-primary) !important;
+    }
+    .trix-input, .trix-button {
+        background-color: var(--bg-transparent) !important;
+        color: var(--text-primary) !important;
+        border-color: var(--border-color) !important
+    }
+}
+
 /* Labels */
 
 .ui.labels .label {
@@ -113,6 +137,16 @@ trix-editor {
     color: var(--text-primary) !important;
     .item {
         color: var(--text-primary) !important;
+    }
+}
+
+/* Admin Menu */
+.ui.very.relaxed.list > .item > .content {
+    a {
+        color: var(--semantic-primary) !important;
+    }
+    &.description {
+        color: var(--text-primary);
     }
 }
 

@@ -9,6 +9,50 @@ class ObjectsController
 
   skip_auth ["/objects/:id", "/objects/:id/replies", "/objects/:id/thread"], GET
 
+  # Authorizes object access.
+  #
+  # Returns the object if the user is authorized to view it, `nil`
+  # otherwise.
+  #
+  private def self.get_object(env, iri_or_id)
+    if (object = ActivityPub::Object.find?(iri_or_id, include_deleted: true))
+      if (object.visible && !object.draft? && !object.reply?) ||
+         ((account = env.account?) &&
+          (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
+        object
+      end
+    end
+  end
+
+  # Authorizes object access for editing.
+  #
+  # Returns the object if the user is authorized to edit it, `nil`
+  # otherwise.
+  #
+  private def self.get_object_editable(env, iri_or_id)
+    if (object = ActivityPub::Object.find?(iri_or_id))
+      if (account = env.account?) && account.actor == object.attributed_to?
+        object
+      end
+    end
+  end
+
+  # Authorizes object for approval/unapproval.
+  #
+  # Returns the object if the user is authorized to approve/unapprove
+  # it, `nil` otherwise.
+  #
+  private def self.get_object_approvable(env, iri_or_id)
+    if (object = ActivityPub::Object.find?(iri_or_id)) && object.in_reply_to?
+      if (account = env.account?)
+        thread = object.thread(for_actor: account.actor)
+        if thread.first.attributed_to? == account.actor
+          object
+        end
+      end
+    end
+  end
+
   post "/objects" do |env|
     object = ActivityPub::Object::Note.new(
       iri: "#{host}/objects/#{id}",
@@ -73,7 +117,7 @@ class ObjectsController
   end
 
   get "/objects/:id/edit" do |env|
-    unless (object = get_editable(env, iri_param(env, "/objects")))
+    unless (object = get_object_editable(env, iri_param(env, "/objects")))
       not_found
     end
 
@@ -81,7 +125,7 @@ class ObjectsController
   end
 
   post "/objects/:id" do |env|
-    unless (object = get_editable(env, iri_param(env))) && object.draft?
+    unless (object = get_object_editable(env, iri_param(env))) && object.draft?
       not_found
     end
 
@@ -105,7 +149,7 @@ class ObjectsController
   end
 
   delete "/objects/:id" do |env|
-    unless (object = get_editable(env, iri_param(env))) && object.draft?
+    unless (object = get_object_editable(env, iri_param(env))) && object.draft?
       not_found
     end
 
@@ -115,7 +159,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id" do |env|
-    unless (object = get_remote_object(env, id_param(env)))
+    unless (object = get_object(env, id_param(env)))
       not_found
     end
 
@@ -123,7 +167,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id/thread" do |env|
-    unless (object = get_remote_object(env, id_param(env)))
+    unless (object = get_object(env, id_param(env))) && !object.draft?
       not_found
     end
 
@@ -137,7 +181,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id/reply" do |env|
-    unless (object = get_remote_object(env, id_param(env)))
+    unless (object = get_object(env, id_param(env))) && !object.draft?
       not_found
     end
 
@@ -147,7 +191,7 @@ class ObjectsController
   post "/remote/objects/:id/approve" do |env|
     actor = env.account.actor
 
-    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
+    not_found unless (object = get_object_approvable(env, id_param(env)))
 
     redirect back_path if actor.approve(object)
 
@@ -157,7 +201,7 @@ class ObjectsController
   post "/remote/objects/:id/unapprove" do |env|
     actor = env.account.actor
 
-    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
+    not_found unless (object = get_object_approvable(env, id_param(env)))
 
     redirect back_path if actor.unapprove(object)
 
@@ -194,7 +238,7 @@ class ObjectsController
   end
 
   private macro check_thread
-    unless (object = ActivityPub::Object.find?(id_param(env))) && !object.draft?
+    unless (object = get_object(env, id_param(env))) && !object.draft?
       not_found
     end
     thread = object.thread(for_actor: env.account.actor)
@@ -261,7 +305,7 @@ class ObjectsController
   end
 
   post "/remote/objects/:id/translation/create" do |env|
-    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
+    not_found unless (object = get_object(env, id_param(env)))
 
     object.translations.each(&.destroy)
 
@@ -287,7 +331,7 @@ class ObjectsController
   end
 
   post "/remote/objects/:id/translation/clear" do |env|
-    not_found unless (object = ActivityPub::Object.find?(id_param(env)))
+    not_found unless (object = get_object(env, id_param(env)))
 
     object.translations.each(&.destroy)
 
@@ -309,37 +353,5 @@ class ObjectsController
       "canonical_path" => params["canonical-path"]?.try(&.as(String).presence),
       "in_reply_to_iri" => params["in-reply-to"]?.try(&.as(String).presence),
     }.compact
-  end
-
-  private def self.get_editable(env, iri_or_id)
-    if (object = ActivityPub::Object.find?(iri_or_id))
-      if env.account.actor == object.attributed_to?
-        object
-      end
-    end
-  end
-
-  private def self.get_object(env, iri_or_id)
-    if (object = ActivityPub::Object.find?(iri_or_id, include_deleted: true))
-      if (object.visible && !object.draft? && !object.reply?) ||
-         ((account = env.account?) &&
-          (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
-        object
-      end
-    end
-  end
-
-  private def self.get_remote_object(env, iri_or_id)
-    if (object = ActivityPub::Object.find?(iri_or_id, include_deleted: true))
-      if (object.visible && !object.draft?) ||
-         ((account = env.account?) &&
-          ((account.actor == object.attributed_to? && !object.draft?) || account.actor.in_inbox?(object)))
-        object
-      end
-    end
-  end
-
-  private def self.get_account(env)
-    Account.find?(username: env.params.url["username"]?)
   end
 end

@@ -1,4 +1,3 @@
-- title = env.params.url["relationship"].titleize
 - content_for "title" do
   = title
 - if related.empty? && title == "Followers"

@@ -66,6 +66,104 @@ Spectator.describe Relationship::Social::Follow do
     end
   end
 
+  context ".followers_for" do
+    let_create(:actor, named: followed_actor)
+    let_create(:actor, named: follower1)
+    let_create(:actor, named: follower2)
+
+    context "with multiple followers" do
+      let_create!(:follow_relationship, named: nil, actor: follower1, object: followed_actor, confirmed: true)
+      let_create!(:follow_relationship, named: nil, actor: follower2, object: followed_actor, confirmed: false)
+
+      it "returns followers for the given actor" do
+        followers = described_class.followers_for(followed_actor.iri)
+        expect(followers.size).to eq(2)
+        expect(followers.map(&.from_iri)).to contain_exactly(follower2.iri, follower1.iri)
+      end
+
+      it "supports pagination" do
+        followers = described_class.followers_for(followed_actor.iri, page: 1, size: 1)
+        expect(followers.size).to eq(1)
+        expect(followers.more?).to be_true
+      end
+    end
+  end
+
+  context ".following_for" do
+    let_create(:actor, named: following_actor)
+    let_create(:actor, named: followed1)
+    let_create(:actor, named: followed2)
+
+    context "with multiple following" do
+      let_create!(:follow_relationship, named: nil, actor: following_actor, object: followed1, confirmed: true)
+      let_create!(:follow_relationship, named: nil, actor: following_actor, object: followed2, confirmed: false)
+
+      it "returns following for the given actor" do
+        following = described_class.following_for(following_actor.iri)
+        expect(following.size).to eq(2)
+        expect(following.map(&.to_iri)).to contain_exactly(followed2.iri, followed1.iri)
+      end
+
+      it "supports pagination" do
+        following = described_class.following_for(following_actor.iri, page: 1, size: 1)
+        expect(following.size).to eq(1)
+        expect(following.more?).to be_true
+      end
+    end
+  end
+
+  context ".followers_since" do
+    let_create(:actor, named: followed_actor)
+    let_create(:actor, named: follower1)
+    let_create(:actor, named: follower2)
+
+    context "with followers created at different times" do
+      let_create!(:follow_relationship, named: old_follow, actor: follower1, object: followed_actor, created_at: 2.days.ago)
+      let_create!(:follow_relationship, named: new_follow, actor: follower2, object: followed_actor, created_at: 1.hour.ago)
+
+      it "returns count since timestamp" do
+        count = described_class.followers_since(followed_actor.iri, 1.day.ago)
+        expect(count).to eq(1)
+      end
+
+      it "returns total number" do
+        count = described_class.followers_since(followed_actor.iri, 3.days.ago)
+        expect(count).to eq(2)
+      end
+
+      it "returns zero" do
+        count = described_class.followers_since(followed_actor.iri, Time.utc)
+        expect(count).to eq(0)
+      end
+    end
+  end
+
+  context ".following_since" do
+    let_create(:actor, named: following_actor)
+    let_create(:actor, named: followed1)
+    let_create(:actor, named: followed2)
+
+    context "with following created at different times" do
+      let_create!(:follow_relationship, named: old_follow, actor: following_actor, object: followed1, created_at: 2.days.ago)
+      let_create!(:follow_relationship, named: new_follow, actor: following_actor, object: followed2, created_at: 1.hour.ago)
+
+      it "returns count since timestamp" do
+        count = described_class.following_since(following_actor.iri, 1.day.ago)
+        expect(count).to eq(1)
+      end
+
+      it "returns total number" do
+        count = described_class.following_since(following_actor.iri, 3.days.ago)
+        expect(count).to eq(2)
+      end
+
+      it "returns zero" do
+        count = described_class.following_since(following_actor.iri, Time.utc)
+        expect(count).to eq(0)
+      end
+    end
+  end
+
   describe "#accepted?" do
     let_create!(:follow_relationship)
 

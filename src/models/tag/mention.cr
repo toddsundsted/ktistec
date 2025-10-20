@@ -85,6 +85,34 @@ class Tag
       ActivityPub::Object.query_and_paginate(query, name, page: page, size: size)
     end
 
+    # Returns the count of objects with the given mention since the
+    # given time.
+    #
+    # Uses the same filters as `all_objects(name, page, size)` but adds
+    # a time-based filter on the tag's `created_at` timestamp.
+    #
+    # Includes private (not visible) objects for consistency.
+    #
+    def self.all_objects(name, since : Time)
+      query = <<-QUERY
+        SELECT count(*)
+          FROM objects AS o
+          JOIN tags AS t
+            ON t.subject_iri = o.iri
+           AND t.type = '#{self}'
+          JOIN actors AS a
+            ON a.iri = o.attributed_to_iri
+         WHERE t.name = ?
+           AND o.published IS NOT NULL
+           AND o.deleted_at IS NULL
+           AND o.blocked_at IS NULL
+           AND a.deleted_at IS NULL
+           AND a.blocked_at IS NULL
+           AND t.created_at > ?
+      QUERY
+      ActivityPub::Object.scalar(query, name, since).as(Int64)
+    end
+
     # Returns the count of objects with the given mention.
     #
     # Uses the statistics table since there is no high cardinality way to

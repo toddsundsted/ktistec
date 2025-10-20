@@ -45,3 +45,20 @@
     .ui.green.ok.inverted.button
       i.checkmark.icon
       | Yes
+.ui.basic.tiny.delete-oauth-client.modal
+  .header
+    i.trash.icon
+    | Delete OAuth Client
+  .content
+    p
+      | Are you sure you want to delete the OAuth client
+        <strong class="client-name">[Client Name]</strong>?
+        This action cannot be undone and will revoke all
+        access tokens for this client.
+  .actions
+    .ui.red.basic.cancel.inverted.button
+      i.remove.icon
+      | No
+    .ui.green.ok.inverted.button
+      i.checkmark.icon
+      | Yes

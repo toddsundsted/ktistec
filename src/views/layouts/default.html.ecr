@@ -28,7 +28,8 @@
     <body class="dimmable">
         <%= render "src/views/partials/modals.html.slang" %>
         <%= render "src/views/partials/header.html.slang" %>
-        <%- wide = env.request.path.starts_with?("/.design-system") -%>
+        <%= render "src/views/partials/banner.html.slang" %>
+        <%- wide = (path = env.request.path).starts_with?("/.design-system") || path.starts_with?("/admin/") -%>
         <div class="<%= wide ? "ui container" : "ui text container" %>">
             <%= content %>
         </div>

@@ -24,16 +24,16 @@ Spectator.describe Task::UpdateMetrics do
     end
   end
 
-  describe ".schedule_unless_exists" do
+  describe ".ensure_scheduled" do
     it "schedules a new task" do
-      expect{described_class.schedule_unless_exists}.to change{described_class.count}.by(1)
+      expect{described_class.ensure_scheduled}.to change{described_class.count}.by(1)
     end
 
     context "given an existing task" do
       before_each { described_class.new.schedule }
 
       it "does not schedule a new task" do
-        expect{described_class.schedule_unless_exists}.not_to change{described_class.count}
+        expect{described_class.ensure_scheduled}.not_to change{described_class.count}
       end
     end
   end
@@ -96,6 +96,24 @@ Spectator.describe Task::UpdateMetrics do
         it "increments point value" do
           expect{subject.perform}.to change{Point.count}.by(4)
           expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 1, 3])
+        end
+      end
+
+      context "when account has been terminated" do
+        before_each { account.destroy }
+
+        it "does not raise an error" do
+          expect{subject.perform}.not_to raise_error
+        end
+
+        it "does not create points for orphaned relationships" do
+          expect{subject.perform}.not_to change{Point.count}
+          expect(Point.chart(inbox).map(&.value)).to be_empty
+        end
+
+        it "does not set the last_id" do
+          subject.perform
+          expect(subject.last_id).not_to be_nil
         end
       end
 

@@ -174,6 +174,67 @@ Spectator.describe Tag::Mention do
     end
   end
 
+  describe ".all_objects with since parameter" do
+    create_object_with_mentions(1, "foo@remote")
+    create_object_with_mentions(2, "foo@remote", "bar@remote")
+    create_object_with_mentions(3, "foo@remote")
+
+    let(since) { Time.utc(2016, 2, 15, 10, 30, 0) }
+
+    before_each do
+      described_class.where(name: "foo@remote", subject_iri: object1.iri).first.assign(created_at: since - 1.5.hours).save
+      described_class.where(name: "foo@remote", subject_iri: object2.iri).first.assign(created_at: since + 30.minutes).save
+      described_class.where(name: "bar@remote", subject_iri: object2.iri).first.assign(created_at: since + 30.minutes).save
+      described_class.where(name: "foo@remote", subject_iri: object3.iri).first.assign(created_at: since + 1.5.hours).save
+    end
+
+    it "returns count of objects mentioned since given time" do
+      expect(described_class.all_objects("foo@remote", since)).to eq(2)
+    end
+
+    it "returns count of objects mentioned since given time" do
+      expect(described_class.all_objects("bar@remote", since)).to eq(1)
+    end
+
+    it "returns zero when no objects mentioned since given time" do
+      expect(described_class.all_objects("foo@remote", since + 3.hours)).to eq(0)
+    end
+
+    it "returns zero for non-existent mention" do
+      expect(described_class.all_objects("nonexistent@remote", since - 3.hours)).to eq(0)
+    end
+
+    it "filters out draft objects" do
+      object2.assign(published: nil).save
+      expect(described_class.all_objects("foo@remote", since)).to eq(1)
+    end
+
+    it "filters out deleted objects" do
+      object2.delete!
+      expect(described_class.all_objects("foo@remote", since)).to eq(1)
+    end
+
+    it "filters out blocked objects" do
+      object2.block!
+      expect(described_class.all_objects("foo@remote", since)).to eq(1)
+    end
+
+    it "filters out objects with deleted attributed to actors" do
+      author.delete!
+      expect(described_class.all_objects("foo@remote", since)).to eq(0)
+    end
+
+    it "filters out objects with blocked attributed to actors" do
+      author.block!
+      expect(described_class.all_objects("foo@remote", since)).to eq(0)
+    end
+
+    it "filters out objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.all_objects("foo@remote", since)).to eq(0)
+    end
+  end
+
   describe ".all_objects_count" do
     create_object_with_mentions(1, "foo@remote", "bar@remote")
     create_object_with_mentions(2, "foo@remote")

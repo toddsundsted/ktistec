@@ -12,7 +12,7 @@ Spectator.describe ActivityPub::Object do
   setup_spec
 
   describe "#source=" do
-    subject { described_class.new(iri: "https://test.test/objects/#{random_string}") }
+    subject { Factory.build(:object, local: true) }
     let_create!(:actor, named: :foo, iri: "https://bar.com/foo", urls: ["https://bar.com/@foo"], username: "foo")
     let_create!(:actor, named: :bar, iri: "https://foo.com/bar", urls: ["https://foo.com/@bar"], username: "bar")
     let(source) { ActivityPub::Object::Source.new("foobar #foobar @foo@bar.com", "text/html") }
@@ -49,12 +49,68 @@ Spectator.describe ActivityPub::Object do
       expect{subject.assign(iri: "https://remote/object", source: source).save}.not_to change{subject.content}
     end
 
-    context "addressing (to)" do
+    context "addressing" do
       let_create!(:mention, subject: subject, href: bar.iri, name: bar.username)
 
       it "replaces mentions" do
         subject.assign(to: ["https://test.test/actor", "https://foo.com/bar"], source: source).save
         expect(subject.to).to eq(["https://test.test/actor", "https://bar.com/foo"])
+      end
+
+      let(followers) { subject.attributed_to.followers.not_nil! }
+
+      context "when object is public" do
+        before_each do
+          subject.assign(
+            to: ["https://www.w3.org/ns/activitystreams#Public"],
+            cc: [followers],
+            source: source
+          ).save
+        end
+
+        it "sets the to field" do
+          expect(subject.to).to contain_exactly("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "sets the cc field" do
+          expect(subject.cc).to contain_exactly(followers, "https://bar.com/foo")
+        end
+      end
+
+      context "when object is private" do
+        before_each do
+          subject.assign(
+            to: [followers],
+            cc: [] of String,
+            source: source
+          ).save
+        end
+
+        it "sets the to field" do
+          expect(subject.to).to contain_exactly(followers)
+        end
+
+        it "sets the cc field" do
+          expect(subject.cc).to contain_exactly("https://bar.com/foo")
+        end
+      end
+
+      context "when object is direct" do
+        before_each do
+          subject.assign(
+            to: [] of String,
+            cc: [] of String,
+            source: source
+          ).save
+        end
+
+        it "sets the to field" do
+          expect(subject.to).to contain_exactly("https://bar.com/foo")
+        end
+
+        it "sets the cc field" do
+          expect(subject.cc).to be_empty
+        end
       end
     end
   end

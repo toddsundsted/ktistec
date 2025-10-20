@@ -26,6 +26,30 @@ class Task
     @[Insignificant]
     property failures : Array(Failure) { [] of Failure }
 
+    # Determines if a recipient should be marked as "down" based on
+    # recent delivery history.
+    #
+    # A recipient is considered "down" if there are 3+ delivery
+    # failures spanning at least 80 hours, with no successful
+    # deliveries to that recipient since the earliest failure.
+    #
+    # A delivery is deemed successful when the recipient is not in the
+    # failures list.
+    #
+    def self.is_recipient_down?(recipient_iri : String, tasks : Array(Task)) : Bool
+      failures = tasks.flat_map(&.failures).select(&.recipient.==(recipient_iri))
+      return false if failures.size < 3
+
+      earliest = failures.min_by(&.timestamp).timestamp
+      latest = failures.max_by(&.timestamp).timestamp
+      return false if latest - earliest < 80.hours
+
+      !tasks.any? do |task|
+        next false if task.created_at <= earliest
+        !task.failures.any?(&.recipient.==(recipient_iri))
+      end
+    end
+
     def transfer(activity, from transferer, to recipients)
       actors = {} of String => ActivityPub::Actor
 
@@ -73,29 +97,10 @@ class Task
       end
 
       unless failures.empty? || actors.empty?
-        account = Account.find(iri: transferer.iri)
-        timezone = Time::Location.load(account.timezone)
-
-        conditions = "running = 0 AND complete = 1 AND failures != '[]' AND created_at > datetime('now', '-10 days')"
-
-        days = self.class.where(conditions)
-          .group_by do |task|
-            task.created_at.in(timezone).at_beginning_of_day
-          end
-
-        # for each recent failing recipient, count up the number of
-        # recent days past with failures for that recipient. if there
-        # are more than two, mark the recipient as down.
-
+        conditions = "running = 0 AND complete = 1 AND created_at > datetime('now', '-10 days')"
+        tasks = self.class.where(conditions)
         failures.map(&.recipient).each do |recipient|
-          count = days
-            .transform_values do |tasks|
-              tasks.any?(&.failures.any?(&.recipient.==(recipient)))
-            end
-            .reduce(0) do |count, (_, failure)|
-              failure ? count + 1 : count
-            end
-          if count > 2
+          if Task::Transfer.is_recipient_down?(recipient, tasks)
             actors[recipient]?.try(&.down!)
           end
         end

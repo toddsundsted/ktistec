@@ -20,7 +20,7 @@ Spectator.describe Task do
     )
   end
 
-  describe ".schedule_unless_exists" do
+  describe ".ensure_scheduled" do
     class SingletonTask < ::Task
       include ::Task::Singleton
 
@@ -31,10 +31,10 @@ Spectator.describe Task do
 
     let(future_time) { 1.day.from_now }
 
-    let!(task) { SingletonTask.instance.assign(next_attempt_at: future_time) }
+    let!(task) { SingletonTask.new.assign(next_attempt_at: future_time).save }
 
     it "does not reset next_attempt_at" do
-      SingletonTask.schedule_unless_exists
+      SingletonTask.ensure_scheduled
       expect(task.reload!.next_attempt_at).to be_close(future_time.to_utc, delta: 1.millisecond)
     end
   end

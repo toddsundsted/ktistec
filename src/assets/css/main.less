@@ -12,8 +12,8 @@
 html { font-size: 16px; }
 
 /* space for the top menu */
-html { scroll-padding-top: 3.65rem; }
-.ui.fixed.menu + .ui.container { padding-top: 3.65rem; }
+html { scroll-padding-top: var(--header-height); }
+.ui.fixed.menu + .ui.banner { padding-top: var(--header-height); }
 
 /* sticky footer */
 body { display: flex; flex-direction: column; }
@@ -517,6 +517,17 @@ trix-editor {
 .ui.dimmer > .ui.modal.active {
     transform: scale(1.0);
     opacity: 1.0;
+}
+
+/** offline banner **/
+.ui.banner .message {
+  text-align: center;
+  background-color: var(--color-yellow);
+  display: none;
+}
+
+body.offline .ui.banner .message {
+  display: block !important;
 }
 
 /** filter terms **/

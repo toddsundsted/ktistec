@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.0.0]
+### Added
+- Add OAuth 2.1 authentication for use with 3rd-party tools.
+  - Cleanup task for removing expired access tokens and old clients.
+  - Admin page for creating/managing OAuth clients.
+- Add Model Context Protocol (MCP) server functionality.
+  - Resource support for ActivityPub actors and objects, as well as
+    registered users and server information.
+  - Tool support for counting and paginating collections (timeline,
+    likes, announces, etc.).
+  - Prompt support demonstrating "What's new?" functionality.
+  - OAuth2-authenticated access for secure integration.
+
 ## [v2.4.16]
 ### Changed
 - Reorganize the admin menu.

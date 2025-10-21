@@ -122,6 +122,10 @@ def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **
   )
 end
 
+def person_factory(**options)
+  actor_factory(ActivityPub::Actor::Person, **options)
+end
+
 # object factories
 
 def object_factory(clazz = ActivityPub::Object, iri = nil, attributed_to_iri = nil, attributed_to = false, visible = true, local = nil, **options)
@@ -393,6 +397,16 @@ end
 def account_factory(clazz = Account, actor_iri = nil, actor = false, username = random_username, password = random_password, language = "en", **options)
   actor = actor_factory(username: username, local: true) unless actor_iri || actor.nil? || actor
   clazz.new(**{actor_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, actor: actor, username: username, password: password, language: language}.merge(options))
+end
+
+# oauth2 factories
+
+def oauth2_provider_client_factory(clazz = OAuth2::Provider::Client, **options)
+  clazz.new(**{client_id: random_string, client_secret: random_string, client_name: random_string, redirect_uris: "https://example.com/callback", scope: "read"}.merge(options))
+end
+
+def oauth2_provider_access_token_factory(clazz = OAuth2::Provider::AccessToken, *, client, account, **options)
+  clazz.new(**{token: "token", client_id: client.id, account_id: account.id, expires_at: Time.utc, scope: "read"}.merge(options))
 end
 
 # Helpers methods for common operations.

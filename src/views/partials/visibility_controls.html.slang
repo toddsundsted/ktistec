@@ -1,6 +1,6 @@
 crystal:
   _public = _private = _direct = false
-  case visibility(object.attributed_to, object.to, object.cc)
+  case visibility(object.attributed_to, object)
   when "private"
     _private = "checked"
   when "direct"

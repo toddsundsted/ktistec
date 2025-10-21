@@ -1,6 +1,27 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.1.0]
+This is the first release after merging the `main_3.x` branch. The
+merge included the following previously unreleased changes:
+
+### Added
+- Add a small banner to highlight "offline" status.
+- Support YAML MCP prompts and hot-reloading.
+
+## [v3.0.0]
+### Added
+- Add OAuth 2.1 authentication for use with 3rd-party tools.
+  - Cleanup task for removing expired access tokens and old clients.
+  - Admin page for creating/managing OAuth clients.
+- Add Model Context Protocol (MCP) server functionality.
+  - Resource support for ActivityPub actors and objects, as well as
+    registered users and server information.
+  - Tool support for counting and paginating collections (timeline,
+    likes, announces, etc.).
+  - Prompt support demonstrating "What's new?" functionality.
+  - OAuth2-authenticated access for secure integration.
+
 ## [v2.4.16]
 ### Changed
 - Reorganize the admin menu.
@@ -452,6 +473,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.0.0]: https://github.com/toddsundsted/ktistec/compare/d7341dd1...2b777537
 [v2.4.16]: https://github.com/toddsundsted/ktistec/compare/db29901e...42f1a298
 [v2.4.15]: https://github.com/toddsundsted/ktistec/compare/6e5edf44...a2d1f2f1
 [v2.4.14]: https://github.com/toddsundsted/ktistec/compare/a77299f7...f22a2091

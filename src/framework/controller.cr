@@ -173,8 +173,10 @@ module Ktistec
     def_response_helper(_created, "Created", 201) # requres a location
     def_response_helper(no_content, "No Content", 204)
     def_response_helper(bad_request, "Bad Request", 400)
+    def_response_helper(unauthorized, "Unauthorized", 401)
     def_response_helper(forbidden, "Forbidden", 403)
     def_response_helper(not_found, "Not Found", 404)
+    def_response_helper(_method_not_allowed, "Method Not Allowed", 405) # requires a list of allowed methods
     def_response_helper(conflict, "Conflict", 409)
     def_response_helper(unprocessable_entity, "Unprocessable Entity", 422)
     def_response_helper(server_error, "Server Error", 500)
@@ -187,6 +189,15 @@ module Ktistec
         _created {{args.splat}}{{opts.double_splat}}
       {% else %}
         _created {{args.splat}}, {{opts.double_splat}}
+      {% end %}
+    end
+
+    macro method_not_allowed(allowed_methods, *args, **opts)
+      env.response.headers.add("Allow", {{allowed_methods.join(", ")}})
+      {% if args.empty? || opts.empty? %}
+        _method_not_allowed {{args.splat}}{{opts.double_splat}}
+      {% else %}
+        _method_not_allowed {{args.splat}}, {{opts.double_splat}}
       {% end %}
     end
 

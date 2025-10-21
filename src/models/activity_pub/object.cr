@@ -167,9 +167,13 @@ module ActivityPub
         if (source = self.source) && local?
           media_type = source.media_type.split(";").map(&.strip).first?
           if media_type == "text/html"
-            # remove old mentions
+            # remove old mentions from both to and cc
+            old_mentions = self.mentions.map(&.href).compact
             if (old_to = self.to)
-              self.to = old_to - self.mentions.map(&.href).compact
+              self.to = old_to - old_mentions
+            end
+            if (old_cc = self.cc)
+              self.cc = old_cc - old_mentions
             end
 
             enhancements = Ktistec::HTML.enhance(source.content)
@@ -179,12 +183,24 @@ module ActivityPub
             self.hashtags = enhancements.hashtags
             self.mentions = enhancements.mentions
 
-            # add new mentions
-            new_to = enhancements.mentions.map(&.href).compact
-            if (old_to = self.to)
-              self.to = old_to | new_to
-            else
-              self.to = new_to
+            # add new mentions based on addressing
+            new_mentions = enhancements.mentions.map(&.href).compact
+            if new_mentions.any?
+              is_public = (to = self.to) && to.includes?("https://www.w3.org/ns/activitystreams#Public")
+              is_private = to && to.includes?(attributed_to.try(&.followers))
+              if is_public || is_private
+                if (old_cc = self.cc)
+                  self.cc = old_cc | new_mentions
+                else
+                  self.cc = new_mentions
+                end
+              else
+                if (old_to = self.to)
+                  self.to = old_to | new_mentions
+                else
+                  self.to = new_mentions
+                end
+              end
             end
           end
         end

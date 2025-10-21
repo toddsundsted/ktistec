@@ -9,6 +9,8 @@ class Task
   class UpdateMetrics < Task
     include Singleton
 
+    Log = ::Log.for(self)
+
     class State
       include JSON::Serializable
 
@@ -41,19 +43,25 @@ class Task
           Relationship.where("type IN ('#{types}') ORDER BY id")
         end
 
-      account_timezone_cache = Hash(String, {Account, Time::Location}).new do |hash, iri|
-        account = Account.find(iri: iri)
-        timezone = Time::Location.load(account.timezone)
-        hash[iri] = {account, timezone}
+      account_timezone_cache = Hash(String, {Account, Time::Location}?).new do |hash, iri|
+        if (account = Account.find?(iri: iri))
+          timezone = Time::Location.load(account.timezone)
+          hash[iri] = {account, timezone}
+        else
+          Log.info { "Skipping relationship for terminated account: #{iri}" }
+          hash[iri] = nil
+        end
       end
 
       counts = items.reduce(Hash(Key, Int32).new(0)) do |counts, relationship|
-        account, timezone = account_timezone_cache[relationship.from_iri]
-        key = Key.new(
-          "#{relationship.type.split("::").last.downcase}-#{account.username}",
-          relationship.created_at.in(timezone).at_beginning_of_day
-        )
-        counts[key] += 1
+        if (account_timezone = account_timezone_cache[relationship.from_iri])
+          account, timezone = account_timezone
+          key = Key.new(
+            "#{relationship.type.split("::").last.downcase}-#{account.username}",
+            relationship.created_at.in(timezone).at_beginning_of_day
+          )
+          counts[key] += 1
+        end
         counts
       end
 

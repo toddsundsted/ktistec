@@ -19,11 +19,13 @@
   - [API](#api)
     - [A Note on ActivityPub](#a-note-on-activitypub)
     - [Publishing an Object](#publishing-an-object)
-    - [Sharing an Object (ActivityPub `Announce`)](#sharing-an-object-activitypub-announce))
+    - [Sharing an Object (ActivityPub `Announce`)](#sharing-an-object-activitypub-announce)
     - [Liking an Object](#liking-an-object)
     - [Following an Actor](#following-an-actor)
     - [Undoing an Activity](#undoing-an-activity)
     - [Deleting](#deleting)
+  - [MCP Support](#mcp-support)
+    - [OAuth](#oauth)
   - [Prerequisites](#prerequisites)
   - [Building](#building)
     - [SQLite3 Compatibility](#sqlite3-compatibility)
@@ -283,7 +285,7 @@ The table below contains a list of supported endpoints:
 | GET    | /lookup/actor?iri=:iri      | Looks up the `actor` in the server cache identified by `iri`. |
 | GET    | /lookup/object?iri=:iri     | Looks up the `object` in the server cache identified by `iri`. |
 | GET    | /sessions                   | Gets a representation of an authentication attempt with unset `username` and `password`. |
-| POST   | /sessions                   | Attempts authentication using the supplied `username` and `password`. |
+| POST   | /sessions                   | Authenticates using the supplied `username` and `password`. |
 | DELETE | /sessions                   | Destroys the current session. |
 
 The `/sessions` endpoint is useful when doing script development
@@ -393,7 +395,7 @@ include the following fields:
 | visibility  | Optional. Controls post visibility. Values: "public", "private", "direct". |
 | sensitive   | Optional. May be `true` or `false`. Marks content as sensitive. |
 
-By default, `cc` incldues the publishing `actor`'s followers collection.
+By default, `cc` includes the publishing `actor`'s followers collection.
 
 Example:
 
@@ -500,6 +502,104 @@ Example:
     outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
     activity="{\"type\":\"Delete\",\"object\":\"https://example.com/123\"}"
     curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+
+## MCP Support
+
+Ktistec provides Model Context Protocol (MCP) server support for
+integrating Ktistec with MCP clients. Compatible clients should "just
+work" with Ktistec.
+
+**Important:** *Content generation is not currently supported.* There
+are technical issues to resolve, but for the most part I currently
+prioritize accessibility and analytics use cases.
+
+### OAuth
+
+OAuth2 authentication is required to access the MCP server from a
+compatible MCP client.
+
+### Prompts
+
+#### server_info
+
+Demonstrates how to use the MCP server to retrieve and present
+detailed information about the Ktistec server.
+
+#### whats_new
+
+Demonstrates how to use the MCP server to retrieve and summarize
+recent posts and social activity.
+
+### Resources
+
+#### ktistec://information
+
+Ktistec server instance information including version, collections
+supported, statistics, etc.
+
+#### ktistec://users/{id}
+
+User account information for registered users. Returns account details
+including username, language, timezone, and related actor information.
+Supports a single ID (`ktistec://users/123`).
+
+#### ktistec://actors/{id*}
+
+ActivityPub actor profiles including name, summary, icon, image,
+attachments/metadata, and URLs. Supports single ID (`ktistec://actors/123`) or
+comma-separated IDs for batch retrieval (`ktistec://actors/123,456,789`).
+
+#### ktistec://objects/{id*}
+
+ActivityPub objects (posts) including name, summary, content,
+attachments, and relationships. Supports single ID (`ktistec://objects/123`) or
+comma-separated IDs for batch retrieval (`ktistec://objects/123,456,789`).
+
+### Tools
+
+#### count\_collection\_since(name, since)
+
+Count items in ActivityPub collections since a given time. Use this
+tool when you want to know if new items have been added in the last
+day/week/month.
+
+**Parameters:**
+- `name` (string, required) - Name of the collection to count.
+- `since` (string, required) - RFC3339 timestamp to count from (e.g., `2024-01-01T00:00:00Z`)
+
+#### paginate\_collection(name, page, size)
+
+Paginate through collections of ActivityPub items. Use this tool when
+you want to retrieve the items in a collection.
+
+**Parameters:**
+- `name` (string, required) - Name of the collection to paginate
+- `page` (integer, optional) - Page number (defaults to 1, minimum 1)
+- `size` (integer, optional) - Number of items per page (defaults to 10, minimum 1, maximum 20)
+
+#### read\_resources(uris)
+
+Read one or more resources by URI. Supports all resource types
+including templated resources (actors, objects) and static resources
+(information, users). Supports batched reads with comma-separated
+IDs.
+
+Use this tool as a universal fallback when resources are not supported
+by an MCP client.
+
+**Parameters:**
+- `uris` (array, required) - Resource URIs to read (e.g., `['ktistec://actors/123,456', 'ktistec://objects/456,789']`)
+
+### Supported Collections
+
+  - Standard: `timeline`, `notifications`, `posts`, `drafts`, `likes`, `announces`, `followers`, `following`
+  - Dynamic: `hashtag#<name>` (e.g., `hashtag#technology`), `mention@<name>` (e.g., `mention@euripides`)
+
+### Compatibility
+
+The Ktistec MCP server works well with Claude Desktop and Claude
+Code. I have also tested it with Gemini CLI and Cursor. It also works
+with open source tools like Goose and Ollama.
 
 ## Prerequisites
 

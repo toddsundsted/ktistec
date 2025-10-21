@@ -110,6 +110,157 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".addressing" do
+    let_build(:actor, local: true)
+
+    context "when visibility is public" do
+      let(params) { {"visibility" => "public"} }
+
+      it "puts public collection in to field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(to).to contain("https://www.w3.org/ns/activitystreams#Public")
+      end
+
+      it "puts followers collection in cc field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(cc).to contain(actor.followers)
+      end
+
+      it "returns visible as true" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(visible).to be_true
+      end
+    end
+
+    context "when visibility is private" do
+      let(params) { {"visibility" => "private"} }
+
+      it "puts followers collection in to field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(to).to contain(actor.followers)
+      end
+
+      it "does not put followers collection in cc field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(cc).not_to contain(actor.followers)
+      end
+
+      it "returns visible as false" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(visible).to be_false
+      end
+    end
+
+    context "when visibility is direct" do
+      let(params) { {"visibility" => "direct"} }
+
+      it "does not put anything in to field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(to).to be_empty
+      end
+
+      it "does not put anything in cc field" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(cc).to be_empty
+      end
+
+      it "returns visible as false" do
+        visible, to, cc = self.class.addressing(params, actor)
+        expect(visible).to be_false
+      end
+    end
+  end
+
+  describe ".visibility" do
+    let_build(:object, local: true)
+    let(actor) { object.attributed_to }
+
+    context "when object addresses the public collection" do
+      it "returns public" do
+        object.assign(to: ["https://www.w3.org/ns/activitystreams#Public", "https://remote/actors/foo"], cc: nil)
+        expect(self.class.visibility(actor, object)).to eq("public")
+      end
+    end
+
+    context "when object addresses the public collection" do
+      it "returns public" do
+        object.assign(to: ["https://remote/actors/foo"], cc: ["https://www.w3.org/ns/activitystreams#Public"])
+        expect(self.class.visibility(actor, object)).to eq("public")
+      end
+    end
+
+    context "when object addresses the followers collection" do
+      it "returns private" do
+        object.assign(to: [actor.followers.not_nil!, "https://remote/actors/foo"], cc: nil)
+        expect(self.class.visibility(actor, object)).to eq("private")
+      end
+    end
+
+    context "when object addresses the followers collection" do
+      it "returns private" do
+        object.assign(to: ["https://remote/actors/foo"], cc: [actor.followers.not_nil!])
+        expect(self.class.visibility(actor, object)).to eq("private")
+      end
+    end
+
+    context "when object addresses neither the public collection nor the followers collection" do
+      it "returns direct" do
+        object.assign(to: ["https://remote/actors/foo"], cc: ["https://remote/actors/bar"])
+        expect(self.class.visibility(actor, object)).to eq("direct")
+      end
+    end
+
+    context "when both to and cc are empty arrays" do
+      it "returns direct" do
+        object.assign(to: [] of String, cc: [] of String)
+        expect(self.class.visibility(actor, object)).to eq("direct")
+      end
+    end
+
+    context "when both to and cc are nil" do
+      context "and object is not a reply" do
+        it "returns public" do
+          object.assign(to: nil, cc: nil)
+          expect(self.class.visibility(actor, object)).to eq("public")
+        end
+      end
+
+      context "and object is a reply" do
+        let_build(:object, named: :parent)
+
+        before_each { object.assign(to: nil, cc: nil, in_reply_to: parent) }
+
+        context "and parent addresses the public collection" do
+          it "returns public" do
+            object.assign(to: nil, cc: ["https://www.w3.org/ns/activitystreams#Public", "https://remote/actors/foo"])
+            expect(self.class.visibility(actor, object)).to eq("public")
+          end
+        end
+
+        context "and parent addresses the public collection" do
+          it "returns public" do
+            object.assign(to: ["https://www.w3.org/ns/activitystreams#Public"], cc: ["https://remote/actors/foo"])
+            expect(self.class.visibility(actor, object)).to eq("public")
+          end
+        end
+
+        context "and parent addresses the followers collection" do
+          it "returns direct" do
+            parent.assign(to: [actor.followers.not_nil!], cc: nil)
+            expect(self.class.visibility(actor, object)).to eq("direct")
+          end
+        end
+
+        context "and parent addresses the followers collection" do
+          it "returns direct" do
+            parent.assign(to: nil, cc: [actor.followers.not_nil!])
+            expect(self.class.visibility(actor, object)).to eq("direct")
+          end
+        end
+      end
+    end
+  end
+
   describe ".wrap_link" do
     let(link) { "https://example.com/this-is-a-url" }
 

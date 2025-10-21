@@ -259,7 +259,7 @@ module Ktistec
         @array = Array(T).new(size)
       end
 
-      delegate :<<, :each, :each_with_index, :empty?, :first, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
+      delegate :<<, :compact, :each, :each_with_index, :empty?, :first, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
 
       def map(&block : T -> U) : PaginatedArray(U) forall U
         PaginatedArray(U).new(size).tap do |array|

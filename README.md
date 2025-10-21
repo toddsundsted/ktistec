@@ -19,7 +19,7 @@
   - [API](#api)
     - [A Note on ActivityPub](#a-note-on-activitypub)
     - [Publishing an Object](#publishing-an-object)
-    - [Sharing an Object (ActivityPub `Announce`)](#sharing-an-object-activitypub-announce))
+    - [Sharing an Object (ActivityPub `Announce`)](#sharing-an-object-activitypub-announce)
     - [Liking an Object](#liking-an-object)
     - [Following an Actor](#following-an-actor)
     - [Undoing an Activity](#undoing-an-activity)
@@ -285,7 +285,7 @@ The table below contains a list of supported endpoints:
 | GET    | /lookup/actor?iri=:iri      | Looks up the `actor` in the server cache identified by `iri`. |
 | GET    | /lookup/object?iri=:iri     | Looks up the `object` in the server cache identified by `iri`. |
 | GET    | /sessions                   | Gets a representation of an authentication attempt with unset `username` and `password`. |
-| POST   | /sessions                   | Attempts authentication using the supplied `username` and `password`. |
+| POST   | /sessions                   | Authenticates using the supplied `username` and `password`. |
 | DELETE | /sessions                   | Destroys the current session. |
 
 The `/sessions` endpoint is useful when doing script development
@@ -395,7 +395,7 @@ include the following fields:
 | visibility  | Optional. Controls post visibility. Values: "public", "private", "direct". |
 | sensitive   | Optional. May be `true` or `false`. Marks content as sensitive. |
 
-By default, `cc` incldues the publishing `actor`'s followers collection.
+By default, `cc` includes the publishing `actor`'s followers collection.
 
 Example:
 
@@ -520,6 +520,11 @@ compatible MCP client.
 
 ### Prompts
 
+#### server_info
+
+Demonstrates how to use the MCP server to retrieve and present
+detailed information about the Ktistec server.
+
 #### whats_new
 
 Demonstrates how to use the MCP server to retrieve and summarize
@@ -536,6 +541,7 @@ supported, statistics, etc.
 
 User account information for registered users. Returns account details
 including username, language, timezone, and related actor information.
+Supports a single ID (`ktistec://users/123`).
 
 #### ktistec://actors/{id*}
 
@@ -593,8 +599,7 @@ by an MCP client.
 
 The Ktistec MCP server works well with Claude Desktop and Claude
 Code. I have also tested it with Gemini CLI and Cursor. It also works
-with open source tools like Goose and Ollama, but you need a hearty
-computer and a good model to effectively make use of tool calling.
+with open source tools like Goose and Ollama.
 
 ## Prerequisites
 

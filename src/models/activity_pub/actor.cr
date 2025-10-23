@@ -72,6 +72,9 @@ module ActivityPub
     end
 
     @[Persistent]
+    property shared_inbox : String?
+
+    @[Persistent]
     property inbox : String?
 
     @[Persistent]

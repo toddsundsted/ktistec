@@ -147,11 +147,11 @@ class MetricsController
         points: Point.chart(chart, *range),
         timezone: timezone(env)
       )
-    end
+    end.reject(&.points.empty?)
 
     minmax = charts.flat_map(&.points).map(&.timestamp).minmax?
 
-    range = {range[0] || minmax[0], range[1] || minmax[1]}
+    range = {range[0] || minmax.try(&.[0]), range[1] || minmax.try(&.[1])}
 
     labels = Chart.labels(*range, granularity: granularity)
 

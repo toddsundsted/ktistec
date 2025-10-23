@@ -240,6 +240,28 @@ Spectator.describe MetricsController do
         expect(datasets.map(&.dig("label"))).to contain_exactly("inbox-test-chart")
         expect(datasets.map(&.dig("data"))).to contain_exactly({"2016-02-15" => 15})
       end
+
+      context "with an older chart" do
+        let_create!(
+          :point, named: point_empty_chart,
+          chart: "inbox-older-chart",
+          timestamp: Time.utc(2010, 1, 1, 0, 0, 0),
+          value: 0
+        )
+
+        it "ignores charts with no points in the date range" do
+          get "/metrics?begin=2016-01-01&end=2017-01-01", ACCEPT_JSON
+          datasets = JSON.parse(response.body).as_a
+          expect(datasets.map(&.dig("label"))).to contain_exactly("inbox-test-chart")
+          expect(datasets.map(&.dig("label"))).not_to contain("inbox-older-chart")
+        end
+
+        it "ignores all charts when no points in the date range" do
+          get "/metrics?begin=2020-01-01&end=2020-01-31", ACCEPT_JSON
+          datasets = JSON.parse(response.body).as_a
+          expect(datasets).to be_empty
+        end
+      end
     end
   end
 end

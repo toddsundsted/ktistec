@@ -326,6 +326,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
+      expect(actor.shared_inbox).to be_nil
 
       expect(actor.attachments).not_to be_nil
       attachments = actor.attachments.not_nil!
@@ -350,6 +351,15 @@ Spectator.describe ActivityPub::Actor do
         expect(actor.urls).to eq(["url one", "url two"])
       end
     end
+
+    context "given `sharedInbox`" do
+      let(json) { super.gsub(/"inbox": "inbox link"/, %q|"endpoints": {"sharedInbox": "https://remote/shared-inbox"}, "inbox": "inbox link"|) }
+
+      it "parses the `sharedInbox` from `endpoint`s" do
+        actor = described_class.from_json_ld(json).save
+        expect(actor.shared_inbox).to eq("https://remote/shared-inbox")
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -367,6 +377,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
+      expect(actor.shared_inbox).to be_nil
 
       expect(actor.attachments).not_to be_nil
       attachments = actor.attachments.not_nil!
@@ -391,6 +402,15 @@ Spectator.describe ActivityPub::Actor do
         expect(actor.urls).to eq(["url one", "url two"])
       end
     end
+
+    context "given `sharedInbox`" do
+      let(json) { super.gsub(/"inbox": "inbox link"/, %q|"endpoints": {"sharedInbox": "https://remote/shared-inbox"}, "inbox": "inbox link"|) }
+
+      it "updates `shared_inbox`" do
+        actor = described_class.new.from_json_ld(json).save
+        expect(actor.shared_inbox).to eq("https://remote/shared-inbox")
+      end
+    end
   end
 
   describe "#to_json_ld" do
@@ -413,6 +433,14 @@ Spectator.describe ActivityPub::Actor do
 
       it "renders the array of URLs" do
         expect(actor.to_json_ld).to match(/"url":\["url one","url two"\]/)
+      end
+    end
+
+    context "given a shared inbox" do
+      before_each { actor.assign(shared_inbox: "https://remote/shared-inbox") }
+
+      it "renders `sharedInbox`" do
+        expect(actor.to_json_ld).to match(/"endpoints":\{[^}]*"sharedInbox":"https:\/\/remote\/shared-inbox"[^}]*\}/)
       end
     end
 

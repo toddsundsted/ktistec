@@ -18,6 +18,9 @@
     "publicKeyPem":<%= pem_public_key.to_json %>
   },
   <%- end -%>
+  <%- if (shared_inbox = actor.shared_inbox) -%>
+  "endpoints":{"sharedInbox":<%= shared_inbox.to_json %>},
+  <%- end -%>
   <%- if (inbox = actor.inbox) -%>
   "inbox":<%= inbox.to_json %>,
   <%- end -%>

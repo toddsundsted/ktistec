@@ -17,6 +17,7 @@ class MetricsController
       Weekly
       Monthly
       Yearly
+      Hourly
     end
 
     enum Predicate
@@ -28,6 +29,8 @@ class MetricsController
       Array(String).new.tap do |result|
         if _begin && _end
           case granularity
+          in Granularity::Hourly
+            current = _begin.at_beginning_of_hour
           in Granularity::Daily
             current = _begin.at_beginning_of_day
           in Granularity::Weekly
@@ -38,8 +41,15 @@ class MetricsController
             current = _begin.at_beginning_of_year
           end
           while (current <= _end)
-            result << current.to_s("%Y-%m-%d")
             case granularity
+            in Granularity::Hourly
+              result << current.to_s("%Y-%m-%d %H:00")
+            in Granularity::Daily, Granularity::Weekly, Granularity::Monthly, Granularity::Yearly
+              result << current.to_s("%Y-%m-%d")
+            end
+            case granularity
+            in Granularity::Hourly
+              current = current.shift(hours: 1)
             in Granularity::Daily
               current = current.shift(days: 1)
             in Granularity::Weekly
@@ -59,6 +69,8 @@ class MetricsController
         if _begin && point.timestamp >= _begin && _end && point.timestamp <= _end
           key =
             case granularity
+            in Granularity::Hourly
+              point.timestamp.in(timezone).at_beginning_of_hour
             in Granularity::Daily
               point.timestamp.in(timezone).at_beginning_of_day
             in Granularity::Weekly
@@ -79,7 +91,14 @@ class MetricsController
         in Predicate::Average
           (value[0] / value[1]).to_i32
         end
-      end.transform_keys(&.to_s("%Y-%m-%d"))
+      end.transform_keys do |key|
+        case granularity
+        in Granularity::Hourly
+          key.to_s("%Y-%m-%d %H:00")
+        in Granularity::Daily, Granularity::Weekly, Granularity::Monthly, Granularity::Yearly
+          key.to_s("%Y-%m-%d")
+        end
+      end
     end
 
     # Returns a copy of `time` representing the beginning of the week.
@@ -128,11 +147,11 @@ class MetricsController
         points: Point.chart(chart, *range),
         timezone: timezone(env)
       )
-    end
+    end.reject(&.points.empty?)
 
     minmax = charts.flat_map(&.points).map(&.timestamp).minmax?
 
-    range = {range[0] || minmax[0], range[1] || minmax[1]}
+    range = {range[0] || minmax.try(&.[0]), range[1] || minmax.try(&.[1])}
 
     labels = Chart.labels(*range, granularity: granularity)
 

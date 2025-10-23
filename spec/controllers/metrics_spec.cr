@@ -10,6 +10,14 @@ Spectator.describe MetricsController::Chart do
   alias Predicate = MetricsController::Chart::Predicate
 
   describe ".labels" do
+    it "returns the labels at hourly granularity" do
+      from_hour = Time.utc(2017, 1, 1, 10, 0, 0)
+      to_hour = Time.utc(2017, 1, 1, 13, 0, 0)
+      expect(subject.labels(from_hour, to_hour, granularity: Granularity::Hourly)).to eq([
+        "2017-01-01 10:00", "2017-01-01 11:00", "2017-01-01 12:00", "2017-01-01 13:00"
+      ])
+    end
+
     let(from) { Time.utc(2016, 12, 31) }
     let(to) { Time.utc(2017, 1, 2) }
 
@@ -37,6 +45,33 @@ Spectator.describe MetricsController::Chart do
   end
 
   describe "#data" do
+    it "returns the summated data at hourly granularity" do
+      from_hour = Time.utc(2017, 1, 1, 10, 0, 0)
+      to_hour = Time.utc(2017, 1, 1, 12, 0, 0)
+      points = [
+        Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 10, 30, 0), value: 5),
+        Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 11, 15, 0), value: 10),
+        Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 11, 45, 0), value: 15)
+      ]
+      hourly_chart = described_class.new("test-chart", points, Time::Location::UTC)
+      expect(hourly_chart.data(from_hour, to_hour, granularity: Granularity::Hourly)).to eq({
+        "2017-01-01 10:00" => 5, "2017-01-01 11:00" => 25
+      })
+    end
+
+    it "returns the averaged data at hourly granularity" do
+      from_hour = Time.utc(2017, 1, 1, 10, 0, 0)
+      to_hour = Time.utc(2017, 1, 1, 11, 0, 0)
+      points = [
+        Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 10, 15, 0), value: 10),
+        Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 10, 45, 0), value: 20)
+      ]
+      hourly_chart = described_class.new("test-chart", points, Time::Location::UTC)
+      expect(hourly_chart.data(from_hour, to_hour, granularity: Granularity::Hourly, predicate: Predicate::Average)).to eq({
+        "2017-01-01 10:00" => 15
+      })
+    end
+
     let(from) { Time.utc(2016, 12, 31) }
     let(to) { Time.utc(2017, 1, 2) }
 
@@ -59,28 +94,28 @@ Spectator.describe MetricsController::Chart do
       expect(subject.data(from, to)).to eq({"2016-12-31" => 1, "2017-01-01" => 2, "2017-01-02" => 3})
     end
 
-    it "returns the summated data at weekly granularity" do
-      expect(subject.data(from, to, granularity: Granularity::Weekly)).to eq({"2016-12-26" => 3, "2017-01-02" => 3})
-    end
-
-    it "returns the summated data at monthly granularity" do
-      expect(subject.data(from, to, granularity: Granularity::Monthly)).to eq({"2016-12-01" => 1, "2017-01-01" => 5})
-    end
-
-    it "returns the summated data at yearly granularity" do
-      expect(subject.data(from, to, granularity: Granularity::Yearly)).to eq({"2016-01-01" => 1, "2017-01-01" => 5})
-    end
-
     it "returns the averaged data at daily granularity" do
       expect(subject.data(from, to, predicate: Predicate::Average)).to eq({"2016-12-31" => 1, "2017-01-01" => 2, "2017-01-02" => 3})
+    end
+
+    it "returns the summated data at weekly granularity" do
+      expect(subject.data(from, to, granularity: Granularity::Weekly)).to eq({"2016-12-26" => 3, "2017-01-02" => 3})
     end
 
     it "returns the averaged data at weekly granularity" do
       expect(subject.data(from, to, granularity: Granularity::Weekly, predicate: Predicate::Average)).to eq({"2016-12-26" => 1, "2017-01-02" => 3})
     end
 
+    it "returns the summated data at monthly granularity" do
+      expect(subject.data(from, to, granularity: Granularity::Monthly)).to eq({"2016-12-01" => 1, "2017-01-01" => 5})
+    end
+
     it "returns the averaged data at monthly granularity" do
       expect(subject.data(from, to, granularity: Granularity::Monthly, predicate: Predicate::Average)).to eq({"2016-12-01" => 1, "2017-01-01" => 2})
+    end
+
+    it "returns the summated data at yearly granularity" do
+      expect(subject.data(from, to, granularity: Granularity::Yearly)).to eq({"2016-01-01" => 1, "2017-01-01" => 5})
     end
 
     it "returns the averaged data at yearly granularity" do

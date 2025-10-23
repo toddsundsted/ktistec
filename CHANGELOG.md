@@ -1,6 +1,18 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.1.1]
+### Added
+- Auto-link URLs in posts. (fixes [#24](https://github.com/toddsundsted/ktistec/issues/24))
+- Support searching by actor username. (fixes [#102](https://github.com/toddsundsted/ktistec/issues/102))
+- Support hourly granularity in metrics charts.
+
+### Fixed
+- Mark actor as down if refresh fails.
+- Remove draft posts from the `everything` collection.
+- Ignore charts with no points in the date range.
+- Ensure `HTTP::Client` instances are closed.
+
 ## [v3.1.0]
 This is the first release after merging the `main_3.x` branch. The
 merge included the following previously unreleased changes:
@@ -473,6 +485,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.1.1]: https://github.com/toddsundsted/ktistec/compare/f9dd19ab...cc5f45ef
 [v3.0.0]: https://github.com/toddsundsted/ktistec/compare/d7341dd1...2b777537
 [v2.4.16]: https://github.com/toddsundsted/ktistec/compare/db29901e...42f1a298
 [v2.4.15]: https://github.com/toddsundsted/ktistec/compare/6e5edf44...a2d1f2f1

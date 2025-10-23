@@ -72,6 +72,9 @@ module ActivityPub
     end
 
     @[Persistent]
+    property shared_inbox : String?
+
+    @[Persistent]
     property inbox : String?
 
     @[Persistent]
@@ -825,6 +828,7 @@ private module ActorModelHelper
       "pem_public_key" => if include_key
         Ktistec::JSON_LD.dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
       end,
+      "shared_inbox" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#endpoints", "https://www.w3.org/ns/activitystreams#sharedInbox"),
       "inbox" => Ktistec::JSON_LD.dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
       "outbox" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
       "following" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),

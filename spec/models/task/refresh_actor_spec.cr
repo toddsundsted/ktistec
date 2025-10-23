@@ -154,6 +154,17 @@ Spectator.describe Task::RefreshActor do
           Fiber.yield
         end.to change{notifications[0]}.by(1)
       end
+
+      context "when refresh fails" do
+        before_each { actor.assign(iri: "https://remote/returns-404") }
+
+        it "notifies subscribers" do
+          expect do
+            subject.perform
+            Fiber.yield
+          end.to change{notifications[0]}.by(1)
+        end
+      end
     end
 
     context "when actor is marked as down" do
@@ -168,6 +179,18 @@ Spectator.describe Task::RefreshActor do
 
         it "does not mark the actor as up" do
           expect{subject.perform}.not_to change{actor.reload!.down?}
+        end
+      end
+    end
+
+    context "when actor is marked as up" do
+      before_each { actor.up! }
+
+      context "and refresh fails" do
+        let(actor) { super.assign(iri: "https://remote/returns-404") }
+
+        it "marks the actor as down" do
+          expect{subject.perform}.to change{actor.reload!.down?}.from(false).to(true)
         end
       end
     end

@@ -93,6 +93,21 @@ Spectator.describe Tag do
       expect(Tag.match("bar")).to be_empty
     end
 
+    context "with SQL wildcard character in prefix" do
+      create_tag(5, "test_tag")
+      create_tag(6, "test%special")
+
+      it "treats underscore as literal character" do
+        results = Tag.match("test_")
+        expect(results).to contain({"test_tag", 1})
+      end
+
+      it "treats percent as literal character" do
+        results = Tag.match("test%")
+        expect(results).to contain({"test%special", 1})
+      end
+    end
+
     let_create(:object, published: Time.local)
     let_build(:tag, subject_iri: object.iri, name: "foobar")
 

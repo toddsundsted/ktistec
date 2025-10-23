@@ -157,11 +157,9 @@ Spectator.describe Task::Singleton do
 
     context "when called multiple times" do
       it "is idempotent" do
-        SingletonTask.ensure_scheduled
-        first_task = SingletonTask.current_instance
-        SingletonTask.ensure_scheduled
-        second_task = SingletonTask.current_instance
-        expect(first_task).to eq(second_task)
+        first_task = SingletonTask.ensure_scheduled
+        second_task = SingletonTask.ensure_scheduled
+        expect(first_task.id).to eq(second_task.id)
       end
     end
   end

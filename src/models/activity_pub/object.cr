@@ -262,6 +262,7 @@ module ActivityPub
              AND o.blocked_at is NULL
              AND t.deleted_at IS NULL
              AND t.blocked_at IS NULL
+             AND NOT (o.iri LIKE '#{Ktistec.host}%' AND o.published IS NULL)
         ORDER BY o.id DESC
            LIMIT ? OFFSET ?
       QUERY
@@ -284,6 +285,7 @@ module ActivityPub
              AND o.blocked_at is NULL
              AND t.deleted_at IS NULL
              AND t.blocked_at IS NULL
+             AND NOT (o.iri LIKE '#{Ktistec.host}%' AND o.published IS NULL)
       QUERY
       Object.scalar(query).as(Int64)
     end

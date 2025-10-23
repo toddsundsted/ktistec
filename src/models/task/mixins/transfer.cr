@@ -88,6 +88,8 @@ class Task
             message = "#{ex.class}: #{ex.message}: #{inbox}"
             failures << Failure.new(recipient, message)
             Log.debug { message }
+          ensure
+            client.try(&.close)
           end
         else
           message = "recipient doesn't have an inbox: #{recipient}"

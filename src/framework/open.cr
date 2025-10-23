@@ -72,6 +72,8 @@ module Ktistec
         rescue Compress::Deflate::Error | Compress::Gzip::Error
           message = "Encoding error"
           break
+        ensure
+          client.try(&.close)
         end
       end
       message =

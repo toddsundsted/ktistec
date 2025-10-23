@@ -80,6 +80,60 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe ".search_by_username" do
+    let_create!(:actor, named: :alice, username: "alice")
+    let_create!(:actor, named: :alicia, username: "alicia")
+    let_create!(:actor, named: :bob, username: "bob")
+    let_create!(:actor, named: :bobby, username: "bobby")
+
+    it "returns actors matching the prefix" do
+      results = described_class.search_by_username("al")
+      expect(results.map(&.username)).to contain_exactly("alice", "alicia")
+    end
+
+    it "returns results ordered alphabetically" do
+      results = described_class.search_by_username("al")
+      expect(results.map(&.username)).to eq(["alice", "alicia"])
+    end
+
+    it "respects the limit parameter" do
+      results = described_class.search_by_username("", limit: 2)
+      expect(results.size).to eq(2)
+    end
+
+    it "returns empty array when no matches found" do
+      results = described_class.search_by_username("xyz")
+      expect(results).to be_empty
+    end
+
+    it "excludes deleted actors" do
+      alice.delete!
+      results = described_class.search_by_username("al")
+      expect(results.map(&.username)).to eq(["alicia"])
+    end
+
+    it "excludes blocked actors" do
+      alice.block!
+      results = described_class.search_by_username("al")
+      expect(results.map(&.username)).to eq(["alicia"])
+    end
+
+    context "with SQL wildcard character in username" do
+      let_create!(:actor, named: :test_underscore, username: "test_user")
+      let_create!(:actor, named: :test_percent, username: "test%special")
+
+      it "treats underscore as literal character" do
+        results = described_class.search_by_username("test_")
+        expect(results.map(&.username)).to eq(["test_user"])
+      end
+
+      it "treats percent as literal character" do
+        results = described_class.search_by_username("test%")
+        expect(results.map(&.username)).to eq(["test%special"])
+      end
+    end
+  end
+
   let(foo_bar) do
     FooBarActor.new(
       iri: "https://test.test/#{random_string}",

@@ -59,12 +59,15 @@ canvas#charts-2 data-controller="chart"
     == datasets.to_json
 crystal:
   ranges = {
+    1.day.ago.to_s("%Y-%m-%d") => "Last 24 Hours",
+    2.days.ago.to_s("%Y-%m-%d") => "Last 48 Hours",
     7.days.ago.to_s("%Y-%m-%d") => "Last 7 Days",
     30.days.ago.to_s("%Y-%m-%d") => "Last 30 Days",
     365.days.ago.to_s("%Y-%m-%d") => "Last 365 Days",
     "" => "All Time",
   }
   granularities = {
+    "hourly" => "By Hour",
     "daily" => "By Day",
     "weekly" => "By Week",
     "monthly" => "By Month",

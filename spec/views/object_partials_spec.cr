@@ -143,17 +143,17 @@ Spectator.describe "object partials" do
     end
 
     context "given a summary" do
-      before_each { object.assign(summary: "Foo Bar Baz") }
+      before_each { object.assign(summary: "<p>Foo Bar Baz</p>") }
 
-      it "renders the summary" do
-        expect(subject.xpath_nodes("//details/summary/text()")).to have("Foo Bar Baz")
+      it "renders the summary as plain text" do
+        expect(subject.xpath_nodes("//details/summary/text()")).to have("Foo Bar Baz\n")
       end
 
       context "and a translation" do
-        let_create!(:translation, origin: object, summary: "Foo Bàr Bàz")
+        let_create!(:translation, origin: object, summary: "<p>Foo Bàr Bàz</p>")
 
-        it "renders the translation of the summary" do
-          expect(subject.xpath_nodes("//details/summary/text()")).to have("Foo Bàr Bàz")
+        it "renders the translation of the summary as plain text" do
+          expect(subject.xpath_nodes("//details/summary/text()")).to have("Foo Bàr Bàz\n")
         end
       end
     end

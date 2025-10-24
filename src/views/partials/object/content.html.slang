@@ -52,7 +52,7 @@ crystal:
         summary
           - if object.sensitive
             i.red.eye.slash.icon
-          = summary
+          = t summary
         == render "src/views/partials/object/content/body.html.slang"
     - else
       == render "src/views/partials/object/content/body.html.slang"

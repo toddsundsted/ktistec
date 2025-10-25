@@ -461,6 +461,10 @@ Spectator.describe MCP::Tools do
         paginate_request(id, "likes", args)
       end
 
+      def paginate_dislikes_request(id, args = {} of String => String | Int32)
+        paginate_request(id, "dislikes", args)
+      end
+
       def paginate_announces_request(id, args = {} of String => String | Int32)
         paginate_request(id, "announces", args)
       end
@@ -599,6 +603,29 @@ Spectator.describe MCP::Tools do
           expect(like_notification["object"]).to eq("ktistec://objects/#{object.id}")
           expect(like_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(like_notification["created_at"]).not_to be_nil
+        end
+      end
+
+      context "with a dislike in the notifications" do
+        let_create(:actor, named: bob)
+        let_create(:object, attributed_to: account.actor)
+        let_create(:dislike, actor: bob, object: object)
+
+        before_each do
+          put_in_notifications(account.actor, dislike)
+        end
+
+        it "returns dislike notification for valid request" do
+          request = paginate_notifications_request("paginate-notifications-6")
+
+          notifications = expect_paginated_response(request, 1, false)
+
+          dislike_notification = notifications.first
+          expect(dislike_notification["type"]).to eq("dislike")
+          expect(dislike_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
+          expect(dislike_notification["object"]).to eq("ktistec://objects/#{object.id}")
+          expect(dislike_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
+          expect(dislike_notification["created_at"]).not_to be_nil
         end
       end
 
@@ -956,6 +983,50 @@ Spectator.describe MCP::Tools do
 
               objects = expect_paginated_response(request, 1, true)
               # returns most recent like first
+              object_data = objects.first.as_h
+              expect(object_data["uri"]).to eq("ktistec://objects/#{post.id}")
+            end
+          end
+        end
+      end
+
+      context "with a disliked object" do
+        let_create(:object, named: disliked_post, attributed_to: account.actor, published: Time.utc)
+
+        it "is empty" do
+          request = paginate_dislikes_request("paginate-dislikes-1")
+
+          objects = expect_paginated_response(request, 0, false)
+          expect(objects).to be_empty
+        end
+
+        context "and a dislike" do
+          let_create!(:dislike, named: nil, actor: account.actor, object: disliked_post)
+
+          it "returns disliked objects" do
+            request = paginate_dislikes_request("paginate-dislikes-2")
+
+            objects = expect_paginated_response(request, 1, false)
+
+            expect(objects.size).to eq(1)
+            object_data = objects.first.as_h
+            expect(object_data["uri"]).to eq("ktistec://objects/#{disliked_post.id}")
+            expect(object_data["external_url"]).to eq(disliked_post.iri)
+            expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{disliked_post.id}")
+            expect(object_data["type"]).to eq("Object")
+            expect(object_data["attributed_to"]).to eq("ktistec://actors/#{disliked_post.attributed_to.id}")
+            expect(object_data["published"]).not_to be_nil
+          end
+
+          context "and another disliked object" do
+            let_create(:object, named: post, attributed_to: account.actor)
+            let_create!(:dislike, named: nil, actor: account.actor, object: post)
+
+            it "supports pagination for dislikes collection" do
+              request = paginate_dislikes_request("paginate-dislikes-3", {"size" => 1})
+
+              objects = expect_paginated_response(request, 1, true)
+              # returns most recent dislike first
               object_data = objects.first.as_h
               expect(object_data["uri"]).to eq("ktistec://objects/#{post.id}")
             end

@@ -266,6 +266,12 @@ module MCP
             JSON::Any.new(MCP::Resources.object_contents(liked_object))
           end
           {objects, likes.more?}
+        when "dislikes"
+          dislikes = actor.dislikes(page: page, size: size)
+          objects = dislikes.map do |disliked_object|
+            JSON::Any.new(MCP::Resources.object_contents(disliked_object))
+          end
+          {objects, dislikes.more?}
         when "announces"
           announces = actor.announces(page: page, size: size)
           objects = announces.map do |announced_object|
@@ -350,6 +356,8 @@ module MCP
           actor.drafts(since: since)
         when "likes"
           actor.likes(since: since)
+        when "dislikes"
+          actor.dislikes(since: since)
         when "announces"
           actor.announces(since: since)
         when "followers"
@@ -546,6 +554,14 @@ module MCP
       when Relationship::Content::Notification::Like
         JSON::Any.new({
           "type" => JSON::Any.new("like"),
+          "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
+          "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
+          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+          "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+        })
+      when Relationship::Content::Notification::Dislike
+        JSON::Any.new({
+          "type" => JSON::Any.new("dislike"),
           "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
           "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),

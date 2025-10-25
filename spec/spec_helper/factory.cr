@@ -461,6 +461,10 @@ def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Act
   Factory.create(:notification_like, owner: owner, activity: activity)
 end
 
+def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Dislike)
+  Factory.create(:notification_dislike, owner: owner, activity: activity)
+end
+
 def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Follow)
   Factory.create(:notification_follow, owner: owner, activity: activity)
 end

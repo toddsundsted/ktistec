@@ -325,6 +325,32 @@ module ActivityPub
       ).as(Int64)
     end
 
+    # Returns the objects that this actor has disliked.
+    #
+    # Returns objects in reverse chronological order (most recent
+    # first). Filters out deleted/blocked objects, and objects by
+    # deleted/blocked actors. Also filters out dislikes that have
+    # been undone.
+    #
+    def dislikes(page = 1, size = 10)
+      Object.query_and_paginate(
+        activity_query(ActivityPub::Activity::Dislike),
+        self.iri, page: page, size: size
+      )
+    end
+
+    # Returns the count of objects that this actor has disliked since the
+    # given date.
+    #
+    # See `#dislikes(page, size)` for further details.
+    #
+    def dislikes(since : Time)
+      Object.scalar(
+        activity_count_query(ActivityPub::Activity::Dislike),
+        iri, since
+      ).as(Int64)
+    end
+
     # Returns the objects that this actor has announced (boosted).
     #
     # Returns objects in reverse chronological order (most recent

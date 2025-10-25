@@ -71,6 +71,25 @@ Spectator.describe "notifications partial" do
       end
     end
 
+    context "given a dislike notification" do
+      let_build(:dislike)
+      let_create!(:notification_dislike, owner: actor, activity: dislike)
+
+      it "renders a disliking message" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
+          to eq("#{dislike.actor.display_name} disliked your post.")
+      end
+
+      context "given another dislike notification" do
+        let_create!(:dislike, named: another, object: dislike.object)
+
+        it "renders a disliking message" do
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
+            to eq("#{dislike.actor.display_name} and 1 other disliked your post.")
+        end
+      end
+    end
+
     context "given a mention notification" do
       let_build(:object)
       let_create!(:notification_mention, owner: actor, object: object)

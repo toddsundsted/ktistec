@@ -249,6 +249,10 @@ def notification_like_factory(**options)
   notification_factory(Relationship::Content::Notification::Like, ActivityPub::Activity::Like, **options)
 end
 
+def notification_dislike_factory(**options)
+  notification_factory(Relationship::Content::Notification::Dislike, ActivityPub::Activity::Dislike, **options)
+end
+
 def notification_follow_factory(**options)
   notification_factory(Relationship::Content::Notification::Follow, ActivityPub::Activity::Follow, **options)
 end

@@ -222,6 +222,31 @@ rule "undo/like"
   retract NotificationLike, owner: actor, activity: activity
 end
 
+rule "dislike, step 1"
+  condition activity, InMailboxOf, actor
+  condition DislikeActivity, activity, object: object
+  condition Object, object, attributed_to: actor
+  # remove any previous notifications about this object
+  condition DislikeActivity, previous, object: object
+  condition NotificationDislike, owner: actor, activity: previous
+  retract NotificationDislike, owner: actor, activity: previous
+end
+
+rule "dislike, step 2"
+  condition activity, InMailboxOf, actor
+  condition DislikeActivity, activity, object: object
+  condition Object, object, attributed_to: actor
+  none NotificationDislike, owner: actor, activity: activity
+  assert NotificationDislike, owner: actor, activity: activity
+end
+
+rule "undo/dislike"
+  condition undo, InMailboxOf, actor
+  condition UndoActivity, undo, object: activity
+  any NotificationDislike, owner: actor, activity: activity
+  retract NotificationDislike, owner: actor, activity: activity
+end
+
 rule "follow"
   condition activity, InMailboxOf, actor
   condition FollowActivity, activity, object: actor

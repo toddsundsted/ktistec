@@ -302,9 +302,13 @@ You can configure a new Ktistec server entirely via the API.
 First, configure the server host name and site name (no authentication
 required):
 
-    curl -X POST -H "Content-Type: application/json" \
-         -d '{"host":"https://your-domain.com","site":"Your Site Name"}' \
-         "$KTISTEC_HOST/"
+```bash
+curl -s \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"host":"https://your-domain.com","site":"Your Site Name"}' \
+  "$KTISTEC_HOST/"
+```
 
 #### Create Primary User Account
 
@@ -322,9 +326,13 @@ required).
 
 Example:
 
-    curl -X POST -H "Content-Type: application/json" \
-         -d '{"username":"your_username","password":"YourSecurePassword123@","name":"Your Display Name","summary":"Your summary","language":"en","timezone":"UTC"}' \
-         "$KTISTEC_HOST/"
+```bash
+curl -s \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"username":"your_username","password":"YourSecurePassword123@","name":"Your Display Name","summary":"Your summary","language":"en","timezone":"UTC"}' \
+  "$KTISTEC_HOST/"
+```
 
 ### Admin Account Management
 
@@ -332,9 +340,13 @@ Example:
 
 Retrieve all user accounts:
 
-    curl -X GET -H "Authorization: Bearer $API_KEY" \
-         -H "Accept: application/json" \
-         "$KTISTEC_HOST/admin/accounts"
+```bash
+curl -s \
+  -X GET \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Accept: application/json" \
+  "$KTISTEC_HOST/admin/accounts"
+```
 
 #### Create New Account
 
@@ -342,10 +354,14 @@ Create a new user account.
 
 Example:
 
-    curl -X POST -H "Authorization: Bearer $API_KEY" \
-         -H "Content-Type: application/json" \
-         -d '{"username":"your_username","password":"YourSecurePassword123@","name":"Your Display Name","summary":"Your summary","language":"en","timezone":"UTC"}' \
-         "$KTISTEC_HOST/admin/accounts"
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"another_user","password":"AnotherPassword123@","name":"Another User","summary":"Another user account","language":"en","timezone":"UTC"}' \
+  "$KTISTEC_HOST/admin/accounts"
+```
 
 ### A Note on ActivityPub
 
@@ -399,9 +415,14 @@ By default, `cc` includes the publishing `actor`'s followers collection.
 
 Example:
 
-    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
-    activity="{\"type\":\"Publish\",\"content\":\"this is a test\",\"visibility\":\"public\"}"
-    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"Publish","content":"this is a test","visibility":"public"}' \
+  "$KTISTEC_HOST/actors/$USERNAME/outbox"
+```
 
 Note: "publishing" an `object` encompasses both creating a new
 `object` (an ActivityPub `Create` activity) and updating an existing
@@ -426,9 +447,14 @@ collection.
 
 Example:
 
-    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
-    activity="{\"type\":\"Announce\",\"object\":\"https://example.com/objects/123\",\"visibility\":\"public\"}"
-    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"Announce","object":"https://example.com/objects/123","visibility":"public"}' \
+  "$KTISTEC_HOST/actors/$USERNAME/outbox"
+```
 
 ### Liking an Object
 
@@ -449,9 +475,14 @@ collection.
 
 Example:
 
-    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
-    activity="{\"type\":\"Like\",\"object\":\"https://example.com/objects/123\",\"visibility\":\"public\"}"
-    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"Like","object":"https://example.com/objects/123","visibility":"public"}' \
+  "$KTISTEC_HOST/actors/$USERNAME/outbox"
+```
 
 ### Following an Actor
 
@@ -465,9 +496,14 @@ endpoint. The JSON `activity` may include the following fields:
 
 Example:
 
-    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
-    activity="{\"type\":\"Follow\",\"object\":\"https://example.com/actors/alice\"}"
-    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"Follow","object":"https://example.com/actors/alice"}' \
+  "$KTISTEC_HOST/actors/$USERNAME/outbox"
+```
 
 ### Undoing an Activity
 
@@ -482,9 +518,14 @@ the following fields:
 
 Example:
 
-    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
-    activity="{\"type\":\"Undo\",\"object\":\"https://example.com/activities/123\"}"
-    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"Undo","object":"https://example.com/activities/123"}' \
+  "$KTISTEC_HOST/actors/$USERNAME/outbox"
+```
 
 ### Deleting
 
@@ -499,9 +540,14 @@ the following fields:
 
 Example:
 
-    outbox="$KTISTEC_HOST/actors/$USERNAME/outbox"
-    activity="{\"type\":\"Delete\",\"object\":\"https://example.com/123\"}"
-    curl -s -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -X POST -d "$activity" "$outbox"
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"Delete","object":"https://example.com/123"}' \
+  "$KTISTEC_HOST/actors/$USERNAME/outbox"
+```
 
 ## MCP Support
 

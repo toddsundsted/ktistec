@@ -177,6 +177,12 @@ def like_factory(actor_iri = nil, actor = false, object_iri = nil, object = fals
   activity_factory(ActivityPub::Activity::Like, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
 end
 
+def dislike_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
+  actor = actor_factory unless actor_iri || actor.nil? || actor
+  object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
+  activity_factory(ActivityPub::Activity::Dislike, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
+end
+
 def create_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
   object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
@@ -241,6 +247,10 @@ end
 
 def notification_like_factory(**options)
   notification_factory(Relationship::Content::Notification::Like, ActivityPub::Activity::Like, **options)
+end
+
+def notification_dislike_factory(**options)
+  notification_factory(Relationship::Content::Notification::Dislike, ActivityPub::Activity::Dislike, **options)
 end
 
 def notification_follow_factory(**options)
@@ -449,6 +459,10 @@ end
 
 def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Like)
   Factory.create(:notification_like, owner: owner, activity: activity)
+end
+
+def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Dislike)
+  Factory.create(:notification_dislike, owner: owner, activity: activity)
 end
 
 def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Follow)

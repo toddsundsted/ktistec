@@ -54,6 +54,24 @@ class RelationshipsController
         to: to.to_a,
         cc: cc.to_a,
       )
+    when "Dislike"
+      unless (iri = activity["object"]?) && (object = ActivityPub::Object.find?(iri))
+        bad_request
+      end
+      now = Time.utc
+      visible, to, cc = addressing(activity, account.actor)
+      if (attributed_to = object.attributed_to?)
+        to << attributed_to.iri
+      end
+      activity = ActivityPub::Activity::Dislike.new(
+        iri: "#{host}/activities/#{id}",
+        actor: account.actor,
+        object: object,
+        published: now,
+        visible: visible,
+        to: to.to_a,
+        cc: cc.to_a,
+      )
     when "Publish"
       unless (content = activity["content"]?)
         bad_request
@@ -185,7 +203,7 @@ class RelationshipsController
       to = [] of String
       cc = [] of String
       case object
-      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like
+      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
         if (attributed_to = object.object.attributed_to?)
           to << attributed_to.iri
         end

@@ -647,6 +647,67 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#dislikes" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_dislike(index)
+      let_create!(:note, named: note{{index}})
+      let_create!(:dislike, named: dislike{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_dislike(1)
+    create_dislike(2)
+    create_dislike(3)
+    create_dislike(4)
+    create_dislike(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.dislikes(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.dislikes(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      note5.attributed_to.delete!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      note5.attributed_to.block!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts if the dislike has been undone" do
+      dislike5.undo!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "paginates the results" do
+      expect(subject.dislikes(1, 2)).to eq([note5, note4])
+      expect(subject.dislikes(2, 2)).to eq([note3, note2])
+      expect(subject.dislikes(2, 2).more?).to be_true
+    end
+  end
+
   describe "#announces" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 

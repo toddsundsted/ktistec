@@ -552,6 +552,63 @@ Spectator.describe RelationshipsController do
       end
     end
 
+    context "on dislike" do
+      let_build(:note, attributed_to: other)
+      let_build(:dislike, actor: other, object: nil, to: [actor.iri])
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", dislike.to_json_ld(true), "application/json") }
+
+      it "returns 400 if no object is included" do
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "fetches object if remote" do
+        dislike.object_iri = note.iri
+        HTTP::Client.objects << note
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(HTTP::Client.last?).to match("GET #{note.iri}")
+      end
+
+      it "doesn't fetch the object if embedded" do
+        dislike.object = note
+        HTTP::Client.objects << note
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "fetches the attributed to actor" do
+        dislike.object = note
+        note.attributed_to_iri = "https://remote/actors/123"
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
+      end
+
+      it "saves the object" do
+        dislike.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
+          to change{ActivityPub::Object.count(iri: note.iri)}.by(1)
+      end
+
+      it "puts the activity in the actor's inbox" do
+        dislike.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
+          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+      end
+
+      it "puts the activity in the actor's notifications" do
+        dislike.object = note.assign(attributed_to: actor)
+        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
+          to change{Notification.count(from_iri: actor.iri)}.by(1)
+      end
+
+      it "does not put the object in the actor's timeline" do
+        dislike.object = note.assign(attributed_to: actor)
+        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
+          not_to change{Timeline.count(from_iri: actor.iri)}
+      end
+    end
+
     context "on create" do
       let_build(:note, attributed_to: other)
       let_build(:create, actor: other, object: nil, to: [actor.iri])

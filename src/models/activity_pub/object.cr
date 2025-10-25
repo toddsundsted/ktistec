@@ -383,9 +383,12 @@ module ActivityPub
     @[Assignable]
     property likes_count : Int64 = 0
 
+    @[Assignable]
+    property dislikes_count : Int64 = 0
+
     def with_statistics!
       query = <<-QUERY
-         SELECT sum(a.type = 'ActivityPub::Activity::Announce') AS announces, sum(a.type = 'ActivityPub::Activity::Like') AS likes
+         SELECT sum(a.type = 'ActivityPub::Activity::Announce') AS announces, sum(a.type = 'ActivityPub::Activity::Like') AS likes, sum(a.type = 'ActivityPub::Activity::Dislike') AS dislikes
            FROM activities AS a
           WHERE a.undone_at IS NULL
             AND a.object_iri = ?
@@ -394,6 +397,7 @@ module ActivityPub
         Ktistec.database.query_one(query, iri) do |rs|
           rs.read(Int64?).try { |announces_count| self.announces_count = announces_count }
           rs.read(Int64?).try { |likes_count| self.likes_count = likes_count }
+          rs.read(Int64?).try { |dislikes_count| self.dislikes_count = dislikes_count }
         end
       end
       self

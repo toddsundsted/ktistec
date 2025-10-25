@@ -55,6 +55,27 @@
             - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
               .extra.meta.truncated
                 == content
+        - in Relationship::Content::Notification::Dislike
+          crystal:
+            activity = notification.activity
+            activities = activity.object.activities(inclusion: activity.type)
+          .label
+            - if (icon = activity.actor.icon)
+              img data-actor-id=activity.actor.id src=icon
+            - else
+              i.user.icon
+          .content
+            .summary
+              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              - if activities.size > 1
+                | and #{pluralize(activities.size - 1, "other")} disliked
+              - else
+                | disliked
+              a< href=remote_object_path(activity.object) your post
+              | .
+            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+              .extra.meta.truncated
+                == content
         - in Relationship::Content::Notification::Reply
           crystal:
             object = notification.object

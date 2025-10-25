@@ -895,22 +895,33 @@ Spectator.describe ActivityPub::Object do
 
     let_build(:announce, object: object)
     let_build(:like, object: object)
+    let_build(:dislike, object: object)
 
     it "updates announces count" do
       announce.save
       expect(object.with_statistics!.announces_count).to eq(1)
       expect(object.with_statistics!.likes_count).to eq(0)
+      expect(object.with_statistics!.dislikes_count).to eq(0)
     end
 
     it "updates likes count" do
       like.save
       expect(object.with_statistics!.announces_count).to eq(0)
       expect(object.with_statistics!.likes_count).to eq(1)
+      expect(object.with_statistics!.dislikes_count).to eq(0)
+    end
+
+    it "updates dislikes count" do
+      dislike.save
+      expect(object.with_statistics!.announces_count).to eq(0)
+      expect(object.with_statistics!.likes_count).to eq(0)
+      expect(object.with_statistics!.dislikes_count).to eq(1)
     end
 
     it "doesn't fail when the object hasn't been saved" do
       expect(object.with_statistics!.announces_count).to eq(0)
       expect(object.with_statistics!.likes_count).to eq(0)
+      expect(object.with_statistics!.dislikes_count).to eq(0)
     end
 
     it "filters out undone announces" do
@@ -921,6 +932,11 @@ Spectator.describe ActivityPub::Object do
     it "filters out undone likes" do
       like.save.undo!
       expect(object.with_statistics!.likes_count).to eq(0)
+    end
+
+    it "filters out undone dislikes" do
+      dislike.save.undo!
+      expect(object.with_statistics!.dislikes_count).to eq(0)
     end
   end
 

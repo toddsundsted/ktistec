@@ -32,6 +32,7 @@ Spectator.describe ActivityPub::Activity do
         "target":"target link",
         "to":"to link",
         "cc":["cc link"],
+        "audience":["audience link"],
         "summary":"abc"
       }
     JSON
@@ -52,6 +53,7 @@ Spectator.describe ActivityPub::Activity do
       expect(activity.target_iri).to eq("target link")
       expect(activity.to).to eq(["to link"])
       expect(activity.cc).to eq(["cc link"])
+      expect(activity.audience).to eq(["audience link"])
       expect(activity.summary).to eq("abc")
     end
 
@@ -74,6 +76,7 @@ Spectator.describe ActivityPub::Activity do
       expect(activity.target_iri).to eq("target link")
       expect(activity.to).to eq(["to link"])
       expect(activity.cc).to eq(["cc link"])
+      expect(activity.audience).to eq(["audience link"])
       expect(activity.summary).to eq("abc")
     end
 

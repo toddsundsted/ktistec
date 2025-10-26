@@ -178,6 +178,7 @@ Spectator.describe ActivityPub::Object do
         "replies":"replies link",
         "to":"to link",
         "cc":["cc link"],
+        "audience":["audience link"],
         "name":"123",
         "summary":"abc",
         "sensitive":true,
@@ -227,6 +228,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.audience).to eq(["audience link"])
       expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
@@ -376,6 +378,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.audience).to eq(["audience link"])
       expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")

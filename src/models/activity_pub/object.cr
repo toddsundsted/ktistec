@@ -866,6 +866,7 @@ module ActivityPub
           end,
           "to" => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
           "cc" => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+          "audience" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#audience"),
           "name" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
           "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
           "sensitive" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool),

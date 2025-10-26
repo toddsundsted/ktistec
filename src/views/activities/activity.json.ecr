@@ -24,6 +24,9 @@
   <%- if (cc = activity.cc) -%>
   "cc":<%= cc.to_json %>,
   <%- end -%>
+  <%- if (audience = activity.audience) -%>
+  "audience":<%= audience.to_json %>,
+  <%- end -%>
   <%- if (summary = activity.summary) -%>
   "summary":<%= summary.to_json %>,
   <%- end -%>

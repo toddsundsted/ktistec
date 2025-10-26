@@ -26,6 +26,9 @@
   <%- if (cc = object.cc) -%>
   "cc":<%= cc.to_json %>,
   <%- end -%>
+  <%- if (audience = object.audience) -%>
+  "audience":<%= audience.to_json %>,
+  <%- end -%>
   <%- if (name = object.name) -%>
   "name":<%= name.to_json %>,
   <%- end -%>

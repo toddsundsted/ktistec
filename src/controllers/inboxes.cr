@@ -29,9 +29,15 @@ class RelationshipsController
 
     Log.trace { "[#{request_id}] new post" }
 
+    json_ld = Ktistec::JSON_LD.expand(JSON.parse(body))
+
+    # unwrap Lemmy's Announce activity, if present
+
+    json_ld = unwrap_lemmy_announce(json_ld, request_id)
+
     activity =
       begin
-        ActivityPub::Activity.from_json_ld(body)
+        ActivityPub::Activity.from_json_ld(json_ld)
       rescue Ktistec::Model::TypeError
         bad_request("Unsupported Type")
       end
@@ -343,6 +349,33 @@ class RelationshipsController
     activities = account.actor.in_inbox(**pagination_params(env), public: env.account? != account)
 
     ok "relationships/inbox", env: env, account: account, activities: activities
+  end
+
+  private def self.unwrap_lemmy_announce(json_ld, request_id)
+    type = json_ld.dig?("@type").try(&.as_s)
+    return json_ld unless type == "https://www.w3.org/ns/activitystreams#Announce"
+
+    object = json_ld["https://www.w3.org/ns/activitystreams#object"]?
+    return json_ld unless object && object.as_h?
+
+    supported_types = [
+      "https://www.w3.org/ns/activitystreams#Create",
+      "https://www.w3.org/ns/activitystreams#Like",
+      "https://www.w3.org/ns/activitystreams#Dislike",
+      "https://www.w3.org/ns/activitystreams#Update",
+      "https://www.w3.org/ns/activitystreams#Undo",
+      "https://www.w3.org/ns/activitystreams#Delete"
+    ]
+
+    type = object.dig?("@type").try(&.as_s)
+    return json_ld unless type && type.in?(supported_types)
+
+    Log.debug { "[#{request_id}] unwrapped #{type.split("#").last} from Announce" }
+
+    object
+  rescue ex
+    Log.warn { "[#{request_id}] failed to unwrap Announce: #{ex.message}" }
+    json_ld
   end
 
   private def self.get_account(env)

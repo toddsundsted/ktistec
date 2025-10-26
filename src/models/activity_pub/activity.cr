@@ -55,6 +55,9 @@ module ActivityPub
     property cc : Array(String)?
 
     @[Persistent]
+    property audience : Array(String)?
+
+    @[Persistent]
     property summary : String?
 
     def display_date(timezone = nil)

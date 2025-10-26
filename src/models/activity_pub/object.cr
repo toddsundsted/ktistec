@@ -79,6 +79,9 @@ module ActivityPub
     property cc : Array(String)?
 
     @[Persistent]
+    property audience : Array(String)?
+
+    @[Persistent]
     property name : String?
 
     @[Persistent]

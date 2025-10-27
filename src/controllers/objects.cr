@@ -208,6 +208,11 @@ class ObjectsController
     bad_request
   end
 
+  # MULTI_USER NOTE: block and unoperations set/clear a global
+  # `blocked_at` timestamp that hides the object from ALL users. this
+  # is a single-user design remnant. proper multi-user support would
+  # require per-user blocking relationships.
+
   post "/remote/objects/:id/block" do |env|
     not_found unless (object = ActivityPub::Object.find?(id_param(env)))
 
@@ -303,6 +308,10 @@ class ObjectsController
     complete_task
     render_or_redirect
   end
+
+  # MULTI_USER NOTE: translations are global (shared by all
+  # users). this is a single-user remnant and known limitation -
+  # proper multi-user support would permit per-user translations.
 
   post "/remote/objects/:id/translation/create" do |env|
     not_found unless (object = get_object(env, id_param(env)))

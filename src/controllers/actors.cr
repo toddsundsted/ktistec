@@ -170,6 +170,11 @@ class ActorsController
     ok "actors/remote", env: env, actor: actor
   end
 
+  # MULTI_USER NOTE: block and unblock operations set/clear a global
+  # `blocked_at` timestamp that hides the actor from ALL users. this
+  # is a single-user design remnant. proper multi-user support would
+  # require per-user blocking relationships.
+
   post "/remote/actors/:id/block" do |env|
     unless (actor = ActivityPub::Actor.find?(id_param(env)))
       not_found

@@ -4,8 +4,12 @@ require "../models/activity_pub/object/note"
 require "../models/task/deliver"
 require "../rules/content_rules"
 
-class RelationshipsController
+class OutboxesController
   include Ktistec::Controller
+
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"]?)
+  end
 
   post "/actors/:username/outbox" do |env|
     unless (account = get_account(env))
@@ -351,9 +355,5 @@ class RelationshipsController
     activities = account.actor.in_outbox(**pagination_params(env), public: env.account? != account)
 
     ok "relationships/outbox", env: env, activities: activities
-  end
-
-  private def self.get_account(env)
-    Account.find?(username: env.params.url["username"]?)
   end
 end

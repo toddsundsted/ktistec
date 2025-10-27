@@ -6,12 +6,16 @@ require "../models/activity_pub/activity/**"
 require "../models/task/receive"
 require "../rules/content_rules"
 
-class RelationshipsController
+class InboxesController
   include Ktistec::Controller
 
   Log = ::Log.for("inbox")
 
   skip_auth ["/actors/:username/inbox"], POST
+
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"]?)
+  end
 
   post "/actors/:username/inbox" do |env|
     request_id = env.request.object_id
@@ -376,9 +380,5 @@ class RelationshipsController
   rescue ex
     Log.warn { "[#{request_id}] failed to unwrap Announce: #{ex.message}" }
     json_ld
-  end
-
-  private def self.get_account(env)
-    Account.find?(username: env.params.url["username"]?)
   end
 end

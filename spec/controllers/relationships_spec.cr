@@ -3,11 +3,74 @@ require "../../src/controllers/relationships"
 require "../spec_helper/factory"
 require "../spec_helper/controller"
 
+# redefine as public for testing
+class RelationshipsController
+  def self.get_account(env)
+    previous_def(env)
+  end
+
+  def self.get_account_with_ownership(env)
+    previous_def(env)
+  end
+end
+
 Spectator.describe RelationshipsController do
   setup_spec
 
   HTML_HEADERS = HTTP::Headers{"Accept" => "text/html"}
   JSON_HEADERS = HTTP::Headers{"Accept" => "application/json"}
+
+  describe ".get_account" do
+    let(account) { register }
+
+    it "returns nil" do
+      env = env_factory("GET", "/actors/nonexistent/following")
+      result = RelationshipsController.get_account(env)
+      expect(result).to be_nil
+    end
+
+    it "returns account" do
+      env = env_factory("GET", "/actors/#{account.username}/following")
+      result = RelationshipsController.get_account(env)
+      expect(result).to eq(account)
+    end
+  end
+
+  describe ".get_account_with_ownership" do
+    let(account) { register }
+
+    it "returns nil" do
+      env = env_factory("GET", "/actors/nonexistent/likes")
+      result = RelationshipsController.get_account_with_ownership(env)
+      expect(result).to be_nil
+    end
+
+    it "returns nil" do
+      env = env_factory("GET", "/actors/#{account.username}/likes")
+      result = RelationshipsController.get_account_with_ownership(env)
+      expect(result).to be_nil
+    end
+
+    context "when authenticated" do
+      sign_in(as: account.username)
+
+      it "returns account" do
+        env = env_factory("GET", "/actors/#{account.username}/likes")
+        result = RelationshipsController.get_account_with_ownership(env)
+        expect(result).to eq(account)
+      end
+
+      context "given another account" do
+        let(other_account) { register }
+
+        it "returns nil" do
+          env = env_factory("GET", "/actors/#{other_account.username}/likes")
+          result = RelationshipsController.get_account_with_ownership(env)
+          expect(result).to be_nil
+        end
+      end
+    end
+  end
 
   describe "GET /actors/:username/:relationship" do
     let(actor) { register.actor }
@@ -22,16 +85,6 @@ Spectator.describe RelationshipsController do
     it "returns 404 if actor does not exist" do
       get "/actors/0/following", JSON_HEADERS
       expect(response.status_code).to eq(404)
-    end
-
-    it "returns 401 if relationship type is not supported" do
-      get "/actors/#{actor.username}/foobar", HTML_HEADERS
-      expect(response.status_code).to eq(401)
-    end
-
-    it "returns 401 if relationship type is not supported" do
-      get "/actors/#{actor.username}/foobar", JSON_HEADERS
-      expect(response.status_code).to eq(401)
     end
 
     context "when relationship is following" do

@@ -6,7 +6,7 @@ require "../spec_helper/controller"
 require "../spec_helper/factory"
 require "../spec_helper/network"
 
-Spectator.describe RelationshipsController do
+Spectator.describe InboxesController do
   setup_spec
 
   after_each do

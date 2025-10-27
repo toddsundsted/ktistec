@@ -13,10 +13,40 @@ class ActorsController
 
   skip_auth ["/actors/:username", "/actors/:username/public-posts", "/actors/:username/feed.rss"], GET
 
-  get "/actors/:username" do |env|
-    username = env.params.url["username"]
+  # Authorizes account access.
+  #
+  # Returns the account if it exists, `nil` otherwise.
+  #
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"])
+  end
 
-    unless (account = Account.find?(username: username))
+  # Authorizes account access.
+  #
+  # Returns the account if the authenticated user owns it, `nil`
+  # otherwise.
+  #
+  private def self.get_account_with_ownership(env)
+    if (account = Account.find?(username: env.params.url["username"]))
+      if env.account? == account
+        account
+      end
+    end
+  end
+
+  # Authorizes actor access.
+  #
+  # Returns the actor if it exists, `nil` otherwise.
+  #
+  private def self.get_actor(id)
+    ActivityPub::Actor.find?(id)
+  end
+
+  # these actions render views about local actors for both anonymous
+  # and authenticated users.
+
+  get "/actors/:username" do |env|
+    unless (account = get_account(env))
       not_found
     end
 
@@ -29,13 +59,13 @@ class ActorsController
           env.session.string("timeline_filters", filters.join(","))
         else
           env.session.delete("timeline_filters")
-          redirect "/actors/#{username}"
+          redirect "/actors/#{account.username}"
         end
       else
         if filters = env.session.string?("timeline_filters")
           unless filters.empty?
             query_string = %Q|filters=#{filters.split(",").join("&filters=")}|
-            redirect "/actors/#{username}?#{query_string}"
+            redirect "/actors/#{account.username}?#{query_string}"
           end
         end
       end
@@ -45,9 +75,7 @@ class ActorsController
   end
 
   get "/actors/:username/public-posts" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+    unless (account = get_account(env))
       not_found
     end
 
@@ -59,9 +87,7 @@ class ActorsController
   end
 
   get "/actors/:username/feed.rss" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+    unless (account = get_account(env))
       not_found
     end
 
@@ -80,14 +106,12 @@ class ActorsController
     )
   end
 
-  get "/actors/:username/posts" do |env|
-    username = env.params.url["username"]
+  # these actions render views about the authenticated local actor
+  # itself.
 
-    unless (account = Account.find?(username: username))
+  get "/actors/:username/posts" do |env|
+    unless (account = get_account_with_ownership(env))
       not_found
-    end
-    unless account == env.account
-      forbidden
     end
 
     actor = account.actor
@@ -98,13 +122,8 @@ class ActorsController
   end
 
   get "/actors/:username/timeline" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+    unless (account = get_account_with_ownership(env))
       not_found
-    end
-    unless account == env.account
-      forbidden
     end
 
     actor = account.actor
@@ -117,13 +136,8 @@ class ActorsController
   end
 
   get "/actors/:username/notifications" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+    unless (account = get_account_with_ownership(env))
       not_found
-    end
-    unless account == env.account
-      forbidden
     end
 
     actor = account.actor
@@ -136,13 +150,8 @@ class ActorsController
   end
 
   get "/actors/:username/drafts" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+    unless (account = get_account_with_ownership(env))
       not_found
-    end
-    unless account == env.account
-      forbidden
     end
 
     drafts = account.actor.drafts(**pagination_params(env))
@@ -150,13 +159,21 @@ class ActorsController
     ok "objects/index", env: env, drafts: drafts
   end
 
+  # these actions render views of and operator on remote/cached
+  # actors for authenticated users.
+
   get "/remote/actors/:id" do |env|
-    unless (actor = ActivityPub::Actor.find?(id_param(env)))
+    unless (actor = get_actor(id_param(env)))
       not_found
     end
 
     ok "actors/remote", env: env, actor: actor
   end
+
+  # MULTI_USER NOTE: block and unblock operations set/clear a global
+  # `blocked_at` timestamp that hides the actor from ALL users. this
+  # is a single-user design remnant. proper multi-user support would
+  # require per-user blocking relationships.
 
   post "/remote/actors/:id/block" do |env|
     unless (actor = ActivityPub::Actor.find?(id_param(env)))
@@ -179,7 +196,7 @@ class ActorsController
   end
 
   post "/remote/actors/:id/refresh" do |env|
-    unless (actor = ActivityPub::Actor.find?(id_param(env)))
+    unless (actor = get_actor(id_param(env)))
       not_found
     end
 

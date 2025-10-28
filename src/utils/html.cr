@@ -85,11 +85,11 @@ module Ktistec
         end
 
         xml.xpath_nodes("//node()[not(ancestor-or-self::a|ancestor-or-self::pre|ancestor-or-self::code)]/text()").each do |text|
-          if (remainder = text.text).includes?('#') || remainder.includes?('@') || remainder.includes?("http://") || remainder.includes?("https://")
+          if (remainder = text.text).includes?('#') || remainder.includes?('＃') || remainder.includes?('@') || remainder.includes?("http://") || remainder.includes?("https://")
             cursor = insertion = XML.parse("<span/>").first_element_child.not_nil!
             text.replace_with(insertion)
             while !remainder.empty?
-              text, tag, remainder = remainder.partition(%r{(https?://[^\s<>"#]+(?:#[^\s<>"]*)?|\B#([[:alnum:]][[:alnum:]_-]+)|@[^@\s]+@[^@\s]+)\b})
+              text, tag, remainder = remainder.partition(%r{(https?://[^\s<>"#＃]+(?:[#＃][^\s<>"]*)?|\B[#＃]([[:alnum:]][[:alnum:]_-]+)|@[^@\s]+@[^@\s]+)\b})
               unless text.empty?
                 cursor = cursor.add_sibling(XML::Node.new(text))
               end
@@ -98,9 +98,9 @@ module Ktistec
                   url = tag.rstrip(".,!?);")
                   node = %Q|<a href="#{url}">#{url}</a>|
                   cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
-                elsif tag[0] == '#'
-                  hashtag = tag[1..]
-                  node = %Q|<a href="#{Ktistec.host}/tags/#{hashtag}" class="hashtag" rel="tag">##{hashtag}</a>|
+                elsif (hash_char = tag[0]) == '#' || hash_char == '＃'
+                  hashtag = tag.lstrip('#').lstrip('＃')
+                  node = %Q|<a href="#{Ktistec.host}/tags/#{hashtag}" class="hashtag" rel="tag">#{hash_char}#{hashtag}</a>|
                   cursor = cursor.add_sibling(XML.parse(node).first_element_child.not_nil!)
                   enhancements.hashtags << Hashtag.new(name: hashtag, href: "#{Ktistec.host}/tags/#{hashtag}")
                 else

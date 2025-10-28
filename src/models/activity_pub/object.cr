@@ -673,6 +673,91 @@ module ActivityPub
       Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})
     end
 
+    # Predefined thread query projection definitions.
+    #
+    PROJECTION_MINIMAL = {
+      id: Int64,
+      iri: String,
+      in_reply_to_iri: String?,
+      thread: String?,
+      depth: Int32,
+    }
+
+    PROJECTION_METADATA = {
+      id: Int64,
+      iri: String,
+      attributed_to_iri: String?,
+      in_reply_to_iri: String?,
+      thread: String?,
+      published: Time?,
+      deleted: Bool,
+      blocked: Bool,
+      hashtags: String?,
+      mentions: String?,
+      depth: Int32,
+    }
+
+    # Returns projected fields for all objects in the thread.
+    #
+    # The `projection` parameter accepts a `NamedTuple` that defines
+    # which fields to return. Predefined constants handle common
+    # use-cases:
+    #
+    # - PROJECTION_MINIMAL
+    # - PROJECTION_METADATA
+    #
+    # Or specify a custom projection:
+    #     projection: {id: Int64, iri: String, depth: Int32}
+    #
+    # Returns `Array(NamedTuple)` with named fields.
+    #
+    def thread_query(*, projection : T) forall T
+      {% begin %}
+        {% select_parts = [] of String %}
+        {% needs_hashtag_join = false %}
+        {% needs_mention_join = false %}
+        {% needs_group_by = false %}
+
+        {% for key in T.keys %}
+          {% if key == :depth %}
+            {% select_parts << "r.depth" %}
+          {% elsif key == :deleted %}
+            {% select_parts << "o.deleted_at IS NOT NULL AS deleted" %}
+          {% elsif key == :blocked %}
+            {% select_parts << "o.blocked_at IS NOT NULL AS blocked" %}
+          {% elsif key == :hashtags %}
+            {% select_parts << "GROUP_CONCAT(DISTINCT ht.name) AS hashtags" %}
+            {% needs_hashtag_join = true %}
+            {% needs_group_by = true %}
+          {% elsif key == :mentions %}
+            {% select_parts << "GROUP_CONCAT(DISTINCT mt.name) AS mentions" %}
+            {% needs_mention_join = true %}
+            {% needs_group_by = true %}
+          {% else %}
+            {% select_parts << "o.#{key.id}" %}
+          {% end %}
+        {% end %}
+
+        query = <<-QUERY
+        #{thread_query_with_recursive}
+        SELECT {{select_parts.join(", ").id}}
+          FROM objects AS o, replies_to AS r
+          {% if needs_hashtag_join %}
+          LEFT JOIN tags AS ht ON ht.subject_iri = o.iri AND ht.type = 'Tag::Hashtag'
+          {% end %}
+          {% if needs_mention_join %}
+          LEFT JOIN tags AS mt ON mt.subject_iri = o.iri AND mt.type = 'Tag::Mention'
+          {% end %}
+         WHERE o.iri IN (r.iri)
+         {% if needs_group_by %}
+         GROUP BY o.id, r.depth, r.position
+         {% end %}
+         ORDER BY r.position
+        QUERY
+        Ktistec.database.query_all(query, iri, as: projection)
+      {% end %}
+    end
+
     private def ancestors_with_recursive
       <<-QUERY
       WITH RECURSIVE

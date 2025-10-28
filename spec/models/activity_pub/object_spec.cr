@@ -1339,6 +1339,101 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    describe "#thread_query" do
+      let_build(:actor)
+
+      let(projection) { {id: Int64, iri: String, depth: Int32} }
+
+      it "returns projection fields" do
+        result = subject.thread_query(projection: projection)
+        expect(result.size).to eq(6)
+        first = result.first
+        expect(first[:id]).to eq(subject.id)
+        expect(first[:iri]).to eq(subject.iri)
+        expect(first[:depth]).to eq(0)
+      end
+
+      it "returns the same objects in the same order as `thread`" do
+        result1 = subject.thread_query(projection: projection)
+        result2 = subject.thread(for_actor: actor)
+        expect(result1.size).to eq(result2.size)
+        expect(result1.map { |r| r[:id] }).to eq(result2.map(&.id))
+        expect(result1.map { |r| r[:iri] }).to eq(result2.map(&.iri))
+      end
+
+      it "omits destroyed replies and their children" do
+        object4.destroy
+        result = subject.thread_query(projection: projection)
+        expect(result.size).to eq(4)
+        expect(result.map { |r| r[:iri] }).to eq([subject, object1, object2, object3].map(&.iri))
+      end
+
+      it "omits replies with destroyed attributed to actors" do
+        actor4.destroy
+        result = subject.thread_query(projection: projection)
+        expect(result.size).to eq(4)
+        expect(result.map { |r| r[:iri] }).to eq([subject, object1, object2, object3].map(&.iri))
+      end
+
+      it "includes deleted status for non-deleted objects" do
+        result = subject.thread_query(projection: {deleted: Bool})
+        expect(result[1][:deleted]).to be_false
+      end
+
+      context "given a deleted object" do
+        before_each { object1.delete! }
+
+        it "includes deleted status for deleted objects" do
+          result = subject.thread_query(projection: {deleted: Bool})
+          expect(result[1][:deleted]).to be_true
+        end
+      end
+
+      it "includes blocked status for non-blocked objects" do
+        result = subject.thread_query(projection: {blocked: Bool})
+        expect(result[1][:blocked]).to be_false
+      end
+
+      context "given a blocked object" do
+        before_each { object1.block! }
+
+        it "includes blocked status for blocked objects" do
+          result = subject.thread_query(projection: {blocked: Bool})
+          expect(result[1][:blocked]).to be_true
+        end
+      end
+
+      it "returns nil for hashtags" do
+        result = subject.thread_query(projection: {hashtags: String?})
+        expect(result[1][:hashtags]).to be_nil
+      end
+
+      context "given hashtags" do
+        let_create!(:hashtag, named: nil, subject: object1, name: "foo")
+        let_create!(:hashtag, named: nil, subject: object1, name: "bar")
+
+        it "includes hashtags" do
+          result = subject.thread_query(projection: {hashtags: String?})
+          expect(result[1][:hashtags].try(&.split(",").sort)).to eq(["bar", "foo"])
+        end
+      end
+
+      it "returns nil for mentions" do
+        result = subject.thread_query(projection: {mentions: String?})
+        expect(result[1][:mentions]).to be_nil
+      end
+
+      context "given mentions" do
+        let_create!(:mention, named: nil, subject: object1, name: "alice@example.com")
+        let_create!(:mention, named: nil, subject: object1, name: "bob@example.com")
+
+        it "includes mentions" do
+          result = subject.thread_query(projection: {mentions: String?})
+          expect(result[1][:mentions].try(&.split(",").sort)).to eq(["alice@example.com", "bob@example.com"])
+        end
+      end
+    end
+
     describe "#ancestors" do
       it "returns all ancestors" do
         expect(subject.ancestors).to eq([subject])

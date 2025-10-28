@@ -153,7 +153,7 @@ class ObjectsController
       not_found
     end
 
-    object.delete!
+    object.destroy
 
     redirect back_path
   end

@@ -408,6 +408,7 @@ include the following fields:
 | in-reply-to | Optional. The IRI of the `object` being replied to. |
 | to          | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
 | cc          | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
+| audience    | Optional. A comma-separate list of `actors` in the audience. Specified as IRIs. |
 | visibility  | Optional. Controls post visibility. Values: "public", "private", "direct". |
 | sensitive   | Optional. May be `true` or `false`. Marks content as sensitive. |
 
@@ -439,6 +440,7 @@ endpoint. The JSON `activity` may include the following fields:
 | object     | The IRI of the `object` being shared. |
 | to         | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
 | cc         | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
+| audience   | Optional. A comma-separate list of `actors` in the audience. Specified as IRIs. |
 | visibility | Optional. Controls post visibility. Values: "public", "private", "direct". |
 
 By default, `to` includes the actor to which the `object` is
@@ -467,6 +469,7 @@ endpoint. The JSON `activity` may include the following fields:
 | object     | The IRI of the `object` being liked. |
 | to         | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
 | cc         | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
+| audience   | Optional. A comma-separate list of `actors` in the audience. Specified as IRIs. |
 | visibility | Optional. Controls post visibility. Values: "public", "private", "direct". |
 
 By default, `to` includes the actor to which the `object` is
@@ -481,6 +484,35 @@ curl -s \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"type":"Like","object":"https://example.com/objects/123","visibility":"public"}' \
+  "$KTISTEC_HOST/actors/$USERNAME/outbox"
+```
+
+### Disliking an Object
+
+To dislike an `object`, `POST` a JSON `activity` to the `outbox`
+endpoint. The JSON `activity` may include the following fields:
+
+| Name       | Notes |
+|-|-|
+| type       | Must be "Dislike". |
+| object     | The IRI of the `object` being disliked. |
+| to         | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
+| cc         | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
+| audience   | Optional. A comma-separate list of `actors` in the audience. Specified as IRIs. |
+| visibility | Optional. Controls post visibility. Values: "public", "private", "direct". |
+
+By default, `to` includes the actor to which the `object` is
+attributed, and `cc` includes the publishing `actor`'s followers
+collection.
+
+Example:
+
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"Dislike","object":"https://example.com/objects/123","visibility":"public"}' \
   "$KTISTEC_HOST/actors/$USERNAME/outbox"
 ```
 

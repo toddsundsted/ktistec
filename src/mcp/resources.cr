@@ -192,6 +192,7 @@ module MCP
         JSON::Any.new("timeline"),
         JSON::Any.new("notifications"),
         JSON::Any.new("likes"),
+        JSON::Any.new("dislikes"),
         JSON::Any.new("announces"),
         JSON::Any.new("followers"),
         JSON::Any.new("following"),
@@ -330,6 +331,17 @@ module MCP
         end
         contents["likes"] = JSON::Any.new({
           "count" => JSON::Any.new(likes.size.to_i64),
+          "actors" => JSON::Any.new(actors_data)
+        })
+      end
+
+      dislikes = ActivityPub::Activity::Dislike.where(object_iri: object.iri).to_a
+      if dislikes.any?
+        actors_data = dislikes.map do |dislike|
+          JSON::Any.new({"uri" => JSON::Any.new(mcp_actor_path(dislike.actor))})
+        end
+        contents["dislikes"] = JSON::Any.new({
+          "count" => JSON::Any.new(dislikes.size.to_i64),
           "actors" => JSON::Any.new(actors_data)
         })
       end

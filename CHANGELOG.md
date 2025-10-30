@@ -1,6 +1,22 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.1.2]
+### Added
+- Support for the `Dislike` activity.
+- Support for the `audience` property on activities and objects.
+- Support for delivery to shared inboxes.
+- Support for full-width hash signs in hashtags.
+
+### Fixed
+- Strip HTML from object summaries rather than escaping it.
+- Properly unwrap Lemmy `Announce` activities.
+
+### Changed
+- Clean up authorization in actors, activities, objects, relationships, filters, and uploads controllers.
+- Destroy discarded drafts instead of deleting them.
+- Move inbox and outbox routes into their own controllers.
+
 ## [v3.1.1]
 ### Added
 - Auto-link URLs in posts. (fixes [#24](https://github.com/toddsundsted/ktistec/issues/24))
@@ -485,6 +501,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.1.2]: https://github.com/toddsundsted/ktistec/compare/ebc7405c...65fd47cb
 [v3.1.1]: https://github.com/toddsundsted/ktistec/compare/f9dd19ab...cc5f45ef
 [v3.0.0]: https://github.com/toddsundsted/ktistec/compare/d7341dd1...2b777537
 [v2.4.16]: https://github.com/toddsundsted/ktistec/compare/db29901e...42f1a298

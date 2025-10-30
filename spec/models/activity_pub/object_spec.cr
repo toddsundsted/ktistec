@@ -178,6 +178,7 @@ Spectator.describe ActivityPub::Object do
         "replies":"replies link",
         "to":"to link",
         "cc":["cc link"],
+        "audience":["audience link"],
         "name":"123",
         "summary":"abc",
         "sensitive":true,
@@ -227,6 +228,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.audience).to eq(["audience link"])
       expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
@@ -376,6 +378,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.audience).to eq(["audience link"])
       expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
@@ -895,22 +898,33 @@ Spectator.describe ActivityPub::Object do
 
     let_build(:announce, object: object)
     let_build(:like, object: object)
+    let_build(:dislike, object: object)
 
     it "updates announces count" do
       announce.save
       expect(object.with_statistics!.announces_count).to eq(1)
       expect(object.with_statistics!.likes_count).to eq(0)
+      expect(object.with_statistics!.dislikes_count).to eq(0)
     end
 
     it "updates likes count" do
       like.save
       expect(object.with_statistics!.announces_count).to eq(0)
       expect(object.with_statistics!.likes_count).to eq(1)
+      expect(object.with_statistics!.dislikes_count).to eq(0)
+    end
+
+    it "updates dislikes count" do
+      dislike.save
+      expect(object.with_statistics!.announces_count).to eq(0)
+      expect(object.with_statistics!.likes_count).to eq(0)
+      expect(object.with_statistics!.dislikes_count).to eq(1)
     end
 
     it "doesn't fail when the object hasn't been saved" do
       expect(object.with_statistics!.announces_count).to eq(0)
       expect(object.with_statistics!.likes_count).to eq(0)
+      expect(object.with_statistics!.dislikes_count).to eq(0)
     end
 
     it "filters out undone announces" do
@@ -921,6 +935,11 @@ Spectator.describe ActivityPub::Object do
     it "filters out undone likes" do
       like.save.undo!
       expect(object.with_statistics!.likes_count).to eq(0)
+    end
+
+    it "filters out undone dislikes" do
+      dislike.save.undo!
+      expect(object.with_statistics!.dislikes_count).to eq(0)
     end
   end
 

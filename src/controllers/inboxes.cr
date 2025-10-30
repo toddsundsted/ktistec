@@ -6,12 +6,16 @@ require "../models/activity_pub/activity/**"
 require "../models/task/receive"
 require "../rules/content_rules"
 
-class RelationshipsController
+class InboxesController
   include Ktistec::Controller
 
   Log = ::Log.for("inbox")
 
   skip_auth ["/actors/:username/inbox"], POST
+
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"]?)
+  end
 
   post "/actors/:username/inbox" do |env|
     request_id = env.request.object_id
@@ -29,9 +33,15 @@ class RelationshipsController
 
     Log.trace { "[#{request_id}] new post" }
 
+    json_ld = Ktistec::JSON_LD.expand(JSON.parse(body))
+
+    # unwrap Lemmy's Announce activity, if present
+
+    json_ld = unwrap_lemmy_announce(json_ld, request_id)
+
     activity =
       begin
-        ActivityPub::Activity.from_json_ld(body)
+        ActivityPub::Activity.from_json_ld(json_ld)
       rescue Ktistec::Model::TypeError
         bad_request("Unsupported Type")
       end
@@ -145,6 +155,11 @@ class RelationshipsController
       unless object.attributed_to?(account.actor, dereference: true)
         bad_request
       end
+    # DESIGN DECISION: Actors can both Like AND Dislike the same
+    # object. This is intentional - it accurately captures federated
+    # state. Some ActivityPub implementations may allow users to both
+    # upvote and downvote the same content. Ktistec preserves this
+    # state as received.
     when ActivityPub::Activity::Like
       unless (object = activity.object?(account.actor, dereference: true))
         bad_request
@@ -153,6 +168,15 @@ class RelationshipsController
         bad_request
       end
       # compatibility with implementations that don't address likes
+      deliver_to = [account.iri]
+    when ActivityPub::Activity::Dislike
+      unless (object = activity.object?(account.actor, dereference: true))
+        bad_request
+      end
+      unless object.attributed_to?(account.actor, dereference: true)
+        bad_request
+      end
+      # compatibility with implementations that don't address dislikes
       deliver_to = [account.iri]
     when ActivityPub::Activity::Create
       unless (object = activity.object?(account.actor, dereference: true, ignore_cached: true))
@@ -331,7 +355,30 @@ class RelationshipsController
     ok "relationships/inbox", env: env, account: account, activities: activities
   end
 
-  private def self.get_account(env)
-    Account.find?(username: env.params.url["username"]?)
+  private def self.unwrap_lemmy_announce(json_ld, request_id)
+    type = json_ld.dig?("@type").try(&.as_s)
+    return json_ld unless type == "https://www.w3.org/ns/activitystreams#Announce"
+
+    object = json_ld["https://www.w3.org/ns/activitystreams#object"]?
+    return json_ld unless object && object.as_h?
+
+    supported_types = [
+      "https://www.w3.org/ns/activitystreams#Create",
+      "https://www.w3.org/ns/activitystreams#Like",
+      "https://www.w3.org/ns/activitystreams#Dislike",
+      "https://www.w3.org/ns/activitystreams#Update",
+      "https://www.w3.org/ns/activitystreams#Undo",
+      "https://www.w3.org/ns/activitystreams#Delete"
+    ]
+
+    type = object.dig?("@type").try(&.as_s)
+    return json_ld unless type && type.in?(supported_types)
+
+    Log.debug { "[#{request_id}] unwrapped #{type.split("#").last} from Announce" }
+
+    object
+  rescue ex
+    Log.warn { "[#{request_id}] failed to unwrap Announce: #{ex.message}" }
+    json_ld
   end
 end

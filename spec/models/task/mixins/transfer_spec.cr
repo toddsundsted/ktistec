@@ -150,6 +150,61 @@ Spectator.describe Task::Transfer do
         expect(HTTP::Client.requests).to be_empty
       end
     end
+
+    context "when recipient has a shared inbox" do
+      before_each do
+        remote_recipient.assign(shared_inbox: "https://remote/shared-inbox").save
+      end
+
+      it "sends the activity to the shared inbox" do
+        subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(HTTP::Client.requests).to have("POST https://remote/shared-inbox")
+        expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.inbox}")
+      end
+    end
+
+    context "given another remote recipient" do
+      let_create!(:actor, named: :another_recipient, iri: "https://remote/actors/another")
+
+      context "when multiple recipients share the same shared inbox" do
+        before_each do
+          remote_recipient.assign(shared_inbox: "https://remote/shared-inbox").save
+          another_recipient.assign(shared_inbox: "https://remote/shared-inbox").save
+        end
+
+        it "delivers once to the shared inbox" do
+          subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
+          expect(HTTP::Client.requests).to have("POST https://remote/shared-inbox")
+          expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.inbox}")
+          expect(HTTP::Client.requests).not_to have("POST #{another_recipient.inbox}")
+        end
+      end
+
+      context "when delivery to the shared inbox fails" do
+        before_each do
+          remote_recipient.assign(shared_inbox: "https://remote/openssl-error").save
+          another_recipient.assign(shared_inbox: "https://remote/openssl-error").save
+        end
+
+        it "tracks failures for each recipient" do
+          subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
+          expect(subject.failures.map(&.recipient)).to contain_exactly(remote_recipient.iri, another_recipient.iri)
+        end
+      end
+
+      context "when mixing recipients with and without a shared inbox" do
+        before_each do
+          remote_recipient.assign(shared_inbox: "https://remote/shared-inbox").save
+        end
+
+        it "delivers to shared and individual inboxes appropriately" do
+          subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
+          expect(HTTP::Client.requests).to have("POST https://remote/shared-inbox")
+          expect(HTTP::Client.requests).to have("POST #{another_recipient.inbox}")
+          expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.inbox}")
+        end
+      end
+    end
   end
 
   describe ".is_recipient_down?" do

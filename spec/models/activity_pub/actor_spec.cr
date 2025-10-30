@@ -326,6 +326,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
+      expect(actor.shared_inbox).to be_nil
 
       expect(actor.attachments).not_to be_nil
       attachments = actor.attachments.not_nil!
@@ -350,6 +351,15 @@ Spectator.describe ActivityPub::Actor do
         expect(actor.urls).to eq(["url one", "url two"])
       end
     end
+
+    context "given `sharedInbox`" do
+      let(json) { super.gsub(/"inbox": "inbox link"/, %q|"endpoints": {"sharedInbox": "https://remote/shared-inbox"}, "inbox": "inbox link"|) }
+
+      it "parses the `sharedInbox` from `endpoint`s" do
+        actor = described_class.from_json_ld(json).save
+        expect(actor.shared_inbox).to eq("https://remote/shared-inbox")
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -367,6 +377,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
+      expect(actor.shared_inbox).to be_nil
 
       expect(actor.attachments).not_to be_nil
       attachments = actor.attachments.not_nil!
@@ -391,6 +402,15 @@ Spectator.describe ActivityPub::Actor do
         expect(actor.urls).to eq(["url one", "url two"])
       end
     end
+
+    context "given `sharedInbox`" do
+      let(json) { super.gsub(/"inbox": "inbox link"/, %q|"endpoints": {"sharedInbox": "https://remote/shared-inbox"}, "inbox": "inbox link"|) }
+
+      it "updates `shared_inbox`" do
+        actor = described_class.new.from_json_ld(json).save
+        expect(actor.shared_inbox).to eq("https://remote/shared-inbox")
+      end
+    end
   end
 
   describe "#to_json_ld" do
@@ -413,6 +433,14 @@ Spectator.describe ActivityPub::Actor do
 
       it "renders the array of URLs" do
         expect(actor.to_json_ld).to match(/"url":\["url one","url two"\]/)
+      end
+    end
+
+    context "given a shared inbox" do
+      before_each { actor.assign(shared_inbox: "https://remote/shared-inbox") }
+
+      it "renders `sharedInbox`" do
+        expect(actor.to_json_ld).to match(/"endpoints":\{[^}]*"sharedInbox":"https:\/\/remote\/shared-inbox"[^}]*\}/)
       end
     end
 
@@ -616,6 +644,67 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.likes(1, 2)).to eq([note5, note4])
       expect(subject.likes(2, 2)).to eq([note3, note2])
       expect(subject.likes(2, 2).more?).to be_true
+    end
+  end
+
+  describe "#dislikes" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_dislike(index)
+      let_create!(:note, named: note{{index}})
+      let_create!(:dislike, named: dislike{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_dislike(1)
+    create_dislike(2)
+    create_dislike(3)
+    create_dislike(4)
+    create_dislike(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.dislikes(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.dislikes(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      note5.attributed_to.delete!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      note5.attributed_to.block!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts if the dislike has been undone" do
+      dislike5.undo!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "paginates the results" do
+      expect(subject.dislikes(1, 2)).to eq([note5, note4])
+      expect(subject.dislikes(2, 2)).to eq([note3, note2])
+      expect(subject.dislikes(2, 2).more?).to be_true
     end
   end
 

@@ -730,6 +730,15 @@ module Ktistec::ViewHelper
     Ktistec::Util.sanitize({{str}})
   end
 
+  # Renders HTML as plain text by stripping out all HTML.
+  #
+  # For use in views:
+  #     <%= t string %>
+  #
+  macro t(str)
+    Ktistec::Util.render_as_text({{str}})
+  end
+
   # Transforms the span of time between two different times into
   # words.
   #

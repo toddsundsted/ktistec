@@ -1305,6 +1305,12 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "render_as_text" do
+    it "strips all HTML" do
+      expect(t("<p>Foo Bar</p>")).to eq("Foo Bar\n")
+    end
+  end
+
   describe "pluralize" do
     it "pluralizes the noun" do
       expect(pluralize(0, "fox")).to eq("fox")

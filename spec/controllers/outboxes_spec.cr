@@ -4,7 +4,7 @@ require "../spec_helper/controller"
 require "../spec_helper/factory"
 require "../spec_helper/network"
 
-Spectator.describe RelationshipsController do
+Spectator.describe OutboxesController do
   setup_spec
 
   HTML_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/vnd.turbo-stream.html, text/html"}
@@ -343,6 +343,134 @@ Spectator.describe RelationshipsController do
 
         it "does not put the object in the actor's timeline" do
           expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|}.
+            not_to change{Timeline.count(from_iri: actor.iri)}
+        end
+      end
+
+      context "on dislike" do
+        before_each do
+          actor.assign(followers: "#{actor.iri}/followers").save
+        end
+
+        it "returns 400 if the object iri is missing" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the object iri is missing" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike"}|
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if object does not exist" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=https%3A%2F%2Fremote%2Fobjects%2Fblah_blah"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if object does not exist" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"https://remote/objects/blah_blah"}|
+          expect(response.status_code).to eq(400)
+        end
+
+        let_create(:object, attributed_to: other)
+
+        it "redirects when successful" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "returns 201 when successful" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
+          expect(response.status_code).to eq(201)
+        end
+
+        it "creates a dislike activity" do
+          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"}.
+            to change{ActivityPub::Activity::Dislike.count(actor_iri: actor.iri)}.by(1)
+        end
+
+        it "creates a dislike activity" do
+          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|}.
+            to change{ActivityPub::Activity::Dislike.count(actor_iri: actor.iri)}.by(1)
+        end
+
+        it "does not create a visible activity if not public" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}&visibility=private"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
+        end
+
+        it "does not create a visible activity if not public" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}","visibility":"private"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
+        end
+
+        it "creates a visible activity if public" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}&visibility=public"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+        end
+
+        it "creates a visible activity if public" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}","visibility":"public"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+        end
+
+        it "addresses (to) the public collection" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}&visibility=public"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "addresses (to) the public collection" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}","visibility":"public"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "addresses (to) the object's actor" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (to) the object's actor" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (to) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
+        end
+
+        it "addresses (to) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+
+        it "does not put the object in the actor's timeline" do
+          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"}.
+            not_to change{Timeline.count(from_iri: actor.iri)}
+        end
+
+        it "does not put the object in the actor's timeline" do
+          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|}.
             not_to change{Timeline.count(from_iri: actor.iri)}
         end
       end
@@ -1307,6 +1435,79 @@ Spectator.describe RelationshipsController do
 
         it "sends the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{like.iri}"}|
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+      end
+
+      context "when undoing a dislike" do
+        let_build(:object, attributed_to: other)
+        let_create!(:dislike, actor: actor, object: object)
+
+        before_each do
+          actor.assign(followers: "#{actor.iri}/followers").save
+        end
+
+        it "returns 400 if the dislike activity does not exist" do
+          dislike.destroy
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the dislike activity does not exist" do
+          dislike.destroy
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the dislike activity does not belong to the actor" do
+          dislike.assign(actor: other).save
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the dislike activity does not belong to the actor" do
+          dislike.assign(actor: other).save
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
+          expect(response.status_code).to eq(400)
+        end
+
+        it "addresses (cc) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
+          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "addresses (cc) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
+          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "undoes the dislike" do
+          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"}.
+            to change{ActivityPub::Activity.count(iri: dislike.iri)}.by(-1)
+        end
+
+        it "undoes the dislike" do
+          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|}.
+            to change{ActivityPub::Activity.count(iri: dislike.iri)}.by(-1)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
           expect(HTTP::Client.requests).to have("POST #{other.inbox}")
         end
       end

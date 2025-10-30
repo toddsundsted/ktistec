@@ -1,15 +1,14 @@
-- relationship = env.params.url["relationship"]
 - content_for "title" do
-  = relationship.titleize
+  = title
 - if objects.empty?
   .ui.basic.very.padded.center.aligned.segment
     .ui.icon.header
       i.exclamation.icon
       | There is nothing here, yet.
     .ui.text
-      | This page lists your #{relationship}.
+      | This page lists your #{title.downcase}.
 - else
-  h1= relationship.titleize
+  h1= title
   section.ui.feed
     - objects.each do |object|
       == object_partial(env, object)

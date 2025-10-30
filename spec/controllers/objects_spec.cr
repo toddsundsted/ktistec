@@ -4,10 +4,32 @@ require "../spec_helper/factory"
 require "../spec_helper/controller"
 require "../spec_helper/network"
 
+# redefine as public for testing
+class ObjectsController
+  def self.get_object(env, iri_or_id)
+    previous_def(env, iri_or_id)
+  end
+
+  def self.get_object_editable(env, iri_or_id)
+    previous_def(env, iri_or_id)
+  end
+
+  def self.get_object_approvable(env, iri_or_id)
+    previous_def(env, iri_or_id)
+  end
+end
+
 Spectator.describe ObjectsController do
   setup_spec
 
+  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html"}
+  ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
+  FORM_DATA = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html", "Content-Type" => "application/x-www-form-urlencoded"}
+  JSON_DATA = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
+
   let(actor) { register.actor }
+
+  let(published) { Time.utc(2025, 1, 1, 12, 0, 0) }
 
   let_create(
     :actor, named: :author,
@@ -17,21 +39,21 @@ Spectator.describe ObjectsController do
   let_create(
     :object, named: :visible,
     attributed_to: author,
-    published: Time.utc,
+    published: published,
     visible: true,
     local: true
   )
   let_create(
     :object, named: :notvisible,
     attributed_to: author,
-    published: Time.utc,
+    published: published,
     visible: false,
     local: true
   )
   let_create(
     :object, named: :remote,
     attributed_to: author,
-    published: Time.utc,
+    published: published,
     visible: false
   )
   let_create(
@@ -44,14 +66,178 @@ Spectator.describe ObjectsController do
     :object, named: :reply,
     in_reply_to: visible,
     attributed_to: actor,
-    published: Time.utc,
+    published: published,
     local: true
   )
 
-  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html"}
-  ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
-  FORM_DATA = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html", "Content-Type" => "application/x-www-form-urlencoded"}
-  JSON_DATA = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
+  describe ".get_object" do
+    let(env) { env_factory("GET", "/") }
+
+    it "returns visible objects" do
+      result = ObjectsController.get_object(env, visible.iri)
+      expect(result).to eq(visible)
+    end
+
+    it "returns nil for non-visible objects" do
+      result = ObjectsController.get_object(env, notvisible.iri)
+      expect(result).to be_nil
+    end
+
+    it "returns nil for draft objects" do
+      result = ObjectsController.get_object(env, draft.iri)
+      expect(result).to be_nil
+    end
+
+    it "returns nil for reply objects" do
+      result = ObjectsController.get_object(env, reply.iri)
+      expect(result).to be_nil
+    end
+
+    context "when authenticated" do
+      sign_in
+
+      it "returns visible objects" do
+        result = ObjectsController.get_object(env, visible.iri)
+        expect(result).to eq(visible)
+      end
+
+      it "returns nil for non-visible objects" do
+        result = ObjectsController.get_object(env, notvisible.iri)
+        expect(result).to be_nil
+      end
+
+      it "returns nil for draft objects" do
+        result = ObjectsController.get_object(env, draft.iri)
+        expect(result).to be_nil
+      end
+
+      it "returns nil for reply objects" do
+        result = ObjectsController.get_object(env, reply.iri)
+        expect(result).to be_nil
+      end
+
+      context "and account actor is the object owner" do
+        before_each do
+          notvisible.assign(attributed_to: Global.account.not_nil!.actor).save
+          draft.assign(attributed_to: Global.account.not_nil!.actor).save
+          reply.assign(attributed_to: Global.account.not_nil!.actor).save
+        end
+
+        it "returns non-visible objects owned by the actor" do
+          result = ObjectsController.get_object(env, notvisible.iri)
+          expect(result).to eq(notvisible)
+        end
+
+        it "returns draft objects owned by the actor" do
+          result = ObjectsController.get_object(env, draft.iri)
+          expect(result).to eq(draft)
+        end
+
+        it "returns reply objects owned by the actor" do
+          result = ObjectsController.get_object(env, reply.iri)
+          expect(result).to eq(reply)
+        end
+      end
+
+      context "and object is in account actor's inbox" do
+        before_each do
+          put_in_inbox(owner: Global.account.not_nil!.actor, object: notvisible)
+          put_in_inbox(owner: Global.account.not_nil!.actor, object: draft)
+          put_in_inbox(owner: Global.account.not_nil!.actor, object: reply)
+        end
+
+        it "returns non-visible objects in the actor's inbox" do
+          result = ObjectsController.get_object(env, notvisible.iri)
+          expect(result).to eq(notvisible)
+        end
+
+        it "returns draft objects in the actor's inbox" do
+          result = ObjectsController.get_object(env, draft.iri)
+          expect(result).to eq(draft)
+        end
+
+        it "returns reply objects in the actor's inbox" do
+          result = ObjectsController.get_object(env, reply.iri)
+          expect(result).to eq(reply)
+        end
+      end
+    end
+  end
+
+  describe ".get_object_editable" do
+    let(env) { env_factory("GET", "/") }
+
+    it "returns nil" do
+      result = ObjectsController.get_object_editable(env, visible.iri)
+      expect(result).to be_nil
+    end
+
+    context "when authenticated" do
+      sign_in
+
+      it "returns nil for objects not owned by the account actor" do
+        result = ObjectsController.get_object_editable(env, visible.iri)
+        expect(result).to be_nil
+      end
+
+      context "and account actor is the object owner" do
+        before_each do
+          visible.assign(attributed_to: Global.account.not_nil!.actor).save
+          notvisible.assign(attributed_to: Global.account.not_nil!.actor).save
+          draft.assign(attributed_to: Global.account.not_nil!.actor).save
+        end
+
+        it "returns visible objects" do
+          result = ObjectsController.get_object_editable(env, visible.iri)
+          expect(result).to eq(visible)
+        end
+
+        it "returns non-visible objects" do
+          result = ObjectsController.get_object_editable(env, notvisible.iri)
+          expect(result).to eq(notvisible)
+        end
+
+        it "returns draft objects" do
+          result = ObjectsController.get_object_editable(env, draft.iri)
+          expect(result).to eq(draft)
+        end
+      end
+    end
+  end
+
+  describe ".get_object_approvable" do
+    let(env) { env_factory("GET", "/") }
+
+    it "returns nil" do
+      result = ObjectsController.get_object_approvable(env, reply.iri)
+      expect(result).to be_nil
+    end
+
+    context "when authenticated" do
+      sign_in
+
+      it "returns nil when user does not own the thread root" do
+        result = ObjectsController.get_object_approvable(env, reply.iri)
+        expect(result).to be_nil
+      end
+
+      context "and user owns the thread root" do
+        before_each do
+          visible.assign(attributed_to: Global.account.not_nil!.actor).save
+        end
+
+        it "returns the reply" do
+          result = ObjectsController.get_object_approvable(env, reply.iri)
+          expect(result).to eq(reply)
+        end
+
+        it "returns nil for objects that are not replies" do
+          result = ObjectsController.get_object_approvable(env, visible.iri)
+          expect(result).to be_nil
+        end
+      end
+    end
+  end
 
   describe "POST /objects" do
     it "returns 401 if not authorized" do
@@ -787,11 +973,6 @@ Spectator.describe ObjectsController do
         expect(JSON.parse(response.body)["id"]).to eq(visible.iri)
       end
 
-      it "returns 404 if object is a draft" do
-        get "/remote/objects/#{draft.id}"
-        expect(response.status_code).to eq(404)
-      end
-
       it "returns 404 if object is not visible" do
         get "/remote/objects/#{notvisible.id}"
         expect(response.status_code).to eq(404)
@@ -867,11 +1048,6 @@ Spectator.describe ObjectsController do
         expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri)
       end
 
-      it "returns 404 if object is a draft" do
-        get "/remote/objects/#{draft.id}/thread"
-        expect(response.status_code).to eq(404)
-      end
-
       it "returns 404 if object is not visible" do
         get "/remote/objects/#{notvisible.id}/thread"
         expect(response.status_code).to eq(404)
@@ -889,6 +1065,11 @@ Spectator.describe ObjectsController do
           get "/remote/objects/#{remote.id}"
           expect(response.status_code).to eq(200)
         end
+      end
+
+      it "returns 404 if object is draft" do
+        get "/remote/objects/#{draft.id}/thread"
+        expect(response.status_code).to eq(404)
       end
 
       it "returns 404 if object does not exist" do
@@ -961,18 +1142,9 @@ Spectator.describe ObjectsController do
       let_build(:actor, named: :other, iri: "https://nowhere/", username: "other")
       let_build(:object, named: :parent, attributed_to: other)
 
-      before_each do
-        visible.assign(in_reply_to: parent).save
-      end
-
       it "prepopulates editor with mentions" do
         get "/remote/objects/#{visible.id}/reply", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("@author@nowhere @other@nowhere ")
-      end
-
-      it "returns 404 if object is a draft" do
-        get "/remote/objects/#{draft.id}/reply"
-        expect(response.status_code).to eq(404)
+        expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("@author@nowhere ")
       end
 
       it "returns 404 if object is not visible" do
@@ -994,6 +1166,11 @@ Spectator.describe ObjectsController do
         end
       end
 
+      it "returns 404 if object is draft" do
+        get "/remote/objects/#{draft.id}/reply"
+        expect(response.status_code).to eq(404)
+      end
+
       it "returns 404 if object does not exist" do
         get "/remote/objects/0/reply"
         expect(response.status_code).to eq(404)
@@ -1010,29 +1187,42 @@ Spectator.describe ObjectsController do
     context "when authorized" do
       sign_in(as: actor.username)
 
-      before_each { actor.unapprove(remote) }
+      before_each do
+        visible.assign(attributed_to: actor).save
+        actor.unapprove(reply)
+      end
 
       it "succeeds" do
-        post "/remote/objects/#{remote.id}/approve"
+        post "/remote/objects/#{reply.id}/approve"
         expect(response.status_code).to eq(302)
       end
 
       it "approves the object" do
-        expect{post "/remote/objects/#{remote.id}/approve"}.
-          to change{remote.approved_by?(actor)}
+        expect{post "/remote/objects/#{reply.id}/approve"}.
+          to change{reply.approved_by?(actor)}
       end
 
       context "but it's already approved" do
-        before_each { actor.approve(remote) }
+        before_each { actor.approve(reply) }
 
         it "returns 400" do
-          post "/remote/objects/#{remote.id}/approve"
+          post "/remote/objects/#{reply.id}/approve"
           expect(response.status_code).to eq(400)
         end
       end
 
       it "returns 404 if object does not exist" do
         post "/remote/objects/0/approve"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is not a reply" do
+        post "/remote/objects/#{visible.id}/approve"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 when user does not own the thread root" do
+        post "/remote/objects/#{remote.id}/approve"
         expect(response.status_code).to eq(404)
       end
     end
@@ -1047,29 +1237,42 @@ Spectator.describe ObjectsController do
     context "when authorized" do
       sign_in(as: actor.username)
 
-      before_each { actor.approve(remote) }
+      before_each do
+        visible.assign(attributed_to: actor).save
+        actor.approve(reply)
+      end
 
       it "succeeds" do
-        post "/remote/objects/#{remote.id}/unapprove"
+        post "/remote/objects/#{reply.id}/unapprove"
         expect(response.status_code).to eq(302)
       end
 
       it "unapproves the object" do
-        expect{post "/remote/objects/#{remote.id}/unapprove"}.
-          to change{remote.approved_by?(actor)}
+        expect{post "/remote/objects/#{reply.id}/unapprove"}.
+          to change{reply.approved_by?(actor)}
       end
 
       context "but it's already unapproved" do
-        before_each { actor.unapprove(remote) }
+        before_each { actor.unapprove(reply) }
 
         it "returns 400" do
-          post "/remote/objects/#{remote.id}/unapprove"
+          post "/remote/objects/#{reply.id}/unapprove"
           expect(response.status_code).to eq(400)
         end
       end
 
       it "returns 404 if object does not exist" do
         post "/remote/objects/0/unapprove"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is not a reply" do
+        post "/remote/objects/#{visible.id}/unapprove"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 when user does not own the thread root" do
+        post "/remote/objects/#{remote.id}/unapprove"
         expect(response.status_code).to eq(404)
       end
     end
@@ -1145,29 +1348,31 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        post "/remote/objects/#{remote.id}/follow"
+        post "/remote/objects/#{visible.id}/follow"
         expect(response.status_code).to eq(302)
       end
 
       it "follows the thread" do
-        post "/remote/objects/#{remote.id}/follow"
-        expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
+        post "/remote/objects/#{visible.id}/follow"
+        expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(visible.iri)
       end
 
       it "begins fetching the thread" do
-        post "/remote/objects/#{remote.id}/follow"
-        expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
+        post "/remote/objects/#{visible.id}/follow"
+        expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(visible.iri)
       end
 
       context "within a turbo-frame" do
         it "succeeds" do
-          post "/remote/objects/#{remote.id}/follow", TURBO_FRAME
+          post "/remote/objects/#{visible.id}/follow", TURBO_FRAME
           expect(response.status_code).to eq(200)
         end
       end
 
       context "given a reply" do
-        let_create!(:object, named: :reply, in_reply_to: remote)
+        let_create!(:object, named: :reply, in_reply_to: visible)
+
+        before_each { put_in_inbox(owner: actor, object: reply) }
 
         it "succeeds" do
           post "/remote/objects/#{reply.id}/follow"
@@ -1176,39 +1381,39 @@ Spectator.describe ObjectsController do
 
         it "follows the thread" do
           post "/remote/objects/#{reply.id}/follow"
-          expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
+          expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(visible.iri)
         end
 
         it "begins fetching the thread" do
           post "/remote/objects/#{reply.id}/follow"
-          expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
+          expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(visible.iri)
         end
       end
 
       context "given an existing follow and fetch" do
-        let_create!(:follow_thread_relationship, actor: actor, thread: remote.thread)
-        let_create!(:fetch_thread_task, source: actor, thread: remote.thread)
+        let_create!(:follow_thread_relationship, actor: actor, thread: visible.thread)
+        let_create!(:fetch_thread_task, source: actor, thread: visible.thread)
 
         it "succeeds" do
-          post "/remote/objects/#{remote.id}/follow"
+          post "/remote/objects/#{visible.id}/follow"
           expect(response.status_code).to eq(302)
         end
 
         it "does not change the count of follow relationships" do
-          expect{post "/remote/objects/#{remote.id}/follow"}.
-            not_to change{Relationship::Content::Follow::Thread.count(thread: remote.iri)}
+          expect{post "/remote/objects/#{visible.id}/follow"}.
+            not_to change{Relationship::Content::Follow::Thread.count(thread: visible.iri)}
         end
 
         it "does not change the count of fetch tasks" do
-          expect{post "/remote/objects/#{remote.id}/follow"}.
-            not_to change{Task::Fetch::Thread.count(thread: remote.iri)}
+          expect{post "/remote/objects/#{visible.id}/follow"}.
+            not_to change{Task::Fetch::Thread.count(thread: visible.iri)}
         end
 
         context "where the fetch is complete but has failed" do
           before_each { fetch_thread_task.assign(complete: true, backtrace: ["error"]).save }
 
           it "clears the backtrace" do
-            expect{post "/remote/objects/#{remote.id}/follow"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
+            expect{post "/remote/objects/#{visible.id}/follow"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
           end
         end
       end
@@ -1235,46 +1440,48 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        post "/remote/objects/#{remote.id}/unfollow"
+        post "/remote/objects/#{visible.id}/unfollow"
         expect(response.status_code).to eq(302)
       end
 
       context "within a turbo-frame" do
         it "succeeds" do
-          post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
+          post "/remote/objects/#{visible.id}/unfollow", TURBO_FRAME
           expect(response.status_code).to eq(200)
         end
       end
 
       context "given a follow and fetch" do
-        let_create(:object, named: :reply, in_reply_to: remote)
+        let_create(:object, named: :reply, in_reply_to: visible)
         let_create!(:follow_thread_relationship, actor: actor, thread: reply.thread)
         let_create!(:fetch_thread_task, source: actor, thread: reply.thread)
 
         it "succeeds" do
-          post "/remote/objects/#{remote.id}/unfollow"
+          post "/remote/objects/#{visible.id}/unfollow"
           expect(response.status_code).to eq(302)
         end
 
         it "unfollows the thread" do
-          post "/remote/objects/#{remote.id}/unfollow"
+          post "/remote/objects/#{visible.id}/unfollow"
           expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to be_empty
         end
 
         it "stops fetching the thread" do
-          post "/remote/objects/#{remote.id}/unfollow"
-          expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(remote.iri)
+          post "/remote/objects/#{visible.id}/unfollow"
+          expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(visible.iri)
         end
 
         context "within a turbo-frame" do
           it "succeeds" do
-            post "/remote/objects/#{remote.id}/unfollow", TURBO_FRAME
+            post "/remote/objects/#{visible.id}/unfollow", TURBO_FRAME
             expect(response.status_code).to eq(200)
           end
         end
 
         context "given a reply" do
-          let_create!(:object, named: :reply, in_reply_to: remote)
+          let_create!(:object, named: :reply, in_reply_to: visible)
+
+          before_each { put_in_inbox(owner: actor, object: reply) }
 
           it "succeeds" do
             post "/remote/objects/#{reply.id}/unfollow"
@@ -1288,7 +1495,7 @@ Spectator.describe ObjectsController do
 
           it "stops fetching the root object of the thread" do
             post "/remote/objects/#{reply.id}/unfollow"
-            expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(remote.iri)
+            expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(visible.iri)
           end
 
           context "within a turbo-frame" do
@@ -1322,29 +1529,31 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        post "/remote/objects/#{remote.id}/fetch/start"
+        post "/remote/objects/#{visible.id}/fetch/start"
         expect(response.status_code).to eq(302)
       end
 
       it "does not follow the thread" do
-        post "/remote/objects/#{remote.id}/fetch/start"
+        post "/remote/objects/#{visible.id}/fetch/start"
         expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to be_empty
       end
 
       it "begins fetching the thread" do
-        post "/remote/objects/#{remote.id}/fetch/start"
-        expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
+        post "/remote/objects/#{visible.id}/fetch/start"
+        expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(visible.iri)
       end
 
       context "within a turbo-frame" do
         it "succeeds" do
-          post "/remote/objects/#{remote.id}/fetch/start", TURBO_FRAME
+          post "/remote/objects/#{visible.id}/fetch/start", TURBO_FRAME
           expect(response.status_code).to eq(200)
         end
       end
 
       context "given a reply" do
-        let_create!(:object, named: :reply, in_reply_to: remote)
+        let_create!(:object, named: :reply, in_reply_to: visible)
+
+        before_each { put_in_inbox(owner: actor, object: reply) }
 
         it "succeeds" do
           post "/remote/objects/#{reply.id}/fetch/start"
@@ -1358,34 +1567,34 @@ Spectator.describe ObjectsController do
 
         it "begins fetching the thread" do
           post "/remote/objects/#{reply.id}/fetch/start"
-          expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(remote.iri)
+          expect(Task::Fetch::Thread.all.map(&.thread)).to contain_exactly(visible.iri)
         end
       end
 
       context "given an existing follow and fetch" do
-        let_create!(:follow_thread_relationship, actor: actor, thread: remote.thread)
-        let_create!(:fetch_thread_task, source: actor, thread: remote.thread)
+        let_create!(:follow_thread_relationship, actor: actor, thread: visible.thread)
+        let_create!(:fetch_thread_task, source: actor, thread: visible.thread)
 
         it "succeeds" do
-          post "/remote/objects/#{remote.id}/fetch/start"
+          post "/remote/objects/#{visible.id}/fetch/start"
           expect(response.status_code).to eq(302)
         end
 
         it "does not change the count of follow relationships" do
-          expect{post "/remote/objects/#{remote.id}/fetch/start"}.
-            not_to change{Relationship::Content::Follow::Thread.count(thread: remote.iri)}
+          expect{post "/remote/objects/#{visible.id}/fetch/start"}.
+            not_to change{Relationship::Content::Follow::Thread.count(thread: visible.iri)}
         end
 
         it "does not change the count of fetch tasks" do
-          expect{post "/remote/objects/#{remote.id}/fetch/start"}.
-            not_to change{Task::Fetch::Thread.count(thread: remote.iri)}
+          expect{post "/remote/objects/#{visible.id}/fetch/start"}.
+            not_to change{Task::Fetch::Thread.count(thread: visible.iri)}
         end
 
         context "where the fetch is complete but has failed" do
           before_each { fetch_thread_task.assign(complete: true, backtrace: ["error"]).save }
 
           it "clears the backtrace" do
-            expect{post "/remote/objects/#{remote.id}/fetch/start"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
+            expect{post "/remote/objects/#{visible.id}/fetch/start"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
           end
         end
       end
@@ -1412,46 +1621,48 @@ Spectator.describe ObjectsController do
       sign_in(as: actor.username)
 
       it "succeeds" do
-        post "/remote/objects/#{remote.id}/fetch/cancel"
+        post "/remote/objects/#{visible.id}/fetch/cancel"
         expect(response.status_code).to eq(302)
       end
 
       context "within a turbo-frame" do
         it "succeeds" do
-          post "/remote/objects/#{remote.id}/fetch/cancel", TURBO_FRAME
+          post "/remote/objects/#{visible.id}/fetch/cancel", TURBO_FRAME
           expect(response.status_code).to eq(200)
         end
       end
 
       context "given a follow and fetch" do
-        let_create(:object, named: :reply, in_reply_to: remote)
+        let_create(:object, named: :reply, in_reply_to: visible)
         let_create!(:follow_thread_relationship, actor: actor, thread: reply.thread)
         let_create!(:fetch_thread_task, source: actor, thread: reply.thread)
 
         it "succeeds" do
-          post "/remote/objects/#{remote.id}/fetch/cancel"
+          post "/remote/objects/#{visible.id}/fetch/cancel"
           expect(response.status_code).to eq(302)
         end
 
         it "does not unfollow the thread" do
-          post "/remote/objects/#{remote.id}/fetch/cancel"
+          post "/remote/objects/#{visible.id}/fetch/cancel"
           expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(reply.thread)
         end
 
         it "stops fetching the thread" do
-          post "/remote/objects/#{remote.id}/fetch/cancel"
+          post "/remote/objects/#{visible.id}/fetch/cancel"
           expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(reply.thread)
         end
 
         context "within a turbo-frame" do
           it "succeeds" do
-            post "/remote/objects/#{remote.id}/fetch/cancel", TURBO_FRAME
+            post "/remote/objects/#{visible.id}/fetch/cancel", TURBO_FRAME
             expect(response.status_code).to eq(200)
           end
         end
 
         context "given a reply" do
-          let_create!(:object, named: :reply, in_reply_to: remote)
+          let_create!(:object, named: :reply, in_reply_to: visible)
+
+          before_each { put_in_inbox(owner: actor, object: reply) }
 
           it "succeeds" do
             post "/remote/objects/#{reply.id}/fetch/cancel"
@@ -1460,12 +1671,12 @@ Spectator.describe ObjectsController do
 
           it "does not unfollow the root object of the thread" do
             post "/remote/objects/#{reply.id}/fetch/cancel"
-            expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(remote.thread)
+            expect(Relationship::Content::Follow::Thread.all.map(&.thread)).to contain_exactly(visible.thread)
           end
 
           it "stops fetching the root object of the thread" do
             post "/remote/objects/#{reply.id}/fetch/cancel"
-            expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(remote.iri)
+            expect(Task::Fetch::Thread.where(complete: true).map(&.thread)).to contain_exactly(visible.iri)
           end
 
           context "within a turbo-frame" do
@@ -1499,6 +1710,8 @@ Spectator.describe ObjectsController do
 
     context "when authorized" do
       sign_in(as: actor.username)
+
+      before_each { put_in_inbox(owner: actor, object: remote) }
 
       it "succeeds" do
         post "/remote/objects/#{remote.id}/translation/create"
@@ -1567,6 +1780,8 @@ Spectator.describe ObjectsController do
 
     context "when authorized" do
       sign_in(as: actor.username)
+
+      before_each { put_in_inbox(owner: actor, object: remote) }
 
       it "succeeds" do
         post "/remote/objects/#{remote.id}/translation/clear"

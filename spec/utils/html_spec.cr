@@ -168,6 +168,24 @@ Spectator.describe Ktistec::HTML do
         expect(described_class.enhance(content).hashtags).
           to eq([Ktistec::HTML::Hashtag.new(name: "hashtag", href: "#{Ktistec.host}/tags/hashtag")])
       end
+
+      context "given full-width hash sign" do
+        it "replaces hashtags with markup" do
+          content = %q|<div>＃日本語</div>|
+          expect(described_class.enhance(content).content).to eq(%Q|<p><a href="#{Ktistec.host}/tags/%E6%97%A5%E6%9C%AC%E8%AA%9E" class="hashtag" rel="tag">＃日本語</a></p>|)
+        end
+
+        it "handles mixed hash and full-width hash signs" do
+          content = %q|<div>#regular ＃fullwidth</div>|
+          expect(described_class.enhance(content).content).to eq(%Q|<p><a href="#{Ktistec.host}/tags/regular" class="hashtag" rel="tag">#regular</a> <a href="#{Ktistec.host}/tags/fullwidth" class="hashtag" rel="tag">＃fullwidth</a></p>|)
+        end
+
+        it "returns hashtags" do
+          content = %q|<div>＃モノクロ写真</div>|
+          expect(described_class.enhance(content).hashtags).
+            to eq([Ktistec::HTML::Hashtag.new(name: "モノクロ写真", href: "#{Ktistec.host}/tags/モノクロ写真")])
+        end
+      end
     end
 
     context "mentions" do

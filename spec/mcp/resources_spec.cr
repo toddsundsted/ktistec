@@ -115,7 +115,7 @@ Spectator.describe MCP::Resources do
 
       # supported collections
       collections = data["collections"].as_a.map(&.as_s)
-      expected_collections = ["posts", "drafts", "timeline", "notifications", "likes", "announces", "followers", "following"]
+      expected_collections = ["posts", "drafts", "timeline", "notifications", "likes", "dislikes", "announces", "followers", "following"]
       expect(collections).to contain_exactly(*expected_collections)
 
       # supported collection formats
@@ -322,6 +322,7 @@ Spectator.describe MCP::Resources do
         expect(json["in_reply_to"]).to eq("ktistec://objects/#{root.id}")
         expect(json["type"]).to eq("Object")
         expect(json["likes"]?).to be_nil
+        expect(json["dislikes"]?).to be_nil
         expect(json["announces"]?).to be_nil
         expect(json["replies"]?).to be_nil
       end
@@ -417,6 +418,25 @@ Spectator.describe MCP::Resources do
           actors = likes["actors"].as_a
           expect(actors.size).to eq(1)
           expect(actors.first["uri"]).to eq("ktistec://actors/#{liker.id}")
+        end
+      end
+
+      context "with a dislike" do
+        let_create(:actor, named: disliker)
+        let_create!(:dislike, actor: disliker, object: object)
+
+        it "includes dislikes field in object JSON" do
+          response = described_class.handle_resources_read(request, account)
+
+          text = response["contents"].as_a.first["text"].as_s
+          json = JSON.parse(text)
+
+          dislikes = json["dislikes"].as_h
+          expect(dislikes["count"]).to eq(1)
+
+          actors = dislikes["actors"].as_a
+          expect(actors.size).to eq(1)
+          expect(actors.first["uri"]).to eq("ktistec://actors/#{disliker.id}")
         end
       end
 

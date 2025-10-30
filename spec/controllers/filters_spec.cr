@@ -3,10 +3,50 @@ require "../../src/controllers/filters"
 require "../spec_helper/factory"
 require "../spec_helper/controller"
 
+# redefine as public for testing
+class FiltersController
+  def self.get_filter_term(env, id)
+    previous_def(env, id)
+  end
+end
+
 Spectator.describe FiltersController do
   setup_spec
 
   let(actor) { register.actor }
+
+  describe ".get_filter_term" do
+    let(env) { env_factory("GET", "/") }
+
+    let_create!(:filter_term, named: test_term, actor: actor, term: "test")
+    let_create!(:filter_term, named: other_term, term: "other")
+
+    context "when unauthenticated" do
+      it "returns nil" do
+        result = FiltersController.get_filter_term(env, test_term.id)
+        expect(result).to be_nil
+      end
+    end
+
+    context "when authenticated" do
+      sign_in(as: actor.username)
+
+      it "returns the owned filter term" do
+        result = FiltersController.get_filter_term(env, test_term.id)
+        expect(result).to eq(test_term)
+      end
+
+      it "returns nil if user does not own the term" do
+        result = FiltersController.get_filter_term(env, other_term.id)
+        expect(result).to be_nil
+      end
+
+      it "returns nil if the term does not exist" do
+        result = FiltersController.get_filter_term(env, 999999_i64)
+        expect(result).to be_nil
+      end
+    end
+  end
 
   describe "GET /filters" do
     ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
@@ -165,14 +205,14 @@ Spectator.describe FiltersController do
         let_create!(:filter_term, named: term1, actor: actor, term: "hey")
         let_create!(:filter_term, named: term2, term: "hey")
 
-        it "returns 403 if term does not belong to the actor" do
+        it "returns 404 if term does not belong to the actor" do
           delete "/filters/#{term2.id}", HTML_HEADERS
-          expect(response.status_code).to eq(403)
+          expect(response.status_code).to eq(404)
         end
 
-        it "returns 403 if term does not belong to the actor" do
+        it "returns 404 if term does not belong to the actor" do
           delete "/filters/#{term2.id}", JSON_HEADERS
-          expect(response.status_code).to eq(403)
+          expect(response.status_code).to eq(404)
         end
 
         it "redirects if successful" do

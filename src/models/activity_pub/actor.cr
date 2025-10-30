@@ -20,6 +20,7 @@ require "./activity"
 require "./activity/announce"
 require "./activity/create"
 require "./activity/delete"
+require "./activity/dislike"
 require "./activity/like"
 require "./activity/undo"
 require "./object"
@@ -70,6 +71,9 @@ module ActivityPub
         OpenSSL::RSA.new(key, nil, true)
       end
     end
+
+    @[Persistent]
+    property shared_inbox : String?
 
     @[Persistent]
     property inbox : String?
@@ -317,6 +321,32 @@ module ActivityPub
     def likes(since : Time)
       Object.scalar(
         activity_count_query(ActivityPub::Activity::Like),
+        iri, since
+      ).as(Int64)
+    end
+
+    # Returns the objects that this actor has disliked.
+    #
+    # Returns objects in reverse chronological order (most recent
+    # first). Filters out deleted/blocked objects, and objects by
+    # deleted/blocked actors. Also filters out dislikes that have
+    # been undone.
+    #
+    def dislikes(page = 1, size = 10)
+      Object.query_and_paginate(
+        activity_query(ActivityPub::Activity::Dislike),
+        self.iri, page: page, size: size
+      )
+    end
+
+    # Returns the count of objects that this actor has disliked since the
+    # given date.
+    #
+    # See `#dislikes(page, size)` for further details.
+    #
+    def dislikes(since : Time)
+      Object.scalar(
+        activity_count_query(ActivityPub::Activity::Dislike),
         iri, since
       ).as(Int64)
     end
@@ -825,6 +855,7 @@ private module ActorModelHelper
       "pem_public_key" => if include_key
         Ktistec::JSON_LD.dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
       end,
+      "shared_inbox" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#endpoints", "https://www.w3.org/ns/activitystreams#sharedInbox"),
       "inbox" => Ktistec::JSON_LD.dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
       "outbox" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
       "following" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),

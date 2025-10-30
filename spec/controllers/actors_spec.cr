@@ -3,6 +3,21 @@ require "../../src/controllers/actors"
 require "../spec_helper/controller"
 require "../spec_helper/factory"
 
+# redefine as public for testing
+class ActorsController
+  def self.get_account(env)
+    previous_def(env)
+  end
+
+  def self.get_account_with_ownership(env)
+    previous_def(env)
+  end
+
+  def self.get_actor(env)
+    previous_def(env)
+  end
+end
+
 Spectator.describe ActorsController do
   setup_spec
 
@@ -10,6 +25,72 @@ Spectator.describe ActorsController do
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
 
   let(actor) { register.actor }
+
+  describe ".get_account" do
+    let(account) { register }
+
+    it "returns nil" do
+      env = env_factory("GET", "/actors/nonexistent/posts")
+      result = ActorsController.get_account(env)
+      expect(result).to be_nil
+    end
+
+    it "returns account" do
+      env = env_factory("GET", "/actors/#{account.username}/posts")
+      result = ActorsController.get_account(env)
+      expect(result).to eq(account)
+    end
+  end
+
+  describe ".get_account_with_ownership" do
+    let(account) { register }
+
+    it "returns nil" do
+      env = env_factory("GET", "/actors/nonexistent/posts")
+      result = ActorsController.get_account_with_ownership(env)
+      expect(result).to be_nil
+    end
+
+    it "returns nil" do
+      env = env_factory("GET", "/actors/#{account.username}/posts")
+      result = ActorsController.get_account_with_ownership(env)
+      expect(result).to be_nil
+    end
+
+    context "when authenticated" do
+      sign_in(as: account.username)
+
+      it "returns account" do
+        env = env_factory("GET", "/actors/#{account.username}/posts")
+        result = ActorsController.get_account_with_ownership(env)
+        expect(result).to eq(account)
+      end
+
+      context "given another account" do
+        let(other_account) { register }
+
+        it "returns nil" do
+          env = env_factory("GET", "/actors/#{other_account.username}/posts")
+          result = ActorsController.get_account_with_ownership(env)
+          expect(result).to be_nil
+        end
+      end
+    end
+  end
+
+  describe ".get_actor" do
+    let_create!(:actor)
+
+    it "returns nil" do
+      result = ActorsController.get_actor(999999)
+      expect(result).to be_nil
+    end
+
+    it "returns actor" do
+      result = ActorsController.get_actor(actor.id)
+      expect(result).to eq(actor)
+    end
+  end
 
   describe "GET /actors/:username" do
     it "returns 404 if not found" do
@@ -289,14 +370,14 @@ Spectator.describe ActorsController do
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/posts", ACCEPT_HTML
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/posts", ACCEPT_JSON
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
       it "succeeds" do
@@ -403,14 +484,14 @@ Spectator.describe ActorsController do
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/timeline", ACCEPT_HTML
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/timeline", ACCEPT_JSON
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
       it "succeeds" do
@@ -618,14 +699,14 @@ Spectator.describe ActorsController do
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/notifications", ACCEPT_HTML
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/notifications", ACCEPT_JSON
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
       it "succeeds" do
@@ -684,14 +765,14 @@ Spectator.describe ActorsController do
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/drafts", ACCEPT_HTML
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/drafts", ACCEPT_JSON
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
       it "succeeds" do

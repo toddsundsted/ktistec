@@ -4,8 +4,12 @@ require "../models/activity_pub/object/note"
 require "../models/task/deliver"
 require "../rules/content_rules"
 
-class RelationshipsController
+class OutboxesController
   include Ktistec::Controller
+
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"]?)
+  end
 
   post "/actors/:username/outbox" do |env|
     unless (account = get_account(env))
@@ -27,6 +31,9 @@ class RelationshipsController
       if (attributed_to = object.attributed_to?)
         to << attributed_to.iri
       end
+      if object.audience
+        audience = object.audience
+      end
       activity = ActivityPub::Activity::Announce.new(
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
@@ -35,6 +42,7 @@ class RelationshipsController
         visible: visible,
         to: to.to_a,
         cc: cc.to_a,
+        audience: audience,
       )
     when "Like"
       unless (iri = activity["object"]?) && (object = ActivityPub::Object.find?(iri))
@@ -45,6 +53,9 @@ class RelationshipsController
       if (attributed_to = object.attributed_to?)
         to << attributed_to.iri
       end
+      if object.audience
+        audience = object.audience
+      end
       activity = ActivityPub::Activity::Like.new(
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
@@ -53,6 +64,29 @@ class RelationshipsController
         visible: visible,
         to: to.to_a,
         cc: cc.to_a,
+        audience: audience,
+      )
+    when "Dislike"
+      unless (iri = activity["object"]?) && (object = ActivityPub::Object.find?(iri))
+        bad_request
+      end
+      now = Time.utc
+      visible, to, cc = addressing(activity, account.actor)
+      if (attributed_to = object.attributed_to?)
+        to << attributed_to.iri
+      end
+      if object.audience
+        audience = object.audience
+      end
+      activity = ActivityPub::Activity::Dislike.new(
+        iri: "#{host}/activities/#{id}",
+        actor: account.actor,
+        object: object,
+        published: now,
+        visible: visible,
+        to: to.to_a,
+        cc: cc.to_a,
+        audience: audience,
       )
     when "Publish"
       unless (content = activity["content"]?)
@@ -77,6 +111,9 @@ class RelationshipsController
       if (attributed_to = in_reply_to.try(&.attributed_to?))
         to << attributed_to.iri
       end
+      if in_reply_to && in_reply_to.audience
+        audience = in_reply_to.audience
+      end
       language = activity["language"]?.presence
       name = activity["name"]?.presence
       summary = activity["summary"]?.presence
@@ -98,6 +135,7 @@ class RelationshipsController
         visible: visible,
         to: to.to_a,
         cc: cc.to_a,
+        audience: audience,
       )
       # validate ensures properties are populated from source
       unless object.valid?
@@ -117,7 +155,8 @@ class RelationshipsController
           object: object,
           visible: object.visible,
           to: object.to,
-          cc: object.cc
+          cc: object.cc,
+          audience: audience,
         )
       end
       unless activity.responds_to?(:valid_for_send?) && activity.valid_for_send?
@@ -185,7 +224,7 @@ class RelationshipsController
       to = [] of String
       cc = [] of String
       case object
-      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like
+      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
         if (attributed_to = object.object.attributed_to?)
           to << attributed_to.iri
         end
@@ -316,9 +355,5 @@ class RelationshipsController
     activities = account.actor.in_outbox(**pagination_params(env), public: env.account? != account)
 
     ok "relationships/outbox", env: env, activities: activities
-  end
-
-  private def self.get_account(env)
-    Account.find?(username: env.params.url["username"]?)
   end
 end

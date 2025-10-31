@@ -3,6 +3,7 @@
     "https://www.w3.org/ns/activitystreams",
     "https://w3id.org/security/v1",
     {
+      "manuallyApprovesFollowers":"as:manuallyApprovesFollowers",
       "schema":"http://schema.org#",
       "PropertyValue":"schema:PropertyValue",
       "value":"schema:value"
@@ -66,6 +67,9 @@
   <%- elsif urls.size > 0 -%>
   "url":<%= urls.first.to_json %>,
   <%- end -%>
+  <%- end -%>
+  <%- if (account = Account.find?(iri: actor.iri)) -%>
+  "manuallyApprovesFollowers":<%= (!account.auto_approve_followers).to_json %>,
   <%- end -%>
   "type":<%= actor.type.split("::").last.to_json %>,
   "id":<%= actor.iri.to_json %>

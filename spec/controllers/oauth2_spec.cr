@@ -317,7 +317,7 @@ Spectator.describe OAuth2Controller do
       json_body = JSON.parse(response.body)
       expect(json_body["access_token"]?).not_to be_nil
       expect(json_body["token_type"]?).to eq("Bearer")
-      expect(json_body["expires_in"]?).to eq(3600 * 24)
+      expect(json_body["expires_in"]?).to eq(3600 * 24 * 30)
     end
 
     it "updates the client's last_accessed_at timestamp" do
@@ -339,7 +339,7 @@ Spectator.describe OAuth2Controller do
         json_body = JSON.parse(response.body)
         expect(json_body["access_token"]?).not_to be_nil
         expect(json_body["token_type"]?).to eq("Bearer")
-        expect(json_body["expires_in"]?).to eq(3600 * 24)
+        expect(json_body["expires_in"]?).to eq(3600 * 24 * 30)
       end
     end
 
@@ -356,7 +356,7 @@ Spectator.describe OAuth2Controller do
         json_body = JSON.parse(response.body)
         expect(json_body["access_token"]?).not_to be_nil
         expect(json_body["token_type"]?).to eq("Bearer")
-        expect(json_body["expires_in"]?).to eq(3600 * 24)
+        expect(json_body["expires_in"]?).to eq(3600 * 24 * 30)
       end
 
       context "and invalid credentials" do

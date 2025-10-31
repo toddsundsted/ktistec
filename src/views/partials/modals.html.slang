@@ -62,3 +62,20 @@
     .ui.green.ok.inverted.button
       i.checkmark.icon
       | Yes
+.ui.basic.tiny.delete-oauth-token.modal
+  .header
+    i.trash.icon
+    | Revoke OAuth Token
+  .content
+    p
+      | Are you sure you want to revoke the OAuth token
+        <strong class="token-id">[Token ID]</strong>?
+        This action cannot be undone and will immediately
+        revoke access for this token.
+  .actions
+    .ui.red.basic.cancel.inverted.button
+      i.remove.icon
+      | No
+    .ui.green.ok.inverted.button
+      i.checkmark.icon
+      | Yes

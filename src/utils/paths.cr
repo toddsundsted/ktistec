@@ -64,6 +64,14 @@ module Utils::Paths
     "/admin/accounts"
   end
 
+  macro admin_oauth_clients_path
+    "/admin/oauth/clients"
+  end
+
+  macro admin_oauth_tokens_path
+    "/admin/oauth/tokens"
+  end
+
   macro remote_activity_path(activity = nil)
     {% if activity %}
       "/remote/activities/#{{{activity}}.id}"

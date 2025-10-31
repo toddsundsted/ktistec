@@ -37,3 +37,15 @@
         a.header href=Ktistec::ViewHelper.admin_accounts_path Accounts
         .description
           | Manage user accounts
+    .item
+      i.large.key.icon
+      .content
+        a.header href=Ktistec::ViewHelper.admin_oauth_clients_path OAuth Clients
+        .description
+          | Manage OAuth client applications
+    .item
+      i.large.lock.icon
+      .content
+        a.header href=Ktistec::ViewHelper.admin_oauth_tokens_path OAuth Tokens
+        .description
+          | View and manage OAuth access tokens

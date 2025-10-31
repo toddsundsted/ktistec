@@ -12,7 +12,7 @@ class Task
   # **Inactive Clients**:
   # Note: Manually created clients are always preserved.
   # 1. Delete clients created more than 1 month ago AND never accessed
-  # 2. Delete clients that were last accessed more than four months ago
+  # 2. Delete clients that were last accessed more than one year ago
   #
   class CleanOauth < Task
     include Singleton
@@ -48,7 +48,7 @@ class Task
            AND (
              (last_accessed_at IS NULL AND created_at < datetime('now', '-1 month'))
               OR
-             (last_accessed_at < datetime('now', '-4 months'))
+             (last_accessed_at < datetime('now', '-1 year'))
            )
         SQL
       )

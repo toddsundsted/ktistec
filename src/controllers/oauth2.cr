@@ -365,14 +365,14 @@ class OAuth2Controller
       token: Random::Secure.urlsafe_base64,
       client_id: client.id,
       account_id: auth_code.account_id,
-      expires_at: Time.utc + 1.day,
+      expires_at: Time.utc + 30.days,
       scope: "mcp",
     ).save
 
     {
       token_type: "Bearer",
       access_token: access_token.token,
-      expires_in: 1.day.to_i,
+      expires_in: 30.days.to_i,
       scope: access_token.scope,
     }.to_json
   end

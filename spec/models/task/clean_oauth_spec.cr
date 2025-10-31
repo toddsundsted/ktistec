@@ -91,7 +91,7 @@ Spectator.describe Task::CleanOauth do
       end
     end
 
-    context "with a client that was accessed more than four months ago" do
+    context "with a client that was accessed more than one year ago" do
       let_create!(
         oauth2_provider_client,
         named: accessed_recently,
@@ -103,7 +103,7 @@ Spectator.describe Task::CleanOauth do
         oauth2_provider_client,
         named: not_accessed_recently,
         client_name: "Not Accessed Recently",
-        last_accessed_at: 6.months.ago,
+        last_accessed_at: 13.months.ago,
         created_at: 2.months.ago,
       )
 

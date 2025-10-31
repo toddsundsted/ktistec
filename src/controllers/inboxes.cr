@@ -3,8 +3,7 @@ require "../framework/controller"
 require "../framework/open"
 require "../framework/signature"
 require "../models/activity_pub/activity/**"
-require "../models/task/receive"
-require "../rules/content_rules"
+require "../services/inbox_activity_processor"
 
 class InboxesController
   include Ktistec::Controller
@@ -287,55 +286,7 @@ class InboxesController
 
     Log.trace { "[#{request_id}] saved id=#{activity.id}" }
 
-    ContentRules.new.run do
-      recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq
-      recipients.each { |recipient| assert ContentRules::IsRecipient.new(recipient) }
-      assert ContentRules::Incoming.new(account.actor, activity)
-    end
-
-    # handle side-effects
-
-    case activity
-    when ActivityPub::Activity::Follow
-      if activity.object == account.actor
-        unless Relationship::Social::Follow.find?(actor: activity.actor, object: activity.object)
-          Relationship::Social::Follow.new(
-            actor: activity.actor,
-            object: activity.object,
-            visible: false
-          ).save(skip_associated: true)
-        end
-      end
-    when ActivityPub::Activity::Accept
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: true).save
-      end
-    when ActivityPub::Activity::Reject
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: true).save
-      end
-    when ActivityPub::Activity::Undo
-      case (object = activity.object)
-      when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
-          follow.destroy
-        end
-      end
-      activity.object.undo!
-    when ActivityPub::Activity::Delete
-      case (object = activity.object?)
-      when ActivityPub::Object
-        object.delete!
-      when ActivityPub::Actor
-        object.delete!
-      end
-    end
-
-    Task::Receive.new(
-      receiver: account.actor,
-      activity: activity,
-      deliver_to: deliver_to
-    ).schedule
+    InboxActivityProcessor.process(account, activity, deliver_to)
 
     Log.trace { "[#{request_id}] complete" }
 

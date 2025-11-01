@@ -4,7 +4,6 @@ require "../models/activity_pub/object"
 require "../models/account"
 require "../rules/content_rules"
 require "../models/task/handle_follow_request"
-require "../models/task/handle_follow_back"
 require "../models/task/receive"
 require "../models/relationship/social/follow"
 
@@ -26,7 +25,6 @@ class InboxActivityProcessor
        deliver_to : Array(String)? = nil,
        content_rules : ContentRules = ContentRules.new,
        handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
-       handle_follow_back_task_class : Task::HandleFollowBack.class = Task::HandleFollowBack,
        receive_task_class : Task::Receive.class = Task::Receive
      )
     content_rules.run do
@@ -46,10 +44,6 @@ class InboxActivityProcessor
           ).save(skip_associated: true)
         end
         handle_follow_request_task_class.new(
-          recipient: account.actor,
-          activity: activity
-        ).schedule
-        handle_follow_back_task_class.new(
           recipient: account.actor,
           activity: activity
         ).schedule

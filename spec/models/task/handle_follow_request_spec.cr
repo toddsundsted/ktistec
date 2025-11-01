@@ -15,7 +15,7 @@ Spectator.describe Task::HandleFollowRequest do
   let_create(:follow, named: :follow_activity, actor: other, object: account.actor)
 
   describe "#perform" do
-    let_build(:handle_follow_request_task, source: account.actor, subject: follow_activity)
+    let_build(:handle_follow_request_task, recipient: account.actor, activity: follow_activity)
 
     it "does not create an Accept activity" do
       expect { handle_follow_request_task.perform }.not_to change { ActivityPub::Activity::Accept.count }
@@ -56,7 +56,7 @@ Spectator.describe Task::HandleFollowRequest do
         account.assign(auto_approve_followers: true).save
       end
 
-      let_build(:handle_follow_request_task, source: account.actor, subject_iri: "https://invalid/activity")
+      let_build(:handle_follow_request_task, recipient: account.actor, subject_iri: "https://invalid/activity")
 
       it "completes gracefully without error" do
         expect { handle_follow_request_task.perform }.not_to raise_error
@@ -72,7 +72,7 @@ Spectator.describe Task::HandleFollowRequest do
         account.assign(auto_approve_followers: true).save
       end
 
-      let_build(:handle_follow_request_task, source_iri: "https://invalid/actor", subject: follow_activity)
+      let_build(:handle_follow_request_task, source_iri: "https://invalid/actor", activity: follow_activity)
 
       it "completes gracefully without error" do
         expect { handle_follow_request_task.perform }.not_to raise_error

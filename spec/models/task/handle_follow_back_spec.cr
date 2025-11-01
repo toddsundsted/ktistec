@@ -14,7 +14,7 @@ Spectator.describe Task::HandleFollowBack do
   let_create!(:follow, named: :follow_activity, actor: other, object: account.actor)
 
   describe "#perform" do
-    let_build(:handle_follow_back_task, source: account.actor, subject: follow_activity)
+    let_build(:handle_follow_back_task, recipient: account.actor, activity: follow_activity)
 
     it "does not create a Follow activity" do
       expect { handle_follow_back_task.perform }.not_to change { ActivityPub::Activity::Follow.count }
@@ -63,7 +63,7 @@ Spectator.describe Task::HandleFollowBack do
         account.assign(auto_follow_back: true).save
       end
 
-      let_build(:handle_follow_back_task, source: account.actor, subject_iri: "https://invalid/activity")
+      let_build(:handle_follow_back_task, recipient: account.actor, subject_iri: "https://invalid/activity")
 
       it "completes gracefully without error" do
         expect { handle_follow_back_task.perform }.not_to raise_error
@@ -79,7 +79,7 @@ Spectator.describe Task::HandleFollowBack do
         account.assign(auto_follow_back: true).save
       end
 
-      let_build(:handle_follow_back_task, source_iri: "https://invalid/actor", subject: follow_activity)
+      let_build(:handle_follow_back_task, source_iri: "https://invalid/actor", activity: follow_activity)
 
       it "completes gracefully without error" do
         expect { handle_follow_back_task.perform }.not_to raise_error

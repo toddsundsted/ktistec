@@ -111,12 +111,13 @@ class SettingsController
       "language" => params["language"]?.try(&.to_s),
       "timezone" => params["timezone"]?.try(&.to_s.presence),
       "password" => params["password"]?.try(&.to_s),
+      "auto_approve_followers" => params["auto_approve_followers"]? == "1",
       # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
       "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "attachments" => reduce_attachments(params)
     }.select do |k, v|
-      v || k.in?("image", "icon")
+      v || k.in?("image", "icon", "auto_approve_followers")
     end
   end
 

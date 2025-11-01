@@ -281,6 +281,7 @@ The table below contains a list of supported endpoints:
 | GET    | /admin/accounts             | Retrieves all user accounts. |
 | GET    | /admin/accounts/new         | Gets a representation of an account. |
 | POST   | /admin/accounts             | Creates a new user account. |
+| POST   | /settings/actor             | Updates account settings for the authenticated user. |
 | GET    | /lookup/activity?iri=:iri   | Looks up the `activity` in the server cache identified by `iri`. |
 | GET    | /lookup/actor?iri=:iri      | Looks up the `actor` in the server cache identified by `iri`. |
 | GET    | /lookup/object?iri=:iri     | Looks up the `object` in the server cache identified by `iri`. |
@@ -315,14 +316,16 @@ curl -s \
 Next, create the primary user account (again, no authentication
 required).
 
-| Name     | Notes |
+| Name                   | Notes |
 |-|-|
-| username | The username for the primary account. |
-| password | The password for the primary account. |
-| name     | Optional. Display name for the account. |
-| summary  | Optional. Biography/description for the account. |
-| language | IETF BCP 47 language tag (e.g., "en", "en-US"). |
-| timezone | IANA timezone (e.g., "UTC", "America/New_York"). |
+| username               | The username for the primary account. |
+| password               | The password for the primary account. |
+| name                   | Optional. Display name for the account. |
+| summary                | Optional. Biography/description for the account. |
+| language               | IETF BCP 47 language tag (e.g., "en", "en-US"). |
+| timezone               | IANA timezone (e.g., "UTC", "America/New_York"). |
+| auto_approve_followers | Optional. When `true`, follow requests are automatically approved. Defaults to `false`. |
+| auto_follow_back       | Optional. When `true`, automatically follows back accounts that follow you. Defaults to `false`. |
 
 Example:
 
@@ -330,7 +333,7 @@ Example:
 curl -s \
   -X POST \
   -H "Content-Type: application/json" \
-  -d '{"username":"your_username","password":"YourSecurePassword123@","name":"Your Display Name","summary":"Your summary","language":"en","timezone":"UTC"}' \
+  -d '{"username":"your_username","password":"YourSecurePassword123@","name":"Your Display Name","summary":"Your summary","language":"en","timezone":"UTC","auto_approve_followers":true,"auto_follow_back":false}' \
   "$KTISTEC_HOST/"
 ```
 
@@ -350,7 +353,7 @@ curl -s \
 
 #### Create New Account
 
-Create a new user account.
+Create a new user account. Supports the same parameters as creating the primary account.
 
 Example:
 
@@ -359,8 +362,38 @@ curl -s \
   -X POST \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"username":"another_user","password":"AnotherPassword123@","name":"Another User","summary":"Another user account","language":"en","timezone":"UTC"}' \
+  -d '{"username":"another_user","password":"AnotherPassword123@","name":"Another User","summary":"Another user account","language":"en","timezone":"UTC","auto_approve_followers":false,"auto_follow_back":true}' \
   "$KTISTEC_HOST/admin/accounts"
+```
+
+### Account Settings
+
+#### Update Actor Account Settings
+
+Update account settings for the authenticated user. Requires authentication.
+
+| Name                   | Notes |
+|-|-|
+| name                   | Optional. Display name for the account. |
+| summary                | Optional. Biography/description for the account. |
+| language               | Optional. IETF BCP 47 language tag (e.g., "en", "en-US"). |
+| timezone               | Optional. IANA timezone (e.g., "UTC", "America/New_York"). |
+| password               | Optional. New password for the account. |
+| auto_approve_followers | Optional. When `true`, follow requests are automatically approved. When `false`, requests require manual approval. |
+| auto_follow_back       | Optional. When `true`, automatically follows back accounts that follow you. |
+| image                  | Optional. Full URI of the account's profile image. |
+| icon                   | Optional. Full URI of the account's avatar icon. |
+| attachments            | Optional. Array of attachment objects. |
+
+Example:
+
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Updated Display Name","summary":"Updated summary","language":"en","timezone":"UTC"}' \
+  "$KTISTEC_HOST/settings/actor"
 ```
 
 ### A Note on ActivityPub

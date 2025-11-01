@@ -105,6 +105,8 @@ class HomeController
       "summary" => params["summary"].as(String),
       "language" => params["language"].as(String),
       "timezone" => params["timezone"].as(String),
+      "auto_approve_followers" => params["auto_approve_followers"]?.in?("1", true) || false,
+      "auto_follow_back" => params["auto_follow_back"]?.in?("1", true) || false,
       "type" => params["type"]?.try(&.as(String)) || PERSON,
     }
   end

@@ -127,6 +127,12 @@ class Account
   validates(timezone) { "is unsupported" unless check_timezone?(timezone) }
 
   @[Persistent]
+  property auto_approve_followers : Bool { false }
+
+  @[Persistent]
+  property auto_follow_back : Bool { false }
+
+  @[Persistent]
   property iri : String { "" }
 
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri

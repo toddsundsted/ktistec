@@ -451,6 +451,34 @@ Spectator.describe ActivityPub::Actor do
         expect(actor.to_json_ld).to match(%r{"value\":\"<a href=\\\"http://site.example.com\\\" target=\\\"_blank\\\" rel=\\\"ugc\\\"><span class=\\\"invisible\\\">http://</span><span>site.example.com</span></a>\"})
       end
     end
+
+    it "does not render manuallyApprovesFollowers" do
+      expect(JSON.parse(actor.to_json_ld).as_h.has_key?("manuallyApprovesFollowers")).to be_false
+    end
+
+    context "given a local actor with an account" do
+      let(account) { register }
+
+      context "when auto_approve_followers is true" do
+        before_each do
+          account.assign(auto_approve_followers: true).save
+        end
+
+        it "renders manuallyApprovesFollowers as false" do
+          expect(JSON.parse(account.actor.to_json_ld).as_h["manuallyApprovesFollowers"]).to eq(false)
+        end
+      end
+
+      context "when auto_approve_followers is false" do
+        before_each do
+          account.assign(auto_approve_followers: false).save
+        end
+
+        it "renders manuallyApprovesFollowers as true" do
+          expect(JSON.parse(account.actor.to_json_ld).as_h["manuallyApprovesFollowers"]).to eq(true)
+        end
+      end
+    end
   end
 
   describe "#make_delete_activity" do

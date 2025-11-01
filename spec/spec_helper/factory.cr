@@ -353,6 +353,14 @@ def handle_follow_request_task_factory(source_iri = nil, source = false, subject
   task_factory(Task::HandleFollowRequest, **{source: source, source_iri: source_iri, subject: subject, subject_iri: subject_iri}.merge(options))
 end
 
+def handle_follow_back_task_factory(source_iri = nil, source = false, subject_iri = nil, subject = false, **options)
+  source = actor_factory(local: true) unless source_iri || source.nil? || source
+  source_iri = source.iri if source && source.responds_to?(:iri) && !source_iri
+  subject = follow_factory unless subject_iri || subject.nil? || subject
+  subject_iri = subject.iri if subject && subject.responds_to?(:iri) && !subject_iri
+  task_factory(Task::HandleFollowBack, **{source: source, source_iri: source_iri, subject: subject, subject_iri: subject_iri}.merge(options))
+end
+
 {% if @top_level.has_constant?("Task") %}
   class Factory::ConcurrentTask < Task
     include Task::ConcurrentTask

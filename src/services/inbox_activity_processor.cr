@@ -3,6 +3,7 @@ require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
 require "../models/account"
 require "../rules/content_rules"
+require "../models/task/handle_follow_request"
 require "../models/task/receive"
 require "../models/relationship/social/follow"
 
@@ -23,6 +24,7 @@ class InboxActivityProcessor
        activity : ActivityPub::Activity,
        deliver_to : Array(String)? = nil,
        content_rules : ContentRules = ContentRules.new,
+       handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
        receive_task_class : Task::Receive.class = Task::Receive
      )
     content_rules.run do
@@ -41,6 +43,10 @@ class InboxActivityProcessor
             visible: false
           ).save(skip_associated: true)
         end
+        handle_follow_request_task_class.new(
+          recipient: account.actor,
+          activity: activity
+        ).schedule
       end
     when ActivityPub::Activity::Accept
       if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))

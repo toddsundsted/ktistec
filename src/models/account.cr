@@ -130,6 +130,9 @@ class Account
   property auto_approve_followers : Bool { false }
 
   @[Persistent]
+  property auto_follow_back : Bool { false }
+
+  @[Persistent]
   property iri : String { "" }
 
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri

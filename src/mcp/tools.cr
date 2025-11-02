@@ -8,6 +8,7 @@ require "../models/relationship/content/notification/follow/mention"
 require "../models/relationship/content/notification/follow/thread"
 require "../models/tag/hashtag"
 require "../models/tag/mention"
+require "./tools/results_pager"
 require "./resources"
 
 module MCP
@@ -15,6 +16,8 @@ module MCP
     include Utils::Paths
 
     Log = ::Log.for("mcp")
+
+    class_property result_pager = ResultsPager(JSON::Any).new
 
     alias ToolPropertyDefinition =
       NamedTuple(
@@ -26,6 +29,7 @@ module MCP
         minimum: Int32?,
         maximum: Int32?,
         default: String | Int32 | Bool | Time | Array(String) | Array(Int32) | Array(Bool) | Nil,
+        enum: Array(String)?,     # enum values for string types
         # array-specific properties
         items: String?,           # type of array items ("string", "integer")
         min_items: Int32?,        # minimum array length
@@ -42,6 +46,17 @@ module MCP
 
     TOOL_DEFINITIONS = [] of ToolDefinition
 
+    # Defines an MCP tool.
+    #
+    # Arguments:
+    # - name: Tool name
+    # - description: Tool description
+    # - properties: Array of ToolPropertyDefinition (type, description, required, etc.)
+    # - block: Tool implementation
+    #
+    # The block can access validated parameters via `arguments["param_name"]?`
+    # and must return `JSON::Any`.
+    #
     macro def_tool(name, description, properties = [] of ToolPropertyDefinition, &block)
       {% TOOL_DEFINITIONS << {name: name, description: description, properties: properties} %}
 
@@ -389,6 +404,168 @@ module MCP
       })
     end
 
+    record ThreadQueryResult,
+      objects_data : Array(JSON::Any),
+      objects_count : Int32,
+      authors_count : Int32?,
+      root_object_id : Int64?,
+      max_depth : Int32
+
+    def_tool(
+      "get_thread",
+      "Retrieve thread structure, metadata, and summary data. Large threads may have " \
+      "hundreds of objects, so this tool supports pagination.\n\n" \
+      "**Two Modes of Operation:**\n\n" \
+      "1. **Initial Query Mode**: Provide `object` (plus optional `projection` and `page_size`) to start traversing a thread.\n" \
+      "   Returns summary data and the first page of objects. If there are more pages, includes a `cursor`.\n\n" \
+      "2. **Pagination Mode**: Provide only `cursor` (from a previous response) to fetch the next page.\n" \
+      "   Returns the next page of objects. If there are more pages, includes a `cursor`.\n" \
+      "   Do not include `object`, `projection`, or `page_size`.\n\n" \
+      "**Usage Examples:**\n" \
+      "- Start: `{\"object\": \"ktistec://objects/123\", \"projection\": \"metadata\", \"page_size\": 20}`\n" \
+      "- Continue: `{\"cursor\": \"eyJwYWdlcl9pZ...\"}`\n\n" \
+      "**Important:** You must provide EITHER `object` OR `cursor`, but not both.",
+      [
+        {name: "object", type: "string", description: "Resource URI of any object in the thread (format: ktistec://objects/{id}). Required for initial query, omit when using cursor.", required: false},
+        {name: "projection", type: "string", description: "Data fields to include: 'minimal' (URIs and structure only) or 'metadata' (adds authors, timestamps). Only used with object.", required: false, enum: ["minimal", "metadata"], default: "metadata"},
+        {name: "page_size", type: "integer", description: "Number of objects per page. Only used with object.", required: false, minimum: 1, maximum: 100, default: 25},
+        {name: "cursor", type: "string", description: "Opaque pagination cursor from previous get_thread response. Use ONLY this parameter to fetch next page.", required: false},
+      ]
+    ) do
+      unless account.reload!
+        raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      has_object = arguments["object"]?
+      has_cursor = arguments["cursor"]?
+
+      if has_object && has_cursor
+        raise MCPError.new("Cannot provide both 'object' and 'cursor'.", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+      unless has_object || has_cursor
+        raise MCPError.new("Must provide either 'object' or 'cursor'.", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      # PAGINATION MODE
+      if (cursor = arguments["cursor"]?.try(&.as_s))
+        Log.debug { "get_thread (pagination): user=#{mcp_user_path(account)} cursor=#{cursor[0..8]}..." }
+
+        pager_response = @@result_pager.fetch(cursor)
+        page_objects = pager_response[:page]
+        next_cursor = pager_response[:cursor]
+
+        result_data = {
+          "objects" => page_objects,
+          "cursor" => next_cursor,
+          "has_more" => !!next_cursor,
+        }
+
+      # INITIAL QUERY MODE
+      else
+        object_uri = arguments["object"].as_s
+        projection = arguments["projection"]?.try(&.as_s) || "metadata"
+        page_size = arguments["page_size"]?.try(&.as_i) || 25
+
+        unless (match = /^ktistec:\/\/objects\/(\d+)$/.match(object_uri))
+          raise MCPError.new("Invalid object URI format (should be: ktistec://objects/{id})", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+        end
+        object_id = match[1].to_i64
+
+        unless (object = ActivityPub::Object.find?(object_id))
+          raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+        end
+        unless ["minimal", "metadata"].includes?(projection)
+          raise MCPError.new("Projection must be 'minimal' or 'metadata'", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+        end
+
+        Log.debug { "get_thread (initial query): user=#{mcp_user_path(account)} object=#{object_uri} projection=#{projection}" }
+
+        query_result =
+          case projection
+          when "minimal"
+            results = object.thread_query(projection: ActivityPub::Object::PROJECTION_MINIMAL)
+            objects = results.map do |tuple|
+              thread_obj = ActivityPub::Object.find(tuple[:id])
+              hash = {} of String => JSON::Any
+              hash["object"] = JSON::Any.new(mcp_object_path(thread_obj))
+              hash["iri"] = JSON::Any.new(tuple[:iri])
+              hash["parent"] = tuple[:in_reply_to_iri] ?
+                JSON::Any.new(mcp_object_path(thread_obj.in_reply_to)) :
+                JSON::Any.new(nil)
+              hash["thread"] = JSON::Any.new(tuple[:thread])
+              hash["depth"] = JSON::Any.new(tuple[:depth])
+              JSON::Any.new(hash)
+            end
+            ThreadQueryResult.new(
+              objects_data: objects,
+              objects_count: objects.size,
+              authors_count: nil,
+              root_object_id: results.find { |t| t[:in_reply_to_iri].nil? }.try(&.[:id]),
+              max_depth: results.max_of? { |t| t[:depth] } || 0
+            )
+          when "metadata"
+            results = object.thread_query(projection: ActivityPub::Object::PROJECTION_METADATA)
+            objects = results.map do |tuple|
+              thread_obj = ActivityPub::Object.find(tuple[:id])
+              hash = {} of String => JSON::Any
+              hash["object"] = JSON::Any.new(mcp_object_path(thread_obj))
+              hash["iri"] = JSON::Any.new(tuple[:iri])
+              if tuple[:attributed_to_iri] && (attributed_to = thread_obj.attributed_to?)
+                hash["actor"] = JSON::Any.new({
+                  "uri" => JSON::Any.new(mcp_actor_path(attributed_to)),
+                  "handle" => JSON::Any.new(attributed_to.handle)
+                })
+              else
+                hash["actor"] = JSON::Any.new(nil)
+              end
+              hash["parent"] = tuple[:in_reply_to_iri] ?
+                JSON::Any.new(mcp_object_path(thread_obj.in_reply_to)) :
+                JSON::Any.new(nil)
+              hash["thread"] = JSON::Any.new(tuple[:thread])
+              hash["published"] = JSON::Any.new(tuple[:published].try(&.to_rfc3339))
+              hash["deleted"] = JSON::Any.new(tuple[:deleted])
+              hash["blocked"] = JSON::Any.new(tuple[:blocked])
+              hash["hashtags"] = JSON::Any.new(tuple[:hashtags])
+              hash["mentions"] = JSON::Any.new(tuple[:mentions])
+              hash["depth"] = JSON::Any.new(tuple[:depth])
+              JSON::Any.new(hash)
+            end
+            ThreadQueryResult.new(
+              objects_data: objects,
+              objects_count: objects.size,
+              authors_count: results.map { |t| t[:attributed_to_iri] }.compact.uniq.size,
+              root_object_id: results.find { |t| t[:in_reply_to_iri].nil? }.try(&.[:id]),
+              max_depth: results.max_of? { |t| t[:depth] } || 0
+            )
+          else
+            raise "should never happen"
+          end
+
+        pager_response = @@result_pager.store(query_result.objects_data, page_size)
+        page_objects = pager_response[:page]
+        cursor_value = pager_response[:cursor]
+
+        result_data = {
+          "objects" => page_objects,
+          "cursor" => cursor_value,
+          "has_more" => !!cursor_value,
+          "projection" => projection,
+          "page_size" => page_size,
+          "objects_count" => query_result.objects_count,
+          "authors_count" => query_result.authors_count,
+          "root_object_id" => query_result.root_object_id,
+          "max_depth" => query_result.max_depth,
+        }
+      end
+
+      JSON::Any.new({
+        "content" => JSON::Any.new([JSON::Any.new({
+          "type" => JSON::Any.new("text"),
+          "text" => JSON::Any.new(result_data.to_json)
+        })])
+      })
+    end
+
     def_tool(
       "read_resources",
       "Read one or more resources by URI (format \"ktistec://{resource}/{id*}\"). Supports all resource types including " \
@@ -444,51 +621,62 @@ module MCP
           JSON::Any.new({
             "name" => JSON::Any.new({{tool[:name]}}),
             "description" => JSON::Any.new({{tool[:description]}}),
-            "inputSchema" => JSON::Any.new({
-              "type" => JSON::Any.new("object"),
-              "properties" => JSON::Any.new({
-                {% for prop in tool[:properties] %}
-                  {% if prop[:type] == "array" %}
-                    {{prop[:name]}} => JSON::Any.new({
-                      "type" => JSON::Any.new("array"),
-                      "description" => JSON::Any.new({{prop[:description]}}),
-                      {% if prop[:items] %}
-                        "items" => JSON::Any.new({
-                          "type" => JSON::Any.new({{prop[:items]}})
-                        }),
-                      {% end %}
-                      {% if prop[:min_items] %}
-                        "minItems" => JSON::Any.new({{prop[:min_items]}}),
-                      {% end %}
-                      {% if prop[:max_items] %}
-                        "maxItems" => JSON::Any.new({{prop[:max_items]}}),
-                      {% end %}
-                      {% if prop[:unique_items] %}
-                        "uniqueItems" => JSON::Any.new({{prop[:unique_items]}}),
-                      {% end %}
-                    }),
-                  {% else %}
-                    {{prop[:name]}} => JSON::Any.new({
-                      "type" => JSON::Any.new({{prop[:type] == "time" ? "string" : prop[:type]}}),
-                      "description" => JSON::Any.new({{prop[:description]}}),
-                      {% if prop[:minimum] %}
-                        "minimum" => JSON::Any.new({{prop[:minimum]}}),
-                      {% end %}
-                      {% if prop[:maximum] %}
-                        "maximum" => JSON::Any.new({{prop[:maximum]}}),
-                      {% end %}
-                    }),
+            {% if tool[:raw_schema_json] %}
+              "inputSchema" => JSON.parse({{tool[:raw_schema_json]}}),
+            {% else %}
+              "inputSchema" => JSON::Any.new({
+                "type" => JSON::Any.new("object"),
+                "properties" => JSON::Any.new({
+                  {% for prop in tool[:properties] %}
+                    {% if prop[:type] == "array" %}
+                      {{prop[:name]}} => JSON::Any.new({
+                        "type" => JSON::Any.new("array"),
+                        "description" => JSON::Any.new({{prop[:description]}}),
+                        {% if prop[:items] %}
+                          "items" => JSON::Any.new({
+                            "type" => JSON::Any.new({{prop[:items]}})
+                          }),
+                        {% end %}
+                        {% if prop[:min_items] %}
+                          "minItems" => JSON::Any.new({{prop[:min_items]}}),
+                        {% end %}
+                        {% if prop[:max_items] %}
+                          "maxItems" => JSON::Any.new({{prop[:max_items]}}),
+                        {% end %}
+                        {% if prop[:unique_items] %}
+                          "uniqueItems" => JSON::Any.new({{prop[:unique_items]}}),
+                        {% end %}
+                      }),
+                    {% else %}
+                      {{prop[:name]}} => JSON::Any.new({
+                        "type" => JSON::Any.new({{prop[:type] == "time" ? "string" : prop[:type]}}),
+                        "description" => JSON::Any.new({{prop[:description]}}),
+                        {% if prop[:minimum] %}
+                          "minimum" => JSON::Any.new({{prop[:minimum]}}),
+                        {% end %}
+                        {% if prop[:maximum] %}
+                          "maximum" => JSON::Any.new({{prop[:maximum]}}),
+                        {% end %}
+                        {% if prop[:enum] %}
+                          "enum" => JSON::Any.new([
+                            {% for value in prop[:enum] %}
+                              JSON::Any.new({{value}}),
+                            {% end %}
+                          ]),
+                        {% end %}
+                      }),
+                    {% end %}
                   {% end %}
-                {% end %}
+                }),
+                "required" => JSON::Any.new([
+                  {% for prop in tool[:properties] %}
+                    {% if prop[:required] %}
+                      JSON::Any.new({{prop[:name]}}),
+                    {% end %}
+                  {% end %}
+                ] of JSON::Any)
               }),
-              "required" => JSON::Any.new([
-                {% for prop in tool[:properties] %}
-                  {% if prop[:required] %}
-                    JSON::Any.new({{prop[:name]}}),
-                  {% end %}
-                {% end %}
-              ])
-            })
+            {% end %}
           }),
         {% end %}
       ]
@@ -514,6 +702,8 @@ module MCP
         handle_tool_paginate_collection(params, account)
       when "count_collection_since"
         handle_tool_count_collection_since(params, account)
+      when "get_thread"
+        handle_tool_get_thread(params, account)
       when "read_resources"
         handle_tool_read_resources(params, account)
       else

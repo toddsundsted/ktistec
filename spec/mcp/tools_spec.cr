@@ -325,7 +325,7 @@ Spectator.describe MCP::Tools do
       response = described_class.handle_tools_list(tools_list_request)
 
       tools = response["tools"].as_a
-      expect(tools.size).to eq(5)
+      expect(tools.size).to eq(6)
 
       expect(tools[-2]["name"]).to eq("test_tool")
       expect(tools[-1]["name"]).to eq("test_array_tool")
@@ -1736,6 +1736,198 @@ Spectator.describe MCP::Tools do
         request = read_resources_request("read-7", ["ktistec://invalid/123"])
 
         expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Unsupported URI scheme: ktistec:\/\/invalid\/123/)
+      end
+    end
+
+    context "with get_thread tool" do
+      let_create!(:actor, named: :op_actor, local: true)
+      let_create!(:object, named: :root_note, attributed_to: op_actor, visible: true)
+      let_create!(:object, named: :reply1, attributed_to: op_actor, in_reply_to: root_note, visible: true)
+      let_create!(:actor, named: :other_actor, local: true)
+      let_create!(:object, named: :reply2, attributed_to: other_actor, in_reply_to: root_note, visible: true)
+      let_create!(:object, named: :reply3, attributed_to: other_actor, in_reply_to: reply1, visible: true)
+
+      private def get_thread_request(id, object_uri, projection = nil, page_size = 5)
+        args_hash = {"object" => object_uri, "projection" => projection, "page_size" => page_size}.compact
+        args_json = args_hash.map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
+        JSON::RPC::Request.from_json(%Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "get_thread", "arguments": {#{args_json}}}}|)
+      end
+
+      it "retrieves thread with minimal projection" do
+        request = get_thread_request("get-thread-1", "ktistec://objects/#{root_note.id}", "minimal")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        expect(content.size).to eq(1)
+
+        data = JSON.parse(content.first["text"].as_s)
+        expect(data["projection"]).to eq("minimal")
+        expect(data["objects_count"]).to eq(4)
+
+        objects = data["objects"].as_a
+        first_object = objects.first.as_h
+
+        expect(first_object.keys).to contain_exactly("object", "iri", "parent", "thread", "depth")
+
+        expect(first_object["object"].as_s).to eq("ktistec://objects/#{root_note.id}")
+        expect(first_object["iri"].as_s).to eq(root_note.iri)
+        expect(first_object["parent"].as_nil).to be_nil
+        expect(first_object["thread"].as_s).to eq(root_note.thread)
+        expect(first_object["depth"].as_i).to eq(0)
+      end
+
+      it "retrieves thread with metadata projection" do
+        request = get_thread_request("get-thread-2", "ktistec://objects/#{root_note.id}", "metadata")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        expect(content.size).to eq(1)
+
+        data = JSON.parse(content.first["text"].as_s)
+        expect(data["projection"]).to eq("metadata")
+        expect(data["objects_count"]).to eq(4)
+
+        objects = data["objects"].as_a
+        first_object = objects.first.as_h
+
+        expect(first_object.keys).to contain_exactly("object", "iri", "actor", "parent", "thread", "published", "deleted", "blocked", "hashtags", "mentions", "depth")
+
+        expect(first_object["object"].as_s).to eq("ktistec://objects/#{root_note.id}")
+        expect(first_object["iri"].as_s).to eq(root_note.iri)
+        actor_data = first_object["actor"].as_h
+        expect(actor_data["uri"].as_s).to eq("ktistec://actors/#{op_actor.id}")
+        expect(actor_data["handle"].as_s).to eq(op_actor.handle)
+        expect(first_object["parent"].as_nil).to be_nil
+        expect(first_object["thread"].as_s).to eq(root_note.thread)
+        expect(first_object["published"].as_nil).to be_nil
+        expect(first_object["depth"].as_i).to eq(0)
+      end
+
+      it "defaults to metadata projection" do
+        request = get_thread_request("get-thread-3", "ktistec://objects/#{root_note.id}")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["projection"]).to eq("metadata")
+      end
+
+      it "calculates summary statistics" do
+        request = get_thread_request("get-thread-4", "ktistec://objects/#{root_note.id}", "metadata")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["root_object_id"]).to eq(root_note.id)
+        expect(data["objects_count"]).to eq(4)
+        expect(data["authors_count"]).to eq(2)
+        expect(data["max_depth"]).to eq(2)
+      end
+
+      it "rejects invalid resource URI format" do
+        request = get_thread_request("get-thread-7", "invalid-uri")
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Invalid object URI format/)
+      end
+
+      it "rejects invalid object_id" do
+        request = get_thread_request("get-thread-5", "ktistec://objects/999999")
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Object not found/)
+      end
+
+      it "rejects invalid projection name" do
+        request = get_thread_request("get-thread-6", "ktistec://objects/#{root_note.id}", "invalid")
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Projection must be/)
+      end
+
+      private def get_thread_continuation_request(id, cursor)
+        args_hash = {"cursor" => cursor}
+        args_json = args_hash.map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
+        JSON::RPC::Request.from_json(%Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "get_thread", "arguments": {#{args_json}}}}|)
+      end
+
+      it "returns cursor when thread exceeds page size" do
+        request = get_thread_request("get-thread-paginate-1", "ktistec://objects/#{root_note.id}", "metadata", 1)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["objects"].as_a.size).to eq(1)
+        expect(data["cursor"].as_s).not_to be_nil
+        expect(data["has_more"]).to eq(true)
+      end
+
+      it "fetches subsequent pages using cursor" do
+        request = get_thread_request("get-thread-paginate-2", "ktistec://objects/#{root_note.id}", "metadata", 1)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["objects"].as_a.size).to eq(1)
+        expect(data["cursor"].as_s).not_to be_nil
+        expect(data["has_more"]).to eq(true)
+
+        cursor = data["cursor"].as_s
+
+        request = get_thread_continuation_request("get-thread-page-2", cursor)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["objects"].as_a.size).to eq(1)
+        expect(data["cursor"].as_s).not_to be_nil
+        expect(data["has_more"]).to eq(true)
+      end
+
+      it "returns nil cursor on last page" do
+        request = get_thread_request("get-thread-paginate-3", "ktistec://objects/#{root_note.id}", "metadata", 3)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["objects"].as_a.size).to eq(3)
+        expect(data["cursor"].as_s).not_to be_nil
+        expect(data["has_more"]).to eq(true)
+
+        cursor = data["cursor"].as_s
+
+        request = get_thread_continuation_request("get-thread-page-3", cursor)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["objects"].as_a.size).to eq(1)
+        expect(data["cursor"].as_nil).to be_nil
+        expect(data["has_more"]).to eq(false)
+      end
+
+      it "raises error for invalid cursor" do
+        request = get_thread_continuation_request("get-thread-page-bad-1", "invalid-cursor-string")
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Malformed cursor/)
+      end
+
+      it "rejects request with both object and cursor" do
+        args_json = %Q|"object": "ktistec://objects/123", "cursor": "abc"|
+        request = JSON::RPC::Request.from_json(%Q|{"jsonrpc": "2.0", "id": "get-thread-both", "method": "tools/call", "params": {"name": "get_thread", "arguments": {#{args_json}}}}|)
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Cannot provide both/)
+      end
+
+      it "rejects request with neither object nor cursor" do
+        args_json = %Q|"projection": "metadata"|
+        request = JSON::RPC::Request.from_json(%Q|{"jsonrpc": "2.0", "id": "get-thread-neither", "method": "tools/call", "params": {"name": "get_thread", "arguments": {#{args_json}}}}|)
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Must provide either/)
       end
     end
   end

@@ -16,7 +16,7 @@ class Task
         perform_backup
       end
     ensure
-      self.next_attempt_at = 1.day.from_now
+      self.next_attempt_at = randomized_next_attempt_at(1.day)
     end
 
     def perform_backup

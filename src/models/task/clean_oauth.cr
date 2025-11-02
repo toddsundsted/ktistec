@@ -24,8 +24,8 @@ class Task
       cleanup_expired_tokens
       cleanup_orphaned_clients
     ensure
-      random_delay = (rand(3600) - 1800).seconds
-      self.next_attempt_at = 1.day.from_now + random_delay
+      # ±30 minutes on 1 day = 1800 seconds / 86400 seconds ≈ 0.0208 (2.08%)
+      self.next_attempt_at = randomized_next_attempt_at(1.day, randomization_percentage: 0.0208)
     end
 
     private def cleanup_expired_tokens

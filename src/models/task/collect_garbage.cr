@@ -81,7 +81,7 @@ class Task
 
       deleted_count
     ensure
-      self.next_attempt_at = 1.day.from_now
+      self.next_attempt_at = randomized_next_attempt_at(1.day)
     end
 
     # Performs garbage collection on-demand.
@@ -100,7 +100,7 @@ class Task
 
       deleted_count
     ensure
-      self.next_attempt_at = 1.day.from_now
+      self.next_attempt_at = randomized_next_attempt_at(1.day)
     end
 
     private def optimize_database

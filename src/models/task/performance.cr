@@ -33,7 +33,7 @@ class Task
         value: (memory_used / 1000).to_i32
       ).save
     ensure
-      self.next_attempt_at = 1.hour.from_now
+      self.next_attempt_at = randomized_next_attempt_at(1.hour)
     end
   end
 end

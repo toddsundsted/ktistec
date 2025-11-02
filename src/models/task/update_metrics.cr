@@ -82,7 +82,7 @@ class Task
     def perform
       accumulate([Relationship::Content::Inbox, Relationship::Content::Outbox])
     ensure
-      self.next_attempt_at = 1.hour.from_now
+      self.next_attempt_at = randomized_next_attempt_at(1.hour)
     end
   end
 end

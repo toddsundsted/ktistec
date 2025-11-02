@@ -14,10 +14,12 @@ export default class extends Controller {
         replacement.dataset.actorId = element.dataset.actorId
         replacement.className = "user icon"
         element.replaceWith(replacement)
-        let xhr = new XMLHttpRequest()
-        xhr.open("POST", `/remote/actors/${element.dataset.actorId}/refresh`)
-        xhr.setRequestHeader("X-CSRF-Token", Ktistec.csrf)
-        xhr.send()
+        if (Ktistec.auth) {
+          let xhr = new XMLHttpRequest()
+          xhr.open("POST", `/remote/actors/${element.dataset.actorId}/refresh`)
+          xhr.setRequestHeader("X-CSRF-Token", Ktistec.csrf)
+          xhr.send()
+        }
       }
     }, true)
   }

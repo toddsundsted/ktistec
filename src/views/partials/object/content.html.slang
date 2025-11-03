@@ -15,7 +15,7 @@ crystal:
   end
   is_blocked = object.blocked? || author.blocked? || actor.blocked?
   is_deleted = object.deleted? || author.deleted? || actor.deleted?
-.content data-controller="image-gallery"
+.content data-controller="image-viewer" data-action="click->image-viewer#handleClick"
   .summary
     - if object.draft?
       | draft created

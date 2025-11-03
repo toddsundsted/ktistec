@@ -1,0 +1,577 @@
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+  /**
+   * Disconnects the controller.
+   *
+   * Closes the image view modal.
+   */
+  disconnect() {
+    this.closeModal()
+  }
+
+  /**
+   * Handles clicks on the content element.
+   *
+   * Opens the viewer if a qualifying image was clicked.
+   */
+  handleClick(event) {
+    const clickedElement = event.target
+
+    if (clickedElement.tagName === "IMG" && this.isViewerImage(clickedElement)) {
+      event.preventDefault()
+      this.openViewer(clickedElement)
+    }
+  }
+
+  /**
+   * Determines if an image should be displayed in the viewer.
+   *
+   * An image qualifies if it's within this controller's content
+   * element and either:
+   *   - Inside a .text or .extra.text element
+   *   - Has the "attachment" class
+   */
+  isViewerImage(img) {
+    const isInText = img.closest(".text, .extra.text") !== null
+    const hasAttachmentClass = img.classList.contains("attachment")
+    const isWithinContent = img.closest(".content") === this.element
+
+    return isWithinContent && (isInText || hasAttachmentClass)
+  }
+
+  /**
+   * Opens the image viewer modal for the clicked image.
+   *
+   * Sets up the modal structure, prevents body scroll, and attaches
+   * keyboard listeners.
+   */
+  openViewer(clickedImage) {
+    this.previousActiveElement = document.activeElement
+
+    this.collection = this.findCollection(clickedImage)
+    this.currentIndex = this.collection.indexOf(clickedImage)
+
+    const caption = this.extractCaption(clickedImage)
+    this.createModal(clickedImage.src, clickedImage.alt || "", caption)
+
+    this.showModal()
+
+    if (this.collection && this.collection.length > 1) {
+      this.updateNavigationButtons()
+      this.updateAriaLabel()
+      this.updatePagination()
+    }
+
+    document.body.classList.add('image-viewer-modal-open')
+
+    this.boundHandleEscape = this.handleEscape.bind(this)
+    this.boundHandleArrowKeys = this.handleArrowKeys.bind(this)
+    document.addEventListener('keydown', this.boundHandleEscape)
+    document.addEventListener('keydown', this.boundHandleArrowKeys)
+
+    if (this.collection && this.collection.length > 1) {
+      this.initSwipeListeners()
+    }
+  }
+
+  /**
+   * Finds all viewer images in the same collection as the clicked image.
+   *
+   * Returns an array of image elements within the same .content element.
+   */
+  findCollection(clickedImage) {
+    const contentElement = clickedImage.closest('.content')
+    if (!contentElement) return [clickedImage]
+
+    return Array.from(contentElement.querySelectorAll('img')).filter(img =>
+      this.isViewerImage(img)
+    )
+  }
+
+  /**
+   * Creates and appends the modal DOM structure with proper ARIA
+   * attributes.
+   *
+   * Sets up close handlers (button and backdrop) and implements focus
+   * trapping for keyboard navigation accessibility.
+   */
+  createModal(imageSrc, imageAlt, caption) {
+    this.removeModal()
+
+    this.modal = document.createElement('div')
+    this.modal.className = 'image-viewer-modal'
+    this.modal.setAttribute('role', 'dialog')
+    this.modal.setAttribute('aria-modal', 'true')
+    this.modal.setAttribute('aria-label', 'Image viewer')
+    this.modal.setAttribute('aria-hidden', 'true')
+    this.modal.setAttribute('tabindex', '-1')
+
+    const backdrop = document.createElement('div')
+    backdrop.className = 'image-viewer-modal__backdrop'
+
+    const container = document.createElement('div')
+    container.className = 'image-viewer-modal__container'
+
+    const controls = document.createElement('div')
+    controls.className = 'image-viewer-modal__controls'
+
+    const leftGroup = document.createElement('div')
+    leftGroup.className = 'image-viewer-modal__controls-left'
+
+    const rightGroup = document.createElement('div')
+    rightGroup.className = 'image-viewer-modal__controls-right'
+
+    if (this.collection && this.collection.length > 1) {
+      const pagination = document.createElement('div')
+      pagination.className = 'image-viewer-modal__pagination'
+      pagination.setAttribute('aria-live', 'polite')
+      pagination.setAttribute('aria-atomic', 'true')
+      leftGroup.appendChild(pagination)
+
+      this.paginationElement = pagination
+
+      const prevButton = document.createElement('button')
+      prevButton.className = 'image-viewer-modal__prev'
+      prevButton.type = 'button'
+      prevButton.setAttribute('aria-label', 'Previous image')
+      prevButton.setAttribute('tabindex', '0')
+
+      const prevIcon = document.createElement('i')
+      prevIcon.className = 'angle left icon'
+      prevIcon.setAttribute('aria-hidden', 'true')
+      prevButton.appendChild(prevIcon)
+
+      prevButton.addEventListener('click', () => this.navigatePrev())
+      rightGroup.appendChild(prevButton)
+
+      const nextButton = document.createElement('button')
+      nextButton.className = 'image-viewer-modal__next'
+      nextButton.type = 'button'
+      nextButton.setAttribute('aria-label', 'Next image')
+      nextButton.setAttribute('tabindex', '0')
+
+      const nextIcon = document.createElement('i')
+      nextIcon.className = 'angle right icon'
+      nextIcon.setAttribute('aria-hidden', 'true')
+      nextButton.appendChild(nextIcon)
+
+      nextButton.addEventListener('click', () => this.navigateNext())
+      rightGroup.appendChild(nextButton)
+
+      this.prevButton = prevButton
+      this.nextButton = nextButton
+    }
+
+    const closeButton = document.createElement('button')
+    closeButton.className = 'image-viewer-modal__close'
+    closeButton.type = 'button'
+    closeButton.setAttribute('aria-label', 'Close image viewer')
+    closeButton.setAttribute('tabindex', '0')
+
+    const closeIcon = document.createElement('i')
+    closeIcon.className = 'times icon'
+    closeIcon.setAttribute('aria-hidden', 'true')
+    closeButton.appendChild(closeIcon)
+
+    rightGroup.appendChild(closeButton)
+
+    controls.appendChild(leftGroup)
+    controls.appendChild(rightGroup)
+
+    const content = document.createElement('div')
+    content.className = 'image-viewer-modal__content'
+
+    const image = document.createElement('img')
+    image.className = 'image-viewer-modal__image'
+    image.src = imageSrc
+    image.alt = imageAlt
+    image.loading = 'eager'
+    image.setAttribute('tabindex', '-1')
+    content.appendChild(image)
+
+    this.currentImageElement = image
+
+    if (caption) {
+      const captionDiv = document.createElement('div')
+      captionDiv.className = 'image-viewer-modal__caption'
+      captionDiv.setAttribute('role', 'region')
+      captionDiv.setAttribute('aria-live', 'polite')
+      captionDiv.innerHTML = caption
+      content.appendChild(captionDiv)
+    }
+
+    container.appendChild(content)
+    this.modal.appendChild(backdrop)
+    this.modal.appendChild(controls)
+    this.modal.appendChild(container)
+
+    document.body.appendChild(this.modal)
+
+    closeButton.addEventListener('click', () => this.closeModal())
+    backdrop.addEventListener('click', () => this.closeModal())
+
+    // focus trap: prevent tabbing outside the modal
+    this.modal.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        const focusableElements = this.modal.querySelectorAll('button, [tabindex]:not([tabindex="-1"])')
+        const firstElement = focusableElements[0]
+        const lastElement = focusableElements[focusableElements.length - 1]
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault()
+          lastElement.focus()
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault()
+          firstElement.focus()
+        }
+      }
+    })
+  }
+
+  /**
+   * Makes the modal visible by updating ARIA attributes and setting
+   * focus on the close button.
+   */
+  showModal() {
+    requestAnimationFrame(() => {
+      this.modal.setAttribute('aria-hidden', 'false')
+      const closeBtn = this.modal.querySelector('.image-viewer-modal__close')
+      if (closeBtn) {
+        closeBtn.focus()
+      } else {
+        this.modal.focus()
+      }
+    })
+  }
+
+  /**
+   * Closes the image view modal.
+   *
+   * Hides and removes the modal, restores body scroll, removes event
+   * listeners, and returns focus to the element that triggered the
+   * viewer.
+   */
+  closeModal() {
+    if (!this.modal) return
+
+    if (this.modal.contains(document.activeElement)) {
+      document.activeElement.blur()
+    }
+
+    this.modal.setAttribute('aria-hidden', 'true')
+
+    if (this.boundHandleEscape) {
+      document.removeEventListener('keydown', this.boundHandleEscape)
+      this.boundHandleEscape = null
+    }
+
+    if (this.boundHandleArrowKeys) {
+      document.removeEventListener('keydown', this.boundHandleArrowKeys)
+      this.boundHandleArrowKeys = null
+    }
+
+    document.body.classList.remove('image-viewer-modal-open')
+
+    // use transitionend event to remove modal after animation
+    // completes. use fallback timeout in case transitionend doesn't
+    // fire.
+
+    let transitionCompleted = false
+
+    const removeAfterTransition = () => {
+      if (transitionCompleted) return
+      transitionCompleted = true
+
+      this.removeModal()
+      if (this.previousActiveElement) {
+        this.previousActiveElement.focus()
+        this.previousActiveElement = null
+      }
+    }
+
+    const transitionHandler = (e) => {
+      if (e.target !== this.modal) return
+      this.modal.removeEventListener('transitionend', transitionHandler)
+      if (this.modalTransitionTimeout) {
+        clearTimeout(this.modalTransitionTimeout)
+        this.modalTransitionTimeout = null
+      }
+      removeAfterTransition()
+    }
+
+    this.modal.addEventListener('transitionend', transitionHandler)
+
+    this.modalTransitionTimeout = setTimeout(() => {
+      this.modal.removeEventListener('transitionend', transitionHandler)
+      this.modalTransitionTimeout = null
+      removeAfterTransition()
+    }, 200)
+  }
+
+  /**
+   * Removes the modal from the DOM.
+   */
+  removeModal() {
+    if (this.modal && this.modal.parentNode) {
+      // clean up any pending transition timeout
+      if (this.modalTransitionTimeout) {
+        clearTimeout(this.modalTransitionTimeout)
+        this.modalTransitionTimeout = null
+      }
+
+      const content = this.modal.querySelector('.image-viewer-modal__content')
+      if (content && this.boundTouchStart && this.boundTouchEnd) {
+        content.removeEventListener('touchstart', this.boundTouchStart)
+        content.removeEventListener('touchend', this.boundTouchEnd)
+      }
+
+      this.modal.parentNode.removeChild(this.modal)
+      this.modal = null
+      this.collection = null
+      this.currentImageElement = null
+      this.currentIndex = null
+      this.prevButton = null
+      this.nextButton = null
+      this.paginationElement = null
+    }
+  }
+
+  /**
+   * Handles Escape keypress to close the modal.
+   */
+  handleEscape(event) {
+    if (event.key === 'Escape' || event.keyCode === 27) {
+      this.closeModal()
+    }
+  }
+
+  /**
+   * Handles arrow keypress for image navigation.
+   */
+  handleArrowKeys(event) {
+    if (!this.modal || !this.collection || this.collection.length <= 1) {
+      return
+    }
+
+    if (this.modal.getAttribute('aria-hidden') === 'true') {
+      return
+    }
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault()
+      if (event.key === 'ArrowLeft') {
+        this.navigatePrev()
+      } else {
+        this.navigateNext()
+      }
+    }
+  }
+
+  /**
+   * Extracts caption text from an image.
+   *
+   * Prefers figcaption over alt text. Returns null if no caption is
+   * found.
+   *
+   * Note: figcaption HTML is trusted and used directly because all
+   * content (local and remote) is sanitized server-side via
+   * Ktistec::Util.sanitize, which whitelists only safe formatting
+   * elements (strong, em, sup, sub, del, ins, s) and strips all
+   * attributes and dangerous elements. Alt text is escaped since it
+   * contains user-provided content that hasn't been sanitized.
+   */
+  extractCaption(clickedImage) {
+    const figure = clickedImage.closest('figure')
+    if (figure) {
+      const figcaption = figure.querySelector('figcaption')
+      if (figcaption && figcaption.textContent.trim()) {
+        return figcaption.innerHTML.trim()
+      }
+    }
+
+    if (clickedImage.alt && clickedImage.alt.trim()) {
+      return this.escapeHtml(clickedImage.alt.trim())
+    }
+
+    return null
+  }
+
+  /**
+   * Escapes HTML.
+   */
+  escapeHtml(text) {
+    const div = document.createElement('div')
+    div.textContent = text
+    return div.innerHTML
+  }
+
+  /**
+   * Navigates to the previous image in the collection.
+   */
+  navigatePrev() {
+    if (this.currentIndex > 0) {
+      this.navigateTo(this.currentIndex - 1)
+    }
+  }
+
+  /**
+   * Navigates to the next image in the collection.
+   */
+  navigateNext() {
+    if (this.currentIndex < this.collection.length - 1) {
+      this.navigateTo(this.currentIndex + 1)
+    }
+  }
+
+  /**
+   * Navigates to a specific image by index.
+   *
+   * Updates the displayed image, caption, and navigation button states.
+   */
+  navigateTo(index) {
+    if (!this.collection || index < 0 || index >= this.collection.length) {
+      return
+    }
+
+    this.currentIndex = index
+    const image = this.collection[index]
+    const caption = this.extractCaption(image)
+
+    this.updateImage(image.src, image.alt || "", caption)
+    this.updateNavigationButtons()
+    this.updateAriaLabel()
+    this.updatePagination()
+  }
+
+  /**
+   * Updates the displayed image and caption.
+   */
+  updateImage(imageSrc, imageAlt, caption) {
+    const image = this.modal.querySelector('.image-viewer-modal__image')
+    const captionDiv = this.modal.querySelector('.image-viewer-modal__caption')
+    const content = this.modal.querySelector('.image-viewer-modal__content')
+
+    if (image) {
+      image.style.opacity = '0'
+      const transitionHandler = () => {
+        image.removeEventListener('transitionend', transitionHandler)
+        image.src = imageSrc
+        image.alt = imageAlt
+        requestAnimationFrame(() => {
+          image.style.opacity = '1'
+          image.focus()
+          this.currentImageElement = image
+        })
+      }
+      image.addEventListener('transitionend', transitionHandler, { once: true })
+    }
+
+    if (caption) {
+      if (captionDiv) {
+        captionDiv.innerHTML = caption
+      } else if (content) {
+        const newCaptionDiv = document.createElement('div')
+        newCaptionDiv.className = 'image-viewer-modal__caption'
+        newCaptionDiv.setAttribute('role', 'region')
+        newCaptionDiv.setAttribute('aria-live', 'polite')
+        newCaptionDiv.innerHTML = caption
+        content.appendChild(newCaptionDiv)
+      }
+    } else {
+      if (captionDiv) {
+        captionDiv.remove()
+      }
+    }
+  }
+
+  /**
+   * Updates navigation button visibility based on current position.
+   */
+  updateNavigationButtons() {
+    if (!this.prevButton || !this.nextButton) return
+
+    if (this.currentIndex === 0) {
+      this.prevButton.style.display = 'none'
+    } else {
+      this.prevButton.style.display = 'flex'
+    }
+
+    if (this.currentIndex === this.collection.length - 1) {
+      this.nextButton.style.display = 'none'
+    } else {
+      this.nextButton.style.display = 'flex'
+    }
+  }
+
+  /**
+   * Updates the modal ARIA label with current position.
+   */
+  updateAriaLabel() {
+    if (this.collection && this.collection.length > 1) {
+      const position = `${this.currentIndex + 1} of ${this.collection.length}`
+      this.modal.setAttribute('aria-label', `Image viewer (${position})`)
+    }
+  }
+
+  /**
+   * Updates the pagination display with current position.
+   */
+  updatePagination() {
+    if (this.paginationElement && this.collection && this.collection.length > 1) {
+      this.paginationElement.textContent = `${this.currentIndex + 1}/${this.collection.length}`
+    }
+  }
+
+  /**
+   * Initializes touch event listeners for swipe detection.
+   */
+  initSwipeListeners() {
+    const content = this.modal.querySelector('.image-viewer-modal__content')
+    if (!content) return
+
+    this.boundTouchStart = (e) => {
+      const touch = e.touches[0]
+      this.touchStartX = touch.clientX
+      this.touchStartY = touch.clientY
+    }
+
+    this.boundTouchEnd = (e) => {
+      const touch = e.changedTouches[0]
+      this.touchEndX = touch.clientX
+      this.touchEndY = touch.clientY
+      this.handleSwipe()
+    }
+
+    content.addEventListener('touchstart', this.boundTouchStart, { passive: true })
+    content.addEventListener('touchend', this.boundTouchEnd, { passive: true })
+  }
+
+  /**
+   * Handles swipe gesture detection and navigation.
+   */
+  handleSwipe() {
+    if (this.touchStartX === null || this.touchStartX === undefined ||
+        this.touchEndX === null || this.touchEndX === undefined) {
+      return
+    }
+
+    const deltaX = this.touchEndX - this.touchStartX
+    const deltaY = this.touchEndY - this.touchStartY
+
+    const minSwipeDistance = 50
+    const maxVerticalDistance = 30
+
+    if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaY) < maxVerticalDistance) {
+      if (deltaX > 0) {
+        this.navigatePrev()
+      } else {
+        this.navigateNext()
+      }
+    }
+
+    this.touchStartX = null
+    this.touchStartY = null
+    this.touchEndX = null
+    this.touchEndY = null
+  }
+}

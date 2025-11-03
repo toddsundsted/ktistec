@@ -1,0 +1,207 @@
+/** image viewer modal **/
+@image-viewer-z-index: 9999;
+@image-viewer-container-z-index: 1;
+@image-viewer-transition-duration: 0.2s;
+@image-viewer-backdrop-opacity: 0.9;
+@image-viewer-close-button-bg-opacity: 0.2;
+@image-viewer-close-button-bg-opacity-hover: 0.3;
+@image-viewer-controls-height: 3.5rem;
+@image-viewer-controls-padding: 0.5rem;
+@image-viewer-close-button-size: 2.5rem;
+@image-viewer-close-icon-size: 1.25rem;
+@image-viewer-outline-width: 2px;
+@image-viewer-outline-offset: 2px;
+@image-viewer-viewport-width: 95vw;
+@image-viewer-viewport-height: 95vh;
+@image-viewer-caption-space: 6rem;
+@image-viewer-image-border-radius: 4px;
+@image-viewer-image-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+@image-viewer-caption-margin-top: 1rem;
+@image-viewer-caption-padding: 0.5rem 1rem;
+@image-viewer-caption-max-width: 90vw;
+@image-viewer-caption-font-size: 0.9rem;
+@image-viewer-caption-line-height: 1.4;
+@image-viewer-mobile-breakpoint: 599px;
+@image-viewer-mobile-controls-height: 3rem;
+@image-viewer-mobile-controls-padding: 0.5rem;
+@image-viewer-mobile-close-button-size: 2rem;
+@image-viewer-mobile-close-icon-size: 1rem;
+@image-viewer-mobile-viewport-width: 98vw;
+@image-viewer-mobile-caption-space: 5rem;
+
+.image-viewer-modal {
+    position: fixed;
+    inset: 0;
+    z-index: @image-viewer-z-index;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity @image-viewer-transition-duration ease, visibility @image-viewer-transition-duration ease;
+
+    &[aria-hidden="false"] {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    &__backdrop {
+        position: absolute;
+        inset: 0;
+        background-color: rgba(0, 0, 0, @image-viewer-backdrop-opacity);
+        cursor: pointer;
+    }
+
+    &__controls {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: @image-viewer-controls-height;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 @image-viewer-controls-padding;
+        z-index: @image-viewer-container-z-index + 1;
+    }
+
+    &__controls-left {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    &__controls-right {
+        display: flex;
+        align-items: center;
+        gap: @image-viewer-controls-padding;
+        flex-shrink: 0;
+    }
+
+    &__pagination {
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-right: @image-viewer-controls-padding;
+    }
+
+    &__container {
+        position: relative;
+        max-width: @image-viewer-viewport-width;
+        max-height: @image-viewer-viewport-height;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        z-index: @image-viewer-container-z-index;
+        margin-top: @image-viewer-controls-height;
+    }
+
+    &__prev,
+    &__next,
+    &__close {
+        background: rgba(255, 255, 255, @image-viewer-close-button-bg-opacity);
+        border: none;
+        color: white;
+        width: @image-viewer-close-button-size;
+        height: @image-viewer-close-button-size;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color @image-viewer-transition-duration ease;
+        padding: 0;
+        flex-shrink: 0;
+
+        .icon {
+            margin: 0;
+            font-size: @image-viewer-close-icon-size;
+        }
+
+        &:hover,
+        &:focus {
+            background: rgba(255, 255, 255, @image-viewer-close-button-bg-opacity-hover);
+            outline: @image-viewer-outline-width solid white;
+            outline-offset: @image-viewer-outline-offset;
+        }
+    }
+
+    &__prev,
+    &__next {
+        flex-shrink: 0;
+    }
+
+    &__content {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 100%;
+        max-height: calc(@image-viewer-viewport-height - @image-viewer-controls-height);
+        overflow: auto;
+        justify-content: center;
+        padding-top: 0;
+    }
+
+    &__image {
+        max-width: @image-viewer-viewport-width;
+        max-height: calc(@image-viewer-viewport-height - @image-viewer-controls-height - @image-viewer-caption-space);
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        border-radius: @image-viewer-image-border-radius;
+        box-shadow: @image-viewer-image-shadow;
+        flex-shrink: 0;
+        opacity: 1;
+        transition: opacity @image-viewer-transition-duration ease;
+        outline: none;
+
+        &:focus {
+            outline: none;
+        }
+    }
+
+    &__caption {
+        margin-top: @image-viewer-caption-margin-top;
+        padding: @image-viewer-caption-padding;
+        color: white;
+        text-align: center;
+        max-width: @image-viewer-caption-max-width;
+        font-size: @image-viewer-caption-font-size;
+        line-height: @image-viewer-caption-line-height;
+    }
+}
+
+body.image-viewer-modal-open {
+    overflow: hidden;
+}
+
+@media screen and (max-width: @image-viewer-mobile-breakpoint) {
+    .image-viewer-modal {
+        &__controls {
+            height: @image-viewer-mobile-controls-height;
+            padding: @image-viewer-mobile-controls-padding;
+        }
+
+        &__prev,
+        &__next,
+        &__close {
+            width: @image-viewer-mobile-close-button-size;
+            height: @image-viewer-mobile-close-button-size;
+
+            .icon {
+                font-size: @image-viewer-mobile-close-icon-size;
+            }
+        }
+
+        &__content {
+            max-height: calc(100vh - @image-viewer-mobile-controls-height);
+        }
+
+        &__image {
+            max-width: @image-viewer-mobile-viewport-width;
+            max-height: calc(100vh - @image-viewer-mobile-controls-height - @image-viewer-mobile-caption-space);
+        }
+    }
+}

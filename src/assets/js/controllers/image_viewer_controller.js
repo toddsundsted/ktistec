@@ -67,8 +67,11 @@ export default class extends Controller {
 
     this.boundHandleEscape = this.handleEscape.bind(this)
     this.boundHandleArrowKeys = this.handleArrowKeys.bind(this)
+    this.boundHandleFullscreenChange = this.handleFullscreenChange.bind(this)
+
     document.addEventListener('keydown', this.boundHandleEscape)
     document.addEventListener('keydown', this.boundHandleArrowKeys)
+    document.addEventListener('fullscreenchange', this.boundHandleFullscreenChange)
 
     if (this.collection && this.collection.length > 1) {
       this.initSwipeListeners()
@@ -163,6 +166,27 @@ export default class extends Controller {
       this.nextButton = nextButton
     }
 
+    const fullscreenButton = document.createElement('button')
+    fullscreenButton.className = 'image-viewer-modal__fullscreen'
+    fullscreenButton.type = 'button'
+    fullscreenButton.setAttribute('aria-label', 'Enter fullscreen')
+    fullscreenButton.setAttribute('tabindex', '0')
+
+    const fullscreenIcon = document.createElement('i')
+    fullscreenIcon.className = 'expand icon'
+    fullscreenIcon.setAttribute('aria-hidden', 'true')
+    fullscreenButton.appendChild(fullscreenIcon)
+
+    fullscreenButton.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.toggleFullscreen()
+    })
+    rightGroup.appendChild(fullscreenButton)
+
+    this.fullscreenButton = fullscreenButton
+    this.fullscreenIcon = fullscreenIcon
+
     const closeButton = document.createElement('button')
     closeButton.className = 'image-viewer-modal__close'
     closeButton.type = 'button'
@@ -191,6 +215,7 @@ export default class extends Controller {
     content.appendChild(image)
 
     this.currentImageElement = image
+    this.fullscreenElement = content
 
     if (caption) {
       const captionDiv = document.createElement('div')
@@ -270,6 +295,15 @@ export default class extends Controller {
       this.boundHandleArrowKeys = null
     }
 
+    if (this.boundHandleFullscreenChange) {
+      document.removeEventListener('fullscreenchange', this.boundHandleFullscreenChange)
+      this.boundHandleFullscreenChange = null
+    }
+
+    if (this.isFullscreen()) {
+      this.exitFullscreen()
+    }
+
     document.body.classList.remove('image-viewer-modal-open')
 
     // use transitionend event to remove modal after animation
@@ -333,6 +367,9 @@ export default class extends Controller {
       this.prevButton = null
       this.nextButton = null
       this.paginationElement = null
+      this.fullscreenButton = null
+      this.fullscreenIcon = null
+      this.fullscreenElement = null
     }
   }
 
@@ -341,7 +378,84 @@ export default class extends Controller {
    */
   handleEscape(event) {
     if (event.key === 'Escape' || event.keyCode === 27) {
-      this.closeModal()
+      if (this.isFullscreen()) {
+        this.exitFullscreen()
+      } else {
+        this.closeModal()
+      }
+    }
+  }
+
+  /**
+   * Checks if the viewer is in fullscreen mode.
+   */
+  isFullscreen() {
+    return !!(document.fullscreenElement ||
+              document.webkitFullscreenElement ||
+              document.mozFullScreenElement ||
+              document.msFullscreenElement)
+  }
+
+  /**
+   * Toggles fullscreen mode.
+   */
+  toggleFullscreen() {
+    if (this.isFullscreen()) {
+      this.exitFullscreen()
+    } else {
+      this.enterFullscreen()
+    }
+  }
+
+  /**
+   * Enters fullscreen mode.
+   */
+  enterFullscreen() {
+    const element = this.fullscreenElement || this.currentImageElement
+    if (!element) return
+
+    const requestFullscreen = element.requestFullscreen ||
+                              element.webkitRequestFullscreen ||
+                              element.mozRequestFullScreen ||
+                              element.msRequestFullscreen
+
+    if (requestFullscreen) {
+      const promise = requestFullscreen.call(element)
+      if (promise && promise instanceof Promise) {
+        promise.catch((err) => {
+          console.warn('Fullscreen request failed:', err)
+        })
+      }
+    }
+  }
+
+  /**
+   * Exits fullscreen mode.
+   */
+  exitFullscreen() {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen()
+    } else if (document.mozCancelFullScreen) {
+      document.mozCancelFullScreen()
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen()
+    }
+  }
+
+  /**
+   * Handles fullscreen state changes.
+   */
+  handleFullscreenChange() {
+    if (!this.fullscreenButton || !this.fullscreenIcon) return
+
+    if (this.isFullscreen()) {
+      this.fullscreenButton.setAttribute('aria-label', 'Exit fullscreen')
+      this.fullscreenIcon.className = 'compress icon'
+    } else {
+      this.fullscreenButton.setAttribute('aria-label', 'Enter fullscreen')
+      this.fullscreenIcon.className = 'expand icon'
     }
   }
 

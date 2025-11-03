@@ -63,6 +63,9 @@ export default class extends Controller {
       this.updatePagination()
     }
 
+    this.updateZoomButtons()
+    this.updateZoomLevelDisplay()
+
     document.body.classList.add('image-viewer-modal-open')
 
     this.boundHandleEscape = this.handleEscape.bind(this)
@@ -119,6 +122,8 @@ export default class extends Controller {
     const controls = document.createElement('div')
     controls.className = 'image-viewer-modal__controls'
 
+    // left group
+
     const leftGroup = document.createElement('div')
     leftGroup.className = 'image-viewer-modal__controls-left'
 
@@ -133,6 +138,19 @@ export default class extends Controller {
       leftGroup.appendChild(pagination)
 
       this.paginationElement = pagination
+    }
+
+    const zoomLevelDisplay = document.createElement('div')
+    zoomLevelDisplay.className = 'image-viewer-modal__zoom-level'
+    zoomLevelDisplay.setAttribute('aria-live', 'polite')
+    zoomLevelDisplay.style.display = 'none'
+    leftGroup.appendChild(zoomLevelDisplay)
+
+    this.zoomLevelDisplay = zoomLevelDisplay
+
+    // right group
+
+    if (this.collection && this.collection.length > 1) {
 
       const prevButton = document.createElement('button')
       prevButton.className = 'image-viewer-modal__prev'
@@ -165,6 +183,67 @@ export default class extends Controller {
       this.prevButton = prevButton
       this.nextButton = nextButton
     }
+
+    const zoomOutButton = document.createElement('button')
+    zoomOutButton.className = 'image-viewer-modal__zoom-out'
+    zoomOutButton.type = 'button'
+    zoomOutButton.setAttribute('aria-label', 'Zoom out')
+    zoomOutButton.setAttribute('tabindex', '0')
+
+    const zoomOutIcon = document.createElement('i')
+    zoomOutIcon.className = 'zoom out icon'
+    zoomOutIcon.setAttribute('aria-hidden', 'true')
+    zoomOutButton.appendChild(zoomOutIcon)
+
+    zoomOutButton.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.zoomOut()
+    })
+    rightGroup.appendChild(zoomOutButton)
+
+    this.zoomOutButton = zoomOutButton
+
+    const zoomInButton = document.createElement('button')
+    zoomInButton.className = 'image-viewer-modal__zoom-in'
+    zoomInButton.type = 'button'
+    zoomInButton.setAttribute('aria-label', 'Zoom in')
+    zoomInButton.setAttribute('tabindex', '0')
+
+    const zoomInIcon = document.createElement('i')
+    zoomInIcon.className = 'zoom in icon'
+    zoomInIcon.setAttribute('aria-hidden', 'true')
+    zoomInButton.appendChild(zoomInIcon)
+
+    zoomInButton.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.zoomIn()
+    })
+    rightGroup.appendChild(zoomInButton)
+
+    this.zoomInButton = zoomInButton
+
+    const resetZoomButton = document.createElement('button')
+    resetZoomButton.className = 'image-viewer-modal__reset-zoom'
+    resetZoomButton.type = 'button'
+    resetZoomButton.setAttribute('aria-label', 'Reset zoom')
+    resetZoomButton.setAttribute('tabindex', '0')
+    resetZoomButton.style.display = 'none'
+
+    const resetZoomIcon = document.createElement('i')
+    resetZoomIcon.className = 'compress icon'
+    resetZoomIcon.setAttribute('aria-hidden', 'true')
+    resetZoomButton.appendChild(resetZoomIcon)
+
+    resetZoomButton.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.resetZoom()
+    })
+    rightGroup.appendChild(resetZoomButton)
+
+    this.resetZoomButton = resetZoomButton
 
     const fullscreenButton = document.createElement('button')
     fullscreenButton.className = 'image-viewer-modal__fullscreen'
@@ -206,16 +285,32 @@ export default class extends Controller {
     const content = document.createElement('div')
     content.className = 'image-viewer-modal__content'
 
+    const imageWrapper = document.createElement('div')
+    imageWrapper.className = 'image-viewer-modal__image-wrapper'
+
     const image = document.createElement('img')
     image.className = 'image-viewer-modal__image'
     image.src = imageSrc
     image.alt = imageAlt
     image.loading = 'eager'
     image.setAttribute('tabindex', '-1')
-    content.appendChild(image)
+
+    image.addEventListener('load', () => {
+      this.naturalImageWidth = image.naturalWidth
+      this.naturalImageHeight = image.naturalHeight
+      this.updateZoomLimits()
+    })
+
+    imageWrapper.appendChild(image)
+    content.appendChild(imageWrapper)
 
     this.currentImageElement = image
+    this.imageWrapper = imageWrapper
     this.fullscreenElement = content
+    this.zoomLevel = 1.0
+    this.naturalImageWidth = 0
+    this.naturalImageHeight = 0
+    this.maxZoomLevel = 4.0
 
     if (caption) {
       const captionDiv = document.createElement('div')
@@ -370,6 +465,15 @@ export default class extends Controller {
       this.fullscreenButton = null
       this.fullscreenIcon = null
       this.fullscreenElement = null
+      this.zoomInButton = null
+      this.zoomOutButton = null
+      this.resetZoomButton = null
+      this.zoomLevelDisplay = null
+      this.imageWrapper = null
+      this.zoomLevel = 1.0
+      this.naturalImageWidth = 0
+      this.naturalImageHeight = 0
+      this.maxZoomLevel = 4.0
     }
   }
 
@@ -456,6 +560,111 @@ export default class extends Controller {
     } else {
       this.fullscreenButton.setAttribute('aria-label', 'Enter fullscreen')
       this.fullscreenIcon.className = 'expand icon'
+    }
+  }
+
+  /**
+   * Updates zoom limits based on natural image size.
+   */
+  updateZoomLimits() {
+    if (!this.currentImageElement || !this.naturalImageWidth || !this.naturalImageHeight) {
+      return
+    }
+
+    const rect = this.currentImageElement.getBoundingClientRect()
+    const displayedWidth = rect.width
+    const displayedHeight = rect.height
+
+    if (displayedWidth > 0 && displayedHeight > 0) {
+      const widthRatio = this.naturalImageWidth / displayedWidth
+      const heightRatio = this.naturalImageHeight / displayedHeight
+      this.maxZoomLevel = Math.max(widthRatio, heightRatio, 4.0)
+    }
+  }
+
+  /**
+   * Zooms in by 0.25x increments.
+   */
+  zoomIn() {
+    const newZoom = Math.min(this.zoomLevel + 0.25, this.maxZoomLevel)
+    this.setZoom(newZoom)
+  }
+
+  /**
+   * Zooms out by 0.25x increments.
+   */
+  zoomOut() {
+    const newZoom = Math.max(this.zoomLevel - 0.25, 1.0)
+    this.setZoom(newZoom)
+  }
+
+  /**
+   * Sets the zoom level.
+   */
+  setZoom(level) {
+    this.zoomLevel = Math.max(1.0, Math.min(level, this.maxZoomLevel))
+
+    if (this.imageWrapper) {
+      this.imageWrapper.style.transform = `scale(${this.zoomLevel})`
+      this.imageWrapper.style.transformOrigin = 'center center'
+    }
+
+    this.updateZoomButtons()
+    this.updateZoomLevelDisplay()
+  }
+
+  /**
+   * Resets zoom to 1.0x.
+   */
+  resetZoom() {
+    this.setZoom(1.0)
+  }
+
+  /**
+   * Updates zoom button states.
+   */
+  updateZoomButtons() {
+    if (!this.zoomInButton || !this.zoomOutButton || !this.resetZoomButton) return
+
+    const isZoomed = this.zoomLevel > 1.0
+    const canZoomIn = this.zoomLevel < this.maxZoomLevel
+    const canZoomOut = this.zoomLevel > 1.0
+
+    if (canZoomIn) {
+      this.zoomInButton.removeAttribute('disabled')
+      this.zoomInButton.setAttribute('aria-label', 'Zoom in')
+    } else {
+      this.zoomInButton.setAttribute('disabled', 'true')
+      this.zoomInButton.setAttribute('aria-label', 'Zoom in (at maximum)')
+    }
+
+    if (canZoomOut) {
+      this.zoomOutButton.removeAttribute('disabled')
+      this.zoomOutButton.setAttribute('aria-label', 'Zoom out')
+    } else {
+      this.zoomOutButton.setAttribute('disabled', 'true')
+      this.zoomOutButton.setAttribute('aria-label', 'Zoom out (at minimum)')
+    }
+
+    if (isZoomed) {
+      this.resetZoomButton.style.display = 'flex'
+    } else {
+      this.resetZoomButton.style.display = 'none'
+    }
+  }
+
+  /**
+   * Updates zoom level display.
+   */
+  updateZoomLevelDisplay() {
+    if (!this.zoomLevelDisplay) return
+
+    if (this.zoomLevel > 1.0) {
+      const percentage = Math.round(this.zoomLevel * 100)
+      this.zoomLevelDisplay.textContent = `${percentage}%`
+      this.zoomLevelDisplay.style.display = 'block'
+    } else {
+      this.zoomLevelDisplay.style.display = 'none'
     }
   }
 
@@ -555,6 +764,7 @@ export default class extends Controller {
     this.updateNavigationButtons()
     this.updateAriaLabel()
     this.updatePagination()
+    this.resetZoom()
   }
 
   /**
@@ -571,6 +781,13 @@ export default class extends Controller {
         image.removeEventListener('transitionend', transitionHandler)
         image.src = imageSrc
         image.alt = imageAlt
+
+        image.addEventListener('load', () => {
+          this.naturalImageWidth = image.naturalWidth
+          this.naturalImageHeight = image.naturalHeight
+          this.updateZoomLimits()
+        }, { once: true })
+
         requestAnimationFrame(() => {
           image.style.opacity = '1'
           image.focus()

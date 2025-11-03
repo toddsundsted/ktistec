@@ -76,20 +76,6 @@ Trix.config.textAttributes.code = { tagName: "code", inheritable: true }
 Trix.config.textAttributes.sub = { tagName: "sub", inheritable: true }
 Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
 
-// prevent morphing of the editor, lightgallery, and images. each has
-// client state that will be lost if the page is refreshed/morphed.
-// see: https://github.com/hotwired/turbo-rails/issues/533
-// see: https://github.com/hotwired/turbo/issues/1083
-
-addEventListener("turbo:before-morph-element", (event) => {
-  const { target } = event
-  if (target.tagName == "DIV" && target.classList.contains("lg-container")) {
-    event.preventDefault()
-  } else if (target.tagName == "IMG" && target.dataset.lgId) {
-    event.preventDefault()
-  }
-})
-
 // monitor the stream sources on the page. if any are closed, remove
 // them, which ensures they are recreated when the page refreshes.
 

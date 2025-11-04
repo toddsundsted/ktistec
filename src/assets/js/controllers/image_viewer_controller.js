@@ -102,50 +102,45 @@ export default class extends Controller {
   }
 
   /**
-   * Creates and appends the modal DOM structure with proper ARIA
-   * attributes.
-   *
-   * Sets up close handlers (button and backdrop) and implements focus
-   * trapping for keyboard navigation accessibility.
+   * Creates a button element with an icon.
    */
-  createModal(imageSrc, imageAlt, caption) {
-    this.removeModal()
+  createButton(className, ariaLabel, iconClass, clickHandler, options = {}) {
+    const button = document.createElement('button')
+    button.className = className
+    button.type = 'button'
+    button.setAttribute('aria-label', ariaLabel)
+    button.setAttribute('tabindex', options.tabindex !== undefined ? options.tabindex : '0')
 
-    this.modal = document.createElement('div')
-    this.modal.className = 'image-viewer-modal'
-    this.modal.setAttribute('role', 'dialog')
-    this.modal.setAttribute('aria-modal', 'true')
-    this.modal.setAttribute('aria-label', 'Image viewer')
-    this.modal.setAttribute('aria-hidden', 'true')
-    this.modal.setAttribute('tabindex', '-1')
+    if (options.disabled) {
+      button.setAttribute('disabled', 'true')
+    }
 
-    // initialize caption height CSS variable
-    this.modal.style.setProperty('--caption-height', '0px')
+    const icon = document.createElement('i')
+    icon.className = iconClass
+    icon.setAttribute('aria-hidden', 'true')
+    button.appendChild(icon)
 
-    const backdrop = document.createElement('div')
-    backdrop.className = 'image-viewer-modal__backdrop'
+    if (clickHandler) {
+      button.addEventListener('click', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        clickHandler(e)
+      })
+    }
 
-    const container = document.createElement('div')
-    container.className = 'image-viewer-modal__container'
+    return button
+  }
 
-    const controls = document.createElement('div')
-    controls.className = 'image-viewer-modal__controls'
-
-    // left group
-
-    const leftGroup = document.createElement('div')
-    leftGroup.className = 'image-viewer-modal__controls-left'
-
-    const rightGroup = document.createElement('div')
-    rightGroup.className = 'image-viewer-modal__controls-right'
-
+  /**
+   * Creates the controls section.
+   */
+  createControls(leftGroup, rightGroup) {
     if (this.collection && this.collection.length > 1) {
       const pagination = document.createElement('div')
       pagination.className = 'image-viewer-modal__pagination'
       pagination.setAttribute('aria-live', 'polite')
       pagination.setAttribute('aria-atomic', 'true')
       leftGroup.appendChild(pagination)
-
       this.paginationElement = pagination
     }
 
@@ -154,143 +149,86 @@ export default class extends Controller {
     zoomLevelDisplay.setAttribute('aria-live', 'polite')
     zoomLevelDisplay.style.display = 'none'
     leftGroup.appendChild(zoomLevelDisplay)
-
     this.zoomLevelDisplay = zoomLevelDisplay
 
-    // right group
-
     if (this.collection && this.collection.length > 1) {
-
-      const prevButton = document.createElement('button')
-      prevButton.className = 'image-viewer-modal__prev'
-      prevButton.type = 'button'
-      prevButton.setAttribute('aria-label', 'Previous image')
-      prevButton.setAttribute('tabindex', '0')
-
-      const prevIcon = document.createElement('i')
-      prevIcon.className = 'angle left icon'
-      prevIcon.setAttribute('aria-hidden', 'true')
-      prevButton.appendChild(prevIcon)
-
-      prevButton.addEventListener('click', () => this.navigatePrev())
+      const prevButton = this.createButton(
+        'image-viewer-modal__prev',
+        'Previous image',
+        'angle left icon',
+        () => this.navigatePrev()
+      )
       rightGroup.appendChild(prevButton)
-
-      const nextButton = document.createElement('button')
-      nextButton.className = 'image-viewer-modal__next'
-      nextButton.type = 'button'
-      nextButton.setAttribute('aria-label', 'Next image')
-      nextButton.setAttribute('tabindex', '0')
-
-      const nextIcon = document.createElement('i')
-      nextIcon.className = 'angle right icon'
-      nextIcon.setAttribute('aria-hidden', 'true')
-      nextButton.appendChild(nextIcon)
-
-      nextButton.addEventListener('click', () => this.navigateNext())
-      rightGroup.appendChild(nextButton)
-
       this.prevButton = prevButton
+
+      const nextButton = this.createButton(
+        'image-viewer-modal__next',
+        'Next image',
+        'angle right icon',
+        () => this.navigateNext()
+      )
+      rightGroup.appendChild(nextButton)
       this.nextButton = nextButton
     }
 
-    const zoomOutButton = document.createElement('button')
-    zoomOutButton.className = 'image-viewer-modal__zoom-out'
-    zoomOutButton.type = 'button'
-    zoomOutButton.setAttribute('aria-label', 'Zoom out')
-    zoomOutButton.setAttribute('tabindex', '0')
-
-    const zoomOutIcon = document.createElement('i')
-    zoomOutIcon.className = 'zoom out icon'
-    zoomOutIcon.setAttribute('aria-hidden', 'true')
-    zoomOutButton.appendChild(zoomOutIcon)
-
-    zoomOutButton.addEventListener('click', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      this.zoomOut()
-    })
+    const zoomOutButton = this.createButton(
+      'image-viewer-modal__zoom-out',
+      'Zoom out',
+      'zoom out icon',
+      () => this.zoomOut()
+    )
     rightGroup.appendChild(zoomOutButton)
-
     this.zoomOutButton = zoomOutButton
 
-    const zoomInButton = document.createElement('button')
-    zoomInButton.className = 'image-viewer-modal__zoom-in'
-    zoomInButton.type = 'button'
-    zoomInButton.setAttribute('aria-label', 'Zoom in')
-    zoomInButton.setAttribute('tabindex', '0')
-
-    const zoomInIcon = document.createElement('i')
-    zoomInIcon.className = 'zoom in icon'
-    zoomInIcon.setAttribute('aria-hidden', 'true')
-    zoomInButton.appendChild(zoomInIcon)
-
-    zoomInButton.addEventListener('click', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      this.zoomIn()
-    })
+    const zoomInButton = this.createButton(
+      'image-viewer-modal__zoom-in',
+      'Zoom in',
+      'zoom in icon',
+      () => this.zoomIn()
+    )
     rightGroup.appendChild(zoomInButton)
-
     this.zoomInButton = zoomInButton
 
-    const resetZoomButton = document.createElement('button')
-    resetZoomButton.className = 'image-viewer-modal__reset-zoom'
-    resetZoomButton.type = 'button'
-    resetZoomButton.setAttribute('aria-label', 'Reset zoom')
-    resetZoomButton.setAttribute('tabindex', '0')
-    resetZoomButton.setAttribute('disabled', 'true')
-
-    const resetZoomIcon = document.createElement('i')
-    resetZoomIcon.className = 'compress icon'
-    resetZoomIcon.setAttribute('aria-hidden', 'true')
-    resetZoomButton.appendChild(resetZoomIcon)
-
-    resetZoomButton.addEventListener('click', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      this.resetZoom()
-    })
+    const resetZoomButton = this.createButton(
+      'image-viewer-modal__reset-zoom',
+      'Reset zoom',
+      'compress icon',
+      () => this.resetZoom(),
+      { disabled: true }
+    )
     rightGroup.appendChild(resetZoomButton)
-
     this.resetZoomButton = resetZoomButton
 
-    const fullscreenButton = document.createElement('button')
-    fullscreenButton.className = 'image-viewer-modal__fullscreen'
-    fullscreenButton.type = 'button'
-    fullscreenButton.setAttribute('aria-label', 'Enter fullscreen')
-    fullscreenButton.setAttribute('tabindex', '0')
+    if (this.isFullscreenSupported()) {
+      const fullscreenButton = this.createButton(
+        'image-viewer-modal__fullscreen',
+        'Enter fullscreen',
+        'expand icon',
+        () => this.toggleFullscreen()
+      )
+      rightGroup.appendChild(fullscreenButton)
+      this.fullscreenButton = fullscreenButton
 
-    const fullscreenIcon = document.createElement('i')
-    fullscreenIcon.className = 'expand icon'
-    fullscreenIcon.setAttribute('aria-hidden', 'true')
-    fullscreenButton.appendChild(fullscreenIcon)
+      const fullscreenIcon = fullscreenButton.querySelector('i')
+      this.fullscreenIcon = fullscreenIcon
+    } else {
+      this.fullscreenButton = null
+      this.fullscreenIcon = null
+    }
 
-    fullscreenButton.addEventListener('click', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      this.toggleFullscreen()
-    })
-    rightGroup.appendChild(fullscreenButton)
-
-    this.fullscreenButton = fullscreenButton
-    this.fullscreenIcon = fullscreenIcon
-
-    const closeButton = document.createElement('button')
-    closeButton.className = 'image-viewer-modal__close'
-    closeButton.type = 'button'
-    closeButton.setAttribute('aria-label', 'Close image viewer')
-    closeButton.setAttribute('tabindex', '0')
-
-    const closeIcon = document.createElement('i')
-    closeIcon.className = 'times icon'
-    closeIcon.setAttribute('aria-hidden', 'true')
-    closeButton.appendChild(closeIcon)
-
+    const closeButton = this.createButton(
+      'image-viewer-modal__close',
+      'Close image viewer',
+      'times icon',
+      () => this.closeModal()
+    )
     rightGroup.appendChild(closeButton)
+  }
 
-    controls.appendChild(leftGroup)
-    controls.appendChild(rightGroup)
-
+  /**
+   * Creates the image wrapper and content area.
+   */
+  createImageContent(imageSrc, imageAlt) {
     const content = document.createElement('div')
     content.className = 'image-viewer-modal__content'
 
@@ -329,6 +267,81 @@ export default class extends Controller {
     this.panStartPanX = 0
     this.panStartPanY = 0
 
+    return { content, imageWrapper }
+  }
+
+  /**
+   * Sets up event listeners for the modal.
+   */
+  setupModalEventListeners(backdrop) {
+    backdrop.addEventListener('click', () => this.closeModal())
+
+    // focus trap: prevent tabbing outside the modal
+    this.modal.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        const focusableElements = this.modal.querySelectorAll('button, [tabindex]:not([tabindex="-1"])')
+        const firstElement = focusableElements[0]
+        const lastElement = focusableElements[focusableElements.length - 1]
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault()
+          lastElement.focus()
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault()
+          firstElement.focus()
+        }
+      }
+    })
+  }
+
+  /**
+   * Creates the modal structure.
+   */
+  createModalStructure() {
+    const modal = document.createElement('div')
+    modal.className = 'image-viewer-modal'
+    modal.setAttribute('role', 'dialog')
+    modal.setAttribute('aria-modal', 'true')
+    modal.setAttribute('aria-label', 'Image viewer')
+    modal.setAttribute('aria-hidden', 'true')
+    modal.setAttribute('tabindex', '-1')
+    modal.style.setProperty('--caption-height', '0px')
+
+    const backdrop = document.createElement('div')
+    backdrop.className = 'image-viewer-modal__backdrop'
+
+    const container = document.createElement('div')
+    container.className = 'image-viewer-modal__container'
+
+    const controls = document.createElement('div')
+    controls.className = 'image-viewer-modal__controls'
+
+    const leftGroup = document.createElement('div')
+    leftGroup.className = 'image-viewer-modal__controls-left'
+
+    const rightGroup = document.createElement('div')
+    rightGroup.className = 'image-viewer-modal__controls-right'
+
+    return { modal, backdrop, container, controls, leftGroup, rightGroup }
+  }
+
+  /**
+   * Creates and appends the modal DOM structure with proper ARIA
+   * attributes.
+   *
+   * Sets up close handlers (button and backdrop) and implements focus
+   * trapping for keyboard navigation accessibility.
+   */
+  createModal(imageSrc, imageAlt, caption) {
+    this.removeModal()
+
+    const { modal, backdrop, container, controls, leftGroup, rightGroup } = this.createModalStructure()
+    this.modal = modal
+
+    this.createControls(leftGroup, rightGroup)
+    controls.appendChild(leftGroup)
+    controls.appendChild(rightGroup)
+
+    const { content } = this.createImageContent(imageSrc, imageAlt)
     container.appendChild(content)
 
     this.modal.appendChild(backdrop)
@@ -336,11 +349,9 @@ export default class extends Controller {
     this.modal.appendChild(container)
 
     if (caption) {
-      const captionDiv = document.createElement('div')
-      captionDiv.className = 'image-viewer-modal__caption'
-      captionDiv.setAttribute('role', 'region')
-      captionDiv.setAttribute('aria-live', 'polite')
-      captionDiv.innerHTML = caption
+      const captionDiv = this.createCaptionDiv()
+      const captionWrapper = this.getOrCreateCaptionWrapper(captionDiv)
+      captionWrapper.innerHTML = caption
       this.modal.appendChild(captionDiv)
       this.captionElement = captionDiv
     }
@@ -359,24 +370,7 @@ export default class extends Controller {
       })
     })
 
-    closeButton.addEventListener('click', () => this.closeModal())
-    backdrop.addEventListener('click', () => this.closeModal())
-
-    // focus trap: prevent tabbing outside the modal
-    this.modal.addEventListener('keydown', (e) => {
-      if (e.key === 'Tab') {
-        const focusableElements = this.modal.querySelectorAll('button, [tabindex]:not([tabindex="-1"])')
-        const firstElement = focusableElements[0]
-        const lastElement = focusableElements[focusableElements.length - 1]
-        if (e.shiftKey && document.activeElement === firstElement) {
-          e.preventDefault()
-          lastElement.focus()
-        } else if (!e.shiftKey && document.activeElement === lastElement) {
-          e.preventDefault()
-          firstElement.focus()
-        }
-      }
-    })
+    this.setupModalEventListeners(backdrop)
   }
 
   /**
@@ -404,10 +398,6 @@ export default class extends Controller {
    */
   closeModal() {
     if (!this.modal) return
-
-    if (this.modal.contains(document.activeElement)) {
-      document.activeElement.blur()
-    }
 
     this.modal.setAttribute('aria-hidden', 'true')
 
@@ -523,6 +513,17 @@ export default class extends Controller {
         this.captionResizeObserver = null
       }
 
+      if (this.imageTransitionTimeout) {
+        clearTimeout(this.imageTransitionTimeout)
+        this.imageTransitionTimeout = null
+      }
+
+      const fullscreenContent = this.fullscreenElement || this.currentImageElement
+      if (fullscreenContent && this.boundFullscreenClick) {
+        fullscreenContent.removeEventListener('click', this.boundFullscreenClick)
+        this.boundFullscreenClick = null
+      }
+
       this.modal.parentNode.removeChild(this.modal)
       this.modal = null
       this.collection = null
@@ -572,10 +573,22 @@ export default class extends Controller {
     if (event.key === 'Escape' || event.keyCode === 27) {
       if (this.isFullscreen()) {
         this.exitFullscreen()
+      } else if (this.zoomLevel > 1.0) {
+        this.resetZoom()
       } else {
         this.closeModal()
       }
     }
+  }
+
+  /**
+   * Checks if the Fullscreen API is supported in the browser.
+   */
+  isFullscreenSupported() {
+    return !!(document.fullscreenEnabled ||
+              document.webkitFullscreenEnabled ||
+              document.mozFullScreenEnabled ||
+              document.msFullscreenEnabled)
   }
 
   /**
@@ -642,12 +655,31 @@ export default class extends Controller {
   handleFullscreenChange() {
     if (!this.fullscreenButton || !this.fullscreenIcon) return
 
+    const content = this.fullscreenElement || this.currentImageElement
+    if (!content) return
+
     if (this.isFullscreen()) {
+      content.classList.add('is-fullscreen')
       this.fullscreenButton.setAttribute('aria-label', 'Exit fullscreen')
       this.fullscreenIcon.className = 'compress icon'
+
+      // exit fullscreen when clicking anywhere except controls
+      this.boundFullscreenClick = (e) => {
+        if (e.target.closest('button') || e.target.closest('.image-viewer-modal__controls')) {
+          return
+        }
+        this.exitFullscreen()
+      }
+      content.addEventListener('click', this.boundFullscreenClick)
     } else {
+      content.classList.remove('is-fullscreen')
       this.fullscreenButton.setAttribute('aria-label', 'Enter fullscreen')
       this.fullscreenIcon.className = 'expand icon'
+
+      if (this.boundFullscreenClick) {
+        content.removeEventListener('click', this.boundFullscreenClick)
+        this.boundFullscreenClick = null
+      }
     }
   }
 
@@ -980,6 +1012,30 @@ export default class extends Controller {
   }
 
   /**
+   * Creates or returns an existing caption wrapper.
+   */
+  getOrCreateCaptionWrapper(captionDiv) {
+    let captionWrapper = captionDiv.querySelector('.image-viewer-modal__caption-wrapper')
+    if (!captionWrapper) {
+      captionWrapper = document.createElement('div')
+      captionWrapper.className = 'image-viewer-modal__caption-wrapper'
+      captionDiv.appendChild(captionWrapper)
+    }
+    return captionWrapper
+  }
+
+  /**
+   * Creates a new caption.
+   */
+  createCaptionDiv() {
+    const captionDiv = document.createElement('div')
+    captionDiv.className = 'image-viewer-modal__caption'
+    captionDiv.setAttribute('role', 'region')
+    captionDiv.setAttribute('aria-live', 'polite')
+    return captionDiv
+  }
+
+  /**
    * Extracts caption text from an image.
    *
    * Prefers figcaption over alt text. Returns null if no caption is
@@ -1066,7 +1122,17 @@ export default class extends Controller {
 
     if (image) {
       image.style.opacity = '0'
-      const transitionHandler = () => {
+      let transitionCompleted = false
+
+      const updateImageSource = () => {
+        if (transitionCompleted) return
+        transitionCompleted = true
+
+        if (this.imageTransitionTimeout) {
+          clearTimeout(this.imageTransitionTimeout)
+          this.imageTransitionTimeout = null
+        }
+
         image.removeEventListener('transitionend', transitionHandler)
         image.src = imageSrc
         image.alt = imageAlt
@@ -1084,19 +1150,32 @@ export default class extends Controller {
           this.currentImageElement = image
         })
       }
+
+      const transitionHandler = (e) => {
+        if (e.target !== image) return
+        updateImageSource()
+      }
+
       image.addEventListener('transitionend', transitionHandler, { once: true })
+
+      // fallback timeout in case transitionend doesn't fire
+      this.imageTransitionTimeout = setTimeout(() => {
+        image.removeEventListener('transitionend', transitionHandler)
+        this.imageTransitionTimeout = null
+        updateImageSource()
+      }, 200)
     }
 
     if (caption) {
       if (captionDiv) {
-        captionDiv.innerHTML = caption
+        const captionWrapper = this.getOrCreateCaptionWrapper(captionDiv)
+        captionWrapper.innerHTML = caption
         captionDiv.style.display = 'block'
       } else {
-        captionDiv = document.createElement('div')
-        captionDiv.className = 'image-viewer-modal__caption'
-        captionDiv.setAttribute('role', 'region')
-        captionDiv.setAttribute('aria-live', 'polite')
-        captionDiv.innerHTML = caption
+        captionDiv = this.createCaptionDiv()
+        const captionWrapper = this.getOrCreateCaptionWrapper(captionDiv)
+        captionWrapper.innerHTML = caption
+
         const container = this.modal.querySelector('.image-viewer-modal__container')
         if (container) {
           container.insertAdjacentElement('afterend', captionDiv)

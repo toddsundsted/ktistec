@@ -137,6 +137,7 @@
 
     &__content {
         position: relative;
+        cursor: default;
 
         &:fullscreen,
         &:-webkit-full-screen,
@@ -155,6 +156,11 @@
         transition: transform @image-viewer-zoom-transition-duration @image-viewer-zoom-bounce-easing,
                     width @image-viewer-zoom-transition-duration @image-viewer-zoom-bounce-easing,
                     height @image-viewer-zoom-transition-duration @image-viewer-zoom-bounce-easing;
+        will-change: transform;
+
+        &.no-transition {
+            transition: none;
+        }
     }
 
     &__image {

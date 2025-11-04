@@ -65,6 +65,7 @@ export default class extends Controller {
 
     this.updateZoomButtons()
     this.updateZoomLevelDisplay()
+    this.updateCursor()
 
     // prevent body scroll on iOS Safari
     this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop
@@ -83,6 +84,7 @@ export default class extends Controller {
     document.addEventListener('fullscreenchange', this.boundHandleFullscreenChange)
 
     this.initSwipeListeners()
+    this.initPanListeners()
   }
 
   /**
@@ -306,6 +308,7 @@ export default class extends Controller {
       this.naturalImageWidth = image.naturalWidth
       this.naturalImageHeight = image.naturalHeight
       this.updateZoomLimits()
+      this.constrainPan()
     })
 
     imageWrapper.appendChild(image)
@@ -318,6 +321,13 @@ export default class extends Controller {
     this.naturalImageWidth = 0
     this.naturalImageHeight = 0
     this.maxZoomLevel = 4.0
+    this.panX = 0
+    this.panY = 0
+    this.isPanning = false
+    this.panStartX = 0
+    this.panStartY = 0
+    this.panStartPanX = 0
+    this.panStartPanY = 0
 
     container.appendChild(content)
 
@@ -484,6 +494,30 @@ export default class extends Controller {
         content.removeEventListener('touchend', this.boundTouchEnd)
       }
 
+      if (content && this.boundPanMouseDown) {
+        content.removeEventListener('mousedown', this.boundPanMouseDown)
+      }
+
+      if (this.boundPanMouseMove) {
+        document.removeEventListener('mousemove', this.boundPanMouseMove)
+      }
+
+      if (this.boundPanMouseUp) {
+        document.removeEventListener('mouseup', this.boundPanMouseUp)
+      }
+
+      if (content && this.boundPanTouchStartPan) {
+        content.removeEventListener('touchstart', this.boundPanTouchStartPan)
+      }
+
+      if (this.boundPanTouchMovePan) {
+        document.removeEventListener('touchmove', this.boundPanTouchMovePan)
+      }
+
+      if (this.boundPanTouchEndPan) {
+        document.removeEventListener('touchend', this.boundPanTouchEndPan)
+      }
+
       if (this.captionResizeObserver) {
         this.captionResizeObserver.disconnect()
         this.captionResizeObserver = null
@@ -510,6 +544,9 @@ export default class extends Controller {
       this.naturalImageWidth = 0
       this.naturalImageHeight = 0
       this.maxZoomLevel = 4.0
+      this.panX = 0
+      this.panY = 0
+      this.isPanning = false
     }
   }
 
@@ -653,15 +690,19 @@ export default class extends Controller {
    * Sets the zoom level.
    */
   setZoom(level) {
+    const wasZoomed = this.zoomLevel > 1.0
     this.zoomLevel = Math.max(1.0, Math.min(level, this.maxZoomLevel))
 
-    if (this.imageWrapper) {
-      this.imageWrapper.style.transform = `scale(${this.zoomLevel})`
-      this.imageWrapper.style.transformOrigin = 'center center'
+    if (this.zoomLevel === 1.0 && wasZoomed) {
+      this.resetPan()
+    } else {
+      this.constrainPan()
     }
 
+    this.applyTransform()
     this.updateZoomButtons()
     this.updateZoomLevelDisplay()
+    this.updateCursor()
   }
 
   /**
@@ -669,6 +710,199 @@ export default class extends Controller {
    */
   resetZoom() {
     this.setZoom(1.0)
+    this.resetPan()
+  }
+
+  /**
+   * Applies transform (scale + translate) to the image wrapper.
+   */
+  applyTransform() {
+    if (!this.imageWrapper) return
+
+    if (this.isPanning) {
+      this.imageWrapper.classList.add('no-transition')
+    } else {
+      this.imageWrapper.classList.remove('no-transition')
+    }
+
+    this.imageWrapper.style.transform = `scale(${this.zoomLevel}) translate(${this.panX}px, ${this.panY}px)`
+    this.imageWrapper.style.transformOrigin = 'center center'
+  }
+
+  /**
+   * Resets pan position.
+   */
+  resetPan() {
+    this.panX = 0
+    this.panY = 0
+    this.applyTransform()
+  }
+
+  /**
+   * Constrains pan to image bounds.
+   */
+  constrainPan() {
+    if (!this.currentImageElement || this.zoomLevel <= 1.0) {
+      this.panX = 0
+      this.panY = 0
+      this.applyTransform()
+      return
+    }
+
+    const content = this.modal.querySelector('.image-viewer-modal__content')
+    if (!content) return
+
+    const contentRect = content.getBoundingClientRect()
+    const viewportWidth = contentRect.width
+    const viewportHeight = contentRect.height
+
+    const imageRect = this.currentImageElement.getBoundingClientRect()
+    const scaledWidth = imageRect.width
+    const scaledHeight = imageRect.height
+
+    if (scaledWidth <= 0 || scaledHeight <= 0) return
+
+    const maxPanX = scaledWidth > viewportWidth ? (scaledWidth - viewportWidth) / 2 : 0
+    const maxPanY = scaledHeight > viewportHeight ? (scaledHeight - viewportHeight) / 2 : 0
+
+    this.panX = Math.max(-maxPanX, Math.min(maxPanX, this.panX))
+    this.panY = Math.max(-maxPanY, Math.min(maxPanY, this.panY))
+
+    this.applyTransform()
+  }
+
+  /**
+   * Initializes pan event listeners.
+   */
+  initPanListeners() {
+    const content = this.modal.querySelector('.image-viewer-modal__content')
+    if (!content) return
+
+    this.boundPanMouseDown = this.handlePanMouseDown.bind(this)
+    this.boundPanMouseMove = this.handlePanMouseMove.bind(this)
+    this.boundPanMouseUp = this.handlePanMouseUp.bind(this)
+
+    content.addEventListener('mousedown', this.boundPanMouseDown)
+
+    this.boundPanTouchStartPan = this.handlePanTouchStart.bind(this)
+    this.boundPanTouchMovePan = this.handlePanTouchMove.bind(this)
+    this.boundPanTouchEndPan = this.handlePanTouchEnd.bind(this)
+
+    content.addEventListener('touchstart', this.boundPanTouchStartPan, { passive: false })
+  }
+
+  /**
+   * Handles mouse down for panning.
+   */
+  handlePanMouseDown(event) {
+    if (this.zoomLevel <= 1.0) return
+    if (event.target !== this.currentImageElement && !this.imageWrapper.contains(event.target)) return
+    if (event.target.closest('button')) return
+
+    event.preventDefault()
+    this.isPanning = true
+    this.panStartX = event.clientX
+    this.panStartY = event.clientY
+    this.panStartPanX = this.panX
+    this.panStartPanY = this.panY
+
+    document.addEventListener('mousemove', this.boundPanMouseMove)
+    document.addEventListener('mouseup', this.boundPanMouseUp)
+
+    this.updateCursor()
+  }
+
+  /**
+   * Handles mouse move for panning.
+   */
+  handlePanMouseMove(event) {
+    if (!this.isPanning) return
+
+    event.preventDefault()
+    const deltaX = event.clientX - this.panStartX
+    const deltaY = event.clientY - this.panStartY
+
+    this.panX = this.panStartPanX + (deltaX / this.zoomLevel)
+    this.panY = this.panStartPanY + (deltaY / this.zoomLevel)
+
+    this.constrainPan()
+  }
+
+  /**
+   * Handles mouse up for panning.
+   */
+  handlePanMouseUp() {
+    if (!this.isPanning) return
+
+    this.isPanning = false
+    document.removeEventListener('mousemove', this.boundPanMouseMove)
+    document.removeEventListener('mouseup', this.boundPanMouseUp)
+
+    this.updateCursor()
+  }
+
+  /**
+   * Handles touch start for panning.
+   */
+  handlePanTouchStart(event) {
+    if (this.zoomLevel <= 1.0) return
+    if (event.touches.length !== 1) return
+    if (event.target !== this.currentImageElement && !this.imageWrapper.contains(event.target)) return
+
+    event.preventDefault()
+    this.isPanning = true
+    const touch = event.touches[0]
+    this.panStartX = touch.clientX
+    this.panStartY = touch.clientY
+    this.panStartPanX = this.panX
+    this.panStartPanY = this.panY
+
+    document.addEventListener('touchmove', this.boundPanTouchMovePan, { passive: false })
+    document.addEventListener('touchend', this.boundPanTouchEndPan)
+  }
+
+  /**
+   * Handles touch move for panning.
+   */
+  handlePanTouchMove(event) {
+    if (!this.isPanning || event.touches.length !== 1) return
+
+    event.preventDefault()
+    const touch = event.touches[0]
+    const deltaX = touch.clientX - this.panStartX
+    const deltaY = touch.clientY - this.panStartY
+
+    this.panX = this.panStartPanX + (deltaX / this.zoomLevel)
+    this.panY = this.panStartPanY + (deltaY / this.zoomLevel)
+
+    this.constrainPan()
+  }
+
+  /**
+   * Handles touch end for panning.
+   */
+  handlePanTouchEnd() {
+    if (!this.isPanning) return
+
+    this.isPanning = false
+    document.removeEventListener('touchmove', this.boundPanTouchMovePan)
+    document.removeEventListener('touchend', this.boundPanTouchEndPan)
+  }
+
+  /**
+   * Updates cursor style based on zoom and pan state.
+   */
+  updateCursor() {
+    const content = this.modal.querySelector('.image-viewer-modal__content')
+    if (!content) return
+
+    if (this.isPanning) {
+      content.style.cursor = 'grabbing'
+    } else if (this.zoomLevel > 1.0) {
+      content.style.cursor = 'grab'
+    } else {
+      content.style.cursor = 'default'
+    }
   }
 
   /**
@@ -820,6 +1054,7 @@ export default class extends Controller {
     this.updateAriaLabel()
     this.updatePagination()
     this.resetZoom()
+    this.resetPan()
   }
 
   /**
@@ -840,6 +1075,7 @@ export default class extends Controller {
           this.naturalImageWidth = image.naturalWidth
           this.naturalImageHeight = image.naturalHeight
           this.updateZoomLimits()
+          this.constrainPan()
         }, { once: true })
 
         requestAnimationFrame(() => {
@@ -940,13 +1176,21 @@ export default class extends Controller {
     const content = this.modal.querySelector('.image-viewer-modal__content')
     if (!content) return
 
+    // skip swipe detection when zoomed (pan handles it)
+
     this.boundTouchStart = (e) => {
+      if (this.zoomLevel > 1.0) return
+      if (e.touches.length !== 1) return
+
       const touch = e.touches[0]
       this.touchStartX = touch.clientX
       this.touchStartY = touch.clientY
     }
 
     this.boundTouchEnd = (e) => {
+      if (this.zoomLevel > 1.0) return
+      if (e.changedTouches.length !== 1) return
+
       const touch = e.changedTouches[0]
       this.touchEndX = touch.clientX
       this.touchEndY = touch.clientY

@@ -29,15 +29,15 @@ export default class extends Controller {
    *
    * An image qualifies if it's within this controller's content
    * element and either:
-   *   - Inside a .text or .extra.text element
+   *   - Inside a .extra.text element
    *   - Has the "attachment" class
    */
   isViewerImage(img) {
-    const isInText = img.closest(".text, .extra.text") !== null
+    const isInExtraText = img.closest(".extra.text") !== null
     const hasAttachmentClass = img.classList.contains("attachment")
     const isWithinContent = img.closest(".content") === this.element
 
-    return isWithinContent && (isInText || hasAttachmentClass)
+    return isWithinContent && (isInExtraText || hasAttachmentClass)
   }
 
   /**
@@ -66,7 +66,13 @@ export default class extends Controller {
     this.updateZoomButtons()
     this.updateZoomLevelDisplay()
 
+    // prevent body scroll on iOS Safari
+    this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop
+    document.documentElement.classList.add('image-viewer-modal-open')
     document.body.classList.add('image-viewer-modal-open')
+    document.body.style.top = `-${this.scrollPosition}px`
+    document.body.style.position = 'fixed'
+    document.body.style.width = '100%'
 
     this.boundHandleEscape = this.handleEscape.bind(this)
     this.boundHandleArrowKeys = this.handleArrowKeys.bind(this)
@@ -76,9 +82,7 @@ export default class extends Controller {
     document.addEventListener('keydown', this.boundHandleArrowKeys)
     document.addEventListener('fullscreenchange', this.boundHandleFullscreenChange)
 
-    if (this.collection && this.collection.length > 1) {
-      this.initSwipeListeners()
-    }
+    this.initSwipeListeners()
   }
 
   /**
@@ -112,6 +116,9 @@ export default class extends Controller {
     this.modal.setAttribute('aria-label', 'Image viewer')
     this.modal.setAttribute('aria-hidden', 'true')
     this.modal.setAttribute('tabindex', '-1')
+
+    // initialize caption height CSS variable
+    this.modal.style.setProperty('--caption-height', '0px')
 
     const backdrop = document.createElement('div')
     backdrop.className = 'image-viewer-modal__backdrop'
@@ -229,7 +236,7 @@ export default class extends Controller {
     resetZoomButton.type = 'button'
     resetZoomButton.setAttribute('aria-label', 'Reset zoom')
     resetZoomButton.setAttribute('tabindex', '0')
-    resetZoomButton.style.display = 'none'
+    resetZoomButton.setAttribute('disabled', 'true')
 
     const resetZoomIcon = document.createElement('i')
     resetZoomIcon.className = 'compress icon'
@@ -312,21 +319,35 @@ export default class extends Controller {
     this.naturalImageHeight = 0
     this.maxZoomLevel = 4.0
 
+    container.appendChild(content)
+
+    this.modal.appendChild(backdrop)
+    this.modal.appendChild(controls)
+    this.modal.appendChild(container)
+
     if (caption) {
       const captionDiv = document.createElement('div')
       captionDiv.className = 'image-viewer-modal__caption'
       captionDiv.setAttribute('role', 'region')
       captionDiv.setAttribute('aria-live', 'polite')
       captionDiv.innerHTML = caption
-      content.appendChild(captionDiv)
+      this.modal.appendChild(captionDiv)
+      this.captionElement = captionDiv
     }
 
-    container.appendChild(content)
-    this.modal.appendChild(backdrop)
-    this.modal.appendChild(controls)
-    this.modal.appendChild(container)
-
     document.body.appendChild(this.modal)
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        this.updateCaptionHeight()
+        if (this.captionElement) {
+          this.captionResizeObserver = new ResizeObserver(() => {
+            this.updateCaptionHeight()
+          })
+          this.captionResizeObserver.observe(this.captionElement)
+        }
+      })
+    })
 
     closeButton.addEventListener('click', () => this.closeModal())
     backdrop.addEventListener('click', () => this.closeModal())
@@ -399,7 +420,16 @@ export default class extends Controller {
       this.exitFullscreen()
     }
 
+    // restore scroll position on iOS Safari
+    document.documentElement.classList.remove('image-viewer-modal-open')
     document.body.classList.remove('image-viewer-modal-open')
+    document.body.style.top = ''
+    document.body.style.position = ''
+    document.body.style.width = ''
+    if (this.scrollPosition !== undefined) {
+      window.scrollTo(0, this.scrollPosition)
+      this.scrollPosition = undefined
+    }
 
     // use transitionend event to remove modal after animation
     // completes. use fallback timeout in case transitionend doesn't
@@ -454,6 +484,11 @@ export default class extends Controller {
         content.removeEventListener('touchend', this.boundTouchEnd)
       }
 
+      if (this.captionResizeObserver) {
+        this.captionResizeObserver.disconnect()
+        this.captionResizeObserver = null
+      }
+
       this.modal.parentNode.removeChild(this.modal)
       this.modal = null
       this.collection = null
@@ -470,10 +505,26 @@ export default class extends Controller {
       this.resetZoomButton = null
       this.zoomLevelDisplay = null
       this.imageWrapper = null
+      this.captionElement = null
       this.zoomLevel = 1.0
       this.naturalImageWidth = 0
       this.naturalImageHeight = 0
       this.maxZoomLevel = 4.0
+    }
+  }
+
+  /**
+   * Updates the CSS custom property for caption height.
+   */
+  updateCaptionHeight() {
+    if (!this.modal) return
+
+    const caption = this.captionElement || this.modal.querySelector('.image-viewer-modal__caption')
+    if (caption && caption.style.display !== 'none') {
+      const height = caption.offsetHeight
+      this.modal.style.setProperty('--caption-height', `${height}px`)
+    } else {
+      this.modal.style.setProperty('--caption-height', '0px')
     }
   }
 
@@ -647,9 +698,13 @@ export default class extends Controller {
     }
 
     if (isZoomed) {
-      this.resetZoomButton.style.display = 'flex'
+      this.resetZoomButton.removeAttribute('disabled')
+      this.resetZoomButton.setAttribute('tabindex', '0')
+      this.resetZoomButton.setAttribute('aria-label', 'Reset zoom')
     } else {
-      this.resetZoomButton.style.display = 'none'
+      this.resetZoomButton.setAttribute('disabled', 'true')
+      this.resetZoomButton.setAttribute('tabindex', '-1')
+      this.resetZoomButton.setAttribute('aria-label', 'Reset zoom (at minimum)')
     }
   }
 
@@ -772,8 +827,7 @@ export default class extends Controller {
    */
   updateImage(imageSrc, imageAlt, caption) {
     const image = this.modal.querySelector('.image-viewer-modal__image')
-    const captionDiv = this.modal.querySelector('.image-viewer-modal__caption')
-    const content = this.modal.querySelector('.image-viewer-modal__content')
+    let captionDiv = this.captionElement || this.modal.querySelector('.image-viewer-modal__caption')
 
     if (image) {
       image.style.opacity = '0'
@@ -800,18 +854,44 @@ export default class extends Controller {
     if (caption) {
       if (captionDiv) {
         captionDiv.innerHTML = caption
-      } else if (content) {
-        const newCaptionDiv = document.createElement('div')
-        newCaptionDiv.className = 'image-viewer-modal__caption'
-        newCaptionDiv.setAttribute('role', 'region')
-        newCaptionDiv.setAttribute('aria-live', 'polite')
-        newCaptionDiv.innerHTML = caption
-        content.appendChild(newCaptionDiv)
+        captionDiv.style.display = 'block'
+      } else {
+        captionDiv = document.createElement('div')
+        captionDiv.className = 'image-viewer-modal__caption'
+        captionDiv.setAttribute('role', 'region')
+        captionDiv.setAttribute('aria-live', 'polite')
+        captionDiv.innerHTML = caption
+        const container = this.modal.querySelector('.image-viewer-modal__container')
+        if (container) {
+          container.insertAdjacentElement('afterend', captionDiv)
+        } else {
+          this.modal.appendChild(captionDiv)
+        }
+        this.captionElement = captionDiv
+        if (this.captionResizeObserver) {
+          this.captionResizeObserver.disconnect()
+        }
+        this.captionResizeObserver = new ResizeObserver(() => {
+          this.updateCaptionHeight()
+        })
+        this.captionResizeObserver.observe(captionDiv)
       }
+
+      requestAnimationFrame(() => {
+        this.updateCaptionHeight()
+      })
     } else {
       if (captionDiv) {
         captionDiv.remove()
+        this.captionElement = null
+
+        if (this.captionResizeObserver) {
+          this.captionResizeObserver.disconnect()
+          this.captionResizeObserver = null
+        }
       }
+
+      this.updateCaptionHeight()
     }
   }
 
@@ -889,9 +969,24 @@ export default class extends Controller {
     const deltaX = this.touchEndX - this.touchStartX
     const deltaY = this.touchEndY - this.touchStartY
 
+    // swipe left/right
     const minSwipeDistance = 50
     const maxVerticalDistance = 30
+    // swipe up
+    const minVerticalSwipeDistance = 100
+    const maxHorizontalDistance = 50
 
+    // check for vertical swipe (flick up to close)
+    if (deltaY < -minVerticalSwipeDistance && Math.abs(deltaX) < maxHorizontalDistance) {
+      this.closeModal()
+      this.touchStartX = null
+      this.touchStartY = null
+      this.touchEndX = null
+      this.touchEndY = null
+      return
+    }
+
+    // check for horizontal swipe (navigate left/right)
     if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaY) < maxVerticalDistance) {
       if (deltaX > 0) {
         this.navigatePrev()

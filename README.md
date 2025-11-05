@@ -32,8 +32,8 @@
     - [Running Tests](#running-tests)
   - [Setup, Configuration, and Usage](#setup-configuration-and-usage)
     - [Command Line Options](#command-line-options)
-    - [Site Description](#site-description)
-    - [Translation](#translation)
+    - [User Settings](#user-settings)
+    - [Site Settings](#site-settings)
   - [Contributors](#contributors)
   - [Copyright and License](#copyright-and-license)
 
@@ -847,7 +847,42 @@ It also:
 
 **Consider backing up your database before using this option!**
 
-### Site Description
+### User Settings
+
+Ktistec provides comprehensive user/account settings that you can
+access through the web interface. Navigate to the settings page to
+configure your settings.
+
+**Available Settings:**
+
+- **Display Name**: Your public display name shown on your profile
+- **Summary**: Your biography or profile description
+- **Language**: IETF BCP 47 language tag (e.g., "en-US", "de", "ja") used for your posts and UI preferences
+- **Timezone**: IANA timezone (e.g., "America/New_York", "UTC") for displaying timestamps and aggregating metrics
+- **Password**: When supplied, updates your account password
+- **Auto-approve Followers**: When enabled, follow requests are automatically approved without requiring manual review
+- **Auto-follow Back**: When enabled, automatically follows back actors that follow you
+- **Background Image**: Your profile banner/background image
+- **Profile Image**: Your profile avatar icon
+- **Metadata**: Up to four custom profile metadata fields with name/value pairs
+
+These settings can also be configured via the API (see [Account Settings](#account-settings)
+in the API documentation).
+
+### Site Settings
+
+Site settings control server-wide configuration. You can access these
+from the settings page.
+
+**Available Settings:**
+
+- **Site Name**: The name of your Ktistec instance
+- **Description**: A customizable description displayed on your home page
+- **Footer**: A customizable footer displayed at the bottom of every page
+- **Translator Service**: Choose translation service (DeepL or LibreTranslate) if API keys are configured
+- **Translator Service URL**: API endpoint for the selected translation service
+
+#### Site Description
 
 Ktistec supports a customizable site description on your home
 page.
@@ -861,7 +896,7 @@ authoring posts:
 2. Use the rich text editor to change the site description
 3. Press Update
 
-### Translation
+#### Translation
 
 First, ensure you've set your language in Account Settings on
 the settings page. Your  language must be a valid [IETF BCP 47

@@ -14,6 +14,15 @@ p
   == input_tag("Language", account, language, data: {"controller" => "default-language", "placeholder-only" => true})
   == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone", "placeholder-only" => true})
   == input_tag("Password", account, password, type: "password", placeholder: "Leave blank to leave unchanged")
+  .ui.fields
+    .field
+      .ui.checkbox
+        input type="checkbox" name="auto_approve_followers" value="1" checked=account.auto_approve_followers
+        label Automatically approve new followers
+    .field
+      .ui.checkbox
+        input type="checkbox" name="auto_follow_back" value="1" checked=account.auto_follow_back
+        label Automatically follow back when followed
   crystal:
     attachments = actor.attachments || [] of ActivityPub::Actor::Attachment
     attachments.size.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1) do |i|

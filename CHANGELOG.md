@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.1.3]
+### Added
+- Add admin page for managing OAuth access tokens.
+- Add support for auto-approve followers. (fixes [#26](https://github.com/toddsundsted/ktistec/issues/26))
+- Add support for auto-follow back.
+
+### Fixed
+- Prevent triggering actor refresh when user is anonymous.
+
+### Changed
+- Replace "lightgallery" dependency with custom image viewer.
+- Set OAuth access token expiry to 30 days (previously expired after 24 hours).
+- Refactor inbox and outbox processing into dedicated processor services.
+
 ## [v3.1.2]
 ### Added
 - Support for the `Dislike` activity.
@@ -501,6 +515,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.1.3]: https://github.com/toddsundsted/ktistec/compare/c460d486...c06caebe
 [v3.1.2]: https://github.com/toddsundsted/ktistec/compare/ebc7405c...65fd47cb
 [v3.1.1]: https://github.com/toddsundsted/ktistec/compare/f9dd19ab...cc5f45ef
 [v3.0.0]: https://github.com/toddsundsted/ktistec/compare/d7341dd1...2b777537

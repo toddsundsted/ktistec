@@ -38,6 +38,8 @@ Spectator.describe AdminController do
           expect(XML.parse_html(response.body).xpath_nodes("//a[@href='/tasks' and text()='Tasks']")).not_to be_empty
           expect(XML.parse_html(response.body).xpath_nodes("//a[@href='/filters' and text()='Filters']")).not_to be_empty
           expect(XML.parse_html(response.body).xpath_nodes("//a[@href='/admin/accounts' and text()='Accounts']")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//a[@href='/admin/oauth/clients' and text()='OAuth Clients']")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//a[@href='/admin/oauth/tokens' and text()='OAuth Tokens']")).not_to be_empty
         end
       end
     end

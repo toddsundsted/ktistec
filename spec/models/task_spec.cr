@@ -11,6 +11,11 @@ Spectator.describe Task do
     def perform
       # no-op
     end
+
+    # expose protected method for testing
+    def randomized_next_attempt_at(delta : Time::Span, randomization_percentage : Float64? = nil) : Time
+      super
+    end
   end
 
   subject do
@@ -89,6 +94,54 @@ Spectator.describe Task do
     it "is false if next_attempt_at is in the future" do
       subject.next_attempt_at = 1.day.from_now
       expect(subject.past_due?).to be_false
+    end
+  end
+
+  describe "#randomized_next_attempt_at" do
+    let(now) { Time.utc }
+
+    it "returns exact time for deltas less than minimum threshold" do
+      delta = 4.minutes
+      result = subject.randomized_next_attempt_at(delta)
+      expected = delta.from_now
+      expect(result).to be_close(expected, delta: 1.second)
+    end
+
+    it "returns randomized time for delta equal to minimum threshold" do
+      delta = Task::MIN_RANDOMIZATION_THRESHOLD
+      result = subject.randomized_next_attempt_at(delta)
+      expected = delta.from_now
+      max_variation = delta.total_seconds * Task::ADAPTIVE_RANDOMIZATION_PERCENTAGE_SHORT / 2.0
+      time_diff = (result - expected).total_seconds.abs
+      expect(time_diff).to be <= max_variation
+    end
+
+    it "uses short adaptive percentage for intervals < 6 hours" do
+      delta = 1.hour
+      result = subject.randomized_next_attempt_at(delta)
+      expected = delta.from_now
+      max_variation = delta.total_seconds * Task::ADAPTIVE_RANDOMIZATION_PERCENTAGE_SHORT / 2.0
+      time_diff = (result - expected).total_seconds.abs
+      expect(time_diff).to be <= max_variation
+    end
+
+    it "uses long adaptive percentage for intervals >= 6 hours" do
+      delta = 1.day
+      result = subject.randomized_next_attempt_at(delta)
+      expected = delta.from_now
+      max_variation = delta.total_seconds * Task::ADAPTIVE_RANDOMIZATION_PERCENTAGE_LONG / 2.0
+      time_diff = (result - expected).total_seconds.abs
+      expect(time_diff).to be <= max_variation
+    end
+
+    it "uses explicit randomization percentage when provided" do
+      delta = 1.hour
+      custom_percentage = 0.10 # 10%
+      result = subject.randomized_next_attempt_at(delta, randomization_percentage: custom_percentage)
+      expected = delta.from_now
+      max_variation = delta.total_seconds * custom_percentage / 2.0
+      time_diff = (result - expected).total_seconds.abs
+      expect(time_diff).to be <= max_variation
     end
   end
 

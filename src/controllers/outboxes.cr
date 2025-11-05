@@ -1,8 +1,7 @@
 require "../framework/controller"
 require "../models/activity_pub/activity/**"
 require "../models/activity_pub/object/note"
-require "../models/task/deliver"
-require "../rules/content_rules"
+require "../services/outbox_activity_processor"
 
 class OutboxesController
   include Ktistec::Controller
@@ -278,50 +277,7 @@ class OutboxesController
 
     activity.save
 
-    ContentRules.new.run do
-      assert ContentRules::Outgoing.new(account.actor, activity)
-    end
-
-    # handle side-effects
-
-    case activity
-    when ActivityPub::Activity::Follow
-      unless Relationship::Social::Follow.find?(actor: activity.actor, object: activity.object, visible: false)
-        Relationship::Social::Follow.new(
-          actor: activity.actor,
-          object: activity.object,
-          visible: false
-        ).save(skip_associated: true)
-      end
-    when ActivityPub::Activity::Accept
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: true).save
-      end
-    when ActivityPub::Activity::Reject
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: true).save
-      end
-    when ActivityPub::Activity::Undo
-      case (object = activity.object)
-      when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
-          follow.destroy
-        end
-      end
-      activity.object.undo!
-    when ActivityPub::Activity::Delete
-      case (object = activity.object?)
-      when ActivityPub::Object
-        object.delete!
-      when ActivityPub::Actor
-        object.delete!
-      end
-    end
-
-    Task::Deliver.new(
-      sender: account.actor,
-      activity: activity
-    ).schedule
+    OutboxActivityProcessor.process(account, activity)
 
     if accepts?("application/ld+json", "application/activity+json", "application/json")
       unless activity.is_a?(ActivityPub::Activity::Delete)

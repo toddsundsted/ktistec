@@ -16,7 +16,8 @@
         <link rel="stylesheet" href="/3rd/semantic-2.4.1.min.css"/>
         <script>
           window.Ktistec = {
-            csrf: '<%= env.session.string?("csrf") %>'
+            csrf: '<%= env.session.string?("csrf") %>',
+            auth: <%= !!env.session.account? %>
           }
         </script>
         <link rel="stylesheet" href="/dist/site.css"/>

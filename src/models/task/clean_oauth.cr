@@ -12,7 +12,7 @@ class Task
   # **Inactive Clients**:
   # Note: Manually created clients are always preserved.
   # 1. Delete clients created more than 1 month ago AND never accessed
-  # 2. Delete clients that were last accessed more than four months ago
+  # 2. Delete clients that were last accessed more than one year ago
   #
   class CleanOauth < Task
     include Singleton
@@ -24,8 +24,8 @@ class Task
       cleanup_expired_tokens
       cleanup_orphaned_clients
     ensure
-      random_delay = (rand(3600) - 1800).seconds
-      self.next_attempt_at = 1.day.from_now + random_delay
+      # ±30 minutes on 1 day = 1800 seconds / 86400 seconds ≈ 0.0208 (2.08%)
+      self.next_attempt_at = randomized_next_attempt_at(1.day, randomization_percentage: 0.0208)
     end
 
     private def cleanup_expired_tokens
@@ -48,7 +48,7 @@ class Task
            AND (
              (last_accessed_at IS NULL AND created_at < datetime('now', '-1 month'))
               OR
-             (last_accessed_at < datetime('now', '-4 months'))
+             (last_accessed_at < datetime('now', '-1 year'))
            )
         SQL
       )

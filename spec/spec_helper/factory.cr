@@ -345,6 +345,15 @@ def fetch_thread_task_factory(source_iri = nil, source = false, **options)
   task_factory(Task::Fetch::Thread, **{source: source, source_iri: source_iri}.merge(options))
 end
 
+def handle_follow_request_task_factory(source_iri = nil, recipient = false, subject_iri = nil, activity = false, **options)
+  recipient = actor_factory(local: true) unless source_iri || recipient.nil? || recipient
+  activity = follow_factory unless subject_iri || activity.nil? || activity
+  task_factory(
+    Task::HandleFollowRequest,
+    **{recipient: recipient || nil, source_iri: source_iri, activity: activity || nil, subject_iri: subject_iri}.merge(options)
+  )
+end
+
 {% if @top_level.has_constant?("Task") %}
   class Factory::ConcurrentTask < Task
     include Task::ConcurrentTask

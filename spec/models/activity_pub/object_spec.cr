@@ -167,7 +167,8 @@ Spectator.describe ActivityPub::Object do
       {
         "@context":[
           "https://www.w3.org/ns/activitystreams",
-          {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}
+          {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"},
+          {"toot":"http://joinmastodon.org/ns#"}
         ],
         "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",
@@ -322,6 +323,33 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "with focalPoint field" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.2,-0.4]|) }
+
+      it "deserializes focal point" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.2, -0.4})])
+      end
+    end
+
+    context "with focalPoint at center" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,0.0]|) }
+
+      it "deserializes center focal point" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.0, 0.0})])
+      end
+    end
+
+    context "with malformed focalPoint" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,null]|) }
+
+      it "handles malformed focal point gracefully" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
+      end
+    end
+
     # support Lemmy-style language property
     context "when language is present" do
       let(json) do
@@ -472,6 +500,33 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "with focalPoint field" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.2,-0.4]|) }
+
+      it "deserializes focal point" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.2, -0.4})])
+      end
+    end
+
+    context "with focalPoint at center" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,0.0]|) }
+
+      it "deserializes center focal point" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.0, 0.0})])
+      end
+    end
+
+    context "with malformed focalPoint" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,null]|) }
+
+      it "handles malformed focal point gracefully" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
+      end
+    end
+
     # support Lemmy-style language property
     context "when language is present" do
       let(json) do
@@ -521,6 +576,33 @@ Spectator.describe ActivityPub::Object do
     it "renders an identical instance" do
       object = described_class.from_json_ld(json)
       expect(described_class.from_json_ld(object.to_json_ld)).to eq(object)
+    end
+
+    context "with focal point" do
+      let(:object) do
+        described_class.new(
+          iri: "https://test.test/objects/#{random_string}",
+          attachments: [ActivityPub::Object::Attachment.new("https://example.com/image.jpg", "image/jpeg", "Test image", {0.5, -0.25})]
+        ).save
+      end
+
+      let(json_ld) { JSON.parse(object.to_json_ld) }
+
+      it "includes toot context in output" do
+        context = json_ld["@context"].as_a
+        toot_context = context.find! { |c| c.as_h? && c.as_h.has_key?("toot") }
+        expect(toot_context.as_h["toot"]).to eq("http://joinmastodon.org/ns#")
+      end
+
+      it "serializes focal point in attachment" do
+        attachments = json_ld["attachment"].as_a
+        expect(attachments.first["focalPoint"]).to eq([0.5, -0.25])
+      end
+
+      it "round-trips focal point correctly" do
+        restored = described_class.from_json_ld(object.to_json_ld)
+        expect(restored.attachments).to eq(object.attachments)
+      end
     end
 
     it "does not render a content map" do

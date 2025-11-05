@@ -910,7 +910,19 @@ module ActivityPub
             url = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#url").presence
             media_type = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#mediaType").presence
             name = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
-            ActivityPub::Object::Attachment.new(url, media_type, name) if url && media_type
+            focal_point =
+              if (fp = attachment.as_h["http://joinmastodon.org/ns#focalPoint"]?)
+                # parse as array and convert to tuple
+                if (fp_array = fp.as_a?)
+                  if fp_array.size == 2
+                    # handle both integer [0, 0] and float [0.0, 0.0] formats
+                    x = fp_array[0].as_i64?.try(&.to_f64) || fp_array[0].as_f?.try(&.to_f64)
+                    y = fp_array[1].as_i64?.try(&.to_f64) || fp_array[1].as_f?.try(&.to_f64)
+                    {x, y} if x && y && x.finite? && y.finite?
+                  end
+                end
+              end
+            ActivityPub::Object::Attachment.new(url, media_type, name, focal_point) if url && media_type
           end,
           "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
           # use addressing to establish visibility

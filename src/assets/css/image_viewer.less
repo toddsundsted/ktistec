@@ -1,0 +1,210 @@
+/** image viewer modal **/
+@image-viewer-z-index: 9999;
+@image-viewer-container-z-index: 1;
+@image-viewer-transition-duration: 0.2s;
+@image-viewer-backdrop-opacity: 1.0;
+@image-viewer-close-button-bg-opacity: 0.2;
+@image-viewer-close-button-bg-opacity-hover: 0.3;
+@image-viewer-controls-height: 3.5rem;
+@image-viewer-controls-padding: 0.5rem;
+@image-viewer-close-button-size: 2.5rem;
+@image-viewer-close-icon-size: 1.25rem;
+@image-viewer-outline-width: 2px;
+@image-viewer-outline-offset: 2px;
+@image-viewer-viewport-width: 95vw;
+@image-viewer-image-border-radius: 4px;
+@image-viewer-caption-padding: 1rem;
+@image-viewer-caption-max-width: 90vw;
+@image-viewer-caption-font-size: 0.9rem;
+@image-viewer-caption-line-height: 1.4;
+@image-viewer-mobile-breakpoint: 599px;
+@image-viewer-mobile-viewport-width: 98vw;
+@image-viewer-zoom-transition-duration: 0.3s;
+@image-viewer-zoom-bounce-easing: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+
+.image-viewer-modal {
+    position: fixed;
+    inset: 0;
+    z-index: @image-viewer-z-index;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity @image-viewer-transition-duration ease, visibility @image-viewer-transition-duration ease;
+
+    &[aria-hidden="false"] {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    &__backdrop {
+        position: absolute;
+        inset: 0;
+        background-color: rgba(0, 0, 0, @image-viewer-backdrop-opacity);
+        cursor: pointer;
+    }
+
+    &__controls {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: @image-viewer-controls-height;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 @image-viewer-controls-padding;
+        z-index: @image-viewer-container-z-index + 1;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 70%, transparent 100%);
+    }
+
+    &__controls-left {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    &__controls-right {
+        display: flex;
+        align-items: center;
+        gap: @image-viewer-controls-padding;
+        flex-shrink: 0;
+    }
+
+    &__pagination {
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-right: @image-viewer-controls-padding;
+    }
+
+    &__zoom-level {
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-left: @image-viewer-controls-padding;
+    }
+
+    &__container {
+        position: relative;
+        z-index: @image-viewer-container-z-index;
+    }
+
+    &__prev,
+    &__next,
+    &__zoom-in,
+    &__zoom-out,
+    &__reset-zoom,
+    &__fullscreen,
+    &__close {
+        background: rgba(255, 255, 255, @image-viewer-close-button-bg-opacity);
+        border: none;
+        color: white;
+        width: @image-viewer-close-button-size;
+        height: @image-viewer-close-button-size;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color @image-viewer-transition-duration ease;
+        padding: 0;
+        flex-shrink: 0;
+
+        .icon {
+            margin: 0;
+            font-size: @image-viewer-close-icon-size;
+        }
+
+        &:hover:not(:disabled),
+        &:focus:not(:disabled) {
+            background: rgba(255, 255, 255, @image-viewer-close-button-bg-opacity-hover);
+            outline: @image-viewer-outline-width solid white;
+            outline-offset: @image-viewer-outline-offset;
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    }
+
+    &__content {
+        position: relative;
+        cursor: default;
+
+        &:fullscreen,
+        &.is-fullscreen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, @image-viewer-backdrop-opacity);
+        }
+    }
+
+    &__image-wrapper {
+        transition: transform @image-viewer-zoom-transition-duration @image-viewer-zoom-bounce-easing,
+                    width @image-viewer-zoom-transition-duration @image-viewer-zoom-bounce-easing,
+                    height @image-viewer-zoom-transition-duration @image-viewer-zoom-bounce-easing;
+        will-change: transform;
+
+        &.no-transition {
+            transition: none;
+        }
+    }
+
+    &__image {
+        max-width: @image-viewer-viewport-width;
+        max-height: calc(100vh - 2 * max(@image-viewer-controls-height, var(--caption-height, 0px)));
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        border-radius: @image-viewer-image-border-radius;
+        transition: opacity @image-viewer-transition-duration ease;
+        outline: none;
+        user-select: none;
+
+        &:focus {
+            outline: none;
+        }
+    }
+
+    &__caption {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        padding: @image-viewer-caption-padding 0;
+        z-index: @image-viewer-container-z-index + 1;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 70%, transparent 100%);
+    }
+
+    &__caption-wrapper {
+        max-width: @image-viewer-caption-max-width;
+        padding: 0 @image-viewer-caption-padding;
+        color: white;
+        text-align: center;
+        font-size: @image-viewer-caption-font-size;
+        line-height: @image-viewer-caption-line-height;
+    }
+}
+
+html.image-viewer-modal-open,
+body.image-viewer-modal-open {
+    overflow: hidden;
+    height: 100%;
+}
+
+@media screen and (max-width: @image-viewer-mobile-breakpoint) {
+    .image-viewer-modal {
+        &__image {
+            max-width: @image-viewer-mobile-viewport-width;
+        }
+    }
+}

@@ -5,7 +5,7 @@ section.ui.feed data-controller="icon-load-error"
   - if (description = Ktistec::DescriptionEnhancer.enhanced_description.presence)
     .ui.segments
       .ui.segment.event
-        .content data-controller="image-gallery"
+        .content data-controller="image-viewer" data-action="click->image-viewer#handleClick"
           .text
             == description
   - objects.each do |object|

@@ -127,7 +127,10 @@ module ActivityPub
       @[JSON::Field(key: "name")]
       property caption : String?
 
-      def initialize(@url, @media_type, @caption = nil)
+      @[JSON::Field(key: "focalPoint")]
+      property focal_point : Tuple(Float64, Float64)?
+
+      def initialize(@url, @media_type, @caption = nil, @focal_point = nil)
       end
 
       def image?
@@ -140,6 +143,25 @@ module ActivityPub
 
       def audio?
         media_type.in?(%w[audio/mpeg audio/mp4 audio/webm audio/ogg audio/flac])
+      end
+
+      def has_focal_point?
+        return false unless (fp = focal_point)
+        fp[0].finite? && fp[1].finite?
+      end
+
+      def normalized_focal_point
+        return nil unless has_focal_point?
+        x, y = focal_point.not_nil!
+        {
+          (x / 2 + 0.5),     # normalized x = x / 2 + 0.5
+          (-y / 2 + 0.5)     # normalized y = -y / 2 + 0.5 (y inverted)
+        }
+      end
+
+      def css_object_position
+        return "50% 50%" unless (normalized = normalized_focal_point)
+        "#{(normalized[0] * 100).round(2)}% #{(normalized[1] * 100).round(2)}%"
       end
     end
 

@@ -1627,3 +1627,60 @@ Spectator.describe ActivityPub::Object::ModelHelper do
     end
   end
 end
+
+Spectator.describe ActivityPub::Object::Attachment do
+  def create_attachment(focal_point : Tuple(Float64, Float64)? = nil)
+    ActivityPub::Object::Attachment.new(
+      "https://example.com/image.jpg",
+      "image/jpeg",
+      nil,
+      focal_point
+    )
+  end
+
+  describe "#has_focal_point?" do
+    it "returns false for missing focal point" do
+      attachment = create_attachment
+
+      expect(attachment.has_focal_point?).to be_false
+    end
+
+    it "returns true for valid position" do
+      attachment = create_attachment({0.0, 0.0})
+
+      expect(attachment.has_focal_point?).to be_true
+    end
+
+    it "returns true for valid positions" do
+      attachment = create_attachment({-0.6, 0.07})
+
+      expect(attachment.has_focal_point?).to be_true
+    end
+  end
+
+  describe "#normalized_focal_point" do
+    it "converts Mastodon coordinates" do
+      attachment = create_attachment({0.2, -0.4})
+
+      normalized = attachment.normalized_focal_point.not_nil!
+      expect(normalized[0]).to eq(0.6)
+      expect(normalized[1]).to eq(0.7)
+    end
+  end
+
+  describe "#css_object_position" do
+    it "generates correct CSS values" do
+      attachment = create_attachment({0.2, -0.4})
+
+      css = attachment.css_object_position
+      expect(css).to eq("60.0% 70.0%")
+    end
+
+    it "returns center fallback when no focal point" do
+      attachment = create_attachment
+
+      css = attachment.css_object_position
+      expect(css).to eq("50% 50%")
+    end
+  end
+end

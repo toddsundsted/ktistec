@@ -1,7 +1,8 @@
 {
   "@context":[
     "https://www.w3.org/ns/activitystreams",
-    {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}
+    {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"},
+    {"toot":"http://joinmastodon.org/ns#","focalPoint":"toot:focalPoint"}
   ],
   <%- if (published = object.published) -%>
   "published":<%= published.to_rfc3339(fraction_digits: 3).to_json %>,

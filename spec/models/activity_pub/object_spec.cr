@@ -167,7 +167,8 @@ Spectator.describe ActivityPub::Object do
       {
         "@context":[
           "https://www.w3.org/ns/activitystreams",
-          {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}
+          {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"},
+          {"toot":"http://joinmastodon.org/ns#"}
         ],
         "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",
@@ -322,6 +323,33 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "with focalPoint field" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.2,-0.4]|) }
+
+      it "deserializes focal point" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.2, -0.4})])
+      end
+    end
+
+    context "with focalPoint at center" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,0.0]|) }
+
+      it "deserializes center focal point" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.0, 0.0})])
+      end
+    end
+
+    context "with malformed focalPoint" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,null]|) }
+
+      it "handles malformed focal point gracefully" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
+      end
+    end
+
     # support Lemmy-style language property
     context "when language is present" do
       let(json) do
@@ -472,6 +500,33 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "with focalPoint field" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.2,-0.4]|) }
+
+      it "deserializes focal point" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.2, -0.4})])
+      end
+    end
+
+    context "with focalPoint at center" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,0.0]|) }
+
+      it "deserializes center focal point" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.0, 0.0})])
+      end
+    end
+
+    context "with malformed focalPoint" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,null]|) }
+
+      it "handles malformed focal point gracefully" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
+      end
+    end
+
     # support Lemmy-style language property
     context "when language is present" do
       let(json) do
@@ -521,6 +576,33 @@ Spectator.describe ActivityPub::Object do
     it "renders an identical instance" do
       object = described_class.from_json_ld(json)
       expect(described_class.from_json_ld(object.to_json_ld)).to eq(object)
+    end
+
+    context "with focal point" do
+      let(:object) do
+        described_class.new(
+          iri: "https://test.test/objects/#{random_string}",
+          attachments: [ActivityPub::Object::Attachment.new("https://example.com/image.jpg", "image/jpeg", "Test image", {0.5, -0.25})]
+        ).save
+      end
+
+      let(json_ld) { JSON.parse(object.to_json_ld) }
+
+      it "includes toot context in output" do
+        context = json_ld["@context"].as_a
+        toot_context = context.find! { |c| c.as_h? && c.as_h.has_key?("toot") }
+        expect(toot_context.as_h["toot"]).to eq("http://joinmastodon.org/ns#")
+      end
+
+      it "serializes focal point in attachment" do
+        attachments = json_ld["attachment"].as_a
+        expect(attachments.first["focalPoint"]).to eq([0.5, -0.25])
+      end
+
+      it "round-trips focal point correctly" do
+        restored = described_class.from_json_ld(object.to_json_ld)
+        expect(restored.attachments).to eq(object.attachments)
+      end
     end
 
     it "does not render a content map" do
@@ -1624,6 +1706,64 @@ Spectator.describe ActivityPub::Object::ModelHelper do
       it "populates replies" do
         expect(object["replies"]).to be_a(ActivityPub::Collection)
       end
+    end
+  end
+end
+
+Spectator.describe ActivityPub::Object::Attachment do
+  def create_attachment(focal_point : Tuple(Float64, Float64)? = nil)
+    ActivityPub::Object::Attachment.new(
+      "https://example.com/image.jpg",
+      "image/jpeg",
+      nil,
+      focal_point
+    )
+  end
+
+  describe "#has_focal_point?" do
+    it "returns false for missing focal point" do
+      attachment = create_attachment
+
+      expect(attachment.has_focal_point?).to be_false
+    end
+
+    it "returns true for valid position" do
+      attachment = create_attachment({0.0, 0.0})
+
+      expect(attachment.has_focal_point?).to be_true
+    end
+
+    it "returns true for valid positions" do
+      attachment = create_attachment({-0.6, 0.07})
+
+      expect(attachment.has_focal_point?).to be_true
+    end
+  end
+
+  describe "#normalized_focal_point" do
+    it "converts Mastodon coordinates" do
+      attachment = create_attachment({0.2, -0.4})
+
+      normalized = attachment.normalized_focal_point.not_nil!
+      # with exaggeration (strength=0.75):
+      expect(normalized[0]).to be_within(0.001).of(0.6778)
+      expect(normalized[1]).to be_within(0.001).of(0.7990)
+    end
+  end
+
+  describe "#css_object_position" do
+    it "generates correct CSS values" do
+      attachment = create_attachment({0.2, -0.4})
+
+      css = attachment.css_object_position
+      expect(css).to eq("67.78% 79.91%")
+    end
+
+    it "returns center fallback when no focal point" do
+      attachment = create_attachment
+
+      css = attachment.css_object_position
+      expect(css).to eq("50% 50%")
     end
   end
 end

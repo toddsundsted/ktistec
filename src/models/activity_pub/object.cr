@@ -127,7 +127,10 @@ module ActivityPub
       @[JSON::Field(key: "name")]
       property caption : String?
 
-      def initialize(@url, @media_type, @caption = nil)
+      @[JSON::Field(key: "focalPoint")]
+      property focal_point : Tuple(Float64, Float64)?
+
+      def initialize(@url, @media_type, @caption = nil, @focal_point = nil)
       end
 
       def image?
@@ -140,6 +143,35 @@ module ActivityPub
 
       def audio?
         media_type.in?(%w[audio/mpeg audio/mp4 audio/webm audio/ogg audio/flac])
+      end
+
+      def has_focal_point?
+        return false unless (fp = focal_point)
+        fp[0].finite? && fp[1].finite?
+      end
+
+      def normalized_focal_point
+        return nil unless has_focal_point?
+        x, y = focal_point.not_nil!
+        norm_x = x / 2 + 0.5      # normalized x = x / 2 + 0.5
+        norm_y = -y / 2 + 0.5     # normalized y = -y / 2 + 0.5 (y inverted)
+        # push the focal point toward the edges so that more of the focused thing is in view
+        {
+          exaggerate(norm_x),
+          exaggerate(norm_y)
+        }
+      end
+
+      private def exaggerate(value, strength = 0.75)
+        # recenter value at 0
+        centered = value - 0.5
+        exaggerated = centered.sign * (centered.abs ** strength)
+        (exaggerated + 0.5).clamp(0.0, 1.0)
+      end
+
+      def css_object_position
+        return "50% 50%" unless (normalized = normalized_focal_point)
+        "#{(normalized[0] * 100).round(2)}% #{(normalized[1] * 100).round(2)}%"
       end
     end
 
@@ -888,7 +920,19 @@ module ActivityPub
             url = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#url").presence
             media_type = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#mediaType").presence
             name = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
-            ActivityPub::Object::Attachment.new(url, media_type, name) if url && media_type
+            focal_point =
+              if (fp = attachment.as_h["http://joinmastodon.org/ns#focalPoint"]?)
+                # parse as array and convert to tuple
+                if (fp_array = fp.as_a?)
+                  if fp_array.size == 2
+                    # handle both integer [0, 0] and float [0.0, 0.0] formats
+                    x = fp_array[0].as_i64?.try(&.to_f64) || fp_array[0].as_f?.try(&.to_f64)
+                    y = fp_array[1].as_i64?.try(&.to_f64) || fp_array[1].as_f?.try(&.to_f64)
+                    {x, y} if x && y && x.finite? && y.finite?
+                  end
+                end
+              end
+            ActivityPub::Object::Attachment.new(url, media_type, name, focal_point) if url && media_type
           end,
           "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
           # use addressing to establish visibility

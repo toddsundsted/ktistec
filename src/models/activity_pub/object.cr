@@ -153,10 +153,20 @@ module ActivityPub
       def normalized_focal_point
         return nil unless has_focal_point?
         x, y = focal_point.not_nil!
+        norm_x = x / 2 + 0.5      # normalized x = x / 2 + 0.5
+        norm_y = -y / 2 + 0.5     # normalized y = -y / 2 + 0.5 (y inverted)
+        # push the focal point toward the edges so that more of the focused thing is in view
         {
-          (x / 2 + 0.5),     # normalized x = x / 2 + 0.5
-          (-y / 2 + 0.5)     # normalized y = -y / 2 + 0.5 (y inverted)
+          exaggerate(norm_x),
+          exaggerate(norm_y)
         }
+      end
+
+      private def exaggerate(value, strength = 0.75)
+        # recenter value at 0
+        centered = value - 0.5
+        exaggerated = centered.sign * (centered.abs ** strength)
+        (exaggerated + 0.5).clamp(0.0, 1.0)
       end
 
       def css_object_position

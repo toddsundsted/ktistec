@@ -1745,8 +1745,9 @@ Spectator.describe ActivityPub::Object::Attachment do
       attachment = create_attachment({0.2, -0.4})
 
       normalized = attachment.normalized_focal_point.not_nil!
-      expect(normalized[0]).to eq(0.6)
-      expect(normalized[1]).to eq(0.7)
+      # with exaggeration (strength=0.75):
+      expect(normalized[0]).to be_within(0.001).of(0.6778)
+      expect(normalized[1]).to be_within(0.001).of(0.7990)
     end
   end
 
@@ -1755,7 +1756,7 @@ Spectator.describe ActivityPub::Object::Attachment do
       attachment = create_attachment({0.2, -0.4})
 
       css = attachment.css_object_position
-      expect(css).to eq("60.0% 70.0%")
+      expect(css).to eq("67.78% 79.91%")
     end
 
     it "returns center fallback when no focal point" do

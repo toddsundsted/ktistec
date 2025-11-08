@@ -73,6 +73,21 @@ Spectator.describe ThreadAnalysisService do
     end
   end
 
+  let(base_time) { Time.utc(2025, 1, 1, 10, 0) }
+
+  def make_thread(offsets : Array(Time::Span))
+    offsets.map_with_index do |offset, idx|
+      {
+        id: (idx + 1).to_i64,
+        iri: "https://test/#{idx + 1}",
+        in_reply_to_iri: idx == 0 ? nil : "https://test/1",
+        attributed_to_iri: "https://test/actor#{idx + 1}",
+        published: base_time + offset,
+        depth: idx == 0 ? 0 : 1
+      }
+    end
+  end
+
   describe ".notable_branches" do
     let(branches) { ThreadAnalysisService.notable_branches(tuples) }
 
@@ -136,20 +151,140 @@ Spectator.describe ThreadAnalysisService do
       custom_branches = ThreadAnalysisService.notable_branches(tuples, limit: 3)
       expect(custom_branches.size).to be <= 3
     end
+
+    context "edge cases" do
+      it "handles single object" do
+        tuples = make_thread([0.minutes])
+        expect(ThreadAnalysisService.notable_branches(tuples)).to be_empty
+      end
+    end
   end
 
-  context "edge cases" do
-    it "handles single object" do
-      tuple = [{
-        id: 1_i64,
-        iri: "https://test/1",
-        in_reply_to_iri: nil,
-        attributed_to_iri: "https://test/actor",
-        published: Time.utc,
-        depth: 0
-      }]
-      result = ThreadAnalysisService.notable_branches(tuple)
-      expect(result).to be_empty
+  describe ".timeline_histogram" do
+    let(histogram) { ThreadAnalysisService.timeline_histogram(tuples).not_nil! }
+
+    it "sum of buckets matches total objects" do
+      sum_of_buckets = histogram.buckets.sum(&.object_count)
+      expect(sum_of_buckets).to eq(histogram.total_objects)
+    end
+
+    it "last bucket cumulative count matches total objects" do
+      last_bucket = histogram.buckets.last
+      expect(last_bucket.cumulative_count).to eq(histogram.total_objects)
+    end
+
+    it "returns histogram with correct bucket size" do
+      duration = histogram.time_range[1] - histogram.time_range[0]
+      expect(duration.total_hours).to be_between(24, 72)   # hours
+      expect(histogram.bucket_size_minutes).to eq(6 * 60)  # minutes
+    end
+
+    it "computes unique author counts per bucket" do
+      histogram.buckets.each do |bucket|
+        expect(bucket.author_count).to be_between(0, bucket.object_count)
+      end
+    end
+
+    it "objects are placed in only one bucket" do
+      all_ids = histogram.buckets.flat_map(&.object_ids)
+      expect(all_ids.uniq.size).to eq(all_ids.size)
+    end
+
+    context "outlier elimination" do
+      it "detects outliers when 6-hour minimum exceeds 3x median" do
+        # fast thread: 1-min gaps, then 10-hour gap
+        # median = 1 min, 3x median = 3 min, threshold = max(3 min, 6h) = 6h
+        tuples = make_thread([0.seconds, 1.minute, 2.minutes, 10.hours])
+        result = ThreadAnalysisService.timeline_histogram(tuples).not_nil!
+        expect(result.total_objects).to eq(3)
+        expect(result.outliers_excluded).to eq(1)
+      end
+
+      it "does not exclude gaps below 6-hour minimum" do
+        # fast thread: 1-min gaps, with 4-hour gap
+        # median = 1 min, threshold = 6h, gap of 4h < threshold
+        tuples = make_thread([0.seconds, 1.minute, 2.minutes, 4.hours])
+        result = ThreadAnalysisService.timeline_histogram(tuples).not_nil!
+        expect(result.total_objects).to eq(4)
+        expect(result.outliers_excluded).to eq(0)
+      end
+
+      it "detects outliers when 3x median exceeds 6-hour minimum" do
+        # slow thread: 3-hour gaps, then 10-hour gap from last post
+        # median = 3h, 3x median = 9h, threshold = max(9h, 6h) = 9h
+        tuples = make_thread([0.hours, 3.hours, 6.hours, 16.hours])
+        result = ThreadAnalysisService.timeline_histogram(tuples).not_nil!
+        expect(result.total_objects).to eq(3)
+        expect(result.outliers_excluded).to eq(1)
+      end
+
+      it "does not exclude gaps below 3x median" do
+        # slow thread: 3-hour gaps consistently
+        # median = 3h, threshold = 9h, all gaps are 3h
+        tuples = make_thread([0.hours, 3.hours, 6.hours, 9.hours])
+        result = ThreadAnalysisService.timeline_histogram(tuples).not_nil!
+        expect(result.total_objects).to eq(4)
+        expect(result.outliers_excluded).to eq(0)
+      end
+    end
+
+    context "granularity selection" do
+      it "uses 5-minute buckets for short threads" do
+        # thread spanning 30 minutes (< 1 hour)
+        tuples = make_thread([0.seconds, 30.minutes])
+        result = ThreadAnalysisService.timeline_histogram(tuples).not_nil!
+        expect(result.bucket_size_minutes).to eq(5)
+      end
+
+      it "uses hourly buckets for medium threads" do
+        # thread spanning 6 hours (3-12 hour range)
+        tuples = make_thread([0.seconds, 6.hours])
+        result = ThreadAnalysisService.timeline_histogram(tuples).not_nil!
+        expect(result.bucket_size_minutes).to eq(60)
+      end
+
+      it "uses daily buckets for week-long threads" do
+        # thread spanning 10 days (1-4 week range)
+        tuples = make_thread([0.seconds, 10.days])
+        result = ThreadAnalysisService.timeline_histogram(tuples).not_nil!
+        expect(result.bucket_size_minutes).to eq(1440)
+      end
+
+      it "uses weekly buckets for month-long threads" do
+        # thread spanning 35 days (> 4 weeks)
+        tuples = make_thread([0.seconds, 35.days])
+        result = ThreadAnalysisService.timeline_histogram(tuples).not_nil!
+        expect(result.bucket_size_minutes).to eq(10080)
+      end
+    end
+
+    context "edge cases" do
+      it "handles single object" do
+        tuples = make_thread([0.minutes])
+        expect(ThreadAnalysisService.timeline_histogram(tuples)).to be_nil
+      end
+
+      it "omits empty buckets in sparse threads" do
+        # sparse thread: posts at 0h, 2h, and 2.5h
+        # with 15-min buckets (1-3 hour range), posts land in buckets 0, 8, and 10
+        result = ThreadAnalysisService.timeline_histogram(make_thread([0.hours, 2.hours, (2.5).hours])).not_nil!
+
+        expect(result.bucket_size_minutes).to eq(15)
+        expect(result.buckets.size).to eq(3)
+
+        expect(result.buckets[0].time_range[0]).to be_within(1.millisecond).of(base_time)
+        expect(result.buckets[0].time_range[1]).to be_within(1.millisecond).of(base_time + 15.minutes)
+
+        expect(result.buckets[1].time_range[0]).to be_within(1.millisecond).of(base_time + 2.hours)
+        expect(result.buckets[1].time_range[1]).to be_within(1.millisecond).of(base_time + 2.hours + 15.minutes)
+
+        expect(result.buckets[2].time_range[0]).to be_within(1.millisecond).of(base_time + 2.hours + 30.minutes)
+        expect(result.buckets[2].time_range[1]).to be_within(1.millisecond).of(base_time + 2.hours + 45.minutes)
+
+        expect(result.buckets[0].object_count).to eq(1)
+        expect(result.buckets[1].object_count).to eq(1)
+        expect(result.buckets[2].object_count).to eq(1)
+      end
     end
   end
 end

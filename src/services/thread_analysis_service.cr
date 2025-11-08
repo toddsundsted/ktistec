@@ -1,4 +1,15 @@
 module ThreadAnalysisService
+  record ThreadAnalysis,
+    thread_id : String,
+    root_object_id : Int64,
+    object_count : Int32,
+    author_count : Int32,
+    max_depth : Int32,
+    timeline_histogram : TimelineHistogram?,
+    key_participants : Array(ParticipantInfo),
+    notable_branches : Array(BranchInfo),
+    duration_ms : Float64
+
   record ParticipantInfo,
     actor_iri : String,
     object_count : Int32,

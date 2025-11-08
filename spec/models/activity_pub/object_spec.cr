@@ -1,6 +1,7 @@
 require "../../../src/models/activity_pub/object"
 require "../../../src/models/activity_pub/activity/announce"
 require "../../../src/models/activity_pub/activity/like"
+require "../../../src/services/thread_analysis_service"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
@@ -1494,6 +1495,71 @@ Spectator.describe ActivityPub::Object do
             expect(object5.ancestors(actor)).to eq([object5, subject])
           end
         end
+      end
+    end
+  end
+
+  describe "#analyze_thread" do
+    let_build(:actor)
+    let(base_time) { Time.utc(2025, 1, 1, 10, 0) }
+
+    def make_test_thread(structure : Array({time_offset: Time::Span, parent_idx: Int32?, author_idx: Int32}))
+      actors = (0...6).map do |i|
+        Factory.create(:actor, iri: "https://test.test/actors/#{('a'.ord + i).chr}")
+      end
+      objects = [] of ActivityPub::Object
+      structure.each do |spec|
+        parent = (idx = spec[:parent_idx]) ? objects[idx] : nil
+        object = Factory.create(
+          :object,
+          in_reply_to: parent,
+          attributed_to: actors[spec[:author_idx]],
+          published: base_time + spec[:time_offset]
+        )
+        objects << object
+      end
+      objects.first
+    end
+
+    context "with small test thread" do
+      let(root) do
+        make_test_thread([
+          {time_offset: 0.minutes, parent_idx: nil, author_idx: 0},    # root by author_a
+          {time_offset: 5.minutes, parent_idx: 0, author_idx: 1},      # reply1 by author_b
+          {time_offset: 10.minutes, parent_idx: 1, author_idx: 2},     # branch_reply1 by author_c
+          {time_offset: 15.minutes, parent_idx: 1, author_idx: 3},     # branch_reply2 by author_d
+          {time_offset: 20.minutes, parent_idx: 1, author_idx: 4},     # branch_reply3 by author_e
+          {time_offset: 25.minutes, parent_idx: 1, author_idx: 5},     # branch_reply4 by author_f
+          {time_offset: 30.minutes, parent_idx: 1, author_idx: 0},     # branch_reply5 by author_a (OP)
+        ])
+      end
+
+      subject { root.analyze_thread(for_actor: actor) }
+
+      it "includes basic statistics" do
+        expect(subject.object_count).to eq(7)
+        expect(subject.author_count).to eq(6)
+        expect(subject.max_depth).to eq(2)
+      end
+
+      it "includes thread_id" do
+        expect(subject.thread_id).to eq(root.thread)
+      end
+
+      it "includes root_object_id" do
+        expect(subject.root_object_id).to eq(root.id)
+      end
+
+      it "includes key_participants" do
+        expect(subject.key_participants.first.actor_iri).to eq(root.attributed_to_iri)
+      end
+
+      it "includes notable_branches" do
+        expect(subject.notable_branches.size).to eq(1)
+      end
+
+      it "includes timeline_histogram" do
+        expect(subject.timeline_histogram.not_nil!.total_objects).to eq(7)
       end
     end
   end

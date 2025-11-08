@@ -6,6 +6,7 @@ require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
 require "../relationship/content/canonical"
+require "../../services/thread_analysis_service"
 require "../translation"
 require "../../framework/json_ld"
 require "../../framework/model"
@@ -756,6 +757,46 @@ module ActivityPub
         QUERY
         Ktistec.database.query_all(query, iri, as: projection)
       {% end %}
+    end
+
+    # Analyzes thread structure and participation patterns.
+    #
+    # Returns comprehensive analysis including statistics, key
+    # participants, notable branches, and timeline histogram.
+    #
+    def analyze_thread(*, for_actor : ActivityPub::Actor) : ThreadAnalysisService::ThreadAnalysis
+
+      tuples = nil
+      object_count = 0
+      author_count = 0
+      root = nil
+      max_depth = 0
+      histogram = nil
+      participants = nil
+      branches = nil
+
+      duration = Benchmark.realtime do
+        tuples = thread_query(projection: PROJECTION_METADATA)
+        object_count = tuples.size
+        author_count = tuples.compact_map { |t| t[:attributed_to_iri] }.uniq.size
+        root = tuples.find! { |t| t[:in_reply_to_iri].nil? }
+        max_depth = tuples.map { |t| t[:depth] }.max? || 0
+        histogram = ThreadAnalysisService.timeline_histogram(tuples)
+        participants = ThreadAnalysisService.key_participants(tuples)
+        branches = ThreadAnalysisService.notable_branches(tuples)
+      end
+
+      ThreadAnalysisService::ThreadAnalysis.new(
+        thread_id: thread.not_nil!,
+        root_object_id: root.not_nil![:id],
+        object_count: object_count,
+        author_count: author_count,
+        max_depth: max_depth,
+        timeline_histogram: histogram,
+        key_participants: participants.not_nil!,
+        notable_branches: branches.not_nil!,
+        duration_ms: duration.total_milliseconds
+      )
     end
 
     private def ancestors_with_recursive

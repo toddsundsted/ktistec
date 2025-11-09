@@ -835,28 +835,6 @@ module ActivityPub
       Object.query_all(query, iri, additional_columns: {depth: Int32})
     end
 
-    def ancestors(approved_by)
-      query = <<-QUERY
-      #{ancestors_with_recursive}
-         SELECT #{Object.columns(prefix: "o")}, p.depth
-           FROM objects AS o, ancestors_of AS p
-           JOIN actors AS a
-             ON a.iri = o.attributed_to_iri
-      LEFT JOIN relationships AS r
-             ON r.type = '#{Relationship::Content::Approved}'
-            AND r.from_iri = ? AND r.to_iri = o.iri
-          WHERE o.iri IN (p.iri)
-            AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
-            AND o.deleted_at IS NULL
-            AND o.blocked_at IS NULL
-            AND a.deleted_at IS NULL
-            AND a.blocked_at IS NULL
-       ORDER BY p.depth
-      QUERY
-      from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
-      Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})
-    end
-
     private def descendants_with_recursive
       <<-QUERY
       WITH RECURSIVE

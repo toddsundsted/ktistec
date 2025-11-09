@@ -1475,27 +1475,6 @@ Spectator.describe ActivityPub::Object do
       it "returns the depths" do
         expect(object5.ancestors.map(&.depth)).to eq([0, 1, 2])
       end
-
-      context "given an actor" do
-        let_build(:actor)
-
-        it "only includes the subject" do
-          expect(object5.ancestors(actor)).to eq([subject])
-        end
-
-        context "and an approved object" do
-          let_create!(:approved_relationship, named: :approved, actor: actor, object: object5)
-
-          it "omits unapproved replies but includes their approved parents" do
-            expect(object5.ancestors(actor)).to eq([object5, subject])
-          end
-
-          it "doesn't include the actor's unapproved replies" do
-            object4.assign(attributed_to: actor).save
-            expect(object5.ancestors(actor)).to eq([object5, subject])
-          end
-        end
-      end
     end
 
     describe "#descendants" do

@@ -1497,6 +1497,48 @@ Spectator.describe ActivityPub::Object do
         end
       end
     end
+
+    describe "#descendants" do
+      it "returns all descendants" do
+        expect(subject.descendants).to eq([subject, object1, object2, object3, object4, object5])
+        expect(object1.descendants).to eq([object1, object2, object3])
+        expect(object5.descendants).to eq([object5])
+      end
+
+      it "omits deleted replies and their children" do
+        object2.delete!
+        expect(object1.descendants).to eq([object1])
+      end
+
+      it "omits blocked replies and their children" do
+        object2.block!
+        expect(object1.descendants).to eq([object1])
+      end
+
+      it "omits destroyed replies and their children" do
+        object2.destroy
+        expect(object1.descendants).to eq([object1])
+      end
+
+      it "omits replies with deleted attributed to actors" do
+        actor2.delete!
+        expect(object1.descendants).to eq([object1])
+      end
+
+      it "omits replies with blocked attributed to actors" do
+        actor2.block!
+        expect(object1.descendants).to eq([object1])
+      end
+
+      it "omits replies with destroyed attributed to actors" do
+        actor2.destroy
+        expect(object1.descendants).to eq([object1])
+      end
+
+      it "returns the depths" do
+        expect(object1.descendants.map(&.depth)).to eq([0, 1, 2])
+      end
+    end
   end
 
   describe "#analyze_thread" do

@@ -596,7 +596,7 @@ module ActivityPub
     # compatibility.
     #
     private def thread_query_with_recursive
-      query = <<-QUERY
+      <<-QUERY
       WITH RECURSIVE
        ancestors_of(iri, depth) AS (
            VALUES(?, 0)
@@ -855,6 +855,38 @@ module ActivityPub
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
       Object.query_all(query, iri, from_iri, additional_columns: {depth: Int32})
+    end
+
+    private def descendants_with_recursive
+      <<-QUERY
+      WITH RECURSIVE
+       replies_to(iri, position, depth) AS (
+          VALUES(?, '', 0)
+           UNION
+          SELECT o.iri, printf('%s.%020d', r.position, CASE WHEN p.iri IS NOT NULL AND o.attributed_to_iri = p.attributed_to_iri THEN -o.id ELSE o.id END), r.depth + 1 AS depth
+            FROM objects AS o, replies_to AS r
+       LEFT JOIN objects AS p
+              ON p.iri = r.iri
+            JOIN actors AS a
+              ON a.iri = o.attributed_to_iri
+           WHERE o.in_reply_to_iri = r.iri
+             AND o.deleted_at IS NULL
+             AND o.blocked_at IS NULL
+             AND a.deleted_at IS NULL
+             AND a.blocked_at IS NULL
+      )
+      QUERY
+    end
+
+    def descendants
+      query = <<-QUERY
+      #{descendants_with_recursive}
+      SELECT #{Object.columns(prefix: "o")}, r.depth
+        FROM objects AS o, replies_to AS r
+       WHERE o.iri IN (r.iri)
+       ORDER BY r.position
+      QUERY
+      Object.query_all(query, iri, additional_columns: {depth: Int32})
     end
 
     def activities(inclusion = nil, exclusion = nil)

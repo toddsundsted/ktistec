@@ -102,7 +102,6 @@ module ThreadAnalysisService
     end
 
     branches = [] of BranchInfo
-
     tuples.each do |tuple|
       next if tuple[:in_reply_to_iri].nil?
 
@@ -150,7 +149,32 @@ module ThreadAnalysisService
       )
     end
 
-    branches.sort_by { |b| -b.object_count }.first(limit)
+    root_iris = Set(String).new
+    parent_iris = Set(String?).new
+
+    selected = [] of BranchInfo
+    branches.sort_by(&.object_count.-).each do |branch|
+      root_tuple = tuples.find { |t| t[:id] == branch.root_id }
+      next unless root_tuple
+
+      root_iri = root_tuple[:iri]
+      parent_iri = root_tuple[:in_reply_to_iri]
+
+      # skip if this is an immediate child or an immediate parent of
+      # an already-selected branch
+
+      next if root_iris.includes?(parent_iri)
+      next if parent_iris.includes?(root_iri)
+
+      root_iris.add(root_iri)
+      parent_iris.add(parent_iri)
+
+      selected << branch
+
+      break if selected.size >= limit
+    end
+
+    selected
   end
 
   # Returns a timeline histogram showing thread activity over time.

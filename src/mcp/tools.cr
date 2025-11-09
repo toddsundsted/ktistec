@@ -418,7 +418,9 @@ module MCP
     def_tool(
       "get_thread",
       "Retrieve thread structure, metadata, and summary data. Large threads may have " \
-      "hundreds of objects, so this tool supports pagination.\n\n" \
+      "hundreds of objects, so this tool supports pagination. This tool retrieves the " \
+      "entire thread for the given `object_id` starting at the root, not only the " \
+      "subthread.\n\n" \
       "**Two Modes of Operation:**\n\n" \
       "1. **Initial Query Mode**: Provide `object_id` (plus optional `projection` and `page_size`) to start traversing a thread.\n" \
       "   Returns summary data and the first page of objects. If there are more pages, includes a `cursor`.\n\n" \

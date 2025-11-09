@@ -1084,7 +1084,7 @@ Spectator.describe ObjectsController do
         before_each { remote.assign(visible: true).save }
 
         it "succeeds" do
-          get "/remote/objects/#{remote.id}"
+          get "/remote/objects/#{remote.id}/thread"
           expect(response.status_code).to eq(200)
         end
       end
@@ -1131,6 +1131,102 @@ Spectator.describe ObjectsController do
 
         it "renders the collection" do
           get "/remote/objects/#{visible.id}/thread", ACCEPT_JSON
+          expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri, notvisible.iri)
+        end
+      end
+    end
+  end
+
+  describe "GET /remote/objects/:id/branch" do
+    it "returns 401" do
+      get "/remote/objects/0/branch"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/branch", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/branch", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the collection" do
+        get "/remote/objects/#{visible.id}/branch", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}")
+      end
+
+      it "renders the collection" do
+        get "/remote/objects/#{visible.id}/branch", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri)
+      end
+
+      it "returns 404 if object is not visible" do
+        get "/remote/objects/#{notvisible.id}/branch"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is remote" do
+        get "/remote/objects/#{remote.id}/branch"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "if remote object is visible" do
+        before_each { remote.assign(visible: true).save }
+
+        it "succeeds" do
+          get "/remote/objects/#{remote.id}/branch"
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      it "returns 404 if object is draft" do
+        get "/remote/objects/#{draft.id}/branch"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        get "/remote/objects/0/branch"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "and it's in the user's inbox" do
+        before_each do
+          [visible, notvisible, remote].each { |object| put_in_inbox(actor, object) }
+        end
+
+        it "succeeds" do
+          [visible, notvisible, remote].each do |object|
+            get "/remote/objects/#{object.id}/branch", ACCEPT_HTML
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        it "succeeds" do
+          [visible, notvisible, remote].each do |object|
+            get "/remote/objects/#{object.id}/branch", ACCEPT_JSON
+            expect(response.status_code).to eq(200)
+          end
+        end
+      end
+
+      context "with replies" do
+        before_each do
+          notvisible.assign(in_reply_to: visible).save
+        end
+
+        it "renders the collection" do
+          get "/remote/objects/#{visible.id}/branch", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
+        end
+
+        it "renders the collection" do
+          get "/remote/objects/#{visible.id}/branch", ACCEPT_JSON
           expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri, notvisible.iri)
         end
       end

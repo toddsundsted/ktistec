@@ -132,6 +132,14 @@ module Utils::Paths
     {% end %}
   end
 
+  macro remote_branch_path(object = nil, anchor = true)
+    {% if anchor %}
+      "#{Utils::Paths.remote_object_path({{object}})}/branch##{Utils::Paths.anchor({{object}})}"
+    {% else %}
+      "#{Utils::Paths.remote_object_path({{object}})}/branch"
+    {% end %}
+  end
+
   macro edit_object_path(object = nil)
     "#{Utils::Paths.object_path({{object}})}/edit"
   end

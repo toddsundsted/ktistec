@@ -61,15 +61,15 @@ Spectator.describe ThreadAnalysisService do
       end
     end
 
-    it "returns limited participants plus OP" do
-      participants = ThreadAnalysisService.key_participants(tuples, limit: 3)
+    it "returns limited participants (including OP)" do
+      participants = ThreadAnalysisService.key_participants(tuples, limit: 4)
       expect(participants.size).to eq(4)
       expect(participants.first.actor_iri).to eq(root.attributed_to_iri) # OP
     end
 
-    it "the default limit is 5 plus OP" do
+    it "the default limit is 18 (including OP)" do
       participants = ThreadAnalysisService.key_participants(tuples)
-      expect(participants.size).to eq(6)
+      expect(participants.size).to eq(18)
     end
   end
 

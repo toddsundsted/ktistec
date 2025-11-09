@@ -43,7 +43,7 @@ module ThreadAnalysisService
   #
   def self.key_participants(
     tuples : Array(NamedTuple),
-    limit : Int32 = 5,
+    limit : Int32 = 18, # matches thread_page_thread_controls.html.slang
   ) : Array(ParticipantInfo)
     by_author = tuples.compact_map do |t|
       if (actor_iri = t[:attributed_to_iri])
@@ -74,7 +74,7 @@ module ThreadAnalysisService
     top_n = participants
       .reject { |p| p.actor_iri == op_iri }
       .sort_by { |p| -p.object_count }
-      .first(limit)
+      .first(limit - 1)
 
     result = [] of ParticipantInfo
     result << op_participant if op_participant

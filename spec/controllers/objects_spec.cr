@@ -78,6 +78,20 @@ Spectator.describe ObjectsController do
       expect(result).to eq(visible)
     end
 
+    it "returns visible reply objects" do
+      result = ObjectsController.get_object(env, reply.iri)
+      expect(result).to eq(reply)
+    end
+
+    context "given a not-visible reply" do
+      before_each { reply.assign(visible: false).save }
+
+      it "returns nil for non-visible objects" do
+        result = ObjectsController.get_object(env, reply.iri)
+        expect(result).to be_nil
+      end
+    end
+
     it "returns nil for non-visible objects" do
       result = ObjectsController.get_object(env, notvisible.iri)
       expect(result).to be_nil
@@ -85,11 +99,6 @@ Spectator.describe ObjectsController do
 
     it "returns nil for draft objects" do
       result = ObjectsController.get_object(env, draft.iri)
-      expect(result).to be_nil
-    end
-
-    it "returns nil for reply objects" do
-      result = ObjectsController.get_object(env, reply.iri)
       expect(result).to be_nil
     end
 
@@ -101,6 +110,20 @@ Spectator.describe ObjectsController do
         expect(result).to eq(visible)
       end
 
+      it "returns visible reply objects" do
+        result = ObjectsController.get_object(env, reply.iri)
+        expect(result).to eq(reply)
+      end
+
+      context "given a not-visible reply" do
+        before_each { reply.assign(visible: false).save }
+
+        it "returns nil for non-visible objects" do
+          result = ObjectsController.get_object(env, reply.iri)
+          expect(result).to be_nil
+        end
+      end
+
       it "returns nil for non-visible objects" do
         result = ObjectsController.get_object(env, notvisible.iri)
         expect(result).to be_nil
@@ -108,11 +131,6 @@ Spectator.describe ObjectsController do
 
       it "returns nil for draft objects" do
         result = ObjectsController.get_object(env, draft.iri)
-        expect(result).to be_nil
-      end
-
-      it "returns nil for reply objects" do
-        result = ObjectsController.get_object(env, reply.iri)
         expect(result).to be_nil
       end
 
@@ -322,6 +340,25 @@ Spectator.describe ObjectsController do
       expect(JSON.parse(response.body)["id"]).to eq(visible.iri)
     end
 
+    it "succeeds with a visible reply" do
+      get "/objects/#{reply.uid}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+    end
+
+    it "succeeds with a visible reply" do
+      get "/objects/#{reply.uid}", ACCEPT_JSON
+      expect(response.status_code).to eq(200)
+    end
+
+    context "given a not-visible reply" do
+      before_each { reply.assign(visible: false).save }
+
+      it "returns 404" do
+        get "/objects/#{reply.uid}"
+        expect(response.status_code).to eq(404)
+      end
+    end
+
     it "returns 404 if object is a draft" do
       get "/objects/#{draft.uid}"
       expect(response.status_code).to eq(404)
@@ -329,11 +366,6 @@ Spectator.describe ObjectsController do
 
     it "returns 404 if object is not visible" do
       get "/objects/#{notvisible.uid}"
-      expect(response.status_code).to eq(404)
-    end
-
-    it "returns 404 if object is a reply" do
-      get "/objects/#{reply.uid}"
       expect(response.status_code).to eq(404)
     end
 
@@ -445,11 +477,6 @@ Spectator.describe ObjectsController do
       expect(response.status_code).to eq(404)
     end
 
-    it "returns 404 if object is a reply" do
-      get "/objects/#{reply.uid}/replies"
-      expect(response.status_code).to eq(404)
-    end
-
     it "returns 404 if object is remote" do
       get "/objects/#{remote.uid}/replies"
       expect(response.status_code).to eq(404)
@@ -489,11 +516,6 @@ Spectator.describe ObjectsController do
 
     it "returns 404 if object is not visible" do
       get "/objects/#{notvisible.uid}/thread"
-      expect(response.status_code).to eq(404)
-    end
-
-    it "returns 404 if object is a reply" do
-      get "/objects/#{reply.uid}/thread"
       expect(response.status_code).to eq(404)
     end
 

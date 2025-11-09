@@ -566,6 +566,112 @@ module MCP
       })
     end
 
+    # Formats time ranges as RFC3339 strings.
+    #
+    private def self.format_time_range(time_range : Tuple(Time?, Time?)?)
+      if time_range && (start_time = time_range[0]) && (end_time = time_range[1])
+        [start_time.to_rfc3339, end_time.to_rfc3339]
+      else
+        [nil, nil]
+      end
+    end
+
+    private def self.object_ids_to_uris(ids : Array(Int64))
+      ids.map { |id| "ktistec://objects/#{id}" }
+    end
+
+    def_tool(
+      "analyze_thread",
+      "Analyze thread structure and identify key participants and notable branches. " \
+      "Use this before reading thread content to understand the conversation landscape " \
+      "and identify which posts are most relevant to examine. This is especially " \
+      "useful with large threads.\n\n" \
+      "**Returns:**\n" \
+      "- Basic statistics (total posts, unique authors, max depth, analysis duration)\n" \
+      "- Key participants (original poster + top 5 most active posters with their posts)\n" \
+      "- Notable branches (conversation subtrees with ≥5 posts)\n" \
+      "- Timeline histogram (temporal distribution of posts)",
+      [
+        {name: "object", type: "string", description: "Resource URI of any object in the thread (format: ktistec://objects/{id})", required: true},
+      ]
+    ) do
+      unless account.reload!
+        raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      unless (match = /^ktistec:\/\/objects\/(\d+)$/.match(object))
+        raise MCPError.new("Invalid object URI format (should be: ktistec://objects/{id})", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+      object_id = match[1].to_i64
+
+      unless (thread_object = ActivityPub::Object.find?(object_id))
+        raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      Log.debug { "analyze_thread: user=#{mcp_user_path(account)} object=#{object}" }
+
+      analysis = thread_object.analyze_thread(for_actor: account.actor)
+
+      result = {
+        "thread_id" => analysis.thread_id,
+        "object_count" => analysis.object_count,
+        "author_count" => analysis.author_count,
+        "root_object" => "ktistec://objects/#{analysis.root_object_id}",
+        "max_depth" => analysis.max_depth,
+        "duration_ms" => analysis.duration_ms,
+
+        "key_participants" => analysis.key_participants.map do |p|
+          actor = ActivityPub::Actor.find?(iri: p.actor_iri)
+          {
+            "actor" => {
+              "uri" => actor ? mcp_actor_path(actor) : nil,
+              "handle" => actor ? actor.handle : nil,
+            },
+            "object_count" => p.object_count,
+            "depth_range" => [p.depth_range[0], p.depth_range[1]],
+            "time_range" => format_time_range(p.time_range),
+            "objects" => object_ids_to_uris(p.object_ids),
+          }
+        end,
+
+        "notable_branches" => analysis.notable_branches.map do |b|
+          {
+            "root" => "ktistec://objects/#{b.root_id}",
+            "object_count" => b.object_count,
+            "author_count" => b.author_count,
+            "depth_range" => [b.depth_range[0], b.depth_range[1]],
+            "time_range" => format_time_range(b.time_range),
+            "objects" => object_ids_to_uris(b.object_ids),
+          }
+        end,
+
+        "timeline_histogram" => if (histogram = analysis.timeline_histogram)
+          {
+            "time_range" => format_time_range(histogram.time_range),
+            "total_objects" => histogram.total_objects,
+            "outliers_excluded" => histogram.outliers_excluded,
+            "bucket_size_minutes" => histogram.bucket_size_minutes,
+            "buckets" => histogram.buckets.map do |bucket|
+              {
+                "time_range" => format_time_range(bucket.time_range),
+                "object_count" => bucket.object_count,
+                "cumulative_count" => bucket.cumulative_count,
+                "author_count" => bucket.author_count,
+                "objects" => object_ids_to_uris(bucket.object_ids),
+              }
+            end
+          }
+        end,
+      }
+
+      JSON::Any.new({
+        "content" => JSON::Any.new([JSON::Any.new({
+          "type" => JSON::Any.new("text"),
+          "text" => JSON::Any.new(result.to_json)
+        })])
+      })
+    end
+
     def_tool(
       "read_resources",
       "Read one or more resources by URI (format \"ktistec://{resource}/{id*}\"). Supports all resource types including " \
@@ -704,6 +810,8 @@ module MCP
         handle_tool_count_collection_since(params, account)
       when "get_thread"
         handle_tool_get_thread(params, account)
+      when "analyze_thread"
+        handle_tool_analyze_thread(params, account)
       when "read_resources"
         handle_tool_read_resources(params, account)
       else

@@ -325,7 +325,7 @@ Spectator.describe MCP::Tools do
       response = described_class.handle_tools_list(tools_list_request)
 
       tools = response["tools"].as_a
-      expect(tools.size).to eq(6)
+      expect(tools.size).to eq(7)
 
       expect(tools[-2]["name"]).to eq("test_tool")
       expect(tools[-1]["name"]).to eq("test_array_tool")
@@ -1928,6 +1928,119 @@ Spectator.describe MCP::Tools do
         request = JSON::RPC::Request.from_json(%Q|{"jsonrpc": "2.0", "id": "get-thread-neither", "method": "tools/call", "params": {"name": "get_thread", "arguments": {#{args_json}}}}|)
 
         expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Must provide either/)
+      end
+    end
+
+    context "with analyze_thread tool" do
+      let_create!(:actor, named: :op_actor, local: true)
+      let_create!(:object, named: :root_note, attributed_to: op_actor, visible: true, published: Time.utc)
+      let_create!(:object, named: :reply1, attributed_to: op_actor, in_reply_to: root_note, visible: true, published: Time.utc + 1.minute)
+      let_create!(:actor, named: :second_actor, local: true)
+      let_create!(:object, named: :reply2, attributed_to: second_actor, in_reply_to: root_note, visible: true, published: Time.utc + 2.minutes)
+      let_create!(:object, named: :reply3, attributed_to: second_actor, in_reply_to: reply1, visible: true, published: Time.utc + 3.minutes)
+      let_create!(:actor, named: :third_actor, local: true)
+      let_create!(:object, named: :reply4, attributed_to: third_actor, in_reply_to: reply2, visible: true, published: Time.utc + 4.minutes)
+      let_create!(:object, named: :reply5, attributed_to: third_actor, in_reply_to: reply2, visible: true, published: Time.utc + 5.minutes)
+      let_create!(:object, named: :reply6, attributed_to: third_actor, in_reply_to: reply2, visible: true, published: Time.utc + 6.minutes)
+      let_create!(:object, named: :reply7, attributed_to: third_actor, in_reply_to: reply2, visible: true, published: Time.utc + 7.minutes)
+
+      private def analyze_thread_request(id, object_uri)
+        JSON::RPC::Request.from_json(
+          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "analyze_thread", "arguments": {"object": #{object_uri.inspect}}}}|
+        )
+      end
+
+      it "returns basic thread statistics" do
+        request = analyze_thread_request("analyze-thread-1", "ktistec://objects/#{root_note.id}")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        expect(content.size).to eq(1)
+
+        data = JSON.parse(content.first["text"].as_s)
+        expect(data["thread_id"]).to eq(root_note.thread)
+        expect(data["root_object"]).to eq("ktistec://objects/#{root_note.id}")
+        expect(data["object_count"]).to eq(8)
+        expect(data["author_count"]).to eq(3)
+        expect(data["max_depth"]).to eq(2)
+        expect(data["duration_ms"].as_f).to be > 0
+      end
+
+      it "returns timeline histogram" do
+        request = analyze_thread_request("analyze-thread-2", "ktistec://objects/#{root_note.id}")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        histogram = data["timeline_histogram"].as_h
+        expect(histogram["total_objects"].as_i).to eq(8)
+        expect(histogram["outliers_excluded"].as_i).to eq(0)
+        expect(histogram["bucket_size_minutes"].as_i).to be > 0
+
+        time_range = histogram["time_range"].as_a
+        expect(time_range.size).to eq(2)
+        expect(time_range[0].as_s?).not_to be_nil
+        expect(time_range[1].as_s?).not_to be_nil
+
+        first_bucket = histogram["buckets"].as_a.first.as_h
+        expect(first_bucket.keys).to contain_exactly("time_range", "object_count", "cumulative_count", "author_count", "objects")
+      end
+
+      it "identifies key participants" do
+        request = analyze_thread_request("analyze-thread-3", "ktistec://objects/#{root_note.id}")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        participants = data["key_participants"].as_a
+        expect(participants.size).to eq(3)
+
+        op = participants[0].as_h
+        op_actor_data = op["actor"].as_h
+        expect(op_actor_data["uri"].as_s).to eq("ktistec://actors/#{op_actor.id}")
+        expect(op_actor_data["handle"].as_s).to eq(op_actor.handle)
+        expect(op["object_count"].as_i).to eq(2)
+        expect(op["objects"].as_a.size).to eq(2)
+        op_uris = op["objects"].as_a.map(&.as_s).to_set
+        expect(op_uris).to eq(Set{"ktistec://objects/#{root_note.id}", "ktistec://objects/#{reply1.id}"})
+        op_depth_range = op["depth_range"].as_a
+        expect(op_depth_range.size).to eq(2)
+        expect(op_depth_range[0].as_i).to eq(0)
+        expect(op_depth_range[1].as_i).to eq(1)
+        op_time_range = op["time_range"].as_a
+        expect(op_time_range.size).to eq(2)
+        expect(op_time_range[0].as_s?).not_to be_nil
+        expect(op_time_range[1].as_s?).not_to be_nil
+      end
+
+      it "identifies notable branches" do
+        request = analyze_thread_request("analyze-thread-4", "ktistec://objects/#{root_note.id}")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        branches = data["notable_branches"].as_a
+        expect(branches.size).to eq(1)
+
+        branch = branches.first.as_h
+        expect(branch["root"].as_s).to eq("ktistec://objects/#{reply2.id}")
+        expect(branch["object_count"].as_i).to eq(5)
+        expect(branch["author_count"].as_i).to eq(2)
+
+        depth_range = branch["depth_range"].as_a
+        expect(depth_range[0].as_i).to eq(1)
+        expect(depth_range[1].as_i).to eq(2)
+
+        time_range = branch["time_range"].as_a
+        expect(time_range.size).to eq(2)
+        expect(time_range[0].as_s?).not_to be_nil
+        expect(time_range[1].as_s?).not_to be_nil
+
+        objects = branch["objects"].as_a
+        expect(objects.size).to eq(5)
       end
     end
   end

@@ -296,8 +296,10 @@ module MCP
         when "followers"
           followers = Relationship::Social::Follow.followers_for(actor.iri, page: page, size: size)
           objects = followers.map do |relationship|
+            follower = relationship.actor
             JSON::Any.new({
-              "actor" => JSON::Any.new(mcp_actor_path(relationship.actor)),
+              "actor_id" => JSON::Any.new(follower.id),
+              "actor_handle" => JSON::Any.new(follower.handle),
               "confirmed" => JSON::Any.new(relationship.confirmed)
             })
           end
@@ -305,8 +307,10 @@ module MCP
         when "following"
           following = Relationship::Social::Follow.following_for(actor.iri, page: page, size: size)
           objects = following.map do |relationship|
+            followed = relationship.object
             JSON::Any.new({
-              "actor" => JSON::Any.new(mcp_actor_path(relationship.object)),
+              "actor_id" => JSON::Any.new(followed.id),
+              "actor_handle" => JSON::Any.new(followed.handle),
               "confirmed" => JSON::Any.new(relationship.confirmed)
             })
           end
@@ -416,19 +420,19 @@ module MCP
       "Retrieve thread structure, metadata, and summary data. Large threads may have " \
       "hundreds of objects, so this tool supports pagination.\n\n" \
       "**Two Modes of Operation:**\n\n" \
-      "1. **Initial Query Mode**: Provide `object` (plus optional `projection` and `page_size`) to start traversing a thread.\n" \
+      "1. **Initial Query Mode**: Provide `object_id` (plus optional `projection` and `page_size`) to start traversing a thread.\n" \
       "   Returns summary data and the first page of objects. If there are more pages, includes a `cursor`.\n\n" \
       "2. **Pagination Mode**: Provide only `cursor` (from a previous response) to fetch the next page.\n" \
       "   Returns the next page of objects. If there are more pages, includes a `cursor`.\n" \
-      "   Do not include `object`, `projection`, or `page_size`.\n\n" \
+      "   Do not include `object_id`, `projection`, or `page_size`.\n\n" \
       "**Usage Examples:**\n" \
-      "- Start: `{\"object\": \"ktistec://objects/123\", \"projection\": \"metadata\", \"page_size\": 20}`\n" \
+      "- Start: `{\"object_id\": 123, \"projection\": \"metadata\", \"page_size\": 20}`\n" \
       "- Continue: `{\"cursor\": \"eyJwYWdlcl9pZ...\"}`\n\n" \
-      "**Important:** You must provide EITHER `object` OR `cursor`, but not both.",
+      "**Important:** You must provide EITHER `object_id` OR `cursor`, but not both.",
       [
-        {name: "object", type: "string", description: "Resource URI of any object in the thread (format: ktistec://objects/{id}). Required for initial query, omit when using cursor.", required: false},
-        {name: "projection", type: "string", description: "Data fields to include: 'minimal' (URIs and structure only) or 'metadata' (adds authors, timestamps). Only used with object.", required: false, enum: ["minimal", "metadata"], default: "metadata"},
-        {name: "page_size", type: "integer", description: "Number of objects per page. Only used with object.", required: false, minimum: 1, maximum: 100, default: 25},
+        {name: "object_id", type: "integer", description: "Database ID of any object in the thread. Required for initial query, omit when using cursor.", required: false, minimum: 1},
+        {name: "projection", type: "string", description: "Data fields to include: 'minimal' (IDs and structure only) or 'metadata' (adds authors, timestamps). Only used with object_id.", required: false, enum: ["minimal", "metadata"], default: "metadata"},
+        {name: "page_size", type: "integer", description: "Number of objects per page. Only used with object_id.", required: false, minimum: 1, maximum: 100, default: 25},
         {name: "cursor", type: "string", description: "Opaque pagination cursor from previous get_thread response. Use ONLY this parameter to fetch next page.", required: false},
       ]
     ) do
@@ -436,14 +440,14 @@ module MCP
         raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
-      has_object = arguments["object"]?
+      has_object_id = arguments["object_id"]?
       has_cursor = arguments["cursor"]?
 
-      if has_object && has_cursor
-        raise MCPError.new("Cannot provide both 'object' and 'cursor'.", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      if has_object_id && has_cursor
+        raise MCPError.new("Cannot provide both 'object_id' and 'cursor'.", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
-      unless has_object || has_cursor
-        raise MCPError.new("Must provide either 'object' or 'cursor'.", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      unless has_object_id || has_cursor
+        raise MCPError.new("Must provide either 'object_id' or 'cursor'.", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
       # PAGINATION MODE
@@ -462,14 +466,9 @@ module MCP
 
       # INITIAL QUERY MODE
       else
-        object_uri = arguments["object"].as_s
+        object_id = arguments["object_id"].as_i64
         projection = arguments["projection"]?.try(&.as_s) || "metadata"
         page_size = arguments["page_size"]?.try(&.as_i) || 25
-
-        unless (match = /^ktistec:\/\/objects\/(\d+)$/.match(object_uri))
-          raise MCPError.new("Invalid object URI format (should be: ktistec://objects/{id})", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-        end
-        object_id = match[1].to_i64
 
         unless (object = ActivityPub::Object.find?(object_id))
           raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -478,7 +477,7 @@ module MCP
           raise MCPError.new("Projection must be 'minimal' or 'metadata'", JSON::RPC::ErrorCodes::INVALID_PARAMS)
         end
 
-        Log.debug { "get_thread (initial query): user=#{mcp_user_path(account)} object=#{object_uri} projection=#{projection}" }
+        Log.debug { "get_thread (initial query): user=#{mcp_user_path(account)} object_id=#{object_id} projection=#{projection}" }
 
         query_result =
           case projection
@@ -487,11 +486,9 @@ module MCP
             objects = results.map do |tuple|
               thread_obj = ActivityPub::Object.find(tuple[:id])
               hash = {} of String => JSON::Any
-              hash["object"] = JSON::Any.new(mcp_object_path(thread_obj))
+              hash["object_id"] = JSON::Any.new(tuple[:id])
               hash["iri"] = JSON::Any.new(tuple[:iri])
-              hash["parent"] = tuple[:in_reply_to_iri] ?
-                JSON::Any.new(mcp_object_path(thread_obj.in_reply_to)) :
-                JSON::Any.new(nil)
+              hash["parent_id"] = JSON::Any.new(thread_obj.in_reply_to?.try(&.id))
               hash["thread"] = JSON::Any.new(tuple[:thread])
               hash["depth"] = JSON::Any.new(tuple[:depth])
               JSON::Any.new(hash)
@@ -508,19 +505,17 @@ module MCP
             objects = results.map do |tuple|
               thread_obj = ActivityPub::Object.find(tuple[:id])
               hash = {} of String => JSON::Any
-              hash["object"] = JSON::Any.new(mcp_object_path(thread_obj))
+              hash["object_id"] = JSON::Any.new(tuple[:id])
               hash["iri"] = JSON::Any.new(tuple[:iri])
               if tuple[:attributed_to_iri] && (attributed_to = thread_obj.attributed_to?)
                 hash["actor"] = JSON::Any.new({
-                  "uri" => JSON::Any.new(mcp_actor_path(attributed_to)),
+                  "id" => JSON::Any.new(attributed_to.id),
                   "handle" => JSON::Any.new(attributed_to.handle)
                 })
               else
                 hash["actor"] = JSON::Any.new(nil)
               end
-              hash["parent"] = tuple[:in_reply_to_iri] ?
-                JSON::Any.new(mcp_object_path(thread_obj.in_reply_to)) :
-                JSON::Any.new(nil)
+              hash["parent_id"] = JSON::Any.new(thread_obj.in_reply_to?.try(&.id))
               hash["thread"] = JSON::Any.new(tuple[:thread])
               hash["published"] = JSON::Any.new(tuple[:published].try(&.to_rfc3339))
               hash["deleted"] = JSON::Any.new(tuple[:deleted])
@@ -576,10 +571,6 @@ module MCP
       end
     end
 
-    private def self.object_ids_to_uris(ids : Array(Int64))
-      ids.map { |id| "ktistec://objects/#{id}" }
-    end
-
     def_tool(
       "analyze_thread",
       "Analyze thread structure and identify key participants and notable branches. " \
@@ -592,23 +583,18 @@ module MCP
       "- Notable branches (conversation subtrees with ≥5 posts)\n" \
       "- Timeline histogram (temporal distribution of posts)",
       [
-        {name: "object", type: "string", description: "Resource URI of any object in the thread (format: ktistec://objects/{id})", required: true},
+        {name: "object_id", type: "integer", description: "Database ID of any object in the thread", required: true, minimum: 1},
       ]
     ) do
       unless account.reload!
         raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
-      unless (match = /^ktistec:\/\/objects\/(\d+)$/.match(object))
-        raise MCPError.new("Invalid object URI format (should be: ktistec://objects/{id})", JSON::RPC::ErrorCodes::INVALID_PARAMS)
-      end
-      object_id = match[1].to_i64
-
       unless (thread_object = ActivityPub::Object.find?(object_id))
         raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
-      Log.debug { "analyze_thread: user=#{mcp_user_path(account)} object=#{object}" }
+      Log.debug { "analyze_thread: user=#{mcp_user_path(account)} object_id=#{object_id}" }
 
       analysis = thread_object.analyze_thread(for_actor: account.actor)
 
@@ -616,7 +602,7 @@ module MCP
         "thread_id" => analysis.thread_id,
         "object_count" => analysis.object_count,
         "author_count" => analysis.author_count,
-        "root_object" => "ktistec://objects/#{analysis.root_object_id}",
+        "root_object_id" => analysis.root_object_id,
         "max_depth" => analysis.max_depth,
         "duration_ms" => analysis.duration_ms,
 
@@ -624,24 +610,24 @@ module MCP
           actor = ActivityPub::Actor.find?(iri: p.actor_iri)
           {
             "actor" => {
-              "uri" => actor ? mcp_actor_path(actor) : nil,
+              "id" => actor ? actor.id : nil,
               "handle" => actor ? actor.handle : nil,
             },
             "object_count" => p.object_count,
             "depth_range" => [p.depth_range[0], p.depth_range[1]],
             "time_range" => format_time_range(p.time_range),
-            "objects" => object_ids_to_uris(p.object_ids),
+            "object_ids" => p.object_ids,
           }
         end,
 
         "notable_branches" => analysis.notable_branches.map do |b|
           {
-            "root" => "ktistec://objects/#{b.root_id}",
+            "root_id" => b.root_id,
             "object_count" => b.object_count,
             "author_count" => b.author_count,
             "depth_range" => [b.depth_range[0], b.depth_range[1]],
             "time_range" => format_time_range(b.time_range),
-            "objects" => object_ids_to_uris(b.object_ids),
+            "object_ids" => b.object_ids,
           }
         end,
 
@@ -657,7 +643,7 @@ module MCP
                 "object_count" => bucket.object_count,
                 "cumulative_count" => bucket.cumulative_count,
                 "author_count" => bucket.author_count,
-                "objects" => object_ids_to_uris(bucket.object_ids),
+                "object_ids" => bucket.object_ids,
               }
             end
           }
@@ -854,8 +840,8 @@ module MCP
         JSON::Any.new({
           "type" => JSON::Any.new("mention"),
           "status" => notification_status(notification),
-          "object" => JSON::Any.new(mcp_object_path(notification.object)),
-          "actor" => JSON::Any.new(mcp_actor_path(notification.object.attributed_to)),
+          "object_id" => JSON::Any.new(notification.object.id),
+          "actor_id" => JSON::Any.new(notification.object.attributed_to.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
@@ -863,9 +849,9 @@ module MCP
         JSON::Any.new({
           "type" => JSON::Any.new("reply"),
           "status" => notification_status(notification),
-          "object" => JSON::Any.new(mcp_object_path(notification.object)),
-          "actor" => JSON::Any.new(mcp_actor_path(notification.object.attributed_to)),
-          "parent" => JSON::Any.new(mcp_object_path(notification.object.in_reply_to.not_nil!)),
+          "object_id" => JSON::Any.new(notification.object.id),
+          "actor_id" => JSON::Any.new(notification.object.attributed_to.id),
+          "parent_id" => JSON::Any.new(notification.object.in_reply_to.not_nil!.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
@@ -877,8 +863,8 @@ module MCP
         JSON::Any.new({
           "type" => JSON::Any.new("follow"),
           "status" => JSON::Any.new(status),
-          "follower" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
-          "followee" => JSON::Any.new(mcp_user_path(notification.owner)),
+          "follower_id" => JSON::Any.new(notification.activity.actor.id),
+          "followee_id" => JSON::Any.new(notification.owner.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_actor_path(notification.activity.actor)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
@@ -888,7 +874,7 @@ module MCP
         # five latest likes
         latest_likes = likes.reverse.first(5).map do |like|
           JSON::Any.new({
-            "uri" => JSON::Any.new(mcp_actor_path(like.actor)),
+            "actor_id" => JSON::Any.new(like.actor.id),
             "handle" => JSON::Any.new(like.actor.handle),
             "liked_at" => JSON::Any.new(like.created_at.to_rfc3339),
           })
@@ -900,7 +886,7 @@ module MCP
             "count" => JSON::Any.new(latest_likes.size),
             "actors" => JSON::Any.new(latest_likes)
           }),
-          "object" => JSON::Any.new(mcp_object_path(object)),
+          "object_id" => JSON::Any.new(object.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
@@ -910,7 +896,7 @@ module MCP
         # five latest dislikes
         latest_dislikes = dislikes.reverse.first(5).map do |dislike|
           JSON::Any.new({
-            "uri" => JSON::Any.new(mcp_actor_path(dislike.actor)),
+            "actor_id" => JSON::Any.new(dislike.actor.id),
             "handle" => JSON::Any.new(dislike.actor.handle),
             "disliked_at" => JSON::Any.new(dislike.created_at.to_rfc3339),
           })
@@ -922,7 +908,7 @@ module MCP
             "count" => JSON::Any.new(latest_dislikes.size),
             "actors" => JSON::Any.new(latest_dislikes)
           }),
-          "object" => JSON::Any.new(mcp_object_path(object)),
+          "object_id" => JSON::Any.new(object.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
@@ -932,7 +918,7 @@ module MCP
         # five latest announces
         latest_announces = announces.reverse.first(5).map do |announce|
           JSON::Any.new({
-            "uri" => JSON::Any.new(mcp_actor_path(announce.actor)),
+            "actor_id" => JSON::Any.new(announce.actor.id),
             "handle" => JSON::Any.new(announce.actor.handle),
             "announced_at" => JSON::Any.new(announce.created_at.to_rfc3339),
           })
@@ -944,7 +930,7 @@ module MCP
             "count" => JSON::Any.new(latest_announces.size),
             "actors" => JSON::Any.new(latest_announces)
           }),
-          "object" => JSON::Any.new(mcp_object_path(object)),
+          "object_id" => JSON::Any.new(object.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
@@ -956,7 +942,7 @@ module MCP
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         }).tap do |json|
           if (latest_object = Tag::Hashtag.most_recent_object(notification.name))
-            json.as_h["latest_object"] = JSON::Any.new(mcp_object_path(latest_object))
+            json.as_h["latest_object_id"] = JSON::Any.new(latest_object.id)
           end
         end
       when Relationship::Content::Notification::Follow::Mention
@@ -967,14 +953,14 @@ module MCP
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         }).tap do |json|
           if (latest_object = Tag::Mention.most_recent_object(notification.name))
-            json.as_h["latest_object"] = JSON::Any.new(mcp_object_path(latest_object))
+            json.as_h["latest_object_id"] = JSON::Any.new(latest_object.id)
           end
         end
       when Relationship::Content::Notification::Follow::Thread
         JSON::Any.new({
           "type" => JSON::Any.new("follow_thread"),
           "thread" => JSON::Any.new(notification.object.thread),
-          "latest_object" => JSON::Any.new(mcp_object_path(notification.object)),
+          "latest_object_id" => JSON::Any.new(notification.object.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_thread_path(notification.object, anchor: false)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })

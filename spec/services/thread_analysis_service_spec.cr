@@ -92,8 +92,8 @@ Spectator.describe ThreadAnalysisService do
     let(branches) { ThreadAnalysisService.notable_branches(tuples) }
 
     it "sorts branches by size" do
-      object_counts = branches.map(&.object_count)
-      expect(object_counts).to eq(object_counts.sort.reverse)
+      branch_scores = branches.map(&.score)
+      expect(branch_scores).to eq(branch_scores.sort.reverse)
     end
 
     it "includes only branches with >= 5 objects" do
@@ -125,16 +125,11 @@ Spectator.describe ThreadAnalysisService do
       end
     end
 
-    it "includes all objects within max_depth" do
-      # test assumes max_depth=2
+    it "includes all objects" do
       branches.each do |branch|
         root_tuple = tuples.find! { |t| t[:id] == branch.root_id }
-        level_0 = [root_tuple]
-        level_1 = tuples.select { |t| t[:in_reply_to_iri] == root_tuple[:iri] }
-        level_1_iris = level_1.map { |t| t[:iri] }
-        level_2 = tuples.select { |t| level_1_iris.includes?(t[:in_reply_to_iri]) }
-        expected_ids = (level_0 + level_1 + level_2).map { |t| t[:id] }.to_set
-        expect(branch.object_ids.to_set).to eq(expected_ids)
+        expected_ids = ActivityPub::Object.find(root_tuple[:id]).descendants.map(&.id.not_nil!)
+        expect(branch.object_ids.sort).to eq(expected_ids.sort)
       end
     end
 

@@ -19,6 +19,7 @@ module ThreadAnalysisService
 
   record BranchInfo,
     root_id : Int64,
+    score : Int32,
     object_count : Int32,
     author_count : Int32,
     depth_range : Tuple(Int32, Int32),   # min and max depth
@@ -127,25 +128,40 @@ module ThreadAnalysisService
         current_level_iris = next_level_iris
       end
 
-      subtree_ids = subtree_ids.flatten
-
-      next if subtree_ids.size < threshold
+      next if (score = subtree_ids.flatten.size) < threshold
 
       # compute branch statistics
 
-      subtree_tuples = subtree_ids.compact_map { |id| tuples.find { |t| t[:id] == id } }
+      descendant_ids = [tuple[:id]]
+      to_visit_iris = [tuple[:iri]]
+      visited_iris = Set(String).new
 
-      authors = subtree_tuples.compact_map { |t| t[:attributed_to_iri] }.uniq
-      depths = subtree_tuples.compact_map { |t| t[:depth] }
-      times = subtree_tuples.compact_map { |t| t[:published] }.sort
+      while to_visit_iris.any?
+        current_iri = to_visit_iris.shift
+        next if visited_iris.includes?(current_iri)
+        visited_iris.add(current_iri)
+        if (children = children_map[current_iri]?)
+          children.each do |child|
+            descendant_ids << child[:id]
+            to_visit_iris << child[:iri]
+          end
+        end
+      end
+
+      descendant_tuples = descendant_ids.compact_map { |id| tuples.find { |t| t[:id] == id } }
+
+      authors = descendant_tuples.compact_map { |t| t[:attributed_to_iri] }.uniq
+      depths = descendant_tuples.compact_map { |t| t[:depth] }
+      times = descendant_tuples.compact_map { |t| t[:published] }.sort
 
       branches << BranchInfo.new(
         root_id: tuple[:id],
-        object_count: subtree_ids.size,
+        score: score,
+        object_count: descendant_ids.size,
         author_count: authors.size,
         depth_range: {depths.min, depths.max},
         time_range: times.size > 1 ? {times.first, times.last} : {times.first?, times.first?},
-        object_ids: subtree_ids
+        object_ids: descendant_ids
       )
     end
 
@@ -153,7 +169,7 @@ module ThreadAnalysisService
     parent_iris = Set(String?).new
 
     selected = [] of BranchInfo
-    branches.sort_by(&.object_count.-).each do |branch|
+    branches.sort_by(&.score.-).each do |branch|
       root_tuple = tuples.find { |t| t[:id] == branch.root_id }
       next unless root_tuple
 

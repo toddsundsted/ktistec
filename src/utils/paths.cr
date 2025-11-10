@@ -140,6 +140,10 @@ module Utils::Paths
     {% end %}
   end
 
+  macro remote_thread_analysis_path(object = nil)
+    "#{Utils::Paths.remote_object_path({{object}})}/thread/analysis"
+  end
+
   macro edit_object_path(object = nil)
     "#{Utils::Paths.object_path({{object}})}/edit"
   end

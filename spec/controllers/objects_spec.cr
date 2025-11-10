@@ -1137,6 +1137,77 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "GET /remote/objects/:id/thread/analysis" do
+    # create enough replies for timeline histogram (needs 2+ objects)
+    # and notable branches (needs 5+ objects in a subtree)
+
+    let_create!(:object, named: :branch_root, attributed_to: actor, in_reply_to: visible, published: published + 5.minutes, visible: true)
+    let_create!(:object, named: nil, attributed_to: author, in_reply_to: branch_root, published: published + 10.minutes, visible: true)
+    let_create!(:object, named: reply2, attributed_to: author, in_reply_to: branch_root, published: published + 15.minutes, visible: true)
+    let_create!(:object, named: nil, attributed_to: author, in_reply_to: reply2, published: published + 20.minutes, visible: true)
+    let_create!(:object, named: nil, attributed_to: author, in_reply_to: reply2, published: published + 25.minutes, visible: true)
+    let_create!(:object, named: nil, attributed_to: author, in_reply_to: reply2, published: published + 30.minutes, visible: true)
+
+    it "returns 401" do
+      get "/remote/objects/0/thread/analysis"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the contributors" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'contributors')]")).not_to be_empty
+      end
+
+      it "renders the contributors" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("contributors").as_a).not_to be_empty
+      end
+
+      it "renders the timeline" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'timeline')]")).not_to be_empty
+      end
+
+      it "renders the timeline" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("timeline").as_h).not_to be_empty
+      end
+
+      it "renders the branches" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'branches')]")).not_to be_empty
+      end
+
+      it "renders the branches" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("branches").as_a).not_to be_empty
+      end
+
+      it "returns 404 if object is not visible" do
+        get "/remote/objects/#{notvisible.id}/thread/analysis"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is remote" do
+        get "/remote/objects/#{remote.id}/thread/analysis"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "GET /remote/objects/:id/branch" do
     it "returns 401" do
       get "/remote/objects/0/branch"

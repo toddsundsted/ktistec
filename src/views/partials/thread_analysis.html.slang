@@ -52,13 +52,15 @@ turbo-frame#thread_analysis
   - unless notable_branches.empty?
     .branches style="margin-top: 15px;" role="region" aria-label="Thread notable branches"
       p Notable Branches
-      .ui.stackable.two.column.compact.grid style="margin-top: 15px;"
+      .ui.list
         - notable_branches.each_with_index do |branch, index|
-          - if (branch_root = ActivityPub::Object.find?(branch.root_id))
-            .column role="listitem"
+          - if (branch_root = ActivityPub::Object.find?(branch.root_id)) && (preview = branch_root.preview)
+            .item role="listitem"
               - if (attributed_to = branch_root.attributed_to?) && (icon = attributed_to.icon)
-                a.ui.avatar.image data-turbo-frame="_top" href=remote_actor_path(attributed_to) aria-label="#{attributed_to.display_name}"
-                  img data-actor-id=attributed_to.id src=icon alt="#{attributed_to.display_name}"
-              a> data-turbo-frame="_top" href=remote_branch_path(branch_root) aria-label="View branch #{index + 1}: #{pluralize(branch.object_count, "post")}"
-                = pluralize(branch.object_count, "post")
-              span by #{pluralize(branch.author_count, "author")}
+                img.ui.avatar.image data-actor-id=attributed_to.id src=icon alt="#{attributed_to.display_name}"
+              .content style="width: calc(100% - 2em)"
+                .header
+                  a data-turbo-frame="_top" href=remote_branch_path(branch_root) aria-label="View branch #{index + 1}"
+                    = attributed_to.try(&.display_name)
+                .truncated.description
+                  = t preview

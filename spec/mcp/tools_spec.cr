@@ -1932,7 +1932,7 @@ Spectator.describe MCP::Tools do
       let_create!(:object, named: :root_note, attributed_to: op_actor, visible: true, published: Time.utc)
       let_create!(:object, named: :reply1, attributed_to: op_actor, in_reply_to: root_note, visible: true, published: Time.utc + 1.minute)
       let_create!(:actor, named: :second_actor, local: true)
-      let_create!(:object, named: :reply2, attributed_to: second_actor, in_reply_to: root_note, visible: true, published: Time.utc + 2.minutes)
+      let_create!(:object, named: :reply2, attributed_to: second_actor, in_reply_to: root_note, visible: true, content: "first notable branch", published: Time.utc + 2.minutes)
       let_create!(:object, named: :reply3, attributed_to: second_actor, in_reply_to: reply1, visible: true, published: Time.utc + 3.minutes)
       let_create!(:actor, named: :third_actor, local: true)
       let_create!(:object, named: :reply4, attributed_to: third_actor, in_reply_to: reply2, visible: true, published: Time.utc + 4.minutes)
@@ -2023,6 +2023,7 @@ Spectator.describe MCP::Tools do
 
         branch = branches.first.as_h
         expect(branch["root_id"].as_i64).to eq(reply2.id)
+        expect(branch["root_preview"].as_s).to_not be_nil
         expect(branch["object_count"].as_i).to eq(5)
         expect(branch["author_count"].as_i).to eq(2)
 

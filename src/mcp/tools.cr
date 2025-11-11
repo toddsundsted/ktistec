@@ -625,6 +625,7 @@ module MCP
         "notable_branches" => analysis.notable_branches.map do |b|
           {
             "root_id" => b.root_id,
+            "root_preview" => ActivityPub::Object.find(b.root_id).preview,
             "object_count" => b.object_count,
             "author_count" => b.author_count,
             "depth_range" => [b.depth_range[0], b.depth_range[1]],

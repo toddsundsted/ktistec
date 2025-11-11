@@ -1645,6 +1645,67 @@ Spectator.describe ActivityPub::Object do
       expect(subject.tags).to contain_exactly(hashtag, mention)
     end
   end
+
+  describe "#preview" do
+    let_build(:object, summary: nil, content: nil)
+
+    it "returns nil" do
+      expect(object.preview).to be_nil
+    end
+
+    context "with content" do
+      before_each { object.assign(content: "original content") }
+
+      it "returns content" do
+        expect(object.preview).to eq("original content")
+      end
+
+      context "and content translation" do
+        let_create!(:translation, origin: object, content: "translated content")
+
+        it "returns content translation" do
+          expect(object.preview).to eq("translated content")
+        end
+
+        context "and summary" do
+          before_each { object.assign(summary: "original summary") }
+
+          it "returns summary" do
+            expect(object.preview).to eq("original summary")
+          end
+
+          context "and summary translation" do
+            let_create!(:translation, origin: object, summary: "translated summary")
+
+            it "returns summary translation" do
+              expect(object.preview).to eq("translated summary")
+            end
+          end
+        end
+      end
+    end
+
+    context "with multiple translations" do
+      before_each { object.assign(summary: "original summary", content: "original content") }
+
+      let_create!(:translation, named: nil, origin: object, summary: "first translated summary", content: "first translated content")
+      let_create!(:translation, named: nil, origin: object, summary: "second translated summary", content: "second translated content")
+
+      it "uses most recent translation" do
+        expect(object.preview).to eq("second translated summary")
+      end
+    end
+
+    context "with blank values" do
+      before_each { object.assign(summary: nil, content: "original content") }
+
+      let_create!(:translation, origin: object, summary: "", content: "  ")
+
+      it "ignores blank values" do
+        expect(object.preview).to eq("original content")
+      end
+    end
+  end
 end
 
 Spectator.describe ActivityPub::Object::ModelHelper do

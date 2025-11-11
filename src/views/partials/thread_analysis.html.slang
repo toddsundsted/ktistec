@@ -19,11 +19,10 @@ turbo-frame#thread_analysis
       duration_hours = ((time_range[1] - time_range[0]).total_minutes / 60).round(1)
       total_posts = timeline_histogram.buckets.sum(&.object_count)
       # check if thread spans multiple days
-      start_date = timeline_histogram.time_range[0].not_nil!
-      end_date = timeline_histogram.time_range[1].not_nil!
-      spans_days = (end_date.to_s("%Y-%m-%d") != start_date.to_s("%Y-%m-%d"))
+      timezone = Time::Location.load(env.account.timezone)
+      spans_days = (time_range[1].in(timezone).to_s("%Y-%m-%d") != time_range[0].in(timezone).to_s("%Y-%m-%d"))
       labels = timeline_histogram.buckets.map do |bucket|
-        spans_days ? bucket.time_range[0].to_s("%m/%d %H:%M") : bucket.time_range[0].to_s("%H:%M")
+        spans_days ? bucket.time_range[0].in(timezone).to_s("%m/%d %I:%M%p") : bucket.time_range[0].in(timezone).to_s("%I:%M%p")
       end
       datasets = [{
         label: "Posts",

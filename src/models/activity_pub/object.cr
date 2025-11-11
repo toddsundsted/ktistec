@@ -281,6 +281,29 @@ module ActivityPub
       (published || created_at).in(timezone)
     end
 
+    # Returns a preview for the object using fallback.
+    #
+    # The method checks for text in the following order:
+    # 1. Summary from translation
+    # 2. Summary from the object
+    # 3. Content from translation
+    # 4. Content from the object
+    #
+    # Returns the first non-blank value found, or `nil`.
+    #
+    def preview
+      translation = Translation.where("origin_id = ? ORDER BY id DESC LIMIT 1", id).first?
+      if translation && (summary = translation.summary.presence)
+        summary
+      elsif (summary = self.summary.presence)
+        summary
+      elsif translation && (content = translation.content.presence)
+        content
+      else
+        self.content.presence
+      end
+    end
+
     # Returns federated posts.
     #
     # Includes local posts. Does not include private (not visible)

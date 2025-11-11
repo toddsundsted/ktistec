@@ -1,7 +1,7 @@
 turbo-frame#mention_page_mention_banner
   .ui.thread.segments
     .ui.segment
-      p
+      p: strong
         a href=mention_path @#{mention}
         - if count > 0
           span< #{pluralize(count, "mention")}

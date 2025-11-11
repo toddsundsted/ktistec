@@ -5,7 +5,7 @@ turbo-frame#thread_analysis
     notable_branches = analysis.notable_branches
 
   .contributors role="region" aria-label="Thread key contributors"
-    p Contributors to this thread
+    p: strong Contributors to this thread
     div
       - key_participants.truncate(0, 18).each do |participant|
         - if (actor = ActivityPub::Actor.find?(iri: participant.actor_iri))
@@ -40,7 +40,7 @@ turbo-frame#thread_analysis
         maintainAspectRatio: false
       }
     .timeline style="margin-top: 15px;" role="region" aria-label="Thread timeline visualization"
-      p Thread Timeline (#{analysis.object_count} posts over #{duration_hours} hours)
+      p: strong Thread Timeline (#{analysis.object_count} posts over #{duration_hours} hours)
       canvas data-controller="chart" style="max-height: 150px; margin: 10px 0;" role="img" aria-label="Activity histogram showing #{total_posts} posts over time"
         script type="application/json" data-chart-target="labels"
           == labels.to_json
@@ -51,7 +51,7 @@ turbo-frame#thread_analysis
 
   - unless notable_branches.empty?
     .branches style="margin-top: 15px;" role="region" aria-label="Thread notable branches"
-      p Notable Branches
+      p: strong Notable Branches
       .ui.list
         - notable_branches.each_with_index do |branch, index|
           - if (branch_root = ActivityPub::Object.find?(branch.root_id)) && (preview = branch_root.preview)

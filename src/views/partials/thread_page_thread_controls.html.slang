@@ -16,7 +16,7 @@ turbo-frame#thread_page_thread_controls
           contributors[op] = Int32::MAX
           # remove blocked and deleted actors
           contributors.reject! { |actor, _| actor.blocked? || actor.deleted? }
-        p Contributors to this thread
+        p: strong Contributors to this thread
           - unless thread.size < 10 || (_task && _task.running)
             a< href=remote_thread_analysis_path(thread.first) data-turbo-frame="thread_analysis" (full analysis)
         p

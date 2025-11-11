@@ -324,41 +324,51 @@ module MCP
         contents["original_language"] = JSON::Any.new(object.language || "")
       end
 
-      likes = ActivityPub::Activity::Like.where(object_iri: object.iri).to_a
-      if likes.any?
-        actors_data = likes.map do |like|
-          JSON::Any.new({"uri" => JSON::Any.new(mcp_actor_path(like.actor))})
+      activities = object.activities(inclusion: [ActivityPub::Activity::Like, ActivityPub::Activity::Dislike, ActivityPub::Activity::Announce])
+
+      if (likes = activities.select(&.is_a?(ActivityPub::Activity::Like))).any?
+        actors_data = likes.reverse.map do |like|
+          JSON::Any.new({
+            "uri" => JSON::Any.new(mcp_actor_path(like.actor)),
+            "handle" => JSON::Any.new(like.actor.handle),
+            "liked_at" => JSON::Any.new(like.created_at.to_rfc3339)
+          })
         end
         contents["likes"] = JSON::Any.new({
-          "count" => JSON::Any.new(likes.size.to_i64),
+          "count" => JSON::Any.new(likes.size),
           "actors" => JSON::Any.new(actors_data)
         })
       end
 
-      dislikes = ActivityPub::Activity::Dislike.where(object_iri: object.iri).to_a
-      if dislikes.any?
-        actors_data = dislikes.map do |dislike|
-          JSON::Any.new({"uri" => JSON::Any.new(mcp_actor_path(dislike.actor))})
+      if (dislikes = activities.select(&.is_a?(ActivityPub::Activity::Dislike))).any?
+        actors_data = dislikes.reverse.map do |dislike|
+          JSON::Any.new({
+            "uri" => JSON::Any.new(mcp_actor_path(dislike.actor)),
+            "handle" => JSON::Any.new(dislike.actor.handle),
+            "disliked_at" => JSON::Any.new(dislike.created_at.to_rfc3339)
+          })
         end
         contents["dislikes"] = JSON::Any.new({
-          "count" => JSON::Any.new(dislikes.size.to_i64),
+          "count" => JSON::Any.new(dislikes.size),
           "actors" => JSON::Any.new(actors_data)
         })
       end
 
-      announces = ActivityPub::Activity::Announce.where(object_iri: object.iri).to_a
-      if announces.any?
-        actors_data = announces.map do |announce|
-          JSON::Any.new({"uri" => JSON::Any.new(mcp_actor_path(announce.actor))})
+      if (announces = activities.select(&.is_a?(ActivityPub::Activity::Announce))).any?
+        actors_data = announces.reverse.map do |announce|
+          JSON::Any.new({
+            "uri" => JSON::Any.new(mcp_actor_path(announce.actor)),
+            "handle" => JSON::Any.new(announce.actor.handle),
+            "announced_at" => JSON::Any.new(announce.created_at.to_rfc3339)
+          })
         end
         contents["announces"] = JSON::Any.new({
-          "count" => JSON::Any.new(announces.size.to_i64),
+          "count" => JSON::Any.new(announces.size),
           "actors" => JSON::Any.new(actors_data)
         })
       end
 
-      replies = object.replies(for_actor: nil) # `for_actor` is a dummy parameter
-      if replies.any?
+      if (replies = object.replies(for_actor: nil)).any? # `for_actor` is a dummy parameter
         objects_data = replies.map do |reply|
           reply_data = {
             "uri" => JSON::Any.new(mcp_object_path(reply)),

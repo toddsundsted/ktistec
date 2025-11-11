@@ -180,6 +180,26 @@ class ObjectsController
     ok "objects/thread", env: env, object: object, thread: thread, follow: follow, task: task
   end
 
+  get "/remote/objects/:id/thread/analysis" do |env|
+    unless (object = get_object(env, id_param(env))) && !object.draft?
+      not_found
+    end
+
+    analysis = object.analyze_thread(for_actor: env.account.actor)
+
+    ok "partials/thread_analysis", env: env, object: object, analysis: analysis
+  end
+
+  get "/remote/objects/:id/branch" do |env|
+    unless (object = get_object(env, id_param(env))) && !object.draft?
+      not_found
+    end
+
+    thread = object.descendants
+
+    ok "objects/branch", env: env, object: object, thread: thread
+  end
+
   get "/remote/objects/:id/reply" do |env|
     unless (object = get_object(env, id_param(env))) && !object.draft?
       not_found

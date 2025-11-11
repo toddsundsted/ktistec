@@ -8,6 +8,7 @@ require "../models/relationship/content/notification/follow/mention"
 require "../models/relationship/content/notification/follow/thread"
 require "../models/tag/hashtag"
 require "../models/tag/mention"
+require "./tools/results_pager"
 require "./resources"
 
 module MCP
@@ -15,6 +16,8 @@ module MCP
     include Utils::Paths
 
     Log = ::Log.for("mcp")
+
+    class_property result_pager = ResultsPager(JSON::Any).new
 
     alias ToolPropertyDefinition =
       NamedTuple(
@@ -26,6 +29,7 @@ module MCP
         minimum: Int32?,
         maximum: Int32?,
         default: String | Int32 | Bool | Time | Array(String) | Array(Int32) | Array(Bool) | Nil,
+        enum: Array(String)?,     # enum values for string types
         # array-specific properties
         items: String?,           # type of array items ("string", "integer")
         min_items: Int32?,        # minimum array length
@@ -42,6 +46,17 @@ module MCP
 
     TOOL_DEFINITIONS = [] of ToolDefinition
 
+    # Defines an MCP tool.
+    #
+    # Arguments:
+    # - name: Tool name
+    # - description: Tool description
+    # - properties: Array of ToolPropertyDefinition (type, description, required, etc.)
+    # - block: Tool implementation
+    #
+    # The block can access validated parameters via `arguments["param_name"]?`
+    # and must return `JSON::Any`.
+    #
     macro def_tool(name, description, properties = [] of ToolPropertyDefinition, &block)
       {% TOOL_DEFINITIONS << {name: name, description: description, properties: properties} %}
 
@@ -281,8 +296,10 @@ module MCP
         when "followers"
           followers = Relationship::Social::Follow.followers_for(actor.iri, page: page, size: size)
           objects = followers.map do |relationship|
+            follower = relationship.actor
             JSON::Any.new({
-              "actor" => JSON::Any.new(mcp_actor_path(relationship.actor)),
+              "actor_id" => JSON::Any.new(follower.id),
+              "actor_handle" => JSON::Any.new(follower.handle),
               "confirmed" => JSON::Any.new(relationship.confirmed)
             })
           end
@@ -290,8 +307,10 @@ module MCP
         when "following"
           following = Relationship::Social::Follow.following_for(actor.iri, page: page, size: size)
           objects = following.map do |relationship|
+            followed = relationship.object
             JSON::Any.new({
-              "actor" => JSON::Any.new(mcp_actor_path(relationship.object)),
+              "actor_id" => JSON::Any.new(followed.id),
+              "actor_handle" => JSON::Any.new(followed.handle),
               "confirmed" => JSON::Any.new(relationship.confirmed)
             })
           end
@@ -389,6 +408,259 @@ module MCP
       })
     end
 
+    record ThreadQueryResult,
+      objects_data : Array(JSON::Any),
+      objects_count : Int32,
+      authors_count : Int32?,
+      root_object_id : Int64?,
+      max_depth : Int32
+
+    def_tool(
+      "get_thread",
+      "Retrieve thread structure, metadata, and summary data. Large threads may have " \
+      "hundreds of objects, so this tool supports pagination. This tool retrieves the " \
+      "entire thread for the given `object_id` starting at the root, not only the " \
+      "subthread.\n\n" \
+      "**Two Modes of Operation:**\n\n" \
+      "1. **Initial Query Mode**: Provide `object_id` (plus optional `projection` and `page_size`) to start traversing a thread.\n" \
+      "   Returns summary data and the first page of objects. If there are more pages, includes a `cursor`.\n\n" \
+      "2. **Pagination Mode**: Provide only `cursor` (from a previous response) to fetch the next page.\n" \
+      "   Returns the next page of objects. If there are more pages, includes a `cursor`.\n" \
+      "   Do not include `object_id`, `projection`, or `page_size`.\n\n" \
+      "**Usage Examples:**\n" \
+      "- Start: `{\"object_id\": 123, \"projection\": \"metadata\", \"page_size\": 20}`\n" \
+      "- Continue: `{\"cursor\": \"eyJwYWdlcl9pZ...\"}`\n\n" \
+      "**Important:** You must provide EITHER `object_id` OR `cursor`, but not both.",
+      [
+        {name: "object_id", type: "integer", description: "Database ID of any object in the thread. Required for initial query, omit when using cursor.", required: false, minimum: 1},
+        {name: "projection", type: "string", description: "Data fields to include: 'minimal' (IDs and structure only) or 'metadata' (adds authors, timestamps). Only used with object_id.", required: false, enum: ["minimal", "metadata"], default: "metadata"},
+        {name: "page_size", type: "integer", description: "Number of objects per page. Only used with object_id.", required: false, minimum: 1, maximum: 100, default: 25},
+        {name: "cursor", type: "string", description: "Opaque pagination cursor from previous get_thread response. Use ONLY this parameter to fetch next page.", required: false},
+      ]
+    ) do
+      unless account.reload!
+        raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      has_object_id = arguments["object_id"]?
+      has_cursor = arguments["cursor"]?
+
+      if has_object_id && has_cursor
+        raise MCPError.new("Cannot provide both 'object_id' and 'cursor'.", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+      unless has_object_id || has_cursor
+        raise MCPError.new("Must provide either 'object_id' or 'cursor'.", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      # PAGINATION MODE
+      if (cursor = arguments["cursor"]?.try(&.as_s))
+        Log.debug { "get_thread (pagination): user=#{mcp_user_path(account)} cursor=#{cursor[0..8]}..." }
+
+        pager_response = @@result_pager.fetch(cursor)
+        page_objects = pager_response[:page]
+        next_cursor = pager_response[:cursor]
+
+        result_data = {
+          "objects" => page_objects,
+          "cursor" => next_cursor,
+          "has_more" => !!next_cursor,
+        }
+
+      # INITIAL QUERY MODE
+      else
+        object_id = arguments["object_id"].as_i64
+        projection = arguments["projection"]?.try(&.as_s) || "metadata"
+        page_size = arguments["page_size"]?.try(&.as_i) || 25
+
+        unless (object = ActivityPub::Object.find?(object_id))
+          raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+        end
+        unless ["minimal", "metadata"].includes?(projection)
+          raise MCPError.new("Projection must be 'minimal' or 'metadata'", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+        end
+
+        Log.debug { "get_thread (initial query): user=#{mcp_user_path(account)} object_id=#{object_id} projection=#{projection}" }
+
+        query_result =
+          case projection
+          when "minimal"
+            results = object.thread_query(projection: ActivityPub::Object::PROJECTION_MINIMAL)
+            objects = results.map do |tuple|
+              thread_obj = ActivityPub::Object.find(tuple[:id])
+              hash = {} of String => JSON::Any
+              hash["object_id"] = JSON::Any.new(tuple[:id])
+              hash["iri"] = JSON::Any.new(tuple[:iri])
+              hash["parent_id"] = JSON::Any.new(thread_obj.in_reply_to?.try(&.id))
+              hash["thread"] = JSON::Any.new(tuple[:thread])
+              hash["depth"] = JSON::Any.new(tuple[:depth])
+              JSON::Any.new(hash)
+            end
+            ThreadQueryResult.new(
+              objects_data: objects,
+              objects_count: objects.size,
+              authors_count: nil,
+              root_object_id: results.find { |t| t[:in_reply_to_iri].nil? }.try(&.[:id]),
+              max_depth: results.max_of? { |t| t[:depth] } || 0
+            )
+          when "metadata"
+            results = object.thread_query(projection: ActivityPub::Object::PROJECTION_METADATA)
+            objects = results.map do |tuple|
+              thread_obj = ActivityPub::Object.find(tuple[:id])
+              hash = {} of String => JSON::Any
+              hash["object_id"] = JSON::Any.new(tuple[:id])
+              hash["iri"] = JSON::Any.new(tuple[:iri])
+              if tuple[:attributed_to_iri] && (attributed_to = thread_obj.attributed_to?)
+                hash["actor"] = JSON::Any.new({
+                  "id" => JSON::Any.new(attributed_to.id),
+                  "handle" => JSON::Any.new(attributed_to.handle)
+                })
+              else
+                hash["actor"] = JSON::Any.new(nil)
+              end
+              hash["parent_id"] = JSON::Any.new(thread_obj.in_reply_to?.try(&.id))
+              hash["thread"] = JSON::Any.new(tuple[:thread])
+              hash["published"] = JSON::Any.new(tuple[:published].try(&.to_rfc3339))
+              hash["deleted"] = JSON::Any.new(tuple[:deleted])
+              hash["blocked"] = JSON::Any.new(tuple[:blocked])
+              hash["hashtags"] = JSON::Any.new(tuple[:hashtags])
+              hash["mentions"] = JSON::Any.new(tuple[:mentions])
+              hash["depth"] = JSON::Any.new(tuple[:depth])
+              JSON::Any.new(hash)
+            end
+            ThreadQueryResult.new(
+              objects_data: objects,
+              objects_count: objects.size,
+              authors_count: results.map { |t| t[:attributed_to_iri] }.compact.uniq.size,
+              root_object_id: results.find { |t| t[:in_reply_to_iri].nil? }.try(&.[:id]),
+              max_depth: results.max_of? { |t| t[:depth] } || 0
+            )
+          else
+            raise "should never happen"
+          end
+
+        pager_response = @@result_pager.store(query_result.objects_data, page_size)
+        page_objects = pager_response[:page]
+        cursor_value = pager_response[:cursor]
+
+        result_data = {
+          "objects" => page_objects,
+          "cursor" => cursor_value,
+          "has_more" => !!cursor_value,
+          "projection" => projection,
+          "page_size" => page_size,
+          "objects_count" => query_result.objects_count,
+          "authors_count" => query_result.authors_count,
+          "root_object_id" => query_result.root_object_id,
+          "max_depth" => query_result.max_depth,
+        }
+      end
+
+      JSON::Any.new({
+        "content" => JSON::Any.new([JSON::Any.new({
+          "type" => JSON::Any.new("text"),
+          "text" => JSON::Any.new(result_data.to_json)
+        })])
+      })
+    end
+
+    # Formats time ranges as RFC3339 strings.
+    #
+    private def self.format_time_range(time_range : Tuple(Time?, Time?)?)
+      if time_range && (start_time = time_range[0]) && (end_time = time_range[1])
+        [start_time.to_rfc3339, end_time.to_rfc3339]
+      else
+        [nil, nil]
+      end
+    end
+
+    def_tool(
+      "analyze_thread",
+      "Analyze thread structure and identify key participants and notable branches. " \
+      "Use this before reading thread content to understand the conversation landscape " \
+      "and identify which posts are most relevant to examine. This is especially " \
+      "useful with large threads.\n\n" \
+      "**Returns:**\n" \
+      "- Basic statistics (total posts, unique authors, max depth, analysis duration)\n" \
+      "- Key participants (original poster + top 5 most active posters with their posts)\n" \
+      "- Notable branches (conversation subtrees with ≥5 posts)\n" \
+      "- Timeline histogram (temporal distribution of posts)",
+      [
+        {name: "object_id", type: "integer", description: "Database ID of any object in the thread", required: true, minimum: 1},
+      ]
+    ) do
+      unless account.reload!
+        raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      unless (thread_object = ActivityPub::Object.find?(object_id))
+        raise MCPError.new("Object not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+      end
+
+      Log.debug { "analyze_thread: user=#{mcp_user_path(account)} object_id=#{object_id}" }
+
+      analysis = thread_object.analyze_thread(for_actor: account.actor)
+
+      result = {
+        "thread_id" => analysis.thread_id,
+        "object_count" => analysis.object_count,
+        "author_count" => analysis.author_count,
+        "root_object_id" => analysis.root_object_id,
+        "max_depth" => analysis.max_depth,
+        "duration_ms" => analysis.duration_ms,
+
+        "key_participants" => analysis.key_participants.map do |p|
+          actor = ActivityPub::Actor.find?(iri: p.actor_iri)
+          {
+            "actor" => {
+              "id" => actor ? actor.id : nil,
+              "handle" => actor ? actor.handle : nil,
+            },
+            "object_count" => p.object_count,
+            "depth_range" => [p.depth_range[0], p.depth_range[1]],
+            "time_range" => format_time_range(p.time_range),
+            "object_ids" => p.object_ids,
+          }
+        end,
+
+        "notable_branches" => analysis.notable_branches.map do |b|
+          {
+            "root_id" => b.root_id,
+            "root_preview" => ActivityPub::Object.find(b.root_id).preview,
+            "object_count" => b.object_count,
+            "author_count" => b.author_count,
+            "depth_range" => [b.depth_range[0], b.depth_range[1]],
+            "time_range" => format_time_range(b.time_range),
+            "object_ids" => b.object_ids,
+          }
+        end,
+
+        "timeline_histogram" => if (histogram = analysis.timeline_histogram)
+          {
+            "time_range" => format_time_range(histogram.time_range),
+            "total_objects" => histogram.total_objects,
+            "outliers_excluded" => histogram.outliers_excluded,
+            "bucket_size_minutes" => histogram.bucket_size_minutes,
+            "buckets" => histogram.buckets.map do |bucket|
+              {
+                "time_range" => format_time_range(bucket.time_range),
+                "object_count" => bucket.object_count,
+                "cumulative_count" => bucket.cumulative_count,
+                "author_count" => bucket.author_count,
+                "object_ids" => bucket.object_ids,
+              }
+            end
+          }
+        end,
+      }
+
+      JSON::Any.new({
+        "content" => JSON::Any.new([JSON::Any.new({
+          "type" => JSON::Any.new("text"),
+          "text" => JSON::Any.new(result.to_json)
+        })])
+      })
+    end
+
     def_tool(
       "read_resources",
       "Read one or more resources by URI (format \"ktistec://{resource}/{id*}\"). Supports all resource types including " \
@@ -444,51 +716,62 @@ module MCP
           JSON::Any.new({
             "name" => JSON::Any.new({{tool[:name]}}),
             "description" => JSON::Any.new({{tool[:description]}}),
-            "inputSchema" => JSON::Any.new({
-              "type" => JSON::Any.new("object"),
-              "properties" => JSON::Any.new({
-                {% for prop in tool[:properties] %}
-                  {% if prop[:type] == "array" %}
-                    {{prop[:name]}} => JSON::Any.new({
-                      "type" => JSON::Any.new("array"),
-                      "description" => JSON::Any.new({{prop[:description]}}),
-                      {% if prop[:items] %}
-                        "items" => JSON::Any.new({
-                          "type" => JSON::Any.new({{prop[:items]}})
-                        }),
-                      {% end %}
-                      {% if prop[:min_items] %}
-                        "minItems" => JSON::Any.new({{prop[:min_items]}}),
-                      {% end %}
-                      {% if prop[:max_items] %}
-                        "maxItems" => JSON::Any.new({{prop[:max_items]}}),
-                      {% end %}
-                      {% if prop[:unique_items] %}
-                        "uniqueItems" => JSON::Any.new({{prop[:unique_items]}}),
-                      {% end %}
-                    }),
-                  {% else %}
-                    {{prop[:name]}} => JSON::Any.new({
-                      "type" => JSON::Any.new({{prop[:type] == "time" ? "string" : prop[:type]}}),
-                      "description" => JSON::Any.new({{prop[:description]}}),
-                      {% if prop[:minimum] %}
-                        "minimum" => JSON::Any.new({{prop[:minimum]}}),
-                      {% end %}
-                      {% if prop[:maximum] %}
-                        "maximum" => JSON::Any.new({{prop[:maximum]}}),
-                      {% end %}
-                    }),
+            {% if tool[:raw_schema_json] %}
+              "inputSchema" => JSON.parse({{tool[:raw_schema_json]}}),
+            {% else %}
+              "inputSchema" => JSON::Any.new({
+                "type" => JSON::Any.new("object"),
+                "properties" => JSON::Any.new({
+                  {% for prop in tool[:properties] %}
+                    {% if prop[:type] == "array" %}
+                      {{prop[:name]}} => JSON::Any.new({
+                        "type" => JSON::Any.new("array"),
+                        "description" => JSON::Any.new({{prop[:description]}}),
+                        {% if prop[:items] %}
+                          "items" => JSON::Any.new({
+                            "type" => JSON::Any.new({{prop[:items]}})
+                          }),
+                        {% end %}
+                        {% if prop[:min_items] %}
+                          "minItems" => JSON::Any.new({{prop[:min_items]}}),
+                        {% end %}
+                        {% if prop[:max_items] %}
+                          "maxItems" => JSON::Any.new({{prop[:max_items]}}),
+                        {% end %}
+                        {% if prop[:unique_items] %}
+                          "uniqueItems" => JSON::Any.new({{prop[:unique_items]}}),
+                        {% end %}
+                      }),
+                    {% else %}
+                      {{prop[:name]}} => JSON::Any.new({
+                        "type" => JSON::Any.new({{prop[:type] == "time" ? "string" : prop[:type]}}),
+                        "description" => JSON::Any.new({{prop[:description]}}),
+                        {% if prop[:minimum] %}
+                          "minimum" => JSON::Any.new({{prop[:minimum]}}),
+                        {% end %}
+                        {% if prop[:maximum] %}
+                          "maximum" => JSON::Any.new({{prop[:maximum]}}),
+                        {% end %}
+                        {% if prop[:enum] %}
+                          "enum" => JSON::Any.new([
+                            {% for value in prop[:enum] %}
+                              JSON::Any.new({{value}}),
+                            {% end %}
+                          ]),
+                        {% end %}
+                      }),
+                    {% end %}
                   {% end %}
-                {% end %}
+                }),
+                "required" => JSON::Any.new([
+                  {% for prop in tool[:properties] %}
+                    {% if prop[:required] %}
+                      JSON::Any.new({{prop[:name]}}),
+                    {% end %}
+                  {% end %}
+                ] of JSON::Any)
               }),
-              "required" => JSON::Any.new([
-                {% for prop in tool[:properties] %}
-                  {% if prop[:required] %}
-                    JSON::Any.new({{prop[:name]}}),
-                  {% end %}
-                {% end %}
-              ])
-            })
+            {% end %}
           }),
         {% end %}
       ]
@@ -514,6 +797,10 @@ module MCP
         handle_tool_paginate_collection(params, account)
       when "count_collection_since"
         handle_tool_count_collection_since(params, account)
+      when "get_thread"
+        handle_tool_get_thread(params, account)
+      when "analyze_thread"
+        handle_tool_analyze_thread(params, account)
       when "read_resources"
         handle_tool_read_resources(params, account)
       else
@@ -522,19 +809,52 @@ module MCP
       end
     end
 
+    private def self.notification_status(notification) : JSON::Any
+      owner = notification.owner
+      object = notification.object
+
+      reactions = [] of String
+
+      liked = announced = false
+      inclusion = [ActivityPub::Activity::Like, ActivityPub::Activity::Announce]
+      activities = object.activities(inclusion: inclusion).select do |activity|
+        if activity.actor == owner
+          liked = true if activity.is_a?(ActivityPub::Activity::Like)
+          announced = true if activity.is_a?(ActivityPub::Activity::Announce)
+          break if liked && announced
+        end
+      end
+      reactions << "liked" if liked
+      reactions << "announced" if announced
+
+      replies = object.replies(for_actor: owner).any? { |reply| reply.attributed_to == owner }
+      reactions << "replied" if replies
+
+      if reactions.empty?
+        JSON::Any.new("new")
+      else
+        JSON::Any.new(reactions.map { |r| JSON::Any.new(r) })
+      end
+    end
+
     private def self.notification_to_json_any(notification) : JSON::Any?
       case notification
       when Relationship::Content::Notification::Mention
         JSON::Any.new({
           "type" => JSON::Any.new("mention"),
-          "object" => JSON::Any.new(mcp_object_path(notification.object)),
+          "status" => notification_status(notification),
+          "object_id" => JSON::Any.new(notification.object.id),
+          "actor_id" => JSON::Any.new(notification.object.attributed_to.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       when Relationship::Content::Notification::Reply
         JSON::Any.new({
           "type" => JSON::Any.new("reply"),
-          "object" => JSON::Any.new(mcp_object_path(notification.object)),
+          "status" => notification_status(notification),
+          "object_id" => JSON::Any.new(notification.object.id),
+          "actor_id" => JSON::Any.new(notification.object.attributed_to.id),
+          "parent_id" => JSON::Any.new(notification.object.in_reply_to.not_nil!.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
@@ -546,33 +866,75 @@ module MCP
         JSON::Any.new({
           "type" => JSON::Any.new("follow"),
           "status" => JSON::Any.new(status),
-          "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
-          "object" => JSON::Any.new(mcp_user_path(notification.owner)),
+          "follower_id" => JSON::Any.new(notification.activity.actor.id),
+          "followee_id" => JSON::Any.new(notification.owner.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_actor_path(notification.activity.actor)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       when Relationship::Content::Notification::Like
+        object = notification.activity.object
+        likes = object.activities(inclusion: ActivityPub::Activity::Like)
+        # five latest likes
+        latest_likes = likes.reverse.first(5).map do |like|
+          JSON::Any.new({
+            "actor_id" => JSON::Any.new(like.actor.id),
+            "handle" => JSON::Any.new(like.actor.handle),
+            "liked_at" => JSON::Any.new(like.created_at.to_rfc3339),
+          })
+        end
         JSON::Any.new({
           "type" => JSON::Any.new("like"),
-          "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
-          "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
-          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+          "total_likes" => JSON::Any.new(likes.size),
+          "latest_likes" => JSON::Any.new({
+            "count" => JSON::Any.new(latest_likes.size),
+            "actors" => JSON::Any.new(latest_likes)
+          }),
+          "object_id" => JSON::Any.new(object.id),
+          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       when Relationship::Content::Notification::Dislike
+        object = notification.activity.object
+        dislikes = object.activities(inclusion: ActivityPub::Activity::Dislike)
+        # five latest dislikes
+        latest_dislikes = dislikes.reverse.first(5).map do |dislike|
+          JSON::Any.new({
+            "actor_id" => JSON::Any.new(dislike.actor.id),
+            "handle" => JSON::Any.new(dislike.actor.handle),
+            "disliked_at" => JSON::Any.new(dislike.created_at.to_rfc3339),
+          })
+        end
         JSON::Any.new({
           "type" => JSON::Any.new("dislike"),
-          "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
-          "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
-          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+          "total_dislikes" => JSON::Any.new(dislikes.size),
+          "latest_dislikes" => JSON::Any.new({
+            "count" => JSON::Any.new(latest_dislikes.size),
+            "actors" => JSON::Any.new(latest_dislikes)
+          }),
+          "object_id" => JSON::Any.new(object.id),
+          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       when Relationship::Content::Notification::Announce
+        object = notification.activity.object
+        announces = object.activities(inclusion: ActivityPub::Activity::Announce)
+        # five latest announces
+        latest_announces = announces.reverse.first(5).map do |announce|
+          JSON::Any.new({
+            "actor_id" => JSON::Any.new(announce.actor.id),
+            "handle" => JSON::Any.new(announce.actor.handle),
+            "announced_at" => JSON::Any.new(announce.created_at.to_rfc3339),
+          })
+        end
         JSON::Any.new({
           "type" => JSON::Any.new("announce"),
-          "actor" => JSON::Any.new(mcp_actor_path(notification.activity.actor)),
-          "object" => JSON::Any.new(mcp_object_path(notification.activity.object)),
-          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.activity.object)}"),
+          "total_announces" => JSON::Any.new(announces.size),
+          "latest_announces" => JSON::Any.new({
+            "count" => JSON::Any.new(latest_announces.size),
+            "actors" => JSON::Any.new(latest_announces)
+          }),
+          "object_id" => JSON::Any.new(object.id),
+          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       when Relationship::Content::Notification::Follow::Hashtag
@@ -581,18 +943,27 @@ module MCP
           "hashtag" => JSON::Any.new(notification.name),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{hashtag_path(notification.name)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
-        })
+        }).tap do |json|
+          if (latest_object = Tag::Hashtag.most_recent_object(notification.name))
+            json.as_h["latest_object_id"] = JSON::Any.new(latest_object.id)
+          end
+        end
       when Relationship::Content::Notification::Follow::Mention
         JSON::Any.new({
           "type" => JSON::Any.new("follow_mention"),
           "mention" => JSON::Any.new(notification.name),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{mention_path(notification.name)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
-        })
+        }).tap do |json|
+          if (latest_object = Tag::Mention.most_recent_object(notification.name))
+            json.as_h["latest_object_id"] = JSON::Any.new(latest_object.id)
+          end
+        end
       when Relationship::Content::Notification::Follow::Thread
         JSON::Any.new({
           "type" => JSON::Any.new("follow_thread"),
           "thread" => JSON::Any.new(notification.object.thread),
+          "latest_object_id" => JSON::Any.new(notification.object.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_thread_path(notification.object, anchor: false)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })

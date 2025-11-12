@@ -35,10 +35,12 @@ class HTTP::Server::Context
     request.cookies["AuthToken"]?.try(&.value)
   end
 
+  # Returns a new, nonpersistent, anonymous session.
+  #
   private def new_session
     Session.new.tap do |session|
       jwt = session.generate_jwt
-      response.cookies["AuthToken"] = jwt
+      __assign_cookie(jwt)
     end
   end
 
@@ -48,7 +50,18 @@ class HTTP::Server::Context
   def new_session(account : Account)
     @session = Session.new(account).save.tap do |session|
       jwt = session.generate_jwt
-      response.cookies["AuthToken"] = jwt
+      __assign_cookie(jwt)
     end
+  end
+
+  private def __assign_cookie(jwt)
+    response.cookies["AuthToken"] = HTTP::Cookie.new(
+      name: "AuthToken",
+      value: jwt,
+      path: "/",
+      max_age: 30.days,
+      http_only: true,
+      secure: true,
+    )
   end
 end

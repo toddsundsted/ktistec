@@ -226,22 +226,60 @@ module ThreadAnalysisService
     # threshold: minimum 6 hours, or 3x median (whichever is larger)
     outlier_threshold = [median_gap * 3, 6.hours].max
 
-    # find first significant outlier
-    outlier_index = nil
-    objects.each_cons(2).with_index do |pair, idx|
+    # identify all clusters
+    clusters = [] of Array(typeof(objects.first))
+    current_cluster = [objects.first]
+
+    objects.each_cons(2) do |pair|
       gap = pair[1][:published] - pair[0][:published]
       if gap > outlier_threshold
-        outlier_index = idx + 1
-        break
+        clusters << current_cluster
+        current_cluster = [pair[1]]
+      else
+        current_cluster << pair[1]
+      end
+    end
+    clusters << current_cluster
+
+    # find last significant cluster (3+ posts) as baseline
+    last_significant_cluster = clusters.reverse.find { |c| c.size >= 3 }
+
+    baseline_cutoff = last_significant_cluster ? last_significant_cluster.last[:published] : objects.last[:published]
+    baseline_duration = (baseline_cutoff - objects.first[:published]).total_hours
+    baseline_bucket_size = calculate_bucket_size_for_duration(baseline_duration)
+
+    # try progressively trimming trailing clusters to improve granularity
+    best_cutoff = baseline_cutoff
+    best_bucket_size = baseline_bucket_size
+    accumulated_loss = 0
+
+    # trim clusters backwards from end
+    clusters.reverse.each_with_index do |cluster, idx|
+      accumulated_loss += cluster.size
+      loss_percentage = accumulated_loss.to_f / objects.size
+
+      # stop if we lose more than 5% of posts
+      break if loss_percentage > 0.05
+
+      # find the cluster before this one
+      cutoff_cluster_idx = clusters.size - idx - 2
+      next if cutoff_cluster_idx < 0
+
+      cutoff_cluster = clusters[cutoff_cluster_idx]
+      cutoff_time = cutoff_cluster.last[:published]
+      trimmed_duration = (cutoff_time - objects.first[:published]).total_hours
+      bucket_size = calculate_bucket_size_for_duration(trimmed_duration)
+
+      # keep this cutoff if it gives us smaller buckets
+      if bucket_size < best_bucket_size
+        best_cutoff = cutoff_time
+        best_bucket_size = bucket_size
       end
     end
 
-    active_objects, outlier_count =
-      if outlier_index
-        {objects[0...outlier_index], objects.size - outlier_index}
-      else
-        {objects, 0}
-      end
+    # use the best cutoff found
+    active_objects = objects.select { |o| o[:published] <= best_cutoff }
+    outlier_count = objects.size - active_objects.size
 
     return if active_objects.empty?
 
@@ -249,16 +287,7 @@ module ThreadAnalysisService
     time_end = active_objects.last[:published]
     duration = time_end - time_start
 
-    bucket_size_minutes = case duration.total_hours
-      when 0...1     then 5      # < 1 hour
-      when 1...3     then 15     # 1-3 hours
-      when 3...12    then 60     # 3-12 hours (1 hour)
-      when 12...24   then 180    # 12-24 hours (3 hours)
-      when 24...72   then 360    # 1-3 days (6 hours)
-      when 72...168  then 720    # 3-7 days (12 hours)
-      when 168...672 then 1440   # 1-4 weeks (daily)
-      else                10080  # > 4 weeks (weekly)
-    end
+    bucket_size_minutes = best_bucket_size
 
     bucket_duration = bucket_size_minutes.minutes
 
@@ -301,5 +330,21 @@ module ThreadAnalysisService
       bucket_size_minutes: bucket_size_minutes,
       buckets: buckets
     )
+  end
+
+  # Calculates best bucket size in minutes for a given duration in
+  # hours.
+  #
+  private def self.calculate_bucket_size_for_duration(hours : Float64) : Int32
+    case hours
+    when 0...1     then 5      # < 1 hour
+    when 1...3     then 15     # 1-3 hours
+    when 3...12    then 60     # 3-12 hours (1 hour)
+    when 12...24   then 180    # 12-24 hours (3 hours)
+    when 24...72   then 360    # 1-3 days (6 hours)
+    when 72...168  then 720    # 3-7 days (12 hours)
+    when 168...672 then 1440   # 1-4 weeks (daily)
+    else                10080  # > 4 weeks (weekly)
+    end
   end
 end

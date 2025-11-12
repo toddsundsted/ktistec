@@ -23,7 +23,7 @@ Spectator.describe HTTP::Server::Context do
 
   it "returns the session token in a cookie" do
     get "/foo/bar/session"
-    payload = Ktistec::JWT.decode(response.cookies["AuthToken"].value)
+    payload = Ktistec::JWT.decode(response.cookies["__Host-AuthToken"].value)
     expect(payload["jti"]).not_to be_nil
   end
 
@@ -71,7 +71,7 @@ Spectator.describe HTTP::Server::Context do
     let(session) { Session.new(account).save }
 
     it "uses an existing session" do
-      get "/foo/bar/session", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+      get "/foo/bar/session", HTTP::Headers{"Cookie" => "__Host-AuthToken=#{jwt}"}
       expect(JSON.parse(response.body).dig("session_key")).to eq(session.session_key)
     end
 
@@ -79,7 +79,7 @@ Spectator.describe HTTP::Server::Context do
       let(payload) { {jti: session.session_key, iat: 1.year.ago} }
 
       it "creates a new session" do
-        get "/foo/bar/session", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        get "/foo/bar/session", HTTP::Headers{"Cookie" => "__Host-AuthToken=#{jwt}"}
         expect(JSON.parse(response.body).dig("session_key")).not_to eq(session.session_key)
       end
     end
@@ -88,7 +88,7 @@ Spectator.describe HTTP::Server::Context do
       let(payload) { {jti: "invalid session key", iat: Time.utc} }
 
       it "creates a new session" do
-        get "/foo/bar/session", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        get "/foo/bar/session", HTTP::Headers{"Cookie" => "__Host-AuthToken=#{jwt}"}
         expect(JSON.parse(response.body).dig("session_key")).not_to eq(session.session_key)
       end
     end
@@ -97,7 +97,7 @@ Spectator.describe HTTP::Server::Context do
       let(jwt) { Ktistec::JWT.encode(payload, "old secret key") }
 
       it "creates a new session" do
-        get "/foo/bar/session", HTTP::Headers{"Cookie" => "AuthToken=#{jwt}"}
+        get "/foo/bar/session", HTTP::Headers{"Cookie" => "__Host-AuthToken=#{jwt}"}
         expect(JSON.parse(response.body).dig("session_key")).not_to eq(session.session_key)
       end
     end

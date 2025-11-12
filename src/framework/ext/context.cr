@@ -32,7 +32,7 @@ class HTTP::Server::Context
   end
 
   private def check_cookie
-    request.cookies["AuthToken"]?.try(&.value)
+    request.cookies["__Host-AuthToken"]?.try(&.value)
   end
 
   # Returns a new, nonpersistent, anonymous session.
@@ -55,8 +55,8 @@ class HTTP::Server::Context
   end
 
   private def __assign_cookie(jwt)
-    response.cookies["AuthToken"] = HTTP::Cookie.new(
-      name: "AuthToken",
+    response.cookies["__Host-AuthToken"] = HTTP::Cookie.new(
+      name: "__Host-AuthToken",
       value: jwt,
       path: "/",
       max_age: 30.days,

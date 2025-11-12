@@ -3,6 +3,7 @@
     - [Text and images](#text-and-images)
     - [Draft posts](#draft-posts)
     - [Threaded replies](#threaded-replies)
+    - [Thread Analysis](#thread-analysis)
     - [Translations](#translations)
     - [@-mention and #-hashtag autocomplete](#-mention-and--hashtag-autocomplete)
     - [Control over comment visibility](#control-over-comment-visibility)
@@ -61,7 +62,11 @@ lists.
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/tszn70.png" width=460>
 
 Ktistec supports inline placement of images, with ActivityPub image
-attachments used for compatibility with non-Ktistec servers.
+attachments used for compatibility with non-Ktistec servers. Images
+support focal point positioning to ensure the most important part of
+an image is always visible in thumbnails. Focal point positioning
+currently only works with federated attachments. There is no means to
+edit an image's focal point locally at this time.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/aecz36.png" width=460>
 
@@ -83,6 +88,17 @@ posts. To keep the author's first posts together, the author's
 self-replies are prioritized in the thread view.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/eaxx1q.png" width=460>
+
+### Thread Analysis
+
+Ktistec can analyze large conversation threads to help you navigate
+complex discussions. Thread analysis provides:
+
+- **Key Participants**: Identify the most active contributors
+- **Timeline Histogram**: Visualize conversation activity over time
+- **Notable Branches**: Discover important sub-conversations within threads
+
+Access thread analysis from the thread view page for any conversation.
 
 ### Translations
 
@@ -700,6 +716,33 @@ by an MCP client.
 
 **Parameters:**
 - `uris` (array, required) - Resource URIs to read (e.g., `['ktistec://actors/123,456', 'ktistec://objects/456,789']`)
+
+#### analyze\_thread(object\_id)
+
+Analyze a conversation thread to understand its structure and activity.
+Returns key participants, timeline histogram, and notable branches.
+
+**Parameters:**
+- `object_id` (integer, required) - Database ID of any object in the thread
+
+#### get\_thread(object\_id, projection, page\_size) or get\_thread(cursor)
+
+Retrieve thread structure, metadata, and summary data for a
+conversation thread with pagination support. Supports two modes of
+operation: initial query mode and pagination mode.
+
+**Initial query mode** Return summary data and the first page of
+objects. If there are more pages, the results include a `cursor`.
+
+**Pagination mode**: Provide only the `cursor` to fetch the next page.
+Returns the next page of objects and a new `cursor` if more pages
+remain.
+
+**Parameters:**
+- `object_id` (integer) - Database ID of any object in the thread
+- `projection` (string) - Data fields to include: 'minimal' (IDs and structure only) or 'metadata' (adds authors, timestamps)
+- `page_size` (integer) - Number of objects per page
+- `cursor` (string) - Opaque pagination cursor
 
 ### Supported Collections
 

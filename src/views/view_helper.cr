@@ -739,6 +739,10 @@ module Ktistec::ViewHelper
     Ktistec::Util.render_as_text({{str}})
   end
 
+  macro …(str, n)
+    Ktistec::Util.render_as_text_and_truncate({{str}}, {{n}})
+  end
+
   # Transforms the span of time between two different times into
   # words.
   #

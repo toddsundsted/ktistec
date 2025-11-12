@@ -172,6 +172,14 @@ module Ktistec
       end
     end
 
+    # Renders content as simple text and truncates to the given
+    # length.
+    #
+    def render_as_text_and_truncate(content : String, length : Int, *, ellipsis = "…")
+      text = render_as_text(content)
+      text.size > length ? text[0, length - ellipsis.size] + ellipsis : text
+    end
+
     # Converts the array of words to comma-separated sentence form
     # where the last word is joined by a connector word (by default
     # "and").

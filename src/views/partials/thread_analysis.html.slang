@@ -63,4 +63,4 @@ turbo-frame#thread_analysis
                   a data-turbo-frame="_top" href=remote_branch_path(branch_root) aria-label="View branch #{index + 1}"
                     = attributed_to.try(&.display_name)
                 .truncated.description
-                  = t preview
+                  = … preview, 120

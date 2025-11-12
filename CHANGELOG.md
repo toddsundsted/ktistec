@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.2.0]
+### Added
+- Thread analysis displaying key participants, timeline histogram, and notable branches.
+- New MCP tools: `analyze_thread` and `get_thread`.
+- Focal point rendering support for image attachments.
+
+### Fixed
+- Regression in object visibility affecting replies to threads.
+
+### Changed
+- Enhanced MCP tool details for likes, dislikes, and announces.
+- Improved cookie security.
+
 ## [v3.1.3]
 ### Added
 - Add admin page for managing OAuth access tokens.
@@ -515,6 +528,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.2.0]: https://github.com/toddsundsted/ktistec/compare/65e9e57f...9a25965a
 [v3.1.3]: https://github.com/toddsundsted/ktistec/compare/c460d486...c06caebe
 [v3.1.2]: https://github.com/toddsundsted/ktistec/compare/ebc7405c...65fd47cb
 [v3.1.1]: https://github.com/toddsundsted/ktistec/compare/f9dd19ab...cc5f45ef

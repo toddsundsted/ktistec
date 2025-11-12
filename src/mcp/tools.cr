@@ -625,7 +625,7 @@ module MCP
         "notable_branches" => analysis.notable_branches.map do |b|
           {
             "root_id" => b.root_id,
-            "root_preview" => ActivityPub::Object.find(b.root_id).preview,
+            "root_preview" => (preview = ActivityPub::Object.find(b.root_id).preview) && Ktistec::Util.render_as_text_and_truncate(preview, 120),
             "object_count" => b.object_count,
             "author_count" => b.author_count,
             "depth_range" => [b.depth_range[0], b.depth_range[1]],

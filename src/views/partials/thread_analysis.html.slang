@@ -58,9 +58,9 @@ turbo-frame#thread_analysis
             .item role="listitem"
               - if (attributed_to = branch_root.attributed_to?) && (icon = attributed_to.icon)
                 img.ui.avatar.image data-actor-id=attributed_to.id src=icon alt="#{attributed_to.display_name}"
-              .content style="width: calc(100% - 2em)"
+              .content
                 .header
                   a data-turbo-frame="_top" href=remote_branch_path(branch_root) aria-label="View branch #{index + 1}"
                     = attributed_to.try(&.display_name)
                 .truncated.description
-                  = t preview
+                  = … preview, 120

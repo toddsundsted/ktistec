@@ -26,6 +26,17 @@ class Task
     @[Insignificant]
     property failures : Array(Failure) { [] of Failure }
 
+    # Sanitizes a message for logging.
+    #
+    private def sanitize_log_message(message : String, max_length : Int32 = 200) : String
+      sanitized = message.gsub(/\r?\n/, "\\n")
+      if sanitized.size > max_length
+        sanitized[0, max_length - 3] + "..."
+      else
+        sanitized
+      end
+    end
+
     # Determines if a recipient should be marked as "down" based on
     # recent delivery history.
     #
@@ -89,7 +100,7 @@ class Task
           client.read_timeout = 10.seconds
           response = client.post(uri.request_target, headers, body)
           unless response.success?
-            message = "failed to deliver to #{inbox}: [#{response.status_code}] #{response.body}"
+            message = "failed to deliver to #{inbox}: [#{response.status_code}] #{sanitize_log_message(response.body)}"
             # track failure for recipients using this inbox
             inbox_recipients.each do |recipient|
               failures << Failure.new(recipient, message)

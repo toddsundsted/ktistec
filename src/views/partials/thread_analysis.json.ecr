@@ -1,0 +1,60 @@
+<%
+  key_participants = analysis.key_participants
+  timeline_histogram = analysis.timeline_histogram
+  notable_branches = analysis.notable_branches
+
+  contributors = key_participants.compact_map do |participant|
+    if (actor = ActivityPub::Actor.find?(iri: participant.actor_iri))
+      {
+        actor_iri: participant.actor_iri,
+        object_count: participant.object_count,
+        depth_range: participant.depth_range,
+        time_range: [participant.time_range[0].to_rfc3339, participant.time_range[1].to_rfc3339],
+        object_ids: participant.object_ids
+      }
+    end
+  end
+
+  timeline = if timeline_histogram
+    {
+      time_range: [timeline_histogram.time_range[0].to_rfc3339, timeline_histogram.time_range[1].to_rfc3339],
+      total_objects: timeline_histogram.total_objects,
+      outliers_excluded: timeline_histogram.outliers_excluded,
+      bucket_size_minutes: timeline_histogram.bucket_size_minutes,
+      buckets: timeline_histogram.buckets.map do |bucket|
+        {
+          time_range: [bucket.time_range[0].to_rfc3339, bucket.time_range[1].to_rfc3339],
+          object_count: bucket.object_count,
+          cumulative_count: bucket.cumulative_count,
+          author_count: bucket.author_count,
+          object_ids: bucket.object_ids
+        }
+      end
+    }
+  end
+
+  branches = notable_branches.compact_map do |branch|
+    if (branch_root = ActivityPub::Object.find?(branch.root_id))
+      {
+        root_id: branch.root_id,
+        object_count: branch.object_count,
+        author_count: branch.author_count,
+        depth_range: branch.depth_range,
+        time_range: [branch.time_range[0]?.try(&.to_rfc3339), branch.time_range[1]?.try(&.to_rfc3339)],
+        object_ids: branch.object_ids
+      }
+    end
+  end
+
+  output = {
+    thread_id: analysis.thread_id,
+    root_object_id: analysis.root_object_id,
+    object_count: analysis.object_count,
+    author_count: analysis.author_count,
+    max_depth: analysis.max_depth,
+    duration_ms: analysis.duration_ms,
+    contributors: contributors,
+    timeline: timeline,
+    branches: branches
+  }
+%><%= output.to_json %>

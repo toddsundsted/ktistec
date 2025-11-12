@@ -417,7 +417,11 @@ Spectator.describe MCP::Resources do
 
           actors = likes["actors"].as_a
           expect(actors.size).to eq(1)
-          expect(actors.first["uri"]).to eq("ktistec://actors/#{liker.id}")
+
+          actor = actors.first
+          expect(actor["uri"]).to eq("ktistec://actors/#{liker.id}")
+          expect(actor["handle"]).to eq(liker.handle)
+          expect(actor["liked_at"]).not_to be_nil
         end
       end
 
@@ -436,7 +440,11 @@ Spectator.describe MCP::Resources do
 
           actors = dislikes["actors"].as_a
           expect(actors.size).to eq(1)
-          expect(actors.first["uri"]).to eq("ktistec://actors/#{disliker.id}")
+
+          actor = actors.first
+          expect(actor["uri"]).to eq("ktistec://actors/#{disliker.id}")
+          expect(actor["handle"]).to eq(disliker.handle)
+          expect(actor["disliked_at"]).not_to be_nil
         end
       end
 
@@ -455,7 +463,11 @@ Spectator.describe MCP::Resources do
 
           actors = announces["actors"].as_a
           expect(actors.size).to eq(1)
-          expect(actors.first["uri"]).to eq("ktistec://actors/#{announcer.id}")
+
+          actor = actors.first
+          expect(actor["uri"]).to eq("ktistec://actors/#{announcer.id}")
+          expect(actor["handle"]).to eq(announcer.handle)
+          expect(actor["announced_at"]).not_to be_nil
         end
       end
 

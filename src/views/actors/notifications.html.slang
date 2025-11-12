@@ -31,9 +31,9 @@
                 | shared
               a< href=remote_object_path(activity.object) your post
               | .
-            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+            - if (content = activity.object.preview)
               .extra.meta.truncated
-                == content
+                = t content
         - in Relationship::Content::Notification::Like
           crystal:
             activity = notification.activity
@@ -52,9 +52,9 @@
                 | liked
               a< href=remote_object_path(activity.object) your post
               | .
-            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+            - if (content = activity.object.preview)
               .extra.meta.truncated
-                == content
+                = t content
         - in Relationship::Content::Notification::Dislike
           crystal:
             activity = notification.activity
@@ -73,13 +73,13 @@
                 | disliked
               a< href=remote_object_path(activity.object) your post
               | .
-            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+            - if (content = activity.object.preview)
               .extra.meta.truncated
-                == content
+                = t content
         - in Relationship::Content::Notification::Reply
           crystal:
             object = notification.object
-            content = Ktistec::Util.render_as_text(object.content).presence
+            content = object.preview
             attributed_to = object.attributed_to
             in_reply_to = object.in_reply_to
           .label
@@ -95,11 +95,11 @@
               | .
             - if content
               .extra.meta.truncated
-                == content
+                = t content
         - in Relationship::Content::Notification::Mention
           crystal:
             object = notification.object
-            content = Ktistec::Util.render_as_text(object.content).presence
+            content = object.preview
             attributed_to = object.attributed_to
           .label
             - if (icon = attributed_to.icon)
@@ -113,12 +113,12 @@
               | you.
             - if content
               .extra.meta.truncated
-                == content
+                = t content
         - in Relationship::Content::Notification::Follow::Hashtag
           crystal:
             name = notification.name
             object = Tag::Hashtag.most_recent_object(name)
-            content = object ? Ktistec::Util.render_as_text(object.content).presence : nil
+            content = object ? object.preview : nil
             attributed_to = object.try(&.attributed_to)
           .label
             - if attributed_to && (icon = attributed_to.icon)
@@ -132,12 +132,12 @@
               | .
             - if content
               .extra.meta.truncated
-                == content
+                = t content
         - in Relationship::Content::Notification::Follow::Mention
           crystal:
             name = notification.name
             object = Tag::Mention.most_recent_object(name)
-            content = object ? Ktistec::Util.render_as_text(object.content).presence : nil
+            content = object ? object.preview : nil
             attributed_to = object.try(&.attributed_to)
           .label
             - if attributed_to && (icon = attributed_to.icon)
@@ -151,7 +151,7 @@
               | .
             - if content
               .extra.meta.truncated
-                == content
+                = t content
         - in Relationship::Content::Notification::Follow
           - activity = notification.activity
           .label
@@ -179,7 +179,7 @@
         - in Relationship::Content::Notification::Follow::Thread
           crystal:
             object = notification.object
-            content = Ktistec::Util.render_as_text(object.content).presence
+            content = object.preview
             attributed_to = object.attributed_to
           .label
             - if (icon = attributed_to.icon)
@@ -198,7 +198,7 @@
                 | you follow.
             - if content
               .extra.meta.truncated
-                == content
+                = t content
         - in Relationship::Content::Notification
           / This can't happen!
   == paginate(env, notifications)

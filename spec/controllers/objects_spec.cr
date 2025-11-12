@@ -78,6 +78,20 @@ Spectator.describe ObjectsController do
       expect(result).to eq(visible)
     end
 
+    it "returns visible reply objects" do
+      result = ObjectsController.get_object(env, reply.iri)
+      expect(result).to eq(reply)
+    end
+
+    context "given a not-visible reply" do
+      before_each { reply.assign(visible: false).save }
+
+      it "returns nil for non-visible objects" do
+        result = ObjectsController.get_object(env, reply.iri)
+        expect(result).to be_nil
+      end
+    end
+
     it "returns nil for non-visible objects" do
       result = ObjectsController.get_object(env, notvisible.iri)
       expect(result).to be_nil
@@ -85,11 +99,6 @@ Spectator.describe ObjectsController do
 
     it "returns nil for draft objects" do
       result = ObjectsController.get_object(env, draft.iri)
-      expect(result).to be_nil
-    end
-
-    it "returns nil for reply objects" do
-      result = ObjectsController.get_object(env, reply.iri)
       expect(result).to be_nil
     end
 
@@ -101,6 +110,20 @@ Spectator.describe ObjectsController do
         expect(result).to eq(visible)
       end
 
+      it "returns visible reply objects" do
+        result = ObjectsController.get_object(env, reply.iri)
+        expect(result).to eq(reply)
+      end
+
+      context "given a not-visible reply" do
+        before_each { reply.assign(visible: false).save }
+
+        it "returns nil for non-visible objects" do
+          result = ObjectsController.get_object(env, reply.iri)
+          expect(result).to be_nil
+        end
+      end
+
       it "returns nil for non-visible objects" do
         result = ObjectsController.get_object(env, notvisible.iri)
         expect(result).to be_nil
@@ -108,11 +131,6 @@ Spectator.describe ObjectsController do
 
       it "returns nil for draft objects" do
         result = ObjectsController.get_object(env, draft.iri)
-        expect(result).to be_nil
-      end
-
-      it "returns nil for reply objects" do
-        result = ObjectsController.get_object(env, reply.iri)
         expect(result).to be_nil
       end
 
@@ -322,6 +340,25 @@ Spectator.describe ObjectsController do
       expect(JSON.parse(response.body)["id"]).to eq(visible.iri)
     end
 
+    it "succeeds with a visible reply" do
+      get "/objects/#{reply.uid}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+    end
+
+    it "succeeds with a visible reply" do
+      get "/objects/#{reply.uid}", ACCEPT_JSON
+      expect(response.status_code).to eq(200)
+    end
+
+    context "given a not-visible reply" do
+      before_each { reply.assign(visible: false).save }
+
+      it "returns 404" do
+        get "/objects/#{reply.uid}"
+        expect(response.status_code).to eq(404)
+      end
+    end
+
     it "returns 404 if object is a draft" do
       get "/objects/#{draft.uid}"
       expect(response.status_code).to eq(404)
@@ -329,11 +366,6 @@ Spectator.describe ObjectsController do
 
     it "returns 404 if object is not visible" do
       get "/objects/#{notvisible.uid}"
-      expect(response.status_code).to eq(404)
-    end
-
-    it "returns 404 if object is a reply" do
-      get "/objects/#{reply.uid}"
       expect(response.status_code).to eq(404)
     end
 
@@ -445,11 +477,6 @@ Spectator.describe ObjectsController do
       expect(response.status_code).to eq(404)
     end
 
-    it "returns 404 if object is a reply" do
-      get "/objects/#{reply.uid}/replies"
-      expect(response.status_code).to eq(404)
-    end
-
     it "returns 404 if object is remote" do
       get "/objects/#{remote.uid}/replies"
       expect(response.status_code).to eq(404)
@@ -489,11 +516,6 @@ Spectator.describe ObjectsController do
 
     it "returns 404 if object is not visible" do
       get "/objects/#{notvisible.uid}/thread"
-      expect(response.status_code).to eq(404)
-    end
-
-    it "returns 404 if object is a reply" do
-      get "/objects/#{reply.uid}/thread"
       expect(response.status_code).to eq(404)
     end
 
@@ -1062,7 +1084,7 @@ Spectator.describe ObjectsController do
         before_each { remote.assign(visible: true).save }
 
         it "succeeds" do
-          get "/remote/objects/#{remote.id}"
+          get "/remote/objects/#{remote.id}/thread"
           expect(response.status_code).to eq(200)
         end
       end
@@ -1109,6 +1131,173 @@ Spectator.describe ObjectsController do
 
         it "renders the collection" do
           get "/remote/objects/#{visible.id}/thread", ACCEPT_JSON
+          expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri, notvisible.iri)
+        end
+      end
+    end
+  end
+
+  describe "GET /remote/objects/:id/thread/analysis" do
+    # create enough replies for timeline histogram (needs 2+ objects)
+    # and notable branches (needs 5+ objects in a subtree)
+
+    let_create!(:object, named: :branch_root, attributed_to: actor, in_reply_to: visible, published: published + 5.minutes, visible: true)
+    let_create!(:object, named: nil, attributed_to: author, in_reply_to: branch_root, published: published + 10.minutes, visible: true)
+    let_create!(:object, named: reply2, attributed_to: author, in_reply_to: branch_root, published: published + 15.minutes, visible: true)
+    let_create!(:object, named: nil, attributed_to: author, in_reply_to: reply2, published: published + 20.minutes, visible: true)
+    let_create!(:object, named: nil, attributed_to: author, in_reply_to: reply2, published: published + 25.minutes, visible: true)
+    let_create!(:object, named: nil, attributed_to: author, in_reply_to: reply2, published: published + 30.minutes, visible: true)
+
+    it "returns 401" do
+      get "/remote/objects/0/thread/analysis"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the contributors" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'contributors')]")).not_to be_empty
+      end
+
+      it "renders the contributors" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("contributors").as_a).not_to be_empty
+      end
+
+      it "renders the timeline" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'timeline')]")).not_to be_empty
+      end
+
+      it "renders the timeline" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("timeline").as_h).not_to be_empty
+      end
+
+      it "renders the branches" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'branches')]")).not_to be_empty
+      end
+
+      it "renders the branches" do
+        get "/remote/objects/#{visible.id}/thread/analysis", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("branches").as_a).not_to be_empty
+      end
+
+      it "returns 404 if object is not visible" do
+        get "/remote/objects/#{notvisible.id}/thread/analysis"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is remote" do
+        get "/remote/objects/#{remote.id}/thread/analysis"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "GET /remote/objects/:id/branch" do
+    it "returns 401" do
+      get "/remote/objects/0/branch"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/branch", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/branch", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the collection" do
+        get "/remote/objects/#{visible.id}/branch", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}")
+      end
+
+      it "renders the collection" do
+        get "/remote/objects/#{visible.id}/branch", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri)
+      end
+
+      it "returns 404 if object is not visible" do
+        get "/remote/objects/#{notvisible.id}/branch"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is remote" do
+        get "/remote/objects/#{remote.id}/branch"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "if remote object is visible" do
+        before_each { remote.assign(visible: true).save }
+
+        it "succeeds" do
+          get "/remote/objects/#{remote.id}/branch"
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      it "returns 404 if object is draft" do
+        get "/remote/objects/#{draft.id}/branch"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        get "/remote/objects/0/branch"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "and it's in the user's inbox" do
+        before_each do
+          [visible, notvisible, remote].each { |object| put_in_inbox(actor, object) }
+        end
+
+        it "succeeds" do
+          [visible, notvisible, remote].each do |object|
+            get "/remote/objects/#{object.id}/branch", ACCEPT_HTML
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        it "succeeds" do
+          [visible, notvisible, remote].each do |object|
+            get "/remote/objects/#{object.id}/branch", ACCEPT_JSON
+            expect(response.status_code).to eq(200)
+          end
+        end
+      end
+
+      context "with replies" do
+        before_each do
+          notvisible.assign(in_reply_to: visible).save
+        end
+
+        it "renders the collection" do
+          get "/remote/objects/#{visible.id}/branch", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}", "object-#{notvisible.id}")
+        end
+
+        it "renders the collection" do
+          get "/remote/objects/#{visible.id}/branch", ACCEPT_JSON
           expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri, notvisible.iri)
         end
       end

@@ -4,7 +4,7 @@ crystal:
 turbo-frame#tag_page_tag_controls
   .ui.thread.segments
     .ui.segment
-      p
+      p: strong
         a href=hashtag_path(hashtag) ##{hashtag}
         - if count > 0
           span< #{pluralize(count, "hashtag")}

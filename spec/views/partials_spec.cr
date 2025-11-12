@@ -246,6 +246,38 @@ Spectator.describe "partials" do
           not_to contain("Cancel")
       end
     end
+
+    context "given a thread with <10 posts" do
+      let(:thread) { Array.new(5) { object } }
+
+      it "does not render the full analysis link" do
+        expect(subject.xpath_nodes("//a[contains(text(),'full analysis')]")).to be_empty
+      end
+    end
+
+    context "given a thread with 10+ posts" do
+      let(:thread) { Array.new(15) { object } }
+
+      it "renders the full analysis link" do
+        expect(subject.xpath_nodes("//a[contains(text(),'full analysis')]")).not_to be_empty
+      end
+
+      context "given a fetch task" do
+        let(task) { new_double(:task, running: true, complete: false) }
+
+        it "does not render the full analysis link" do
+          expect(subject.xpath_nodes("//a[contains(text(),'full analysis')]")).to be_empty
+        end
+
+        context "that is not running" do
+          let(task) { new_double(:task, running: false, complete: true) }
+
+          it "renders the full analysis link" do
+            expect(subject.xpath_nodes("//a[contains(text(),'full analysis')]")).not_to be_empty
+          end
+        end
+      end
+    end
   end
 
   describe "actor-panel.html.slang" do

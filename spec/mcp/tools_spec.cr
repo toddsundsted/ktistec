@@ -8,6 +8,8 @@ Spectator.describe MCP::Tools do
 
   let!(account) { register }
 
+  let(now) { Time.utc }
+
   MCP::Tools.def_tool("test_tool", "A test tool for `def_tool` macro testing", [
     {name: "user", type: "string", description: "User ID", required: true, matches: /^[a-z]+[a-z0-9_]+$/},
     {name: "query", type: "string", description: "Search terms", required: true},
@@ -323,7 +325,7 @@ Spectator.describe MCP::Tools do
       response = described_class.handle_tools_list(tools_list_request)
 
       tools = response["tools"].as_a
-      expect(tools.size).to eq(5)
+      expect(tools.size).to eq(7)
 
       expect(tools[-2]["name"]).to eq("test_tool")
       expect(tools[-1]["name"]).to eq("test_array_tool")
@@ -493,8 +495,8 @@ Spectator.describe MCP::Tools do
       end
 
       context "with a mention in the notifications" do
-        let_create(:object, attributed_to: account.actor)
-        let_create(:create, actor: account.actor, object: object)
+        let_create(:object)
+        let_create(:create, object: object)
 
         before_each do
           put_in_notifications(account.actor, mention: create)
@@ -507,15 +509,31 @@ Spectator.describe MCP::Tools do
 
           mention = notifications.first
           expect(mention["type"]).to eq("mention")
-          expect(mention["object"]).to eq("ktistec://objects/#{object.id}")
+          expect(mention["status"]).to eq("new")
+          expect(mention["object_id"].as_i64).to eq(object.id)
+          expect(mention["actor_id"].as_i64).to eq(object.attributed_to.id)
           expect(mention["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(mention["created_at"]).not_to be_nil
+        end
+
+        context "with a like" do
+          let_create!(:like, actor: account.actor, object: object)
+
+          it "returns liked status" do
+            request = paginate_notifications_request("paginate-notifications-liked-1")
+
+            notifications = expect_paginated_response(request, 1, false)
+
+            mention = notifications.first
+            expect(mention["status"]).to eq(["liked"])
+          end
         end
       end
 
       context "with a reply in the notifications" do
-        let_create(:object, attributed_to: account.actor)
-        let_create(:create, actor: account.actor, object: object)
+        let_create(:object, named: :parent, attributed_to: account.actor)
+        let_create(:object, in_reply_to: parent)
+        let_create(:create, object: object)
 
         before_each do
           put_in_notifications(account.actor, reply: create)
@@ -528,9 +546,38 @@ Spectator.describe MCP::Tools do
 
           reply = notifications.first
           expect(reply["type"]).to eq("reply")
-          expect(reply["object"]).to eq("ktistec://objects/#{object.id}")
+          expect(reply["status"]).to eq("new")
+          expect(reply["object_id"].as_i64).to eq(object.id)
+          expect(reply["actor_id"].as_i64).to eq(object.attributed_to.id)
+          expect(reply["parent_id"].as_i64).to eq(object.in_reply_to.id)
           expect(reply["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(reply["created_at"]).not_to be_nil
+        end
+
+        context "with a reply" do
+          let_create!(:object, named: :user_reply, attributed_to: account.actor, in_reply_to: object)
+
+          it "returns replied status" do
+            request = paginate_notifications_request("paginate-notifications-replied-1")
+
+            notifications = expect_paginated_response(request, 1, false)
+
+            reply = notifications.first
+            expect(reply["status"]).to eq(["replied"])
+          end
+        end
+
+        context "with an announce" do
+          let_create!(:announce, actor: account.actor, object: object)
+
+          it "returns announced status" do
+            request = paginate_notifications_request("paginate-notifications-announced-1")
+
+            notifications = expect_paginated_response(request, 1, false)
+
+            reply = notifications.first
+            expect(reply["status"]).to eq(["announced"])
+          end
         end
       end
 
@@ -550,8 +597,8 @@ Spectator.describe MCP::Tools do
           follow_notification = notifications.first
           expect(follow_notification["type"]).to eq("follow")
           expect(follow_notification["status"]).to eq("new")
-          expect(follow_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
-          expect(follow_notification["object"]).to eq("ktistec://users/#{account.id}")
+          expect(follow_notification["follower_id"].as_i64).to eq(bob.id)
+          expect(follow_notification["followee_id"].as_i64).to eq(account.id)
           expect(follow_notification["action_url"]).to eq("#{Ktistec.host}/remote/actors/#{bob.id}")
           expect(follow_notification["created_at"]).not_to be_nil
         end
@@ -599,10 +646,21 @@ Spectator.describe MCP::Tools do
 
           like_notification = notifications.first
           expect(like_notification["type"]).to eq("like")
-          expect(like_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
-          expect(like_notification["object"]).to eq("ktistec://objects/#{object.id}")
+          expect(like_notification["total_likes"]).to eq(1)
+          expect(like_notification["object_id"].as_i64).to eq(object.id)
           expect(like_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(like_notification["created_at"]).not_to be_nil
+
+          latest_likes = like_notification["latest_likes"].as_h
+          expect(latest_likes["count"]).to eq(1)
+
+          actors = latest_likes["actors"].as_a
+          expect(actors.size).to eq(1)
+
+          actor = actors.first
+          expect(actor["actor_id"].as_i64).to eq(bob.id)
+          expect(actor["handle"]).to eq(bob.handle)
+          expect(actor["liked_at"]).not_to be_nil
         end
       end
 
@@ -622,10 +680,21 @@ Spectator.describe MCP::Tools do
 
           dislike_notification = notifications.first
           expect(dislike_notification["type"]).to eq("dislike")
-          expect(dislike_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
-          expect(dislike_notification["object"]).to eq("ktistec://objects/#{object.id}")
+          expect(dislike_notification["total_dislikes"]).to eq(1)
+          expect(dislike_notification["object_id"].as_i64).to eq(object.id)
           expect(dislike_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(dislike_notification["created_at"]).not_to be_nil
+
+          latest_dislikes = dislike_notification["latest_dislikes"].as_h
+          expect(latest_dislikes["count"]).to eq(1)
+
+          actors = latest_dislikes["actors"].as_a
+          expect(actors.size).to eq(1)
+
+          actor = actors.first
+          expect(actor["actor_id"].as_i64).to eq(bob.id)
+          expect(actor["handle"]).to eq(bob.handle)
+          expect(actor["disliked_at"]).not_to be_nil
         end
       end
 
@@ -645,14 +714,27 @@ Spectator.describe MCP::Tools do
 
           announce_notification = notifications.first
           expect(announce_notification["type"]).to eq("announce")
-          expect(announce_notification["actor"]).to eq("ktistec://actors/#{bob.id}")
-          expect(announce_notification["object"]).to eq("ktistec://objects/#{object.id}")
+          expect(announce_notification["total_announces"]).to eq(1)
+          expect(announce_notification["object_id"].as_i64).to eq(object.id)
           expect(announce_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
           expect(announce_notification["created_at"]).not_to be_nil
+
+          latest_announces = announce_notification["latest_announces"].as_h
+          expect(latest_announces["count"]).to eq(1)
+
+          actors = latest_announces["actors"].as_a
+          expect(actors.size).to eq(1)
+
+          actor = actors.first
+          expect(actor["actor_id"].as_i64).to eq(bob.id)
+          expect(actor["handle"]).to eq(bob.handle)
+          expect(actor["announced_at"]).not_to be_nil
         end
       end
 
       context "with a new post to a followed hashtag in the notifications" do
+        let_create!(:object, content: "Post about #rails programming", published: now)
+        let_create!(:hashtag, subject: object, name: "rails")
         let_create!(:notification_follow_hashtag, owner: account.actor, name: "rails")
 
         it "returns follow hashtag notification for valid request" do
@@ -663,12 +745,17 @@ Spectator.describe MCP::Tools do
           follow_hashtag_notification = notifications.first
           expect(follow_hashtag_notification["type"]).to eq("follow_hashtag")
           expect(follow_hashtag_notification["hashtag"]).to eq("rails")
+          expect(follow_hashtag_notification["latest_object_id"].as_i64).to eq(object.id)
           expect(follow_hashtag_notification["action_url"]).to eq("#{Ktistec.host}/tags/rails")
           expect(follow_hashtag_notification["created_at"]).not_to be_nil
+          created_at = Time.parse_rfc3339(follow_hashtag_notification["created_at"].as_s)
+          expect(created_at).to be_within(1.second).of(notification_follow_hashtag.created_at)
         end
       end
 
       context "with a new post to a followed mention in the notifications" do
+        let_create!(:object, content: "Hello @alice@example.com how are you?", published: now)
+        let_create!(:mention, subject: object, name: "alice@example.com")
         let_create!(:notification_follow_mention, owner: account.actor, name: "alice@example.com")
 
         it "returns follow mention notification for valid request" do
@@ -679,8 +766,10 @@ Spectator.describe MCP::Tools do
           follow_mention_notification = notifications.first
           expect(follow_mention_notification["type"]).to eq("follow_mention")
           expect(follow_mention_notification["mention"]).to eq("alice@example.com")
+          expect(follow_mention_notification["latest_object_id"].as_i64).to eq(object.id)
           expect(follow_mention_notification["action_url"]).to eq("#{Ktistec.host}/mentions/alice@example.com")
-          expect(follow_mention_notification["created_at"]).not_to be_nil
+          created_at = Time.parse_rfc3339(follow_mention_notification["created_at"].as_s)
+          expect(created_at).to be_within(1.second).of(notification_follow_mention.created_at)
         end
       end
 
@@ -696,13 +785,15 @@ Spectator.describe MCP::Tools do
           follow_thread_notification = notifications.first
           expect(follow_thread_notification["type"]).to eq("follow_thread")
           expect(follow_thread_notification["thread"]).to eq(object.thread)
+          expect(follow_thread_notification["latest_object_id"].as_i64).to eq(object.id)
           expect(follow_thread_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}/thread")
-          expect(follow_thread_notification["created_at"]).not_to be_nil
+          created_at = Time.parse_rfc3339(follow_thread_notification["created_at"].as_s)
+          expect(created_at).to be_within(1.second).of(notification_follow_thread.created_at)
         end
       end
 
       context "with an object in the timeline" do
-        let_create!(:object, attributed_to: account.actor, published: Time.utc)
+        let_create!(:object, attributed_to: account.actor, published: now)
 
         before_each do
           put_in_timeline(account.actor, object)
@@ -725,7 +816,7 @@ Spectator.describe MCP::Tools do
       end
 
       context "with an object in actor's posts" do
-        let_create!(:object, attributed_to: account.actor, published: Time.utc)
+        let_create!(:object, attributed_to: account.actor, published: now)
         let_create!(:create, actor: account.actor, object: object)
 
         before_each do
@@ -947,7 +1038,7 @@ Spectator.describe MCP::Tools do
       end
 
       context "with a liked object" do
-        let_create(:object, named: liked_post, attributed_to: account.actor, published: Time.utc)
+        let_create(:object, named: liked_post, attributed_to: account.actor, published: now)
 
         it "is empty" do
           request = paginate_likes_request("paginate-likes-1")
@@ -1035,7 +1126,7 @@ Spectator.describe MCP::Tools do
       end
 
       context "with an announced object" do
-        let_create(:object, named: announced_post, attributed_to: account.actor, published: Time.utc)
+        let_create(:object, named: announced_post, attributed_to: account.actor, published: now)
 
         it "is empty" do
           request = paginate_announces_request("paginate-announces-1")
@@ -1097,7 +1188,8 @@ Spectator.describe MCP::Tools do
             objects = expect_paginated_response(request, 1, false)
 
             relationship = objects.first.as_h
-            expect(relationship["actor"]).to eq("ktistec://actors/#{follower.id}")
+            expect(relationship["actor_id"].as_i64).to eq(follower.id)
+            expect(relationship["actor_handle"].as_s).to eq(follower.handle)
             expect(relationship["confirmed"]).to eq(true)
           end
 
@@ -1111,11 +1203,11 @@ Spectator.describe MCP::Tools do
               objects = expect_paginated_response(request, 2, false)
 
               unconfirmed_relationship = objects[0].as_h
-              expect(unconfirmed_relationship["actor"]).to eq("ktistec://actors/#{unconfirmed_follower.id}")
+              expect(unconfirmed_relationship["actor_id"].as_i64).to eq(unconfirmed_follower.id)
               expect(unconfirmed_relationship["confirmed"]).to eq(false)
 
               confirmed_relationship = objects[1].as_h
-              expect(confirmed_relationship["actor"]).to eq("ktistec://actors/#{follower.id}")
+              expect(confirmed_relationship["actor_id"].as_i64).to eq(follower.id)
               expect(confirmed_relationship["confirmed"]).to eq(true)
             end
 
@@ -1126,7 +1218,7 @@ Spectator.describe MCP::Tools do
 
               # returns most recent follower first
               relationship = objects.first.as_h
-              expect(relationship["actor"]).to eq("ktistec://actors/#{unconfirmed_follower.id}")
+              expect(relationship["actor_id"].as_i64).to eq(unconfirmed_follower.id)
             end
           end
         end
@@ -1151,7 +1243,8 @@ Spectator.describe MCP::Tools do
             objects = expect_paginated_response(request, 1, false)
 
             relationship = objects.first.as_h
-            expect(relationship["actor"]).to eq("ktistec://actors/#{followed_actor.id}")
+            expect(relationship["actor_id"].as_i64).to eq(followed_actor.id)
+            expect(relationship["actor_handle"].as_s).to eq(followed_actor.handle)
             expect(relationship["confirmed"]).to eq(true)
           end
 
@@ -1165,11 +1258,11 @@ Spectator.describe MCP::Tools do
               objects = expect_paginated_response(request, 2, false)
 
               unconfirmed_relationship = objects[0].as_h
-              expect(unconfirmed_relationship["actor"]).to eq("ktistec://actors/#{unconfirmed_followed.id}")
+              expect(unconfirmed_relationship["actor_id"].as_i64).to eq(unconfirmed_followed.id)
               expect(unconfirmed_relationship["confirmed"]).to eq(false)
 
               confirmed_relationship = objects[1].as_h
-              expect(confirmed_relationship["actor"]).to eq("ktistec://actors/#{followed_actor.id}")
+              expect(confirmed_relationship["actor_id"].as_i64).to eq(followed_actor.id)
               expect(confirmed_relationship["confirmed"]).to eq(true)
             end
 
@@ -1180,7 +1273,7 @@ Spectator.describe MCP::Tools do
 
               # returns most recent following first
               relationship = objects.first.as_h
-              expect(relationship["actor"]).to eq("ktistec://actors/#{unconfirmed_followed.id}")
+              expect(relationship["actor_id"].as_i64).to eq(unconfirmed_followed.id)
             end
           end
         end
@@ -1239,7 +1332,7 @@ Spectator.describe MCP::Tools do
         content = response["content"].as_a
         expect(content.size).to eq(1)
         data = JSON.parse(content.first["text"].as_s)
-        expect(Time.parse_rfc3339(data["counted_at"].as_s)).to be_within(5.seconds).of(Time.utc)
+        expect(Time.parse_rfc3339(data["counted_at"].as_s)).to be_within(5.seconds).of(now)
         expect(data["count"]).to eq(expected_count)
       end
 
@@ -1645,6 +1738,306 @@ Spectator.describe MCP::Tools do
         request = read_resources_request("read-7", ["ktistec://invalid/123"])
 
         expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Unsupported URI scheme: ktistec:\/\/invalid\/123/)
+      end
+    end
+
+    context "with get_thread tool" do
+      let_create!(:actor, named: :op_actor, local: true)
+      let_create!(:object, named: :root_note, attributed_to: op_actor, visible: true)
+      let_create!(:object, named: :reply1, attributed_to: op_actor, in_reply_to: root_note, visible: true)
+      let_create!(:actor, named: :other_actor, local: true)
+      let_create!(:object, named: :reply2, attributed_to: other_actor, in_reply_to: root_note, visible: true)
+      let_create!(:object, named: :reply3, attributed_to: other_actor, in_reply_to: reply1, visible: true)
+
+      private def get_thread_request(id, object_id, projection = nil, page_size = 5)
+        args_hash = {"object_id" => object_id, "projection" => projection, "page_size" => page_size}.compact
+        args_json = args_hash.map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
+        JSON::RPC::Request.from_json(%Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "get_thread", "arguments": {#{args_json}}}}|)
+      end
+
+      it "retrieves thread with minimal projection" do
+        request = get_thread_request("get-thread-1", root_note.id, "minimal")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        expect(content.size).to eq(1)
+
+        data = JSON.parse(content.first["text"].as_s)
+        expect(data["projection"]).to eq("minimal")
+        expect(data["objects_count"]).to eq(4)
+
+        objects = data["objects"].as_a
+        first_object = objects.first.as_h
+
+        expect(first_object.keys).to contain_exactly("object_id", "iri", "parent_id", "thread", "depth")
+
+        expect(first_object["object_id"].as_i64).to eq(root_note.id)
+        expect(first_object["iri"].as_s).to eq(root_note.iri)
+        expect(first_object["parent_id"].as_nil).to be_nil
+        expect(first_object["thread"].as_s).to eq(root_note.thread)
+        expect(first_object["depth"].as_i).to eq(0)
+      end
+
+      it "retrieves thread with metadata projection" do
+        request = get_thread_request("get-thread-2", root_note.id, "metadata")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        expect(content.size).to eq(1)
+
+        data = JSON.parse(content.first["text"].as_s)
+        expect(data["projection"]).to eq("metadata")
+        expect(data["objects_count"]).to eq(4)
+
+        objects = data["objects"].as_a
+        first_object = objects.first.as_h
+
+        expect(first_object.keys).to contain_exactly("object_id", "iri", "actor", "parent_id", "thread", "published", "deleted", "blocked", "hashtags", "mentions", "depth")
+
+        expect(first_object["object_id"].as_i64).to eq(root_note.id)
+        expect(first_object["iri"].as_s).to eq(root_note.iri)
+        actor_data = first_object["actor"].as_h
+        expect(actor_data["id"].as_i64).to eq(op_actor.id)
+        expect(actor_data["handle"].as_s).to eq(op_actor.handle)
+        expect(first_object["parent_id"].as_nil).to be_nil
+        expect(first_object["thread"].as_s).to eq(root_note.thread)
+        expect(first_object["published"].as_nil).to be_nil
+        expect(first_object["depth"].as_i).to eq(0)
+      end
+
+      it "defaults to metadata projection" do
+        request = get_thread_request("get-thread-3", root_note.id)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["projection"]).to eq("metadata")
+      end
+
+      it "calculates summary statistics" do
+        request = get_thread_request("get-thread-4", root_note.id, "metadata")
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["root_object_id"]).to eq(root_note.id)
+        expect(data["objects_count"]).to eq(4)
+        expect(data["authors_count"]).to eq(2)
+        expect(data["max_depth"]).to eq(2)
+      end
+
+      it "rejects invalid object_id" do
+        request = get_thread_request("get-thread-5", 999999)
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Object not found/)
+      end
+
+      it "rejects invalid projection name" do
+        request = get_thread_request("get-thread-6", root_note.id, "invalid")
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Projection must be/)
+      end
+
+      private def get_thread_continuation_request(id, cursor)
+        args_hash = {"cursor" => cursor}
+        args_json = args_hash.map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
+        JSON::RPC::Request.from_json(%Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "get_thread", "arguments": {#{args_json}}}}|)
+      end
+
+      it "returns cursor when thread exceeds page size" do
+        request = get_thread_request("get-thread-paginate-1", root_note.id, "metadata", 1)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["objects"].as_a.size).to eq(1)
+        expect(data["cursor"].as_s).not_to be_nil
+        expect(data["has_more"]).to eq(true)
+      end
+
+      it "fetches subsequent pages using cursor" do
+        request = get_thread_request("get-thread-paginate-2", root_note.id, "metadata", 1)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["objects"].as_a.size).to eq(1)
+        expect(data["cursor"].as_s).not_to be_nil
+        expect(data["has_more"]).to eq(true)
+
+        cursor = data["cursor"].as_s
+
+        request = get_thread_continuation_request("get-thread-page-2", cursor)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["objects"].as_a.size).to eq(1)
+        expect(data["cursor"].as_s).not_to be_nil
+        expect(data["has_more"]).to eq(true)
+      end
+
+      it "returns nil cursor on last page" do
+        request = get_thread_request("get-thread-paginate-3", root_note.id, "metadata", 3)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["objects"].as_a.size).to eq(3)
+        expect(data["cursor"].as_s).not_to be_nil
+        expect(data["has_more"]).to eq(true)
+
+        cursor = data["cursor"].as_s
+
+        request = get_thread_continuation_request("get-thread-page-3", cursor)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        expect(data["objects"].as_a.size).to eq(1)
+        expect(data["cursor"].as_nil).to be_nil
+        expect(data["has_more"]).to eq(false)
+      end
+
+      it "raises error for invalid cursor" do
+        request = get_thread_continuation_request("get-thread-page-bad-1", "invalid-cursor-string")
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Malformed cursor/)
+      end
+
+      it "rejects request with both object_id and cursor" do
+        args_json = %Q|"object_id": 123, "cursor": "abc"|
+        request = JSON::RPC::Request.from_json(%Q|{"jsonrpc": "2.0", "id": "get-thread-both", "method": "tools/call", "params": {"name": "get_thread", "arguments": {#{args_json}}}}|)
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Cannot provide both/)
+      end
+
+      it "rejects request with neither object_id nor cursor" do
+        args_json = %Q|"projection": "metadata"|
+        request = JSON::RPC::Request.from_json(%Q|{"jsonrpc": "2.0", "id": "get-thread-neither", "method": "tools/call", "params": {"name": "get_thread", "arguments": {#{args_json}}}}|)
+
+        expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Must provide either/)
+      end
+    end
+
+    context "with analyze_thread tool" do
+      let_create!(:actor, named: :op_actor, local: true)
+      let_create!(:object, named: :root_note, attributed_to: op_actor, visible: true, published: Time.utc)
+      let_create!(:object, named: :reply1, attributed_to: op_actor, in_reply_to: root_note, visible: true, published: Time.utc + 1.minute)
+      let_create!(:actor, named: :second_actor, local: true)
+      let_create!(:object, named: :reply2, attributed_to: second_actor, in_reply_to: root_note, visible: true, content: "first notable branch", published: Time.utc + 2.minutes)
+      let_create!(:object, named: :reply3, attributed_to: second_actor, in_reply_to: reply1, visible: true, published: Time.utc + 3.minutes)
+      let_create!(:actor, named: :third_actor, local: true)
+      let_create!(:object, named: :reply4, attributed_to: third_actor, in_reply_to: reply2, visible: true, published: Time.utc + 4.minutes)
+      let_create!(:object, named: :reply5, attributed_to: third_actor, in_reply_to: reply2, visible: true, published: Time.utc + 5.minutes)
+      let_create!(:object, named: :reply6, attributed_to: third_actor, in_reply_to: reply2, visible: true, published: Time.utc + 6.minutes)
+      let_create!(:object, named: :reply7, attributed_to: third_actor, in_reply_to: reply2, visible: true, published: Time.utc + 7.minutes)
+
+      private def analyze_thread_request(id, object_id)
+        JSON::RPC::Request.from_json(
+          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "analyze_thread", "arguments": {"object_id": #{object_id}}}}|
+        )
+      end
+
+      it "returns basic thread statistics" do
+        request = analyze_thread_request("analyze-thread-1", root_note.id)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        expect(content.size).to eq(1)
+
+        data = JSON.parse(content.first["text"].as_s)
+        expect(data["thread_id"]).to eq(root_note.thread)
+        expect(data["root_object_id"].as_i64).to eq(root_note.id)
+        expect(data["object_count"]).to eq(8)
+        expect(data["author_count"]).to eq(3)
+        expect(data["max_depth"]).to eq(2)
+        expect(data["duration_ms"].as_f).to be > 0
+      end
+
+      it "returns timeline histogram" do
+        request = analyze_thread_request("analyze-thread-2", root_note.id)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        histogram = data["timeline_histogram"].as_h
+        expect(histogram["total_objects"].as_i).to eq(8)
+        expect(histogram["outliers_excluded"].as_i).to eq(0)
+        expect(histogram["bucket_size_minutes"].as_i).to be > 0
+
+        time_range = histogram["time_range"].as_a
+        expect(time_range.size).to eq(2)
+        expect(time_range[0].as_s?).not_to be_nil
+        expect(time_range[1].as_s?).not_to be_nil
+
+        first_bucket = histogram["buckets"].as_a.first.as_h
+        expect(first_bucket.keys).to contain_exactly("time_range", "object_count", "cumulative_count", "author_count", "object_ids")
+      end
+
+      it "identifies key participants" do
+        request = analyze_thread_request("analyze-thread-3", root_note.id)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        participants = data["key_participants"].as_a
+        expect(participants.size).to eq(3)
+
+        op = participants[0].as_h
+        op_actor_data = op["actor"].as_h
+        expect(op_actor_data["id"].as_i64).to eq(op_actor.id)
+        expect(op_actor_data["handle"].as_s).to eq(op_actor.handle)
+        expect(op["object_count"].as_i).to eq(2)
+        expect(op["object_ids"].as_a.size).to eq(2)
+        op_ids = op["object_ids"].as_a.map(&.as_i64).to_set
+        expect(op_ids).to eq(Set{root_note.id, reply1.id})
+        op_depth_range = op["depth_range"].as_a
+        expect(op_depth_range.size).to eq(2)
+        expect(op_depth_range[0].as_i).to eq(0)
+        expect(op_depth_range[1].as_i).to eq(1)
+        op_time_range = op["time_range"].as_a
+        expect(op_time_range.size).to eq(2)
+        expect(op_time_range[0].as_s?).not_to be_nil
+        expect(op_time_range[1].as_s?).not_to be_nil
+      end
+
+      it "identifies notable branches" do
+        request = analyze_thread_request("analyze-thread-4", root_note.id)
+
+        response = described_class.handle_tools_call(request, account)
+        content = response["content"].as_a
+        data = JSON.parse(content.first["text"].as_s)
+
+        branches = data["notable_branches"].as_a
+        expect(branches.size).to eq(1)
+
+        branch = branches.first.as_h
+        expect(branch["root_id"].as_i64).to eq(reply2.id)
+        expect(branch["root_preview"].as_s).to_not be_nil
+        expect(branch["object_count"].as_i).to eq(5)
+        expect(branch["author_count"].as_i).to eq(2)
+
+        depth_range = branch["depth_range"].as_a
+        expect(depth_range[0].as_i).to eq(1)
+        expect(depth_range[1].as_i).to eq(2)
+
+        time_range = branch["time_range"].as_a
+        expect(time_range.size).to eq(2)
+        expect(time_range[0].as_s?).not_to be_nil
+        expect(time_range[1].as_s?).not_to be_nil
+
+        object_ids = branch["object_ids"].as_a
+        expect(object_ids.size).to eq(5)
       end
     end
   end

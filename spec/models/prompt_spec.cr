@@ -23,6 +23,7 @@ Spectator.describe Prompt do
   def make_prompt(name)
     yaml = %Q({name: "#{name}", arguments: [], messages: []})
     File.write(File.join(Prompt.default_prompts_dir, "#{name}.yml"), yaml)
+    Prompt.reset! # bust the cache
   end
 
   before_each do

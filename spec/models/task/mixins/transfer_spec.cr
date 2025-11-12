@@ -10,6 +10,11 @@ class FooBarTransfer < Task
 
   @source_iri = ""
   @subject_iri  = ""
+
+  # redefine private method as public for testing
+  def sanitize_log_message(message : String, max_length : Int32 = 200) : String
+    super
+  end
 end
 
 class Regex
@@ -34,6 +39,39 @@ Spectator.describe Task::Transfer do
     recipient = actor_factory unless recipient_iri || recipient.nil? || recipient
     failure = Task::Transfer::Failure.new(recipient.as(ActivityPub::Actor).iri, "failure", created_at)
     FooBarTransfer.new(**{running: false, complete: true, failures: [failure], created_at: created_at})
+  end
+
+  describe "#sanitize_log_message" do
+    subject { FooBarTransfer.new }
+
+    it "returns short messages without newlines unchanged" do
+      message = "short message"
+      expect(subject.sanitize_log_message(message)).to eq(message)
+    end
+
+    it "replaces newline with literal '\\n'" do
+      message = "line 1\nline 2\nline 3"
+      expect(subject.sanitize_log_message(message)).to eq("line 1\\nline 2\\nline 3")
+    end
+
+    it "replaces CRLF with literal '\\n'" do
+      message = "line 1\r\nline 2\r\nline 3"
+      expect(subject.sanitize_log_message(message)).to eq("line 1\\nline 2\\nline 3")
+    end
+
+    it "truncates messages longer than 200 characters" do
+      message = "a" * 250
+      result = subject.sanitize_log_message(message)
+      expect(result.size).to eq(200)
+      expect(result).to end_with("...")
+    end
+
+    it "respects `max_length` parameter" do
+      message = "a" * 100
+      result = subject.sanitize_log_message(message, max_length: 50)
+      expect(result.size).to eq(50)
+      expect(result).to end_with("...")
+    end
   end
 
   describe "#transfer" do

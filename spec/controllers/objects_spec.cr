@@ -1708,6 +1708,86 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "POST /remote/objects/:id/bookmark" do
+    it "returns 401" do
+      post "/remote/objects/0/bookmark"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/remote/objects/#{visible.id}/bookmark"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "creates bookmark relationship" do
+        post "/remote/objects/#{visible.id}/bookmark"
+        expect(Relationship::Content::Bookmark.find?(actor: actor, object: visible)).not_to be_nil
+      end
+
+      context "given a bookmark" do
+        let_create!(:bookmark_relationship, actor: actor, object: visible)
+
+        it "is idempotent" do
+          expect{post "/remote/objects/#{visible.id}/bookmark"}.
+            not_to change{Relationship::Content::Bookmark.count(actor: actor, object: visible)}
+        end
+      end
+
+      it "returns 404 if object is draft" do
+        post "/remote/objects/#{draft.id}/bookmark"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/bookmark"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "DELETE /objects/:id/bookmark" do
+    it "returns 401" do
+      delete "/remote/objects/0/bookmark"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      context "given a bookmark" do
+        let_create!(:bookmark_relationship, actor: actor, object: visible)
+
+        it "succeeds" do
+          delete "/remote/objects/#{visible.id}/bookmark"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "removes bookmark relationship" do
+          delete "/remote/objects/#{visible.id}/bookmark"
+          expect(Relationship::Content::Bookmark.find?(actor: actor, object: visible)).to be_nil
+        end
+      end
+
+      it "is idempotent" do
+        expect{delete "/remote/objects/#{visible.id}/bookmark"}.
+          not_to change{Relationship::Content::Bookmark.count(actor: actor, object: visible)}
+      end
+
+      it "returns 404 if object is draft" do
+        delete "/remote/objects/#{draft.id}/bookmark"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        delete "/remote/objects/999999/bookmark"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "POST /remote/objects/:id/fetch/start" do
     it "returns 401" do
       post "/remote/objects/0/fetch/start"

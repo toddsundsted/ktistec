@@ -1,5 +1,7 @@
 require "kemal"
 
+require "./ext/context"
+
 require "../views/view_helper"
 
 class HTTP::Server::Context
@@ -62,6 +64,12 @@ module Ktistec
       env.response.headers.add("Location", {{url}})
       env.response.status_code = {{status_code}}
       next
+    end
+
+    # Send Turbo Stream refresh.
+    #
+    macro turbo_stream_refresh
+      %q|<turbo-stream action="refresh"><template></template></turbo-stream>|
     end
 
     VIEWS = {} of String => {String, String, String?}

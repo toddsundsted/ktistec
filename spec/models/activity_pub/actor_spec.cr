@@ -797,6 +797,65 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#bookmarks" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_bookmark(index)
+      let_create!(:note, named: note{{index}})
+      let_create!(:bookmark_relationship, named: bookmark{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_bookmark(1)
+    create_bookmark(2)
+    create_bookmark(3)
+    create_bookmark(4)
+    create_bookmark(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.bookmarks(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.bookmarks(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.bookmarks(1, 2)).to eq([note4, note3])
+      expect(subject.bookmarks(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.bookmarks(1, 2)).to eq([note4, note3])
+      expect(subject.bookmarks(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      note5.attributed_to.delete!
+      expect(subject.bookmarks(1, 2)).to eq([note4, note3])
+      expect(subject.bookmarks(since: since)).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      note5.attributed_to.block!
+      expect(subject.bookmarks(1, 2)).to eq([note4, note3])
+      expect(subject.bookmarks(since: since)).to eq(4)
+    end
+
+    it "paginates the results" do
+      expect(subject.bookmarks(1, 2)).to eq([note5, note4])
+      expect(subject.bookmarks(2, 2)).to eq([note3, note2])
+      expect(subject.bookmarks(2, 2).more?).to be_true
+    end
+
+    it "returns results in reverse chronological order" do
+      expect(subject.bookmarks(1, 5)).to eq([note5, note4, note3, note2, note1])
+    end
+  end
+
   describe "#drafts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }

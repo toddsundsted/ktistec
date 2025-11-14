@@ -296,7 +296,11 @@ class OutboxesController
           redirect actor_path
         end
       end
-      redirect back_path
+      if accepts_turbo_stream?
+        turbo_stream_refresh
+      else
+        redirect back_path
+      end
     end
   end
 

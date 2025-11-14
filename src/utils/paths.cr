@@ -152,6 +152,10 @@ module Utils::Paths
     "#{Utils::Paths.remote_object_path({{object}})}/reply"
   end
 
+  macro bookmark_path(object = nil)
+    "#{Utils::Paths.remote_object_path({{object}})}/bookmark"
+  end
+
   macro approve_path(object = nil)
     "#{Utils::Paths.remote_object_path({{object}})}/approve"
   end
@@ -237,6 +241,14 @@ module Utils::Paths
       "#{Utils::Paths.actor_path({{actor}})}/#{{{relationship}}}"
     {% else %}
       "#{Utils::Paths.actor_path({{actor}})}/#{env.params.url["relationship"]}"
+    {% end %}
+  end
+
+  macro actor_bookmarks_path(actor = nil)
+    {% if actor %}
+      "/actors/#{{{actor}}.username}/bookmarks"
+    {% else %}
+      "/actors/:username/bookmarks"
     {% end %}
   end
 

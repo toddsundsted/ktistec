@@ -121,6 +121,18 @@ class ActorsController
     ok "actors/posts", env: env, actor: actor, objects: objects
   end
 
+  get "/actors/:username/bookmarks" do |env|
+    unless (account = get_account_with_ownership(env))
+      not_found
+    end
+
+    actor = account.actor
+
+    objects = actor.bookmarks(**pagination_params(env))
+
+    ok "actors/bookmarks", env: env, actor: actor, objects: objects
+  end
+
   get "/actors/:username/timeline" do |env|
     unless (account = get_account_with_ownership(env))
       not_found

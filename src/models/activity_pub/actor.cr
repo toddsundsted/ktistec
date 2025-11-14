@@ -10,6 +10,7 @@ require "../../framework/model/**"
 require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
+require "../relationship/content/bookmark"
 require "../relationship/content/notification/*"
 require "../relationship/content/timeline/*"
 require "../relationship/content/inbox"
@@ -375,6 +376,50 @@ module ActivityPub
         activity_count_query(ActivityPub::Activity::Announce),
         iri, since
       ).as(Int64)
+    end
+
+    # Returns the objects that this actor has bookmarked.
+    #
+    # Returns objects in reverse chronological order (most recent
+    # first). Filters out deleted/blocked objects, and objects by
+    # deleted/blocked actors.
+    #
+    def bookmarks(page = 1, size = 10)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS c
+             ON c.iri = o.attributed_to_iri
+           JOIN relationships AS r
+             ON r.to_iri = o.iri
+            AND r.type = '#{Relationship::Content::Bookmark}'
+          WHERE r.from_iri = ?
+            #{common_filters_on("o", "c")}
+       ORDER BY r.id DESC
+          LIMIT ? OFFSET ?
+      QUERY
+      Object.query_and_paginate(query, self.iri, page: page, size: size)
+    end
+
+    # Returns the count of objects that this actor has bookmarked
+    # since the given date.
+    #
+    # See `#bookmarks(page, size)` for further details.
+    #
+    def bookmarks(since : Time)
+      query = <<-QUERY
+         SELECT count(o.id)
+           FROM objects AS o
+           JOIN actors AS c
+             ON c.iri = o.attributed_to_iri
+           JOIN relationships AS r
+             ON r.to_iri = o.iri
+            AND r.type = '#{Relationship::Content::Bookmark}'
+          WHERE r.from_iri = ?
+            #{common_filters_on("o", "c")}
+            AND r.created_at > ?
+      QUERY
+      Object.scalar(query, iri, since).as(Int64)
     end
 
     # Returns the actor's draft posts.

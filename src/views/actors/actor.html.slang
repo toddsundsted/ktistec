@@ -21,6 +21,7 @@
           span.ui.mini.transitional.horizontal.circular.red.label= count
         - else
           span.invisible.label
+      a.item href=actor_bookmarks_path(actor) Bookmarks
       a.item href=actor_relationships_path(actor, "followers") Followers
       a.item href=actor_relationships_path(actor, "following") Following
       a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"

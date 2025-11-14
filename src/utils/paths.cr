@@ -244,6 +244,14 @@ module Utils::Paths
     {% end %}
   end
 
+  macro actor_bookmarks_path(actor = nil)
+    {% if actor %}
+      "/actors/#{{{actor}}.username}/bookmarks"
+    {% else %}
+      "/actors/:username/bookmarks"
+    {% end %}
+  end
+
   macro outbox_path(actor = nil)
     Utils::Paths.actor_relationships_path({{actor}}, "outbox")
   end

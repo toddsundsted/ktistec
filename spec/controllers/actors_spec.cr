@@ -460,6 +460,77 @@ Spectator.describe ActorsController do
     end
   end
 
+  describe "GET /actors/:username/bookmarks" do
+    it "returns 401 if not authorized" do
+      get "/actors/missing/bookmarks", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/actors/missing/bookmarks", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "returns 404 if not found" do
+        get "/actors/missing/bookmarks", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if not found" do
+        get "/actors/missing/bookmarks", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if different account" do
+        get "/actors/#{register.actor.username}/bookmarks", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if different account" do
+        get "/actors/#{register.actor.username}/bookmarks", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/bookmarks", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/bookmarks", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      context "with bookmarked objects" do
+        let_create(:object, named: :note, visible: true, published: Time.utc)
+        let_create!(:bookmark_relationship, actor: actor, object: note)
+
+        it "renders bookmarked objects" do
+          get "/actors/#{actor.username}/bookmarks", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]")).not_to be_empty
+        end
+
+        it "renders bookmarked objects" do
+          get "/actors/#{actor.username}/bookmarks", ACCEPT_JSON
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).not_to be_empty
+        end
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/bookmarks", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]")).to be_empty
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/bookmarks", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
+      end
+    end
+  end
+
   describe "GET /actors/:username/timeline" do
     it "returns 401 if not authorized" do
       get "/actors/missing/timeline", ACCEPT_HTML

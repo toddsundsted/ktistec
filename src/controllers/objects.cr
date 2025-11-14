@@ -322,7 +322,11 @@ class ObjectsController
     bookmark = Relationship::Content::Bookmark.find_or_new(actor: env.account.actor, object: object)
     bookmark.save if bookmark.new_record?
 
-    redirect back_path
+    if accepts_turbo_stream?
+      turbo_stream_refresh
+    else
+      redirect back_path
+    end
   end
 
   delete "/remote/objects/:id/bookmark" do |env|
@@ -331,7 +335,11 @@ class ObjectsController
     bookmark = Relationship::Content::Bookmark.find?(actor: env.account.actor, object: object)
     bookmark.destroy if bookmark
 
-    redirect back_path
+    if accepts_turbo_stream?
+      turbo_stream_refresh
+    else
+      redirect back_path
+    end
   end
 
   post "/remote/objects/:id/fetch/start" do |env|

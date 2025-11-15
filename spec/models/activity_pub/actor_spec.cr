@@ -856,6 +856,65 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#pins" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_pin(index)
+      let_create!(:note, named: note{{index}}, attributed_to: subject, local: true)
+      let_create!(:pin_relationship, named: pin{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_pin(1)
+    create_pin(2)
+    create_pin(3)
+    create_pin(4)
+    create_pin(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.pins.first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.pins(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.pins).to eq([note4, note3, note2, note1])
+      expect(subject.pins(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.pins).to eq([note4, note3, note2, note1])
+      expect(subject.pins(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      subject.delete!
+      expect(subject.pins).to be_empty
+      expect(subject.pins(since: since)).to eq(0)
+    end
+
+    it "filters out posts by blocked actors" do
+      subject.block!
+      expect(subject.pins).to be_empty
+      expect(subject.pins(since: since)).to eq(0)
+    end
+
+    it "paginates the results" do
+      expect(subject.pins(1, 2)).to eq([note5, note4])
+      expect(subject.pins(2, 2)).to eq([note3, note2])
+      expect(subject.pins(2, 2).more?).to be_true
+    end
+
+    it "returns results in reverse chronological order" do
+      expect(subject.pins(1, 5)).to eq([note5, note4, note3, note2, note1])
+    end
+  end
+
   describe "#drafts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }

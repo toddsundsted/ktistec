@@ -329,6 +329,10 @@ def bookmark_relationship_factory(**options)
   relationship_factory(Relationship::Content::Bookmark, **options)
 end
 
+def pin_relationship_factory(**options)
+  relationship_factory(Relationship::Content::Pin, **options)
+end
+
 def canonical_relationship_factory(**options)
   relationship_factory(Relationship::Content::Canonical, **options)
 end

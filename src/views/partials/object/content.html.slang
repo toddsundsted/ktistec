@@ -158,6 +158,15 @@ crystal:
         == form_button bookmark_path(object), button_class: "ui button mini iconic" do
           i.bookmark.outline.icon
           | Bookmark
+      - if author == account.actor
+        - if (pin =  Relationship::Content::Pin.find?(actor: account.actor, object: object))
+          == form_button pin_path(object), method: "DELETE", button_class: "ui button mini blue iconic" do
+            i.pin.icon
+            | Pin
+        - else
+          == form_button pin_path(object), button_class: "ui button mini iconic" do
+            i.pin.icon
+            | Pin
       - if translation
         == form_button clear_translation_object_path(object), button_class: "ui button mini purple iconic" do
           i.paper.plane.icon

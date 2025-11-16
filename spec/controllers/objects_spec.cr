@@ -1788,6 +1788,96 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "POST /remote/objects/:id/pin" do
+    it "returns 401" do
+      post "/remote/objects/0/pin"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        post "/remote/objects/#{reply.id}/pin"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "creates pin relationship" do
+        post "/remote/objects/#{reply.id}/pin"
+        expect(Relationship::Content::Pin.find?(actor: actor, object: reply)).not_to be_nil
+      end
+
+      context "given a pin" do
+        let_create!(:pin_relationship, actor: actor, object: reply)
+
+        it "is idempotent" do
+          expect{post "/remote/objects/#{reply.id}/pin"}.
+            not_to change{Relationship::Content::Pin.count(actor: actor, object: reply)}
+        end
+      end
+
+      it "returns 403 if object is not attributed to actor" do
+        post "/remote/objects/#{visible.id}/pin"
+        expect(response.status_code).to eq(403)
+      end
+
+      it "returns 404 if object is draft" do
+        post "/remote/objects/#{draft.id}/pin"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/pin"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "DELETE /remote/objects/:id/pin" do
+    it "returns 401" do
+      delete "/remote/objects/0/pin"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      context "given a pin" do
+        let_create!(:pin_relationship, actor: actor, object: reply)
+
+        it "succeeds" do
+          delete "/remote/objects/#{reply.id}/pin"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "removes pin relationship" do
+          delete "/remote/objects/#{reply.id}/pin"
+          expect(Relationship::Content::Pin.find?(actor: actor, object: reply)).to be_nil
+        end
+      end
+
+      it "is idempotent" do
+        expect{delete "/remote/objects/#{reply.id}/pin"}.
+          not_to change{Relationship::Content::Pin.count(actor: actor, object: reply)}
+      end
+
+      it "returns 403 if object is not attributed to actor" do
+        delete "/remote/objects/#{visible.id}/pin"
+        expect(response.status_code).to eq(403)
+      end
+
+      it "returns 404 if object is draft" do
+        delete "/remote/objects/#{draft.id}/pin"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        delete "/remote/objects/999999/pin"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "POST /remote/objects/:id/fetch/start" do
     it "returns 401" do
       post "/remote/objects/0/fetch/start"

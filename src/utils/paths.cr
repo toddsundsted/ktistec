@@ -156,6 +156,10 @@ module Utils::Paths
     "#{Utils::Paths.remote_object_path({{object}})}/bookmark"
   end
 
+  macro pin_path(object = nil)
+    "#{Utils::Paths.remote_object_path({{object}})}/pin"
+  end
+
   macro approve_path(object = nil)
     "#{Utils::Paths.remote_object_path({{object}})}/approve"
   end

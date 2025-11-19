@@ -650,21 +650,27 @@ module ActivityPub
     #
     # Does not include private (not visible) posts.
     #
+    # Orders pinned posts first.
+    #
     def known_posts(page = 1, size = 10)
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
+      LEFT JOIN relationships AS p
+             ON p.type = '#{Relationship::Content::Pin}'
+            AND p.from_iri = ?
+            AND p.to_iri = o.iri
           WHERE o.attributed_to_iri = ?
+            #{common_filters_on("o")}
+            AND o.published IS NOT NULL
             AND o.visible = 1
-            AND o.deleted_at is NULL
-            AND o.blocked_at is NULL
-       ORDER BY o.published DESC
+       ORDER BY p.id DESC, o.published DESC
           LIMIT ? OFFSET ?
       QUERY
-      Object.query_and_paginate(query, self.iri, page: page, size: size)
+      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
-    # Returns the actor's public posts.
+    # Returns the actor's public posts and shares.
     #
     # Meant to be called on local (not cached) actors.
     #
@@ -683,16 +689,73 @@ module ActivityPub
              ON r.to_iri = a.iri
             AND r.type = '#{Relationship::Content::Outbox}'
           WHERE r.from_iri = ?
-            AND o.visible = 1
-            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
             #{common_filters_on("o", "t", "a")}
+            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
+            AND o.visible = 1
        ORDER BY r.id DESC
           LIMIT ? OFFSET ?
       QUERY
       Object.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
-    # Returns an actor's own posts
+    # Returns the actor's public posts and shares.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    # Does not include private (not visible) posts and replies.
+    #
+    def public_posts_with_pins(page = 1, size = 10)
+      base_offset = (page - 1) * size
+      all_pinned_query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN relationships AS p
+             ON p.type = '#{Relationship::Content::Pin}'
+            AND p.from_iri = ?
+            AND p.to_iri = o.iri
+       ORDER BY p.id DESC
+      QUERY
+      all_pinned = Object.query_all(all_pinned_query, self.iri)
+      pinned_to_skip = [base_offset, all_pinned.size].min
+      pinned_available = all_pinned.size - pinned_to_skip
+      pinned_to_take = [size, pinned_available].min
+      pinned = all_pinned[pinned_to_skip, pinned_to_take]
+      non_pinned_needed = size - pinned.size + 1 # +1 for pagination check
+      non_pinned_offset = [0, base_offset - all_pinned.size].max
+      non_pinned_query = <<-QUERY
+         SELECT DISTINCT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+            AND r.type = '#{Relationship::Content::Outbox}'
+      LEFT JOIN relationships AS p
+             ON p.type = '#{Relationship::Content::Pin}'
+            AND p.from_iri = ?
+            AND p.to_iri = o.iri
+          WHERE r.from_iri = ?
+            #{common_filters_on("o", "t", "a")}
+            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
+            AND o.visible = 1
+            AND p.id IS NULL
+       ORDER BY r.id DESC
+          LIMIT ? OFFSET ?
+      QUERY
+      non_pinned = Object.query_all(non_pinned_query, self.iri, self.iri, non_pinned_needed, non_pinned_offset)
+      Ktistec::Util::PaginatedArray(Object).new.tap do |array|
+        (pinned + non_pinned).each { |obj| array << obj }
+        if array.size > size
+          array.more = true
+          array.pop
+        end
+      end
+    end
+
+    # Returns the actor's posts and shares.
     #
     # Meant to be called on local (not cached) actors.
     #

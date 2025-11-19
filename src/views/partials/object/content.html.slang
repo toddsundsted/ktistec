@@ -21,6 +21,8 @@ crystal:
       | draft created
       a.date< = object.short_date(timezone)
     - else
+      - if for_actor && (pin = Relationship::Content::Pin.find?(actor: for_actor, object: object))
+        i.pin.icon
       - if account
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = actor.display_name

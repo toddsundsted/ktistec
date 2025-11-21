@@ -72,6 +72,14 @@ class HTTP::Client
     @@cache.clear
   end
 
+  # Note: Short-circuit client instantiation to avoid costly and
+  # unnecessary construction.
+
+  def initialize(uri : URI)
+    @host = uri.host.not_nil!
+    @port = uri.port || 80
+  end
+
   def self.get(url : String | URI, headers : HTTP::Headers? = nil)
     url = URI.parse(url) if url.is_a?(String)
     new(url).get(url.request_target, headers)

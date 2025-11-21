@@ -804,16 +804,11 @@ Spectator.describe Task::CollectGarbage do
 
       context "given more objects than the max delete count" do
         before_each do
-          (Task::CollectGarbage::DEFAULT_MAX_DELETE_COUNT + 50).times do
-            Factory.create(:object, created_at: TOO_OLD)
-          end
+          11.times { Factory.create(:object, created_at: TOO_OLD) }
         end
 
         it "deletes only up to the maximum count" do
-          initial_count = ActivityPub::Object.count
-          subject.perform
-          deleted_count = initial_count - ActivityPub::Object.count
-          expect(deleted_count).to eq(Task::CollectGarbage::DEFAULT_MAX_DELETE_COUNT)
+          expect{ subject.perform(max_delete_count: 10) }.to change { ActivityPub::Object.count }.by(-10)
         end
       end
     end

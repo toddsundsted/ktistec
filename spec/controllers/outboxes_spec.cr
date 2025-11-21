@@ -7,7 +7,7 @@ require "../spec_helper/network"
 Spectator.describe OutboxesController do
   setup_spec
 
-  HTML_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/vnd.turbo-stream.html, text/html"}
+  HTML_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
   JSON_HEADERS = HTTP::Headers{"Content-Type" => "application/json", "Accept" => "application/json"}
 
   describe "POST /actors/:username/outbox" do
@@ -89,6 +89,15 @@ Spectator.describe OutboxesController do
         it "redirects when successful" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
           expect(response.status_code).to eq(302)
+        end
+
+        context "given a Turbo Streams request" do
+          let(html_headers) { HTML_HEADERS.dup.add("Accept", "text/vnd.turbo-stream.html") }
+
+          it "returns 200 when successful" do
+            post "/actors/#{actor.username}/outbox", html_headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
+            expect(response.status_code).to eq(200)
+          end
         end
 
         it "returns 201 when successful" do
@@ -251,6 +260,15 @@ Spectator.describe OutboxesController do
           expect(response.status_code).to eq(302)
         end
 
+        context "given a Turbo Streams request" do
+          let(html_headers) { HTML_HEADERS.dup.add("Accept", "text/vnd.turbo-stream.html") }
+
+          it "returns 200 when successful" do
+            post "/actors/#{actor.username}/outbox", html_headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"
+            expect(response.status_code).to eq(200)
+          end
+        end
+
         it "returns 201 when successful" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|
           expect(response.status_code).to eq(201)
@@ -377,6 +395,15 @@ Spectator.describe OutboxesController do
         it "redirects when successful" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
           expect(response.status_code).to eq(302)
+        end
+
+        context "given a Turbo Streams request" do
+          let(html_headers) { HTML_HEADERS.dup.add("Accept", "text/vnd.turbo-stream.html") }
+
+          it "returns 200 when successful" do
+            post "/actors/#{actor.username}/outbox", html_headers, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
+            expect(response.status_code).to eq(200)
+          end
         end
 
         it "returns 201 when successful" do
@@ -1077,6 +1104,15 @@ Spectator.describe OutboxesController do
         it "redirects when successful" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Follow&object=#{object.iri}"
           expect(response.status_code).to eq(302)
+        end
+
+        context "given a Turbo Streams request" do
+          let(html_headers) { HTML_HEADERS.dup.add("Accept", "text/vnd.turbo-stream.html") }
+
+          it "returns 200 when successful" do
+            post "/actors/#{actor.username}/outbox", html_headers, "type=Follow&object=#{object.iri}"
+            expect(response.status_code).to eq(200)
+          end
         end
 
         it "returns 201 when successful" do

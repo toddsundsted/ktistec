@@ -248,6 +248,8 @@ class Task
 
     property been_fetched = Set(String).new
 
+    property newly_discovered_objects = Set(ActivityPub::Object).new
+
     # Fetches out through the horizon.
     #
     private def fetch_out(horizon)
@@ -282,11 +284,20 @@ class Task
               been_fetched << object.iri
               state.cached_object = node.id
               state.cache =
-                if (temporary = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))
-                  Log.trace { "fetch_out [#{id}] - iri: #{object.iri}" }
-                  if (replies = temporary.replies?) || ((replies_iri = temporary.replies_iri) && (replies = ActivityPub::Collection.dereference?(source, replies_iri)))
-                    if (iris = replies.all_item_iris(source))
-                      iris
+                begin
+                  # avoid refetching a newly discovered object
+                  temporary =
+                    if newly_discovered_objects.delete(object)
+                      object
+                    else
+                      ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true)
+                    end
+                  if temporary
+                    Log.trace { "fetch_out [#{id}] - iri: #{object.iri}" }
+                    if (replies = temporary.replies?) || ((replies_iri = temporary.replies_iri) && (replies = ActivityPub::Collection.dereference?(source, replies_iri)))
+                      if (iris = replies.all_item_iris(source))
+                        iris
+                      end
                     end
                   end
                 end
@@ -303,7 +314,10 @@ class Task
               unless state.includes?(new)
                 node.last_success_at = now
                 state << new
-                return object if fetched
+                if fetched
+                  newly_discovered_objects << object
+                  return object
+                end
               end
             end
           end

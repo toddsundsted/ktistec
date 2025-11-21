@@ -122,6 +122,28 @@ Spectator.describe SettingsController do
 
       let(account) { Global.account.not_nil! }
 
+      context "when changing the password" do
+        let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
+
+        before_each do
+          Session.new(account).save
+          Session.new(account).save
+        end
+
+        pre_condition { expect(account.sessions.size).to eq(3) }
+
+        it "invalidates existing sessions" do
+          expect { post "/settings/actor", headers, "password=foobarbaz1%21" }.
+            to change { account.reload!.sessions.size }.from(3).to(0)
+        end
+
+        it "redirects to the sign-in page" do
+          post "/settings/actor", headers, "password=foobarbaz1%21"
+          expect(response.status_code).to eq(302)
+          expect(response.headers.to_a).to have({"Location", ["/sessions"]})
+        end
+      end
+
       context "and posting urlencoded data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
 

@@ -91,13 +91,13 @@ Spectator.describe TaskWorker do
     context "given a scheduled task" do
       let(task) { SleepTask.new.save.schedule }
 
-      def spawn_and_sleep
+      def spawn_and_yield
         spawn { TaskWorker.instance.perform(task) }
-        sleep 0.seconds
+        Fiber.yield
       end
 
       it "waits for scheduled tasks to complete" do
-        expect { spawn_and_sleep ; TaskWorker.stop }.to change { task.reload!.complete }.from(false).to(true)
+        expect { spawn_and_yield ; TaskWorker.stop }.to change { task.reload!.complete }.from(false).to(true)
       end
     end
   end

@@ -1,5 +1,6 @@
 require "../framework/controller"
 require "../models/activity_pub/object/note"
+require "../models/relationship/content/bookmark"
 require "../models/relationship/content/follow/thread"
 require "../models/task/fetch/thread"
 require "../models/translation"
@@ -313,6 +314,32 @@ class ObjectsController
     destroy_follow
     complete_task
     render_or_redirect
+  end
+
+  post "/remote/objects/:id/bookmark" do |env|
+    not_found unless (object = get_object(env, id_param(env))) && !object.draft?
+
+    bookmark = Relationship::Content::Bookmark.find_or_new(actor: env.account.actor, object: object)
+    bookmark.save if bookmark.new_record?
+
+    if accepts_turbo_stream?
+      turbo_stream_refresh
+    else
+      redirect back_path
+    end
+  end
+
+  delete "/remote/objects/:id/bookmark" do |env|
+    not_found unless (object = get_object(env, id_param(env))) && !object.draft?
+
+    bookmark = Relationship::Content::Bookmark.find?(actor: env.account.actor, object: object)
+    bookmark.destroy if bookmark
+
+    if accepts_turbo_stream?
+      turbo_stream_refresh
+    else
+      redirect back_path
+    end
   end
 
   post "/remote/objects/:id/fetch/start" do |env|

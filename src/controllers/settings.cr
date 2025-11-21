@@ -3,6 +3,7 @@ require "uuid"
 
 require "../framework/controller"
 require "../models/task/terminate"
+require "../models/session"
 
 class SettingsController
   include Ktistec::Controller
@@ -35,10 +36,17 @@ class SettingsController
     account.assign(params)
     actor.assign(params)
 
+    password_changed = account.changed?(:encrypted_password)
+
     if account.valid?
       account.save
 
-      redirect settings_path
+      if password_changed
+        Session.invalidate_for(account)
+        redirect sessions_path
+      else
+        redirect settings_path
+      end
     else
       unprocessable_entity "settings/settings", env: env, account: account, actor: actor, settings: settings
     end

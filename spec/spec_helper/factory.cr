@@ -325,6 +325,10 @@ def approved_relationship_factory(**options)
   relationship_factory(Relationship::Content::Approved, **options)
 end
 
+def bookmark_relationship_factory(**options)
+  relationship_factory(Relationship::Content::Bookmark, **options)
+end
+
 def canonical_relationship_factory(**options)
   relationship_factory(Relationship::Content::Canonical, **options)
 end

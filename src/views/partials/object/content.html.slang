@@ -150,6 +150,14 @@ crystal:
         == activity_button(outbox_path(account), object.iri, "Announce", button_class: "ui button mini iconic") do
           i.share.icon
           = pluralize(c, "Share")
+      - if (bookmark = Relationship::Content::Bookmark.find?(actor: account.actor, object: object))
+        == form_button bookmark_path(object), method: "DELETE", button_class: "ui button mini blue iconic" do
+          i.bookmark.icon
+          | Bookmark
+      - else
+        == form_button bookmark_path(object), button_class: "ui button mini iconic" do
+          i.bookmark.outline.icon
+          | Bookmark
       - if translation
         == form_button clear_translation_object_path(object), button_class: "ui button mini purple iconic" do
           i.paper.plane.icon

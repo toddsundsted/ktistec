@@ -125,7 +125,7 @@ Spectator.describe MCP::ResultsPager do
       page1 = subject.fetch(cursor1)
       expect(page1[:page]).to eq(["c"])
 
-      sleep 0.10.seconds
+      sleep 0.06.seconds
 
       subject.store(["d", "e"], 2)
 
@@ -142,7 +142,7 @@ Spectator.describe MCP::ResultsPager do
       page2 = subject.fetch(cursor)
       expect(page2[:page]).to eq(["c"])
 
-      sleep 0.10.seconds
+      sleep 0.06.seconds
 
       expect { subject.fetch(cursor) }.to raise_error(MCPError, /Expired cursor/)
     end

@@ -52,6 +52,10 @@ class TaskWorker
 
   def self.stop
     @@running = false
+    if @@performing_tasks > 0
+      # just to speed up the tests
+      sleep 0.01.seconds
+    end
     60.times do
       break unless @@performing_tasks > 0
       Log.info { "Waiting for #{@@performing_tasks} tasks to complete..." }

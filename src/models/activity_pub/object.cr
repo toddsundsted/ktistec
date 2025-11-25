@@ -1102,7 +1102,7 @@ module ActivityPub
           elsif (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
             content.each do |language, content|
               if language && content
-                if language != "und" && content == map["content"]?
+                if language != "und" && language =~ Ktistec::Constants::LANGUAGE_RE && content == map["content"]?
                   map["language"] = language
                   break
                 end

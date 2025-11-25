@@ -351,6 +351,15 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "with unsupported language" do
+      let(json) { super.gsub(%q|"en":"abc"|, %q|"unsupported":"abc"|) }
+
+      it "ignores the language" do
+        object = described_class.from_json_ld(json).save
+        expect(object.language).to be_nil
+      end
+    end
+
     # support Lemmy-style language property
     context "when language is present" do
       let(json) do
@@ -525,6 +534,15 @@ Spectator.describe ActivityPub::Object do
       it "handles malformed focal point gracefully" do
         object = described_class.new.from_json_ld(json).save
         expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
+      end
+    end
+
+    context "with unsupported language" do
+      let(json) { super.gsub(%q|"en":"abc"|, %q|"unsupported":"abc"|) }
+
+      it "ignores the language" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.language).to be_nil
       end
     end
 

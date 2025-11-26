@@ -1,6 +1,17 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.2.1]
+### Added
+- Support for bookmarking posts.
+
+### Fixed
+- Invalidate user's sessions after changing password.
+- Ignore supplied languages that don't conform to expected format.
+
+### Changed
+- Upgrade Kemal.
+
 ## [v3.2.0]
 ### Added
 - Thread analysis displaying key participants, timeline histogram, and notable branches.
@@ -528,6 +539,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.2.1]: https://github.com/toddsundsted/ktistec/compare/9eebb34e...f6d5f376
 [v3.2.0]: https://github.com/toddsundsted/ktistec/compare/65e9e57f...9a25965a
 [v3.1.3]: https://github.com/toddsundsted/ktistec/compare/c460d486...c06caebe
 [v3.1.2]: https://github.com/toddsundsted/ktistec/compare/ebc7405c...65fd47cb

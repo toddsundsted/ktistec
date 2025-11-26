@@ -12,6 +12,7 @@
     - [Content discovery](#content-discovery)
     - [Content filtering](#content-filtering)
     - [Blocking](#blocking)
+    - [Bookmarks](#bookmarks)
     - [RSS feeds](#rss-feeds)
     - [Metrics](#metrics)
     - [Tasks](#tasks)
@@ -184,6 +185,11 @@ been deleted or blocked.
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/42fwx6.png" width=460>
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/epdb39.png" width=460>
+
+### Bookmarks
+
+Save posts for later with bookmarks. Bookmark any post to add it to
+your personal bookmarks collection for easy access.
 
 ### RSS feeds
 

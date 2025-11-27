@@ -116,6 +116,7 @@ def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **
       inbox: "#{iri}/inbox",
       followers: "#{iri}/followers",
       following: "#{iri}/following",
+      featured: "#{iri}/featured",
       pem_public_key: pem_public_key,
       pem_private_key: pem_private_key
     }.merge(options)
@@ -327,6 +328,10 @@ end
 
 def bookmark_relationship_factory(**options)
   relationship_factory(Relationship::Content::Bookmark, **options)
+end
+
+def pin_relationship_factory(**options)
+  relationship_factory(Relationship::Content::Pin, **options)
 end
 
 def canonical_relationship_factory(**options)

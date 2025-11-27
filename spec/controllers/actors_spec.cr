@@ -531,6 +531,53 @@ Spectator.describe ActorsController do
     end
   end
 
+  describe "GET /actors/:username/featured" do
+    it "returns 404 if not found" do
+      get "/actors/missing/featured", ACCEPT_HTML
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if not found" do
+      get "/actors/missing/featured", ACCEPT_JSON
+      expect(response.status_code).to eq(404)
+    end
+
+    it "succeeds" do
+      get "/actors/#{actor.username}/featured", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+    end
+
+    it "succeeds" do
+      get "/actors/#{actor.username}/featured", ACCEPT_JSON
+      expect(response.status_code).to eq(200)
+    end
+
+    context "with pinned/featured objects" do
+      let_create(:object, named: note, attributed_to: actor, visible: true)
+      let_create!(:pin_relationship, actor: actor, object: note)
+
+      it "renders featured objects" do
+        get "/actors/#{actor.username}/featured", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]")).not_to be_empty
+      end
+
+      it "renders featured objects" do
+        get "/actors/#{actor.username}/featured", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).not_to be_empty
+      end
+    end
+
+    it "renders an empty collection" do
+      get "/actors/#{actor.username}/featured", ACCEPT_HTML
+      expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]")).to be_empty
+    end
+
+    it "renders an empty collection" do
+      get "/actors/#{actor.username}/featured", ACCEPT_JSON
+      expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
+    end
+  end
+
   describe "GET /actors/:username/timeline" do
     it "returns 401 if not authorized" do
       get "/actors/missing/timeline", ACCEPT_HTML

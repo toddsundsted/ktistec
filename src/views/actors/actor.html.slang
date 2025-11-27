@@ -56,7 +56,7 @@
   - content_for "head" do
     link rel="alternate" type="application/rss+xml" title="#{actor.display_name}: RSS Feed" href="/actors/#{actor.username}/feed.rss"
   == _view_src_views_partials_actor_panel_html_slang(env, actor)
-  - objects = actor.public_posts(**pagination_params(env))
+  - objects = actor.public_posts_with_pins(**pagination_params(env))
   == render "src/views/actors/public_posts.html.slang"
 - else
   == _view_src_views_partials_actor_panel_html_slang(env, actor)

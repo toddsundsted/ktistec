@@ -93,6 +93,7 @@ Spectator.describe "object partials" do
 
     let(with_detail) { false }
     let(for_thread) { nil }
+    let(for_actor) { nil }
 
     context "given HTML content" do
       before_each { object.assign(content: "<ul><li>One</li><li>Two</li></ul>", media_type: "text/html") }

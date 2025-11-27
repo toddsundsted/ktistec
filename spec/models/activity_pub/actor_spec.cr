@@ -36,6 +36,10 @@ Spectator.describe ActivityPub::Actor do
       expect{subject.assign(username: "foobar").save}.to change{subject.followers}
     end
 
+    it "assigns featured" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.featured}
+    end
+
     it "assigns urls" do
       expect{subject.assign(username: "foobar").save}.to change{subject.urls}
     end
@@ -197,6 +201,7 @@ Spectator.describe ActivityPub::Actor do
           "https://www.w3.org/ns/activitystreams",
           "https://w3id.org/security/v1",
           {
+            "featured":{"@id":"http://joinmastodon.org/ns#featured","@type":"@id"},
             "schema":"http://schema.org#",
             "PropertyValue":"schema:PropertyValue",
             "value":"schema:value"
@@ -214,6 +219,7 @@ Spectator.describe ActivityPub::Actor do
         "outbox": "outbox link",
         "following": "following link",
         "followers": "followers link",
+        "featured": "featured link",
         "name":"Foo Bar",
         "summary": "<p></p>",
         "icon": {
@@ -321,6 +327,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
       expect(actor.followers).to eq("followers link")
+      expect(actor.featured).to eq("featured link")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")
@@ -372,6 +379,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
       expect(actor.followers).to eq("followers link")
+      expect(actor.featured).to eq("featured link")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")
@@ -856,6 +864,65 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#pins" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_pin(index)
+      let_create!(:note, named: note{{index}}, attributed_to: subject, local: true)
+      let_create!(:pin_relationship, named: pin{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_pin(1)
+    create_pin(2)
+    create_pin(3)
+    create_pin(4)
+    create_pin(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.pins.first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.pins(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.pins).to eq([note4, note3, note2, note1])
+      expect(subject.pins(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.pins).to eq([note4, note3, note2, note1])
+      expect(subject.pins(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      subject.delete!
+      expect(subject.pins).to be_empty
+      expect(subject.pins(since: since)).to eq(0)
+    end
+
+    it "filters out posts by blocked actors" do
+      subject.block!
+      expect(subject.pins).to be_empty
+      expect(subject.pins(since: since)).to eq(0)
+    end
+
+    it "paginates the results" do
+      expect(subject.pins(1, 2)).to eq([note5, note4])
+      expect(subject.pins(2, 2)).to eq([note3, note2])
+      expect(subject.pins(2, 2).more?).to be_true
+    end
+
+    it "returns results in reverse chronological order" do
+      expect(subject.pins(1, 5)).to eq([note5, note4, note3, note2, note1])
+    end
+  end
+
   describe "#drafts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
@@ -1216,18 +1283,118 @@ Spectator.describe ActivityPub::Actor do
 
     it "filters out deleted posts" do
       post5.delete!
-      expect(subject.known_posts(1, 2)).to eq([post3, post1])
+      expect(subject.known_posts(1, 3)).to eq([post3, post1])
     end
 
     it "filters out blocked posts" do
       post5.block!
-      expect(subject.known_posts(1, 2)).to eq([post3, post1])
+      expect(subject.known_posts(1, 3)).to eq([post3, post1])
+    end
+
+    it "filters out draft posts" do
+      post5.assign(published: nil).save
+      expect(subject.known_posts(1, 3)).to eq([post3, post1])
+    end
+
+    context "given a pinned post" do
+      let_create!(:pin_relationship, actor: subject, object: post1)
+
+      it "returns the pinned post first" do
+        expect(subject.known_posts(1, 3)).to eq([post1, post5, post3])
+      end
+
+      it "does not duplicate pinned posts" do
+        result = subject.known_posts(1, 10)
+        expect(result.to_a.count { |o| o.id == post1.id }).to eq(1)
+      end
     end
 
     it "paginates the results" do
       expect(subject.known_posts(1, 2)).to eq([post5, post3])
       expect(subject.known_posts(2, 2)).to eq([post1])
       expect(subject.known_posts(2, 2).more?).not_to be_true
+    end
+  end
+
+  describe "#public_posts_with_pins" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro post(index)
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
+      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
+      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.public_posts_with_pins(1, 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "filters out deleted posts" do
+      object5.delete!
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out blocked posts" do
+      object5.block!
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete!
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block!
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out non-public posts" do
+      object5.assign(visible: false).save
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out replies" do
+      object5.assign(in_reply_to: object3).save
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts belonging to undone activities" do
+      activity5.undo!
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    # only local (not cached) actors have an outbox
+    it "filters out posts that are not in an outbox" do
+      outbox5.destroy
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    context "given a pinned post" do
+      let_create!(:object, named: object1, attributed_to: subject)
+      let_create!(:pin_relationship, actor: subject, object: object1)
+
+      it "returns the pinned post first" do
+        expect(subject.public_posts_with_pins(1, 3)).to eq([object1, object5, object4])
+      end
+
+      it "does not duplicate pinned posts" do
+        result = subject.public_posts_with_pins(1, 10)
+        expect(result.to_a.count { |o| o.id == object1.id }).to eq(1)
+      end
+    end
+
+    it "paginates the results" do
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object5, object4])
+      expect(subject.public_posts_with_pins(3, 2)).to eq([object1])
+      expect(subject.public_posts_with_pins(3, 2).more?).not_to be_true
     end
   end
 
@@ -1291,9 +1458,6 @@ Spectator.describe ActivityPub::Actor do
       outbox5.destroy
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
-
-    let_build(:create, actor: subject, object: object5)
-    let_build(:outbox_relationship, named: :outbox, owner: subject, activity: create)
 
     it "paginates the results" do
       expect(subject.public_posts(1, 2)).to eq([object5, object4])

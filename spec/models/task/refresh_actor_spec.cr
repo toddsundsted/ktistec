@@ -200,5 +200,198 @@ Spectator.describe Task::RefreshActor do
       expect{subject.perform}.
         to change{subject.failures.dup}
     end
+
+    alias Pin = Relationship::Content::Pin
+
+    it "does not create any pins" do
+      expect{subject.perform}.not_to change{Pin.count}
+    end
+
+    context "given a local actor with a collection of featured posts" do
+      let_create(:actor, local: true)
+
+      it "does not fetch the featured collection" do
+        subject.perform
+        expect(HTTP::Client.requests).not_to have("GET #{actor.featured}")
+      end
+    end
+
+    context "given a remote actor with a collection of featured posts" do
+      let_create(:object, named: :object1, attributed_to: actor)
+      let_create(:object, named: :object2, attributed_to: actor)
+      let_create(:object, named: :object3, attributed_to: actor)
+
+      let(featured_iri) { "https://remote/actors/actor/featured" }
+
+      let(collection) do
+        ActivityPub::Collection.new(
+          iri: featured_iri,
+          items_iris: [object1.iri, object2.iri],
+        )
+      end
+
+      before_each do
+        HTTP::Client.actors << actor.assign(featured: featured_iri)
+        HTTP::Client.collections << collection
+        HTTP::Client.objects << object1
+        HTTP::Client.objects << object2
+      end
+
+      it "fetches the featured collection" do
+        subject.perform
+        expect(HTTP::Client.requests).to have("GET #{featured_iri}")
+      end
+
+      it "creates pins for featured objects" do
+        expect{subject.perform}.to change{Pin.count}.by(2)
+        expect(Pin.find?(actor: actor, object: object1)).to be_truthy
+        expect(Pin.find?(actor: actor, object: object2)).to be_truthy
+      end
+
+      it "does not dereference cached objects" do
+        subject.perform
+        expect(HTTP::Client.requests).not_to have("GET #{object1.iri}")
+        expect(HTTP::Client.requests).not_to have("GET #{object2.iri}")
+      end
+
+      context "when objects are not cached" do
+        before_each do
+          object1.destroy
+          object2.destroy
+        end
+
+        it "dereferences the objects" do
+          subject.perform
+          expect(HTTP::Client.requests).to have("GET #{object1.iri}")
+          expect(HTTP::Client.requests).to have("GET #{object2.iri}")
+        end
+
+        it "saves the objects" do
+          subject.perform
+          expect(ActivityPub::Object.find?(iri: object1.iri)).to be_truthy
+          expect(ActivityPub::Object.find?(iri: object2.iri)).to be_truthy
+        end
+      end
+
+      context "when actor already has pins" do
+        let_create!(:pin_relationship, named: :pin1, actor: actor, object: object1)
+        let_create!(:pin_relationship, named: :pin3, actor: actor, object: object3)
+
+        it "keeps pins still in collection" do
+          expect{subject.perform}.not_to change{!!Pin.find?(actor: actor, object: object1)}
+        end
+
+        it "removes pins no longer in collection" do
+          expect{subject.perform}.to change{!!Pin.find?(actor: actor, object: object3)}.from(true).to(false)
+        end
+
+        it "adds new pins in collection" do
+          expect{subject.perform}.to change{!!Pin.find?(actor: actor, object: object2)}.from(false).to(true)
+        end
+      end
+
+      context "when featured collection fetch fails" do
+        before_each do
+          actor.assign(featured: "https://remote/returns-500").save
+          HTTP::Client.actors << actor.assign(username: "changed")
+        end
+
+        it "refreshes the actor" do
+          expect{subject.perform}.to change{actor.reload!.username}
+        end
+
+        it "does not fail" do
+          expect{subject.perform}.not_to raise_error
+        end
+      end
+
+      context "when object dereference fails" do
+        before_each do
+          object1.destroy
+          object1.assign(iri: "https://remote/returns-500").save
+          HTTP::Client.objects << object1
+        end
+
+        it "skips the failed pin" do
+          expect{subject.perform}.not_to change{!!Pin.find?(actor: actor, object: object1)}
+        end
+
+        it "creates remaining pins" do
+          expect{subject.perform}.to change{!!Pin.find?(actor: actor, object: object2)}.from(false).to(true)
+        end
+      end
+
+      context "when pin validation fails" do
+        let_create(:object, named: :other_object)
+
+        let(collection) do
+          ActivityPub::Collection.new(
+            iri: featured_iri,
+            items_iris: [other_object.iri]
+          )
+        end
+
+        before_each do
+          HTTP::Client.objects << other_object
+        end
+
+        it "skips the invalid pin" do
+          expect{subject.perform}.not_to change{!!Pin.find?(actor: actor, object: other_object)}
+        end
+
+        it "does not fail" do
+          expect{subject.perform}.not_to raise_error
+        end
+      end
+
+      context "with paginated collection" do
+        let(first_page) do
+          ActivityPub::Collection.new(
+            iri: "#{featured_iri}?page=1",
+            items_iris: [object1.iri, object2.iri],
+            next_iri: "#{featured_iri}?page=2",
+          )
+        end
+        let(last_page) do
+          ActivityPub::Collection.new(
+            iri: "#{featured_iri}?page=2",
+            items_iris: [object3.iri],
+            prev_iri: "#{featured_iri}?page=1",
+          )
+        end
+        let(collection) do
+          ActivityPub::Collection.new(
+            iri: featured_iri,
+            first_iri: first_page.iri,
+            last_iri: last_page.iri,
+          )
+        end
+
+        before_each do
+          HTTP::Client.collections << collection
+          HTTP::Client.collections << first_page
+          HTTP::Client.collections << last_page
+          HTTP::Client.objects << object3
+        end
+
+        it "fetches the featured collection" do
+          subject.perform
+          expect(HTTP::Client.requests).to have("GET #{featured_iri}")
+        end
+
+        it "traverses all pages" do
+          subject.perform
+          expect(HTTP::Client.requests).to have("GET #{featured_iri}?page=1")
+          expect(HTTP::Client.requests).to have("GET #{featured_iri}?page=2")
+        end
+
+        it "creates pins for featured objects" do
+          expect{subject.perform}.to change{Pin.count}.by(3)
+          expect(Pin.find?(actor: actor, object: object1)).to be_truthy
+          expect(Pin.find?(actor: actor, object: object2)).to be_truthy
+          expect(Pin.find?(actor: actor, object: object3)).to be_truthy
+        end
+      end
+    end
   end
 end

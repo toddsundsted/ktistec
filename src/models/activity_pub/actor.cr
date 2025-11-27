@@ -90,6 +90,9 @@ module ActivityPub
     property followers : String?
 
     @[Persistent]
+    property featured : String?
+
+    @[Persistent]
     property name : String?
 
     @[Persistent]
@@ -140,6 +143,7 @@ module ActivityPub
           self.outbox = "#{host}/actors/#{username}/outbox"
           self.following = "#{host}/actors/#{username}/following"
           self.followers = "#{host}/actors/#{username}/followers"
+          self.featured = "#{host}/actors/#{username}/featured"
           self.urls = ["#{host}/@#{username}"]
         end
       end
@@ -1013,6 +1017,7 @@ private module ActorModelHelper
       "outbox" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
       "following" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
       "followers" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
+      "featured" => Ktistec::JSON_LD.dig_id?(json, "http://joinmastodon.org/ns#featured"),
       "name" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
       "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
       "icon" => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),

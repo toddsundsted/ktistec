@@ -36,6 +36,10 @@ Spectator.describe ActivityPub::Actor do
       expect{subject.assign(username: "foobar").save}.to change{subject.followers}
     end
 
+    it "assigns featured" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.featured}
+    end
+
     it "assigns urls" do
       expect{subject.assign(username: "foobar").save}.to change{subject.urls}
     end
@@ -197,6 +201,7 @@ Spectator.describe ActivityPub::Actor do
           "https://www.w3.org/ns/activitystreams",
           "https://w3id.org/security/v1",
           {
+            "featured":{"@id":"http://joinmastodon.org/ns#featured","@type":"@id"},
             "schema":"http://schema.org#",
             "PropertyValue":"schema:PropertyValue",
             "value":"schema:value"
@@ -214,6 +219,7 @@ Spectator.describe ActivityPub::Actor do
         "outbox": "outbox link",
         "following": "following link",
         "followers": "followers link",
+        "featured": "featured link",
         "name":"Foo Bar",
         "summary": "<p></p>",
         "icon": {
@@ -321,6 +327,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
       expect(actor.followers).to eq("followers link")
+      expect(actor.featured).to eq("featured link")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")
@@ -372,6 +379,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
       expect(actor.followers).to eq("followers link")
+      expect(actor.featured).to eq("featured link")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")

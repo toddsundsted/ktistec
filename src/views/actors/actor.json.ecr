@@ -4,6 +4,7 @@
     "https://w3id.org/security/v1",
     {
       "manuallyApprovesFollowers":"as:manuallyApprovesFollowers",
+      "featured":{"@id":"http://joinmastodon.org/ns#featured","@type":"@id"},
       "schema":"http://schema.org#",
       "PropertyValue":"schema:PropertyValue",
       "value":"schema:value"
@@ -33,6 +34,9 @@
   <%- end -%>
   <%- if (followers = actor.followers) -%>
   "followers":<%= followers.to_json %>,
+  <%- end -%>
+  <%- if (featured = actor.featured) -%>
+  "featured":<%= featured.to_json %>,
   <%- end -%>
   <%- if (name = actor.name) -%>
   "name":<%= name.to_json %>,

@@ -11,7 +11,12 @@ require "../models/relationship/content/notification/follow/thread"
 class ActorsController
   include Ktistec::Controller
 
-  skip_auth ["/actors/:username", "/actors/:username/public-posts", "/actors/:username/feed.rss"], GET
+  skip_auth [
+    "/actors/:username",
+    "/actors/:username/public-posts",
+    "/actors/:username/feed.rss",
+    "/actors/:username/featured",
+  ], GET
 
   # Authorizes account access.
   #
@@ -131,6 +136,18 @@ class ActorsController
     objects = actor.bookmarks(**pagination_params(env))
 
     ok "actors/bookmarks", env: env, actor: actor, objects: objects
+  end
+
+  get "/actors/:username/featured" do |env|
+    unless (account = get_account(env))
+      not_found
+    end
+
+    actor = account.actor
+
+    objects = actor.pins(**pagination_params(env))
+
+    ok "actors/featured", env: env, objects: objects
   end
 
   get "/actors/:username/timeline" do |env|

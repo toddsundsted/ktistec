@@ -194,6 +194,8 @@ module MCP
         JSON::Any.new("likes"),
         JSON::Any.new("dislikes"),
         JSON::Any.new("announces"),
+        JSON::Any.new("bookmarks"),
+        JSON::Any.new("pins"),
         JSON::Any.new("followers"),
         JSON::Any.new("following"),
       ])

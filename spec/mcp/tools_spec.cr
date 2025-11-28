@@ -471,6 +471,14 @@ Spectator.describe MCP::Tools do
         paginate_request(id, "announces", args)
       end
 
+      def paginate_bookmarks_request(id, args = {} of String => String | Int32)
+        paginate_request(id, "bookmarks", args)
+      end
+
+      def paginate_pins_request(id, args = {} of String => String | Int32)
+        paginate_request(id, "pins", args)
+      end
+
       def paginate_followers_request(id, args = {} of String => String | Int32)
         paginate_request(id, "followers", args)
       end
@@ -1169,6 +1177,94 @@ Spectator.describe MCP::Tools do
         end
       end
 
+      context "with a bookmarked object" do
+        let_create(:object, named: bookmarked_post, attributed_to: account.actor, published: now)
+
+        it "is empty" do
+          request = paginate_bookmarks_request("paginate-bookmarks-1")
+
+          objects = expect_paginated_response(request, 0, false)
+          expect(objects).to be_empty
+        end
+
+        context "and a bookmark" do
+          let_create!(:bookmark_relationship, named: nil, actor: account.actor, object: bookmarked_post)
+
+          it "returns bookmarked objects" do
+            request = paginate_bookmarks_request("paginate-bookmarks-2")
+
+            objects = expect_paginated_response(request, 1, false)
+
+            expect(objects.size).to eq(1)
+            object_data = objects.first.as_h
+            expect(object_data["uri"]).to eq("ktistec://objects/#{bookmarked_post.id}")
+            expect(object_data["external_url"]).to eq(bookmarked_post.iri)
+            expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{bookmarked_post.id}")
+            expect(object_data["type"]).to eq("Object")
+            expect(object_data["attributed_to"]).to eq("ktistec://actors/#{bookmarked_post.attributed_to.id}")
+            expect(object_data["published"]).not_to be_nil
+          end
+
+          context "and another bookmarked object" do
+            let_create(:object, named: post, attributed_to: account.actor)
+            let_create!(:bookmark_relationship, named: nil, actor: account.actor, object: post)
+
+            it "supports pagination for bookmarks collection" do
+              request = paginate_bookmarks_request("paginate-bookmarks-3", {"size" => 1})
+
+              objects = expect_paginated_response(request, 1, true)
+              # returns most recent bookmark first
+              object_data = objects.first.as_h
+              expect(object_data["uri"]).to eq("ktistec://objects/#{post.id}")
+            end
+          end
+        end
+      end
+
+      context "with a pinned object" do
+        let_create(:object, named: pinned_post, attributed_to: account.actor, published: now)
+
+        it "is empty" do
+          request = paginate_pins_request("paginate-pins-1")
+
+          objects = expect_paginated_response(request, 0, false)
+          expect(objects).to be_empty
+        end
+
+        context "and a pin" do
+          let_create!(:pin_relationship, named: nil, actor: account.actor, object: pinned_post)
+
+          it "returns pinned objects" do
+            request = paginate_pins_request("paginate-pins-2")
+
+            objects = expect_paginated_response(request, 1, false)
+
+            expect(objects.size).to eq(1)
+            object_data = objects.first.as_h
+            expect(object_data["uri"]).to eq("ktistec://objects/#{pinned_post.id}")
+            expect(object_data["external_url"]).to eq(pinned_post.iri)
+            expect(object_data["internal_url"]).to eq("#{Ktistec.host}/remote/objects/#{pinned_post.id}")
+            expect(object_data["type"]).to eq("Object")
+            expect(object_data["attributed_to"]).to eq("ktistec://actors/#{pinned_post.attributed_to.id}")
+            expect(object_data["published"]).not_to be_nil
+          end
+
+          context "and another pinned object" do
+            let_create(:object, named: post, attributed_to: account.actor)
+            let_create!(:pin_relationship, named: nil, actor: account.actor, object: post)
+
+            it "supports pagination for pins collection" do
+              request = paginate_pins_request("paginate-pins-3", {"size" => 1})
+
+              objects = expect_paginated_response(request, 1, true)
+              # returns most recent pin first
+              object_data = objects.first.as_h
+              expect(object_data["uri"]).to eq("ktistec://objects/#{post.id}")
+            end
+          end
+        end
+      end
+
       context "for followers" do
         let_create(:actor, named: follower)
 
@@ -1315,8 +1411,20 @@ Spectator.describe MCP::Tools do
         count_since_request(id, "likes", args)
       end
 
+      def count_dislikes_since_request(id, args = {} of String => String | Int32)
+        count_since_request(id, "dislikes", args)
+      end
+
       def count_announces_since_request(id, args = {} of String => String | Int32)
         count_since_request(id, "announces", args)
+      end
+
+      def count_bookmarks_since_request(id, args = {} of String => String | Int32)
+        count_since_request(id, "bookmarks", args)
+      end
+
+      def count_pins_since_request(id, args = {} of String => String | Int32)
+        count_since_request(id, "pins", args)
       end
 
       def count_followers_since_request(id, args = {} of String => String | Int32)
@@ -1576,6 +1684,33 @@ Spectator.describe MCP::Tools do
         end
       end
 
+      context "with dislikes collection" do
+        let_create!(
+          :dislike,
+          named: nil,
+          actor: account.actor,
+          created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+        )
+        let_create!(
+          :dislike,
+          named: nil,
+          actor: account.actor,
+          created_at: Time.utc(2024, 1, 1, 12, 0, 0)
+        )
+
+        it "returns count for dislikes collection" do
+          request = count_dislikes_since_request("count-dislikes-1", {"since" => "2024-01-01T09:00:00Z"})
+
+          expect_count_response(request, 2)
+        end
+
+        it "returns count for dislikes collection" do
+          request = count_dislikes_since_request("count-dislikes-2", {"since" => "2024-01-01T11:00:00Z"})
+
+          expect_count_response(request, 1)
+        end
+      end
+
       context "with announces collection" do
         let_create!(
           :announce,
@@ -1598,6 +1733,60 @@ Spectator.describe MCP::Tools do
 
         it "returns count respecting since timestamp" do
           request = count_announces_since_request("count-announces-2", {"since" => "2024-01-01T11:00:00Z"})
+
+          expect_count_response(request, 1)
+        end
+      end
+
+      context "with bookmarks collection" do
+        let_create!(
+          :bookmark_relationship,
+          named: nil,
+          actor: account.actor,
+          created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+        )
+        let_create!(
+          :bookmark_relationship,
+          named: nil,
+          actor: account.actor,
+          created_at: Time.utc(2024, 1, 1, 12, 0, 0)
+        )
+
+        it "returns count for bookmarks collection" do
+          request = count_bookmarks_since_request("count-bookmarks-1", {"since" => "2024-01-01T09:00:00Z"})
+
+          expect_count_response(request, 2)
+        end
+
+        it "returns count for bookmarks collection" do
+          request = count_bookmarks_since_request("count-bookmarks-2", {"since" => "2024-01-01T11:00:00Z"})
+
+          expect_count_response(request, 1)
+        end
+      end
+
+      context "with pins collection" do
+        let_create!(
+          :pin_relationship,
+          named: nil,
+          actor: account.actor,
+          created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+        )
+        let_create!(
+          :pin_relationship,
+          named: nil,
+          actor: account.actor,
+          created_at: Time.utc(2024, 1, 1, 12, 0, 0)
+        )
+
+        it "returns count for pins collection" do
+          request = count_pins_since_request("count-pins-1", {"since" => "2024-01-01T09:00:00Z"})
+
+          expect_count_response(request, 2)
+        end
+
+        it "returns count for pins collection" do
+          request = count_pins_since_request("count-pins-2", {"since" => "2024-01-01T11:00:00Z"})
 
           expect_count_response(request, 1)
         end

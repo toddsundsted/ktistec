@@ -99,11 +99,11 @@ module Ktistec
       },
       audio: {
         keep: ["src"],
-        all: [{"controls", nil}]
+        all: [{"class", "ui audio"}, {"controls", nil}]
       },
       video: {
         keep: ["src"],
-        all: [{"controls", nil}]
+        all: [{"class", "ui video"}, {"controls", nil}]
       },
       source: {
         keep: ["src", "type"],

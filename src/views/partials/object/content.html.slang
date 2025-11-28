@@ -17,6 +17,13 @@ crystal:
   is_deleted = object.deleted? || author.deleted? || actor.deleted?
 .content data-controller="image-viewer" data-action="click->image-viewer#handleClick"
   .summary
+    - if for_thread && (parent = object.in_reply_to?)
+      crystal:
+        parent_in_thread = for_thread.try { |thread| thread.any? { |reply| reply.id == parent.id } }
+        parent_href = parent_in_thread ? "##{anchor(parent)}" : remote_thread_path(parent)
+        parent_text = parent.attributed_to?.try(&.handle)
+      a.in-reply-to data-turbo-frame="_top" href=parent_href title=parent_text
+        i.arrow.up.icon
     - if object.draft?
       | draft created
       a.date< = object.short_date(timezone)

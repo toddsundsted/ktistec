@@ -1,5 +1,8 @@
 require "../task"
 require "../activity_pub/actor"
+require "../activity_pub/object"
+require "../activity_pub/collection"
+require "../relationship/content/pin"
 
 class Task
   class RefreshActor < Task
@@ -43,6 +46,7 @@ class Task
     def perform
       if (instance = ActivityPub::Actor.dereference?(source, actor.iri, ignore_cached: true))
         instance.save.up!
+        sync_featured_collection(instance)
         Ktistec::Topic{"/actor/refresh"}.notify_subscribers(actor.id.to_s)
       else
         actor.down!
@@ -50,6 +54,33 @@ class Task
         message = "failed to dereference #{actor.iri}"
         failures << Failure.new(message)
         Log.debug { message }
+      end
+    end
+
+    private def sync_featured_collection(actor)
+      unless actor.local?
+        if (featured = actor.featured)
+          if (collection = ActivityPub::Collection.dereference?(source, featured))
+            if (object_iris = collection.all_item_iris(source))
+              update_pins(actor, object_iris)
+            end
+          end
+        end
+      end
+    end
+
+    private def update_pins(actor, new_iris)
+      new_iris_set = new_iris.to_set
+      current_pins = Relationship::Content::Pin.where(actor: actor)
+      current_iris_set = current_pins.map(&.to_iri).to_set
+      current_pins.each do |pin|
+        pin.destroy unless new_iris_set.includes?(pin.to_iri)
+      end
+      (new_iris_set - current_iris_set).each do |object_iri|
+        if (object = ActivityPub::Object.dereference?(source, object_iri))
+          pin = Relationship::Content::Pin.new(actor: actor, object: object)
+          pin.save if pin.valid?  # saves the object, too
+        end
       end
     end
   end

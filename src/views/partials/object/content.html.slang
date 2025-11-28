@@ -17,10 +17,20 @@ crystal:
   is_deleted = object.deleted? || author.deleted? || actor.deleted?
 .content data-controller="image-viewer" data-action="click->image-viewer#handleClick"
   .summary
+    - if for_thread && (parent = object.in_reply_to?)
+      crystal:
+        parent_in_thread = for_thread.try { |thread| thread.any? { |reply| reply.id == parent.id } }
+        parent_href = parent_in_thread ? "##{anchor(parent)}" : remote_thread_path(parent)
+        parent_text = parent.attributed_to?.try(&.handle)
+      a.in-reply-to.float-right data-turbo-frame="_top" href=parent_href title=parent_text
+        i.arrow.up.icon
     - if object.draft?
       | draft created
       a.date< = object.short_date(timezone)
     - else
+      - if for_actor && (pin = Relationship::Content::Pin.find?(actor: for_actor, object: object))
+        span.float-right
+          i.pin.icon
       - if account
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = actor.display_name
@@ -158,6 +168,15 @@ crystal:
         == form_button bookmark_path(object), button_class: "ui button mini iconic" do
           i.bookmark.outline.icon
           | Bookmark
+      - if author == account.actor
+        - if (pin =  Relationship::Content::Pin.find?(actor: account.actor, object: object))
+          == form_button pin_path(object), method: "DELETE", button_class: "ui button mini blue iconic" do
+            i.pin.icon
+            | Pin
+        - else
+          == form_button pin_path(object), button_class: "ui button mini iconic" do
+            i.pin.icon
+            | Pin
       - if translation
         == form_button clear_translation_object_path(object), button_class: "ui button mini purple iconic" do
           i.paper.plane.icon

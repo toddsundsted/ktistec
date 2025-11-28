@@ -1,6 +1,7 @@
 require "../framework/controller"
 require "../models/activity_pub/object/note"
 require "../models/relationship/content/bookmark"
+require "../models/relationship/content/pin"
 require "../models/relationship/content/follow/thread"
 require "../models/task/fetch/thread"
 require "../models/translation"
@@ -334,6 +335,34 @@ class ObjectsController
 
     bookmark = Relationship::Content::Bookmark.find?(actor: env.account.actor, object: object)
     bookmark.destroy if bookmark
+
+    if accepts_turbo_stream?
+      turbo_stream_refresh
+    else
+      redirect back_path
+    end
+  end
+
+  post "/remote/objects/:id/pin" do |env|
+    not_found unless (object = get_object(env, id_param(env))) && !object.draft?
+    forbidden unless object.attributed_to == env.account.actor
+
+    pin = Relationship::Content::Pin.find_or_new(actor: env.account.actor, object: object)
+    pin.save if pin.new_record?
+
+    if accepts_turbo_stream?
+      turbo_stream_refresh
+    else
+      redirect back_path
+    end
+  end
+
+  delete "/remote/objects/:id/pin" do |env|
+    not_found unless (object = get_object(env, id_param(env))) && !object.draft?
+    forbidden unless object.attributed_to == env.account.actor
+
+    pin = Relationship::Content::Pin.find?(actor: env.account.actor, object: object)
+    pin.destroy if pin
 
     if accepts_turbo_stream?
       turbo_stream_refresh

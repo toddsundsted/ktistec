@@ -93,6 +93,7 @@ Spectator.describe "object partials" do
 
     let(with_detail) { false }
     let(for_thread) { nil }
+    let(for_actor) { nil }
 
     context "given HTML content" do
       before_each { object.assign(content: "<ul><li>One</li><li>Two</li></ul>", media_type: "text/html") }
@@ -235,6 +236,18 @@ Spectator.describe "object partials" do
 
     # threads
 
+    it "does not render a back link to the parent" do
+      expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]")).to be_empty
+    end
+
+    context "given a reply" do
+      before_each { object.assign(in_reply_to: original).save }
+
+      it "does not render a back link to the parent" do
+        expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]")).to be_empty
+      end
+    end
+
     it "does not render a button to the threaded conversation" do
       object.assign(in_reply_to: original).save
       expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
@@ -272,6 +285,24 @@ Spectator.describe "object partials" do
 
       context "when viewing a thread" do
         let(for_thread) { [original] }
+
+        it "does not render a back link to the parent" do
+          expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]")).to be_empty
+        end
+
+        context "given a reply" do
+          before_each { object.assign(in_reply_to: original).save }
+
+          it "renders a link back to the parent in thread view" do
+            expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]/@href").map(&.text)).
+              to contain_exactly("#object-#{original.id}")
+          end
+
+          it "renders a link back to the parent in thread view" do
+            expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]/@title").map(&.text)).
+              to contain_exactly("@remote")
+          end
+        end
 
         it "does not render a button to the threaded conversation" do
           object.assign(in_reply_to: original).save

@@ -49,7 +49,7 @@ module Ktistec::ViewHelper
       activity ? "activity-#{activity.class.to_s.split("::").last.downcase}" : ""
     end
 
-    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, for_thread = nil)
+    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, for_thread = nil, for_actor = nil)
       if for_thread
         render "src/views/partials/thread.html.slang"
       elsif with_detail
@@ -809,7 +809,7 @@ module Ktistec::ViewHelper
     render "src/views/partials/collection.json.ecr"
   end
 
-  def self._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, for_thread)
+  def self._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, for_thread, for_actor)
     render "src/views/partials/object/content.html.slang"
   end
 

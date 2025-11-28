@@ -22,14 +22,15 @@ crystal:
         parent_in_thread = for_thread.try { |thread| thread.any? { |reply| reply.id == parent.id } }
         parent_href = parent_in_thread ? "##{anchor(parent)}" : remote_thread_path(parent)
         parent_text = parent.attributed_to?.try(&.handle)
-      a.in-reply-to data-turbo-frame="_top" href=parent_href title=parent_text
+      a.in-reply-to.float-right data-turbo-frame="_top" href=parent_href title=parent_text
         i.arrow.up.icon
     - if object.draft?
       | draft created
       a.date< = object.short_date(timezone)
     - else
       - if for_actor && (pin = Relationship::Content::Pin.find?(actor: for_actor, object: object))
-        i.pin.icon
+        span.float-right
+          i.pin.icon
       - if account
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = actor.display_name

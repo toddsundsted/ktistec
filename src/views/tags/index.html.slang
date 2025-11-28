@@ -8,7 +8,11 @@ section.ui.feed data-controller="icon-load-error"
   #refresh-posts-message
   - collection.each do |object|
     - if env.account?
-      == object_partial(env, object)
+      crystal:
+        _highlight = if cutoff_time
+          object.created_at > cutoff_time
+        end
+      == object_partial(env, object, highlight: _highlight)
     - else
       crystal:
         _activity = object.activities.find! do |activity|

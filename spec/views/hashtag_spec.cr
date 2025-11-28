@@ -15,6 +15,8 @@ Spectator.describe "index.html.slang" do
 
   let(collection) { Ktistec::Util::PaginatedArray(ActivityPub::Object).new }
 
+  let(cutoff_time) { nil }
+
   let(follow) { nil }
 
   let(task) { nil }
@@ -22,14 +24,14 @@ Spectator.describe "index.html.slang" do
   let(count) { 0 }
 
   module ::Ktistec::ViewHelper
-    def self.render_index_html_slang(env, hashtag, collection, follow, task, count)
+    def self.render_index_html_slang(env, hashtag, collection, cutoff_time, follow, task, count)
       render "./src/views/tags/index.html.slang"
     end
   end
 
   subject do
     begin
-      XML.parse_html(Ktistec::ViewHelper.render_index_html_slang(env, hashtag, collection, follow, task, count))
+      XML.parse_html(Ktistec::ViewHelper.render_index_html_slang(env, hashtag, collection, cutoff_time, follow, task, count))
     rescue XML::Error
       XML.parse_html("<div/>").document
     end

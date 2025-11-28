@@ -68,6 +68,13 @@ nav.ui.top.navigation.menu {
 /** timeline **/
 .ui.feed {
     .event {
+        &.highlighted {
+            background-color: var(--bg-primary-1);
+            width: calc(100% + 1.0rem);
+            margin: -0.5rem;
+            padding: 0.5rem;
+        }
+
         > .label {
             img { width: 2.5em; height: 2.5em; object-fit: cover; }
             /* overlapping profile icons */

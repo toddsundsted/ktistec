@@ -16,6 +16,8 @@ Spectator.describe TagsController do
     let_create(
       :object, named: object{{index}},
       published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+      created_at: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+      updated_at: Time.utc(2016, 2, 15, 10, 20, {{index}}),
       attributed_to: {{origin == :local ? :author.id : :other.id}},
       local: {{origin == :local}},
     )
@@ -80,7 +82,7 @@ Spectator.describe TagsController do
     end
 
     context "if authenticated" do
-      sign_in
+      sign_in(as: author.username)
 
       it "renders the collection" do
         get "/tags/foo", ACCEPT_HTML
@@ -105,6 +107,49 @@ Spectator.describe TagsController do
           get "/tags/foo?page=1", ACCEPT_HTML
           expect(response.status_code).to eq(200)
           expect(response.body).to contain("turbo-stream-source")
+        end
+      end
+
+      context "highlighting" do
+        it "does not highlight any objects" do
+          get "/tags/foo", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'highlighted')]")).to be_empty
+        end
+
+        context "given a fetch task" do
+          let_create!(
+            :fetch_hashtag_task,
+            source: author,
+            name: "foo",
+            last_attempt_at: Time.utc(2016, 2, 15, 10, 20, 3),
+            next_attempt_at: Time.utc(2016, 2, 15, 10, 20, 4),
+          )
+
+          it "highlights objects created after cutoff time" do
+            get "/tags/foo", ACCEPT_HTML
+            objects = XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'highlighted')]/@id").map(&.text)
+            expect(objects).to contain_exactly("object-#{object5.id}", "object-#{object4.id}", "object-#{object3.id}")
+          end
+
+          it "does not highlight objects created before cutoff time" do
+            get "/tags/foo", ACCEPT_HTML
+            objects = XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event') and not(contains(@class,'highlighted'))]/@id").map(&.text)
+            expect(objects).to contain_exactly("object-#{object2.id}", "object-#{object1.id}")
+          end
+        end
+
+        context "given a fetch task with no last_attempt_at" do
+          let_create!(
+            :fetch_hashtag_task,
+            source: author,
+            name: "foo",
+            last_attempt_at: nil,
+          )
+
+          it "does not highlight any objects" do
+            get "/tags/foo", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'highlighted')]")).to be_empty
+          end
         end
       end
     end

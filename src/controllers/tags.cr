@@ -8,6 +8,15 @@ class TagsController
 
   skip_auth ["/tags/:hashtag"], GET
 
+  private def self.cutoff_time(task)
+    if task
+      if (last_at = task.last_attempt_at) && (next_at = task.next_attempt_at)
+        interval = Math.min(next_at - last_at, 1.day)
+        last_at - interval
+      end
+    end
+  end
+
   get "/tags/:hashtag" do |env|
     hashtag = env.params.url["hashtag"]
 
@@ -26,7 +35,7 @@ class TagsController
       task = Task::Fetch::Hashtag.find?(source: env.account.actor, name: hashtag)
     end
 
-    ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, follow: follow, task: task
+    ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, cutoff_time: cutoff_time(task), follow: follow, task: task
   end
 
   private macro set_up
@@ -63,7 +72,7 @@ class TagsController
 
   private macro render_or_redirect
     if in_turbo_frame?
-      ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, follow: follow, task: task
+      ok "tags/index", env: env, hashtag: hashtag, collection: collection, count: count, cutoff_time: nil, follow: follow, task: task
     else
       redirect back_path
     end

@@ -41,6 +41,10 @@ module Ktistec
         # for ActivityPub objects that are, for example, sometimes
         # embedded and aren't dereferenceable.
 
+        # IRIs that include URL fragments (i.e., '#fragment') are not
+        # dereferenceable. per the ActivityPub spec, these IRIs are
+        # just opaque strings.
+
         @@required_iri : Bool = true
 
         @[Persistent]
@@ -73,6 +77,9 @@ module Ktistec
           if ignore_cached || (instance = self.find?(iri, include_deleted: include_deleted)).nil?
             if iri.starts_with?(Ktistec.host)
               instance = self.find?(iri, include_deleted: include_deleted)
+            elsif iri.includes?("#")
+              Log.debug { "#{self}.dereference? - #{iri} - skipping dereference for URL with fragment" }
+              instance = nil
             else
               headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
               Ktistec::Open.open?(key_pair, iri, headers) do |response|
@@ -102,6 +109,9 @@ module Ktistec
                       if dereference && ({{foreign_key}} = self.{{foreign_key}})
                         if ignore_changed || ({{name}}_ = self.{{name}}?).nil? || (ignore_cached && !{{name}}_.changed?)
                           if {{foreign_key}}.starts_with?(Ktistec.host)
+                            {{name}}_ = self.{{name}}?
+                          elsif {{foreign_key}}.includes?("#")
+                            Log.debug { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} - skipping dereference for URL with fragment" }
                             {{name}}_ = self.{{name}}?
                           else
                             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}

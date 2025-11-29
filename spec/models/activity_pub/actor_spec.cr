@@ -452,6 +452,14 @@ Spectator.describe ActivityPub::Actor do
       end
     end
 
+    context "given a local actor" do
+      let_build(:actor, local: true)
+
+      it "renders `proxyUrl`" do
+        expect(actor.to_json_ld).to match(/"endpoints":\{[^}]*"proxyUrl":"https:\/\/test.test\/proxy"[^}]*\}/)
+      end
+    end
+
     context "given an array of attachments" do
       it "renders the array of attachments, with html links" do
         expect(actor.to_json_ld).to match(/"attachment":\[[^\]]+\]/)

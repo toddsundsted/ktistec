@@ -106,6 +106,15 @@
                 i.external.arrow.icon
                 | Source
   .component-showcase
+    h4 Refresh Message
+    .ui.text.container
+      section.ui.feed
+        .ui.info.icon.message
+          i.sync.icon
+          .content
+            .header There are new posts!
+            p: a Refresh
+  .component-showcase
     h4 Object Detail
     .ui.text.container
       section.ui.feed
@@ -263,7 +272,8 @@
             i.user.outline.icon
           .content
             .summary
-              a.user> [blocked]
+              a.user>
+                | [blocked]
               | posted
               a.date< 4 days ago
             .extra.text
@@ -277,7 +287,8 @@
             i.user.icon
           .content
             .summary
-              a.user> Deleted User
+              a.user>
+                | Deleted User
               | posted
               a.date< 5 days ago
             .extra.text.deleted

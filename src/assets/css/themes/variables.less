@@ -7,41 +7,238 @@
 
 /** CSS variables for theming **/
 :root {
-    --color-transparent: transparent;
-
-    --error-text-color: #9f3a38;
-    --error-bg-color: #fff6f6;
-    --error-border-color: #e0b4b4;
-
     --text-white: #fff;
+    --color-transparent: transparent;
 }
 
-/* Light mode colors (default) */
+/** LESS mixins for derived color properties **/
+
+/* Text color mixins */
+
+.text-primary-1() {
+    color: var(--text-primary-1, color-mix(in srgb, var(--text-primary) 80%, var(--mix-lighter)));
+}
+
+.text-primary-2() {
+    color: var(--text-primary-2, color-mix(in srgb, var(--text-primary) 75%, var(--mix-lighter)));
+}
+
+.text-primary-3() {
+    color: var(--text-primary-3, color-mix(in srgb, var(--text-primary) 70%, var(--mix-lighter)));
+}
+
+.text-primary-4() {
+    color: var(--text-primary-4, color-mix(in srgb, var(--text-primary) 65%, var(--mix-lighter)));
+}
+
+.text-muted() {
+    color: var(--text-muted, var(--text-primary-4, color-mix(in srgb, var(--text-primary) 65%, var(--mix-lighter))));
+}
+
+.text-info() {
+    color: var(--text-info, var(--semantic-info));
+}
+
+.text-warning() {
+    color: var(--text-warning, var(--semantic-warning));
+}
+
+.text-error() {
+    color: var(--text-error, var(--semantic-error));
+}
+
+/* Header color mixins */
+
+.header-info() {
+    color: var(--header-info, color-mix(in srgb, var(--semantic-info) 91%, black));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--header-info, color-mix(in srgb, var(--semantic-info) 91%, white));
+    }
+}
+
+.header-warning() {
+    color: var(--header-warning, color-mix(in srgb, var(--semantic-warning) 91%, black));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--header-warning, color-mix(in srgb, var(--semantic-warning) 91%, white));
+    }
+}
+
+.header-error() {
+    color: var(--header-error, color-mix(in srgb, var(--semantic-error) 91%, black));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--header-error, color-mix(in srgb, var(--semantic-error) 91%, white));
+    }
+}
+
+/* Background color mixins */
+
+.bg-primary-1() {
+    background-color: var(--bg-primary-1, color-mix(in srgb, var(--bg-primary) 95%, var(--mix-darker)));
+}
+
+.bg-primary-2() {
+    background-color: var(--bg-primary-2, color-mix(in srgb, var(--bg-primary) 90%, var(--mix-darker)));
+}
+
+.bg-primary-3() {
+    background-color: var(--bg-primary-3, color-mix(in srgb, var(--bg-primary) 85%, var(--mix-darker)));
+}
+
+.bg-transparent() {
+    background-color: var(--bg-transparent, color-mix(in srgb, var(--bg-primary) 63%, transparent));
+}
+
+.bg-hover() {
+    background-color: var(--bg-hover, color-mix(in srgb, var(--bg-primary) 95%, var(--mix-darker)));
+
+    @media (prefers-color-scheme: dark) {
+        background-color: var(--bg-hover, color-mix(in srgb, var(--bg-primary) 65%, var(--mix-darker)));
+    }
+}
+
+.bg-label-hover() {
+    background-color: var(--bg-label-hover, color-mix(in srgb, var(--bg-label) 90%, var(--mix-darker)));
+}
+
+.bg-accent-code() {
+    background-color: var(--bg-accent-code, color-mix(in srgb, color-mix(in srgb, var(--bg-input) 95%, var(--mix-darker)) 98%, var(--semantic-primary)));
+
+    @media (prefers-color-scheme: dark) {
+        background-color: var(--bg-accent-code, color-mix(in srgb, color-mix(in srgb, var(--bg-input) 80%, var(--mix-darker)) 98%, var(--semantic-primary)));
+    }
+}
+
+.bg-accent-pre() {
+    background-color: var(--bg-accent-pre, color-mix(in srgb, color-mix(in srgb, var(--bg-input) 95%, var(--mix-darker)) 98%, var(--semantic-primary)));
+
+    @media (prefers-color-scheme: dark) {
+        background-color: var(--bg-accent-pre, color-mix(in srgb, color-mix(in srgb, var(--bg-input) 80%, var(--mix-darker)) 98%, var(--semantic-primary)));
+    }
+}
+
+.bg-info() {
+    background-color: var(--bg-info, color-mix(in srgb, var(--semantic-info) 6%, white));
+
+    @media (prefers-color-scheme: dark) {
+        background-color: var(--bg-info, color-mix(in srgb, var(--semantic-info) 26%, black));
+    }
+}
+
+.bg-warning() {
+    background-color: var(--bg-warning, color-mix(in srgb, var(--semantic-warning) 6%, white));
+
+    @media (prefers-color-scheme: dark) {
+        background-color: var(--bg-warning, color-mix(in srgb, var(--semantic-warning) 26%, black));
+    }
+}
+
+.bg-error() {
+    background-color: var(--bg-error, color-mix(in srgb, var(--semantic-error) 6%, white));
+
+    @media (prefers-color-scheme: dark) {
+        background-color: var(--bg-error, color-mix(in srgb, var(--semantic-error) 26%, black));
+    }
+}
+
+/* Box shadow color mixins */
+
+.shadow-info() {
+    box-shadow: 0 0 0 1px var(--shadow-info, color-mix(in srgb, var(--semantic-info) 60%, white)) inset, 0 0 0 0 transparent;
+
+    @media (prefers-color-scheme: dark) {
+        box-shadow: 0 0 0 1px var(--shadow-info, color-mix(in srgb, var(--semantic-info) 90%, black)) inset, 0 0 0 0 transparent;
+    }
+}
+
+.shadow-warning() {
+    box-shadow: 0 0 0 1px var(--shadow-warning, color-mix(in srgb, var(--semantic-warning) 60%, white)) inset, 0 0 0 0 transparent;
+
+    @media (prefers-color-scheme: dark) {
+        box-shadow: 0 0 0 1px var(--shadow-warning, color-mix(in srgb, var(--semantic-warning) 90%, black)) inset, 0 0 0 0 transparent;
+    }
+}
+
+.shadow-error() {
+    box-shadow: 0 0 0 1px var(--shadow-error, color-mix(in srgb, var(--semantic-error) 60%, white)) inset, 0 0 0 0 transparent;
+
+    @media (prefers-color-scheme: dark) {
+        box-shadow: 0 0 0 1px var(--shadow-error, color-mix(in srgb, var(--semantic-error) 90%, black)) inset, 0 0 0 0 transparent;
+    }
+}
+
+/* Border color mixins */
+
+.border-color-1() {
+    border-color: var(--border-color-1, color-mix(in srgb, var(--border-color) 80%, black));
+
+    @media (prefers-color-scheme: dark) {
+        border-color: var(--border-color-1, color-mix(in srgb, var(--border-color) 70%, white));
+    }
+}
+
+.border-color-2() {
+    border-color: var(--border-color-2, color-mix(in srgb, var(--border-color) 50%, black));
+
+    @media (prefers-color-scheme: dark) {
+        border-color: var(--border-color-2, color-mix(in srgb, var(--border-color) 40%, white));
+    }
+}
+
+/* Anchor color mixins */
+
+.anchor-color() {
+    color: var(--anchor-color, color-mix(in srgb, var(--semantic-primary) 85%, black));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--anchor-color, color-mix(in srgb, var(--semantic-primary) 95%, white));
+    }
+}
+
+.anchor-color-hover() {
+    color: var(--anchor-color-hover, color-mix(in srgb, var(--anchor-color, color-mix(in srgb, var(--semantic-primary) 85%, black)) 85%, black));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--anchor-color-hover, color-mix(in srgb, var(--anchor-color, color-mix(in srgb, var(--semantic-primary) 95%, white)) 85%, white));
+    }
+}
+
+/* Semantic color mixins */
+
+.semantic-primary-hover() {
+    background-color: var(--semantic-primary-hover, color-mix(in srgb, var(--semantic-primary) 85%, black));
+
+    @media (prefers-color-scheme: dark) {
+        background-color: var(--semantic-primary-hover, color-mix(in srgb, var(--semantic-primary) 85%, black));
+    }
+}
+
+/* Light mode colors */
 :root {
+    /* mix helpers for light mode */
+    --mix-lighter: white;
+    --mix-darker: black;
+
     --text-primary: rgba(0, 0, 0, 0.87);
     --text-primary-inverted: rgba(255, 255, 255, 0.87);
     --text-secondary: rgba(0, 0, 0, 0.6);
-    --text-muted: rgba(0, 0, 0, 0.4);
 
     --bg-primary: #ffffff;
-    --bg-primary-1: color-mix(in srgb, var(--bg-primary) 95%, black);
-    --bg-primary-2: color-mix(in srgb, var(--bg-primary) 90%, black);
-    --bg-primary-3: color-mix(in srgb, var(--bg-primary) 85%, black);
-    --bg-hover: rgba(0, 0, 0, 0.05);
-    --bg-transparent: rgba(255, 255, 255, 0.63);
     --bg-icon-menu: #fbfbfb;
-    --bg-accent-code: #f3f3f3;
-    --bg-accent-pre: #f6f8fa;
     --bg-input: #ffffff;
     --bg-label: #e8e8e8;
 
     --border-color: rgba(34, 36, 38, 0.15);
 
-    --anchor-color: #4183c4;
-
     --semantic-primary: #2185d0;
     --semantic-affirmative: #21ba45;
     --semantic-negative: #db2828;
+
+    --semantic-info: #276f86;
+    --semantic-warning: #573a08;
+    --semantic-error: #9f3a38;
 
     --semantic-dangerous: #ff2733;
     --semantic-dangerous-hover: #f41824;
@@ -54,30 +251,28 @@
 /* Dark mode colors */
 @media (prefers-color-scheme: dark) {
     :root {
+        /* swap mix helpers for dark mode */
+        --mix-lighter: black;
+        --mix-darker: white;
+
         --text-primary: #ffffff;
         --text-primary-inverted: #000000;
         --text-secondary: rgba(255, 255, 255, 0.7);
-        --text-muted: rgba(255, 255, 255, 0.5);
 
         --bg-primary: #1a1a1a;
-        --bg-primary-1: color-mix(in srgb, var(--bg-primary) 95%, white);
-        --bg-primary-2: color-mix(in srgb, var(--bg-primary) 90%, white);
-        --bg-primary-3: color-mix(in srgb, var(--bg-primary) 85%, white);
-        --bg-hover: rgba(255, 255, 255, 0.35);
-        --bg-transparent: rgba(42, 42, 42, 0.63);
         --bg-icon-menu: #1f1f1f;
-        --bg-accent-code: #404040;
-        --bg-accent-pre: #383838;
         --bg-input: #2d2d2d;
         --bg-label: #484848;
 
         --border-color: rgba(255, 255, 255, 0.15);
 
-        --anchor-color: #4183c4;
-
         --semantic-primary: #4dabf7;
         --semantic-affirmative: #51cf66;
         --semantic-negative: #ff6b6b;
+
+        --semantic-info: #5fb3d0;
+        --semantic-warning: #ffd43b;
+        --semantic-error: #9f3a38;
 
         --semantic-dangerous: #ff6b6b;
         --semantic-dangerous-hover: #ff5252;

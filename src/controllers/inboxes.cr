@@ -105,17 +105,23 @@ class InboxesController
       end
     end
 
-    # mastodon issues identifiers for activities that cannot be
+    # some servers issue identifiers for activities that cannot be
     # dereferenced (they are the identifier of the object or actor
     # plus a URL fragment).  so as a last resort, when dealing with an
     # activity that can't otherwise be verified, check on the object
-    # or actor.  if the activity is an update, and the object exists,
-    # or the activity is a delete, but the object or actor does not
-    # exist, consider the activity verified.
+    # or actor.  if the activity is a create or an update, and the
+    # object exists, or the activity is a delete, but the object or
+    # actor does not exist, consider the activity verified.
 
     unless verified
       if (object_iri = activity.object_iri)
-        if activity.is_a?(ActivityPub::Activity::Update)
+        if activity.is_a?(ActivityPub::Activity::Create)
+          Log.trace { "[#{request_id}] checking object of create iri=#{object_iri}" }
+          if (temporary = ActivityPub::Object.dereference?(account.actor, object_iri, ignore_cached: true))
+            activity.object = temporary
+            verified = true
+          end
+        elsif activity.is_a?(ActivityPub::Activity::Update)
           Log.trace { "[#{request_id}] checking object of update iri=#{object_iri}" }
           if (temporary = ActivityPub::Object.dereference?(account.actor, object_iri, ignore_cached: true))
             activity.object = temporary

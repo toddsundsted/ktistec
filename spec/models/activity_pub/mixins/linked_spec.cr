@@ -230,6 +230,40 @@ Spectator.describe Ktistec::Model::Linked do
       end
     end
 
+    context "when linked IRI contains a fragment" do
+      let(iri) { "https://remote/objects/object#activity/like/12345" }
+
+      before_each do
+        subject.linked_model_iri = iri
+      end
+
+      it "does not fetch and does not return the object" do
+        expect(subject.linked_model?(key_pair, dereference: true)).to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "does not fetch and does not return the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: true)).to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      context "and linked object is cached" do
+        before_each do
+          subject.linked_model = object.assign(iri: iri).save
+        end
+
+        it "returns but does not fetch the object" do
+          expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: false)).not_to be_nil
+          expect(HTTP::Client.last?).to be_nil
+        end
+
+        it "returns but does not fetch the object" do
+          expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: true)).not_to be_nil
+          expect(HTTP::Client.last?).to be_nil
+        end
+      end
+    end
+
     context "given bad JSON" do
       before_each do
         HTTP::Client.objects[object.iri] = "<html>"
@@ -364,6 +398,36 @@ Spectator.describe Ktistec::Model::Linked do
             expect(subject.dereference?(key_pair, object.iri, include_deleted: true)).not_to be_nil
             expect(HTTP::Client.last?).to be_nil
           end
+        end
+      end
+    end
+
+    context "when IRI contains a fragment" do
+      let(iri) { "https://remote/objects/object#updates/123456" }
+
+      it "does not return and does not fetch the object" do
+        expect(subject.dereference?(key_pair, iri)).to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "does not return and does not fetch the object" do
+        expect(subject.dereference?(key_pair, iri, ignore_cached: true)).to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      context "and object is cached" do
+        before_each do
+          object.assign(iri: iri).save
+        end
+
+        it "returns but does not fetch the object" do
+          expect(subject.dereference?(key_pair, iri, ignore_cached: false)).not_to be_nil
+          expect(HTTP::Client.last?).to be_nil
+        end
+
+        it "does not return and does not fetch the object" do
+          expect(subject.dereference?(key_pair, iri, ignore_cached: true)).to be_nil
+          expect(HTTP::Client.last?).to be_nil
         end
       end
     end

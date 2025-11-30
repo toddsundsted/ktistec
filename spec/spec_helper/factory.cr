@@ -326,12 +326,16 @@ def approved_relationship_factory(**options)
   relationship_factory(Relationship::Content::Approved, **options)
 end
 
-def bookmark_relationship_factory(**options)
-  relationship_factory(Relationship::Content::Bookmark, **options)
+def bookmark_relationship_factory(object_iri = nil, object = false, actor_iri = nil, actor = false, **options)
+  actor = actor_factory unless actor_iri || actor.nil? || actor
+  object = object_factory(attributed_to_iri: actor_iri, attributed_to: actor) unless object_iri || object.nil? || object
+  relationship_factory(Relationship::Content::Bookmark, **{from_iri: actor_iri, actor: actor, to_iri: object_iri, object: object}.merge(options))
 end
 
-def pin_relationship_factory(**options)
-  relationship_factory(Relationship::Content::Pin, **options)
+def pin_relationship_factory(object_iri = nil, object = false, actor_iri = nil, actor = false, **options)
+  actor = actor_factory unless actor_iri || actor.nil? || actor
+  object = object_factory(attributed_to_iri: actor_iri, attributed_to: actor) unless object_iri || object.nil? || object
+  relationship_factory(Relationship::Content::Pin, **{from_iri: actor_iri, actor: actor, to_iri: object_iri, object: object}.merge(options))
 end
 
 def canonical_relationship_factory(**options)

@@ -293,6 +293,18 @@ module MCP
             JSON::Any.new(MCP::Resources.object_contents(announced_object))
           end
           {objects, announces.more?}
+        when "bookmarks"
+          bookmarks = actor.bookmarks(page: page, size: size)
+          objects = bookmarks.map do |bookmarked_object|
+            JSON::Any.new(MCP::Resources.object_contents(bookmarked_object))
+          end
+          {objects, bookmarks.more?}
+        when "pins"
+          pins = actor.pins(page: page, size: size)
+          objects = pins.map do |pinned_object|
+            JSON::Any.new(MCP::Resources.object_contents(pinned_object))
+          end
+          {objects, pins.more?}
         when "followers"
           followers = Relationship::Social::Follow.followers_for(actor.iri, page: page, size: size)
           objects = followers.map do |relationship|
@@ -379,6 +391,10 @@ module MCP
           actor.dislikes(since: since)
         when "announces"
           actor.announces(since: since)
+        when "bookmarks"
+          actor.bookmarks(since: since)
+        when "pins"
+          actor.pins(since: since)
         when "followers"
           Relationship::Social::Follow.followers_since(actor.iri, since)
         when "following"

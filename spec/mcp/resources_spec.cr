@@ -115,7 +115,7 @@ Spectator.describe MCP::Resources do
 
       # supported collections
       collections = data["collections"].as_a.map(&.as_s)
-      expected_collections = ["posts", "drafts", "timeline", "notifications", "likes", "dislikes", "announces", "followers", "following"]
+      expected_collections = ["posts", "drafts", "timeline", "notifications", "likes", "dislikes", "announces", "bookmarks", "pins", "followers", "following"]
       expect(collections).to contain_exactly(*expected_collections)
 
       # supported collection formats

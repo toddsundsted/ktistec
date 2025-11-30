@@ -38,7 +38,8 @@ nav.ui.top.navigation.menu {
     margin-bottom: 0;
     .item {
         height: 2.5em;
-        &:hover { background: var(--bg-hover); }
+        padding: .75em .50em;
+        &:hover { .bg-hover(); }
         > a { color: inherit; }
     }
 }
@@ -61,12 +62,19 @@ nav.ui.top.navigation.menu {
 
 /** documentation **/
 .ui.documentation {
-    code { background-color: var(--bg-accent-code); padding: .2em .3em; font-size: 90%; line-height: normal; }
+    code { .bg-accent-code(); padding: .2em .3em; font-size: 90%; line-height: normal; }
 }
 
 /** timeline **/
 .ui.feed {
     .event {
+        &.highlighted {
+            .bg-primary-1();
+            width: calc(100% + 1.0rem);
+            margin: -0.5rem;
+            padding: 0.5rem;
+        }
+
         > .label {
             img { width: 2.5em; height: 2.5em; object-fit: cover; }
             /* overlapping profile icons */
@@ -132,8 +140,8 @@ nav.ui.top.navigation.menu {
             figcaption { text-align: center; font-style: italic; }
 
             /* other styles */
-            code { background: var(--bg-accent-code); padding: .2em .3em; font-size: var(--code-size); line-height: normal; }
-            pre { background: var(--bg-accent-pre); padding: .2em .4em; font-size: var(--code-size); overflow-x: auto; }
+            code { .bg-accent-code(); padding: .2em .3em; font-size: var(--code-size); line-height: normal; }
+            pre { .bg-accent-pre(); padding: .2em .4em; font-size: var(--code-size); overflow-x: auto; }
         }
     }
 
@@ -341,7 +349,7 @@ nav.ui.top.navigation.menu {
         width: 7rem;
         height: 7rem;
         object-fit: cover;
-        background-color: var(--bg-transparent);
+        .bg-transparent();
         border-radius: 3.5rem;
         border: 3px solid var(--bg-primary);
     }
@@ -369,7 +377,7 @@ nav.ui.top.navigation.menu {
         position: absolute;
         bottom: 1em;
         right: 1em;
-        color: var(--text-muted);
+        .text-muted();
         font-size: smaller;
     }
 }
@@ -396,7 +404,7 @@ nav.ui.top.navigation.menu {
         width: 4rem;
         height: 4rem;
         object-fit: cover;
-        background-color: var(--bg-transparent);
+        .bg-transparent();
         border-radius: 2rem;
         border: 2px solid var(--bg-primary);
     }
@@ -488,8 +496,8 @@ trix-toolbar {
 
 /** trix editor **/
 trix-editor {
-    code { background: var(--bg-accent-code); padding: .2em .3em; font-size: var(--code-size); line-height: normal; }
-    pre { background: var(--bg-accent-pre); padding: .2em .4em; font-size: var(--code-size); overflow-x: auto; }
+    code { .bg-accent-code(); padding: .2em .3em; font-size: var(--code-size); line-height: normal; }
+    pre { .bg-accent-pre(); padding: .2em .4em; font-size: var(--code-size); overflow-x: auto; }
 
     /* fix style conflicts with semantic ui */
     .attachment__caption-editor { padding: 0 !important; border: none !important; resize: unset !important; height: unset !important; min-height: unset !important; max-height: unset !important; }
@@ -554,7 +562,7 @@ body.offline .ui.banner .message {
 }
 
 /** colors **/
-.blue { color: var(--color-blue); } // pretty sure this is used on the Log page
+.blue { color: var(--semantic-primary); } // logging levels page
 
 /** from mastodon **/
 .invisible {
@@ -580,17 +588,21 @@ body.offline .ui.banner .message {
 .design-system-section {
     margin: 2rem 0;
     padding: 1.5rem;
-    border: 1px solid hsl(from var(--border-color) h s 20%);
+    .border-color-1();
+    border-width: 1px;
+    border-style: solid;
     border-radius: 4px;
     h2 {
         margin-top: 0;
         padding-bottom: 0.5rem;
-        border-bottom: 2px solid hsl(from var(--border-color) h s 50%);
-        color: hsl(from var(--text-primary) h s 20%);
+        .border-color-2();
+        border-bottom-width: 2px;
+        border-bottom-style: solid;
+        .text-primary-1();
     }
     h3 {
         margin-top: 1.5rem;
-        color: hsl(from var(--text-primary) h s 25%);
+        .text-primary-2();
     }
     .component-showcase {
         margin: 1rem 0;
@@ -600,7 +612,7 @@ body.offline .ui.banner .message {
             margin-top: 0;
             margin-bottom: 1rem;
             font-size: 1.1rem;
-            color: hsl(from var(--text-primary) h s 30%);
+            .text-primary-3();
         }
         .variation-group {
             margin: 1rem 0;
@@ -608,7 +620,7 @@ body.offline .ui.banner .message {
                 margin-bottom: 0.5rem;
                 font-size: 0.9rem;
                 font-weight: bold;
-                color: hsl(from var(--text-primary) h s 35%);
+                .text-muted();
             }
         }
     }

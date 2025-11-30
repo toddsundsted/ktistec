@@ -325,6 +325,12 @@ Spectator.describe InboxesController do
         context "but the public key is wrong" do
           before_each { other.dup.assign(pem_public_key: "").save }
 
+          before_each do
+            # surgically remove only the note so that the object
+            # fetching fallback in the controller doesn't succeed
+            HTTP::Client.objects.delete(note.iri)
+          end
+
           it "retrieves the activity from the origin" do
             post "/actors/#{actor.username}/inbox", headers, json_ld
             expect(HTTP::Client.requests).to have("GET #{activity.iri}")
@@ -761,6 +767,27 @@ Spectator.describe InboxesController do
             expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
               to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
           end
+        end
+      end
+
+      context "signature is not valid but the remote object can be fetched" do
+        let(headers) { Ktistec::Signature.sign(other, "", "{}", "") }
+
+        before_each { create.object = note }
+
+        it "checks for the existence of the object" do
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(HTTP::Client.requests).to have("GET #{note.iri}")
+        end
+
+        it "saves the object" do
+          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+            to change{note.class.find?(note.iri)}.from(nil)
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(response.status_code).to eq(200)
         end
       end
 

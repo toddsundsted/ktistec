@@ -99,6 +99,18 @@ h1.ui.header
   table#jslicense-labels1.ui.celled.table
     tr
       td
+        a href="/dist/868.bundle.js"
+          i.file.code.icon
+          | 868.bundle.js
+      td
+        a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
+          .ui.horizontal.label AGPL-3.0
+      td
+        a href="https://github.com/toddsundsted/ktistec/tree/main/src/assets/js" target="_blank"
+          i.github.icon
+          | Source code on GitHub
+    tr
+      td
         a href="/dist/settings.bundle.js"
           i.file.code.icon
           | settings.bundle.js

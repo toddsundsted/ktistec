@@ -65,6 +65,70 @@ describe("XrayController", () => {
       })
     })
 
+    describe("clickable ActivityPub IDs", () => {
+      it("makes valid ActivityPub IDs clickable in ID properties", () => {
+        const input = {
+          "actor": "https://example.com/users/alice",
+          "object": "https://remote.example/notes/123",
+          "inReplyTo": "https://other.example/posts/456"
+        }
+        const result = controller.highlightJSONObject(input)
+
+        expect(result).toContain('<span class="xray-json-string xray-json-clickable" data-id="https://example.com/users/alice">"https://example.com/users/alice"</span>')
+        expect(result).toContain('<span class="xray-json-string xray-json-clickable" data-id="https://remote.example/notes/123">"https://remote.example/notes/123"</span>')
+        expect(result).toContain('<span class="xray-json-string xray-json-clickable" data-id="https://other.example/posts/456">"https://other.example/posts/456"</span>')
+      })
+
+      it("does not make URLs clickable in non-ID properties", () => {
+        const input = {
+          "url": "https://example.com/media.jpg",
+          "content": "Check out https://example.com/page",
+          "name": "Alice"
+        }
+        const result = controller.highlightJSONObject(input)
+
+        expect(result).toContain('<span class="xray-json-string">"https://example.com/media.jpg"</span>')
+        expect(result).toContain('<span class="xray-json-string">"Check out https://example.com/page"</span>')
+        expect(result).not.toContain('xray-json-clickable')
+      })
+
+      it("handles nested clickable IDs", () => {
+        const input = {
+          "object": {
+            "id": "https://example.com/notes/123",
+            "attributedTo": "https://example.com/users/alice"
+          }
+        }
+        const result = controller.highlightJSONObject(input)
+
+        expect(result).toContain('<span class="xray-json-string xray-json-clickable" data-id="https://example.com/notes/123">"https://example.com/notes/123"</span>')
+        expect(result).toContain('<span class="xray-json-string xray-json-clickable" data-id="https://example.com/users/alice">"https://example.com/users/alice"</span>')
+      })
+
+      it("escapes HTML in clickable IDs", () => {
+        const input = {
+          "actor": "https://example.com/users/alice<script>alert('xss')</script>"
+        }
+        const result = controller.highlightJSONObject(input)
+
+        expect(result).toContain('data-id="https://example.com/users/alice&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;"')
+        expect(result).toContain('"https://example.com/users/alice&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;"')
+        expect(result).not.toContain('<script>')
+      })
+
+      it("treats @id property as clickable", () => {
+        const input = {
+          "@context": "https://www.w3.org/ns/activitystreams",
+          "@id": "https://example.com/activities/123",
+          "type": "Create"
+        }
+        const result = controller.highlightJSONObject(input)
+
+        expect(result).toContain('<span class="xray-json-string">"https://www.w3.org/ns/activitystreams"</span>')
+        expect(result).toContain('<span class="xray-json-string xray-json-clickable" data-id="https://example.com/activities/123">"https://example.com/activities/123"</span>')
+      })
+    })
+
     describe("complex structures", () => {
       it("handles nested objects correctly", () => {
         const input = {"actor": {"type": "Person", "name": "Alice"}}
@@ -161,6 +225,85 @@ describe("XrayController", () => {
       const result = controller.escapeHtml('&<>')
 
       expect(result).toBe('&amp;&lt;&gt;')
+    })
+  })
+
+  describe("isIdProperty", () => {
+    it("recognizes ID properties", () => {
+      expect(controller.isIdProperty('id')).toBe(true)
+      expect(controller.isIdProperty('@id')).toBe(true)
+    })
+
+    it("recognizes ActivityStreams object properties", () => {
+      expect(controller.isIdProperty('actor')).toBe(true)
+      expect(controller.isIdProperty('object')).toBe(true)
+      expect(controller.isIdProperty('target')).toBe(true)
+      expect(controller.isIdProperty('attributedTo')).toBe(true)
+      expect(controller.isIdProperty('inReplyTo')).toBe(true)
+    })
+
+    it("recognizes collection properties", () => {
+      expect(controller.isIdProperty('following')).toBe(true)
+      expect(controller.isIdProperty('followers')).toBe(true)
+      expect(controller.isIdProperty('inbox')).toBe(true)
+      expect(controller.isIdProperty('outbox')).toBe(true)
+    })
+
+    it("rejects non-ID properties", () => {
+      expect(controller.isIdProperty('content')).toBe(false)
+      expect(controller.isIdProperty('name')).toBe(false)
+      expect(controller.isIdProperty('published')).toBe(false)
+    })
+
+    it("rejects url property", () => {
+      expect(controller.isIdProperty('url')).toBe(false)
+    })
+  })
+
+  describe("isValidActivityPubId", () => {
+    it("returns true for valid URLs", () => {
+      expect(controller.isValidActivityPubId('https://test.example/users/alice')).toBe(true)
+      expect(controller.isValidActivityPubId('https://other.example/users/bob')).toBe(true)
+    })
+
+    it("returns false for invalid URLs", () => {
+      expect(controller.isValidActivityPubId('not-a-url')).toBe(false)
+      expect(controller.isValidActivityPubId('ftp://example.com')).toBe(false)
+      expect(controller.isValidActivityPubId('')).toBe(false)
+      expect(controller.isValidActivityPubId(null)).toBe(false)
+      expect(controller.isValidActivityPubId(123)).toBe(false)
+    })
+  })
+
+  describe("isClickableId", () => {
+    it("returns true for valid URLs in ID properties", () => {
+      expect(controller.isClickableId('https://test.example/users/alice', 'actor')).toBe(true)
+      expect(controller.isClickableId('https://other.example/users/bob', 'actor')).toBe(true)
+      expect(controller.isClickableId('https://example.com/objects/123', 'object')).toBe(true)
+      expect(controller.isClickableId('https://example.com/inbox', 'inbox')).toBe(true)
+    })
+
+    it("returns false for valid URLs in non-ID properties", () => {
+      expect(controller.isClickableId('https://example.com/users/alice', 'content')).toBe(false)
+      expect(controller.isClickableId('https://example.com/image.jpg', 'name')).toBe(false)
+    })
+
+    it("returns false for invalid URLs", () => {
+      expect(controller.isClickableId('not-a-url', 'actor')).toBe(false)
+      expect(controller.isClickableId('not-a-url', 'name')).toBe(false)
+    })
+  })
+
+  describe("isLocalId", () => {
+    it("identifies local IDs", () => {
+      Object.defineProperty(window, 'location', {
+        value: { origin: 'https://test.example' },
+        writable: true
+      })
+
+      expect(controller.isLocalId('https://test.example/users/alice')).toBe(true)
+      expect(controller.isLocalId('https://other.example/users/bob')).toBe(false)
+      expect(controller.isLocalId('invalid-url')).toBe(false)
     })
   })
 })

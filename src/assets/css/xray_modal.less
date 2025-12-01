@@ -149,6 +149,8 @@
         }
     }
 
+    &__back,
+    &__forward,
     &__cached,
     &__remote,
     &__close {
@@ -209,6 +211,17 @@ body.xray-modal-open {
     position: fixed;
     width: 100%;
     top: var(--xray-scroll-offset, 0px);
+}
+
+.xray-json-clickable {
+    color: #4a9eff !important;
+    cursor: pointer !important;
+    text-decoration: underline;
+
+    &:hover {
+        color: #2085ff !important;
+        background-color: rgba(74, 158, 255, 0.1);
+    }
 }
 
 @media screen and (max-width: @xray-mobile-breakpoint) {

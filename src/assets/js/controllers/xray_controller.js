@@ -13,6 +13,12 @@ export default class extends Controller {
 
     this.cachedData = null
     this.remoteData = null
+    this.navigationMode = false
+    this.currentNavigationId = null
+    this.currentDisplaySource = 'cached'
+
+    this.navigationHistory = []
+    this.currentHistoryIndex = -1
   }
 
   disconnect() {
@@ -25,6 +31,11 @@ export default class extends Controller {
 
     this.cachedData = null
     this.remoteData = null
+    this.navigationMode = false
+    this.currentNavigationId = null
+    this.currentDisplaySource = 'cached'
+    this.navigationHistory = []
+    this.currentHistoryIndex = -1
   }
 
   handleKeydown(event) {
@@ -33,11 +44,26 @@ export default class extends Controller {
       event.preventDefault()
       this.toggleOverlay()
     }
+
+    // check Escape to close overlay
     if (event.key === 'Escape' && this.hasOverlay()) {
       event.preventDefault()
       this.closeOverlay()
     }
+
+    // check Alt+Left/Alt-Right for X-ray navigation
+    if (this.hasOverlay() && event.altKey && !event.ctrlKey && !event.shiftKey) {
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        this.navigateBack()
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        this.navigateForward()
+      }
+    }
   }
+
+
 
   toggleOverlay() {
     if (this.hasOverlay()) {
@@ -55,8 +81,13 @@ export default class extends Controller {
       this.createOverlay()
       this.showLoading()
       this.cachedData = await this.fetchCurrentPage()
+
+      const currentId = this.extractIdFromData(this.cachedData) || window.location.pathname
+      this.addToNavigationHistory(currentId, this.cachedData, null)
+
       this.displayJSON(this.cachedData, 'cached')
       this.updateRemoteButtonVisibility()
+      this.updateNavigationButtons()
       this.showOverlay()
     } catch (error) {
       console.error('X-ray mode error:', error)
@@ -87,6 +118,12 @@ export default class extends Controller {
           <div class="xray-modal__title" id="xray-title">X-Ray Mode</div>
         </div>
         <div class="xray-modal__controls-right">
+          <button id="xray-back-btn" class="xray-modal__back" type="button" aria-label="Navigate back" disabled>
+            <i class="chevron left icon" aria-hidden="true"></i>
+          </button>
+          <button id="xray-forward-btn" class="xray-modal__forward" type="button" aria-label="Navigate forward" disabled>
+            <i class="chevron right icon" aria-hidden="true"></i>
+          </button>
           <button id="xray-cached-btn" class="xray-modal__cached active" type="button" aria-label="Show locally cached version">
             <i class="database icon" aria-hidden="true"></i>
           </button>
@@ -108,6 +145,8 @@ export default class extends Controller {
     overlay.querySelector('#xray-close-btn').addEventListener('click', () => this.closeOverlay())
     overlay.querySelector('#xray-cached-btn').addEventListener('click', () => this.showCached())
     overlay.querySelector('#xray-remote-btn').addEventListener('click', () => this.showRemote())
+    overlay.querySelector('#xray-back-btn').addEventListener('click', () => this.navigateBack())
+    overlay.querySelector('#xray-forward-btn').addEventListener('click', () => this.navigateForward())
     overlay.querySelector('.xray-modal__backdrop').addEventListener('click', () => this.closeOverlay())
 
     // focus trap
@@ -178,6 +217,11 @@ export default class extends Controller {
 
     this.cachedData = null
     this.remoteData = null
+    this.navigationMode = false
+    this.currentNavigationId = null
+    this.currentDisplaySource = 'cached'
+    this.navigationHistory = []
+    this.currentHistoryIndex = -1
   }
 
   hasOverlay() {
@@ -192,9 +236,23 @@ export default class extends Controller {
   }
 
   displayJSON(data, source) {
+    this.currentDisplaySource = source
     const jsonEl = document.getElementById('xray-json')
     if (jsonEl) {
       jsonEl.innerHTML = this.highlightJSONObject(data)
+
+      const clickableIds = jsonEl.querySelectorAll('.xray-json-clickable')
+      clickableIds.forEach(element => {
+        element.style.cursor = 'pointer'
+        element.addEventListener('click', (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          const id = element.getAttribute('data-id')
+          if (id) {
+            this.navigateToId(id)
+          }
+        })
+      })
     }
     this.updateButtonStates(source)
   }
@@ -204,8 +262,14 @@ export default class extends Controller {
     const remoteBtn = document.getElementById('xray-remote-btn')
 
     if (cachedBtn && remoteBtn) {
-      cachedBtn.classList.toggle('active', active === 'cached')
-      remoteBtn.classList.toggle('active', active === 'remote')
+      if (this.navigationMode) {
+        cachedBtn.style.display = 'none'
+        remoteBtn.style.display = 'none'
+      } else {
+        cachedBtn.style.display = 'flex'
+        cachedBtn.classList.toggle('active', active === 'cached')
+        remoteBtn.classList.toggle('active', active === 'remote')
+      }
     }
 
     this.updateTitle(active)
@@ -215,7 +279,7 @@ export default class extends Controller {
     const remoteBtn = document.getElementById('xray-remote-btn')
     if (remoteBtn && this.cachedData) {
       // show remote button only if we have an ActivityPub ID from a different server
-      const activityPubId = this.cachedData.id || this.cachedData['@id']
+      const activityPubId = this.cachedData['id'] || this.cachedData['@id']
       const hasRemoteId = activityPubId && !this.isLocalId(activityPubId)
 
       remoteBtn.style.display = hasRemoteId ? 'flex' : 'none'
@@ -230,23 +294,28 @@ export default class extends Controller {
 
     const baseTitle = 'X-Ray Mode'
 
-    if (activeSource === 'remote') {
-      title.textContent = baseTitle + ' (Remote)'
+    if (activeSource === 'navigation') {
+      const displayId = this.currentNavigationId || 'Unknown'
+      title.textContent = `${baseTitle} - ${displayId}`
+    } else if (activeSource === 'remote') {
+      const activityPubId = this.remoteData && (this.remoteData['id'] || this.remoteData['@id'])
+      const displayId = activityPubId ? `- ${activityPubId}` : ''
+      title.textContent = `${baseTitle} (Remote) ${displayId}`
     } else if (activeSource === 'cached') {
-      const activityPubId = this.cachedData && (this.cachedData.id || this.cachedData['@id'])
+      const activityPubId = this.cachedData && (this.cachedData['id'] || this.cachedData['@id'])
       let suffix
       if (!activityPubId) {
         suffix = ' (Local - Anonymous)'
       } else if (this.isLocalId(activityPubId)) {
-        suffix = ' (Local)'
+        suffix = ` (Local) - ${activityPubId}`
       } else {
-        suffix = ' (Cached)'
+        suffix = ` (Cached) - ${activityPubId}`
       }
       title.textContent = baseTitle + suffix
     }
   }
 
-  highlightJSONObject(obj, indent = 0) {
+  highlightJSONObject(obj, indent = 0, parentKey = null) {
     const indentStr = '  '.repeat(indent)
     const nextIndentStr = '  '.repeat(indent + 1)
 
@@ -261,6 +330,9 @@ export default class extends Controller {
     }
     if (typeof obj === 'string') {
       const escaped = this.escapeHtml(obj)
+      if (this.isClickableId(obj, parentKey)) {
+        return `<span class="xray-json-string xray-json-clickable" data-id="${this.escapeHtml(obj)}">"${escaped}"</span>`
+      }
       return `<span class="xray-json-string">"${escaped}"</span>`
     }
     if (Array.isArray(obj)) {
@@ -268,7 +340,7 @@ export default class extends Controller {
         return '[]'
       }
       const items = obj.map(item =>
-        nextIndentStr + this.highlightJSONObject(item, indent + 1)
+        nextIndentStr + this.highlightJSONObject(item, indent + 1, parentKey)
       ).join(',\n')
       return `[\n${items}\n${indentStr}]`
     }
@@ -279,7 +351,7 @@ export default class extends Controller {
       }
       const items = keys.map(key => {
         const escapedKey = this.escapeHtml(key)
-        const value = this.highlightJSONObject(obj[key], indent + 1)
+        const value = this.highlightJSONObject(obj[key], indent + 1, key)
         return `${nextIndentStr}<span class="xray-json-key">"${escapedKey}"</span>: ${value}`
       }).join(',\n')
       return `{\n${items}\n${indentStr}}`
@@ -298,45 +370,73 @@ export default class extends Controller {
       .replace(/'/g, '&#39;')
   }
 
-  async fetchCurrentPage() {
-    const response = await fetch(window.location.pathname + window.location.search, {
+  /**
+   * Fetch data from local server.
+   *
+   */
+  async fetchLocal(url = null) {
+    const fetchUrl = url || (window.location.pathname + window.location.search)
+    const fetchOptions = {
       headers: {'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"'},
       credentials: 'same-origin'
-    })
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`HTTP ${response.status} ${response.statusText}: ${errorText}`)
     }
-    const contentType = response.headers.get('Content-Type') || ''
-    if (!contentType.includes('json')) {
-      throw new Error('Page does not provide JSON representation')
+    try {
+      const response = await fetch(fetchUrl, fetchOptions)
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`HTTP ${response.status} ${response.statusText}: ${errorText}`)
+      }
+      const contentType = response.headers.get('Content-Type') || ''
+      if (!contentType.includes('json')) {
+        throw new Error('Response does not provide JSON representation')
+      }
+      return response.json()
+    } catch (error) {
+      throw new Error(`Local fetch failed: ${error.message}`)
     }
-    return response.json()
+  }
+
+  /**
+   * Fetch data via proxy endpoint.
+   *
+   */
+  async fetchViaProxy(id) {
+    if (!id) {
+      throw new Error('ID is required for proxy fetch')
+    }
+    const fetchOptions = {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      credentials: 'same-origin',
+      body: JSON.stringify({ id })
+    }
+    try {
+      const response = await fetch('/proxy', fetchOptions)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = `HTTP ${response.status} ${response.statusText}: ${errorData.msg}`
+        throw new Error(errorMessage)
+      }
+      return response.json()
+    } catch (error) {
+      throw new Error(`Proxy fetch failed: ${error.message}`)
+    }
+  }
+
+  async fetchCurrentPage() {
+    return this.fetchLocal()
   }
 
   async fetchRemote() {
-    // get the ActivityPub ID from cached data
-    const cached = this.cachedData || await this.fetchCurrentPage()
-    const objectIri = cached.id || cached['@id']
+    const cachedData = this.cachedData
+    if (!cachedData) {
+      throw new Error('No cached data available')
+    }
+    const objectIri = cachedData['id'] || cachedData['@id']
     if (!objectIri) {
-      throw new Error('No ActivityPub ID found for remote fetching')
+      throw new Error('No ActivityPub ID found')
     }
-
-    const response = await fetch('/proxy', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json',},
-      body: JSON.stringify({id: objectIri}),
-      credentials: 'same-origin'
-    })
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`HTTP ${response.status} ${response.statusText}: ${errorText}`)
-    }
-    const contentType = response.headers.get('Content-Type') || ''
-    if (!contentType.includes('json')) {
-      throw new Error('Page does not provide JSON representation')
-    }
-    return response.json()
+    return this.fetchViaProxy(objectIri)
   }
 
   async showCached() {
@@ -348,6 +448,9 @@ export default class extends Controller {
         this.cachedData = await this.fetchCurrentPage()
         this.displayJSON(this.cachedData, 'cached')
         this.updateRemoteButtonVisibility()
+      }
+      if (!this.navigationMode) {
+        this.updateTitle('cached')
       }
     } catch (error) {
       alert(`Error fetching cached data: ${error.message}`)
@@ -363,6 +466,9 @@ export default class extends Controller {
         this.remoteData = await this.fetchRemote()
         this.displayJSON(this.remoteData, 'remote')
         this.updateRemoteButtonVisibility()
+      }
+      if (!this.navigationMode) {
+        this.updateTitle('remote')
       }
     } catch (error) {
       alert(`Error fetching remote data: ${error.message}`)
@@ -391,5 +497,134 @@ export default class extends Controller {
     } catch {
       return false
     }
+  }
+
+  isIdProperty(propertyName) {
+    const coreIdProps = [
+      'id', '@id'
+    ]
+    const objectIdProps = [
+      'actor', 'object', 'target', 'origin', 'context',
+      'attributedTo', 'inReplyTo', 'partOf', 'describes'
+    ]
+    const collectionProps = [
+      'first', 'last', 'next', 'prev', 'current', 'self',
+      'following', 'followers', 'liked', 'shares',
+      'outbox', 'inbox', 'orderedItems', 'items'
+    ]
+    const arrayIdProps = [
+      'to', 'cc', 'bto', 'bcc', 'tag'
+    ]
+    return coreIdProps.includes(propertyName) ||
+           objectIdProps.includes(propertyName) ||
+           collectionProps.includes(propertyName) ||
+           arrayIdProps.includes(propertyName)
+  }
+
+  isValidActivityPubId(value) {
+    if (typeof value !== 'string' || !value.trim()) {
+      return false
+    }
+    try {
+      const url = new URL(value.trim())
+      return url.protocol === 'http:' || url.protocol === 'https:'
+    } catch {
+      return false
+    }
+  }
+
+  isClickableId(value, propertyName) {
+    return this.isValidActivityPubId(value) && this.isIdProperty(propertyName)
+  }
+
+  async navigateToId(id) {
+    try {
+      this.navigationMode = true
+      this.currentNavigationId = id
+
+      this.showLoading()
+
+      let data
+      if (this.isLocalId(id)) {
+        try {
+          data = await this.fetchLocal(id)
+        } catch (error) {
+          data = await this.fetchViaProxy(id)
+        }
+      } else {
+        data = await this.fetchViaProxy(id)
+      }
+
+      this.addToNavigationHistory(id, data, null)
+
+      this.displayJSON(data, 'navigation')
+      this.updateTitle('navigation')
+
+    } catch (error) {
+      console.error('Navigation error:', error)
+      alert(`Error navigating to ${id}: ${error.message}`)
+    }
+  }
+
+  addToNavigationHistory(id, cachedData, remoteData) {
+    if (this.currentHistoryIndex < this.navigationHistory.length - 1) {
+      this.navigationHistory = this.navigationHistory.slice(0, this.currentHistoryIndex + 1)
+    }
+
+    this.navigationHistory.push({
+      id: id,
+      cachedData: cachedData,
+      remoteData: remoteData,
+      timestamp: Date.now()
+    })
+
+    this.currentHistoryIndex = this.navigationHistory.length - 1
+    this.updateNavigationButtons()
+    this.updateTitle('navigation')
+  }
+
+  navigateBack() {
+    if (this.currentHistoryIndex > 0) {
+      this.currentHistoryIndex--
+      const entry = this.navigationHistory[this.currentHistoryIndex]
+      this.displayJSON(entry.cachedData, 'navigation')
+      this.currentNavigationId = entry.id
+      this.updateNavigationButtons()
+      this.updateTitle('navigation')
+    }
+  }
+
+  navigateForward() {
+    if (this.currentHistoryIndex < this.navigationHistory.length - 1) {
+      this.currentHistoryIndex++
+      const entry = this.navigationHistory[this.currentHistoryIndex]
+      this.displayJSON(entry.cachedData, 'navigation')
+      this.currentNavigationId = entry.id
+      this.updateNavigationButtons()
+      this.updateTitle('navigation')
+    }
+  }
+
+  updateNavigationButtons() {
+    const backBtn = document.getElementById('xray-back-btn')
+    const forwardBtn = document.getElementById('xray-forward-btn')
+
+    if (backBtn) {
+      backBtn.disabled = this.currentHistoryIndex <= 0
+      if (backBtn.disabled) {
+        backBtn.blur()
+      }
+    }
+    if (forwardBtn) {
+      forwardBtn.disabled = this.currentHistoryIndex >= this.navigationHistory.length - 1
+      if (forwardBtn.disabled) {
+        forwardBtn.blur()
+      }
+    }
+  }
+
+  extractIdFromData(data) {
+    if (!data) return null
+    return data['id'] || data['@id'] || null
   }
 }

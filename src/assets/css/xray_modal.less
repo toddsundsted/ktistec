@@ -1,0 +1,221 @@
+/** x-ray modal **/
+@xray-z-index: 9999;
+@xray-container-z-index: 1;
+@xray-transition-duration: 0.2s;
+@xray-backdrop-opacity: 1.0;
+@xray-button-bg-opacity: 0.2;
+@xray-button-bg-opacity-hover: 0.3;
+@xray-button-bg-opacity-active: 0.5;
+@xray-controls-height: 3.5rem;
+@xray-controls-padding: 0.5rem;
+@xray-button-size: 2.5rem;
+@xray-icon-size: 1.25rem;
+@xray-outline-width: 2px;
+@xray-outline-offset: 2px;
+@xray-viewport-width: calc(100vw - 2.0rem);
+@xray-viewport-height: calc(100vh - 4.5rem);
+@xray-mobile-breakpoint: 599px;
+
+.xray-modal {
+    position: fixed;
+    inset: 0;
+    z-index: @xray-z-index;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity @xray-transition-duration ease, visibility @xray-transition-duration ease;
+
+    &[aria-hidden="false"] {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    &__backdrop {
+        position: absolute;
+        inset: 0;
+        background-color: rgba(0, 0, 0, @xray-backdrop-opacity);
+        cursor: pointer;
+    }
+
+    &__controls {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: @xray-controls-height;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 @xray-controls-padding;
+        z-index: @xray-container-z-index + 1;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 70%, transparent 100%);
+    }
+
+    &__controls-left {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    &__controls-right {
+        display: flex;
+        align-items: center;
+        gap: @xray-controls-padding;
+        flex-shrink: 0;
+    }
+
+    &__title {
+        color: white;
+        font-size: 1rem;
+        font-weight: 500;
+        margin: 0;
+        padding: 0;
+    }
+
+    &__container {
+        position: relative;
+        z-index: @xray-container-z-index;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: @xray-controls-height 1rem 1rem;
+    }
+
+    &__content {
+        background: #1a1a1a;
+        border-radius: 8px;
+        max-width: @xray-viewport-width;
+        max-height: @xray-viewport-height;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid #333;
+    }
+
+    &__json {
+        flex: 1;
+        margin: 0;
+        padding: 1rem;
+        background: transparent;
+        border: none;
+        color: #e1e4e8;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: pre;
+        overflow: auto;
+        tab-size: 2;
+        outline: none;
+        resize: none;
+
+        &::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        &::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+    }
+
+    // JSON syntax highlighting
+    &__json {
+        .xray-json-key {
+            color: #0084ff; // Blue for keys
+        }
+
+        .xray-json-string {
+            color: #22863a; // Green for string values
+        }
+
+        .xray-json-number {
+            color: #005cc5; // Light blue for numbers
+        }
+
+        .xray-json-literal {
+            color: #a626a4; // Purple for booleans/null
+        }
+    }
+
+    &__cached,
+    &__remote,
+    &__close {
+        background: rgba(255, 255, 255, @xray-button-bg-opacity);
+        border: none;
+        color: white;
+        width: @xray-button-size;
+        height: @xray-button-size;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color @xray-transition-duration ease;
+        padding: 0;
+        flex-shrink: 0;
+
+        .icon {
+            margin: 0;
+            font-size: @xray-icon-size;
+        }
+
+        &:hover:not(:disabled),
+        &:focus:not(:disabled) {
+            background: rgba(255, 255, 255, @xray-button-bg-opacity-hover);
+            outline: @xray-outline-width solid white;
+            outline-offset: @xray-outline-offset;
+        }
+
+        &.active {
+            background: rgba(255, 255, 255, @xray-button-bg-opacity-active);
+
+            &:hover,
+            &:focus {
+                background: rgba(255, 255, 255, @xray-button-bg-opacity-active + 0.1);
+            }
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    }
+}
+
+html.xray-modal-open,
+body.xray-modal-open {
+    overflow: hidden;
+    height: 100%;
+    position: fixed;
+    width: 100%;
+    top: var(--xray-scroll-offset, 0px);
+}
+
+@media screen and (max-width: @xray-mobile-breakpoint) {
+    .xray-modal {
+        &__controls {
+            padding: 0 0.25rem;
+        }
+
+        &__title {
+            font-size: 0.9rem;
+        }
+
+        &__json {
+            font-size: 12px;
+            padding: 0.75rem;
+        }
+    }
+}

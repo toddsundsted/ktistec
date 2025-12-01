@@ -171,17 +171,25 @@
             font-size: @xray-icon-size;
         }
 
-        &:hover:not(:disabled),
-        &:focus:not(:disabled) {
+        &:hover:not(:disabled) {
             background: rgba(255, 255, 255, @xray-button-bg-opacity-hover);
             outline: @xray-outline-width solid white;
             outline-offset: @xray-outline-offset;
         }
 
+        &:focus:not(:disabled) {
+            background: rgba(255, 255, 255, @xray-button-bg-opacity-hover);
+        }
+
         &.active {
             background: rgba(255, 255, 255, @xray-button-bg-opacity-active);
 
-            &:hover,
+            &:hover {
+                background: rgba(255, 255, 255, @xray-button-bg-opacity-active + 0.1);
+                outline: @xray-outline-width solid white;
+                outline-offset: @xray-outline-offset;
+            }
+
             &:focus {
                 background: rgba(255, 255, 255, @xray-button-bg-opacity-active + 0.1);
             }

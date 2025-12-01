@@ -950,13 +950,13 @@ Spectator.describe ActorsController do
       it "renders the actor" do
         get "/remote/actors/#{actor.id}", ACCEPT_HTML
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("/html")).not_to be_empty
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'segment')]/a[contains(@href,'/remote/actors/#{actor.id}')]/text()").first).to eq(actor.display_name)
       end
 
       it "renders the actor" do
         get "/remote/actors/#{actor.id}", ACCEPT_JSON
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("id")).to be_truthy
+        expect(JSON.parse(response.body).dig("id")).to eq(actor.iri)
       end
     end
   end

@@ -27,7 +27,7 @@
         <%= Ktistec::Themes.js_tags %>
         <%= head %>
     </head>
-    <body class="dimmable">
+    <body class="dimmable" <%= env.account? ? %q|data-controller="xray"| : nil %>>
         <%= render "src/views/partials/modals.html.slang" %>
         <%= render "src/views/partials/header.html.slang" %>
         <%= render "src/views/partials/banner.html.slang" %>

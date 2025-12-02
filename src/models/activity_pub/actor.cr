@@ -109,6 +109,8 @@ module ActivityPub
 
     has_many objects, class_name: ActivityPub::Object, foreign_key: attributed_to_iri, primary_key: iri
 
+    has_many emojis, class_name: Tag::Emoji, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
+
     has_many filter_terms, inverse_of: actor
 
     # the implementation of attachments follows Mastodon's design

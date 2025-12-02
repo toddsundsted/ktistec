@@ -11,6 +11,7 @@ class HomeController
 
   skip_auth ["/"], GET, POST
   skip_auth ["/feed.rss"], GET
+  skip_auth ["/robots.txt"], GET
   skip_auth ["/license"], GET
 
   get "/" do |env|
@@ -47,6 +48,11 @@ class HomeController
       objects, site_name, site_host,
       "#{site_name}: RSS Feed"
     )
+  end
+
+  get "/robots.txt" do |env|
+    env.response.content_type = "text/plain"
+    render "src/views/pages/robots.txt.ecr"
   end
 
   get "/license" do |env|

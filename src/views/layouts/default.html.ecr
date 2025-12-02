@@ -22,11 +22,12 @@
         </script>
         <link rel="stylesheet" href="/dist/site.css"/>
         <script src="/dist/site.bundle.js"></script>
+        <a href="/license" rel="jslicense">License Information</a>
         <%= Ktistec::Themes.css_tags %>
         <%= Ktistec::Themes.js_tags %>
         <%= head %>
     </head>
-    <body class="dimmable">
+    <body class="dimmable" <%= env.account? ? %q|data-controller="xray"| : nil %>>
         <%= render "src/views/partials/modals.html.slang" %>
         <%= render "src/views/partials/header.html.slang" %>
         <%= render "src/views/partials/banner.html.slang" %>

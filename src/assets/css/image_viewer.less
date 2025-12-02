@@ -114,20 +114,24 @@
         flex-shrink: 0;
 
         .icon {
-            margin: 0;
+            margin: 0 0 3px 0;
             font-size: @image-viewer-close-icon-size;
         }
 
-        &:hover:not(:disabled),
-        &:focus:not(:disabled) {
+        &:hover:not(:disabled) {
             background: rgba(255, 255, 255, @image-viewer-close-button-bg-opacity-hover);
             outline: @image-viewer-outline-width solid white;
             outline-offset: @image-viewer-outline-offset;
         }
 
+        &:focus:not(:disabled) {
+            background: rgba(255, 255, 255, @image-viewer-close-button-bg-opacity-hover);
+        }
+
         &:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            outline: none;
         }
     }
 

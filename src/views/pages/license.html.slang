@@ -54,7 +54,7 @@ h1.ui.header
   h3.ui.header
     i.gem.icon
     .content
-      | Crystal Runtime Dependencies
+      | Crystal Dependencies
   .ui.list
     .item
       | host_meta

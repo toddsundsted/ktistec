@@ -31,13 +31,16 @@ export default class extends Controller {
    * element and either:
    *   - Inside a .extra.text element
    *   - Has the "attachment" class
+   * And:
+   *   - Does not have the "emoji" class
    */
   isViewerImage(img) {
     const isInExtraText = img.closest(".extra.text") !== null
-    const hasAttachmentClass = img.classList.contains("attachment")
     const isWithinContent = img.closest(".content") === this.element
+    const hasAttachmentClass = img.classList.contains("attachment")
+    const hasEmojiClass = img.classList.contains("emoji")
 
-    return isWithinContent && (isInExtraText || hasAttachmentClass)
+    return isWithinContent && (isInExtraText || hasAttachmentClass) && !hasEmojiClass
   }
 
   /**

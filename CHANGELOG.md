@@ -1,6 +1,18 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.2.2]
+### Added
+- Support for pinned posts and the Mastodon "featured posts" collection.
+- X-Ray Mode for viewing and navigating JSON-LD resource (actor, object, etc.) representations.
+- Back links on thread pages for easier navigation. (fixes [#1](https://github.com/toddsundsted/ktistec/issues/1))
+- License page for LibreJS compliance. (fixes [#127](https://github.com/toddsundsted/ktistec/issues/127))
+- Highlighting of recently fetched hashtagged posts.
+
+### Changed
+- Improved presentation of audio and video media.
+- Refactored theming/styling implementation.
+
 ## [v3.2.1]
 ### Added
 - Support for bookmarking posts.
@@ -539,6 +551,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.2.2]: https://github.com/toddsundsted/ktistec/compare/ab57a3c7...74f7666e
 [v3.2.1]: https://github.com/toddsundsted/ktistec/compare/9eebb34e...f6d5f376
 [v3.2.0]: https://github.com/toddsundsted/ktistec/compare/65e9e57f...9a25965a
 [v3.1.3]: https://github.com/toddsundsted/ktistec/compare/c460d486...c06caebe

@@ -13,7 +13,9 @@
     - [Content filtering](#content-filtering)
     - [Blocking](#blocking)
     - [Bookmarks](#bookmarks)
+    - [Pinned posts](#pinned-posts)
     - [RSS feeds](#rss-feeds)
+    - [X-Ray Mode](#x-ray-mode)
     - [Metrics](#metrics)
     - [Tasks](#tasks)
     - [Scripts](#scripts)
@@ -191,11 +193,32 @@ been deleted or blocked.
 Save posts for later with bookmarks. Bookmark any post to add it to
 your personal bookmarks collection for easy access.
 
+### Pinned posts
+
+Pin important posts to the top of your profile. Pinned posts appear
+prominently at the top of your profile page and are also exposed via
+the Mastodon "featured posts" collection for compatibility with
+Mastodon and other Fediverse servers.
+
 ### RSS feeds
 
 Ktistec provides RSS feeds for easy content syndication even without
 an account in the Fediverse. RSS feeds are available on the *home
 page* and the *account pages*.
+
+### X-Ray Mode
+
+X-Ray Mode is a developer and power-user tool for inspecting
+ActivityPub JSON-LD representations of actors, objects, and other
+content. Press `Ctrl+Shift+X` on any page to open X-Ray Mode:
+
+- **Cached Version**: View the local JSON-LD representation stored in the Ktistec database
+- **Remote Version**: Fetch and view the original JSON-LD representation from the source server
+- **Navigation**: Click on any ActivityPub IRI to navigate to that object
+- **History**: Use Alt+Left and Alt+Right to navigate through your viewing history
+
+This feature is useful for debugging federation issues, understanding ActivityPub
+structures, and verifying how content is stored and represented.
 
 ### Metrics
 
@@ -752,7 +775,7 @@ remain.
 
 ### Supported Collections
 
-  - Standard: `timeline`, `notifications`, `posts`, `drafts`, `likes`, `announces`, `followers`, `following`
+  - Standard: `timeline`, `notifications`, `posts`, `drafts`, `likes`, `announces`, `bookmarks`, `pins`, `followers`, `following`
   - Dynamic: `hashtag#<name>` (e.g., `hashtag#technology`), `mention@<name>` (e.g., `mention@euripides`)
 
 ### Compatibility
@@ -1008,3 +1031,10 @@ Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public
 License along with this program. If not, see
 (https://www.gnu.org/licenses/).
+
+### LibreJS Compliance
+
+Ktistec is compliant with GNU LibreJS. All JavaScript bundled with
+Ktistec is free software. A complete list of JavaScript and Crystal
+dependencies with their licenses is available at `/license` on any
+running Ktistec instance.

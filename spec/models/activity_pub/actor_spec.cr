@@ -204,7 +204,9 @@ Spectator.describe ActivityPub::Actor do
             "featured":{"@id":"http://joinmastodon.org/ns#featured","@type":"@id"},
             "schema":"http://schema.org#",
             "PropertyValue":"schema:PropertyValue",
-            "value":"schema:value"
+            "value":"schema:value",
+            "toot":"http://joinmastodon.org/ns#",
+            "Emoji":"toot:Emoji"
           }
         ],
         "@id":"https://remote/foo_bar",
@@ -237,6 +239,9 @@ Spectator.describe ActivityPub::Actor do
           {"name": "Blog", "type": "PropertyValue", "value": "https://somewhere.example.com/this-is-a-long-url-that-should-be-truncated"},
           {"name": "Website", "type": "PropertyValue", "value": "http://site.example.com"},
           {"name": "", "type": "invalid entry", "value": "http://site.example.com"}
+        ],
+        "tag": [
+          {"type":"Emoji","name":":batman:","icon":{"type":"Image","mediaType":"image/png","url":"https://example.com/batman.png"}}
         ]
       }
     JSON
@@ -312,6 +317,15 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  # matcher
+  class ::Tag
+    def ===(other : Tag)
+      self.type == other.type &&
+        self.name == other.name &&
+        self.href == other.href
+    end
+  end
+
   describe ".from_json_ld" do
     it "instantiates the subclass" do
       actor = described_class.from_json_ld(json)
@@ -334,6 +348,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
       expect(actor.shared_inbox).to be_nil
+      expect(actor.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
 
       expect(actor.attachments).not_to be_nil
       attachments = actor.attachments.not_nil!
@@ -386,6 +401,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
       expect(actor.shared_inbox).to be_nil
+      expect(actor.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
 
       expect(actor.attachments).not_to be_nil
       attachments = actor.attachments.not_nil!

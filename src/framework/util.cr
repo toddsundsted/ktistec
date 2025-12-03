@@ -91,25 +91,26 @@ module Ktistec
         keep: ["href"],
         remote: [{"target", "_blank"}, {"rel", "external ugc"}],
         local: [{"data-turbo-frame", "_top"}],
-        key: "href"
+        key: "href",
       },
       img: {
         keep: ["src", "alt"],
-        all: [{"class", "ui image"}, {"loading", "lazy"}]
+        all: [{"class", "ui image"}, {"loading", "lazy"}],
+        class: ["emoji"],
       },
       audio: {
         keep: ["src"],
-        all: [{"class", "ui audio"}, {"controls", nil}]
+        all: [{"class", "ui audio"}, {"controls", nil}],
       },
       video: {
         keep: ["src"],
-        all: [{"class", "ui video"}, {"controls", nil}]
+        all: [{"class", "ui video"}, {"controls", nil}],
       },
       source: {
         keep: ["src", "type"],
       },
       span: {
-        class: ["invisible", "ellipsis"]
+        class: ["invisible", "ellipsis"],
       }
     }
 
@@ -137,8 +138,9 @@ module Ktistec
             end
           end
           if (classes = attributes[:class]?) && (class_attribute = html.attributes["class"]?)
-            classes = (classes & class_attribute.content.split).join(' ')
-            build << " class='#{classes}'" if classes.presence
+            classes = classes & class_attribute.content.split
+          else
+            classes = [] of String
           end
           local =
             if (key = attributes[:key]?) && (value = html.attributes[key]?)
@@ -150,9 +152,22 @@ module Ktistec
           if (local && (values = attributes[:local]?)) ||
              (!local && (values = attributes[:remote]?)) ||
              (values = attributes[:all]?)
-            build << values.map do |name, value|
-              value ? " #{name}='#{value}'" : " #{name}"
-            end.join
+            temporary = values.map do |name, value|
+              if name == "class" && value
+                classes.unshift(value)
+                nil
+              elsif value
+                " #{name}='#{value}'"
+              else
+                " #{name}"
+              end
+            end.compact
+          end
+          unless classes.empty?
+            build << " class='#{classes.join(' ').strip}'"
+          end
+          if temporary
+            build << temporary.join
           end
           build << ">"
         else

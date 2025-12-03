@@ -3,6 +3,7 @@ require "slang"
 require "kemal"
 require "markd"
 
+require "../utils/emoji"
 require "../utils/paths"
 
 # Redefine the `render` macros provided by Kemal.
@@ -739,6 +740,11 @@ module Ktistec::ViewHelper
     Ktistec::Util.render_as_text({{str}})
   end
 
+  # Renders HTML as plain text and truncates it to `n` characters.
+  #
+  # For use in views:
+  #     <%= … string, n %>
+  #
   macro …(str, n)
     Ktistec::Util.render_as_text_and_truncate({{str}}, {{n}})
   end

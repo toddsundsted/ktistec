@@ -18,6 +18,7 @@ require "../relationship/content/inbox"
 require "../relationship/content/outbox"
 require "../relationship/social/follow"
 require "../filter_term"
+require "../tag/emoji"
 require "./activity"
 require "./activity/announce"
 require "./activity/create"
@@ -1030,6 +1031,12 @@ private module ActorModelHelper
         type = Ktistec::JSON_LD.dig?(attachment, "@type").presence
         value = Ktistec::JSON_LD.dig?(attachment, "http://schema.org#value").presence
         ActivityPub::Actor::Attachment.new(name, type, value) if name && type && value
+      end,
+      "emojis" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
+        next unless tag.dig?("@type") == "http://joinmastodon.org/ns#Emoji"
+        name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
+        icon_url = tag.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+        Tag::Emoji.new(name: name, href: icon_url) if name && icon_url
       end
     }.compact
   end

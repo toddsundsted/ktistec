@@ -191,7 +191,8 @@ Spectator.describe ActivityPub::Object do
         "mediaType":"xyz",
         "tag":[
           {"type":"Hashtag","href":"hashtag href","name":"#hashtag"},
-          {"type":"Mention","href":"mention href","name":"@mention"}
+          {"type":"Mention","href":"mention href","name":"@mention"},
+          {"type":"toot:Emoji","name":":batman:","icon":{"type":"Image","mediaType":"image/png","url":"https://example.com/batman.png"}}
         ],
         "attachment":[
           {
@@ -239,6 +240,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.media_type).to eq("xyz")
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
       expect(object.mentions.first).to match(Tag::Mention.new(name: "mention", href: "mention href"))
+      expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
       expect(object.urls).to eq(["url link"])
     end
@@ -285,6 +287,33 @@ Spectator.describe ActivityPub::Object do
       it "is ignored" do
         object = described_class.from_json_ld(json).save
         expect(object.mentions).to be_empty
+      end
+    end
+
+    context "when emoji name is null" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":null|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
+    context "when emoji name is blank" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":""|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
+    context "when emoji icon url is null" do
+      let(json) { super.gsub(%q|"url":"https://example.com/batman.png"|, %q|"url":null|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.emojis).to be_empty
       end
     end
 
@@ -425,6 +454,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.media_type).to eq("xyz")
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
       expect(object.mentions.first).to match(Tag::Mention.new(name: "mention", href: "mention href"))
+      expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
       expect(object.urls).to eq(["url link"])
     end
@@ -471,6 +501,33 @@ Spectator.describe ActivityPub::Object do
       it "is ignored" do
         object = described_class.new.from_json_ld(json).save
         expect(object.mentions).to be_empty
+      end
+    end
+
+    context "when emoji name is null" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":null|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
+    context "when emoji name is blank" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":""|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
+    context "when emoji icon url is null" do
+      let(json) { super.gsub(%q|"url":"https://example.com/batman.png"|, %q|"url":null|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.emojis).to be_empty
       end
     end
 

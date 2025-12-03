@@ -167,7 +167,7 @@ nav.ui.top.navigation.menu {
        - media in `.extra.media` are "thumbnail size" attachments.
        - media with the class "extra" are "full size" attachments.
     */
-    .ui.image { object-fit: cover; cursor: zoom-in; }
+    .ui.image:not(.emoji) { object-fit: cover; cursor: zoom-in; }
     .extra.media img, .extra.media audio, .extra.media video {
         display: inline-block;
         object-fit: cover;
@@ -583,6 +583,19 @@ body.offline .ui.banner .message {
 
 .ellipsis::after {
     content: "…";
+}
+
+/** custom emoji **/
+.ui.feed > .event > .content .summary img.emoji,
+.ui.feed > .event > .content .extra.text img.emoji,
+.ui.actor.segments img.emoji,
+.ui.actor.card img.emoji {
+    height: 1.0em;
+    width: auto;
+    max-width: 3.0em;
+    margin: 0 0.05em 0 0.1em;
+    vertical-align: -0.15em;
+    display: inline-block;
 }
 
 /** design system **/

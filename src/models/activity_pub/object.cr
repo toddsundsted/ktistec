@@ -8,6 +8,7 @@ require "../relationship/content/approved"
 require "../relationship/content/canonical"
 require "../../services/thread_analysis_service"
 require "../translation"
+require "../tag/emoji"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
@@ -186,6 +187,7 @@ module ActivityPub
 
     has_many hashtags, class_name: Tag::Hashtag, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
     has_many mentions, class_name: Tag::Mention, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
+    has_many emojis, class_name: Tag::Emoji, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
 
     # Updates the thread and saves the object.
     #
@@ -1074,6 +1076,12 @@ module ActivityPub
             name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
             href = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
             Tag::Mention.new(name: name, href: href) if name
+          end,
+          "emojis" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
+            next unless tag.dig?("@type") == "http://joinmastodon.org/ns#Emoji"
+            name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
+            icon_url = tag.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+            Tag::Emoji.new(name: name, href: icon_url) if name && icon_url
           end,
           "attachments" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
             url = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#url").presence

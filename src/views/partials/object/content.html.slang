@@ -7,6 +7,9 @@ crystal:
   if (content = translation.try(&.content).presence || object.content.presence)
     html = (object.media_type == "text/markdown") ? markdown_to_html(content) : content
   end
+  object_emojis = Tag::Emoji.where(subject: object)
+  actor_emojis = Tag::Emoji.where(subject: actor)
+  author_emojis = (author.iri != actor.iri) ? Tag::Emoji.where(subject: author) : actor_emojis
   if (attachments = object.attachments)
     if html
       urls = XML.parse_html(html).xpath_nodes("//img/@src").map(&.text)
@@ -33,20 +36,20 @@ crystal:
           i.pin.icon
       - if account
         - if author != actor
-          a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = actor.display_name
+          a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) == s Ktistec::Emoji.emojify(actor.display_name, actor_emojis)
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
+          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) == s Ktistec::Emoji.emojify(author.display_name, author_emojis)
         - else
-          a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
+          a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) == s Ktistec::Emoji.emojify(author.display_name, author_emojis)
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
       - else
         - if author != actor
-          a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = actor.display_name
+          a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link == s Ktistec::Emoji.emojify(actor.display_name, actor_emojis)
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
+          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link == s Ktistec::Emoji.emojify(author.display_name, author_emojis)
         - else
-          a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
+          a.user> data-turbo-frame="_top" title=author.handle href=author.display_link == s Ktistec::Emoji.emojify(author.display_name, author_emojis)
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
   - unless is_blocked

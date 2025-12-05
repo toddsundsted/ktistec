@@ -1,6 +1,7 @@
 require "../tag"
 require "../activity_pub/actor"
 require "../activity_pub/object"
+require "../../utils/emoji"
 
 class Tag
   class Emoji < Tag
@@ -9,6 +10,8 @@ class Tag
 
     validates(name) { "is blank" if name.blank? }
     validates(href) { "is blank" unless href.presence }
+
+    include Ktistec::Emoji::Emojifiable
 
     def before_save
       # mastodon shortcodes are case-sensitive (:blob: ≠ :Blob:)

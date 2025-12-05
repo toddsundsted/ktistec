@@ -1,15 +1,18 @@
-require "../models/tag/emoji"
-
 module Ktistec
   module Emoji
     extend self
+
+    module Emojifiable
+      abstract def name : String
+      abstract def href : String?
+    end
 
     # Replaces :shortcode: tokens with <img> tags.
     #
     # Only replaces emoji in text content, not inside HTML
     # elements/attributes.
     #
-    def emojify(content : String?, emoji_tags : Enumerable(Tag::Emoji)) : String
+    def emojify(content : String?, emoji_tags : Enumerable(Emojifiable)) : String
       return "" if content.nil? || content.blank?
       return content if emoji_tags.empty?
 

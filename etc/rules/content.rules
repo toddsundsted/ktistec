@@ -263,9 +263,12 @@ end
 
 ## Follow Notifications
 
+# only notify on the *first* activity for an object!
+
 rule "incoming activity for object"
   condition Incoming, actor, activity
   condition ObjectActivity, activity, object: object
+  none ObjectActivity, not activity, object: object
   assert CheckFollowFor, actor, object
 end
 

@@ -624,6 +624,15 @@ Spectator.describe ContentRules do
           expect(owner.notifications.map(&.to_iri)).to have("hashtag")
         end
       end
+
+      context "and an activity for the object already exists" do
+        before_each { create.save }
+
+        it "does not add the object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.to_iri)).to be_empty
+        end
+      end
     end
 
     context "given notifications with a followed mention already added" do
@@ -669,6 +678,15 @@ Spectator.describe ContentRules do
         it "adds the object to the notifications" do
           run(owner, announce)
           expect(owner.notifications.map(&.to_iri)).to have("mention@remote.com")
+        end
+      end
+
+      context "and an activity for the object already exists" do
+        before_each { create.save }
+
+        it "does not add the object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.to_iri)).to be_empty
         end
       end
     end
@@ -718,6 +736,15 @@ Spectator.describe ContentRules do
         it "adds the object to the notifications" do
           run(owner, announce)
           expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
+        end
+      end
+
+      context "and an activity for the object already exists" do
+        before_each { create.save }
+
+        it "does not add the object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.object_or_activity)).to be_empty
         end
       end
     end

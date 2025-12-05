@@ -26,6 +26,8 @@
   <%- end -%>
   <%- if (shared_inbox = actor.shared_inbox) -%>
     <%- endpoints["sharedInbox"] = shared_inbox -%>
+  <%- elsif actor.local? && (inbox = actor.inbox) -%>
+    <%- endpoints["sharedInbox"] = inbox -%>
   <%- end -%>
   <%- unless endpoints.empty? -%>
   "endpoints":<%= endpoints.to_json %>,

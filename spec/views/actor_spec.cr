@@ -46,4 +46,36 @@ Spectator.describe "actor" do
       end
     end
   end
+
+  describe "actor.json.ecr" do
+    let_create(:actor)
+
+    let(env) { env_factory("GET", "/actor/username") }
+
+    module ::Ktistec::ViewHelper
+      def self.render_actor_json_ecr(env, actor)
+        render "./src/views/actors/actor.json.ecr"
+      end
+    end
+
+    subject do
+      begin
+        JSON.parse(Ktistec::ViewHelper.render_actor_json_ecr(env, actor))
+      rescue JSON::ParseException
+        JSON.parse("{}")
+      end
+    end
+
+    it "does not render a shared inbox endpoint" do
+      expect(subject.dig?("endpoints", "sharedInbox")).to be_nil
+    end
+
+    context "if local" do
+      before_each { actor.assign(iri: "https://test.test/actor") }
+
+      it "renders a shared inbox endpoint" do
+        expect(subject.dig?("endpoints", "sharedInbox")).not_to be_nil
+      end
+    end
+  end
 end

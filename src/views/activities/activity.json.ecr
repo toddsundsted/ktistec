@@ -25,7 +25,11 @@
   "cc":<%= cc.to_json %>,
   <%- end -%>
   <%- if (audience = activity.audience) -%>
+  <%- if audience.size > 1 -%>
   "audience":<%= audience.to_json %>,
+  <%- elsif audience.size == 1 -%>
+  "audience":<%= audience.first.to_json %>,
+  <%- end -%>
   <%- end -%>
   <%- if (summary = activity.summary) -%>
   "summary":<%= summary.to_json %>,

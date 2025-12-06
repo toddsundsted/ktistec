@@ -10,10 +10,7 @@
     - image = actor.image.presence
     - style = image ? "background-image: url(#{actor.image});" : nil
     .ui.attached.segment class=(!image ? "placeholder" : nil) style=style
-      - if actor.icon.presence
-        img src=actor.icon
-      - else
-        i.user.icon
+      == actor_icon(actor)
     - if _account && actor.down?
       .ui.attached.tiny.warning.icon.message
         i.cloud.icon

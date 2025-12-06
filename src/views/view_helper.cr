@@ -176,6 +176,28 @@ module Ktistec::ViewHelper
       str = str.gsub(/\\?[%_]/) { %Q|<span class="wildcard">#{$0}</span>| }
       %Q|<span class="ui filter term">#{str}</span>|
     end
+
+    def actor_icon(actor, classes = nil)
+      if actor
+        if actor.deleted?
+          %Q|<i class="user outline icon"></i>|
+        elsif actor.blocked?
+          %Q|<i class="user outline icon"></i>|
+        elsif (icon = actor.icon.presence)
+          attrs = [
+            %Q|src="#{icon}"|,
+            %Q|alt="#{::HTML.escape(actor.display_name)}"|,
+            %Q|data-actor-id="#{actor.id}"|,
+          ]
+          attrs.unshift %Q|class="#{classes}"| if classes
+          %Q|<img #{attrs.join(" ")}>|
+        else
+          %Q|<i class="user icon"></i>|
+        end
+      else
+        %Q|<i class="user icon"></i>|
+      end
+    end
   end
 
   extend ClassMethods

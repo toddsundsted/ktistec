@@ -9,10 +9,7 @@
           - image = actor.image.presence
           - style = image ? "background-image: url(#{actor.image});" : nil
           .ui.attached.segment class=(!image ? "placeholder" : nil) style=style
-            - if actor.icon.presence
-              img src=actor.icon
-            - else
-              i.user.icon
+            == actor_icon(actor)
           .ui.attached.tiny.warning.icon.message
             i.cloud.icon
             .content
@@ -74,10 +71,7 @@
           - image = actor.image.presence
           - style = image ? "background-image: url(#{actor.image});" : nil
           .content class=(!image ? "placeholder" : nil) style=style
-            - if actor.icon.presence
-              img src=actor.icon
-            - else
-              i.user.icon
+            == actor_icon(actor)
           .extra.content
             a.ui.header href="#" = actor.display_name
             a.ui.link href="#" = actor.handle

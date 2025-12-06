@@ -18,10 +18,7 @@
             activity = notification.activity
             activities = activity.object.activities(inclusion: activity.type)
           .label
-            - if (icon = activity.actor.icon)
-              img data-actor-id=activity.actor.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(activity.actor)
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = activity.actor.display_name
@@ -39,10 +36,7 @@
             activity = notification.activity
             activities = activity.object.activities(inclusion: activity.type)
           .label
-            - if (icon = activity.actor.icon)
-              img data-actor-id=activity.actor.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(activity.actor)
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = activity.actor.display_name
@@ -60,10 +54,7 @@
             activity = notification.activity
             activities = activity.object.activities(inclusion: activity.type)
           .label
-            - if (icon = activity.actor.icon)
-              img data-actor-id=activity.actor.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(activity.actor)
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = activity.actor.display_name
@@ -83,10 +74,7 @@
             attributed_to = object.attributed_to
             in_reply_to = object.in_reply_to
           .label
-            - if (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(attributed_to)
           .content
             .summary
               a> href=remote_actor_path(attributed_to) = attributed_to.display_name
@@ -102,10 +90,7 @@
             content = object.preview
             attributed_to = object.attributed_to
           .label
-            - if (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(attributed_to)
           .content
             .summary
               a> href=remote_actor_path(attributed_to) = attributed_to.display_name
@@ -121,10 +106,7 @@
             content = object ? object.preview : nil
             attributed_to = object.try(&.attributed_to)
           .label
-            - if attributed_to && (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(attributed_to)
           .content
             .summary
               | There are new posts tagged with
@@ -140,10 +122,7 @@
             content = object ? object.preview : nil
             attributed_to = object.try(&.attributed_to)
           .label
-            - if attributed_to && (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(attributed_to)
           .content
             .summary
               | There are new posts that mention
@@ -155,10 +134,7 @@
         - in Relationship::Content::Notification::Follow
           - activity = notification.activity
           .label
-            - if (icon = activity.actor.icon)
-              img data-actor-id=activity.actor.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(activity.actor)
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = activity.actor.display_name
@@ -182,10 +158,7 @@
             content = object.preview
             attributed_to = object.attributed_to
           .label
-            - if (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(attributed_to)
           .content
             .summary
               - if object.iri == object.thread

@@ -1229,7 +1229,15 @@ Spectator.describe Ktistec::Model do
       end
 
       it "clears the model association" do
+        expect{foo_bar_model.reload!}.to change{foo_bar_model.@not_nil}.to(nil)
+      end
+
+      it "clears the model association" do
         expect{not_nil_model.reload!}.to change{not_nil_model.@foo_bar_models}.to(nil)
+      end
+
+      it "clears the model association" do
+        expect{not_nil_model.reload!}.to change{not_nil_model.@foo_bar}.to(nil)
       end
     end
 

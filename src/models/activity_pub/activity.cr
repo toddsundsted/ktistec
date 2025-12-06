@@ -73,9 +73,9 @@ module ActivityPub
       (published || created_at).in(timezone)
     end
 
-    @@recursive : Symbol | Bool = :default
+    class_getter recursive : Symbol | Bool = :default
 
-    def to_json_ld(recursive = @@recursive)
+    def to_json_ld(recursive = self.class.recursive)
       ModelHelper.to_json_ld(self, recursive)
     end
 

@@ -296,14 +296,18 @@ module ActivityPub
     #
     def preview
       translation = Translation.where("origin_id = ? ORDER BY id DESC LIMIT 1", id).first?
-      if translation && (summary = translation.summary.presence)
+      if translation && (name = translation.name.presence)
+        name
+      elsif (name = self.name.presence)
+        name
+      elsif translation && (summary = translation.summary.presence)
         summary
       elsif (summary = self.summary.presence)
         summary
       elsif translation && (content = translation.content.presence)
         content
-      else
-        self.content.presence
+      elsif (content = self.content.presence)
+        content
       end
     end
 

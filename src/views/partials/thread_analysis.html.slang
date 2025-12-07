@@ -9,9 +9,8 @@ turbo-frame#thread_analysis
     div
       - key_participants.truncate(0, 18).each do |participant|
         - if (actor = ActivityPub::Actor.find?(iri: participant.actor_iri))
-          - if (icon = actor.icon)
-            a.ui.avatar.image data-turbo-frame="_top" href=remote_actor_path(actor) aria-label="#{actor.display_name}, #{pluralize(participant.object_count, "post")}"
-              img data-actor-id=actor.id src=icon alt="#{actor.display_name}"
+          a.ui.avatar.image data-turbo-frame="_top" href=remote_actor_path(actor) aria-label="#{actor.display_name}, #{pluralize(participant.object_count, "post")}"
+            == actor_icon(actor)
 
   - unless timeline_histogram.nil?
     crystal:
@@ -56,8 +55,8 @@ turbo-frame#thread_analysis
         - notable_branches.each_with_index do |branch, index|
           - if (branch_root = ActivityPub::Object.find?(branch.root_id)) && (preview = branch_root.preview)
             .item role="listitem"
-              - if (attributed_to = branch_root.attributed_to?) && (icon = attributed_to.icon)
-                img.ui.avatar.image data-actor-id=attributed_to.id src=icon alt="#{attributed_to.display_name}"
+              - if (attributed_to = branch_root.attributed_to?)
+                == actor_icon(attributed_to, "ui avatar image")
               .content
                 .header
                   a data-turbo-frame="_top" href=remote_branch_path(branch_root) aria-label="View branch #{index + 1}"

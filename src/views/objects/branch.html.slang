@@ -13,9 +13,8 @@
   p Contributors to this branch:
   p
     - contributors.to_a.sort_by(&.last.-).truncate(0, 18).each do |actor, _|
-      - if (icon = actor.icon)
-        a.ui.avatar.image data-turbo-frame="_top" href=remote_actor_path(actor)
-          img data-actor-id=actor.id src=icon
+      a.ui.avatar.image data-turbo-frame="_top" href=remote_actor_path(actor)
+        == actor_icon(actor)
   p style="margin-top: 10px;"
     - if (parent = object.in_reply_to?) && parent.in_reply_to?
       a.ui.button href=remote_branch_path(parent)

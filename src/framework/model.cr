@@ -1199,7 +1199,9 @@ module Ktistec
         {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
         {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
         {% for method in methods %}
-          {% if method.body[0] == :has_one %}
+          {% if method.body[0] == :belongs_to %}
+            {{method.body.last}} = nil
+          {% elsif method.body[0] == :has_one %}
             {{method.body.last}} = nil
           {% elsif method.body[0] == :has_many %}
             {{method.body.last}} = nil

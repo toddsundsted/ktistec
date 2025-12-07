@@ -1938,6 +1938,22 @@ Spectator.describe ActivityPub::Object do
               expect(object.preview).to eq("translated summary")
             end
           end
+
+          context "with name" do
+            before_each { object.assign(name: "original name") }
+
+            it "returns name" do
+              expect(object.preview).to eq("original name")
+            end
+
+            context "and name translation" do
+              let_create!(:translation, origin: object, name: "translated name")
+
+              it "returns name translation" do
+                expect(object.preview).to eq("translated name")
+              end
+            end
+          end
         end
       end
     end

@@ -38,4 +38,22 @@ Spectator.describe ActivityPub::Activity::Undo do
       expect(activity.errors["activity"]?). to be_nil
     end
   end
+
+  describe "#to_json_ld" do
+    let_create(:undo)
+
+    before_each { undo.object.undo! }
+
+    subject do
+      JSON.parse(undo.reload!.to_json_ld)
+    end
+
+    it "doesn't recursively serialize the actor" do
+      expect(subject.dig("actor").as_s?).to be_truthy
+    end
+
+    it "recursively serializes the object" do
+      expect(subject.dig("object").as_h?).to be_truthy
+    end
+  end
 end

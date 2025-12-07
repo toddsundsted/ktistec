@@ -176,6 +176,64 @@ module Ktistec::ViewHelper
       str = str.gsub(/\\?[%_]/) { %Q|<span class="wildcard">#{$0}</span>| }
       %Q|<span class="ui filter term">#{str}</span>|
     end
+
+    ACTOR_COLOR_COUNT = 12
+
+    def actor_icon(actor, classes = nil)
+      if actor
+        if actor.deleted?
+          src = "/images/avatars/deleted.png"
+          alt = "Deleted user"
+        elsif actor.blocked?
+          src = "/images/avatars/blocked.png"
+          alt = "Blocked user"
+        elsif (icon = actor.icon.presence)
+          src = icon
+          alt = actor.display_name
+        else
+          if (actor_id = actor.id)
+            color = actor_id % ACTOR_COLOR_COUNT
+            src = "/images/avatars/color-#{color}.png"
+            alt = actor.display_name
+          else
+            src = "/images/avatars/fallback.png"
+            alt = "User"
+          end
+        end
+      else
+        src = "/images/avatars/fallback.png"
+        alt = "User"
+      end
+      attrs = [
+        %Q|src="#{src}"|,
+        %Q|alt="#{::HTML.escape(alt)}"|,
+      ]
+      attrs.push %Q|data-actor-id="#{actor.id}"| if actor && actor.id
+      attrs.unshift %Q|class="#{classes}"| if classes
+      %Q|<img #{attrs.join(" ")}>|
+    end
+
+    def actor_type(actor)
+      icon = if actor
+        case actor.type.split("::").last
+        when "Person"
+          "user"
+        when "Group"
+          "users"
+        when "Organization"
+          "university"
+        when "Service"
+          "plug"
+        when "Application"
+          "laptop"
+        else
+          "user"
+        end
+      else
+        "user"
+      end
+      %Q|<i class="actor-type-overlay #{icon} icon"></i>|
+    end
   end
 
   extend ClassMethods

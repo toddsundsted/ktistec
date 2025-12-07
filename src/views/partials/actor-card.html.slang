@@ -8,10 +8,7 @@
     - image = actor.image.presence
     - style = image ? "background-image: url(#{actor.image});" : nil
     .content class=(!image ? "placeholder" : nil) style=style
-      - if actor.icon.presence
-        img src=actor.icon
-      - else
-        i.user.icon
+      == actor_icon(actor)
   .extra.content
     - if _account
       a.ui.header href=remote_actor_path(actor) == s Ktistec::Emoji.emojify(actor.display_name, _emojis)

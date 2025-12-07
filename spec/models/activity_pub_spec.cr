@@ -41,6 +41,16 @@ Spectator.describe ActivityPub do
         expect(described_class.from_json_ld(%q[{"@type":"Organization"}])).to be_a(ActivityPub::Actor)
         expect(described_class.from_json_ld(%q[{"@type":"Place"}])).to be_a(ActivityPub::Object)
       end
+
+      it "persists the correct type" do
+        actor = described_class.from_json_ld(%q[{"@type":"Organization"}]).as(ActivityPub::Actor)
+        expect(actor.type).to eq("ActivityPub::Actor::Organization")
+      end
+
+      it "persists the correct type" do
+        object = described_class.from_json_ld(%q[{"@type":"Place"}]).as(ActivityPub::Object)
+        expect(object.type).to eq("ActivityPub::Object::Place")
+      end
     end
 
     subject { Factory.create(:activity) }

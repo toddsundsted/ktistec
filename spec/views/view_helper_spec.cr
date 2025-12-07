@@ -361,6 +361,79 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".actor_icon" do
+    let_build(:actor)
+
+    let(classes) { nil }
+    subject { XML.parse_html(self.class.actor_icon(actor, classes), PARSER_OPTIONS) }
+
+    context "when actor is nil" do
+      subject { XML.parse_html(self.class.actor_icon(nil), PARSER_OPTIONS) }
+
+      it "renders fallback icon" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/fallback.png")
+      end
+    end
+
+    context "when icon is nil" do
+      before_each { actor.assign(icon: nil).save }
+
+      it "renders fallback icon" do
+        src = subject.xpath_nodes("//img/@src").map(&.text).first
+        expect(src).to match(/\/images\/avatars\/color-\d+\.png/)
+      end
+    end
+
+    context "when icon is blank" do
+      before_each { actor.assign(icon: "").save }
+
+      it "renders fallback icon" do
+        src = subject.xpath_nodes("//img/@src").map(&.text).first
+        expect(src).to match(/\/images\/avatars\/color-\d+\.png/)
+      end
+    end
+
+    context "when actor is deleted" do
+      before_each { actor.assign(icon: "https://example.com/icon.png").save.delete! }
+
+      it "renders the deleted icon" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/deleted.png")
+      end
+    end
+
+    context "when actor is blocked" do
+      before_each { actor.assign(icon: "https://example.com/icon.png").save.block! }
+
+      it "renders the blocked icono" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/blocked.png")
+      end
+    end
+
+    context "given an icon" do
+      before_each { actor.assign(icon: "https://example.com/icon.png", name: "Test Actor").save }
+
+      it "renders an img tag with src attribute" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("https://example.com/icon.png")
+      end
+
+      it "renders an img tag with alt attribute" do
+        expect(subject.xpath_nodes("//img/@alt").map(&.text)).to contain_exactly("Test Actor")
+      end
+
+      it "renders an img tag with data-actor-id attribute" do
+        expect(subject.xpath_nodes("//img/@data-actor-id").map(&.text)).to contain_exactly(actor.id.to_s)
+      end
+
+      context "and classes" do
+        let(classes) { "ui avatar image" }
+
+        it "renders an img tag with the classes" do
+          expect(subject.xpath_nodes("//img/@class").map(&.text)).to contain_exactly("ui avatar image")
+        end
+      end
+    end
+  end
+
   describe "activity_button" do
     subject do
       XML.parse_html(activity_button("/foobar", "https://object", "Zap", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }, PARSER_OPTIONS).document

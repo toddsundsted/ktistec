@@ -123,6 +123,24 @@ Spectator.describe ActivityPub::Activity do
       expect(json["object"].as_s?).to be_truthy
       expect(json["target"].as_s?).to be_truthy
     end
+
+    context "when audience is multiple values" do
+      before_each { activity.audience = ["audience link 1", "audience link 2"] }
+
+      it "renders audience as an array" do
+        json = JSON.parse(activity.to_json_ld)
+        expect(json["audience"].as_a?).to be_truthy
+      end
+    end
+
+    context "when audience is a single value" do
+      before_each { activity.audience = ["audience link"] }
+
+      it "renders audience as a string" do
+        json = JSON.parse(activity.to_json_ld)
+        expect(json["audience"].as_s?).to be_truthy
+      end
+    end
   end
 end
 

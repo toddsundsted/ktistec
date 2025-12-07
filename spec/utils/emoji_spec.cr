@@ -1,4 +1,5 @@
 require "../../src/utils/emoji"
+require "../../src/models/tag/emoji"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"

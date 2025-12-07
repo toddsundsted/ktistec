@@ -284,7 +284,7 @@
                 | Source
         .event.deleted
           .label
-            i.user.icon
+            i.user.outline.icon
           .content
             .summary
               a.user>

@@ -5,7 +5,10 @@ require "./reject"
 
 class ActivityPub::Activity
   class Follow < ActivityPub::Activity
-    @@recursive = false
+    # see: Activity.recursive
+    def self.recursive
+      false
+    end
 
     belongs_to object, class_name: ActivityPub::Actor, foreign_key: object_iri, primary_key: iri
 

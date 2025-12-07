@@ -17,7 +17,7 @@ module ActivityPub
   def self.from_json_ld(json, **options)
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
     {% begin %}
-      case json["@type"]?.try(&.as_s.split("#").last)
+      case (type = json["@type"]?.try(&.as_s.split("#").last))
       {% for includer in @type.includers %}
         {% for subclass in includer.all_subclasses << includer %}
           {% name = subclass.stringify.split("::").last %}
@@ -28,6 +28,11 @@ module ActivityPub
             when {{name}}
           {% end %}
           attrs = {{includer}}.map(json, **options)
+          if type == {{name}}
+            attrs["type"] = {{subclass.stringify}}
+          else
+            attrs["type"] = "{{includer}}::#{type}"
+          end
           {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(attrs)) ||
             {{subclass}}.new(attrs)
         {% end %}

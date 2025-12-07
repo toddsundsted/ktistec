@@ -21,9 +21,8 @@ turbo-frame#thread_page_thread_controls
             a< href=remote_thread_analysis_path(thread.first) data-turbo-frame="thread_analysis" (full analysis)
         p
           - contributors.to_a.sort_by(&.last.-).truncate(0, 18).each do |actor, _|
-            - if (icon = actor.icon)
-              a.ui.avatar.image data-turbo-frame="_top" href=remote_actor_path(actor)
-                img data-actor-id=actor.id src=icon
+            a.ui.avatar.image data-turbo-frame="_top" href=remote_actor_path(actor)
+              == actor_icon(actor)
         - if env.account?
           - if _task && (_status = fetch_task_status_line(_task, thread))
             p.task

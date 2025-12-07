@@ -14,9 +14,11 @@ Spectator.describe "object partials" do
   include Ktistec::Controller
 
   describe "label.html.slang" do
+    let(env) { env_factory("GET", "/object") }
+
     subject do
       begin
-        XML.parse_html(render "./src/views/partials/object/label.html.slang")
+        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_label_html_slang(env, author, actor))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -34,16 +36,16 @@ Spectator.describe "object partials" do
       context "and the author is deleted" do
         before_each { author.delete! }
 
-        it "renders an empty icon" do
-          expect(subject.xpath_nodes("//i/@class")).to contain_exactly("user outline icon")
+        it "renders the deleted icon" do
+          expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain("/images/avatars/deleted.png")
         end
       end
 
       context "and the author is blocked" do
         before_each { author.block! }
 
-        it "renders an empty icon" do
-          expect(subject.xpath_nodes("//i/@class")).to contain_exactly("user outline icon")
+        it "renders the blocked icon" do
+          expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain("/images/avatars/blocked.png")
         end
       end
     end
@@ -58,16 +60,16 @@ Spectator.describe "object partials" do
       context "and the actor is deleted" do
         before_each { actor.delete! }
 
-        it "renders an empty icon" do
-          expect(subject.xpath_nodes("//i/@class")).to contain_exactly("user outline icon")
+        it "renders the deleted icon" do
+          expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain("/images/avatars/deleted.png")
         end
       end
 
       context "and the actor is blocked" do
         before_each { actor.block! }
 
-        it "renders an empty icon" do
-          expect(subject.xpath_nodes("//i/@class")).to contain_exactly("user outline icon")
+        it "renders the blocked icon" do
+          expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain("/images/avatars/blocked.png")
         end
       end
     end
@@ -78,7 +80,7 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        XML.parse_html(render "./src/views/partials/object/content.html.slang")
+        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, for_thread, for_actor))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end

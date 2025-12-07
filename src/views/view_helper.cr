@@ -177,26 +177,40 @@ module Ktistec::ViewHelper
       %Q|<span class="ui filter term">#{str}</span>|
     end
 
+    ACTOR_COLOR_COUNT = 12
+
     def actor_icon(actor, classes = nil)
       if actor
         if actor.deleted?
-          %Q|<i class="user outline icon"></i>|
+          src = "/images/avatars/deleted.png"
+          alt = "Deleted user"
         elsif actor.blocked?
-          %Q|<i class="user outline icon"></i>|
+          src = "/images/avatars/blocked.png"
+          alt = "Blocked user"
         elsif (icon = actor.icon.presence)
-          attrs = [
-            %Q|src="#{icon}"|,
-            %Q|alt="#{::HTML.escape(actor.display_name)}"|,
-            %Q|data-actor-id="#{actor.id}"|,
-          ]
-          attrs.unshift %Q|class="#{classes}"| if classes
-          %Q|<img #{attrs.join(" ")}>|
+          src = icon
+          alt = actor.display_name
         else
-          %Q|<i class="user icon"></i>|
+          if (actor_id = actor.id)
+            color = actor_id % ACTOR_COLOR_COUNT
+            src = "/images/avatars/color-#{color}.png"
+            alt = actor.display_name
+          else
+            src = "/images/avatars/fallback.png"
+            alt = "User"
+          end
         end
       else
-        %Q|<i class="user icon"></i>|
+        src = "/images/avatars/fallback.png"
+        alt = "User"
       end
+      attrs = [
+        %Q|src="#{src}"|,
+        %Q|alt="#{::HTML.escape(alt)}"|,
+      ]
+      attrs.push %Q|data-actor-id="#{actor.id}"| if actor && actor.id
+      attrs.unshift %Q|class="#{classes}"| if classes
+      %Q|<img #{attrs.join(" ")}>|
     end
   end
 

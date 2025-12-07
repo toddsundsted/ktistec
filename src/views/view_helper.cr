@@ -212,6 +212,28 @@ module Ktistec::ViewHelper
       attrs.unshift %Q|class="#{classes}"| if classes
       %Q|<img #{attrs.join(" ")}>|
     end
+
+    def actor_type(actor)
+      icon = if actor
+        case actor.type.split("::").last
+        when "Person"
+          "user"
+        when "Group"
+          "users"
+        when "Organization"
+          "university"
+        when "Service"
+          "plug"
+        when "Application"
+          "laptop"
+        else
+          "user"
+        end
+      else
+        "user"
+      end
+      %Q|<i class="actor-type-overlay #{icon} icon"></i>|
+    end
   end
 
   extend ClassMethods

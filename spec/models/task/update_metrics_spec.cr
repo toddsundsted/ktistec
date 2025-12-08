@@ -71,15 +71,15 @@ Spectator.describe Task::UpdateMetrics do
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 1, 1])
       end
 
-      it "accumulates points for activities on the same day" do
+      it "accumulates points for activities on the same hour" do
         inbox5.assign(created_at: Time.utc(2016, 2, 4, 10, 10, 10)).save
         expect{subject.perform}.to change{Point.count}.by(4)
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 2])
       end
 
       it "accumulates points in the timezone of the account" do
-        account.assign(timezone: "Etc/GMT+8").save
-        inbox5.assign(created_at: Time.utc(2016, 2, 5, 4, 10, 10)).save
+        account.assign(timezone: "Asia/Kolkata").save  # UTC+5:30
+        inbox5.assign(created_at: Time.utc(2016, 2, 4, 9, 40, 30)).save
         expect{subject.perform}.to change{Point.count}.by(4)
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 2])
       end
@@ -91,7 +91,7 @@ Spectator.describe Task::UpdateMetrics do
       end
 
       context "point already exists" do
-        let_create!(:point, chart: inbox, timestamp: Time.utc(2016, 2, 5, 0, 0, 0), value: 2)
+        let_create!(:point, chart: inbox, timestamp: Time.utc(2016, 2, 5, 10, 0, 0), value: 2)
 
         it "increments point value" do
           expect{subject.perform}.to change{Point.count}.by(4)

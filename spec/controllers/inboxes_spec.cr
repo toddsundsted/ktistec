@@ -1080,16 +1080,6 @@ Spectator.describe InboxesController do
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", undo.to_json_ld, "application/json") }
 
-      class ::UndoneActivity
-        include Ktistec::Model
-        include Ktistec::Model::Common
-
-        @@table_name = "activities"
-
-        @[Persistent]
-        property undone_at : Time?
-      end
-
       context "an announce" do
         let_create(:announce, actor: other)
 
@@ -1220,16 +1210,6 @@ Spectator.describe InboxesController do
 
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 
-        class ::DeletedObject
-          include Ktistec::Model
-          include Ktistec::Model::Common
-
-          @@table_name = "objects"
-
-          @[Persistent]
-          property deleted_at : Time?
-        end
-
         it "returns 400 if the object does not exist" do
           note.destroy
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
@@ -1321,16 +1301,6 @@ Spectator.describe InboxesController do
         let_build(:delete, actor: other, object: other)
 
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
-
-        class ::DeletedActor
-          include Ktistec::Model
-          include Ktistec::Model::Common
-
-          @@table_name = "actors"
-
-          @[Persistent]
-          property deleted_at : Time?
-        end
 
         it "returns 400 if the actor does not exist" do
           other.destroy

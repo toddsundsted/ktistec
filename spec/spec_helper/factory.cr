@@ -406,6 +406,13 @@ def point_factory(clazz = Point, **options)
   clazz.new(**options)
 end
 
+# poll factory
+
+def poll_factory(clazz = Poll, question_iri = nil, question = false, **options)
+  question = object_factory unless question_iri || question.nil? || question
+  clazz.new(**{question_iri: question_iri, question: question}.merge(options))
+end
+
 # filter term factory
 
 def filter_term_factory(clazz = FilterTerm, actor_id = nil, actor = false, **options)

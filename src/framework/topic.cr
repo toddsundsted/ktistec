@@ -192,7 +192,11 @@ module Ktistec
           @@subscriptions[subject].each do |subscription|
             unless subscription.channel.closed? || subscription.queue.includes?(value)
               subscription.queue << value
-              subscription.channel.send(subject)
+              begin
+                subscription.channel.send(subject)
+              rescue Channel::ClosedError
+                # channel has closed despite having been checked
+              end
             end
           end
         end

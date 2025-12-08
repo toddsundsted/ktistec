@@ -100,12 +100,12 @@ class Task
           client.read_timeout = 10.seconds
           response = client.post(uri.request_target, headers, body)
           unless response.success?
-            message = "failed to deliver to #{inbox}: [#{response.status_code}] #{sanitize_log_message(response.body)}"
+            message = "failed to deliver to #{inbox}: [#{response.status_code}] #{response.body}"
             # track failure for recipients using this inbox
             inbox_recipients.each do |recipient|
               failures << Failure.new(recipient, message)
             end
-            Log.debug { message }
+            Log.debug { sanitize_log_message(message) }
           end
         rescue ex: OpenSSL::Error | IO::Error
           message = "#{ex.class}: #{ex.message}: #{inbox}"

@@ -6,6 +6,7 @@
     - [Thread Analysis](#thread-analysis)
     - [Translations](#translations)
     - [@-mention and #-hashtag autocomplete](#-mention-and--hashtag-autocomplete)
+    - [Custom emoji](#custom-emoji)
     - [Control over comment visibility](#control-over-comment-visibility)
     - [Pretty URLs](#pretty-urls)
     - [Followers/following](#followersfollowing)
@@ -121,6 +122,12 @@ and to encourage hands-on-the-keyboard composition, Ktistec supports
 autocompletion.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/22aee8.gif" width=460>
+
+### Custom emoji
+
+Ktistec supports viewing custom emoji in posts and on actor
+profiles. Custom emoji are federated from remote servers and
+automatically rendered when present.
 
 ### Control over comment visibility
 

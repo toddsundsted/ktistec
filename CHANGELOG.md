@@ -1,6 +1,24 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.2.3]
+### Added
+- Support for viewing custom emoji in posts and on actor profiles.
+- Actor type (Person, Group, etc.) overlay badges on actor panels.
+- Colored fallback avatars for actors without icons.
+- Support for robots.txt.
+
+### Fixed
+- Federation with Lemmy and other servers that support FEP-1b12.
+  - Shared inbox support for local actors.
+  - Serialization of undone activities includes the original activity.
+  - Activities "Like" and "Dislike" are not recursive.
+- Notify only once for an object's first received activity.
+
+### Changed
+- Accumulate metrics by hour for finer granularity.
+- Clean up presentation of public followers/following pages.
+
 ## [v3.2.2]
 ### Added
 - Support for pinned posts and the Mastodon "featured posts" collection.
@@ -551,6 +569,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.2.3]: https://github.com/toddsundsted/ktistec/compare/2ab2a727...023fd225
 [v3.2.2]: https://github.com/toddsundsted/ktistec/compare/ab57a3c7...74f7666e
 [v3.2.1]: https://github.com/toddsundsted/ktistec/compare/9eebb34e...f6d5f376
 [v3.2.0]: https://github.com/toddsundsted/ktistec/compare/65e9e57f...9a25965a

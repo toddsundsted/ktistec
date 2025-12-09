@@ -14,6 +14,10 @@ module ActivityPub
   # the only logging in this module is related to mapping JSON-LD.
   Log = ::Log.for("ktistec.json_ld")
 
+  # Note: Take care when modifying this method. In particular,
+  # avoid calling `map` on a subclass directly unless the subclass
+  # explicitly defines it!
+
   def self.from_json_ld(json, **options)
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
     {% begin %}
@@ -27,7 +31,11 @@ module ActivityPub
           {% else %}
             when {{name}}
           {% end %}
-          attrs = {{includer}}.map(json, **options)
+          {% if subclass.class.methods.map(&.name).includes?("map".id) %}
+            attrs = {{subclass}}.map(json, **options)
+          {% else %}
+            attrs = {{includer}}.map(json, **options)
+          {% end %}
           if type == {{name}}
             attrs["type"] = {{subclass.stringify}}
           else

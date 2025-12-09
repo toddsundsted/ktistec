@@ -144,6 +144,10 @@ def note_factory(**options)
   object_factory(ActivityPub::Object::Note, **options)
 end
 
+def question_factory(**options)
+  object_factory(ActivityPub::Object::Question, **options)
+end
+
 def tombstone_factory(**options)
   object_factory(ActivityPub::Object::Tombstone, **options)
 end
@@ -408,9 +412,10 @@ end
 
 # poll factory
 
-def poll_factory(clazz = Poll, question_iri = nil, question = false, **options)
-  question = object_factory unless question_iri || question.nil? || question
-  clazz.new(**{question_iri: question_iri, question: question}.merge(options))
+def poll_factory(clazz = Poll, question_iri = nil, question = false, options = nil, **__options)
+  question = question_factory unless question_iri || question.nil? || question
+  options ||= [Poll::Option.new("Yes"), Poll::Option.new("No")]
+  clazz.new(**{question_iri: question_iri, question: question, options: options}.merge(__options))
 end
 
 # filter term factory

@@ -39,7 +39,6 @@ module ActivityPub
       "ActivityPub::Object::Image",
       "ActivityPub::Object::Page",
       "ActivityPub::Object::Place",
-      "ActivityPub::Object::Question",
       "ActivityPub::Object::Video",
     ]
 

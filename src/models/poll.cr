@@ -1,5 +1,5 @@
 require "../framework/model"
-require "./activity_pub/object"
+require "./activity_pub/object/question"
 
 class Poll
   include Ktistec::Model
@@ -9,7 +9,7 @@ class Poll
 
   @[Persistent]
   property question_iri : String?
-  belongs_to question, class_name: ActivityPub::Object, foreign_key: question_iri, primary_key: iri
+  belongs_to question, class_name: ActivityPub::Object::Question, foreign_key: question_iri, primary_key: iri, inverse_of: poll
   validates(question) { "must be present" unless question? }
 
   class Option

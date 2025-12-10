@@ -663,3 +663,52 @@ body.offline .ui.banner .message {
 .content .float-right {
     float: right;
 }
+
+/** polls **/
+.ui.segment.poll {
+    .bg-primary-1();
+    .poll-option {
+        .poll-option-name {
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        .poll-option-votes {
+            display: flex;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+        }
+        .poll-option-bar {
+            height: 8px;
+            background-color: var(--bg-label);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .poll-option-bar-fill {
+            height: 100%;
+            background-color: var(--semantic-primary);
+            transition: width 0.3s ease;
+        }
+        margin-bottom: 0.75rem;
+    }
+    .poll-footer {
+        font-size: 0.9em;
+        color: var(--text-secondary);
+        .poll-status.active {
+            color: var(--semantic-primary);
+        }
+        .poll-status.expired {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .poll-voters,
+        .poll-type,
+        .poll-closed-time {
+            color: var(--text-secondary);
+        }
+        span + span::before {
+            content: " • ";
+        }
+    }
+}

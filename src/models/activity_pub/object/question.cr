@@ -1,9 +1,30 @@
 require "../object"
+require "./note"
 require "../../poll"
 
 class ActivityPub::Object
   class Question < ActivityPub::Object
     has_one poll, foreign_key: question_iri, primary_key: iri, inverse_of: question
+
+    def voted_by?(actor : ActivityPub::Actor) : Bool
+      !ActivityPub::Object.where(
+        "type = '#{ActivityPub::Object::Note}' AND in_reply_to_iri = ? AND attributed_to_iri = ? AND name IS NOT NULL",
+        self.iri,
+        actor.iri
+      ).empty?
+    end
+
+    def votes_by(actor : ActivityPub::Actor) : Array(ActivityPub::Object)
+      ActivityPub::Object.where(
+        "type = '#{ActivityPub::Object::Note}' AND in_reply_to_iri = ? AND attributed_to_iri = ? AND name IS NOT NULL",
+        self.iri,
+        actor.iri
+      )
+    end
+
+    def options_by(actor : ActivityPub::Actor) : Array(String)
+      votes_by(actor).compact_map(&.name)
+    end
 
     def self.map(json, **options)
       json = json.is_a?(String | IO) ? Ktistec::JSON_LD.expand(JSON.parse(json)) : json

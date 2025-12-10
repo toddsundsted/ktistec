@@ -1,4 +1,5 @@
 require "../../../../src/models/activity_pub/object/question"
+require "../../../../src/models/activity_pub/object/note"
 
 require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
@@ -256,6 +257,122 @@ Spectator.describe ActivityPub::Object::Question do
       expect(Poll.count(question: question, include_deleted: true, include_undone: true)).to eq(1)
       expect(Poll.find?(old_poll.id)).to be_nil
       expect(Poll.find(new_poll.id)).not_to be_nil
+    end
+  end
+
+  # Vote Tracking
+
+  let_create(:actor, local: true)
+
+  let_create(:poll, options: [
+    Poll::Option.new("Yes", 0),
+    Poll::Option.new("No", 0),
+  ])
+
+  let(question) { poll.question }
+
+  macro vote(index)
+    let_create!(
+      :note,
+      named: vote{{index}},
+      name: poll.options[{{index}}].name,
+      in_reply_to: question,
+      attributed_to: actor,
+      content: nil,
+    )
+  end
+
+  describe "#voted_by?" do
+    it "returns false" do
+      expect(question.voted_by?(actor)).to be_false
+    end
+
+    context "when actor has voted" do
+      vote(0)
+
+      it "returns true" do
+        expect(question.voted_by?(actor)).to be_true
+      end
+    end
+
+    context "with reply" do
+      let_create!(
+        :note,
+        named: reply,
+        name: nil,
+        in_reply_to: question,
+        attributed_to: actor,
+        content: "This is a regular reply",
+      )
+
+      it "ignores the reply" do
+        expect(question.voted_by?(actor)).to be_false
+      end
+    end
+  end
+
+  describe "#votes_by" do
+    it "returns empty array" do
+      expect(question.votes_by(actor)).to be_empty
+    end
+
+    context "with single vote" do
+      vote(0)
+
+      it "returns votes for actor" do
+        votes = question.votes_by(actor)
+        expect(votes.size).to eq(1)
+        expect(votes.map(&.name)).to contain_exactly("Yes")
+      end
+    end
+
+    context "with multiple votes" do
+      vote(0)
+      vote(1)
+
+      it "returns votes for actor" do
+        votes = question.votes_by(actor)
+        expect(votes.size).to eq(2)
+        expect(votes.map(&.name)).to contain_exactly("Yes", "No")
+      end
+    end
+
+    context "with other actor's vote" do
+      let_create(:actor, named: other, local: true)
+
+      let_create!(
+        :note,
+        named: other_vote,
+        name: "Yes",
+        in_reply_to: question,
+        attributed_to: other,
+        content: nil,
+      )
+
+      it "ignores the other vote" do
+        expect(question.votes_by(actor)).to be_empty
+      end
+    end
+  end
+
+  describe "#options_by" do
+    context "with single vote" do
+      vote(0)
+
+      it "returns options voted for" do
+        options = question.options_by(actor)
+        expect(options).to contain_exactly("Yes")
+      end
+    end
+
+    context "with multiple votes" do
+      vote(0)
+      vote(1)
+
+      it "returns options voted for" do
+        options = question.options_by(actor)
+        expect(options).to contain_exactly("Yes", "No")
+      end
     end
   end
 end

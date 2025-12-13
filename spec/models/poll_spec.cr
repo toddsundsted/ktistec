@@ -79,4 +79,106 @@ Spectator.describe Poll do
       expect(past_poll.expired?).to be_true
     end
   end
+
+  describe "#adjust_votes" do
+    let_create!(
+      :poll,
+      options: [
+        Poll::Option.new("Yes", 10),
+        Poll::Option.new("No", 5)
+      ],
+      voters_count: 15
+    )
+
+    let(question) { poll.question }
+
+    let_create(:actor, local: true)
+
+    let(vote_times) { question.votes_by(actor).map(&.created_at) }
+
+    it "returns vote counts" do
+      result = poll.adjust_votes(question, actor)
+
+      expect(result[:options][0].votes_count).to eq(10)
+      expect(result[:options][1].votes_count).to eq(5)
+      expect(result[:voters_count]).to eq(15)
+    end
+
+    macro vote(name)
+      let_create!(
+        :note, named: nil,
+        name: {{name}},
+        in_reply_to: question,
+        attributed_to: actor,
+      )
+    end
+
+    context "votes are older than question" do
+      vote("Yes")
+
+      before_each do
+        question.assign(updated_at: vote_times.max + 1.minute)  # don't save
+      end
+
+      it "does not adjust counts" do
+        result = poll.adjust_votes(question, actor)
+
+        expect(result[:options][0].votes_count).to eq(10)
+        expect(result[:options][1].votes_count).to eq(5)
+        expect(result[:voters_count]).to eq(15)
+      end
+    end
+
+    context "votes are newer than question_at" do
+      context "with single recent vote" do
+        vote("Yes")
+
+        before_each do
+          question.assign(updated_at: vote_times.min - 1.minute)  # don't save
+        end
+
+        it "adjusts counts" do
+          result = poll.adjust_votes(question, actor)
+
+          expect(result[:options][0].votes_count).to eq(11)
+          expect(result[:options][1].votes_count).to eq(5)
+          expect(result[:voters_count]).to eq(16)
+        end
+      end
+
+      context "with multiple recent votes" do
+        vote("Yes")
+        vote("No")
+
+        before_each do
+          question.assign(updated_at: vote_times.min - 1.minute)  # don't save
+        end
+
+        it "adjusts counts" do
+          result = poll.adjust_votes(question, actor)
+
+          expect(result[:options][0].votes_count).to eq(11)
+          expect(result[:options][1].votes_count).to eq(6)
+          expect(result[:voters_count]).to eq(16)
+        end
+      end
+
+      context "with multiple recent votes for same option" do
+        vote("Yes")
+        vote("Yes")
+
+        before_each do
+          question.assign(updated_at: vote_times.min - 1.minute)  # don't save
+        end
+
+        it "adjusts counts" do
+          result = poll.adjust_votes(question, actor)
+
+          expect(result[:options][0].votes_count).to eq(12)
+          expect(result[:options][1].votes_count).to eq(5)
+          expect(result[:voters_count]).to eq(16)
+        end
+      end
+    end
+  end
 end

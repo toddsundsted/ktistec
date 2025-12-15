@@ -94,7 +94,7 @@ module Ktistec
         key: "href",
       },
       img: {
-        keep: ["src", "alt"],
+        keep: ["src", "alt", "title"],
         all: [{"class", "ui image"}, {"loading", "lazy"}],
         class: ["emoji"],
       },

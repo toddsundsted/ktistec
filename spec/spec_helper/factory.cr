@@ -270,16 +270,19 @@ def notification_follow_mention_factory(**options)
   notification_factory(Relationship::Content::Notification::Follow::Mention, **{activity: nil}.merge(options))
 end
 
-def notification_follow_thread_factory(**options)
-  notification_factory(Relationship::Content::Notification::Follow::Thread, **{activity: nil}.merge(options))
+def notification_follow_thread_factory(object_iri = nil, object = false, **options)
+  object = object_factory unless object_iri || object.nil? || object
+  notification_factory(Relationship::Content::Notification::Follow::Thread, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
 end
 
-def notification_reply_factory(**options)
-  notification_factory(Relationship::Content::Notification::Reply, **{activity: nil}.merge(options))
+def notification_reply_factory(object_iri = nil, object = false, **options)
+  object = object_factory unless object_iri || object.nil? || object
+  notification_factory(Relationship::Content::Notification::Reply, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
 end
 
-def notification_mention_factory(**options)
-  notification_factory(Relationship::Content::Notification::Mention, **{activity: nil}.merge(options))
+def notification_mention_factory(object_iri = nil, object = false, **options)
+  object = object_factory unless object_iri || object.nil? || object
+  notification_factory(Relationship::Content::Notification::Mention, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
 end
 
 def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)

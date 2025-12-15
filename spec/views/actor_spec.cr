@@ -1,4 +1,5 @@
 require "../../src/models/activity_pub/activity/follow"
+require "../../src/models/relationship/content/notification/**"
 require "../../src/views/view_helper"
 
 require "../spec_helper/factory"
@@ -42,6 +43,100 @@ Spectator.describe "actor" do
 
         it "renders an editor" do
           expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+        end
+
+        before_each do
+          env.account.assign(last_notifications_checked_at: 1.hour.ago).save
+        end
+
+        let(tooltip) { subject.xpath_nodes("//a[contains(@href,'notifications')]/@title").first?.try(&.text) }
+
+        it "does not render tooltip" do
+          expect(tooltip).to be_nil
+        end
+
+        context "given a follow notification" do
+          let_create!(:notification_follow, owner: actor)
+
+          it "renders follow tooltip" do
+            expect(tooltip).to eq("follow 1")
+          end
+        end
+
+        context "given a reply notification" do
+          let_create!(:notification_reply, owner: actor)
+
+          it "renders reply tooltip" do
+            expect(tooltip).to eq("reply 1")
+          end
+        end
+
+        context "given a mention notification" do
+          let_create!(:notification_mention, owner: actor)
+
+          it "renders mention tooltip" do
+            expect(tooltip).to eq("mention 1")
+          end
+        end
+
+        context "given an announce notification" do
+          let_create!(:notification_announce, owner: actor)
+
+          it "renders social tooltip" do
+            expect(tooltip).to eq("social 1")
+          end
+        end
+
+        context "given a like notification" do
+          let_create!(:notification_like, owner: actor)
+
+          it "renders social tooltip" do
+            expect(tooltip).to eq("social 1")
+          end
+        end
+
+        context "given a dislike notification" do
+          let_create!(:notification_dislike, owner: actor)
+
+          it "renders social tooltip" do
+            expect(tooltip).to eq("social 1")
+          end
+        end
+
+        context "given a follow hashtag notification" do
+          let_create!(:notification_follow_hashtag, owner: actor, name: "foo")
+
+          it "renders content tooltip" do
+            expect(tooltip).to eq("content 1")
+          end
+        end
+
+        context "given a follow mention notification" do
+          let_create!(:notification_follow_mention, owner: actor, name: "foo@bar")
+
+          it "renders content tooltip" do
+            expect(tooltip).to eq("content 1")
+          end
+        end
+
+        context "given a follow thread notification" do
+          let_create!(:notification_follow_thread, owner: actor)
+
+          it "renders content tooltip" do
+            expect(tooltip).to eq("content 1")
+          end
+        end
+
+        context "given multiple notifications" do
+          let_create!(:notification_like, owner: actor)
+          let_create!(:notification_dislike, owner: actor)
+          let_create!(:notification_follow_thread, owner: actor)
+          let_create!(:notification_follow, named: :notif_follow1, owner: actor)
+          let_create!(:notification_follow, named: :notif_follow2, owner: actor)
+
+          it "renders combined tooltip" do
+            expect(tooltip).to eq("follow 2 | social 2 | content 1")
+          end
         end
       end
     end

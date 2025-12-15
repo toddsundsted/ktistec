@@ -77,4 +77,24 @@ module ActivityPub
       ActivityPub.from_json_ld?(json, **options.merge(default: self)).as(self?)
     end
   end
+
+  ## Helpers
+
+  # Adds common filters to a query.
+  #
+  macro common_filters(**options)
+    <<-FILTERS
+      {% if (key = options[:objects]) %}
+        AND {{key.id}}.deleted_at is NULL
+        AND {{key.id}}.blocked_at is NULL
+      {% end %}
+      {% if (key = options[:actors]) %}
+        AND {{key.id}}.deleted_at IS NULL
+        AND {{key.id}}.blocked_at IS NULL
+      {% end %}
+      {% if (key = options[:activities]) %}
+        AND {{key.id}}.undone_at IS NULL
+      {% end %}
+    FILTERS
+  end
 end

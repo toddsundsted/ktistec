@@ -322,10 +322,7 @@ module ActivityPub
             JOIN actors AS t
               ON t.iri = o.attributed_to_iri
            WHERE o.visible = 1
-             AND o.deleted_at is NULL
-             AND o.blocked_at is NULL
-             AND t.deleted_at IS NULL
-             AND t.blocked_at IS NULL
+             #{common_filters(objects: "o", actors: "t")}
              AND NOT (o.iri LIKE '#{Ktistec.host}%' AND o.published IS NULL)
         ORDER BY o.id DESC
            LIMIT ? OFFSET ?
@@ -345,10 +342,7 @@ module ActivityPub
             JOIN actors AS t
               ON t.iri = o.attributed_to_iri
            WHERE o.visible = 1
-             AND o.deleted_at is NULL
-             AND o.blocked_at is NULL
-             AND t.deleted_at IS NULL
-             AND t.blocked_at IS NULL
+             #{common_filters(objects: "o", actors: "t")}
              AND NOT (o.iri LIKE '#{Ktistec.host}%' AND o.published IS NULL)
       QUERY
       Object.scalar(query).as(Int64)
@@ -374,11 +368,7 @@ module ActivityPub
               ON t.iri = o.attributed_to_iri
            WHERE o.visible = 1
              AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
-             AND o.deleted_at IS NULL
-             AND o.blocked_at IS NULL
-             AND t.deleted_at IS NULL
-             AND t.blocked_at IS NULL
-             AND a.undone_at IS NULL
+             #{common_filters(objects: "o", actors: "t", activities: "a")}
           ORDER BY r.id DESC
              LIMIT ? OFFSET ?
       QUERY
@@ -405,11 +395,7 @@ module ActivityPub
               ON t.iri = o.attributed_to_iri
            WHERE o.visible = 1
              AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
-             AND o.deleted_at IS NULL
-             AND o.blocked_at IS NULL
-             AND t.deleted_at IS NULL
-             AND t.blocked_at IS NULL
-             AND a.undone_at IS NULL
+             #{common_filters(objects: "o", actors: "t", activities: "a")}
       QUERY
       Object.scalar(query).as(Int64)
     end
@@ -432,7 +418,7 @@ module ActivityPub
             JOIN accounts AS c
               ON c.iri = a.actor_iri
            WHERE a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-             AND a.undone_at IS NULL
+             #{common_filters(activities: "a")}
         ORDER BY a.id DESC
            LIMIT 1
       QUERY
@@ -481,10 +467,7 @@ module ActivityPub
              JOIN actors AS a
                ON a.iri = o.attributed_to_iri
             WHERE o.in_reply_to_iri = t.iri
-              AND o.deleted_at IS NULL
-              AND o.blocked_at IS NULL
-              AND a.deleted_at IS NULL
-              AND a.blocked_at IS NULL
+              #{common_filters(objects: "o", actors: "a")}
         )
       QUERY
     end
@@ -533,10 +516,7 @@ module ActivityPub
            JOIN actors AS a
              ON a.iri = o.attributed_to_iri
           WHERE o.in_reply_to_iri = ?
-            AND o.deleted_at IS NULL
-            AND o.blocked_at IS NULL
-            AND a.deleted_at IS NULL
-            AND a.blocked_at IS NULL
+            #{common_filters(objects: "o", actors: "a")}
        ORDER BY o.published DESC
       QUERY
       Object.query_all(query, iri)
@@ -559,10 +539,7 @@ module ActivityPub
             AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.in_reply_to_iri = ?
             AND o.visible = 1
-            AND o.deleted_at IS NULL
-            AND o.blocked_at IS NULL
-            AND a.deleted_at IS NULL
-            AND a.blocked_at IS NULL
+            #{common_filters(objects: "o", actors: "a")}
        ORDER BY o.published DESC
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
@@ -815,10 +792,7 @@ module ActivityPub
             JOIN actors AS a
               ON a.iri = o.attributed_to_iri
            WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
-             AND o.deleted_at IS NULL
-             AND o.blocked_at IS NULL
-             AND a.deleted_at IS NULL
-             AND a.blocked_at IS NULL
+             #{common_filters(objects: "o", actors: "a")}
       )
       QUERY
     end
@@ -831,10 +805,7 @@ module ActivityPub
         JOIN actors AS a
           ON a.iri = o.attributed_to_iri
        WHERE o.iri IN (p.iri)
-         AND o.deleted_at IS NULL
-         AND o.blocked_at IS NULL
-         AND a.deleted_at IS NULL
-         AND a.blocked_at IS NULL
+         #{common_filters(objects: "o", actors: "a")}
        ORDER BY p.depth
       QUERY
       Object.query_all(query, iri, additional_columns: {depth: Int32})
@@ -853,10 +824,7 @@ module ActivityPub
             JOIN actors AS a
               ON a.iri = o.attributed_to_iri
            WHERE o.in_reply_to_iri = r.iri
-             AND o.deleted_at IS NULL
-             AND o.blocked_at IS NULL
-             AND a.deleted_at IS NULL
-             AND a.blocked_at IS NULL
+             #{common_filters(objects: "o", actors: "a")}
       )
       QUERY
     end
@@ -893,11 +861,9 @@ module ActivityPub
            JOIN actors AS t
              ON t.iri = a.actor_iri
           WHERE a.object_iri = ?
+            #{common_filters(actors: "t", activities: "a")}
             #{inclusion}
             #{exclusion}
-            AND t.deleted_at IS NULL
-            AND t.blocked_at IS NULL
-            AND a.undone_at IS NULL
        ORDER BY a.id ASC
       QUERY
       Activity.query_all(query, iri)

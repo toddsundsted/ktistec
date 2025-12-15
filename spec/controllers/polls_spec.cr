@@ -71,6 +71,11 @@ Spectator.describe PollsController do
         expect(question.votes_by(actor).all?(&.published.is_a?(Time))).to be_true
       end
 
+      it "assigns special" do
+        post "/polls/#{poll.id}/vote", HTML_HEADERS, "options[]=Yes"
+        expect(question.votes_by(actor).all?(&.special.==("vote"))).to be_true
+      end
+
       it "assigns to" do
         post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
         expect(question.votes_by(actor).flat_map(&.to)).to contain_exactly(question.attributed_to.iri)

@@ -35,6 +35,7 @@ class Tag
     macro common_filters(**options)
       <<-FILTERS
         {% if (key = options[:objects]) %}
+          AND {{key.id}}.special is NULL
           AND {{key.id}}.deleted_at is NULL
           AND {{key.id}}.blocked_at is NULL
         {% end %}

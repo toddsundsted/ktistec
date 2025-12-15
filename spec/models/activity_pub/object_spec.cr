@@ -1205,6 +1205,15 @@ Spectator.describe ActivityPub::Object do
     reply_to!(object2, object3)
     reply_to!(object4, object5)
 
+    # special objects like votes are excluded
+
+    let_create!(
+      :object, named: vote,
+      in_reply_to: subject,
+      visible: true,
+      special: "vote",
+    )
+
     describe "#with_replies_count!" do
       it "returns the count of replies" do
         expect(subject.with_replies_count!.replies_count).to eq(5)

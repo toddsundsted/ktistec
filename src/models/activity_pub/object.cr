@@ -49,6 +49,9 @@ module ActivityPub
     property sensitive : Bool { false }
 
     @[Persistent]
+    property special : String?
+
+    @[Persistent]
     property published : Time?
 
     @[Persistent]
@@ -609,6 +612,8 @@ module ActivityPub
     # Intended for presenting a thread to an authorized user (one who
     # may see all objects in a thread).
     #
+    # Filters out special objects (e.g. votes).
+    #
     # Does not filter out deleted or blocked objects. Leaves decisions
     # about presentation of these objects and their replies to the
     # caller.
@@ -623,6 +628,7 @@ module ActivityPub
          SELECT #{Object.columns(prefix: "o")}, r.depth
            FROM objects AS o, replies_to AS r
           WHERE o.iri IN (r.iri)
+            AND o.special IS NULL
           ORDER BY r.position
       QUERY
       Object.query_all(query, iri, additional_columns: {depth: Int32})
@@ -630,6 +636,8 @@ module ActivityPub
 
     # Returns all objects in the thread to which this object belongs
     # which have been approved by `approved_by`.
+    #
+    # Filters out special objects (e.g. votes).
     #
     # Does not filter out deleted or blocked objects. Leaves decisions
     # about presentation of these objects and their replies to the
@@ -649,6 +657,7 @@ module ActivityPub
             AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
             AND o.visible = 1
+            AND o.special IS NULL
             AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
           ORDER BY t.position
       QUERY
@@ -732,6 +741,7 @@ module ActivityPub
           LEFT JOIN tags AS mt ON mt.subject_iri = o.iri AND mt.type = 'Tag::Mention'
           {% end %}
          WHERE o.iri IN (r.iri)
+           AND o.special IS NULL
          {% if needs_group_by %}
          GROUP BY o.id, r.depth, r.position
          {% end %}
@@ -747,7 +757,6 @@ module ActivityPub
     # participants, notable branches, and timeline histogram.
     #
     def analyze_thread(*, for_actor : ActivityPub::Actor) : ThreadAnalysisService::ThreadAnalysis
-
       tuples = nil
       object_count = 0
       author_count = 0

@@ -60,6 +60,7 @@ class PollsController
         name: name,
         content: nil,
         published: now,
+        special: "vote",
         to: [question.attributed_to.iri],
         cc: [] of String,
       )

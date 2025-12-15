@@ -82,17 +82,6 @@ crystal:
             - mentions.each do |mention|
               - handle = no_duplicate_handles ? mention.split("@").first : mention
               a.ui.small.label data-turbo-frame="_top" href=mention_path(mention) @#{handle}
-      - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
-        .extra.detail
-          - activities.each do |activity|
-            - if activity.actor?
-              a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
-                == actor_icon(activity.actor, "ui avatar image")
-                - case activity
-                - when ActivityPub::Activity::Announce
-                  i.share.icon
-                - when ActivityPub::Activity::Like
-                  i.thumbs.up.icon
   - if author.deleted? || actor.deleted?
     .extra.text
       em This actor is deleted!
@@ -235,3 +224,15 @@ crystal:
         button.ui.mini.iconic.button
           i.share.icon
           = pluralize(object.announces_count, "Share")
+  - if account && with_detail && !is_blocked
+    - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
+      .extra.detail
+        - activities.each do |activity|
+          - if activity.actor?
+            a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
+              == actor_icon(activity.actor, "ui avatar image")
+              - case activity
+              - when ActivityPub::Activity::Announce
+                i.share.icon
+              - when ActivityPub::Activity::Like
+                i.thumbs.up.icon

@@ -1122,7 +1122,7 @@ module Ktistec
           {% end %}
         end
         # destroy unassociated instances
-        if (saved_record = @saved_record)
+        if (saved_record = @saved_record.as(self))
           {% for method in methods %}
             {% name = method.name[13..-1] %}
             {% if method.body.first == :has_one %}

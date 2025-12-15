@@ -14,6 +14,10 @@ module ActivityPub
   # the only logging in this module is related to mapping JSON-LD.
   Log = ::Log.for("ktistec.json_ld")
 
+  # Note: Take care when modifying this method. In particular,
+  # avoid calling `map` on a subclass directly unless the subclass
+  # explicitly defines it!
+
   def self.from_json_ld(json, **options)
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
     {% begin %}
@@ -27,7 +31,11 @@ module ActivityPub
           {% else %}
             when {{name}}
           {% end %}
-          attrs = {{includer}}.map(json, **options)
+          {% if subclass.class.methods.map(&.name).includes?("map".id) %}
+            attrs = {{subclass}}.map(json, **options)
+          {% else %}
+            attrs = {{includer}}.map(json, **options)
+          {% end %}
           if type == {{name}}
             attrs["type"] = {{subclass.stringify}}
           else
@@ -68,5 +76,26 @@ module ActivityPub
     def self.from_json_ld?(json, **options)
       ActivityPub.from_json_ld?(json, **options.merge(default: self)).as(self?)
     end
+  end
+
+  ## Helpers
+
+  # Adds common filters to a query.
+  #
+  macro common_filters(**options)
+    <<-FILTERS
+      {% if (key = options[:objects]) %}
+        AND {{key.id}}.special is NULL
+        AND {{key.id}}.deleted_at is NULL
+        AND {{key.id}}.blocked_at is NULL
+      {% end %}
+      {% if (key = options[:actors]) %}
+        AND {{key.id}}.deleted_at IS NULL
+        AND {{key.id}}.blocked_at IS NULL
+      {% end %}
+      {% if (key = options[:activities]) %}
+        AND {{key.id}}.undone_at IS NULL
+      {% end %}
+    FILTERS
   end
 end

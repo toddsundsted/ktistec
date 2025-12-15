@@ -227,34 +227,13 @@ module ActivityPub
         nil
     end
 
-    # Adds common filters to a query.
-    #
-    # The `first_prefix` and `second_prefix` can be either actor or
-    # object table names.
-    #
-    macro common_filters_on(first_prefix = nil, second_prefix = nil, activity_prefix = nil)
-      <<-QUERY
-        {% if first_prefix %}
-          AND {{first_prefix}}.deleted_at IS NULL
-          AND {{first_prefix}}.blocked_at IS NULL
-        {% end %}
-        {% if second_prefix %}
-          AND {{second_prefix}}.deleted_at IS NULL
-          AND {{second_prefix}}.blocked_at IS NULL
-        {% end %}
-        {% if activity_prefix %}
-          AND {{activity_prefix}}.undone_at IS NULL
-        {% end %}
-      QUERY
-    end
-
     private def social_query(type, orig, dest, public = true)
       public = public ? "AND r.confirmed = 1 AND r.visible = 1" : nil
       query = <<-QUERY
         SELECT #{Actor.columns(prefix: "a")}
           FROM actors AS a, relationships AS r
          WHERE a.iri = r.#{orig}
-           #{common_filters_on("a")}
+           #{common_filters(actors: "a")}
            AND r.type = '#{type}'
            AND r.#{dest} = ?
            #{public}
@@ -287,7 +266,7 @@ module ActivityPub
              ON a.object_iri = o.iri
           WHERE a.actor_iri = ?
             AND a.type = '#{type}'
-            #{common_filters_on("o", "c", "a")}
+            #{common_filters(objects: "o", actors: "c", activities: "a")}
        ORDER BY o.id DESC
           LIMIT ? OFFSET ?
       QUERY
@@ -303,7 +282,7 @@ module ActivityPub
              ON a.object_iri = o.iri
           WHERE a.actor_iri = ?
             AND a.type = '#{type}'
-            #{common_filters_on("o", "c", "a")}
+            #{common_filters(objects: "o", actors: "c", activities: "a")}
             AND a.created_at > ?
       QUERY
     end
@@ -402,7 +381,7 @@ module ActivityPub
              ON r.to_iri = o.iri
             AND r.type = '#{Relationship::Content::Bookmark}'
           WHERE r.from_iri = ?
-            #{common_filters_on("o", "c")}
+            #{common_filters(objects: "o", actors: "c")}
        ORDER BY r.id DESC
           LIMIT ? OFFSET ?
       QUERY
@@ -424,7 +403,7 @@ module ActivityPub
              ON r.to_iri = o.iri
             AND r.type = '#{Relationship::Content::Bookmark}'
           WHERE r.from_iri = ?
-            #{common_filters_on("o", "c")}
+            #{common_filters(objects: "o", actors: "c")}
             AND r.created_at > ?
       QUERY
       Object.scalar(query, iri, since).as(Int64)
@@ -446,7 +425,7 @@ module ActivityPub
              ON r.to_iri = o.iri
             AND r.type = '#{Relationship::Content::Pin}'
           WHERE r.from_iri = ?
-            #{common_filters_on("o", "c")}
+            #{common_filters(objects: "o", actors: "c")}
        ORDER BY r.id DESC
           LIMIT ? OFFSET ?
       QUERY
@@ -468,7 +447,7 @@ module ActivityPub
              ON r.to_iri = o.iri
             AND r.type = '#{Relationship::Content::Pin}'
           WHERE r.from_iri = ?
-            #{common_filters_on("o", "c")}
+            #{common_filters(objects: "o", actors: "c")}
             AND r.created_at > ?
       QUERY
       Object.scalar(query, self.iri, since).as(Int64)
@@ -486,7 +465,7 @@ module ActivityPub
            FROM objects AS o
           WHERE o.attributed_to_iri = ?
             AND o.published IS NULL
-            #{common_filters_on("o")}
+            #{common_filters(objects: "o")}
        ORDER BY o.id DESC
           LIMIT ? OFFSET ?
       QUERY
@@ -503,7 +482,7 @@ module ActivityPub
            FROM objects AS o
           WHERE o.attributed_to_iri = ?
             AND o.published IS NULL
-            #{common_filters_on("o")}
+            #{common_filters(objects: "o")}
             AND o.created_at > ?
       QUERY
       Object.scalar(query, iri, since).as(Int64)
@@ -543,9 +522,9 @@ module ActivityPub
           WHERE r.from_iri LIKE ?
             #{mailbox}
             AND r.confirmed = 1
+            #{Actor.common_filters(actors: "act", objects: "obj", activities: "a")}
             #{inclusion}
             #{exclusion}
-            #{Actor.common_filters_on("act", "obj", "a")}
        #{public ? %Q|AND a.visible = 1| : nil}
        #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
        ORDER BY r.id DESC
@@ -589,9 +568,9 @@ module ActivityPub
             AND obj.iri = ?
             #{mailbox}
             AND r.confirmed = 1
+            #{common_filters(actors: "act", objects: "obj", activities: "a")}
             #{inclusion}
             #{exclusion}
-            #{common_filters_on("act", "obj", "a")}
       QUERY
       Activity.scalar(query, self.iri, object.iri).as(Int64) > 0
     end
@@ -636,9 +615,9 @@ module ActivityPub
              ON obj.iri = a.object_iri
           WHERE a.actor_iri = ?
             AND a.object_iri = ?
+            #{common_filters(actors: "act", objects: "obj", activities: "a")}
             #{inclusion}
             #{exclusion}
-            #{common_filters_on("act", "obj", "a")}
       QUERY
       Activity.query_all(query, self.iri, object.iri).first?
     end
@@ -668,7 +647,7 @@ module ActivityPub
             AND p.from_iri = ?
             AND p.to_iri = o.iri
           WHERE o.attributed_to_iri = ?
-            #{common_filters_on("o")}
+            #{common_filters(objects: "o")}
             AND o.published IS NOT NULL
             AND o.visible = 1
        ORDER BY p.id DESC, o.published DESC
@@ -696,7 +675,7 @@ module ActivityPub
              ON r.to_iri = a.iri
             AND r.type = '#{Relationship::Content::Outbox}'
           WHERE r.from_iri = ?
-            #{common_filters_on("o", "t", "a")}
+            #{common_filters(objects: "o", actors: "t", activities: "a")}
             AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
             AND o.visible = 1
        ORDER BY r.id DESC
@@ -745,7 +724,7 @@ module ActivityPub
             AND p.from_iri = ?
             AND p.to_iri = o.iri
           WHERE r.from_iri = ?
-            #{common_filters_on("o", "t", "a")}
+            #{common_filters(objects: "o", actors: "t", activities: "a")}
             AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
             AND o.visible = 1
             AND p.id IS NULL
@@ -781,7 +760,7 @@ module ActivityPub
              ON r.to_iri = a.iri
             AND r.type = '#{Relationship::Content::Outbox}'
           WHERE r.from_iri = ?
-            #{common_filters_on("o", "t", "a")}
+            #{common_filters(objects: "o", actors: "t", activities: "a")}
        ORDER BY r.id DESC
           LIMIT ? OFFSET ?
       QUERY
@@ -805,7 +784,7 @@ module ActivityPub
              ON r.to_iri = a.iri
             AND r.type = '#{Relationship::Content::Outbox}'
           WHERE r.from_iri = ?
-            #{common_filters_on("o", "t", "a")}
+            #{common_filters(objects: "o", actors: "t", activities: "a")}
             AND r.created_at > ?
       QUERY
       Relationship::Content::Outbox.scalar(query, iri, since).as(Int64)
@@ -848,7 +827,7 @@ module ActivityPub
            WHERE +t.from_iri = ?
              #{inclusion}
              #{exclude_replies}
-             #{common_filters_on("o", "c")}
+             #{common_filters(objects: "o", actors: "c")}
         ORDER BY t.id DESC
            LIMIT ? OFFSET ?
       QUERY
@@ -884,7 +863,7 @@ module ActivityPub
            WHERE +t.from_iri = ?
              #{inclusion}
              #{exclude_replies}
-             #{common_filters_on("o", "c")}
+             #{common_filters(objects: "o", actors: "c")}
              AND t.created_at > ?
       QUERY
       Timeline.scalar(query, iri, since).as(Int64)
@@ -912,8 +891,8 @@ module ActivityPub
              ON t.iri = e.attributed_to_iri
           WHERE +n.from_iri = ?
             AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
-            #{common_filters_on("c", "o", "a")}
-            #{common_filters_on("e", "t")}
+            #{common_filters(actors: "c", objects: "o", activities: "a")}
+            #{common_filters(objects: "e", actors: "t")}
        ORDER BY n.id DESC
           LIMIT ? OFFSET ?
       QUERY
@@ -941,8 +920,8 @@ module ActivityPub
              ON t.iri = e.attributed_to_iri
           WHERE +n.from_iri = ?
             AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
-            #{common_filters_on("c", "o", "a")}
-            #{common_filters_on("e", "t")}
+            #{common_filters(actors: "c", objects: "o", activities: "a")}
+            #{common_filters(objects: "e", actors: "t")}
             AND n.created_at > ?
       QUERY
       Notification.scalar(query, iri, since).as(Int64)

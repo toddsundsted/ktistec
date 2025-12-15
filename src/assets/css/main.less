@@ -394,12 +394,19 @@ nav.ui.top.navigation.menu {
         font-weight: normal;
         padding-left: 1ex;
     }
-    .information {
-        position: absolute;
-        bottom: 1em;
-        right: 1em;
-        .text-muted();
-        font-size: smaller;
+    > .ui.basic.segment {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 0.5em;
+        .information {
+            position: static;
+            flex: 1 1 265px;
+            text-align: right;
+            margin-left: auto;
+            font-size: smaller;
+            .text-muted();
+        }
     }
 }
 

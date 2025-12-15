@@ -30,6 +30,25 @@ class Tag
     self.class.short_type
   end
 
+    # Adds common filters to a query.
+    #
+    macro common_filters(**options)
+      <<-FILTERS
+        {% if (key = options[:objects]) %}
+          AND {{key.id}}.special is NULL
+          AND {{key.id}}.deleted_at is NULL
+          AND {{key.id}}.blocked_at is NULL
+        {% end %}
+        {% if (key = options[:actors]) %}
+          AND {{key.id}}.deleted_at IS NULL
+          AND {{key.id}}.blocked_at IS NULL
+        {% end %}
+        {% if (key = options[:activities]) %}
+          AND {{key.id}}.undone_at IS NULL
+        {% end %}
+      FILTERS
+    end
+
   # Matches on tag prefix.
   #
   # Returns results ordered by number of occurrences. Treats SQL LIKE
@@ -73,10 +92,7 @@ class Tag
          WHERE t.type = ?
            AND t.name = ?
            AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
+           #{common_filters(objects: "o", actors: "a")}
         )
       )
     QUERY
@@ -101,10 +117,7 @@ class Tag
          AND o.iri = t.subject_iri
          AND a.iri = o.attributed_to_iri
          AND o.published IS NOT NULL
-         AND o.deleted_at IS NULL
-         AND o.blocked_at IS NULL
-         AND a.deleted_at IS NULL
-         AND a.blocked_at IS NULL
+         #{common_filters(objects: "o", actors: "a")}
     QUERY
     args = {difference, short_type, name, id}
     Internal.log_query(query, args) do

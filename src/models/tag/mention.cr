@@ -48,10 +48,7 @@ class Tag
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
            AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
+           #{common_filters(objects: "o", actors: "a")}
       ORDER BY t.id DESC
          LIMIT 1
       QUERY
@@ -75,10 +72,7 @@ class Tag
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
            AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
+           #{common_filters(objects: "o", actors: "a")}
       ORDER BY t.id DESC
          LIMIT ? OFFSET ?
       QUERY
@@ -104,10 +98,7 @@ class Tag
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
            AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
+           #{common_filters(objects: "o", actors: "a")}
            AND t.created_at > ?
       QUERY
       ActivityPub::Object.scalar(query, name, since).as(Int64)

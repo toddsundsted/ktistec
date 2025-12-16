@@ -133,20 +133,27 @@ export default class extends Controller {
       editor.backspaced = false
       return
     }
+    // Scan backward to find the start of the current word, looking
+    // for a `#` or `@` prefix that indicates a hashtag or mention.
+    // Word boundaries include:
+    // - any whitespace character (space, tab, newline, etc.)
+    // - \uFFFC (Object Replacement Character - used by Trix for attachments)
+    // - `undefined` (start/end of document)
     for (var i = 1; i < 64; i++) {
       let ch1 = document[position - i]
       let ch2 = document[position - i - 1]
-      if ((ch1 == "#" || ch1 == "@") && (ch2 == " " || ch2 == "\n" || !ch2)) {
+      if ((ch1 == "#" || ch1 == "@") && (/\s/.test(ch2) || ch2 == "\uFFFC" || !ch2)) {
         break
       }
-      if (ch1 == " " || ch1 == "\n" || !ch1) {
+      if (/\s/.test(ch1) || ch1 == "\uFFFC" || !ch1) {
         i--
         break
       }
     }
+    // Scan forward to find the end of the current word.
     for (var j = 0; j < 64; j++) {
       let ch = document[position + j]
-      if (ch == " " || ch == "\n" || !ch) {
+      if (/\s/.test(ch) || ch == "\uFFFC" || !ch) {
         break
       }
     }

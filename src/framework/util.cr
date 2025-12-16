@@ -94,7 +94,7 @@ module Ktistec
         key: "href",
       },
       img: {
-        keep: ["src", "alt"],
+        keep: ["src", "alt", "title"],
         all: [{"class", "ui image"}, {"loading", "lazy"}],
         class: ["emoji"],
       },
@@ -282,7 +282,7 @@ module Ktistec
         @array = Array(T).new(size)
       end
 
-      delegate :<<, :compact, :each, :each_with_index, :empty?, :first, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
+      delegate :<<, :compact, :each, :each_with_index, :group_by, :empty?, :first, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
 
       def map(&block : T -> U) : PaginatedArray(U) forall U
         PaginatedArray(U).new(size).tap do |array|

@@ -7,6 +7,7 @@
     - [Translations](#translations)
     - [@-mention and #-hashtag autocomplete](#-mention-and--hashtag-autocomplete)
     - [Custom emoji](#custom-emoji)
+    - [Polls](#polls)
     - [Control over comment visibility](#control-over-comment-visibility)
     - [Pretty URLs](#pretty-urls)
     - [Followers/following](#followersfollowing)
@@ -128,6 +129,13 @@ autocompletion.
 Ktistec supports viewing custom emoji in posts and on actor
 profiles. Custom emoji are federated from remote servers and
 automatically rendered when present.
+
+### Polls
+
+Ktistec supports viewing and voting on polls from federated servers.
+When a post includes a poll, you can see the available options and
+vote directly from your timeline. Poll results are updated in
+real-time as votes are federated across the network.
 
 ### Control over comment visibility
 

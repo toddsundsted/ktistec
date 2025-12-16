@@ -86,13 +86,13 @@ module ActivityPub
     property audience : Array(String)?
 
     @[Persistent]
-    property name : String?
+    property name : String? # plain text
 
     @[Persistent]
-    property summary : String?
+    property summary : String?  # depends on media_type / default HTML text
 
     @[Persistent]
-    property content : String?
+    property content : String?  # depends on media_type / default HTML text
 
     @[Persistent]
     property media_type : String?
@@ -286,7 +286,7 @@ module ActivityPub
       (published || created_at).in(timezone)
     end
 
-    # Returns a preview for the object using fallback.
+    # Returns the text to use for the preview of the object with fallback.
     #
     # The method checks for text in the following order:
     # 1. Summary from translation
@@ -299,9 +299,9 @@ module ActivityPub
     def preview
       translation = Translation.where("origin_id = ? ORDER BY id DESC LIMIT 1", id).first?
       if translation && (name = translation.name.presence)
-        name
+        ::HTML.escape name
       elsif (name = self.name.presence)
-        name
+        ::HTML.escape name
       elsif translation && (summary = translation.summary.presence)
         summary
       elsif (summary = self.summary.presence)

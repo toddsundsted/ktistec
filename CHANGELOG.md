@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.2.4]
+### Added
+- Support for viewing and voting on polls. (fixes [#49](https://github.com/toddsundsted/ktistec/issues/49))
+- Added tooltip to notifications menu item summarizing new notifications.
+
+### Fixed
+- Improved wrapping of actor panel follow/refresh information. (fixes [#130](https://github.com/toddsundsted/ktistec/issues/130))
+- Autocomplete now works correctly when adjacent to a Trix attachment.
+- Image `title` attributes are now preserved.
+
+### Changed
+- Moved avatars to the bottom of the object detail view.
+
 ## [v3.2.3]
 ### Added
 - Support for viewing custom emoji in posts and on actor profiles.
@@ -569,6 +582,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.2.4]: https://github.com/toddsundsted/ktistec/compare/7de86aa4...107553e8
 [v3.2.3]: https://github.com/toddsundsted/ktistec/compare/2ab2a727...023fd225
 [v3.2.2]: https://github.com/toddsundsted/ktistec/compare/ab57a3c7...74f7666e
 [v3.2.1]: https://github.com/toddsundsted/ktistec/compare/9eebb34e...f6d5f376

@@ -28,7 +28,8 @@
         span == s Ktistec::Emoji.emojify(actor.display_name, _emojis)
       br: a href=actor.display_link = actor.handle
       - if (summary = actor.summary.presence)
-        br: == s Ktistec::Emoji.emojify(summary, _emojis)
+        .ui.divider
+        == s Ktistec::Emoji.emojify(summary, _emojis)
       - if (attachments = actor.attachments.presence)
         .ui.divider
         table
@@ -84,7 +85,7 @@
               | Follow request accepted #{distance_of_time_in_words(accepted_or_rejected.created_at, Time.utc)} ago
             - elsif follow_relationship.rejected?
               | Follow request rejected #{distance_of_time_in_words(accepted_or_rejected.created_at, Time.utc)} ago
-          br
+        br
         | Profile refreshed #{distance_of_time_in_words(actor.updated_at, Time.utc)} ago
   - elsif !_account && actor.local?
     .ui.basic.segment

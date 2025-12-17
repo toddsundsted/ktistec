@@ -23,6 +23,7 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
       - elsif must_be_unique
         p It must not match a path another post already uses.
   input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+  input type="hidden" name="media-type" value="text/html; editor=trix"
   input type="hidden" name="type" value="Publish"
   - unless object.new_record?
     input type="hidden" name="object" value=object.iri

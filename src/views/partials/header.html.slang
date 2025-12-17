@@ -1,4 +1,4 @@
-nav.ui.top.fixed.inverted.navigation.menu
+nav.ui.top.fixed.inverted.navigation.menu data-turbo-prefetch="false"
   .ui.text.container
     - if (_account = env.account?)
       a.item href=actor_path(_account)

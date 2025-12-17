@@ -35,7 +35,7 @@
           span.ui.mini.transitional.horizontal.circular.red.label= count
         - else
           span.invisible.label
-    .menu-items
+    .menu-items data-turbo-prefetch="false"
       a.item href=actor_relationships_path(actor, "posts") Posts
       a.item href=actor_relationships_path(actor, "drafts") Drafts
       .item.notifications

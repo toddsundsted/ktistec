@@ -121,6 +121,7 @@ class SettingsController
       "password" => params["password"]?.try(&.to_s),
       "auto_approve_followers" => params["auto_approve_followers"]?.in?("1", true) || false,
       "auto_follow_back" => params["auto_follow_back"]?.in?("1", true) || false,
+      "default_editor" => params["default_editor"]?.try(&.to_s),
       # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
       "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },

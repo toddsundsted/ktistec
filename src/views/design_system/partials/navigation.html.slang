@@ -48,8 +48,7 @@
         .menu-items style="display: flex"
           a.item Posts
           a.item Drafts
-          .item.notifications
-            a.ui href="#" Notifications
+          a.item.notifications href="#" Notifications
             span.ui.mini.transitional.horizontal.circular.red.label 1
           a.item Followers
           a.item Following

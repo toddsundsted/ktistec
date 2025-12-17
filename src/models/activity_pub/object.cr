@@ -1,4 +1,5 @@
 require "json"
+require "markd"
 
 require "./actor"
 require "./collection"
@@ -242,6 +243,9 @@ module ActivityPub
                 end
               end
             end
+          elsif media_type == "text/markdown"
+            self.content = Markd.to_html(source.content)
+            self.media_type = "text/html"
           end
         end
       end

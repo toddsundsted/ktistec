@@ -315,6 +315,22 @@ Spectator.describe ObjectsController do
           post "/objects", JSON_DATA, %Q|{"content":"foo bar","media-type":"text/markdown"}|
           expect(ActivityPub::Object::Note.all.last.source.not_nil!.media_type).to eq("text/markdown")
         end
+
+        it "converts to HTML" do
+          post "/objects", FORM_DATA, "content=%23+Heading%0A%0AThis+is+**bold**&media-type=text%2Fmarkdown"
+          object = ActivityPub::Object::Note.all.last
+          expect(object.content).to match(/<h1>Heading<\/h1>/)
+          expect(object.content).to match(/<strong>bold<\/strong>/)
+          expect(object.media_type).to eq("text/html")
+        end
+
+        it "converts to HTML" do
+          post "/objects", JSON_DATA, %Q|{"content":"# Heading\\n\\nThis is **bold**","media-type":"text/markdown"}|
+          object = ActivityPub::Object::Note.all.last
+          expect(object.content).to match(/<h1>Heading<\/h1>/)
+          expect(object.content).to match(/<strong>bold<\/strong>/)
+          expect(object.media_type).to eq("text/html")
+        end
       end
 
       context "when validation fails" do

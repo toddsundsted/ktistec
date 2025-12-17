@@ -114,6 +114,30 @@ Spectator.describe ActivityPub::Object do
         end
       end
     end
+
+    context "with markdown" do
+      let(markdown_source) { ActivityPub::Object::Source.new("# Heading\n\nThis is **bold** and this is *italic*.", "text/markdown") }
+
+      it "converts markdown to HTML" do
+        subject.assign(source: markdown_source).save
+
+        expect(subject.content).to match(/<h1>Heading<\/h1>/)
+        expect(subject.content).to match(/<strong>bold<\/strong>/)
+        expect(subject.content).to match(/<em>italic<\/em>/)
+      end
+
+      it "sets subject media type to text/html" do
+        expect{subject.assign(source: markdown_source).save}.to change{subject.media_type}.to("text/html")
+      end
+
+      context "given a remote object" do
+        before_each { subject.assign(iri: "https://remote/object").save }
+
+        it "doesn't convert markdown to HTML" do
+          expect{subject.assign(source: markdown_source).save}.not_to change{subject.content}
+        end
+      end
+    end
   end
 
   context "when validating" do

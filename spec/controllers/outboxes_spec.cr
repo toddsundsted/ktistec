@@ -651,6 +651,20 @@ Spectator.describe OutboxesController do
             post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","media-type":"text/markdown"}|
             expect(new_object.source.not_nil!.media_type).to eq("text/markdown")
           end
+
+          it "converts to HTML" do
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=%23+Heading%0A%0AThis+is+**bold**&media-type=text%2Fmarkdown"
+            expect(new_object.content).to match(/<h1>Heading<\/h1>/)
+            expect(new_object.content).to match(/<strong>bold<\/strong>/)
+            expect(new_object.media_type).to eq("text/html")
+          end
+
+          it "converts to HTML" do
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"# Heading\\n\\nThis is **bold**","media-type":"text/markdown"}|
+            expect(new_object.content).to match(/<h1>Heading<\/h1>/)
+            expect(new_object.content).to match(/<strong>bold<\/strong>/)
+            expect(new_object.media_type).to eq("text/html")
+          end
         end
 
         context "given a canonical path" do

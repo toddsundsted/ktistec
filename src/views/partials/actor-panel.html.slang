@@ -65,7 +65,7 @@
             - if (_follow = follow_relationship.activity?)
               .ui.grey.segment
                 == activity_button "Accept Instead", outbox_path(_account), _follow.iri, type: "Accept", button_class: "ui green button"
-    .ui.basic.segment
+    .ui.basic.footer.segment
       - _follow = _account.actor.follows?(actor).try(&.activity?)
       - if _follow
         == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo"
@@ -76,7 +76,7 @@
       - elsif !_follow
         == form_button "Block", block_actor_path(actor), button_class: "ui button dangerous", button_data: {"modal": "block.actor", "controller": "modal-action", "action": "click->modal-action#show"}
       == form_button "Refresh", refresh_remote_actor_path(actor), form_id: "actor-#{actor.id}-refresh-button", button_class: "ui button"
-      .information
+      .status
         - if _follow && (follow_relationship = _account.actor.follows?(actor))
           - if follow_relationship.pending?
             | Follow request is pending

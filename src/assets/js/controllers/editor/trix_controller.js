@@ -31,16 +31,9 @@ function extend_handler(controller) {
 extend_handler(Trix.controllers.Level0InputController)
 extend_handler(Trix.controllers.Level2InputController)
 
-// Provides two features:
-// 1. autosaving editor content when it changes
-// 2. autocompleting hashtags and mentions as the user types
+// Autocompletes hashtags and mentions as the user types.
 //
 // Additional editor properties/state:
-//
-// Autosave:
-// - lastSavedContent: the content when last saved
-// - autosaveTimeout: ID of the debounce timeout
-// - isSaving: whether an auto-save is currently in progress
 //
 // Autocomplete:
 // - suggestion: the current suggestion
@@ -48,78 +41,7 @@ extend_handler(Trix.controllers.Level2InputController)
 // - backspaced: prevents new suggestion after backspacing/canceling
 //
 export default class extends Controller {
-  static targets = ["trixEditor", "saveDraftButton"]
-
-  connect() {
-    this.autosaveTimeout = null
-    this.lastSavedContent = this.getEditorContent()
-    this.isSaving = false
-  }
-
-  disconnect() {
-    if (this.autosaveTimeout) {
-      clearTimeout(this.autosaveTimeout)
-    }
-  }
-
-  getEditorContent() {
-    let editor = this.trixEditorTarget.editor
-    return editor ? editor.getDocument().toString() : ""
-  }
-
-  hasContentChanged() {
-    return this.getEditorContent() !== this.lastSavedContent
-  }
-
-  scheduleAutosave() {
-    if (this.autosaveTimeout) {
-      clearTimeout(this.autosaveTimeout)
-    }
-    this.autosaveTimeout = setTimeout(() => {
-      this.performAutosave()
-    }, 2000)
-  }
-
-  performAutosave() {
-    if (!this.hasContentChanged() || this.isSaving) {
-      return
-    }
-    if (!this.hasSaveDraftButtonTarget) {
-      return
-    }
-    const saveDraftButton = this.saveDraftButtonTarget
-    if (saveDraftButton.classList.contains("disabled")) {
-      return
-    }
-
-    this.lastSavedContent = this.getEditorContent()
-    this.isSaving = true
-
-    saveDraftButton.click()
-
-    saveDraftButton.classList.add("disabled")
-
-    const spinnerIcon = document.createElement('i')
-    spinnerIcon.className = 'sync loading icon'
-    saveDraftButton.prepend(spinnerIcon)
-
-    // Just in case, reset the button after a short delay
-    // Note: This should be handled by the server response
-    setTimeout(() => {
-      this.isSaving = false
-
-      saveDraftButton.classList.remove("disabled")
-
-      const spinnerIcon = saveDraftButton.querySelector('i.sync.loading.icon')
-      if (spinnerIcon) {
-        spinnerIcon.remove()
-      }
-    }, 1000)
-  }
-
-  blur(event) {
-    this.performAutosave()
-  }
+  static targets = ["trixEditor"]
 
   change(event) {
     let editor =  event.target.editor

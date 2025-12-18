@@ -843,6 +843,84 @@ Spectator.describe "partials" do
         end
       end
 
+      context "when default editor is text/html" do
+        before_each { Global.account.not_nil!.assign(default_editor: "text/html; editor=trix") }
+
+        it "renders the trix editor" do
+          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+        end
+
+        it "sets media-type to text/html" do
+          expect(subject.xpath_nodes("//input[@name='media-type']/@value").first).to eq("text/html; editor=trix")
+        end
+
+        context "but object is text/markdown" do
+          before_each do
+            object.source = ActivityPub::Object::Source.new("# Test", "text/markdown")
+          end
+
+          it "renders the markdown editor" do
+            expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).not_to be_empty
+          end
+
+          it "sets media-type to text/markdown" do
+            expect(subject.xpath_nodes("//input[@name='media-type']/@value").first).to eq("text/markdown")
+          end
+        end
+      end
+
+      context "when default editor is text/markdown" do
+        before_each { Global.account.not_nil!.assign(default_editor: "text/markdown") }
+
+        it "renders the markdown editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).not_to be_empty
+        end
+
+        it "sets media-type to text/markdown" do
+          expect(subject.xpath_nodes("//input[@name='media-type']/@value").first).to eq("text/markdown")
+        end
+
+        context "but object is text/html" do
+          before_each do
+            object.source = ActivityPub::Object::Source.new("<p>Test</p>", "text/html; editor=trix")
+          end
+
+          it "renders the trix editor" do
+            expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+          end
+
+          it "sets media-type to text/html" do
+            expect(subject.xpath_nodes("//input[@name='media-type']/@value").first).to eq("text/html; editor=trix")
+          end
+        end
+      end
+
+      context "when object has no source" do
+        before_each do
+          Global.account.not_nil!.assign(default_editor: "text/markdown")
+          object.assign(source: nil).save
+        end
+
+        pre_condition { expect(object.new_record?).to be_false }
+
+        it "renders trix editor regardless of account default" do
+          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+        end
+      end
+
+      context "when object is new" do
+        before_each do
+          Global.account.not_nil!.assign(default_editor: "text/markdown")
+          object.assign(source: nil)
+        end
+
+        pre_condition { expect(object.new_record?).to be_true }
+
+        it "uses account default" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).not_to be_empty
+        end
+      end
+
       context "an object with errors" do
         before_each { object.errors["object"] = ["has errors"] }
 
@@ -891,6 +969,18 @@ Spectator.describe "partials" do
 
           it "uses the assigned language" do
             expect(subject["language"]).to eq("fr")
+          end
+        end
+
+        it "does not render the media-type" do
+          expect(subject.as_h.has_key?("media-type")).to be_false
+        end
+
+        context "given an assigned media_type" do
+          before_each { object.assign(media_type: "text/markdown") }
+
+          it "renders the assigned media-type" do
+            expect(subject["media-type"]).to eq("text/markdown")
           end
         end
       end

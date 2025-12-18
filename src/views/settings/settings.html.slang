@@ -24,6 +24,19 @@ p
         input type="checkbox" name="auto_follow_back" value="1" checked=account.auto_follow_back
         label Automatically follow back when followed
   crystal:
+    is_rich_text = account.default_editor == "text/html; editor=trix"
+    is_markdown = account.default_editor == "text/markdown"
+  .inline.fields
+    label for="default_editor" Default Editor
+    .field
+      .ui.radio.checkbox
+        input#rich-text-editor type="radio" name="default_editor" value="text/html; editor=trix" checked=is_rich_text
+        label for="rich-text-editor" Rich Text
+    .field
+      .ui.radio.checkbox
+        input#markdown-editor type="radio" name="default_editor" value="text/markdown" checked=is_markdown
+        label for="markdown-editor" Markdown
+  crystal:
     attachments = actor.attachments || [] of ActivityPub::Actor::Attachment
     attachments.size.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1) do |i|
       attachments << ActivityPub::Actor::Attachment.new("", "", "")

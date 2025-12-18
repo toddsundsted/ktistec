@@ -81,6 +81,11 @@ Spectator.describe Account do
       new_account = described_class.new(username: "", password: "", timezone: "Foo/Bar")
       expect(new_account.validate["timezone"]).to eq(["is unsupported"])
     end
+
+    it "rejects the default editor as invalid" do
+      new_account = described_class.new(username: "", password: "", default_editor: "text/plain")
+      expect(new_account.validate["default_editor"]).to eq(["is not a valid editor"])
+    end
   end
 
   context "given an actor to associate with" do

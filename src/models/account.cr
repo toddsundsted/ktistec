@@ -133,6 +133,10 @@ class Account
   property auto_follow_back : Bool { false }
 
   @[Persistent]
+  property default_editor : String { "text/html; editor=trix" }
+  validates(default_editor) { "is not a valid editor" unless default_editor.in?("text/html; editor=trix", "text/markdown") }
+
+  @[Persistent]
   property iri : String { "" }
 
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri

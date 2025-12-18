@@ -295,6 +295,44 @@ Spectator.describe ObjectsController do
           to change{ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri)}.by(1)
       end
 
+      it "sets the default media type" do
+        post "/objects", FORM_DATA, "content=foo+bar"
+        expect(ActivityPub::Object::Note.find(content: "foo bar", attributed_to_iri: actor.iri).source.not_nil!.media_type).to eq("text/html; editor=trix")
+      end
+
+      it "sets the default media type" do
+        post "/objects", JSON_DATA, %Q|{"content":"foo bar"}|
+        expect(ActivityPub::Object::Note.find(content: "foo bar", attributed_to_iri: actor.iri).source.not_nil!.media_type).to eq("text/html; editor=trix")
+      end
+
+      context "given a media-type" do
+        it "sets the media type" do
+          post "/objects", FORM_DATA, "content=foo+bar&media-type=text%2Fmarkdown"
+          expect(ActivityPub::Object::Note.all.last.source.not_nil!.media_type).to eq("text/markdown")
+        end
+
+        it "sets the media type" do
+          post "/objects", JSON_DATA, %Q|{"content":"foo bar","media-type":"text/markdown"}|
+          expect(ActivityPub::Object::Note.all.last.source.not_nil!.media_type).to eq("text/markdown")
+        end
+
+        it "converts to HTML" do
+          post "/objects", FORM_DATA, "content=%23+Heading%0A%0AThis+is+**bold**&media-type=text%2Fmarkdown"
+          object = ActivityPub::Object::Note.all.last
+          expect(object.content).to match(/<h1>Heading<\/h1>/)
+          expect(object.content).to match(/<strong>bold<\/strong>/)
+          expect(object.media_type).to eq("text/html")
+        end
+
+        it "converts to HTML" do
+          post "/objects", JSON_DATA, %Q|{"content":"# Heading\\n\\nThis is **bold**","media-type":"text/markdown"}|
+          object = ActivityPub::Object::Note.all.last
+          expect(object.content).to match(/<h1>Heading<\/h1>/)
+          expect(object.content).to match(/<strong>bold<\/strong>/)
+          expect(object.media_type).to eq("text/html")
+        end
+      end
+
       context "when validation fails" do
         it "returns 422 if validation fails" do
           post "/objects", FORM_DATA, "content=foo+bar&canonical-path=foo%2Fbar"

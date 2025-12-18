@@ -1,4 +1,5 @@
 require "json"
+require "markd"
 
 require "./actor"
 require "./collection"
@@ -205,7 +206,12 @@ module ActivityPub
       if changed?(:source)
         clear_changed!(:source)
         if (source = self.source) && local?
+          source_content = source.content
           media_type = source.media_type.split(";").map(&.strip).first?
+          if media_type == "text/markdown"
+            source_content = Markd.to_html(source_content)
+            media_type = "text/html"
+          end
           if media_type == "text/html"
             # remove old mentions from both to and cc
             old_mentions = self.mentions.map(&.href).compact
@@ -216,7 +222,7 @@ module ActivityPub
               self.cc = old_cc - old_mentions
             end
 
-            enhancements = Ktistec::HTML.enhance(source.content)
+            enhancements = Ktistec::HTML.enhance(source_content)
             self.content = enhancements.content
             self.media_type = media_type
             self.attachments = enhancements.attachments

@@ -35,6 +35,11 @@ Spectator.describe SettingsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form[.//textarea[@name='description']][.//input[@name='footer']][.//input[@name='site']]")).not_to be_empty
         end
 
+        it "renders radio buttons for default_editor" do
+          get "/settings", headers
+          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='default_editor'][@type='radio']")).not_to be_empty
+        end
+
         before_each do
           ENV.delete("DEEPL_API_KEY")
           ENV.delete("LIBRETRANSLATE_API_KEY")
@@ -208,6 +213,25 @@ Spectator.describe SettingsController do
           it "does not update the timezone if blank" do
             expect{post "/settings/actor", headers, "timezone="}.
               not_to change{account.reload!.timezone}
+          end
+        end
+
+        it "updates the default_editor to markdown" do
+          post "/settings/actor", headers, "default_editor=text%2Fmarkdown"
+          expect(account.reload!.default_editor).to eq("text/markdown")
+        end
+
+        it "updates the default_editor to rich text" do
+          post "/settings/actor", headers, "default_editor=text%2Fhtml%3B+editor%3Dtrix"
+          expect(account.reload!.default_editor).to eq("text/html; editor=trix")
+        end
+
+        context "given an account with markdown as default editor" do
+          before_each { account.assign(default_editor: "text/markdown").save }
+
+          it "does not update the default_editor if not provided" do
+            expect{post "/settings/actor", headers, "name=Test"}.
+              not_to change{account.reload!.default_editor}
           end
         end
 

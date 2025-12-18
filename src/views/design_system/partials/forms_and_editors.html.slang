@@ -149,6 +149,19 @@
           input.ui.primary.button.disabled type="submit" value="Publish Post"
           input.ui.button.disabled type="submit" value="Save Draft"
   .component-showcase
+    h4 Markdown Editor
+    .ui.text.container
+      form.ui.form method="POST" action="/design-system"
+        .field
+          label Markdown Content
+          textarea.markdown-editor data-controller="editor--markdown" data-action="input->editor--markdown#input" name="markdown-content" rows="3"
+        .field
+          label Language
+          input type="text" name="language" value="en-US"
+        .ui.buttons
+          input.ui.primary.button.disabled type="submit" value="Publish Post"
+          input.ui.button.disabled type="submit" value="Save Draft"
+  .component-showcase
     h4 Tables
     .variation-group
       .variation-label Celled Table

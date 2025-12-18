@@ -44,10 +44,8 @@ extend_handler(Trix.controllers.Level2InputController)
 //
 // Autocomplete:
 // - suggestion: the current suggestion
-// - change_lock: short-circuits change events (and prevents multiple
-//   calls to the backend) when typing quickly
-// - backspaced: prevents a new suggestion from being presented after
-//   backspacing/canceling the previous suggestion
+// - changeLock: short-circuits change events during autocomplete
+// - backspaced: prevents new suggestion after backspacing/canceling
 //
 export default class extends Controller {
   static targets = ["trixEditor", "saveDraftButton"]
@@ -127,7 +125,7 @@ export default class extends Controller {
     let editor =  event.target.editor
     let document = editor.getDocument().toString()
     let position = editor.getPosition()
-    if (editor.change_lock)
+    if (editor.changeLock)
       return
     if (editor.backspaced) {
       editor.backspaced = false
@@ -160,15 +158,15 @@ export default class extends Controller {
     let prefix = document.substring(position - i, position)
     let suffix = document.substring(position, position + j)
     if (!suffix && prefix.length > 2 && (prefix[0] == "#" || prefix[0] == "@")) {
-      editor.change_lock = true
+      editor.changeLock = true
       if (!editor.suggestion || !editor.suggestion.startsWith(prefix)) {
         let url
         switch (prefix[0]) {
         case "#":
-          url = `/tags?hashtag=${prefix.slice(1)}`
+          url = `/tags?hashtag=${encodeURIComponent(prefix.slice(1))}`
           break
         case "@":
-          url = `/tags?mention=${prefix.slice(1)}`
+          url = `/tags?mention=${encodeURIComponent(prefix.slice(1))}`
           break
         }
         if (url) {
@@ -179,6 +177,10 @@ export default class extends Controller {
             .then(function(suggestion) {
               editor.suggestion = `${prefix[0]}${suggestion}`
             })
+            .catch(async (error) => {
+              console.error('Autocomplete fetch failed:', error)
+              editor.suggestion = null
+            })
         }
       }
       if (editor.suggestion && editor.suggestion.toLowerCase().startsWith(prefix.toLowerCase())) {
@@ -186,7 +188,7 @@ export default class extends Controller {
         editor.insertString(suggestion)
         editor.setSelectedRange([position, position + suggestion.length])
       }
-      editor.change_lock = false
+      editor.changeLock = false
     }
 
     this.scheduleAutosave()

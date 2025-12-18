@@ -118,11 +118,12 @@ class OutboxesController
       summary = activity["summary"]?.presence
       sensitive = activity["sensitive"]? == "true"
       canonical_path = activity["canonical-path"]?.presence
+      media_type = activity["media-type"]?.presence || "text/html; editor=trix"
       activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
       iri = "#{host}/objects/#{id}"
       object ||= ActivityPub::Object::Note.new(iri: iri)
       object.assign(
-        source: ActivityPub::Object::Source.new(content, "text/html; editor=trix"),
+        source: ActivityPub::Object::Source.new(content, media_type),
         attributed_to_iri: account.iri,
         in_reply_to_iri: in_reply_to_iri,
         replies_iri: "#{iri}/replies",

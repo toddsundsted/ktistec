@@ -394,12 +394,12 @@ nav.ui.top.navigation.menu {
         font-weight: normal;
         padding-left: 1ex;
     }
-    > .ui.basic.segment {
+    > .segment.footer {
         display: flex;
         flex-wrap: wrap;
         align-items: flex-start;
         gap: 0.5em;
-        .information {
+        .status {
             position: static;
             flex: 1 1 265px;
             text-align: right;
@@ -511,6 +511,18 @@ nav.ui.top.navigation.menu {
         &::before { width: 2.0rem; height: 1.0rem; }
         &::after { width: 1.0rem; height: 1.0rem; }
     }
+}
+
+/** markdown editor **/
+.ui.form textarea.markdown-editor {
+    min-height: 4em;
+    resize: none;
+    font-size: var(--code-size);
+    font-family: monospace;
+    line-height: 1.5;
+    white-space: pre;
+    overflow-y: hidden;
+    overflow-x: auto;
 }
 
 /** trix toolbar **/

@@ -631,6 +631,42 @@ Spectator.describe OutboxesController do
           end
         end
 
+        it "sets the default media type" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"
+          expect(new_object.source.not_nil!.media_type).to eq("text/html; editor=trix")
+        end
+
+        it "sets the default media type" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|
+          expect(new_object.source.not_nil!.media_type).to eq("text/html; editor=trix")
+        end
+
+        context "given a media-type" do
+          it "sets the media type" do
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&media-type=text%2Fmarkdown"
+            expect(new_object.source.not_nil!.media_type).to eq("text/markdown")
+          end
+
+          it "sets the media type" do
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","media-type":"text/markdown"}|
+            expect(new_object.source.not_nil!.media_type).to eq("text/markdown")
+          end
+
+          it "converts to HTML" do
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=%23+Heading%0A%0AThis+is+**bold**&media-type=text%2Fmarkdown"
+            expect(new_object.content).to match(/<h1>Heading<\/h1>/)
+            expect(new_object.content).to match(/<strong>bold<\/strong>/)
+            expect(new_object.media_type).to eq("text/html")
+          end
+
+          it "converts to HTML" do
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"# Heading\\n\\nThis is **bold**","media-type":"text/markdown"}|
+            expect(new_object.content).to match(/<h1>Heading<\/h1>/)
+            expect(new_object.content).to match(/<strong>bold<\/strong>/)
+            expect(new_object.media_type).to eq("text/html")
+          end
+        end
+
         context "given a canonical path" do
           before_all do
             unless Kemal::RouteHandler::INSTANCE.lookup_route("GET", "/objects/:id").found?

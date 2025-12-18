@@ -61,6 +61,11 @@ INSERT INTO migrations VALUES(20250912173911,'add-sensitive-to-objects');
 INSERT INTO migrations VALUES(20250913001217,'add-updated-to-objects');
 INSERT INTO migrations VALUES(20251023134551,'add-shared-inbox-to-actors');
 INSERT INTO migrations VALUES(20251025184317,'add-audience-to-activities-and-objects');
+INSERT INTO migrations VALUES(20251031153342,'add-auto-approve-followers-to-accounts');
+INSERT INTO migrations VALUES(20251031205133,'add-auto-follow-back-to-accounts');
+INSERT INTO migrations VALUES(20251118203714,'add-featured-to-actors');
+INSERT INTO migrations VALUES(20251208090435,'add-polls-table');
+INSERT INTO migrations VALUES(20251215082458,'add-special-to-objects');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -70,7 +75,9 @@ CREATE TABLE accounts (
     iri varchar(255) NOT NULL COLLATE NOCASE,
     timezone varchar(244) NOT NULL DEFAULT "",
     state text,
-    language varchar(244) COLLATE NOCASE
+    language varchar(244) COLLATE NOCASE,
+    auto_approve_followers BOOLEAN NOT NULL DEFAULT 0,
+    auto_follow_back BOOLEAN NOT NULL DEFAULT 0
   );
 CREATE TABLE sessions (
     id integer PRIMARY KEY AUTOINCREMENT,
@@ -102,7 +109,8 @@ CREATE TABLE actors (
     "blocked_at" datetime,
     "attachments" text,
     "down_at" datetime,
-    "shared_inbox" text
+    "shared_inbox" text,
+    "featured" text
   );
 CREATE TABLE objects (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -130,7 +138,8 @@ CREATE TABLE objects (
     "language" varchar(244) COLLATE NOCASE,
     "sensitive" boolean DEFAULT 0,
     "updated" datetime,
-    "audience" text
+    "audience" text,
+    "special" text
   );
 CREATE TABLE activities (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -254,6 +263,16 @@ CREATE TABLE oauth_access_tokens (
     "expires_at" datetime NOT NULL,
     "scope" varchar(255) NOT NULL
   );
+CREATE TABLE polls (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "question_iri" varchar(255) NOT NULL,
+    "options" text NOT NULL,
+    "multiple_choice" integer NOT NULL DEFAULT 0,
+    "voters_count" integer,
+    "closed_at" datetime,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL
+  );
 CREATE UNIQUE INDEX idx_accounts_username
     ON accounts (username ASC);
 CREATE INDEX idx_accounts_iri
@@ -314,4 +333,6 @@ CREATE INDEX idx_oauth_access_tokens_client_id
     ON oauth_access_tokens (client_id ASC);
 CREATE INDEX idx_oauth_access_tokens_account_id
     ON oauth_access_tokens (account_id ASC);
+CREATE UNIQUE INDEX idx_polls_question_iri
+    ON polls (question_iri);
 COMMIT;

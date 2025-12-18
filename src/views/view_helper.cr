@@ -596,8 +596,8 @@ module Ktistec::ViewHelper
     {% end %}
     %id = {{id}} || "#{%name}-#{Time.utc.to_unix_ms}"
     %trix_editor_attributes = [
-      %Q|data-controller="trix"|,
-      %Q|data-action="trix-attachment-add->trix#add trix-attachment-remove->trix#remove trix-change->trix#change"|,
+      %Q|data-controller="editor--trix"|,
+      %Q|data-action="trix-attachment-add->editor--trix#add trix-attachment-remove->editor--trix#remove trix-change->editor--trix#change"|,
       %Q|input="#{%id}"|,
       {% if _class %}
         %Q|class="#{{{_class}}}"|,

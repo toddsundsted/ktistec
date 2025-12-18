@@ -28,7 +28,8 @@
         span == s Ktistec::Emoji.emojify(actor.display_name, _emojis)
       br: a href=actor.display_link = actor.handle
       - if (summary = actor.summary.presence)
-        br: == s Ktistec::Emoji.emojify(summary, _emojis)
+        .ui.divider
+        == s Ktistec::Emoji.emojify(summary, _emojis)
       - if (attachments = actor.attachments.presence)
         .ui.divider
         table
@@ -64,7 +65,7 @@
             - if (_follow = follow_relationship.activity?)
               .ui.grey.segment
                 == activity_button "Accept Instead", outbox_path(_account), _follow.iri, type: "Accept", button_class: "ui green button"
-    .ui.basic.segment
+    .ui.basic.footer.segment
       - _follow = _account.actor.follows?(actor).try(&.activity?)
       - if _follow
         == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo"
@@ -75,7 +76,7 @@
       - elsif !_follow
         == form_button "Block", block_actor_path(actor), button_class: "ui button dangerous", button_data: {"modal": "block.actor", "controller": "modal-action", "action": "click->modal-action#show"}
       == form_button "Refresh", refresh_remote_actor_path(actor), form_id: "actor-#{actor.id}-refresh-button", button_class: "ui button"
-      .information
+      .status
         - if _follow && (follow_relationship = _account.actor.follows?(actor))
           - if follow_relationship.pending?
             | Follow request is pending
@@ -84,7 +85,7 @@
               | Follow request accepted #{distance_of_time_in_words(accepted_or_rejected.created_at, Time.utc)} ago
             - elsif follow_relationship.rejected?
               | Follow request rejected #{distance_of_time_in_words(accepted_or_rejected.created_at, Time.utc)} ago
-          br
+        br
         | Profile refreshed #{distance_of_time_in_words(actor.updated_at, Time.utc)} ago
   - elsif !_account && actor.local?
     .ui.basic.segment

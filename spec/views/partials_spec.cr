@@ -354,7 +354,7 @@ Spectator.describe "partials" do
           end
 
           it "displays pending follow request status" do
-            expect(subject.xpath_nodes("//div[contains(@class,'information')]/text()")).to have(/request .* pending/)
+            expect(subject.xpath_nodes("//div[contains(@class,'status')]/text()")).to have(/request .* pending/)
           end
         end
 
@@ -362,7 +362,7 @@ Spectator.describe "partials" do
           let_create!(:accept, actor: actor, object: follow_activity)
 
           it "displays accepted follow request status with timestamp" do
-            expect(subject.xpath_nodes("//div[contains(@class,'information')]/text()")).to have(/accepted .* ago/)
+            expect(subject.xpath_nodes("//div[contains(@class,'status')]/text()")).to have(/accepted .* ago/)
           end
         end
 
@@ -370,7 +370,7 @@ Spectator.describe "partials" do
           let_create!(:reject, actor: actor, object: follow_activity)
 
           it "displays rejected follow request status with timestamp" do
-            expect(subject.xpath_nodes("//div[contains(@class,'information')]/text()")).to have(/rejected .* ago/)
+            expect(subject.xpath_nodes("//div[contains(@class,'status')]/text()")).to have(/rejected .* ago/)
           end
         end
       end
@@ -484,7 +484,7 @@ Spectator.describe "partials" do
       end
 
       it "renders the last refresh time" do
-        expect(subject.xpath_nodes("//div[contains(@class, 'information')]/text()")).to have(/refreshed/)
+        expect(subject.xpath_nodes("//div[contains(@class, 'status')]/text()")).to have(/refreshed/)
       end
 
       context "and actor is down" do

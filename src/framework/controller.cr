@@ -102,20 +102,7 @@ module Ktistec
     macro def_response_helper(name, status_message, status_code)
       macro {{name.id}}(_message = {{status_message}}, _status_code = {{status_code}}, _basedir = "src/views", _operation = nil, _method = nil, _target = nil, **opts)
         \{% if _message.is_a?(StringLiteral) && _message.includes?('/') %}
-          \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.json.ecr") %}
-            \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
-            register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
-            if accepts?("application/ld+json", "application/activity+json", "application/json")
-              halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
-            end
-          \{% end %}
-          \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.text.ecr") %}
-            \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
-            register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
-            if accepts?("text/plain")
-              halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
-            end
-          \{% end %}
+          # HTML FIRST
           \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.html.slang") %}
             \{% if _operation && _target %}
               if accepts?("text/vnd.turbo-stream.html")
@@ -138,19 +125,39 @@ module Ktistec
               end
             \{% end %}
           \{% end %}
+          # JSON SECOND
           \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.json.ecr") %}
             \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
             register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
-            accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
+            if accepts?("application/ld+json", "application/activity+json", "application/json")
+              halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
+            end
+          \{% end %}
+          # TEXT THIRD
+          \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.text.ecr") %}
+            \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
+            register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
+            if accepts?("text/plain")
+              halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
+            end
+          \{% end %}
+          # HTML FALLBACK
+          \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.html.slang") %}
+            \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}_layout_src_views_layouts_default_html_ecr" %}
+            register_view(\{{key}}, \{{view}}, "src/views/layouts/default.html.ecr", \{{opts.double_splat}})
+            %body = ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
+            accepts?("text/html")  # sets the content type as a side effect
+            halt env, status_code: \{{_status_code}}, response: %body
+          \{% end %}
+          # JSON FALLBACK
+          \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.json.ecr") %}
+            \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
+            register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
+            accepts?("application/ld+json", "application/activity+json", "application/json")  # sets the content type as a side effect
             halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
           \{% end %}
         \{% else %}
-          if accepts?("application/ld+json", "application/activity+json", "application/json")
-            halt env, status_code: \{{_status_code}}, response: ({msg: \{{_message}}.downcase}.to_json)
-          end
-          if accepts?("text/plain")
-            halt env, status_code: \{{_status_code}}, response: \{{_message}}.downcase
-          end
+          # HTML FIRST
           \{% if _operation && _target %}
             if accepts?("text/vnd.turbo-stream.html")
               \{% key = "_view_src_views_pages_generic_html_slang" %}
@@ -171,8 +178,20 @@ module Ktistec
               halt env, status_code: \{{_status_code}}, response: %body
             end
           \{% end %}
-          accepts?("application/ld+json", "application/activity+json", "application/json") # sets the content type as a side effect
-          halt env, status_code: \{{_status_code}}, response: ({msg: \{{_message}}.downcase}.to_json)
+          # JSON SECOND
+          if accepts?("application/ld+json", "application/activity+json", "application/json")
+            halt env, status_code: \{{_status_code}}, response: ({msg: \{{_message}}.downcase}.to_json)
+          end
+          # TEXT THIRD
+          if accepts?("text/plain")
+            halt env, status_code: \{{_status_code}}, response: \{{_message}}.downcase
+          end
+          # HTML fallback
+          \{% key = "_view_src_views_pages_generic_html_slang_layout_src_views_layouts_default_html_ecr" %}
+          register_view(\{{key}}, "src/views/pages/generic.html.slang", "src/views/layouts/default.html.ecr", env: env, message: \{{_message}})
+          %body = Ktistec::ViewHelper.\{{key.id}}(env: env, message: \{{_message}})
+          accepts?("text/html")  # sets the content type as a side effect
+          halt env, status_code: \{{_status_code}}, response: %body
         \{% end %}
       end
     end

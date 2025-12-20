@@ -6,6 +6,7 @@ require "../models/relationship/social/follow"
 require "../models/relationship/content/notification/follow/hashtag"
 require "../models/relationship/content/notification/follow/mention"
 require "../models/relationship/content/notification/follow/thread"
+require "../models/relationship/content/notification/poll/expiry"
 require "../models/tag/hashtag"
 require "../models/tag/mention"
 require "./tools/results_pager"
@@ -981,6 +982,17 @@ module MCP
           "thread" => JSON::Any.new(notification.object.thread),
           "latest_object_id" => JSON::Any.new(notification.object.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_thread_path(notification.object, anchor: false)}"),
+          "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+        })
+      in Relationship::Content::Notification::Poll::Expiry
+        votes = notification.question.votes_by(notification.owner).map do |vote|
+          JSON::Any.new(vote.id)
+        end
+        JSON::Any.new({
+          "type" => JSON::Any.new("poll_expiry"),
+          "question" => JSON::Any.new(notification.question.name),
+          "votes" => JSON::Any.new(votes),
+          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.question)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       in Relationship::Content::Notification

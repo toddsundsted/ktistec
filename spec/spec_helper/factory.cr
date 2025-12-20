@@ -275,6 +275,11 @@ def notification_follow_thread_factory(object_iri = nil, object = false, **optio
   notification_factory(Relationship::Content::Notification::Follow::Thread, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
 end
 
+def notification_poll_expiry_factory(question_iri = nil, question = false, **options)
+  question = question_factory unless question_iri || question.nil? || question
+  notification_factory(Relationship::Content::Notification::Poll::Expiry, **{question_iri: question_iri, question: question, activity: nil}.merge(options))
+end
+
 def notification_reply_factory(object_iri = nil, object = false, **options)
   object = object_factory unless object_iri || object.nil? || object
   notification_factory(Relationship::Content::Notification::Reply, **{object_iri: object_iri, object: object, activity: nil}.merge(options))

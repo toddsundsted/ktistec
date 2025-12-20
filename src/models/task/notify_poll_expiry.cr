@@ -24,5 +24,11 @@ class Task
         end
       end
     end
+
+    # Returns the path to the poll.
+    #
+    def path_to
+      Ktistec::ViewHelper.remote_object_path(question)
+    end
   end
 end

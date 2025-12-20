@@ -855,7 +855,7 @@ module MCP
 
     private def self.notification_to_json_any(notification) : JSON::Any?
       case notification
-      when Relationship::Content::Notification::Mention
+      in Relationship::Content::Notification::Mention
         JSON::Any.new({
           "type" => JSON::Any.new("mention"),
           "status" => notification_status(notification),
@@ -864,7 +864,7 @@ module MCP
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
-      when Relationship::Content::Notification::Reply
+      in Relationship::Content::Notification::Reply
         JSON::Any.new({
           "type" => JSON::Any.new("reply"),
           "status" => notification_status(notification),
@@ -874,7 +874,7 @@ module MCP
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
-      when Relationship::Content::Notification::Follow
+      in Relationship::Content::Notification::Follow
         response = notification.activity.as(ActivityPub::Activity::Follow).accepted_or_rejected?
         status = response ?
           "#{response.class.name.split("::").last.downcase}ed" :
@@ -887,7 +887,7 @@ module MCP
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_actor_path(notification.activity.actor)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
-      when Relationship::Content::Notification::Like
+      in Relationship::Content::Notification::Like
         object = notification.activity.object
         likes = object.activities(inclusion: ActivityPub::Activity::Like)
         # five latest likes
@@ -909,7 +909,7 @@ module MCP
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
-      when Relationship::Content::Notification::Dislike
+      in Relationship::Content::Notification::Dislike
         object = notification.activity.object
         dislikes = object.activities(inclusion: ActivityPub::Activity::Dislike)
         # five latest dislikes
@@ -931,7 +931,7 @@ module MCP
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
-      when Relationship::Content::Notification::Announce
+      in Relationship::Content::Notification::Announce
         object = notification.activity.object
         announces = object.activities(inclusion: ActivityPub::Activity::Announce)
         # five latest announces
@@ -953,7 +953,7 @@ module MCP
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
-      when Relationship::Content::Notification::Follow::Hashtag
+      in Relationship::Content::Notification::Follow::Hashtag
         JSON::Any.new({
           "type" => JSON::Any.new("follow_hashtag"),
           "hashtag" => JSON::Any.new(notification.name),
@@ -964,7 +964,7 @@ module MCP
             json.as_h["latest_object_id"] = JSON::Any.new(latest_object.id)
           end
         end
-      when Relationship::Content::Notification::Follow::Mention
+      in Relationship::Content::Notification::Follow::Mention
         JSON::Any.new({
           "type" => JSON::Any.new("follow_mention"),
           "mention" => JSON::Any.new(notification.name),
@@ -975,7 +975,7 @@ module MCP
             json.as_h["latest_object_id"] = JSON::Any.new(latest_object.id)
           end
         end
-      when Relationship::Content::Notification::Follow::Thread
+      in Relationship::Content::Notification::Follow::Thread
         JSON::Any.new({
           "type" => JSON::Any.new("follow_thread"),
           "thread" => JSON::Any.new(notification.object.thread),
@@ -983,6 +983,8 @@ module MCP
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_thread_path(notification.object, anchor: false)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
+      in Relationship::Content::Notification
+        nil
       end
     end
   end

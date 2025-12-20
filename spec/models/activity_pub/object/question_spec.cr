@@ -271,14 +271,15 @@ Spectator.describe ActivityPub::Object::Question do
 
   let(question) { poll.question }
 
-  macro vote(index)
+  macro vote(index, actor = actor)
     let_create!(
       :note,
       named: vote{{index}},
       name: poll.options[{{index}}].name,
       in_reply_to: question,
-      attributed_to: actor,
+      attributed_to: {{actor}},
       content: nil,
+      special: "vote",
     )
   end
 
@@ -300,9 +301,9 @@ Spectator.describe ActivityPub::Object::Question do
         :note,
         named: reply,
         name: nil,
+        content: "This is a regular reply",
         in_reply_to: question,
         attributed_to: actor,
-        content: "This is a regular reply",
       )
 
       it "ignores the reply" do
@@ -347,6 +348,7 @@ Spectator.describe ActivityPub::Object::Question do
         in_reply_to: question,
         attributed_to: other,
         content: nil,
+        special: "vote",
       )
 
       it "ignores the other vote" do
@@ -372,6 +374,58 @@ Spectator.describe ActivityPub::Object::Question do
       it "returns options voted for" do
         options = question.options_by(actor)
         expect(options).to contain_exactly("Yes", "No")
+      end
+    end
+  end
+
+  describe "#voters" do
+    context "with single voter" do
+      vote(0)
+
+      it "returns all voters" do
+        voters = question.voters
+        expect(voters.size).to eq(1)
+        expect(voters).to contain_exactly(actor)
+      end
+    end
+
+    context "with multiple voters" do
+      vote(0, voter1)
+      vote(1, voter2)
+
+      let_create(:actor, named: voter1, local: true)
+      let_create(:actor, named: voter2, local: true)
+
+      it "returns all voters" do
+        voters = question.voters
+        expect(voters.size).to eq(2)
+        expect(voters).to contain_exactly(voter1, voter2)
+      end
+    end
+
+    context "with same voter voting multiple times" do
+      vote(0)
+      vote(1)
+
+      it "returns each voter only once" do
+        voters = question.voters
+        expect(voters.size).to eq(1)
+        expect(voters).to contain_exactly(actor)
+      end
+    end
+
+    context "with a reply" do
+      let_create!(
+        :note,
+        named: reply,
+        name: nil,
+        content: "This is a regular reply",
+        in_reply_to: question,
+        attributed_to: actor,
+      )
+
+      it "ignores replies" do
+        expect(question.voters).to be_empty
       end
     end
   end

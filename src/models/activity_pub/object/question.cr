@@ -8,7 +8,7 @@ class ActivityPub::Object
 
     def voted_by?(actor : ActivityPub::Actor) : Bool
       !ActivityPub::Object.where(
-        "type = '#{ActivityPub::Object::Note}' AND in_reply_to_iri = ? AND attributed_to_iri = ? AND name IS NOT NULL",
+        "type = '#{ActivityPub::Object::Note}' AND in_reply_to_iri = ? AND attributed_to_iri = ? AND special = 'vote'",
         self.iri,
         actor.iri
       ).empty?
@@ -16,7 +16,7 @@ class ActivityPub::Object
 
     def votes_by(actor : ActivityPub::Actor) : Array(ActivityPub::Object)
       ActivityPub::Object.where(
-        "type = '#{ActivityPub::Object::Note}' AND in_reply_to_iri = ? AND attributed_to_iri = ? AND name IS NOT NULL",
+        "type = '#{ActivityPub::Object::Note}' AND in_reply_to_iri = ? AND attributed_to_iri = ? AND special = 'vote'",
         self.iri,
         actor.iri
       )
@@ -24,6 +24,19 @@ class ActivityPub::Object
 
     def options_by(actor : ActivityPub::Actor) : Array(String)
       votes_by(actor).compact_map(&.name)
+    end
+
+    def voters : Array(ActivityPub::Actor)
+      query = <<-QUERY
+          SELECT #{Actor.columns(prefix: "a")}
+            FROM actors AS a
+            JOIN objects AS o
+              ON o.attributed_to_iri = a.iri
+           WHERE o.type = '#{ActivityPub::Object::Note}'
+             AND o.in_reply_to_iri = ?
+             AND o.special = 'vote'
+      QUERY
+      Actor.query_all(query, iri).uniq
     end
 
     def self.map(json, **options)

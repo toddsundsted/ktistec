@@ -9,6 +9,7 @@ Spectator.describe Task::NotifyPollExpiry do
   setup_spec
 
   let_create!(:question)
+  let_create!(:poll, question: question, closed_at: 1.minute.ago)
   let_create(:actor, named: :voter1)
   let_create(:actor, named: :voter2)
 
@@ -79,6 +80,41 @@ Spectator.describe Task::NotifyPollExpiry do
 
       it "does not create duplicate notifications" do
         expect { notify_poll_expiry_task.perform }.not_to change { Expiry.count }
+      end
+    end
+
+    context "when poll closed_at has changed" do
+      let(future_time) { 1.hour.from_now }
+      let_create!(:poll, question: question, closed_at: future_time)
+      vote(1, voter1, "Option A")
+
+      it "does not create notifications" do
+        expect { notify_poll_expiry_task.perform }.not_to change { Expiry.count }
+      end
+
+      it "reschedules task for new expiry time" do
+        notify_poll_expiry_task.perform
+        expect(notify_poll_expiry_task.next_attempt_at).to be_close(future_time, 1.second)
+      end
+    end
+
+    context "when poll has expired" do
+      let_create!(:poll, question: question, closed_at: 1.hour.ago)
+      vote(1, voter1, "Option A")
+
+      it "does not reschedule task" do
+        notify_poll_expiry_task.perform
+        expect(notify_poll_expiry_task.next_attempt_at).to be_nil
+      end
+    end
+
+    context "when poll has no closed_at" do
+      let_create!(:poll, question: question, closed_at: nil)
+      vote(1, voter1, "Option A")
+
+      it "does not reschedule task" do
+        notify_poll_expiry_task.perform
+        expect(notify_poll_expiry_task.next_attempt_at).to be_nil
       end
     end
 

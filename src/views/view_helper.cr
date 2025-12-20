@@ -25,6 +25,7 @@ macro render(content, layout)
   Ktistec::ViewHelper.{{layout.id}}(
     env,
     yield_content("title"),
+    yield_content("og_metadata"),
     yield_content("head"),
     %content
   )
@@ -861,7 +862,7 @@ module Ktistec::ViewHelper
   # view helpers. View helpers for partials are *not* automatically
   # generated.
 
-  def self._layout_src_views_layouts_default_html_ecr(env, title, head, content)
+  def self._layout_src_views_layouts_default_html_ecr(env, title, og_metadata, head, content)
     render "src/views/layouts/default.html.ecr"
   end
 

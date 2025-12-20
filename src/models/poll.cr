@@ -1,5 +1,6 @@
 require "../framework/model"
 require "./activity_pub/object/question"
+require "./task/notify_poll_expiry"
 
 class Poll
   include Ktistec::Model
@@ -60,6 +61,16 @@ class Poll
       {options: adjusted_options, voters_count: adjusted_voters_count}
     else
       {options: options, voters_count: voters_count}
+    end
+  end
+
+  def after_save
+    if (closed_at = self.closed_at)
+      if closed_at > Time.utc
+        unless Task::NotifyPollExpiry.find?(question: self.question)
+          Task::NotifyPollExpiry.new(source_iri: "", question: self.question).schedule(closed_at)
+        end
+      end
     end
   end
 end

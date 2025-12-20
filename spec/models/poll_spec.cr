@@ -110,6 +110,7 @@ Spectator.describe Poll do
         name: {{name}},
         in_reply_to: question,
         attributed_to: actor,
+        special: "vote",
       )
     end
 
@@ -178,6 +179,52 @@ Spectator.describe Poll do
           expect(result[:options][1].votes_count).to eq(5)
           expect(result[:voters_count]).to eq(16)
         end
+      end
+    end
+  end
+
+  describe "#save" do
+    let_create(:question)
+
+    context "when poll has future closed_at" do
+      let(future_time) { 1.day.from_now }
+
+      let_create(:poll, question: question, closed_at: future_time)
+
+      it "creates notification task" do
+        expect { poll.save }.to change { Task::NotifyPollExpiry.count }.by(1)
+      end
+
+      it "schedules task for poll closed_at time" do
+        poll.save
+        task = Task::NotifyPollExpiry.find(question: question)
+        expect(task.next_attempt_at).to be_close(future_time, 1.second)
+      end
+    end
+
+    context "when another actor has scheduled notification task" do
+      let_create(:poll, question: question, closed_at: 1.day.from_now)
+
+      let_create!(:notify_poll_expiry_task, question: question)
+
+      it "does not create another task" do
+        expect { poll.save }.not_to change { Task::NotifyPollExpiry.count }
+      end
+    end
+
+    context "when poll has no closed_at" do
+      let_create(:poll, question: question, closed_at: nil)
+
+      it "does not create task" do
+        expect { poll.save }.not_to change { Task::NotifyPollExpiry.count }
+      end
+    end
+
+    context "when poll has closed_at in the past" do
+      let_create(:poll, question: question, closed_at: 1.day.ago)
+
+      it "does not create task" do
+        expect { poll.save }.not_to change { Task::NotifyPollExpiry.count }
       end
     end
   end

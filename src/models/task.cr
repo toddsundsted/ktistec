@@ -102,6 +102,14 @@ class Task
 
   def self.scheduled(now = Time.utc, reserve = false)
     if reserve
+      cleanup = <<-SQL
+         DELETE FROM tasks
+          WHERE running = 0
+            AND complete = 1
+            AND backtrace IS NULL
+            AND created_at < ?
+      SQL
+      exec(cleanup, now - 2.hours)
       query = <<-SQL
          UPDATE tasks
             SET running = 1

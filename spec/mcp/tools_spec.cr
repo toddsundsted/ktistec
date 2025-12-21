@@ -800,6 +800,27 @@ Spectator.describe MCP::Tools do
         end
       end
 
+      context "with a poll expiry notification" do
+        let_create!(:question, name: "What is your favorite color?")
+        let_create!(:note, named: vote1, name: "Blue", in_reply_to: question, attributed_to: account.actor, content: nil, special: "vote")
+        let_create!(:note, named: vote2, name: "Red", in_reply_to: question, attributed_to: account.actor, content: nil, special: "vote")
+        let_create!(:notification_poll_expiry, owner: account.actor, question: question)
+
+        it "returns poll expiry notification for valid request" do
+          request = paginate_notifications_request("paginate-notifications-11")
+
+          notifications = expect_paginated_response(request, 1, false)
+
+          poll_expiry_notification = notifications.first
+          expect(poll_expiry_notification["type"]).to eq("poll_expiry")
+          expect(poll_expiry_notification["question"]).to eq("What is your favorite color?")
+          expect(poll_expiry_notification["votes"].as_a.map(&.as_i64)).to contain_exactly(vote1.id, vote2.id)
+          expect(poll_expiry_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{question.id}")
+          created_at = Time.parse_rfc3339(poll_expiry_notification["created_at"].as_s)
+          expect(created_at).to be_within(1.second).of(notification_poll_expiry.created_at)
+        end
+      end
+
       context "with an object in the timeline" do
         let_create!(:object, attributed_to: account.actor, published: now)
 

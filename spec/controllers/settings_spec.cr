@@ -101,7 +101,7 @@ Spectator.describe SettingsController do
       end
 
       context "and accepting JSON" do
-        let(headers) { HTTP::Headers.new }
+        let(headers) { HTTP::Headers{"Accept" => "application/json"} }
 
         it "succeeds" do
           get "/settings", headers

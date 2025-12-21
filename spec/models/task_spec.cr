@@ -207,6 +207,55 @@ Spectator.describe Task do
     it "reserves the scheduled tasks" do
       expect(described_class.scheduled(now, true).all?(&.running)).to be_true
     end
+
+    context "with old tasks" do
+      let!(recent_completed_task) do
+        described_class.new(
+          source_iri: "https://test.test/source",
+          subject_iri: "https://test.test/recent-completed",
+          complete: true,
+          backtrace: nil,
+          created_at: now - 1.hour,
+        ).save
+      end
+      let!(old_completed_task) do
+        described_class.new(
+          source_iri: "https://test.test/source",
+          subject_iri: "https://test.test/old-completed",
+          complete: true,
+          backtrace: nil,
+          created_at: now - 3.hours,
+        ).save
+      end
+      let!(old_failed_task) do
+        described_class.new(
+          source_iri: "https://test.test/source",
+          subject_iri: "https://test.test/old-failed",
+          complete: true,
+          backtrace: ["error"],
+          created_at: now - 3.hours,
+        ).save
+      end
+
+      it "preserves recent completed tasks" do
+        described_class.scheduled(now, true)
+        expect(Task.find?(recent_completed_task.id)).not_to be_nil
+      end
+
+      it "deletes old completed tasks" do
+        expect{described_class.scheduled(now, true)}.to change{Task.count}.by(-1)
+        expect(Task.find?(old_completed_task.id)).to be_nil
+      end
+
+      it "preserves old completed tasks with backtraces" do
+        described_class.scheduled(now, true)
+        expect(Task.find?(old_failed_task.id)).not_to be_nil
+      end
+
+      it "does not delete when not reserving" do
+        expect{described_class.scheduled(now, false)}.not_to change{Task.count}
+      end
+    end
   end
 
   context "given a saved task" do

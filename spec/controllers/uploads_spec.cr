@@ -138,9 +138,22 @@ Spectator.describe UploadsController do
         expect(response.headers["Location"]).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.txt$/)
       end
 
-      it "returns the resource path in the response" do
-        post "/uploads", headers, form
-        expect(JSON.parse(response.body)["msg"].as_s).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.txt$/)
+      context "and accepting application/json" do
+        let(headers) { super.dup.tap { |h| h["Accept"] = "application/json" } }
+
+        it "returns the resource path in the response" do
+          post "/uploads", headers, form
+          expect(JSON.parse(response.body)["msg"].as_s).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.txt$/)
+        end
+      end
+
+      context "and accepting text/plain" do
+        let(headers) { super.dup.tap { |h| h["Accept"] = "text/plain" } }
+
+        it "returns the resource path in the response" do
+          post "/uploads", headers, form
+          expect(response.body).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.txt$/)
+        end
       end
 
       it "stores the file" do

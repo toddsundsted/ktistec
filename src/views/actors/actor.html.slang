@@ -16,7 +16,7 @@
             "mention"
           in Relationship::Content::Notification::Announce, Relationship::Content::Notification::Like, Relationship::Content::Notification::Dislike
             "social"
-          in Relationship::Content::Notification::Follow::Hashtag, Relationship::Content::Notification::Follow::Mention, Relationship::Content::Notification::Follow::Thread
+          in Relationship::Content::Notification::Follow::Hashtag, Relationship::Content::Notification::Follow::Mention, Relationship::Content::Notification::Follow::Thread, Relationship::Content::Notification::Poll::Expiry
             "content"
           in Relationship::Content::Notification
             "other"
@@ -77,6 +77,25 @@
 - elsif !actor.blocked?
   - content_for "head" do
     link rel="alternate" type="application/rss+xml" title="#{actor.display_name}: RSS Feed" href="/actors/#{actor.username}/feed.rss"
+  - content_for "og_metadata" do
+    crystal:
+      og_title = actor.display_name.presence
+      og_description_raw = actor.summary.presence || "#{actor.display_name} on #{Ktistec.settings.site}"
+      og_description = Ktistec::Util.render_as_text_and_truncate(og_description_raw, 155)
+      og_image = actor.icon.presence
+    meta property="og:type" content="profile"
+    meta property="og:title" content=og_title
+    meta property="og:description" content=og_description
+    meta property="og:url" content=actor.iri
+    - if og_image
+      meta property="og:image" content=og_image
+    meta property="profile:username" content=actor.handle
+    meta property="og:site_name" content=Ktistec.settings.site
+    meta name="twitter:card" content="summary"
+    meta name="twitter:title" content=og_title
+    meta name="twitter:description" content=og_description
+    - if og_image
+      meta name="twitter:image" content=og_image
   == _view_src_views_partials_actor_panel_html_slang(env, actor)
   - objects = actor.public_posts_with_pins(**pagination_params(env))
   == render "src/views/actors/public_posts.html.slang"

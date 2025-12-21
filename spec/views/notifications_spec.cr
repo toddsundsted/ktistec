@@ -3,6 +3,7 @@ require "../../src/models/relationship/content/follow/mention"
 require "../../src/models/relationship/content/notification/follow/hashtag"
 require "../../src/models/relationship/content/notification/follow/mention"
 require "../../src/models/relationship/content/notification/follow/thread"
+require "../../src/models/relationship/content/notification/poll/expiry"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"
@@ -200,6 +201,21 @@ Spectator.describe "notifications partial" do
       it "renders a fetch the root of the thread message" do
         expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
           to eq("There are replies to a thread you follow.")
+      end
+    end
+
+    context "given a poll expiry notification" do
+      let_create!(:question, name: "What is your favorite color?")
+      let_create!(:notification_poll_expiry, owner: actor, question: question)
+
+      it "renders poll expiry message" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
+          to match(/A poll you voted in has ended/)
+      end
+
+      it "includes link to poll results" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//a/@href").first.text).
+          to eq("/remote/objects/#{question.id}")
       end
     end
   end

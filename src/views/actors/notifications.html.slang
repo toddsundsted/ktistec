@@ -172,6 +172,20 @@
             - if content
               .extra.meta.truncated
                 == … content, 150
+        - in Relationship::Content::Notification::Poll::Expiry
+          crystal:
+            question = notification.question
+            attributed_to = question.attributed_to
+          .label
+            == actor_icon(attributed_to)
+          .content
+            .summary
+              | A poll
+              a<> href=remote_object_path(question) you voted in
+              | has ended.
+            - if (content = question.preview)
+              .extra.meta.truncated
+                == … content, 150
         - in Relationship::Content::Notification
           / This can't happen!
   == paginate(env, notifications)

@@ -7,16 +7,16 @@ class ActivityPub::Object
     has_one poll, foreign_key: question_iri, primary_key: iri, inverse_of: question
 
     def voted_by?(actor : ActivityPub::Actor) : Bool
-      !ActivityPub::Object.where(
-        "type = '#{ActivityPub::Object::Note}' AND in_reply_to_iri = ? AND attributed_to_iri = ? AND special = 'vote'",
+      !ActivityPub::Object::Note.where(
+        "in_reply_to_iri = ? AND attributed_to_iri = ? AND special = 'vote'",
         self.iri,
         actor.iri
       ).empty?
     end
 
-    def votes_by(actor : ActivityPub::Actor) : Array(ActivityPub::Object)
-      ActivityPub::Object.where(
-        "type = '#{ActivityPub::Object::Note}' AND in_reply_to_iri = ? AND attributed_to_iri = ? AND special = 'vote'",
+    def votes_by(actor : ActivityPub::Actor) : Array(ActivityPub::Object::Note)
+      ActivityPub::Object::Note.where(
+        "in_reply_to_iri = ? AND attributed_to_iri = ? AND special = 'vote'",
         self.iri,
         actor.iri
       )

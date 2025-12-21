@@ -112,8 +112,6 @@ export default class extends Controller {
       }
       editor.changeLock = false
     }
-
-    this.scheduleAutosave()
   }
 
   add(event) {

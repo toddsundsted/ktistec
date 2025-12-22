@@ -418,6 +418,25 @@ Spectator.describe SettingsController do
           end
         end
 
+        it "updates the default_editor to markdown" do
+          post "/settings/actor", headers, %q|{"default_editor":"text/markdown"}|
+          expect(account.reload!.default_editor).to eq("text/markdown")
+        end
+
+        it "updates the default_editor to rich text" do
+          post "/settings/actor", headers, %q|{"default_editor":"text/html; editor=trix"}|
+          expect(account.reload!.default_editor).to eq("text/html; editor=trix")
+        end
+
+        context "given an account with markdown as default editor" do
+          before_each { account.assign(default_editor: "text/markdown").save }
+
+          it "does not update the default_editor if not provided" do
+            expect{post "/settings/actor", headers, %q|{"name":"Test"}|}.
+              not_to change{account.reload!.default_editor}
+          end
+        end
+
         it "updates the password" do
           expect{post "/settings/actor", headers, %q|{"password":"foobarbaz1!"}|}.
             to change{account.reload!.encrypted_password}
@@ -615,6 +634,20 @@ Spectator.describe SettingsController do
         it "does not change the site" do
           expect {post "/settings/service", headers, %q|{"site":""}|}.
             not_to change{Ktistec.settings.site}
+        end
+
+        it "changes the description" do
+          expect {post "/settings/service", headers, %q|{"description":"<p>Server description</p>"}|}.
+            to change{Ktistec.settings.description}
+        end
+
+        context "given a description" do
+          before_each { Ktistec.settings.assign({"description" => "<p>Server description</p>"}).save }
+
+          it "clears the description if blank" do
+            expect {post "/settings/service", headers, %q|{"description":""}|}.
+              to change{Ktistec.settings.description}.from("<p>Server description</p>").to("")
+          end
         end
 
         it "changes the footer" do

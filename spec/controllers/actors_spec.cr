@@ -216,6 +216,38 @@ Spectator.describe ActorsController do
       rss_link = html.xpath_node("//link[@rel='alternate'][@type='application/rss+xml'][@href='/actors/#{actor.username}/feed.rss']")
       expect(rss_link.try(&.["title"])).to eq("#{actor.display_name}: RSS Feed")
     end
+
+    it "includes og:url metadata" do
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      html = XML.parse_html(response.body)
+      og_url = html.xpath_node("//meta[@property='og:url']")
+      expect(og_url.try(&.["content"])).to eq("#{Ktistec.host}/@#{actor.username}")
+    end
+
+    it "includes profile:username" do
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      html = XML.parse_html(response.body)
+      profile_username = html.xpath_node("//meta[@property='profile:username']")
+      expect(profile_username.try(&.["content"])).to eq(actor.username)
+    end
+
+    it "includes og:image" do
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      html = XML.parse_html(response.body)
+      og_image = html.xpath_node("//meta[@property='og:image']")
+      expect(og_image.try(&.["content"])).to eq("https://test.test/images/logo.png")
+    end
+
+    it "includes og:image:alt" do
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      html = XML.parse_html(response.body)
+      og_image_alt = html.xpath_node("//meta[@property='og:image:alt']")
+      expect(og_image_alt.try(&.["content"])).to eq(actor.username)
+    end
   end
 
   describe "GET /actors/:username/feed.rss" do

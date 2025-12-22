@@ -10,9 +10,8 @@ crystal:
   object_emojis = Tag::Emoji.where(subject: object)
   actor_emojis = Tag::Emoji.where(subject: actor)
   author_emojis = (author.iri != actor.iri) ? Tag::Emoji.where(subject: author) : actor_emojis
-  if (attachments = object.attachments)
+  if (attachments = object.attachments.dup)  # don't modify the object
     if html
-      attachments = attachments.dup  # don't modify the object
       urls = XML.parse_html(html).xpath_nodes("//img/@src").map(&.text)
       attachments.reject! { |a| a.url.in?(urls) }
     end

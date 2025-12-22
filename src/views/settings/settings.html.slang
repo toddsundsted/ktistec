@@ -81,9 +81,10 @@ p
       i.checkmark.icon
       | Yes
 h1 Site Settings
-== form_tag(settings, "/settings/service") do
+== form_tag(settings, "/settings/service", form: "data") do
   == error_messages(settings)
   == input_tag("Site Name", settings, site)
+  == input_tag("Site Image", settings, image, class: "filepond", type: "file")
   == trix_editor("Description", settings, description)
   == input_tag("Footer", settings, footer)
   crystal:

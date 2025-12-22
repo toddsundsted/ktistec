@@ -82,11 +82,11 @@ class SettingsController
     redirect home_path
   end
 
-  private def self.actor_params(env)
-    # this method has to handle two different sources of form data
-    # (in addition to JSON data and urlencoded data): vanilla form
-    # submission and FilePond-enhanced form submission.
+  # these methods have to handle two different sources of form data
+  # (in addition to JSON data and urlencoded data): vanilla form
+  # submission and FilePond-enhanced form submission.
 
+  private def self.actor_params(env)
     params = (env.params.body.presence || env.params.json)
 
     # check for the presense of uploaded files. `rescue` because the
@@ -133,15 +133,42 @@ class SettingsController
 
   private def self.service_params(env)
     params = (env.params.body.presence || env.params.json)
+
+    # check for the presense of uploaded files. `rescue` because the
+    # `files` invocation will fail if called on anything other than
+    # form data.
+    files = begin
+              env.params.files.presence
+            rescue HTTP::FormData::Error
+            end
+    if files
+      ["image"].each do |name|
+        if (upload = files[name]?) && (filename = upload.filename.presence) && upload.tempfile.size > 0
+          filename = "#{env.account.actor.id}#{File.extname(filename)}"
+          filepath = File.join("uploads", *Tuple(String, String, String).from(UUID.random.to_s.split("-")[0..2]))
+          begin
+            Dir.mkdir_p(File.join(Kemal.config.public_folder, filepath))
+            upload.tempfile.chmod(0o644) # fix permissions
+            FileUtils.mv(upload.tempfile.path, File.join(Kemal.config.public_folder, filepath, filename))
+            params[name] = "/#{filepath}/#{filename}"
+          rescue err : File::Error
+            Log.warn { err.message }
+          end
+        end
+      end
+    end
+
     {
       # the host may not be changed via settings
       "site" => params["site"]?.try(&.to_s),
+      # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
+      "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
       "description" => params["description"]?.try(&.to_s),
       "footer" => params["footer"]?.try(&.to_s),
       "translator_service" => params["translator_service"]?.try(&.to_s),
       "translator_url" => params["translator_url"]?.try(&.to_s),
     }.select do |k, v|
-      v
+      v || k.in?("image")
     end
   end
 

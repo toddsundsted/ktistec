@@ -30,9 +30,9 @@ Spectator.describe SettingsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='name']][.//input[@name='summary']][.//input[@name='image']][.//input[@name='icon']]")).not_to be_empty
         end
 
-        it "renders a form for description, footer, and site" do
+        it "renders a form for site, image, description, footer" do
           get "/settings", headers
-          expect(XML.parse_html(response.body).xpath_nodes("//form[.//textarea[@name='description']][.//input[@name='footer']][.//input[@name='site']]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='site']][.//input[@name='image']][.//textarea[@name='description']][.//input[@name='footer']]")).not_to be_empty
         end
 
         it "renders radio buttons for default_editor" do
@@ -108,9 +108,14 @@ Spectator.describe SettingsController do
           expect(response.status_code).to eq(200)
         end
 
-        it "renders an object" do
+        it "renders an object with name, summary, image, and icon" do
           get "/settings", headers
-          expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon", "description", "footer", "site")
+          expect(JSON.parse(response.body).dig("actor").as_h.keys).to have("name", "summary", "image", "icon")
+        end
+
+        it "renders an object with site, image, description, and footer" do
+          get "/settings", headers
+          expect(JSON.parse(response.body).dig("site").as_h.keys).to have("site", "image", "description", "footer")
         end
       end
     end
@@ -528,6 +533,63 @@ Spectator.describe SettingsController do
               to change{Ktistec.settings.footer}.from("Copyright Blah Blah").to("")
           end
         end
+
+        it "changes the image" do
+          expect {post "/settings/service", headers, "image=%2Ffoo%2Fbar%2Fbaz"}.
+            to change{Ktistec.settings.image}.from(nil).to("https://test.test/foo/bar/baz")
+        end
+
+        context "given an image" do
+          before_each { Ktistec.settings.assign({"image" => "https://test.test/foo/bar/baz"}).save }
+
+          it "removes the image" do
+            expect {post "/settings/service", headers, "image="}.
+              to change{Ktistec.settings.image}.from("https://test.test/foo/bar/baz").to(nil)
+          end
+        end
+      end
+
+      context "and posting form data" do
+        let(form) do
+          String.build do |io|
+            HTTP::FormData.build(io) do |form_data|
+              metadata = HTTP::FormData::FileMetadata.new(filename: "image.jpg")
+              form_data.file("image", IO::Memory.new("0123456789"), metadata)
+            end
+          end
+        end
+
+        let(headers) do
+          HTTP::Headers{"Content-Type" => %Q{multipart/form-data; boundary="#{form.lines.first[2..-1]}"}}
+        end
+
+        macro uploaded_image(settings)
+          "#{Dir.tempdir}#{URI.parse(Ktistec.{{settings}}.image.not_nil!).path}"
+        end
+
+        it "updates the image" do
+          expect{post "/settings/service", headers, form}.to change{Ktistec.settings.image}.from(nil)
+        end
+
+        it "stores the image file" do
+          post "/settings/service", headers, form
+          expect(File.exists?(uploaded_image(settings))).to be(true)
+        end
+
+        it "makes the image file readable" do
+          post "/settings/service", headers, form
+          expect(File.info(uploaded_image(settings)).permissions).to contain(File::Permissions[OtherRead, GroupRead, OwnerRead])
+        end
+
+        context "given existing image" do
+          before_each do
+            Ktistec.settings.assign({"image" => "https://test.test/foo/bar.jpg"}).save
+          end
+
+          it "updates the image" do
+            expect{post "/settings/service", headers, form}.to change{Ktistec.settings.image}.from("https://test.test/foo/bar.jpg")
+          end
+        end
       end
 
       context "and posting JSON data" do
@@ -566,6 +628,20 @@ Spectator.describe SettingsController do
           it "changes the footer if blank" do
             expect {post "/settings/service", headers, %q|{"footer":""}|}.
               to change{Ktistec.settings.footer}.from("Copyright Blah Blah").to("")
+          end
+        end
+
+        it "changes the image" do
+          expect {post "/settings/service", headers, %q|{"image":"/foo/bar/baz"}|}.
+            to change{Ktistec.settings.image}.from(nil).to("https://test.test/foo/bar/baz")
+        end
+
+        context "given an image" do
+          before_each { Ktistec.settings.assign({"image" => "https://test.test/foo/bar/baz"}).save }
+
+          it "removes the image" do
+            expect {post "/settings/service", headers, %q|{"image":null}|}.
+              to change{Ktistec.settings.image}.from("https://test.test/foo/bar/baz").to(nil)
           end
         end
       end

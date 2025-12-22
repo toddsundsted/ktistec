@@ -70,6 +70,7 @@ module Ktistec
     PROPERTIES = {
       host: String,
       site: String,
+      image: String,
       description: String,
       footer: String,
       translator_service: String,

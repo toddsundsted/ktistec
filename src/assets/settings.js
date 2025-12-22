@@ -61,6 +61,7 @@ function initialize() {
   }
   enable("form[action='/settings/actor'] input[type='file'][name='image']", 1400, 700)
   enable("form[action='/settings/actor'] input[type='file'][name='icon']", 240, 240)
+  enable("form[action='/settings/service'] input[type='file'][name='image']", 630, 630)
 }
 
 document.addEventListener("turbo:load", initialize)

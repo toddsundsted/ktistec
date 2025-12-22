@@ -63,14 +63,4 @@ class Poll
       {options: options, voters_count: voters_count}
     end
   end
-
-  def after_save
-    if (closed_at = self.closed_at)
-      if closed_at > Time.utc
-        unless Task::NotifyPollExpiry.find?(question: self.question)
-          Task::NotifyPollExpiry.new(source_iri: "", question: self.question).schedule(closed_at)
-        end
-      end
-    end
-  end
 end

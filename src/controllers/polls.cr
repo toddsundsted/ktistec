@@ -18,7 +18,7 @@ class PollsController
 
     selected_options =
       if accepts?("text/html")
-        env.params.body.fetch_all("options[]")
+        env.params.body.fetch_all("options")
       else
         options = env.params.json["options"]?
         if options.is_a?(Array)
@@ -72,6 +72,14 @@ class PollsController
         to: vote.to,
         cc: vote.cc,
       ).save
+
+      if (closed_at = poll.closed_at)
+        if closed_at > now
+          unless Task::NotifyPollExpiry.find?(question: question)
+            Task::NotifyPollExpiry.new(source_iri: "", question: question).schedule(closed_at)
+          end
+        end
+      end
 
       OutboxActivityProcessor.process(env.account, activity)
     end

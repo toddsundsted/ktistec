@@ -100,6 +100,50 @@ Spectator.describe PollsController do
         end
       end
 
+      describe "notifications" do
+        let(future_time) { 1.day.from_now }
+
+        context "when poll has future closed_at" do
+          before_each { poll.assign(closed_at: future_time).save }
+
+          it "creates notification task" do
+            expect { post "/polls/#{poll.id}/vote", HTML_HEADERS, "options[]=Yes" }.to change { Task::NotifyPollExpiry.count }.by(1)
+          end
+
+          it "schedules task for poll closed_at time" do
+            post "/polls/#{poll.id}/vote", HTML_HEADERS, "options[]=Yes"
+            task = Task::NotifyPollExpiry.find(question: question)
+            expect(task.next_attempt_at).to be_close(future_time, 1.second)
+          end
+        end
+
+        context "when another actor has scheduled notification task" do
+          before_each { poll.assign(closed_at: future_time).save }
+
+          let_create!(:notify_poll_expiry_task, question: question)
+
+          it "does not create another task" do
+            expect { post "/polls/#{poll.id}/vote", HTML_HEADERS, "options[]=Yes" }.not_to change { Task::NotifyPollExpiry.count }
+          end
+        end
+
+        context "when poll has no closed_at" do
+          before_each { poll.assign(closed_at: nil).save }
+
+          it "does not create task" do
+            expect { post "/polls/#{poll.id}/vote", HTML_HEADERS, "options[]=Yes" }.not_to change { Task::NotifyPollExpiry.count }
+          end
+        end
+
+        context "when poll has closed_at in the past" do
+          let_create(:poll, question: question, closed_at: 1.day.ago)
+
+          it "does not create task" do
+            expect { post "/polls/#{poll.id}/vote", HTML_HEADERS, "options[]=Yes" }.not_to change { Task::NotifyPollExpiry.count }
+          end
+        end
+      end
+
       context "with single-choice poll" do
         it "prevents multiple selections" do
           post "/polls/#{poll.id}/vote", HTML_HEADERS, "options[]=Yes&options[]=No"

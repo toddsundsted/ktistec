@@ -18,7 +18,7 @@ class PollsController
 
     selected_options =
       if accepts?("text/html")
-        env.params.body.fetch_all("options[]")
+        env.params.body.fetch_all("options")
       else
         options = env.params.json["options"]?
         if options.is_a?(Array)

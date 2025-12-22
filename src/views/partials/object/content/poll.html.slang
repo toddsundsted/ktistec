@@ -21,14 +21,14 @@ turbo-frame.ui.segment.poll id="poll-#{poll.question.id}" data-controller="poll"
           label
             - if poll.multiple_choice
               - if is_disabled
-                input type="checkbox" name="options[]" value=option.name disabled="disabled" checked=voted
+                input type="checkbox" name="options" value=option.name disabled="disabled" checked=voted
               - else
-                input type="checkbox" name="options[]" value=option.name data-action="poll#optionSelected"
+                input type="checkbox" name="options" value=option.name data-action="poll#optionSelected"
             - else
               - if is_disabled
-                input type="radio" name="options[]" value=option.name disabled="disabled" checked=voted
+                input type="radio" name="options" value=option.name disabled="disabled" checked=voted
               - else
-                input type="radio" name="options[]" value=option.name data-action="poll#optionSelected"
+                input type="radio" name="options" value=option.name data-action="poll#optionSelected"
             span.option-name
               == s Ktistec::Emoji.emojify(option.name, object_emojis)
           - if show_results

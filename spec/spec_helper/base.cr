@@ -151,6 +151,7 @@ module Ktistec
     Ktistec.settings.assign({
       "host" => "https://test.test/",
       "site" => "Test",
+      "image" => nil,
       "description" => nil,
       "footer" => nil,
     }).save

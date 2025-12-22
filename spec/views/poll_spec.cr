@@ -133,4 +133,12 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
       expect(subject.to_s).to contain("35 votes")
     end
   end
+
+  context "identification" do
+    before_each { poll.question.assign(id: 1234_i64) }
+
+    it "uses the ID of the question in the attribute" do
+      expect(subject.xpath_nodes("//turbo-frame/@id")).to contain_exactly("poll-#{poll.question.id}")
+    end
+  end
 end

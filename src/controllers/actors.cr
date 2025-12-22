@@ -7,6 +7,7 @@ require "../models/relationship/content/follow/mention"
 require "../models/relationship/content/notification/follow/hashtag"
 require "../models/relationship/content/notification/follow/mention"
 require "../models/relationship/content/notification/follow/thread"
+require "../models/relationship/content/notification/poll/expiry"
 
 class ActorsController
   include Ktistec::Controller

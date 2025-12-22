@@ -10,8 +10,8 @@ crystal:
   has_voted = !voted_options.empty?
   is_disabled = show_results = is_expired || has_voted || is_anonymous
   votes_count = tallies[:options].sum(&.votes_count)
-turbo-frame.ui.segment.poll id="poll-#{poll.id}" data-controller="poll" data-poll-id=poll.id
-  form.poll-vote-form method="post" action="/polls/#{poll.id}/vote" data-poll-target="voteForm" data-action="submit->poll#submitVote"
+turbo-frame.ui.segment.poll id="poll-#{poll.question.id}" data-controller="poll" data-poll-id=poll.id
+  form.poll-vote-form method="post" action="/polls/#{poll.id}/vote" data-poll-target="voteForm"
     == authenticity_token(env)
     - options_classes = [has_voted ? "voted" : nil, is_disabled ? "disabled" : nil].compact.join(" ")
     .poll-options class=options_classes

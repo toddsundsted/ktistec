@@ -10,9 +10,9 @@ export default class extends Controller {
     this.element.addEventListener("error", (event) => {
       let element = event.target
       if (element.matches("img[data-actor-id]")) {
-        let replacement = document.createElement("i")
+        let replacement = document.createElement("img")
+        replacement.setAttribute("src", "/images/avatars/fallback.png")
         replacement.dataset.actorId = element.dataset.actorId
-        replacement.className = "user icon"
         element.replaceWith(replacement)
         if (Ktistec.auth) {
           let xhr = new XMLHttpRequest()

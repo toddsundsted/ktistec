@@ -11,16 +11,16 @@ Spectator.describe ObjectFactory do
   describe ".build_from_params" do
     let(params) do
       {
-        "content" => "Data content",
+        "content" => "New content",
         "visibility" => "public"
       }
     end
 
-    it "creates a new object" do
+    it "creates a new Note object" do
       result = ObjectFactory.build_from_params(params, actor)
-      expect(result.valid?).to be_true
       expect(result.object).to be_a(ActivityPub::Object::Note)
-      expect(result.object.content).to eq("Data content")
+      expect(result.object.new_record?).to be_true
+      expect(result.object.content).to eq("New content")
     end
 
     context "given existing object" do
@@ -33,11 +33,35 @@ Spectator.describe ObjectFactory do
         }
       end
 
-      it "updates an existing object" do
+      it "updates an existing Note object" do
         result = ObjectFactory.build_from_params(params, actor, note)
-        expect(result.valid?).to be_true
         expect(result.object).to eq(note)
+        expect(result.object.new_record?).to be_false
         expect(result.object.content).to eq("Updated content")
+      end
+    end
+
+    context "when poll-options is present" do
+      let(params) do
+        {
+          "content" => "What is your favorite color?",
+          "poll-options" => ["Red", "Blue", "Green"],
+          "visibility" => "public"
+        }
+      end
+
+      it "creates a new Question object" do
+        result = ObjectFactory.build_from_params(params, actor)
+        expect(result.object).to be_a(ActivityPub::Object::Question)
+        expect(result.object.new_record?).to be_true
+        expect(result.object.content).to eq("What is your favorite color?")
+      end
+
+      it "creates a new Poll object" do
+        result = ObjectFactory.build_from_params(params, actor)
+        object = result.object.as(ActivityPub::Object::Question)
+        expect(object.poll.new_record?).to be_true
+        expect(object.poll).to be_a(Poll)
       end
     end
   end

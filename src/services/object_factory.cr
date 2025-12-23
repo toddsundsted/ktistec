@@ -9,7 +9,7 @@ module ObjectFactory
   # appropriate builder (`NoteBuilder`, `QuestionBuilder`, etc.).
   #
   def self.build_from_params(
-    params : Hash(String, String),
+    params : Hash(String, String | Array(String)),
     actor : ActivityPub::Actor,
     object : ActivityPub::Object? = nil
   ) : ObjectBuilders::BuildResult
@@ -19,7 +19,11 @@ module ObjectFactory
 
   # Detects which builder to use based on `params`.
   #
-  private def self.detect_builder(params) : ObjectBuilders::ObjectBuilder
-    ObjectBuilders::NoteBuilder.new
+  private def self.detect_builder(params : Hash(String, String | Array(String))) : ObjectBuilders::ObjectBuilder
+    if params["poll-options"]?
+      ObjectBuilders::QuestionBuilder.new
+    else
+      ObjectBuilders::NoteBuilder.new
+    end
   end
 end

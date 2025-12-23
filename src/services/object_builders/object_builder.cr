@@ -16,7 +16,7 @@ module ObjectBuilders
     # errors.
     #
     abstract def build(
-      params : Hash(String, String),
+      params : Hash(String, String | Array(String)),
       actor : ActivityPub::Actor,
       object : ActivityPub::Object? = nil
     ) : BuildResult
@@ -25,16 +25,16 @@ module ObjectBuilders
     #
     # Returns `nil` if the parameter is not present or is blank.
     #
-    protected def extract_string(params : Hash(String, String), key : String) : String?
-      params[key]?.try(&.strip.presence)
+    protected def extract_string(params : Hash(String, String | Array(String)), key : String) : String?
+      params[key]?.try(&.as(String).strip.presence)
     end
 
     # Extracts a boolean parameter.
     #
     # Returns `true` if the parameter value is "true", `false` otherwise.
     #
-    protected def extract_boolean(params : Hash(String, String), key : String) : Bool
-      !!params[key]?.try { |value| value == "true" }
+    protected def extract_boolean(params : Hash(String, String | Array(String)), key : String) : Bool
+      !!params[key]?.try { |value| value.as(String) == "true" }
     end
 
     # Extracts an integer parameter.
@@ -42,17 +42,18 @@ module ObjectBuilders
     # Returns `nil` if the parameter is not present or cannot be
     # converted to an integer.
     #
-    protected def extract_integer(params : Hash(String, String), key : String) : Int32?
-      params[key]?.try(&.to_i?)
+    protected def extract_integer(params : Hash(String, String | Array(String)), key : String) : Int32?
+      params[key]?.try(&.as(String).to_i?)
     end
 
-    # Extracts an array parameter from comma-separated values.
+    # Extracts an array parameter.
     #
-    # Returns `nil` if the parameter is not present. Returns an empty
-    # array if the parameter is present but empty.
+    # Returns `nil` if the parameter is not present.
     #
-    protected def extract_array(params : Hash(String, String), key : String) : Array(String)?
-      params[key]?.try(&.split(",").map(&.strip).reject(&.empty?))
+    protected def extract_array(params : Hash(String, String | Array(String)), key : String) : Array(String)?
+      if (value = params[key]?) && value.is_a?(Array(String))
+        value
+      end
     end
 
     # Calculates addressing (visibility, to, cc, audience) for an object.
@@ -60,7 +61,7 @@ module ObjectBuilders
     # Handles reply-to author and recipient merging.
     #
     protected def calculate_addressing(
-      params : Hash(String, String),
+      params : Hash(String, String | Array(String)),
       actor : ActivityPub::Actor,
       in_reply_to : ActivityPub::Object? = nil
     ) : NamedTuple(visible: Bool, to: Set(String), cc: Set(String), audience: Array(String)?)
@@ -85,7 +86,7 @@ module ObjectBuilders
     # Applies common object attributes from parameters.
     #
     protected def apply_common_attributes(
-      params : Hash(String, String),
+      params : Hash(String, String | Array(String)),
       addressing : NamedTuple(visible: Bool, to: Set(String), cc: Set(String), audience: Array(String)?),
       object : ActivityPub::Object,
       actor : ActivityPub::Actor,
@@ -136,14 +137,14 @@ module ObjectBuilders
 
     # Collects model validation errors.
     #
-    # Adds validation errors from the object to the build result.
+    # Adds validation errors from the model to the build result.
     #
     protected def collect_model_errors(
-      object : ActivityPub::Object,
+      model : Ktistec::Model,
       result : BuildResult
     )
-      unless object.valid?
-        object.errors.each do |field, messages|
+      unless model.valid?
+        model.errors.each do |field, messages|
           messages.each { |message| result.add_error(field, message) }
         end
       end

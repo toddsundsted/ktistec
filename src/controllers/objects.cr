@@ -1,10 +1,10 @@
 require "../framework/controller"
-require "../models/activity_pub/object/note"
 require "../models/relationship/content/bookmark"
 require "../models/relationship/content/pin"
 require "../models/relationship/content/follow/thread"
 require "../models/task/fetch/thread"
 require "../models/translation"
+require "../services/object_factory"
 
 class ObjectsController
   include Ktistec::Controller
@@ -56,12 +56,14 @@ class ObjectsController
   end
 
   post "/objects" do |env|
-    object = ActivityPub::Object::Note.new(
-      iri: "#{host}/objects/#{id}",
-      attributed_to: env.account.actor
-    )
+    params = accepts?("text/html") ? env.params.body : env.params.json
+    params_hash = params.to_h.transform_values do |value|
+      value.is_a?(Array) ? value.map(&.to_s) : value.to_s
+    end
+    result = ObjectFactory.build_from_params(params_hash, env.account.actor)
+    object = result.object
 
-    unless object.assign(params(env)).valid?
+    unless result.valid?
       if accepts_turbo_stream?
         unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "object-new"
       else
@@ -131,7 +133,14 @@ class ObjectsController
       not_found
     end
 
-    unless object.assign(params(env)).valid?
+    params = accepts?("text/html") ? env.params.body : env.params.json
+    params_hash = params.to_h.transform_values do |value|
+      value.is_a?(Array) ? value.map(&.to_s) : value.to_s
+    end
+    result = ObjectFactory.build_from_params(params_hash, env.account.actor, object)
+    object = result.object
+
+    unless result.valid?
       if accepts_turbo_stream?
         unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "object-#{object.id}"
       else
@@ -421,23 +430,5 @@ class ObjectsController
     object.translations.each(&.destroy)
 
     redirect back_path
-  end
-
-  private def self.params(env)
-    params = accepts?("text/html") ? env.params.body : env.params.json
-    visible, to, cc = addressing(params, env.account.actor)
-    media_type = params["media-type"]?.try(&.as(String).presence) || "text/html; editor=trix"
-    {
-      "source" => params["content"]?.try(&.as(String).presence).try { |content| ActivityPub::Object::Source.new(content, media_type) },
-      "visible" => visible,
-      "to" => to.to_a,
-      "cc" => cc.to_a,
-      "language" => params["language"]?.try(&.as(String).presence),
-      "name" => params["name"]?.try(&.as(String).presence),
-      "summary" => params["summary"]?.try(&.as(String).presence),
-      "sensitive" => params["sensitive"]?.try(&.as(String)) == "true",
-      "canonical_path" => params["canonical-path"]?.try(&.as(String).presence),
-      "in_reply_to_iri" => params["in-reply-to"]?.try(&.as(String).presence),
-    }.compact
   end
 end

@@ -1,4 +1,4 @@
-# ![Ktistec](public/logo.png)
+# ![Ktistec](images/logo.png)
   - [Features](#features)
     - [Text and images](#text-and-images)
     - [Draft posts](#draft-posts)
@@ -10,6 +10,7 @@
     - [Polls](#polls)
     - [Control over comment visibility](#control-over-comment-visibility)
     - [Pretty URLs](#pretty-urls)
+    - [Open Graph metadata](#open-graph-metadata)
     - [Followers/following](#followersfollowing)
     - [Content discovery](#content-discovery)
     - [Content filtering](#content-filtering)
@@ -59,12 +60,19 @@ Ktistec is intended for writing and scripting.
 
 ### Text and images
 
-Text formatting options include *bold*, *italic*, *strikethrough*,
-*code* (inline and block), *superscript*/*subscript*, *headers*,
-*blockquotes* with nested indentation, and both *bullet* and *numeric*
-lists.
+Ktistec supports two editing modes: a rich text editor and a Markdown
+editor. Choose your preferred editor in your account settings.
+
+The **rich text editor** provides text formatting options including
+*bold*, *italic*, *strikethrough*, *code* (inline and block),
+*superscript*/*subscript*, *headers*, *blockquotes* with nested
+indentation, and both *bullet* and *numeric* lists.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/tszn70.png" width=460>
+
+The **Markdown editor** lets you write posts in Markdown syntax.
+Ktistec automatically converts Markdown to HTML when you publish. In
+addition to CommonMark syntax, Ktistec supports hashtags and mentions.
 
 Ktistec supports inline placement of images, with ActivityPub image
 attachments used for compatibility with non-Ktistec servers. Images
@@ -158,6 +166,14 @@ visibility controls.
 
 Assign pretty (canonical) URLs to posts, both for SEO and as helpful
 mnemonics for users (and yourself).
+
+### Open Graph metadata
+
+Ktistec includes Open Graph metadata support for actor and posts.
+When you share a link to your profile or a post on social media
+platforms, rich previews with images, titles, and descriptions are
+automatically generated. Configure a site image in the site settings
+to customize how your instance appears when shared.
 
 ### Followers/following
 
@@ -949,6 +965,7 @@ configure your settings.
 - **Password**: When supplied, updates your account password
 - **Auto-approve Followers**: When enabled, follow requests are automatically approved without requiring manual review
 - **Auto-follow Back**: When enabled, automatically follows back actors that follow you
+- **Default Editor**: Choose between the rich text editor or Markdown editor for composing posts
 - **Background Image**: Your profile banner/background image
 - **Profile Image**: Your profile avatar icon
 - **Metadata**: Up to four custom profile metadata fields with name/value pairs
@@ -964,6 +981,7 @@ from the settings page.
 **Available Settings:**
 
 - **Site Name**: The name of your Ktistec instance
+- **Site Image**: An image used for Open Graph metadata when sharing your instance on social media
 - **Description**: A customizable description displayed on your home page
 - **Footer**: A customizable footer displayed at the bottom of every page
 - **Translator Service**: Choose translation service (DeepL or LibreTranslate) if API keys are configured

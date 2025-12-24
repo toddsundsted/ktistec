@@ -1,12 +1,12 @@
-require "../../../src/services/object_builders/object_builder"
-require "../../../src/services/object_builders/build_result"
+require "../../../src/services/object_builder/builder_base"
+require "../../../src/services/object_builder/build_result"
 require "../../../src/models/activity_pub/object/note"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
-class TestObjectBuilder < ObjectBuilders::ObjectBuilder
-  def build(params, actor, object = nil) : ObjectBuilders::BuildResult
+class TestObjectBuilder < ObjectBuilder::BuilderBase
+  def build(params, actor, object = nil) : ObjectBuilder::BuildResult
     raise "Not implemented"
   end
 
@@ -27,7 +27,7 @@ class TestObjectBuilder < ObjectBuilders::ObjectBuilder
   end
 end
 
-Spectator.describe ObjectBuilders::ObjectBuilder do
+Spectator.describe ObjectBuilder::BuilderBase do
   setup_spec
 
   subject { TestObjectBuilder.new }
@@ -272,7 +272,7 @@ Spectator.describe ObjectBuilders::ObjectBuilder do
 
   describe "#validate_reply_to" do
     let_build(:note, local: true)
-    let(:result) { ObjectBuilders::BuildResult.new(note) }
+    let(:result) { ObjectBuilder::BuildResult.new(note) }
 
     context "when in_reply_to_iri is nil" do
       it "returns nil" do
@@ -315,7 +315,7 @@ Spectator.describe ObjectBuilders::ObjectBuilder do
 
   describe "#collect_model_errors" do
     let_build(:note, local: true)
-    let(:result) { ObjectBuilders::BuildResult.new(note) }
+    let(:result) { ObjectBuilder::BuildResult.new(note) }
 
     context "when object is valid" do
       it "does not add errors" do

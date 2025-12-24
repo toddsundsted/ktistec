@@ -1,9 +1,9 @@
-require "../../../src/services/object_builders/question_builder"
+require "../../../src/services/object_builder/question_builder"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
-Spectator.describe ObjectBuilders::QuestionBuilder do
+Spectator.describe ObjectBuilder::QuestionBuilder do
   setup_spec
 
   subject { described_class.new }

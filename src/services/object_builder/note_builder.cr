@@ -1,10 +1,10 @@
-require "./object_builder"
+require "./builder_base"
 require "../../models/activity_pub/object/note"
 
-module ObjectBuilders
+module ObjectBuilder
   # Builds `Note` objects from request parameters.
   #
-  class NoteBuilder < ObjectBuilder
+  class NoteBuilder < BuilderBase
     def build(
       params : Hash(String, String | Array(String)),
       actor : ActivityPub::Actor,

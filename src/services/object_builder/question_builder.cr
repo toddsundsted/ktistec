@@ -1,11 +1,11 @@
-require "./object_builder"
+require "./builder_base"
 require "../../models/activity_pub/object/question"
 require "../../models/poll"
 
-module ObjectBuilders
+module ObjectBuilder
   # Builds `Question` objects from request parameters.
   #
-  class QuestionBuilder < ObjectBuilder
+  class QuestionBuilder < BuilderBase
     def build(
       params : Hash(String, String | Array(String)),
       actor : ActivityPub::Actor,

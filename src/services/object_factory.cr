@@ -1,4 +1,4 @@
-require "./object_builders/**"
+require "./object_builder/**"
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
 
@@ -12,18 +12,18 @@ module ObjectFactory
     params : Hash(String, String | Array(String)),
     actor : ActivityPub::Actor,
     object : ActivityPub::Object? = nil
-  ) : ObjectBuilders::BuildResult
+  ) : ObjectBuilder::BuildResult
     builder = detect_builder(params)
     builder.build(params, actor, object)
   end
 
   # Detects which builder to use based on `params`.
   #
-  private def self.detect_builder(params : Hash(String, String | Array(String))) : ObjectBuilders::ObjectBuilder
+  private def self.detect_builder(params : Hash(String, String | Array(String))) : ObjectBuilder::BuilderBase
     if params["poll-options"]?
-      ObjectBuilders::QuestionBuilder.new
+      ObjectBuilder::QuestionBuilder.new
     else
-      ObjectBuilders::NoteBuilder.new
+      ObjectBuilder::NoteBuilder.new
     end
   end
 end

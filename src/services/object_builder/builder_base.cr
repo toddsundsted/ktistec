@@ -3,13 +3,13 @@ require "../../models/activity_pub/actor"
 require "../../models/activity_pub/object"
 require "../../views/view_helper"
 
-module ObjectBuilders
+module ObjectBuilder
   # Abstract base class for object builders.
   #
   # Each builder implements type-specific logic for constructing
   # ActivityPub objects from request parameters.
   #
-  abstract class ObjectBuilder
+  abstract class BuilderBase
     # Builds an ActivityPub object.
     #
     # Returns a `BuildResult` containing the object and validation

@@ -1,9 +1,9 @@
-require "../../../src/services/object_builders/note_builder"
+require "../../../src/services/object_builder/note_builder"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
-Spectator.describe ObjectBuilders::NoteBuilder do
+Spectator.describe ObjectBuilder::NoteBuilder do
   setup_spec
 
   subject { described_class.new }

@@ -1,6 +1,6 @@
 require "../../models/activity_pub/object"
 
-module ObjectBuilders
+module ObjectBuilder
   # Result of building an ActivityPub object.
   #
   # Contains the built object and validation errors.

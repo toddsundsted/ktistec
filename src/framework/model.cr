@@ -369,7 +369,7 @@ module Ktistec
       #
       # Raises `NotFound` if no such saved instance exists.
       #
-      def find(_id id : Int?, include_deleted : Bool = false, include_undone : Bool = false)
+      def find(_id id : Int64?, include_deleted : Bool = false, include_undone : Bool = false)
         query_one("SELECT #{columns} FROM #{table} WHERE #{conditions(id: id, include_deleted: include_deleted, include_undone: include_undone)}", id)
       rescue DB::NoResultsError
         raise NotFound.new("#{self} id=#{id}: not found")
@@ -379,7 +379,7 @@ module Ktistec
       #
       # Returns `nil` if no such saved instance exists.
       #
-      def find?(_id id : Int?, include_deleted : Bool = false, include_undone : Bool = false)
+      def find?(_id id : Int64?, include_deleted : Bool = false, include_undone : Bool = false)
         find(id, include_deleted: include_deleted, include_undone: include_undone)
       rescue NotFound
       end

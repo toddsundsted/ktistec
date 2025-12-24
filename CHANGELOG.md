@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.2.5]
+### Added
+- Support for editing posts in Markdown. (fixes [#25](https://github.com/toddsundsted/ktistec/issues/25))
+- Support for Open Graph metadata on actors and objects. (fixes [#71](https://github.com/toddsundsted/ktistec/issues/71))
+- Support for uploading a site image.
+- Internal table of contents page.
+- Poll expiry notifications.
+
 ## [v3.2.4]
 ### Added
 - Support for viewing and voting on polls. (fixes [#49](https://github.com/toddsundsted/ktistec/issues/49))
@@ -582,6 +590,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.2.5]: https://github.com/toddsundsted/ktistec/compare/2e91c174...20946f62
 [v3.2.4]: https://github.com/toddsundsted/ktistec/compare/7de86aa4...107553e8
 [v3.2.3]: https://github.com/toddsundsted/ktistec/compare/2ab2a727...023fd225
 [v3.2.2]: https://github.com/toddsundsted/ktistec/compare/ab57a3c7...74f7666e

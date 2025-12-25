@@ -46,6 +46,10 @@ class PollsController
     actor = env.account.actor
     question = poll.question
 
+    if question.attributed_to == actor
+      unprocessable_entity("Authors cannot vote on their own polls")
+    end
+
     if question.voted_by?(actor)
       unprocessable_entity("Poll does not allow multiple votes")
     end

@@ -106,7 +106,6 @@ Spectator.describe StreamingController do
 
   describe ".replace_notifications_count" do
     let(account) { register }
-    let_create!(notification_follow, owner: account.actor)
 
     subject do
       String.build do |io|
@@ -114,19 +113,59 @@ Spectator.describe StreamingController do
       end
     end
 
-    it "renders Turbo Stream actions" do
-      expect(subject).to eq <<-HTML
+    context "given no notifications" do
+      it "renders invisible labels" do
+        expect(subject).to eq <<-HTML
       data: \
       <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
-      <span class="ui mini transitional horizontal circular red label">1</span>\
+      <span class="invisible label"></span>\
       </template></turbo-stream>
 
       data: \
       <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
-      <span class="ui mini transitional horizontal circular red label">1</span>\
+      <span class="invisible label"></span>\
       </template></turbo-stream>
       \n
       HTML
+      end
+    end
+
+    context "given a follow notification" do
+      let_create!(notification_follow, owner: account.actor)
+
+      it "renders red label with tooltip" do
+        expect(subject).to eq <<-HTML
+      data: \
+      <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
+      <span class="ui mini transitional horizontal circular label red" title="follow 1">1</span>\
+      </template></turbo-stream>
+
+      data: \
+      <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
+      <span class="ui mini transitional horizontal circular label red" title="follow 1">1</span>\
+      </template></turbo-stream>
+      \n
+      HTML
+      end
+    end
+
+    context "given a like notification" do
+      let_create!(notification_like, owner: account.actor)
+
+      it "renders orange label with tooltip" do
+        expect(subject).to eq <<-HTML
+      data: \
+      <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
+      <span class="ui mini transitional horizontal circular label orange" title="social 1">1</span>\
+      </template></turbo-stream>
+
+      data: \
+      <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
+      <span class="ui mini transitional horizontal circular label orange" title="social 1">1</span>\
+      </template></turbo-stream>
+      \n
+      HTML
+      end
     end
   end
 

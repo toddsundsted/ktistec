@@ -27,9 +27,11 @@ class StreamingController
   # Renders action to replace the notifications count.
   #
   def self.replace_notifications_count(io, account)
+    count, color, tooltip = Ktistec::ViewHelper.notification_count_and_color(account.actor, account.last_notifications_checked_at)
     body =
-      if (count = account.actor.notifications(since: account.last_notifications_checked_at)) > 0
-        %Q|<span class="ui mini transitional horizontal circular red label">#{count}</span>|
+      if count > 0
+        title = tooltip ? %Q|title="#{tooltip}"| : ""
+        %Q|<span class="ui mini transitional horizontal circular label #{color}" #{title}>#{count}</span>|
       else
         %Q|<span class="invisible label"></span>|
       end

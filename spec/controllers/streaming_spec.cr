@@ -104,12 +104,12 @@ Spectator.describe StreamingController do
     end
   end
 
-  describe ".replace_notifications_count" do
+  describe ".replace_notifications_label" do
     let(account) { register }
 
     subject do
       String.build do |io|
-        described_class.replace_notifications_count(io, account)
+        described_class.replace_notifications_label(io, account)
       end
     end
 

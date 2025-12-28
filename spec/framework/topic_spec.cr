@@ -146,7 +146,7 @@ Spectator.describe Ktistec::Topic do
     let(invocations) { [0] }
 
     context "given a subscription" do
-      make_subscription(topic) { self.invocations[0] += 1 }
+      make_subscription(topic) { |subject, values| self.invocations[0] += values.size }
 
       pre_condition { expect(topic.subscriptions.size).to eq(1) }
 

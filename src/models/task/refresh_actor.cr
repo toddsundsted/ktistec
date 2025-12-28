@@ -43,10 +43,23 @@ class Task
     @[Insignificant]
     property failures : Array(Failure) { [] of Failure }
 
+    class State
+      include JSON::Serializable
+
+      property sync_featured_collection : Bool
+
+      def initialize(@sync_featured_collection = true)
+      end
+    end
+
+    @[Persistent]
+    @[Insignificant]
+    property state : State { State.new }
+
     def perform
       if (instance = ActivityPub::Actor.dereference?(source, actor.iri, ignore_cached: true))
         instance.save.up!
-        sync_featured_collection(instance)
+        sync_featured_collection(instance) if state.sync_featured_collection
         Ktistec::Topic{"/actor/refresh"}.notify_subscribers(actor.id.to_s)
       else
         actor.down!

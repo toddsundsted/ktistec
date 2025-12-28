@@ -3,7 +3,7 @@ crystal:
   _follow = follow
 turbo-frame#thread_page_thread_controls
   .ui.thread.segments
-    .ui.segment
+    .ui.basic.segment
       turbo-frame#thread_analysis
         crystal:
           seed = Hash(ActivityPub::Actor, Int32).new(0)

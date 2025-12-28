@@ -2,14 +2,14 @@
 - _emojis = Tag::Emoji.where(subject: actor)
 .ui.actor.segments
   - if actor.blocked?
-    .ui.blocked.segment
+    .ui.basic.blocked.segment
       = actor.display_name
       br: a href=actor.display_link = actor.handle
       br: em This actor is blocked!
   - else
     - image = actor.image.presence
     - style = image ? "background-image: url(#{actor.image});" : nil
-    .ui.attached.segment class=(!image ? "placeholder" : nil) style=style
+    .ui.basic.segment class=(!image ? "placeholder" : nil) style=style
       .actor-icon-container
         == actor_icon(actor)
         == actor_type(actor)

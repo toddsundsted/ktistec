@@ -178,6 +178,42 @@ module Ktistec::ViewHelper
       %Q|<span class="ui filter term">#{str}</span>|
     end
 
+    # Returns a tuple of {count, color, tooltip} for actor notifications.
+    #
+    def notification_count_and_color(actor, since : Time?)
+      count = actor.notifications(since: since)
+      label_color = "yellow"
+      tooltip = false
+      if count > 0
+        notifications = actor.notifications(size: count)
+        groups =
+          notifications.group_by do |notification|
+            case notification
+            in Relationship::Content::Notification::Follow
+              "follow"
+            in Relationship::Content::Notification::Reply
+              "reply"
+            in Relationship::Content::Notification::Mention
+              "mention"
+            in Relationship::Content::Notification::Announce, Relationship::Content::Notification::Like, Relationship::Content::Notification::Dislike
+              "social"
+            in Relationship::Content::Notification::Follow::Hashtag, Relationship::Content::Notification::Follow::Mention, Relationship::Content::Notification::Follow::Thread, Relationship::Content::Notification::Poll::Expiry
+              "content"
+            in Relationship::Content::Notification
+              "other"
+            end
+          end
+        if groups.has_key?("follow") || groups.has_key?("reply") || groups.has_key?("mention")
+          label_color = "red"
+        elsif groups.has_key?("social")
+          label_color = "orange"
+        end
+        type_order = ["follow", "reply", "mention", "social", "content", "other"]
+        tooltip = groups.to_a.sort_by { |type, _| type_order.index(type) || 99 }.map { |type, items| "#{type} #{items.size}" }.join(" | ")
+      end
+      {count, label_color, tooltip}
+    end
+
     ACTOR_COLOR_COUNT = 12
 
     def actor_icon(actor, classes = nil)

@@ -49,10 +49,19 @@ Spectator.describe "actor" do
           env.account.assign(last_notifications_checked_at: 1.hour.ago).save
         end
 
-        let(tooltip) { subject.xpath_nodes("//a[contains(@href,'notifications')]/@title").first?.try(&.text) }
+        let(tooltip) { subject.xpath_nodes("//a[contains(@href,'notifications')]//span[contains(@class,'label')]/@title").first?.try(&.text) }
+        let(color) do
+          label = subject.xpath_nodes("//a[contains(@href,'notifications')]//span[contains(@class,'label')]").first?.try do |label|
+            label["class"].split.find(&.in? ["red", "orange", "yellow"])
+          end
+        end
 
         it "does not render tooltip" do
           expect(tooltip).to be_nil
+        end
+
+        it "does not render visible label" do
+          expect(color).to be_nil
         end
 
         context "given a follow notification" do
@@ -60,6 +69,10 @@ Spectator.describe "actor" do
 
           it "renders follow tooltip" do
             expect(tooltip).to eq("follow 1")
+          end
+
+          it "renders red label" do
+            expect(color).to eq("red")
           end
         end
 
@@ -69,6 +82,10 @@ Spectator.describe "actor" do
           it "renders reply tooltip" do
             expect(tooltip).to eq("reply 1")
           end
+
+          it "renders red label" do
+            expect(color).to eq("red")
+          end
         end
 
         context "given a mention notification" do
@@ -76,6 +93,10 @@ Spectator.describe "actor" do
 
           it "renders mention tooltip" do
             expect(tooltip).to eq("mention 1")
+          end
+
+          it "renders red label" do
+            expect(color).to eq("red")
           end
         end
 
@@ -85,6 +106,10 @@ Spectator.describe "actor" do
           it "renders social tooltip" do
             expect(tooltip).to eq("social 1")
           end
+
+          it "renders orange label" do
+            expect(color).to eq("orange")
+          end
         end
 
         context "given a like notification" do
@@ -92,6 +117,10 @@ Spectator.describe "actor" do
 
           it "renders social tooltip" do
             expect(tooltip).to eq("social 1")
+          end
+
+          it "renders orange label" do
+            expect(color).to eq("orange")
           end
         end
 
@@ -101,6 +130,10 @@ Spectator.describe "actor" do
           it "renders social tooltip" do
             expect(tooltip).to eq("social 1")
           end
+
+          it "renders orange label" do
+            expect(color).to eq("orange")
+          end
         end
 
         context "given a follow hashtag notification" do
@@ -108,6 +141,10 @@ Spectator.describe "actor" do
 
           it "renders content tooltip" do
             expect(tooltip).to eq("content 1")
+          end
+
+          it "renders yellow label" do
+            expect(color).to eq("yellow")
           end
         end
 
@@ -117,6 +154,10 @@ Spectator.describe "actor" do
           it "renders content tooltip" do
             expect(tooltip).to eq("content 1")
           end
+
+          it "renders yellow label" do
+            expect(color).to eq("yellow")
+          end
         end
 
         context "given a follow thread notification" do
@@ -124,6 +165,10 @@ Spectator.describe "actor" do
 
           it "renders content tooltip" do
             expect(tooltip).to eq("content 1")
+          end
+
+          it "renders yellow label" do
+            expect(color).to eq("yellow")
           end
         end
 
@@ -136,6 +181,10 @@ Spectator.describe "actor" do
 
           it "renders combined tooltip" do
             expect(tooltip).to eq("follow 2 | social 2 | content 1")
+          end
+
+          it "renders red label" do
+            expect(color).to eq("red")
           end
         end
       end

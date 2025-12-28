@@ -1,30 +1,7 @@
 - if env.account?.try(&.actor) == actor
   crystal:
     filters = env.params.query.fetch_all("filters")
-    count = actor.notifications(since: env.account.last_notifications_checked_at)
-    tooltip = false
-    if count > 0
-      notifications = actor.notifications(size: count)
-      groups =
-        notifications.group_by do |notification|
-          case notification
-          in Relationship::Content::Notification::Follow
-            "follow"
-          in Relationship::Content::Notification::Reply
-            "reply"
-          in Relationship::Content::Notification::Mention
-            "mention"
-          in Relationship::Content::Notification::Announce, Relationship::Content::Notification::Like, Relationship::Content::Notification::Dislike
-            "social"
-          in Relationship::Content::Notification::Follow::Hashtag, Relationship::Content::Notification::Follow::Mention, Relationship::Content::Notification::Follow::Thread, Relationship::Content::Notification::Poll::Expiry
-            "content"
-          in Relationship::Content::Notification
-            "other"
-          end
-        end
-      type_order = ["follow", "reply", "mention", "social", "content", "other"]
-      tooltip = groups.to_a.sort_by { |type, _| type_order.index(type) || 99 }.map { |type, items| "#{type} #{items.size}" }.join(" | ")
-    end
+    count, color, tooltip = notification_count_and_color(actor, env.account.last_notifications_checked_at)
   .ui.stackable.secondary.menu
     input.menu-toggle-checkbox type="checkbox" id="menu-toggle"
     .mobile-menu-toggle
@@ -32,15 +9,15 @@
         i.bars.icon
         span.title Collections and Filters
         - if count > 0
-          span.ui.mini.transitional.horizontal.circular.red.label= count
+          span.ui.mini.transitional.horizontal.circular.label class=color title=tooltip = count
         - else
           span.invisible.label
     .menu-items data-turbo-prefetch="false"
       a.item href=actor_relationships_path(actor, "posts") Posts
       a.item href=actor_relationships_path(actor, "drafts") Drafts
-      a.item.notifications href=actor_relationships_path(actor, "notifications") title=tooltip Notifications
+      a.item.notifications href=actor_relationships_path(actor, "notifications") Notifications
         - if count > 0
-          span.ui.mini.transitional.horizontal.circular.red.label= count
+          span.ui.mini.transitional.horizontal.circular.label class=color title=tooltip = count
         - else
           span.invisible.label
       a.item href=actor_bookmarks_path(actor) Bookmarks

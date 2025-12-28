@@ -1074,6 +1074,16 @@ Spectator.describe ActorsController do
           to change{Task::RefreshActor.find?(actor: actor)}
       end
 
+      it "syncs the featured collection" do
+        post "/remote/actors/#{actor.id}/refresh"
+        expect(Task::RefreshActor.find(actor: actor).state.sync_featured_collection).to be_true
+      end
+
+      it "does not sync the featured collection" do
+        post "/remote/actors/#{actor.id}/refresh", HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"}, "sync-featured-collection=false"
+        expect(Task::RefreshActor.find(actor: actor).state.sync_featured_collection).to be_false
+      end
+
       it "renders a turbo stream replace message" do
         post "/remote/actors/#{actor.id}/refresh", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
         expect(XML.parse_html(response.body).xpath_nodes("//turbo-stream[@action='replace']/@target")).to contain_exactly("actor-#{actor.id}-refresh-button")

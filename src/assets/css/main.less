@@ -115,8 +115,7 @@ nav.ui.top.navigation.menu {
             .detail {
                 a {
                     img { cursor: pointer !important; }
-                    i.user { font-size: 1.5em; vertical-align: text-bottom; color: var(--text-secondary); }
-                    img + i, i + i {
+                    img + i {
                         color: var(--semantic-primary);
                         position: relative;
                         left: -10px;
@@ -140,6 +139,49 @@ nav.ui.top.navigation.menu {
             /* other styles */
             code { .bg-accent-code(); padding: .2em .3em; font-size: var(--code-size); line-height: normal; }
             pre { .bg-accent-pre(); padding: .2em .4em; font-size: var(--code-size); overflow-x: auto; }
+
+            .ui.image:not(.emoji) { object-fit: cover; cursor: zoom-in; }
+
+            /* media in posts
+               - classes "ui" and "image" are added to every `img` tag during
+                 HTML sanitization, including tags present in the object
+                 content. therefore, these classes are reliably on every image
+                 in a post.
+               - media in `.extra.text` are in the object content. this is
+                 true of both local and remote posts.
+               - media in `.extra.media` are "thumbnail size" attachments.
+               - media with the class "extra" are "full size" attachments.
+            */
+            .extra.media img, .extra.media audio, .extra.media video {
+                display: inline-block;
+                object-fit: cover;
+                vertical-align: middle;
+                overflow: hidden;
+                width: 95px;
+                height: 95px;
+            }
+            > .event {
+                .extra.text img.image, .extra.text audio.audio, .extra.text video.video { width: 100%; }
+                img.extra.image, audio.extra.audio, video.extra.video { width: 100%; }
+            }
+            > .detailed.event {
+                .extra.text img.image, .extra.text audio.audio, .extra.text video.video { height: auto; }
+                img.extra.image, audio.extra.audio, video.extra.video { height: auto; }
+            }
+            @media screen and (max-width: 599px) {           /* phones */
+                .extra.text img.image, .extra.text video.video { height: 200px; }
+                img.extra.image, video.extra.video { height: 200px; }
+            }
+            @media screen and (min-width: 600px) {           /* tablets portrait & larger */
+                .extra.text img.image, .extra.text video.video { height: 375px; }
+                img.extra.image, video.extra.video { height: 375px; }
+            }
+            @media screen and (min-width: 900px) {           /* tablets landscape & larger */
+            }
+            @media screen and (min-width: 1200px) {          /* desktops & larger */
+            }
+            @media screen and (min-width: 1800px) {          /* wide desktops & larger */
+            }
         }
     }
 
@@ -153,48 +195,6 @@ nav.ui.top.navigation.menu {
     .threaded.depth-7 { margin-left: 7rem !important; width: calc(100% - 7rem) !important; }
     .threaded.depth-8 { margin-left: 8rem !important; width: calc(100% - 8rem) !important; }
     .threaded.depth-9 { margin-left: 9rem !important; width: calc(100% - 9rem) !important; }
-
-    /* media in posts
-       - classes "ui" and "image" are added to every `img` tag during
-         HTML sanitization, including tags present in the object
-         content. therefore, these classes are reliably on every image
-         in a post.
-       - media in `.extra.text` are in the object content. this is
-         true of both local and remote posts.
-       - media in `.extra.media` are "thumbnail size" attachments.
-       - media with the class "extra" are "full size" attachments.
-    */
-    .ui.image:not(.emoji) { object-fit: cover; cursor: zoom-in; }
-    .extra.media img, .extra.media audio, .extra.media video {
-        display: inline-block;
-        object-fit: cover;
-        vertical-align: middle;
-        overflow: hidden;
-        width: 95px;
-        height: 95px;
-    }
-    > .event {
-        .extra.text img.image, .extra.text audio.audio, .extra.text video.video { width: 100%; }
-        img.extra.image, audio.extra.audio, video.extra.video { width: 100%; }
-    }
-    > .detailed.event {
-        .extra.text img.image, .extra.text audio.audio, .extra.text video.video { height: auto; }
-        img.extra.image, audio.extra.audio, video.extra.video { height: auto; }
-    }
-    @media screen and (max-width: 599px) {           /* phones */
-        .extra.text img.image, .extra.text video.video { height: 200px; }
-        img.extra.image, video.extra.video { height: 200px; }
-    }
-    @media screen and (min-width: 600px) {           /* tablets portrait & larger */
-        .extra.text img.image, .extra.text video.video { height: 375px; }
-        img.extra.image, video.extra.video { height: 375px; }
-    }
-    @media screen and (min-width: 900px) {           /* tablets landscape & larger */
-    }
-    @media screen and (min-width: 1200px) {          /* desktops & larger */
-    }
-    @media screen and (min-width: 1800px) {          /* wide desktops & larger */
-    }
 }
 
 .ui.text.container .ui.stackable.secondary.menu {
@@ -407,6 +407,11 @@ nav.ui.top.navigation.menu {
             font-size: smaller;
             .text-muted();
         }
+    }
+    > .tiny.icon.message {
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
     }
 }
 
@@ -636,7 +641,10 @@ body.offline .ui.banner .message {
     vertical-align: -0.15em;
     display: inline-block;
     object-fit: contain;
-    cursor: default;
+    cursor: text;
+}
+a > img.emoji {
+    cursor: pointer !important;
 }
 
 /** design system **/

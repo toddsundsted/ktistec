@@ -4,6 +4,8 @@ require "../framework/topic"
 require "../models/relationship/content/follow/hashtag"
 require "../models/task/fetch/hashtag"
 
+Ktistec::Topic.configure_debounce(/\/actors\/[^\/]+\/notifications$/, 1.second)
+
 class StreamingController
   include Ktistec::Controller
 
@@ -20,16 +22,18 @@ class StreamingController
   def self.replace_actor_icon(io, id)
     actor = ActivityPub::Actor.find(id)
     # omit "data-actor-id" so that replacement can only be attempted once
-    body = %Q|<img src="#{actor.icon}">|
-    stream_replace(io, selector: ":is(i,img)[data-actor-id='#{actor.id}']", body: body)
+    body = %Q|<img class="ui avatar image" src="#{actor.icon}">|
+    stream_replace(io, selector: "img[data-actor-id='#{actor.id}']", body: body)
   end
 
   # Renders action to replace the notifications count.
   #
-  def self.replace_notifications_count(io, account)
+  def self.replace_notifications_label(io, account)
+    count, color, tooltip = Ktistec::ViewHelper.notification_count_and_color(account.actor, account.last_notifications_checked_at)
     body =
-      if (count = account.actor.notifications(since: account.last_notifications_checked_at)) > 0
-        %Q|<span class="ui mini transitional horizontal circular red label">#{count}</span>|
+      if count > 0
+        title = tooltip ? %Q|title="#{tooltip}"| : ""
+        %Q|<span class="ui mini transitional horizontal circular label #{color}" #{title}>#{count}</span>|
       else
         %Q|<span class="invisible label"></span>|
       end
@@ -103,7 +107,7 @@ class StreamingController
     Ktistec::Topic{{{subjects.splat}}}.tap do |topic|
       @@sessions_pools[env.session].push(env.response.@io)
       topic.subscribe(timeout: 1.minute) do |{{block.args.join(",").id}}|
-        if {{block.args.join(" && ").id}}
+        if {{block.args.first.id}}
           {{block.body}}
         else # timeout
           stream_no_op(env.response)
@@ -120,19 +124,21 @@ class StreamingController
       not_found
     end
     setup_response(env.response)
-    subscribe "/actor/refresh", mention_path(mention) do |subject, value|
-      case subject
-      when "/actor/refresh"
-        if (id = value.to_i64?)
-          replace_actor_icon(env.response, id)
-        end
-      else
-        follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
-        count = Tag::Mention.all_objects_count(mention)
-        body = mention_page_mention_banner(env, mention, follow, count)
-        stream_replace(env.response, target: "mention_page_mention_banner", body: body)
-        unless value.blank?
-          replace_refresh_posts_message(env.response)
+    subscribe "/actor/refresh", mention_path(mention) do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        else
+          follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
+          count = Tag::Mention.all_objects_count(mention)
+          body = mention_page_mention_banner(env, mention, follow, count)
+          stream_replace(env.response, target: "mention_page_mention_banner", body: body)
+          unless value.blank?
+            replace_refresh_posts_message(env.response)
+          end
         end
       end
     end
@@ -144,20 +150,40 @@ class StreamingController
       not_found
     end
     setup_response(env.response)
-    subscribe "/actor/refresh", hashtag_path(hashtag) do |subject, value|
-      case subject
-      when "/actor/refresh"
-        if (id = value.to_i64?)
-          replace_actor_icon(env.response, id)
+    subscribe "/actor/refresh", hashtag_path(hashtag) do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        else
+          task = Task::Fetch::Hashtag.find?(source: env.account.actor, name: hashtag)
+          follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
+          count = Tag::Hashtag.all_objects_count(hashtag)
+          body = tag_page_tag_controls(env, hashtag, task, follow, count)
+          stream_replace(env.response, target: "tag_page_tag_controls", body: body)
+          unless value.blank?
+            replace_refresh_posts_message(env.response)
+          end
         end
-      else
-        task = Task::Fetch::Hashtag.find?(source: env.account.actor, name: hashtag)
-        follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
-        count = Tag::Hashtag.all_objects_count(hashtag)
-        body = tag_page_tag_controls(env, hashtag, task, follow, count)
-        stream_replace(env.response, target: "tag_page_tag_controls", body: body)
-        unless value.blank?
-          replace_refresh_posts_message(env.response)
+      end
+    end
+  end
+
+  get "/stream/objects/:id" do |env|
+    id = env.params.url["id"].to_i
+    unless (object = ActivityPub::Object.find?(id))
+      not_found
+    end
+    setup_response(env.response)
+    subscribe "/actor/refresh" do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
         end
       end
     end
@@ -169,21 +195,23 @@ class StreamingController
       not_found
     end
     setup_response(env.response)
-    subscribe "/actor/refresh", object.thread! do |subject, value|
-      case subject
-      when "/actor/refresh"
-        if (id = value.to_i64?)
-          replace_actor_icon(env.response, id)
-        end
-      else
-        thread = object.thread(for_actor: env.account.actor)
-        count = thread.size
-        task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
-        follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
-        body = thread_page_thread_controls(env, thread, task, follow)
-        stream_replace(env.response, target: "thread_page_thread_controls", body: body)
-        unless value.blank?
-          replace_refresh_posts_message(env.response)
+    subscribe "/actor/refresh", object.thread! do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        else
+          thread = object.thread(for_actor: env.account.actor)
+          count = thread.size
+          task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
+          follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
+          body = thread_page_thread_controls(env, thread, task, follow)
+          stream_replace(env.response, target: "thread_page_thread_controls", body: body)
+          unless value.blank?
+            replace_refresh_posts_message(env.response)
+          end
         end
       end
     end
@@ -195,10 +223,12 @@ class StreamingController
       not_found
     end
     setup_response(env.response)
-    subscribe "/actor/refresh" do |subject, value|
-      case subject
-      when "/actor/refresh"
-        stream_refresh(env.response)
+    subscribe "/actor/refresh" do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          stream_refresh(env.response)
+        end
       end
     end
   end
@@ -223,20 +253,22 @@ class StreamingController
       id = "#{since.to_unix}:#{first_count}"
       stream_no_op(env.response, id)
     end
-    subscribe "/actor/refresh", "#{actor_path(env.account.actor)}/notifications", "#{actor_path(env.account.actor)}/timeline" do |subject, value|
-      case subject
-      when "/actor/refresh"
-        if (id = value.to_i64?)
-          replace_actor_icon(env.response, id)
-        end
-      when "#{actor_path(env.account.actor)}/notifications"
-        replace_notifications_count(env.response,  env.account)
-      when "#{actor_path(env.account.actor)}/timeline"
-        if (count = timeline_count(env, since)) > first_count
-          Log.trace { "next - since: #{since} first_count: #{first_count} count: #{count}" }
-          first_count = count
-          id = "#{since.to_unix}:#{first_count}"
-          replace_refresh_posts_message(env.response, id)
+    subscribe "/actor/refresh", "#{actor_path(env.account.actor)}/notifications", "#{actor_path(env.account.actor)}/timeline" do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        when "#{actor_path(env.account.actor)}/notifications"
+          replace_notifications_label(env.response,  env.account)
+        when "#{actor_path(env.account.actor)}/timeline"
+          if (count = timeline_count(env, since)) > first_count
+            Log.trace { "next - since: #{since} first_count: #{first_count} count: #{count}" }
+            first_count = count
+            id = "#{since.to_unix}:#{first_count}"
+            replace_refresh_posts_message(env.response, id)
+          end
         end
       end
     end
@@ -258,14 +290,16 @@ class StreamingController
 
   get "/stream/everything" do |env|
     setup_response(env.response)
-    subscribe "/actor/refresh", everything_path do |subject, value|
-      case subject
-      when "/actor/refresh"
-        if (id = value.to_i64?)
-          replace_actor_icon(env.response, id)
+    subscribe "/actor/refresh", everything_path do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        else
+          stream_refresh(env.response)
         end
-      else
-        stream_refresh(env.response)
       end
     end
   end

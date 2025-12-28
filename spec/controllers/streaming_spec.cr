@@ -38,6 +38,22 @@ Spectator.describe StreamingController do
     end
   end
 
+  describe "GET /stream/objects/:id" do
+    it "returns 401 if not authorized" do
+      get "/stream/objects/1"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if the object does not exist" do
+        get "/stream/objects/999999"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "GET /stream/objects/:id/thread" do
     it "returns 401 if not authorized" do
       get "/stream/objects/1/thread"
@@ -96,37 +112,76 @@ Spectator.describe StreamingController do
     it "renders a Turbo Stream action" do
       expect(subject).to eq <<-HTML
       data: \
-      <turbo-stream action="replace" targets=":is(i,img)[data-actor-id='#{actor.id}']"><template>\
-      <img src="#{actor.icon}">\
+      <turbo-stream action="replace" targets="img[data-actor-id='#{actor.id}']"><template>\
+      <img class="ui avatar image" src="#{actor.icon}">\
       </template></turbo-stream>
       \n
       HTML
     end
   end
 
-  describe ".replace_notifications_count" do
+  describe ".replace_notifications_label" do
     let(account) { register }
-    let_create!(notification_follow, owner: account.actor)
 
     subject do
       String.build do |io|
-        described_class.replace_notifications_count(io, account)
+        described_class.replace_notifications_label(io, account)
       end
     end
 
-    it "renders Turbo Stream actions" do
-      expect(subject).to eq <<-HTML
+    context "given no notifications" do
+      it "renders invisible labels" do
+        expect(subject).to eq <<-HTML
       data: \
       <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
-      <span class="ui mini transitional horizontal circular red label">1</span>\
+      <span class="invisible label"></span>\
       </template></turbo-stream>
 
       data: \
       <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
-      <span class="ui mini transitional horizontal circular red label">1</span>\
+      <span class="invisible label"></span>\
       </template></turbo-stream>
       \n
       HTML
+      end
+    end
+
+    context "given a follow notification" do
+      let_create!(notification_follow, owner: account.actor)
+
+      it "renders red label with tooltip" do
+        expect(subject).to eq <<-HTML
+      data: \
+      <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
+      <span class="ui mini transitional horizontal circular label red" title="follow 1">1</span>\
+      </template></turbo-stream>
+
+      data: \
+      <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
+      <span class="ui mini transitional horizontal circular label red" title="follow 1">1</span>\
+      </template></turbo-stream>
+      \n
+      HTML
+      end
+    end
+
+    context "given a like notification" do
+      let_create!(notification_like, owner: account.actor)
+
+      it "renders orange label with tooltip" do
+        expect(subject).to eq <<-HTML
+      data: \
+      <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
+      <span class="ui mini transitional horizontal circular label orange" title="social 1">1</span>\
+      </template></turbo-stream>
+
+      data: \
+      <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
+      <span class="ui mini transitional horizontal circular label orange" title="social 1">1</span>\
+      </template></turbo-stream>
+      \n
+      HTML
+      end
     end
   end
 

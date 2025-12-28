@@ -171,6 +171,24 @@ class StreamingController
     end
   end
 
+  get "/stream/objects/:id" do |env|
+    id = env.params.url["id"].to_i
+    unless (object = ActivityPub::Object.find?(id))
+      not_found
+    end
+    setup_response(env.response)
+    subscribe "/actor/refresh" do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        end
+      end
+    end
+  end
+
   get "/stream/objects/:id/thread" do |env|
     id = env.params.url["id"].to_i
     unless (object = ActivityPub::Object.find?(id))

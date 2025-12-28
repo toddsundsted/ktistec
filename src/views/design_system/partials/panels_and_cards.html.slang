@@ -8,8 +8,10 @@
         .ui.actor.segments
           - image = actor.image.presence
           - style = image ? "background-image: url(#{actor.image});" : nil
-          .ui.attached.segment class=(!image ? "placeholder" : nil) style=style
-            == actor_icon(actor)
+          .ui.basic.segment class=(!image ? "placeholder" : nil) style=style
+            .actor-icon-container
+              == actor_icon(actor)
+              i.actor-type-overlay.user.icon
           .ui.attached.tiny.warning.icon.message
             i.cloud.icon
             .content
@@ -51,7 +53,7 @@
       .variation-label Blocked Actor Panel
       .ui.text.container
         .ui.actor.segments
-          .ui.blocked.segment
+          .ui.basic.blocked.segment
             | [blocked]
             br: a href="#" [blocked]
             br: em This actor is blocked!

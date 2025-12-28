@@ -3,7 +3,7 @@ crystal:
   _follow = follow
 turbo-frame#tag_page_tag_controls
   .ui.thread.segments
-    .ui.segment
+    .ui.basic.segment
       p: strong
         a href=hashtag_path(hashtag) ##{hashtag}
         - if count > 0

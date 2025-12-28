@@ -22,8 +22,8 @@ class StreamingController
   def self.replace_actor_icon(io, id)
     actor = ActivityPub::Actor.find(id)
     # omit "data-actor-id" so that replacement can only be attempted once
-    body = %Q|<img src="#{actor.icon}">|
-    stream_replace(io, selector: ":is(i,img)[data-actor-id='#{actor.id}']", body: body)
+    body = %Q|<img class="ui avatar image" src="#{actor.icon}">|
+    stream_replace(io, selector: "img[data-actor-id='#{actor.id}']", body: body)
   end
 
   # Renders action to replace the notifications count.
@@ -165,6 +165,24 @@ class StreamingController
           stream_replace(env.response, target: "tag_page_tag_controls", body: body)
           unless value.blank?
             replace_refresh_posts_message(env.response)
+          end
+        end
+      end
+    end
+  end
+
+  get "/stream/objects/:id" do |env|
+    id = env.params.url["id"].to_i
+    unless (object = ActivityPub::Object.find?(id))
+      not_found
+    end
+    setup_response(env.response)
+    subscribe "/actor/refresh" do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
           end
         end
       end

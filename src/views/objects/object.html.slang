@@ -39,5 +39,7 @@
       meta name="twitter:image" content=fallback_image
     - else
       meta name="twitter:image" content=image_attachments.first.url
+- if env.account? && !object.draft?
+  turbo-stream-source src="/stream/objects/#{object.id}"
 section.ui.feed data-controller="icon-load-error"
   == object_partial(env, object, with_detail: true)

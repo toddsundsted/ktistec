@@ -392,6 +392,17 @@ Spectator.describe Task::RefreshActor do
           expect(Pin.find?(actor: actor, object: object3)).to be_truthy
         end
       end
+
+      context "with `sync_featured_collection` disabled" do
+        let(state) { Task::RefreshActor::State.new(sync_featured_collection: false) }
+
+        before_each { subject.assign(state: state) }
+
+        it "does not fetch the featured collection" do
+          subject.perform
+          expect(HTTP::Client.requests).not_to have("GET #{actor.featured}")
+        end
+      end
     end
   end
 end

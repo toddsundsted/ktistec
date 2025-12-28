@@ -38,6 +38,22 @@ Spectator.describe StreamingController do
     end
   end
 
+  describe "GET /stream/objects/:id" do
+    it "returns 401 if not authorized" do
+      get "/stream/objects/1"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if the object does not exist" do
+        get "/stream/objects/999999"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "GET /stream/objects/:id/thread" do
     it "returns 401 if not authorized" do
       get "/stream/objects/1/thread"
@@ -96,8 +112,8 @@ Spectator.describe StreamingController do
     it "renders a Turbo Stream action" do
       expect(subject).to eq <<-HTML
       data: \
-      <turbo-stream action="replace" targets=":is(i,img)[data-actor-id='#{actor.id}']"><template>\
-      <img src="#{actor.icon}">\
+      <turbo-stream action="replace" targets="img[data-actor-id='#{actor.id}']"><template>\
+      <img class="ui avatar image" src="#{actor.icon}">\
       </template></turbo-stream>
       \n
       HTML

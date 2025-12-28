@@ -17,11 +17,12 @@
           crystal:
             activity = notification.activity
             activities = activity.object.activities(inclusion: activity.type)
+            emojis = Tag::Emoji.where(subject: activity.actor)
           .label
             == actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a> href=remote_actor_path(activity.actor) == s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
               - if activities.size > 1
                 | and #{pluralize(activities.size - 1, "other")} shared
               - else
@@ -35,11 +36,12 @@
           crystal:
             activity = notification.activity
             activities = activity.object.activities(inclusion: activity.type)
+            emojis = Tag::Emoji.where(subject: activity.actor)
           .label
             == actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a> href=remote_actor_path(activity.actor) == s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
               - if activities.size > 1
                 | and #{pluralize(activities.size - 1, "other")} liked
               - else
@@ -53,11 +55,12 @@
           crystal:
             activity = notification.activity
             activities = activity.object.activities(inclusion: activity.type)
+            emojis = Tag::Emoji.where(subject: activity.actor)
           .label
             == actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a> href=remote_actor_path(activity.actor) == s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
               - if activities.size > 1
                 | and #{pluralize(activities.size - 1, "other")} disliked
               - else
@@ -73,11 +76,12 @@
             content = object.preview
             attributed_to = object.attributed_to
             in_reply_to = object.in_reply_to
+            emojis = Tag::Emoji.where(subject: attributed_to)
           .label
             == actor_icon(attributed_to)
           .content
             .summary
-              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+              a> href=remote_actor_path(attributed_to) == s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
               a> href=remote_object_path(object) replied to
               a< href=remote_object_path(in_reply_to) your post
               | .
@@ -89,11 +93,12 @@
             object = notification.object
             content = object.preview
             attributed_to = object.attributed_to
+            emojis = Tag::Emoji.where(subject: attributed_to)
           .label
             == actor_icon(attributed_to)
           .content
             .summary
-              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+              a> href=remote_actor_path(attributed_to) == s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
               a> href=remote_object_path(object) mentioned
               | you.
             - if content
@@ -132,12 +137,14 @@
               .extra.meta.truncated
                 == … content, 150
         - in Relationship::Content::Notification::Follow
-          - activity = notification.activity
+          crystal:
+            activity = notification.activity
+            emojis = Tag::Emoji.where(subject: activity.actor)
           .label
             == actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a> href=remote_actor_path(activity.actor) == s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
               | followed you.
             - unless (response = activity.accepted_or_rejected?)
               .extra.text
@@ -157,6 +164,7 @@
             object = notification.object
             content = object.preview
             attributed_to = object.attributed_to
+            emojis = Tag::Emoji.where(subject: attributed_to)
           .label
             == actor_icon(attributed_to)
           .content
@@ -166,7 +174,7 @@
                 a<> href=remote_thread_path(object) a thread
                 | you follow.
               - else
-                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+                a> href=remote_actor_path(attributed_to) == s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
                 a> href=remote_object_path(object) replied to a thread
                 | you follow.
             - if content

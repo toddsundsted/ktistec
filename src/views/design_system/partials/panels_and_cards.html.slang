@@ -41,12 +41,12 @@
                   button.ui.green.button Accept
                 .ui.inline.form
                   button.ui.red.button Reject
-          .ui.basic.segment
+          .ui.basic.footer.segment
             .ui.inline.form
               button.ui.button Unfollow
             .ui.inline.form
               button.ui.button Refresh
-            .information
+            .status
               | Follow request accepted about 1 month ago
               br
               | Profile refreshed 10 days ago
@@ -57,12 +57,12 @@
             | [blocked]
             br: a href="#" [blocked]
             br: em This actor is blocked!
-          .ui.basic.segment
+          .ui.basic.footer.segment
             .ui.inline.form
               button.ui.button Unblock
             .ui.inline.form
               button.ui.button Refresh
-            .information
+            .status
               | Profile refreshed 10 days ago
   .component-showcase
     h4 Actor Card

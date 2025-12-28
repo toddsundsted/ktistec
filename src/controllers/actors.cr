@@ -231,7 +231,9 @@ class ActorsController
     end
 
     unless Task::RefreshActor.exists?(actor.iri)
-      Task::RefreshActor.new(source: env.account.actor, actor: actor).schedule
+      sync_featured_collection = env.params.body["sync-featured-collection"]? != "false"
+      state = Task::RefreshActor::State.new(sync_featured_collection: sync_featured_collection)
+      Task::RefreshActor.new(source: env.account.actor, actor: actor, state: state).schedule
     end
 
     if accepts_turbo_stream?

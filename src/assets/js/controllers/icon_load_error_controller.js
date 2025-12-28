@@ -17,9 +17,11 @@ export default class extends Controller {
         element.replaceWith(replacement)
         if (Ktistec.auth) {
           let xhr = new XMLHttpRequest()
-          xhr.open("POST", `/remote/actors/${element.dataset.actorId}/refresh`)
+          let data = "sync-featured-collection=false"
+          xhr.open("POST", `/remote/actors/${element.dataset.actorId}/refresh`, true)
+          xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded")
           xhr.setRequestHeader("X-CSRF-Token", Ktistec.csrf)
-          xhr.send()
+          xhr.send(data)
         }
       }
     }, true)

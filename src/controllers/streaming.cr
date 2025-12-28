@@ -22,8 +22,8 @@ class StreamingController
   def self.replace_actor_icon(io, id)
     actor = ActivityPub::Actor.find(id)
     # omit "data-actor-id" so that replacement can only be attempted once
-    body = %Q|<img src="#{actor.icon}">|
-    stream_replace(io, selector: ":is(i,img)[data-actor-id='#{actor.id}']", body: body)
+    body = %Q|<img class="ui avatar image" src="#{actor.icon}">|
+    stream_replace(io, selector: "img[data-actor-id='#{actor.id}']", body: body)
   end
 
   # Renders action to replace the notifications count.

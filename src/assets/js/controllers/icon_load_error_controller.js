@@ -11,6 +11,7 @@ export default class extends Controller {
       let element = event.target
       if (element.matches("img[data-actor-id]")) {
         let replacement = document.createElement("img")
+        replacement.className = "ui avatar image"
         replacement.setAttribute("src", "/images/avatars/fallback.png")
         replacement.dataset.actorId = element.dataset.actorId
         element.replaceWith(replacement)

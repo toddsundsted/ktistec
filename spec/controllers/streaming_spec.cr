@@ -96,8 +96,8 @@ Spectator.describe StreamingController do
     it "renders a Turbo Stream action" do
       expect(subject).to eq <<-HTML
       data: \
-      <turbo-stream action="replace" targets=":is(i,img)[data-actor-id='#{actor.id}']"><template>\
-      <img src="#{actor.icon}">\
+      <turbo-stream action="replace" targets="img[data-actor-id='#{actor.id}']"><template>\
+      <img class="ui avatar image" src="#{actor.icon}">\
       </template></turbo-stream>
       \n
       HTML

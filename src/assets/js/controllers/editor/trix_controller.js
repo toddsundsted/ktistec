@@ -1,6 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 import Trix from "trix"
 
+Trix.config.attachments.preview.caption = {
+  name: false,
+  size: false
+}
+
 function extend_handler(controller) {
   let previous_keydown = controller.events.keydown
   controller.events.keydown = function(event) {

@@ -63,6 +63,9 @@ module Ktistec
             caption.attributes.map(&.name).each do |attr|
               caption.delete(attr)
             end
+            unless caption.content.presence
+              caption.unlink
+            end
           end
           figure.attributes.map(&.name).each do |attr|
             figure.delete(attr)

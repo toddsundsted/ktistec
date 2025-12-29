@@ -69,9 +69,14 @@ Spectator.describe Ktistec::HTML do
       expect(described_class.enhance(content).content).to eq(%q|<figure><figcaption>the caption</figcaption></figure>|)
     end
 
-    it "removes the anchor but preserves the img and figcaption" do
+    it "removes blank figcaption" do
+      content = %q|<figure data-trix-content-type="image/png"><img src="https://test.test/img.png"><figcaption></figcaption></figure>|
+      expect(described_class.enhance(content).content).to eq(%q|<figure><img src="https://test.test/img.png"></figure>|)
+    end
+
+    it "removes the anchor and empty figcaption, preserves the img" do
       content = %q|<figure data-trix-content-type=""><a href=""><img src=""><figcaption></figcaption></a></figure>|
-      expect(described_class.enhance(content).content).to eq(%q|<figure><img src=""><figcaption></figcaption></figure>|)
+      expect(described_class.enhance(content).content).to eq(%q|<figure><img src=""></figure>|)
     end
 
     it "preserves lone br" do

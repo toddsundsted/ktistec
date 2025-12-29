@@ -160,14 +160,7 @@ nav.ui.top.navigation.menu {
                 width: 95px;
                 height: 95px;
             }
-            > .event {
-                .extra.text img.image, .extra.text audio.audio, .extra.text video.video { width: 100%; }
-                img.extra.image, audio.extra.audio, video.extra.video { width: 100%; }
-            }
-            > .detailed.event {
-                .extra.text img.image, .extra.text audio.audio, .extra.text video.video { height: auto; }
-                img.extra.image, audio.extra.audio, video.extra.video { height: auto; }
-            }
+
             @media screen and (max-width: 599px) {           /* phones */
                 .extra.text img.image, .extra.text video.video { height: 200px; }
                 img.extra.image, video.extra.video { height: 200px; }
@@ -183,6 +176,15 @@ nav.ui.top.navigation.menu {
             @media screen and (min-width: 1800px) {          /* wide desktops & larger */
             }
         }
+    }
+
+    .event {
+        .extra.text img.image, .extra.text audio.audio, .extra.text video.video { width: 100%; }
+        img.extra.image, audio.extra.audio, video.extra.video { width: 100%; }
+    }
+    .detailed.event {
+        .extra.text img.image, .extra.text audio.audio, .extra.text video.video { height: auto; }
+        img.extra.image, audio.extra.audio, video.extra.video { height: auto; }
     }
 
     /* threaded posts */
@@ -549,6 +551,24 @@ trix-editor {
     .attachment__caption { text-align: center; }
 
     figure img { object-fit: cover; width: 100%; height: auto; }
+
+    ::selection { color: var(--text-secondary); }
+
+    .trix-button-row .trix-button-group .trix-button {
+        border: 2px solid color-mix(in srgb, var(--semantic-primary) 60%, transparent);
+        border-radius: 11.52px;
+        background-color: var(--bg-primary);
+        box-shadow: rgba(0, 0, 0, 0.25) 1px 1px 6px 0px;
+        color: var(--text-secondary);
+        font-family: Arial;
+        line-height: 19.04px;
+        margin: 0 0.25em;
+
+        &:hover {
+            border-color: var(--text-primary);
+            border-style: solid;
+        }
+    }
 }
 
 @media (scripting: none) {
@@ -560,6 +580,70 @@ trix-editor {
 @media (scripting: enabled) {
     trix-editor + textarea {
         display: none;
+    }
+}
+
+.trix-alt-text-modal {
+    display: none;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+
+    input::selection, textarea::selection {
+        color: var(--text-secondary);
+    }
+
+    &[aria-hidden="false"] {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-overlay {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+        position: relative;
+        background-color: var(--bg-primary);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+        padding: 1em;
+        width: 90%;
+        max-width: 500px;
+        z-index: 10000;
+    }
+
+    .modal-body {
+        margin-bottom: 1em;
+
+        textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 0.5em;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: inherit;
+            color: var(--text-primary);
+            resize: vertical;
+
+            &:focus {
+                outline: none;
+                border-color: var(--semantic-primary);
+                box-shadow: 0 0 0 2px color-mix(in srgb, var(--semantic-primary) 20%, transparent);
+            }
+        }
+    }
+
+    .modal-footer {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
     }
 }
 

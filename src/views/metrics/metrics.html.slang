@@ -48,8 +48,8 @@ crystal:
       backgroundColor: "#{color}80",
       type: "line",
       showLine: false,
-      pointStyle: "triangle",
-      pointRadius: 4
+      pointRadius: 0,
+      hidden: false
     }
   end
 canvas#charts-2 data-controller="chart"

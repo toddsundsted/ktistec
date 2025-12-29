@@ -160,14 +160,7 @@ nav.ui.top.navigation.menu {
                 width: 95px;
                 height: 95px;
             }
-            > .event {
-                .extra.text img.image, .extra.text audio.audio, .extra.text video.video { width: 100%; }
-                img.extra.image, audio.extra.audio, video.extra.video { width: 100%; }
-            }
-            > .detailed.event {
-                .extra.text img.image, .extra.text audio.audio, .extra.text video.video { height: auto; }
-                img.extra.image, audio.extra.audio, video.extra.video { height: auto; }
-            }
+
             @media screen and (max-width: 599px) {           /* phones */
                 .extra.text img.image, .extra.text video.video { height: 200px; }
                 img.extra.image, video.extra.video { height: 200px; }
@@ -183,6 +176,15 @@ nav.ui.top.navigation.menu {
             @media screen and (min-width: 1800px) {          /* wide desktops & larger */
             }
         }
+    }
+
+    .event {
+        .extra.text img.image, .extra.text audio.audio, .extra.text video.video { width: 100%; }
+        img.extra.image, audio.extra.audio, video.extra.video { width: 100%; }
+    }
+    .detailed.event {
+        .extra.text img.image, .extra.text audio.audio, .extra.text video.video { height: auto; }
+        img.extra.image, audio.extra.audio, video.extra.video { height: auto; }
     }
 
     /* threaded posts */

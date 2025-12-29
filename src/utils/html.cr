@@ -38,7 +38,19 @@ module Ktistec
       Enhancements.new.tap do |enhancements|
         xml.xpath_nodes("//figure").each do |figure|
           figure.xpath_nodes(".//img").each do |image|
-            enhancements.attachments << Attachment.new(image["src"], figure["data-trix-content-type"])
+            if (attachment_data = figure["data-trix-attachment"]?)
+              begin
+                if (parsed = JSON.parse(attachment_data)) && parsed.as_h?
+                  caption = parsed["alt"]?.try(&.as_s?)
+                end
+              rescue JSON::ParseException
+                #
+              end
+            end
+            enhancements.attachments << Attachment.new(image["src"], figure["data-trix-content-type"], caption)
+            if caption.presence
+              image["alt"] = caption
+            end
           end
           figure.xpath_nodes(".//a[.//img]").each do |anchor|
             children = anchor.children

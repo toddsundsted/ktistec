@@ -17,6 +17,48 @@ Spectator.describe Ktistec::HTML do
       expect(described_class.enhance(content).attachments).to eq([Ktistec::HTML::Attachment.new("https://test.test/img.png", "image/png")])
     end
 
+    context "alt text" do
+      it "extracts alt text from data-trix-attachment" do
+        content = %q|<figure data-trix-attachment='{"contentType":"image/png","url":"https://test.test/img.png","alt":"A beautiful sunset!"}' data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
+        expect(described_class.enhance(content).attachments).to eq([Ktistec::HTML::Attachment.new("https://test.test/img.png", "image/png", "A beautiful sunset!")])
+      end
+
+      it "adds alt attribute to img tag" do
+        content = %q|<figure data-trix-attachment='{"contentType":"image/png","url":"https://test.test/img.png","alt":"A beautiful sunset!"}' data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
+        expect(described_class.enhance(content).content).to match(/<img src="https:\/\/test.test\/img.png" alt="A beautiful sunset!">/)
+      end
+
+      it "handles attachments without alt text" do
+        content = %q|<figure data-trix-attachment='{"contentType":"image/png","url":"https://test.test/img.png"}' data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
+        expect(described_class.enhance(content).attachments).to eq([Ktistec::HTML::Attachment.new("https://test.test/img.png", "image/png")])
+      end
+
+      it "handles attachments without alt text" do
+        content = %q|<figure data-trix-attachment='{"contentType":"image/png","url":"https://test.test/img.png"}' data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
+        expect(described_class.enhance(content).content).to match(/<img src="https:\/\/test.test\/img.png">/)
+      end
+
+      it "handles missing data-trix-attachment attribute" do
+        content = %q|<figure data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
+        expect(described_class.enhance(content).attachments).to eq([Ktistec::HTML::Attachment.new("https://test.test/img.png", "image/png")])
+      end
+
+      it "handles missing data-trix-attachment attribute" do
+        content = %q|<figure data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
+        expect(described_class.enhance(content).content).to match(/<img src="https:\/\/test.test\/img.png">/)
+      end
+
+      it "handles malformed JSON" do
+        content = %q|<figure data-trix-attachment='[]' data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
+        expect(described_class.enhance(content).attachments).to eq([Ktistec::HTML::Attachment.new("https://test.test/img.png", "image/png")])
+      end
+
+      it "handles malformed JSON" do
+        content = %q|<figure data-trix-attachment='[]' data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
+        expect(described_class.enhance(content).content).to match(/<img src="https:\/\/test.test\/img.png">/)
+      end
+    end
+
     it "strips attributes from the figure" do
       content = %q|<figure data-trix-content-type="" data-trix-attributes=""></figure>|
       expect(described_class.enhance(content).content).to eq(%q|<figure></figure>|)

@@ -224,7 +224,7 @@ module Ktistec::ViewHelper
         elsif actor.blocked?
           src = "/images/avatars/blocked.png"
           alt = "Blocked user"
-        elsif (icon = actor.icon.presence)
+        elsif !actor.down? && (icon = actor.icon.presence)
           src = icon
           alt = actor.display_name
         else

@@ -393,6 +393,15 @@ Spectator.describe "helpers" do
       end
     end
 
+    context "when actor is down" do
+      before_each { actor.assign(icon: "https://example.com/icon.png").save.down! }
+
+      it "renders fallback icon" do
+        src = subject.xpath_nodes("//img/@src").map(&.text).first
+        expect(src).to match(/\/images\/avatars\/color-\d+\.png/)
+      end
+    end
+
     context "when actor is deleted" do
       before_each { actor.assign(icon: "https://example.com/icon.png").save.delete! }
 

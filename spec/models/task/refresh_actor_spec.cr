@@ -158,11 +158,11 @@ Spectator.describe Task::RefreshActor do
       context "when refresh fails" do
         before_each { actor.assign(iri: "https://remote/returns-404") }
 
-        it "notifies subscribers" do
+        it "does not notify subscribers" do
           expect do
             subject.perform
             Fiber.yield
-          end.to change{notifications[0]}.by(1)
+          end.not_to change{notifications[0]}
         end
       end
     end

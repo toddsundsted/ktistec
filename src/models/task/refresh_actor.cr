@@ -63,7 +63,6 @@ class Task
         Ktistec::Topic{"/actor/refresh"}.notify_subscribers(actor.id.to_s)
       else
         actor.down!
-        Ktistec::Topic{"/actor/refresh"}.notify_subscribers(actor.id.to_s)
         message = "failed to dereference #{actor.iri}"
         failures << Failure.new(message)
         Log.debug { message }

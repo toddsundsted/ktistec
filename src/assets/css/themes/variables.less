@@ -46,7 +46,8 @@
 /** CSS variables for theming **/
 
 :root {
-    --text-white: #fff;
+    --color-white: #fff;
+    --color-black: #000;
     --color-transparent: transparent;
 }
 
@@ -54,34 +55,34 @@
 
 :root {
     /* mix helpers for light mode */
-    --mix-lighter: white;
-    --mix-darker: black;
+    --mix-lighter: var(--color-white);
+    --mix-darker: var(--color-black);
 
-    --text-primary: rgba(0, 0, 0, 0.87);
+    --text-primary: color-mix(in srgb, var(--mix-darker) 87%, transparent);
  /* --text-primary-1 ➞ --text-primary */
  /* --text-primary-2 ➞ --text-primary */
  /* --text-primary-3 ➞ --text-primary */
  /* --text-primary-4 ➞ --text-primary */
  /* --text-muted ➞ --text-primary-4 ➞ --text-primary */
-    --text-primary-inverted: rgba(255, 255, 255, 0.87);
-    --text-secondary: rgba(0, 0, 0, 0.6);
-    --text-nav-bar: rgba(255, 255, 255, 0.9);
+    --text-primary-inverted: color-mix(in srgb, var(--mix-lighter) 87%, transparent);
+    --text-secondary: color-mix(in srgb, var(--mix-darker) 60%, transparent);
+    --text-nav-bar: color-mix(in srgb, var(--color-white) 90%, transparent);
 
-    --bg-primary: #ffffff;
+    --bg-primary: var(--mix-lighter);
  /* --bg-primary-1 ➞ --bg-primary */
  /* --bg-primary-2 ➞ --bg-primary */
  /* --bg-primary-3 ➞ --bg-primary */
  /* --bg-transparent ➞ --bg-primary */
  /* --bg-hover ➞ --bg-primary */
-    --bg-nav-bar: #1b1c1d;
-    --bg-icon-menu: #fbfbfb;
-    --bg-input: #ffffff;
+    --bg-nav-bar: color-mix(in srgb, var(--color-white) 11%, var(--color-black));
+    --bg-icon-menu: color-mix(in srgb, var(--mix-lighter) 98%, var(--mix-darker));
+    --bg-input: var(--mix-lighter);
  /* --bg-accent-code ➞ --bg-input + --semantic-primary */
  /* --bg-accent-pre ➞ --bg-input + --semantic-primary */
-    --bg-label: #e8e8e8;
+    --bg-label: color-mix(in srgb, var(--mix-lighter) 91%, var(--mix-darker));
  /* --bg-label-hover ➞ --bg-label */
 
-    --border-color: rgba(34, 36, 38, 0.15);
+    --border-color: color-mix(in srgb, var(--mix-darker) 15%, transparent);
  /* --border-color-1 ➞ --border-color */
  /* --border-color-2 ➞ --border-color */
 
@@ -121,34 +122,34 @@
 @media (prefers-color-scheme: dark) {
     :root {
         /* swap mix helpers for dark mode */
-        --mix-lighter: black;
-        --mix-darker: white;
+        --mix-lighter: var(--color-black);
+        --mix-darker: var(--color-white);
 
-        --text-primary: #ffffff;
+        --text-primary: var(--mix-darker);
      /* --text-primary-1 ➞ --text-primary */
      /* --text-primary-2 ➞ --text-primary */
      /* --text-primary-3 ➞ --text-primary */
      /* --text-primary-4 ➞ --text-primary */
      /* --text-muted ➞ --text-primary-4 ➞ --text-primary */
-        --text-primary-inverted: #000000;
-        --text-secondary: rgba(255, 255, 255, 0.7);
-        --text-nav-bar: rgba(255, 255, 255, 0.9);
+        --text-primary-inverted: var(--mix-lighter);
+        --text-secondary: color-mix(in srgb, var(--mix-darker) 70%, transparent);
+        --text-nav-bar: color-mix(in srgb, var(--color-white) 90%, transparent);
 
-        --bg-primary: #1a1a1a;
+        --bg-primary: color-mix(in srgb, var(--mix-lighter) 90%, var(--mix-darker));
      /* --bg-primary-1 ➞ --bg-primary */
      /* --bg-primary-2 ➞ --bg-primary */
      /* --bg-primary-3 ➞ --bg-primary */
      /* --bg-transparent ➞ --bg-primary */
      /* --bg-hover ➞ --bg-primary */
-        --bg-nav-bar: #1b1c1d;
-        --bg-icon-menu: #1f1f1f;
-        --bg-input: #2d2d2d;
+        --bg-nav-bar: color-mix(in srgb, var(--color-white) 11%, var(--color-black));
+        --bg-icon-menu: color-mix(in srgb, var(--mix-lighter) 88%, var(--mix-darker));
+        --bg-input: color-mix(in srgb, var(--mix-lighter) 82%, var(--mix-darker));
      /* --bg-accent-code ➞ --bg-input + --semantic-primary */
      /* --bg-accent-pre ➞ --bg-input + --semantic-primary */
-        --bg-label: #484848;
+        --bg-label: color-mix(in srgb, var(--mix-lighter) 72%, var(--mix-darker));
      /* --bg-label-hover ➞ --bg-label */
 
-        --border-color: rgba(255, 255, 255, 0.15);
+        --border-color: color-mix(in srgb, var(--mix-darker) 15%, transparent);
      /* --border-color-1 ➞ --border-color */
      /* --border-color-2 ➞ --border-color */
 

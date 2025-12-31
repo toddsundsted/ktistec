@@ -68,6 +68,10 @@ The **rich text editor** provides text formatting options including
 *superscript*/*subscript*, *headers*, *blockquotes* with nested
 indentation, and both *bullet* and *numeric* lists.
 
+The rich text editor also supports adding and editing alt text for
+images to improve accessibility. Alt text describes images for screen
+readers and displays when images fail to load.
+
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/tszn70.png" width=460>
 
 The **Markdown editor** lets you write posts in Markdown syntax.

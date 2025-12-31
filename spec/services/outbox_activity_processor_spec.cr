@@ -201,6 +201,54 @@ Spectator.describe OutboxActivityProcessor do
         expect(MockDeliverTask.last_sender).to eq(account.actor)
         expect(MockDeliverTask.last_activity).to eq(create_activity)
       end
+
+      context "given Question object" do
+        let_create(
+          :question, named: object,
+          attributed_to: account.actor,
+        )
+        let_create!(
+          :poll,
+          question: object,
+          options: [Poll::Option.new("Option A", 0), Poll::Option.new("Option B", 0)],
+          closed_at: 1.hour.from_now,
+        )
+
+        it "creates a DistributePollUpdates task" do
+          expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }.
+            to change { Task::DistributePollUpdates.count }.by(1)
+        end
+
+        it "schedules the task for approximately 10 minutes from now" do
+          OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask)
+          task = Task::DistributePollUpdates.find(question: object)
+          expect(task.next_attempt_at).to be_close(10.minutes.from_now, 20.seconds)
+        end
+
+        context "when task already exists" do
+          let_build(:distribute_poll_updates_task, actor: account.actor, question: object)
+
+          before_each do
+            distribute_poll_updates_task.schedule(5.minutes.from_now)
+          end
+
+          it "does not create a duplicate task" do
+            expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }.
+              not_to change { Task::DistributePollUpdates.count }
+          end
+        end
+
+        context "given a remote question" do
+          let_create(  # remote by default
+            :question, named: object,
+          )
+
+          it "does not create a DistributePollUpdates task" do
+            expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }.
+              not_to change { Task::DistributePollUpdates.count }
+          end
+        end
+      end
     end
 
     context "with Announce activity" do

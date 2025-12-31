@@ -44,6 +44,18 @@ Spectator.describe PollsController do
         expect(response.status_code).to eq(422)
       end
 
+      it "rejects votes from poll author" do
+        question.assign(attributed_to: actor).save
+        post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes"
+        expect(response.status_code).to eq(422)
+      end
+
+      it "rejects votes from poll author" do
+        question.assign(attributed_to: actor).save
+        post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+        expect(response.status_code).to eq(422)
+      end
+
       it "requires at least one option" do
         post "/polls/#{poll.id}/vote", HTML_HEADERS, "options="
         expect(response.status_code).to eq(422)

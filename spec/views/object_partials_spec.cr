@@ -1,4 +1,5 @@
 require "../../src/models/activity_pub/object/note"
+require "../../src/models/activity_pub/object/question"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
 require "../../src/models/translation"
@@ -756,6 +757,152 @@ Spectator.describe "object partials" do
 
       it "renders the activity type as a class" do
         expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
+      end
+    end
+  end
+
+  describe "object.json.ecr" do
+    let(env) { env_factory("GET", "/object") }
+
+    subject do
+      JSON.parse(render "src/views/partials/object.json.ecr")
+    end
+
+    describe "Question with oneOf" do
+      let_build(
+        :actor, named: :author,
+      )
+      let_build(
+        :question, named: :object,
+        attributed_to: author,
+        published: Time.utc,
+      )
+      let_create!(
+        :poll,
+        question: object,
+        options: [
+          Poll::Option.new("Option 1", 5),
+          Poll::Option.new("Option 2", 3),
+        ],
+        multiple_choice: false,
+        voters_count: 8,
+        closed_at: 1.day.from_now,
+      )
+      let(recursive) { false }
+
+      it "includes `oneOf`" do
+        expect(subject["oneOf"]).not_to be_nil
+      end
+
+      it "does not include `anyOf`" do
+        expect(subject["anyOf"]?).to be_nil
+      end
+
+      it "includes correct number of options" do
+        expect(subject["oneOf"].as_a.size).to eq(2)
+      end
+
+      it "includes option names" do
+        expect(subject["oneOf"][0]["name"]).to eq("Option 1")
+        expect(subject["oneOf"][1]["name"]).to eq("Option 2")
+      end
+
+      it "includes vote counts" do
+        expect(subject["oneOf"][0]["replies"]["totalItems"]).to eq(5)
+        expect(subject["oneOf"][1]["replies"]["totalItems"]).to eq(3)
+      end
+
+      it "includes `votersCount`" do
+        expect(subject["votersCount"]).to eq(8)
+      end
+
+      it "has matching `endTime` and `closed` values" do
+        expect(subject["endTime"]).to eq(subject["closed"])
+      end
+    end
+
+    describe "Question with anyOf" do
+      let_build(
+        :actor, named: :author,
+      )
+      let_build(
+        :question, named: :object,
+        attributed_to: author,
+        published: Time.utc,
+      )
+      let_create!(
+        :poll,
+        question: object,
+        options: [
+          Poll::Option.new("Choice A", 7),
+          Poll::Option.new("Choice B", 2),
+        ],
+        multiple_choice: true,
+        voters_count: 15,
+        closed_at: 2.days.from_now,
+      )
+      let(recursive) { false }
+
+      it "includes `anyOf`" do
+        expect(subject["anyOf"]).not_to be_nil
+      end
+
+      it "does not include `oneOf`" do
+        expect(subject["oneOf"]?).to be_nil
+      end
+
+      it "includes correct number of options" do
+        expect(subject["anyOf"].as_a.size).to eq(2)
+      end
+
+      it "includes option names" do
+        expect(subject["anyOf"][0]["name"]).to eq("Choice A")
+        expect(subject["anyOf"][1]["name"]).to eq("Choice B")
+      end
+
+      it "includes vote counts" do
+        expect(subject["anyOf"][0]["replies"]["totalItems"]).to eq(7)
+        expect(subject["anyOf"][1]["replies"]["totalItems"]).to eq(2)
+      end
+
+      it "includes `votersCount`" do
+        expect(subject["votersCount"]).to eq(15)
+      end
+
+      it "has matching `endTime` and `closed` values" do
+        expect(subject["endTime"]).to eq(subject["closed"])
+      end
+    end
+
+    context "given a poll" do
+      let_build(
+        :actor, named: :author,
+      )
+      let_build(
+        :question, named: :object,
+        attributed_to: author,
+        published: Time.utc,
+      )
+      let_create!(
+        :poll,
+        question: object,
+        options: [
+          Poll::Option.new("Yes", 0),
+          Poll::Option.new("No", 0),
+        ],
+      )
+      let(recursive) { false }
+
+      it "does not include `votersCount`" do
+        expect(subject["votersCount"]?).to be_nil
+      end
+
+      it "does not include `endTime`" do
+        expect(subject["endTime"]?).to be_nil
+      end
+
+      it "does not include `closed`" do
+        expect(subject["closed"]?).to be_nil
       end
     end
   end

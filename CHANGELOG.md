@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.2.6]
+### Added
+- Support for editing alt text in the Trix editor. (fixes [#52](https://github.com/toddsundsted/ktistec/issues/52))
+
+### Fixed
+- Render fallback icon when actor is down.
+- Remove blank `figcaption` elements.
+- Emojify display names in notifications.
+
+### Changed
+- Color notifications label by type of unread notifications.
+- Render lines instead of points for server starts in metrics.
+
 ## [v3.2.5]
 ### Added
 - Support for editing posts in Markdown. (fixes [#25](https://github.com/toddsundsted/ktistec/issues/25))
@@ -590,6 +603,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.2.6]: https://github.com/toddsundsted/ktistec/compare/28674aa8...79e17af6
 [v3.2.5]: https://github.com/toddsundsted/ktistec/compare/2e91c174...20946f62
 [v3.2.4]: https://github.com/toddsundsted/ktistec/compare/7de86aa4...107553e8
 [v3.2.3]: https://github.com/toddsundsted/ktistec/compare/2ab2a727...023fd225

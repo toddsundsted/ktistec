@@ -283,20 +283,47 @@ Spectator.describe ActivityPub::Object::Question do
     )
   end
 
-  describe "#voted_by?" do
-    it "returns false" do
-      expect(question.voted_by?(actor)).to be_false
+  describe "#votes" do
+    it "returns empty array when no votes" do
+      expect(question.votes).to be_empty
     end
 
-    context "when actor has voted" do
+    context "with single vote" do
       vote(0)
 
-      it "returns true" do
-        expect(question.voted_by?(actor)).to be_true
+      it "returns all votes" do
+        votes = question.votes
+        expect(votes.size).to eq(1)
+        expect(votes.map(&.name)).to contain_exactly("Yes")
       end
     end
 
-    context "with reply" do
+    context "with multiple votes from same voter" do
+      vote(0)
+      vote(1)
+
+      it "returns all votes" do
+        votes = question.votes
+        expect(votes.size).to eq(2)
+        expect(votes.map(&.name)).to contain_exactly("Yes", "No")
+      end
+    end
+
+    context "with multiple voters" do
+      vote(0, voter1)
+      vote(1, voter2)
+
+      let_create(:actor, named: voter1, local: true)
+      let_create(:actor, named: voter2, local: true)
+
+      it "returns all votes" do
+        votes = question.votes
+        expect(votes.size).to eq(2)
+        expect(votes.map(&.name)).to contain_exactly("Yes", "No")
+      end
+    end
+
+    context "with a reply" do
       let_create!(
         :note,
         named: reply,
@@ -306,8 +333,8 @@ Spectator.describe ActivityPub::Object::Question do
         attributed_to: actor,
       )
 
-      it "ignores the reply" do
-        expect(question.voted_by?(actor)).to be_false
+      it "ignores replies" do
+        expect(question.votes).to be_empty
       end
     end
   end
@@ -353,6 +380,35 @@ Spectator.describe ActivityPub::Object::Question do
 
       it "ignores the other vote" do
         expect(question.votes_by(actor)).to be_empty
+      end
+    end
+  end
+
+  describe "#voted_by?" do
+    it "returns false" do
+      expect(question.voted_by?(actor)).to be_false
+    end
+
+    context "when actor has voted" do
+      vote(0)
+
+      it "returns true" do
+        expect(question.voted_by?(actor)).to be_true
+      end
+    end
+
+    context "with reply" do
+      let_create!(
+        :note,
+        named: reply,
+        name: nil,
+        content: "This is a regular reply",
+        in_reply_to: question,
+        attributed_to: actor,
+      )
+
+      it "ignores the reply" do
+        expect(question.voted_by?(actor)).to be_false
       end
     end
   end

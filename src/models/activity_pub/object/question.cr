@@ -6,12 +6,11 @@ class ActivityPub::Object
   class Question < ActivityPub::Object
     has_one poll, foreign_key: question_iri, primary_key: iri, inverse_of: question
 
-    def voted_by?(actor : ActivityPub::Actor) : Bool
-      !ActivityPub::Object::Note.where(
-        "in_reply_to_iri = ? AND attributed_to_iri = ? AND special = 'vote'",
-        self.iri,
-        actor.iri
-      ).empty?
+    def votes : Array(ActivityPub::Object::Note)
+      ActivityPub::Object::Note.where(
+        "in_reply_to_iri = ? AND special = 'vote'",
+        self.iri
+      )
     end
 
     def votes_by(actor : ActivityPub::Actor) : Array(ActivityPub::Object::Note)
@@ -20,6 +19,10 @@ class ActivityPub::Object
         self.iri,
         actor.iri
       )
+    end
+
+    def voted_by?(actor : ActivityPub::Actor) : Bool
+      !votes_by(actor).empty?
     end
 
     def options_by(actor : ActivityPub::Actor) : Array(String)

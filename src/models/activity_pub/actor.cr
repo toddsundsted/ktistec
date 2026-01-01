@@ -12,6 +12,8 @@ require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
 require "../relationship/content/bookmark"
 require "../relationship/content/pin"
+require "../relationship/content/follow/hashtag"
+require "../relationship/content/follow/mention"
 require "../relationship/content/notification/*"
 require "../relationship/content/timeline/*"
 require "../relationship/content/inbox"
@@ -952,6 +954,37 @@ module ActivityPub
           LIMIT ? OFFSET ?
       QUERY
       FilterTerm.query_and_paginate(query, id, page: page, size: size)
+    end
+
+    getter followed_actors : Set(String) do
+      query = <<-QUERY
+         SELECT r.to_iri
+           FROM relationships AS r
+          WHERE r.type = '#{Relationship::Social::Follow}'
+            AND r.from_iri = ?
+            AND r.confirmed = 1
+      QUERY
+      Ktistec.database.query_all(query, iri, as: String).to_set
+    end
+
+    getter followed_hashtags : Set(String) do
+      query = <<-QUERY
+         SELECT r.to_iri
+           FROM relationships AS r
+          WHERE r.type = '#{Relationship::Content::Follow::Hashtag}'
+            AND r.from_iri = ?
+      QUERY
+      Ktistec.database.query_all(query, iri, as: String).map(&.downcase).to_set
+    end
+
+    getter followed_mentions : Set(String) do
+      query = <<-QUERY
+         SELECT r.to_iri
+           FROM relationships AS r
+          WHERE r.type = '#{Relationship::Content::Follow::Mention}'
+            AND r.from_iri = ?
+      QUERY
+      Ktistec.database.query_all(query, iri, as: String).map(&.downcase).to_set
     end
 
     def make_delete_activity

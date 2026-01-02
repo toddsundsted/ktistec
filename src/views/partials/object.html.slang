@@ -11,7 +11,7 @@ crystal:
     viewing_actor ? mention_states(object, viewing_actor) : nil,
     object_states(object),
     actor_states(object, author, actor, followed_actors),
-  ].compact.join(" ")
+  ].compact.flatten.join(" ")
   attrs = object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
 turbo-frame.event id=anchor(object) class=classes *attrs
   == _view_src_views_partials_object_label_html_slang(env, author, actor)

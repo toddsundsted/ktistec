@@ -759,6 +759,25 @@ Spectator.describe "object partials" do
         expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
       end
     end
+
+    context "with multiple state classes" do
+      let_create!(:object, sensitive: true, replies_count: 2_i64)
+      let_create!(:mention, subject: object, name: "testuser")
+
+      it "contains expected class values" do
+        class_attr = subject.xpath_nodes("//*[contains(@class,'event')]/@class").first.content
+        classes = class_attr.split(/\s+/)
+        expect(classes).to contain_exactly(
+          "event",
+          "activity-like",
+          "actor-actor",
+          "object-object",
+          "is-sensitive",
+          "has-replies",
+          "visibility-public",
+        ).in_any_order
+      end
+    end
   end
 
   describe "object.json.ecr" do

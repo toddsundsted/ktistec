@@ -2456,5 +2456,13 @@ Spectator.describe "helpers" do
         expect(subject["data-followed-mentions"]).to eq("alice")
       end
     end
+
+    it "includes data-hashtags" do
+      expect(subject["data-hashtags"]).to eq("ruby crystal")
+    end
+
+    it "includes data-mentions" do
+      expect(subject["data-mentions"]).to eq("alice bob")
+    end
   end
 end

@@ -105,15 +105,21 @@ module Ktistec::ViewHelper
         attrs["data-actor-handle"] = actor.handle
         attrs["data-actor-iri"] = actor.iri
       end
+      object_hashtags = object.hashtags.map(&.name.downcase)
+      if object_hashtags.presence
+        attrs["data-hashtags"] = object_hashtags.first(10).join(" ")
+      end
       if followed_hashtags
-        object_hashtags = object.hashtags.map(&.name.downcase)
         matched = object_hashtags.select { |hashtag| followed_hashtags.includes?(hashtag) }
         if matched.presence
           attrs["data-followed-hashtags"] = matched.join(" ")
         end
       end
+      object_mentions = object.mentions.map(&.name.downcase)
+      if object_mentions.presence
+        attrs["data-mentions"] = object_mentions.first(10).join(" ")
+      end
       if followed_mentions
-        object_mentions = object.mentions.map(&.name.downcase)
         matched = object_mentions.select { |mention| followed_mentions.includes?(mention) }
         if matched.presence
           attrs["data-followed-mentions"] = matched.join(" ")

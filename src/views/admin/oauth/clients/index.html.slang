@@ -30,7 +30,8 @@ table.ui.table
           code = client.client_id.size > 6 ? "#{client.client_id[0..2]}…#{client.client_id[-3..-1]}" : client.client_id
         td
           i.copy.link.icon data-controller="clipboard" data-action="click->clipboard#click" data-clipboard-text-value=client.client_secret title="Copy Client Secret"
-          code ********
+          code
+            | ********
         td
           - if client.manual
             .ui.blue.label Manual

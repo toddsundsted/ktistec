@@ -90,6 +90,54 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
     end
   end
 
+  context "draft poll" do
+    sign_in
+
+    before_each do
+      poll.question.assign(
+        iri: "https://test.test/objects/#{Ktistec::Util.id}",
+        attributed_to: env.account.actor,  # author viewing own poll
+        published: nil
+      ).save
+    end
+
+    it "does not render vote counts" do
+      expect(subject.xpath_nodes("//*[@class='poll-count']")).to be_empty
+    end
+
+    it "renders enabled inputs" do
+      expect(subject.xpath_nodes("//input[@type='radio' and not(@disabled)]").size).to eq(3)
+    end
+
+    it "renders vote button as type='button'" do
+      expect(subject.xpath_nodes("//button[@type='button']").size).to eq(1)
+    end
+  end
+
+  context "published poll" do
+    sign_in
+
+    before_each do
+      poll.question.assign(
+        iri: "https://test.test/objects/#{Ktistec::Util.id}",
+        attributed_to: env.account.actor,  # author viewing own poll
+        published: Time.utc
+      ).save
+    end
+
+    it "renders vote counts" do
+      expect(subject.xpath_nodes("//*[@class='poll-count']/text()")).to contain_exactly("10", "20", "5")
+    end
+
+    it "renders disabled inputs" do
+      expect(subject.xpath_nodes("//input[@type='radio' and @disabled]").size).to eq(3)
+    end
+
+    it "renders disabled vote button" do
+      expect(subject.xpath_nodes("//button[@type='submit' and @disabled]").size).to eq(1)
+    end
+  end
+
   context "expired poll" do
     before_each { poll.assign(closed_at: Time.utc - 1.hour).save }
 

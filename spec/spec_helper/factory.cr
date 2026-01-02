@@ -387,6 +387,14 @@ def notify_poll_expiry_task_factory(subject_iri = nil, question = false, **optio
   )
 end
 
+def distribute_poll_updates_task_factory(subject_iri = nil, question = false, **options)
+  question = question_factory unless subject_iri || question.nil? || question
+  task_factory(
+    Task::DistributePollUpdates,
+    **{question: question || nil, subject_iri: subject_iri}.merge(options)
+  )
+end
+
 {% if @top_level.has_constant?("Task") %}
   class Factory::ConcurrentTask < Task
     include Task::ConcurrentTask

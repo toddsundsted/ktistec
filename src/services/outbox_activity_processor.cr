@@ -4,6 +4,7 @@ require "../models/activity_pub/object"
 require "../models/account"
 require "../rules/content_rules"
 require "../models/task/deliver"
+require "../models/task/distribute_poll_updates"
 require "../models/relationship/social/follow"
 
 class OutboxActivityProcessor
@@ -32,6 +33,16 @@ class OutboxActivityProcessor
     end
 
     case activity
+    when ActivityPub::Activity::Create
+      case (object = activity.object)
+      when ActivityPub::Object::Question
+        if object.local? && !Task::DistributePollUpdates.find?(question: object)
+          Task::DistributePollUpdates.new(
+            actor: activity.actor,
+            question: object
+          ).schedule(Task::DistributePollUpdates::CHECK_INTERVAL.from_now)
+        end
+      end
     when ActivityPub::Activity::Follow
       unless Relationship::Social::Follow.find?(actor: activity.actor, object: activity.object, visible: false)
         Relationship::Social::Follow.new(

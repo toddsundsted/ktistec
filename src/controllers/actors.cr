@@ -2,8 +2,6 @@ require "../framework/controller"
 require "../models/task/refresh_actor"
 require "../utils/rss"
 
-require "../models/relationship/content/follow/hashtag"
-require "../models/relationship/content/follow/mention"
 require "../models/relationship/content/notification/follow/hashtag"
 require "../models/relationship/content/notification/follow/mention"
 require "../models/relationship/content/notification/follow/thread"

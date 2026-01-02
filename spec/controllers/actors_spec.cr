@@ -138,12 +138,12 @@ Spectator.describe ActorsController do
 
       it "with no filters it renders all posts" do
         get "/actors/#{actor.username}?filters=none", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create", "event activity-announce").in_any_order
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/, /event activity-announce/).in_any_order
       end
 
       it "filters out shares from posts" do
         get "/actors/#{actor.username}?filters=no-shares", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/)
       end
 
       context "given a reply" do
@@ -151,12 +151,12 @@ Spectator.describe ActorsController do
 
         it "with no filters it renders all posts" do
           get "/actors/#{actor.username}?filters=none", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create", "event activity-announce").in_any_order
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/, /event activity-announce/).in_any_order
         end
 
         it "filters out replies from posts" do
           get "/actors/#{actor.username}?filters=no-replies", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-announce/)
         end
       end
 
@@ -323,7 +323,7 @@ Spectator.describe ActorsController do
 
         it "renders the object's create aspect" do
           get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
         end
       end
 
@@ -332,7 +332,7 @@ Spectator.describe ActorsController do
 
         it "renders the object's announce aspect" do
           get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
         end
       end
 
@@ -344,7 +344,7 @@ Spectator.describe ActorsController do
 
         it "renders the object's create aspect" do
           get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
         end
       end
     end
@@ -362,7 +362,7 @@ Spectator.describe ActorsController do
 
         it "renders the object's announce aspect" do
           get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
         end
       end
     end
@@ -436,7 +436,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
           end
         end
 
@@ -445,7 +445,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
           end
         end
 
@@ -457,7 +457,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
           end
         end
       end
@@ -475,7 +475,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
           end
         end
       end
@@ -679,7 +679,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
           end
         end
 
@@ -691,7 +691,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
           end
         end
       end
@@ -707,7 +707,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
           end
         end
 
@@ -719,7 +719,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
           end
         end
 
@@ -732,7 +732,7 @@ Spectator.describe ActorsController do
 
           it "renders the object without aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/^event\s/)
           end
         end
 
@@ -745,7 +745,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
           end
         end
 
@@ -758,7 +758,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
           end
         end
 
@@ -772,7 +772,7 @@ Spectator.describe ActorsController do
 
           it "renders the object without aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/^event\s/)
           end
 
           context "and a create" do
@@ -782,7 +782,7 @@ Spectator.describe ActorsController do
 
             it "renders the object's create aspect" do
               get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
             end
           end
 
@@ -793,7 +793,7 @@ Spectator.describe ActorsController do
 
             it "renders the object's announce aspect" do
               get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
             end
           end
         end

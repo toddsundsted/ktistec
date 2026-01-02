@@ -135,11 +135,14 @@ class OutboxesController
         bad_request
       end
       # after validating, set timestamps based on activity type
+      # use `assign` so that associated objects are marked as changed
       time = Time.utc
       if activity.is_a?(ActivityPub::Activity::Update)
-        object.updated = activity.published = time
+        object.assign(updated: time)
+        activity.assign(published: time)
       else
-        object.published = activity.published = time
+        object.assign(published: time)
+        activity.assign(published: time)
       end
     when "Follow"
       unless object_iri && (object = ActivityPub::Actor.find?(object_iri))

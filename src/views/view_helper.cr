@@ -48,15 +48,15 @@ module Ktistec::ViewHelper
     end
 
     def activity_type_class(activity)
-      activity ? "activity-#{activity.class.to_s.split("::").last.downcase}" : ""
+      activity ? "activity-#{activity.type.split("::").last.downcase}" : ""
     end
 
     def actor_type_class(actor)
-      actor ? "actor-#{actor.class.to_s.split("::").last.downcase}" : ""
+      actor ? "actor-#{actor.type.split("::").last.downcase}" : ""
     end
 
     def object_type_class(object)
-      object ? "object-#{object.class.to_s.split("::").last.downcase}" : ""
+      object ? "object-#{object.type.split("::").last.downcase}" : ""
     end
 
     def object_states(object)

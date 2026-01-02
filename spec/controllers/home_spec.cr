@@ -264,7 +264,7 @@ Spectator.describe HomeController do
 
             it "renders the object's create aspect" do
               get "/", HTML_HEADERS
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/)
             end
           end
 
@@ -275,7 +275,7 @@ Spectator.describe HomeController do
 
             it "renders the object's announce aspect" do
               get "/", HTML_HEADERS
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-announce/)
             end
           end
 
@@ -287,7 +287,7 @@ Spectator.describe HomeController do
 
             it "renders the object's create aspect" do
               get "/", HTML_HEADERS
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/)
             end
           end
         end
@@ -305,7 +305,7 @@ Spectator.describe HomeController do
 
             it "renders the object's announce aspect" do
               get "/", HTML_HEADERS
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-announce/)
             end
           end
         end

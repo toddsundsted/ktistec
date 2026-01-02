@@ -47,8 +47,79 @@ module Ktistec::ViewHelper
       object ? "depth-#{Math.min(object.depth, 9)}" : ""
     end
 
-    def activity(activity)
+    def activity_type_class(activity)
       activity ? "activity-#{activity.class.to_s.split("::").last.downcase}" : ""
+    end
+
+    def actor_type_class(actor)
+      actor ? "actor-#{actor.class.to_s.split("::").last.downcase}" : ""
+    end
+
+    def object_type_class(object)
+      object ? "object-#{object.class.to_s.split("::").last.downcase}" : ""
+    end
+
+    def object_states(object)
+      states = [] of String
+      states << "is-sensitive" if object.sensitive
+      states << "is-draft" if object.draft?
+      states << "is-deleted" if object.deleted?
+      states << "is-blocked" if object.blocked?
+      states << "has-replies" if object.replies_count > 0
+      states << "has-media" if object.attachments.try { |a| a.size > 0 }
+      if (attributed_to = object.attributed_to?)
+        states << "visibility-#{visibility(attributed_to, object)}"
+      end
+      states
+    end
+
+    def actor_states(object, author, actor, followed_actors)
+      states = [] of String
+      if followed_actors
+        states << "author-followed-by-me" if author && followed_actors.includes?(author.iri)
+        states << "actor-followed-by-me" if actor && actor != author && followed_actors.includes?(actor.iri)
+      end
+      states
+    end
+
+    def mention_states(object, actor)
+      states = [] of String
+      object_mentions = object.mentions
+      is_mentioned = object_mentions.any? { |m| m.href == actor.iri }
+      if is_mentioned
+        states << (object_mentions.size == 1 ? "mentions-only-me" : "mentions-me")
+      end
+      states
+    end
+
+    def object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
+      attrs = {} of String => String
+      if (id = object.id)
+        attrs["data-object-id"] = id.to_s
+      end
+      if author
+        attrs["data-author-handle"] = author.handle
+        attrs["data-author-iri"] = author.iri
+      end
+      if actor && actor != author
+        attrs["data-actor-handle"] = actor.handle
+        attrs["data-actor-iri"] = actor.iri
+      end
+      if followed_hashtags
+        object_hashtags = object.hashtags.map(&.name.downcase)
+        matched = object_hashtags.select { |hashtag| followed_hashtags.includes?(hashtag) }
+        if matched.presence
+          attrs["data-followed-hashtags"] = matched.join(" ")
+        end
+      end
+      if followed_mentions
+        object_mentions = object.mentions.map(&.name.downcase)
+        matched = object_mentions.select { |mention| followed_mentions.includes?(mention) }
+        if matched.presence
+          attrs["data-followed-mentions"] = matched.join(" ")
+        end
+      end
+      attrs
     end
 
     def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, for_thread = nil, for_actor = nil, highlight = false)

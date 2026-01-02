@@ -1,4 +1,5 @@
 require "../object"
+require "./question"
 
 class ActivityPub::Object
   class Note < ActivityPub::Object

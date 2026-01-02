@@ -1852,4 +1852,53 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.display_name).to eq("[blocked]")
     end
   end
+
+  describe "#followed_actors" do
+    let_build(:actor)
+    let_build(:actor, named: :other)
+
+    it "returns empty set" do
+      expect(actor.followed_actors).to be_empty
+    end
+
+    context "given a follow" do
+      let_create!(:follow_relationship, actor: actor, object: other)
+
+      it "returns followed actors" do
+        expect(actor.followed_actors).to contain(other.iri)
+      end
+    end
+  end
+
+  describe "#followed_hashtags" do
+    let_build(:actor)
+
+    it "returns empty set" do
+      expect(actor.followed_hashtags).to be_empty
+    end
+
+    context "given a follow" do
+      let_create!(:follow_hashtag_relationship, actor: actor, name: "crystal")
+
+      it "returns set of followed hashtags" do
+        expect(actor.followed_hashtags).to contain("crystal")
+      end
+    end
+  end
+
+  describe "#followed_mentions" do
+    let_build(:actor)
+
+    it "returns empty set" do
+      expect(actor.followed_mentions).to be_empty
+    end
+
+    context "given a follow" do
+      let_create!(:follow_mention_relationship, actor: actor, name: "alice@example.com")
+
+      it "returns set of followed mentions" do
+        expect(actor.followed_mentions).to contain("alice@example.com")
+      end
+    end
+  end
 end

@@ -294,14 +294,139 @@ server.
 ## Theming
 
 Ktistec includes built-in theming support that allows for custom theme
-creation and automatically adapts to your browser's light/dark mode
-preference.
+creation. The theming system uses a hierarchy of CSS custom
+properties and computed fallback values to provide consistent
+styling across all elements with a minimum of effort.
 
-### Built-in Theme Support
+Theme authors can customize at multiple levels:
 
-Ktistec automatically switches between light and dark themes based on
-your browser's color scheme preference. The theming system uses CSS
-custom properties to provide consistent styling across all elements.
+### Level 1 - Base Colors
+
+Define only base colors like `--text-primary`, `--bg-primary`,
+`--bg-input`, `--semantic-primary`, etc. Variations are
+automatically generated using `color-mix` formulas.
+
+Example:
+```css
+:root { --semantic-primary: #7277cf; }
+```
+
+Result: `--bg-accent-code`, `--anchor-color`, etc. auto-generate using
+`--semantic-primary` as the base color.
+
+### Level 2 - Full Control
+
+Define base colors and derived colors. Defined colors are used as
+specified. The rest are automatically generated.
+
+Example:
+```css
+:root {
+  --text-primary: #333;
+  --text-primary-2: #ff0000;
+}
+```
+
+Result: `--text-primary-1/-3/-4` auto-generate; `--text-primary-2` is
+red.
+
+The full set of CSS custom color properties is found in
+[variables.less](src/assets/css/themes/variables.less).
+
+### CSS Classes and Data Attributes
+
+Ktistec exposes rich metadata through CSS classes and data attributes
+that you can target in your themes. In the descriptions below, **author**
+refers to the original creator of the content, while **actor** refers
+to the user performing the activity (e.g., the person who boosted the
+post).
+
+#### CSS Classes
+
+##### ActivityPub Object Types
+- `object-note`, `object-question`, etc.
+
+##### ActivityPub Actor Types
+- `actor-person`, `actor-group`, etc.
+
+##### ActivityPub Activity Types
+- `activity-create`, `activity-announce`, `activity-like`
+
+##### Object States
+- `is-draft` - Post is a draft
+- `is-deleted` - Post or author is deleted
+- `is-blocked` - Post or author is blocked
+- `is-sensitive` - Post is marked sensitive
+- `has-replies` - Post has at least one reply
+- `has-media` - Post has media attachments
+
+##### Visibility States
+- `visibility-public` - Posted to public timeline
+- `visibility-private` - Posted to followers only
+- `visibility-direct` - Direct mention
+
+##### Relationship States (when logged in)
+- `author-followed-by-me` - You follow the original author
+- `actor-followed-by-me` - You follow the announcer/liker
+
+##### Mention States
+- `mentions-me` - You are mentioned in this post
+- `mentions-only-me` - You are the only actor mentioned
+
+##### Visual States
+- `highlighted` - Post is highlighted in the UI
+- `depth-0`, `depth-1`, `depth-2`, etc. - Thread depth levels
+
+#### Data Attributes
+
+Data attributes allow targeting specific identities and content identifiers.
+
+##### Author/Actor Identifiers
+- `data-author-handle` - Author's full handle (e.g., `@alice@example.com`)
+- `data-author-iri` - Author's full IRI (e.g., `https://example.com/actors/alice`)
+- `data-actor-handle` - Actor's handle (when different from author, e.g., in boosts)
+- `data-actor-iri` - Actor's IRI (when different from author)
+
+##### Content Tags
+- `data-followed-hashtags` - Space-separated hashtags you follow that appear in this post
+- `data-followed-mentions` - Space-separated mentions you follow that appear in this post
+- `data-hashtags` - Up to 10 space-separated hashtags that appear in the post
+- `data-mentions` - Up to 10 space-separated mentions that appear in the post
+
+##### Metadata
+- `data-object-id` - Database ID of the object
+
+#### Example Selectors
+
+```css
+/* Highlight posts from a specific author */
+.ui.feed [data-author-handle="@alice@example.com"] {
+  border-left: 4px solid purple;
+  background: #f5f0ff;
+}
+
+/* Style posts about specific topics */
+.ui.feed [data-followed-hashtags~="activitypub"] {
+  border-left-color: #6b4fbb;
+}
+
+/* Followed author shared by followed actor */
+.ui.feed .activity-announce.author-followed-by-me.actor-followed-by-me {
+  background: linear-gradient(to right, #e8f5e9, #e1f5fe);
+  border-left: 4px solid #4caf50;
+  border-top: 3px solid #00bcd4;
+}
+
+/* Polls from groups */
+.ui.feed .object-question.actor-group {
+  border-left: 5px solid #ff9800;
+}
+
+/* Direct messages from followed authors */
+.ui.feed .visibility-direct.author-followed-by-me {
+  border: 3px solid #4caf50;
+}
+```
 
 ### Custom Themes
 
@@ -312,7 +437,7 @@ every page's HTML `head` element.
 #### Creating a Custom Theme
 
 1. Add `.css` and `.js` files to `public/themes/`
-2. Use CSS custom properties to override existing theme variables
+2. Use CSS custom properties to override theme variables
 3. Restart the server—theme files are discovered at startup
 
 A simple custom theme that supports both light and dark modes:
@@ -335,11 +460,10 @@ A simple custom theme that supports both light and dark modes:
 }
 ```
 
-See `src/assets/css/themes/variables.less` for the complete list of
-available custom properties.
+### Light/Dark Mode Support
 
-You can preview how your custom theme affects Ktistec UI elements by
-visiting the design system page at `/.design-system`.
+If themes are properly designed, Ktistec automatically adapts to your
+browser's light/dark mode preference.
 
 ## API
 

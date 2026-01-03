@@ -1,5 +1,6 @@
 .ui.text.container
   h1.ui.header Admin
+  p.small.text Ktistec Version #{Ktistec::VERSION}
   .ui.very.relaxed.list
     .item
       i.large.cog.icon

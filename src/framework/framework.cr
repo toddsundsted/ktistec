@@ -209,7 +209,7 @@ module Ktistec
   class Server
     class_getter? shutting_down : Bool = false
 
-    def self.run
+    def self.run(&)
       log_levels = LogLevel.all_as_hash
       ::Log.setup log_levels.transform_values(&.severity)
 

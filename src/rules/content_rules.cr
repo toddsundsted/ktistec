@@ -108,7 +108,7 @@ class ContentRules
     compiler.compile
   end
 
-  def run
+  def run(&)
     domain = self.class.domain.copy(independent_facts: true)
     with domain yield
     domain.run

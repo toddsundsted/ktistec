@@ -185,7 +185,7 @@ module Ktistec
         loop do
           select_actions = subscriptions.values.map(&.channel.receive_select_action)
           select_actions += [timeout_select_action(timeout)] if timeout
-          i, subject = Channel(Int32).select(select_actions)
+          _, subject = Channel(Int32).select(select_actions)
           if subject
             if (subscription = subscriptions[subject]) && !subscription.queue.empty?
               values, subscription.queue = subscription.queue, Array(String).new
@@ -239,7 +239,6 @@ module Ktistec
           debounce_interval = subject_name ? self.class.debounce_interval_for(subject_name) : nil
           @@subscriptions[subject].each do |subscription|
             unless subscription.channel.closed? || subscription.queue.includes?(value)
-              was_empty = subscription.queue.empty?
               subscription.queue << value
               if debounce_interval
                 # start timer on first value. send when timer fires

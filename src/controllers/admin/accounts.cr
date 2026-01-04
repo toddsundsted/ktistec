@@ -24,8 +24,6 @@ module Admin
     end
 
     post "/admin/accounts" do |env|
-      host = Ktistec.host
-
       params = params(env)
 
       account = Account.new(params)

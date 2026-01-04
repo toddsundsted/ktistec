@@ -834,7 +834,7 @@ module MCP
 
       liked = announced = false
       inclusion = [ActivityPub::Activity::Like, ActivityPub::Activity::Announce]
-      activities = object.activities(inclusion: inclusion).select do |activity|
+      object.activities(inclusion: inclusion).each do |activity|
         if activity.actor == owner
           liked = true if activity.is_a?(ActivityPub::Activity::Like)
           announced = true if activity.is_a?(ActivityPub::Activity::Announce)

@@ -231,7 +231,7 @@ module ActivityPub
 
     private def social_query(type, orig, dest, public = true)
       public = public ? "AND r.confirmed = 1 AND r.visible = 1" : nil
-      query = <<-QUERY
+      <<-QUERY
         SELECT #{Actor.columns(prefix: "a")}
           FROM actors AS a, relationships AS r
          WHERE a.iri = r.#{orig}
@@ -259,7 +259,7 @@ module ActivityPub
     end
 
     private def activity_query(type)
-      query = <<-QUERY
+      <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS c
@@ -275,7 +275,7 @@ module ActivityPub
     end
 
     private def activity_count_query(type)
-      query = <<-QUERY
+      <<-QUERY
          SELECT count(o.id)
            FROM objects AS o
            JOIN actors AS c

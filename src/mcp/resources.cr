@@ -269,7 +269,7 @@ module MCP
 
       # process attachments to filter out embedded image URLs
       embedded_urls = [] of String
-      if content && (attachments = object.attachments)
+      if content && object.attachments
         begin
           html_doc = XML.parse_html(content)
           embedded_urls = html_doc.xpath_nodes("//img/@src").map(&.text)

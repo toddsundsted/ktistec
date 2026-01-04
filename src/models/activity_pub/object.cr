@@ -926,7 +926,7 @@ module ActivityPub
           canonical.destroy
         end
         if (canonical.nil? || canonical.from_iri != @canonical_path) && (canonical_path = @canonical_path)
-          canonical = Relationship::Content::Canonical.new(from_iri: canonical_path, to_iri: path).save
+          Relationship::Content::Canonical.new(from_iri: canonical_path, to_iri: path).save
           if (urls = self.urls)
             urls << "#{Ktistec.host}#{canonical_path}"
           else

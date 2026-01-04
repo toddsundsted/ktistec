@@ -71,7 +71,7 @@ class HomeController
       else
         unprocessable_entity "home/step_1", env: env, settings: settings
       end
-    elsif (accounts = Account.all).empty?
+    elsif Account.all.empty?
       params = step_2_params(env)
 
       account = Account.new(params)

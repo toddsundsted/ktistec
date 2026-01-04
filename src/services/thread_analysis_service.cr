@@ -285,7 +285,6 @@ module ThreadAnalysisService
 
     time_start = active_objects.first[:published]
     time_end = active_objects.last[:published]
-    duration = time_end - time_start
 
     bucket_size_minutes = best_bucket_size
 

@@ -6,10 +6,12 @@ require "../../../../../spec_helper/factory"
 Spectator.describe Relationship::Content::Notification::Follow::Mention do
   setup_spec
 
+  let_create(:actor, named: owner)
+
   let(options) do
     {
-      owner: Factory.create(:actor),
-      name: "foo@bar"
+      owner: owner,
+      name: "foo@bar",
     }
   end
 

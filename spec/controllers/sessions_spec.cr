@@ -12,7 +12,7 @@ Spectator.describe SessionsController do
   let(username) { random_username }
   let(password) { random_password }
 
-  let!(account) { Factory.create(:account, username: username, password: password) }
+  let_create!(:account, username: username, password: password)
   let(session) { Session.new(account).save }
   let(payload) { {jti: session.session_key, iat: Time.utc} }
   let(jwt) { Ktistec::JWT.encode(payload) }

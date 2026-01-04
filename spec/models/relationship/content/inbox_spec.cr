@@ -6,10 +6,13 @@ require "../../../spec_helper/factory"
 Spectator.describe Relationship::Content::Inbox do
   setup_spec
 
+  let_create(:actor, named: from)
+  let_create(:activity, named: to)
+
   let(options) do
     {
-      from_iri: Factory.create(:actor).iri,
-      to_iri: Factory.create(:activity).iri
+      from_iri: from.iri,
+      to_iri: to.iri,
     }
   end
 

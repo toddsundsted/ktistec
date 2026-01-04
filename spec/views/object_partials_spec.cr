@@ -336,14 +336,14 @@ Spectator.describe "object partials" do
       end
 
       context "given hashtags with the same name" do
+        let_build(:hashtag, named: one, name: "bar")
+        let_build(:hashtag, named: two, name: "bar")
+
         let(with_detail) { true }
 
         before_each do
           object.assign(
-            hashtags: [
-              Factory.build(:hashtag, name: "bar"),
-              Factory.build(:hashtag, name: "bar")
-            ]
+            hashtags: [one, two]
           )
         end
 
@@ -354,14 +354,14 @@ Spectator.describe "object partials" do
       end
 
       context "given mentions with the same name" do
+        let_build(:mention, named: one, name: "bar@one.com")
+        let_build(:mention, named: two, name: "bar@one.com")
+
         let(with_detail) { true }
 
         before_each do
           object.assign(
-            mentions: [
-              Factory.build(:mention, name: "bar@one.com"),
-              Factory.build(:mention, name: "bar@one.com")
-            ]
+            mentions: [one, two]
           )
         end
 
@@ -372,14 +372,14 @@ Spectator.describe "object partials" do
       end
 
       context "given mentions with different names but the same handle" do
+        let_build(:mention, named: one, name: "bar@one.com")
+        let_build(:mention, named: two, name: "bar@two.com")
+
         let(with_detail) { true }
 
         before_each do
           object.assign(
-            mentions: [
-              Factory.build(:mention, name: "bar@one.com"),
-              Factory.build(:mention, name: "bar@two.com")
-            ]
+            mentions: [one, two]
           )
         end
 
@@ -390,14 +390,14 @@ Spectator.describe "object partials" do
       end
 
       context "given mentions with different names" do
+        let_build(:mention, named: one, name: "foo@one.com")
+        let_build(:mention, named: two, name: "bar@two.com")
+
         let(with_detail) { true }
 
         before_each do
           object.assign(
-            mentions: [
-              Factory.build(:mention, name: "foo@one.com"),
-              Factory.build(:mention, name: "bar@two.com")
-            ]
+            mentions: [one, two]
           )
         end
 

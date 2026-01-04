@@ -11,11 +11,11 @@ Spectator.describe "partials" do
   include Ktistec::ViewHelper::ClassMethods
 
   describe "collection.json.ecr" do
+    let_build(:object, named: foo, iri: "foo")
+    let_build(:object, named: bar, iri: "bar")
+
     let(collection) do
-      Ktistec::Util::PaginatedArray{
-        Factory.build(:object, iri: "foo"),
-        Factory.build(:object, iri: "bar")
-      }
+      Ktistec::Util::PaginatedArray{foo, bar}
     end
 
     let(env) { env_factory("GET", "/collection#{query}") }

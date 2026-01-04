@@ -101,9 +101,10 @@ Spectator.describe Task::Fetch::Thread do
   describe "#perform" do
     let_create(:object)
 
+    # these tests assume this is a "followed" thread
+    let_create!(:follow_thread_relationship, named: nil, actor: source, thread: object.thread)
+
     subject do
-      # these tests assume this is a "followed" thread
-      Factory.build(:follow_thread_relationship, actor: source, thread: object.thread).save
       described_class.new(source: source, thread: object.thread).save
     end
 

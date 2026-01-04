@@ -13,7 +13,10 @@ Spectator.describe ActivityPub::Object do
   setup_spec
 
   describe "#source=" do
-    subject { Factory.build(:object, local: true) }
+    let_build(:object, local: true)
+
+    subject { object }
+
     let_create!(:actor, named: :foo, iri: "https://bar.com/foo", urls: ["https://bar.com/@foo"], username: "foo")
     let_create!(:actor, named: :bar, iri: "https://foo.com/bar", urls: ["https://foo.com/@bar"], username: "bar")
     let(source) { ActivityPub::Object::Source.new("foobar #foobar @foo@bar.com", "text/html") }
@@ -713,20 +716,22 @@ Spectator.describe ActivityPub::Object do
       expect(JSON.parse(object.to_json_ld).as_h).not_to have_key("contentMap")
     end
 
-    it "renders hashtags" do
-      object = described_class.new(
-        iri: "https://test.test/object",
-        hashtags: [Factory.build(:hashtag, name: "foo", href: "https://test.test/tags/foo")]
-      ).save
-      expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Hashtag", "name" => "#foo", "href" => "https://test.test/tags/foo"})
+    context "with hashtags" do
+      let_build(:hashtag, name: "foo", href: "https://test.test/tags/foo")
+
+      it "renders hashtags" do
+        object = described_class.new(iri: "https://test.test/object", hashtags: [hashtag]).save
+        expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Hashtag", "name" => "#foo", "href" => "https://test.test/tags/foo"})
+      end
     end
 
-    it "renders mentions" do
-      object = described_class.new(
-        iri: "https://test.test/object",
-        mentions: [Factory.build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo")]
-      ).save
-      expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Mention", "name" => "@foo@test.test", "href" => "https://test.test/actors/foo"})
+    context "with mentions" do
+      let_build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo")
+
+      it "renders mentions" do
+        object = described_class.new(iri: "https://test.test/object", mentions: [mention]).save
+        expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Mention", "name" => "@foo@test.test", "href" => "https://test.test/actors/foo"})
+      end
     end
 
     it "renders sensitive property when true" do
@@ -1194,10 +1199,12 @@ Spectator.describe ActivityPub::Object do
   end
 
   context "when threaded" do
+    let_build(:actor)
+
     subject do
       described_class.new(
         iri: "https://test.test/objects/#{random_string}",
-        attributed_to: Factory.build(:actor),
+        attributed_to: actor,
         visible: true,
       ).save
     end
@@ -1634,12 +1641,12 @@ Spectator.describe ActivityPub::Object do
 
     def make_test_thread(structure : Array({time_offset: Time::Span, parent_idx: Int32?, author_idx: Int32}))
       actors = (0...6).map do |i|
-        Factory.create(:actor, iri: "https://test.test/actors/#{('a'.ord + i).chr}")
+        Factory.create(:actor, iri: "https://test.test/actors/#{('a'.ord + i).chr}")  # ameba:disable Ktistec/NoImperativeFactories
       end
       objects = [] of ActivityPub::Object
       structure.each do |spec|
         parent = (idx = spec[:parent_idx]) ? objects[idx] : nil
-        object = Factory.create(
+        object = Factory.create(  # ameba:disable Ktistec/NoImperativeFactories
           :object,
           in_reply_to: parent,
           attributed_to: actors[spec[:author_idx]],
@@ -1921,8 +1928,9 @@ Spectator.describe ActivityPub::Object do
   end
 
   describe "#tags" do
-    let(hashtag) { Factory.build(:hashtag, name: "foo", href: "https://test.test/tags/foo") }
-    let(mention) { Factory.build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo") }
+    let_build(:hashtag, name: "foo", href: "https://test.test/tags/foo")
+    let_build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo")
+
     subject do
       described_class.new(
         iri: "https://test.test/object",

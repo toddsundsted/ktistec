@@ -316,8 +316,9 @@ Spectator.describe SearchesController do
           end
 
           context "with an existing like" do
+            let_build(:like, actor: actor, object: object)
+
             before_each do
-              like = Factory.build(:like, actor: actor, object: object)
               put_in_outbox(actor, like)
             end
 

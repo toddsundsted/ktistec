@@ -2,10 +2,10 @@ require "../../framework/database"
 
 extend Ktistec::Database::Migration
 
-up do |db|
+up do
   add_column "accounts", "timezone", "varchar(244) NOT NULL DEFAULT \"\""
 end
 
-down do |db|
+down do
   remove_column "accounts", "timezone"
 end

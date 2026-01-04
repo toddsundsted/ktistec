@@ -17,11 +17,11 @@ class SettingsController
     ok "settings/settings", env: env, account: account, actor: actor, settings: settings
   end
 
-  get "/settings/actor" do |env|
+  get "/settings/actor" do |env|  # ameba:disable Lint/UnusedArgument
     redirect settings_path
   end
 
-  get "/settings/service" do |env|
+  get "/settings/service" do |env|  # ameba:disable Lint/UnusedArgument
     redirect settings_path
   end
 

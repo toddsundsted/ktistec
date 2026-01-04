@@ -1104,9 +1104,7 @@ Spectator.describe "helpers" do
     let(host) { Ktistec.settings.host }
 
     subject do
-      JSON.parse(String.build { |content_io|
-        activity_pub_collection(collection)
-      })
+      JSON.parse(String.build { |content_io| activity_pub_collection(collection) })  # ameba:disable Lint/UnusedArgument
     end
 
     it "generates a JSON-LD document" do

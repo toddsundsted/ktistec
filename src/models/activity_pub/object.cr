@@ -214,7 +214,7 @@ module ActivityPub
           end
           if media_type == "text/html"
             # remove old mentions from both to and cc
-            old_mentions = self.mentions.map(&.href).compact
+            old_mentions = self.mentions.compact_map(&.href)
             if (old_to = self.to)
               self.to = old_to - old_mentions
             end
@@ -230,7 +230,7 @@ module ActivityPub
             self.mentions = enhancements.mentions
 
             # add new mentions based on addressing
-            new_mentions = enhancements.mentions.map(&.href).compact
+            new_mentions = enhancements.mentions.compact_map(&.href)
             if new_mentions.any?
               is_public = (to = self.to) && to.includes?("https://www.w3.org/ns/activitystreams#Public")
               is_private = to && to.includes?(attributed_to.try(&.followers))

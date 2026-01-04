@@ -85,7 +85,7 @@ module OAuth2
       validates(redirect_uris) do
         if redirect_uris.presence
           errors =
-            redirect_uris.split.map do |uri|
+            redirect_uris.split.compact_map do |uri|
               begin
                 parsed_uri = URI.parse(uri)
                 unless parsed_uri.scheme.presence && parsed_uri.host.presence
@@ -94,7 +94,7 @@ module OAuth2
               rescue URI::Error
                 uri
               end
-            end.compact
+            end
           "invalid URIs: #{errors.join(", ")}" if errors.presence
         else
           "must be present"

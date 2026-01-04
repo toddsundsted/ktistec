@@ -220,7 +220,7 @@ module Ktistec
       @frozen = true
       Log.debug do
         subscriptions_count = @@subscriptions.values.map(&.size).sum
-        subjects = (0...@subjects.size).map { |i| @subjects[i] }.compact.join(" ")
+        subjects = (0...@subjects.size).compact_map { |i| @subjects[i] }.join(" ")
         "statistics - subscriptions=#{subscriptions_count} slots=#{@subjects.size} free=#{@subjects.free} | #{subjects}"
       end
       Log.trace do

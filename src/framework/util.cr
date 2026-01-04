@@ -152,7 +152,7 @@ module Ktistec
           if (local && (values = attributes[:local]?)) ||
              (!local && (values = attributes[:remote]?)) ||
              (values = attributes[:all]?)
-            temporary = values.map do |name, value|
+            temporary = values.compact_map do |name, value|
               if name == "class" && value
                 classes.unshift(value)
                 nil
@@ -161,7 +161,7 @@ module Ktistec
               else
                 " #{name}"
               end
-            end.compact
+            end
           end
           unless classes.empty?
             build << " class='#{classes.join(' ').strip}'"

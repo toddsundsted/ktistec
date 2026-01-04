@@ -40,7 +40,7 @@ class MetricsController
           in Granularity::Yearly
             current = _begin.at_beginning_of_year
           end
-          while (current <= _end)
+          while current <= _end
             case granularity
             in Granularity::Hourly
               result << current.to_s("%Y-%m-%d %H:00")

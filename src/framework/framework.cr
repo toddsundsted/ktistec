@@ -233,7 +233,7 @@ module Ktistec
       return if @@shutting_down
       @@shutting_down = true
       Log.info { "#{Kemal.config.app_name} is going to take a rest!" } if Kemal.config.shutdown_message
-      if server = Kemal.config.server
+      if (server = Kemal.config.server)
         server.close unless server.closed?
         Kemal.config.running = false
       end

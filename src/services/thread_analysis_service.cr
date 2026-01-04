@@ -114,7 +114,7 @@ module ThreadAnalysisService
         next_level_iris = [] of String
 
         current_level_iris.each do |parent_iri|
-          if children = children_map[parent_iri]?
+          if (children = children_map[parent_iri]?)
             children.each do |child|
               next_level_ids << child[:id]
               next_level_iris << child[:iri]

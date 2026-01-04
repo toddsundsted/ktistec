@@ -66,7 +66,7 @@ class ActorsController
           redirect "/actors/#{account.username}"
         end
       else
-        if filters = env.session.string?("timeline_filters")
+        if (filters = env.session.string?("timeline_filters"))
           unless filters.empty?
             query_string = %Q|filters=#{filters.split(",").join("&filters=")}|
             redirect "/actors/#{account.username}?#{query_string}"

@@ -219,7 +219,7 @@ module Ktistec
     def notify_subscribers(value : String = "")
       @frozen = true
       Log.debug do
-        subscriptions_count = @@subscriptions.values.map(&.size).sum
+        subscriptions_count = @@subscriptions.values.sum(&.size)
         subjects = (0...@subjects.size).compact_map { |i| @subjects[i] }.join(" ")
         "statistics - subscriptions=#{subscriptions_count} slots=#{@subjects.size} free=#{@subjects.free} | #{subjects}"
       end

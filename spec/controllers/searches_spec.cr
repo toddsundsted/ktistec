@@ -67,7 +67,7 @@ Spectator.describe SearchesController do
           get "/search?query=al", JSON_HEADERS
           expect(response.status_code).to eq(200)
           actors = JSON.parse(response.body).as_h["actors"].as_a
-          usernames = actors.map { |a| a.as_h["username"].as_s }
+          usernames = actors.map(&.as_h.["username"].as_s)
           expect(usernames).to contain_exactly("alice", "alicia")
         end
 
@@ -97,7 +97,7 @@ Spectator.describe SearchesController do
           get "/search?query=@al", JSON_HEADERS
           expect(response.status_code).to eq(200)
           actors = JSON.parse(response.body).as_h["actors"].as_a
-          usernames = actors.map { |a| a.as_h["username"].as_s }
+          usernames = actors.map(&.as_h.["username"].as_s)
           expect(usernames).to contain_exactly("alice", "alicia")
         end
 

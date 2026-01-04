@@ -220,7 +220,7 @@ module ThreadAnalysisService
       gaps << (pair[1][:published] - pair[0][:published])
     end
 
-    sorted_gaps = gaps.sort_by { |g| g.total_seconds }
+    sorted_gaps = gaps.sort_by(&.total_seconds)
     median_gap = sorted_gaps[sorted_gaps.size // 2]
 
     # threshold: minimum 6 hours, or 3x median (whichever is larger)

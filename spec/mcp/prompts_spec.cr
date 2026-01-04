@@ -116,7 +116,7 @@ Spectator.describe MCP::Prompts do
       prompts = response["prompts"].as_a
       expect(prompts.size).to eq(2)  # test_prompt & whats_new
 
-      names = prompts.map { |p| p["name"].as_s }
+      names = prompts.map(&.["name"].as_s)
       expect(names).to contain("test_prompt", "whats_new")
     end
 

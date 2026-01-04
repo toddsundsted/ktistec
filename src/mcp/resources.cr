@@ -277,7 +277,7 @@ module MCP
           # continue without filtering attachments
         end
       end
-      filtered_attachments = object.attachments.try(&.reject { |a| a.url.in?(embedded_urls) })
+      filtered_attachments = object.attachments.try(&.reject(&.url.in?(embedded_urls)))
 
       contents = Hash(String, JSON::Any).new
 

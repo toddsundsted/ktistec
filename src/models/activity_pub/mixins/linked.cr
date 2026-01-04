@@ -99,7 +99,7 @@ module Ktistec
         macro finished
           {% verbatim do %}
             {% for type in @type.all_subclasses << @type %}
-              {% for method in type.methods.select { |d| d.name.starts_with?("_association_") } %}
+              {% for method in type.methods.select(&.name.starts_with?("_association_")) %}
                 {% if method.body.first == :belongs_to %}
                   {% name = method.name[13..-1].id %}
                   {% foreign_key = method.body[2].id %}

@@ -138,7 +138,7 @@ module Ktistec
               v
             {% ancestors = @type.ancestors << @type %}
             {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
-            {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+            {% methods = methods.select(&.name.starts_with?("_association_")) %}
             {% for method in methods %}
               elsif "_association_#{o}" == {{method.name.stringify}} && v.responds_to?({{method.body[1]}})
                 v.{{method.body[1].id}}
@@ -159,7 +159,7 @@ module Ktistec
                 c << %Q|"#{o}" = ?|
               {% ancestors = @type.ancestors << @type %}
               {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
-              {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+              {% methods = methods.select(&.name.starts_with?("_association_")) %}
               {% for method in methods %}
                 elsif "_association_#{o}" == {{method.name.stringify}}
                   c << %Q|"{{method.body[2].id}}" = ?|
@@ -932,7 +932,7 @@ module Ktistec
       {% begin %}
         {% ancestors = @type.ancestors << @type %}
         {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
-        {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+        {% methods = methods.select(&.name.starts_with?("_association_")) %}
         unless skip_associated
           {% for method in methods %}
             if (%body = {{method.body.last}})
@@ -1100,7 +1100,7 @@ module Ktistec
       {% begin %}
         {% ancestors = @type.ancestors << @type %}
         {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
-        {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+        {% methods = methods.select(&.name.starts_with?("_association_")) %}
         # update associated instances
         if @id != old
           {% for method in methods %}
@@ -1197,7 +1197,7 @@ module Ktistec
         # nil the associations, as well...
         {% ancestors = @type.ancestors << @type %}
         {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
-        {% methods = methods.select { |d| d.name.starts_with?("_association_") } %}
+        {% methods = methods.select(&.name.starts_with?("_association_")) %}
         {% for method in methods %}
           {% if method.body[0] == :belongs_to %}
             {{method.body.last}} = nil

@@ -228,10 +228,10 @@ module Ktistec
       end
       # look up the indexes that share the same name
       indexes =
-        @indexes.map do |index|
+        @indexes.flat_map do |index|
           name = @subjects[index]
           (0...@subjects.size).select { |i| @subjects[i] == name }
-        end.flatten
+        end
       # notify them all
       indexes.each do |subject|
         if @@subscriptions.has_key?(subject)

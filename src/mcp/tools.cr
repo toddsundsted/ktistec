@@ -688,7 +688,7 @@ module MCP
     ]) do
       Log.debug { "read_resources: user=#{mcp_user_path(account)} uris=#{uris}" }
 
-      resources_data = uris.map do |uri|
+      resources_data = uris.flat_map do |uri|
 
         # NOTE: create a fake JSON::RPC::Request to reuse existing resource reading logic
         fake_params = JSON::Any.new({
@@ -712,7 +712,7 @@ module MCP
             "data" => resource_data
           }
         end
-      end.flatten
+      end
 
       result_data = {
         "resources" => resources_data,

@@ -9,7 +9,7 @@ class FooBarController
 
   skip_auth ["/foo/bar/secret", "/foo/bar/secret/*"], GET
 
-  get "/foo/bar/secret" do |env|
+  get "/foo/bar/secret" do
   end
 
   get "/foo/bar/secret/:segment" do |env|

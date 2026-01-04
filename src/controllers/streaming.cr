@@ -224,7 +224,7 @@ class StreamingController
     end
     setup_response(env.response)
     subscribe "/actor/refresh" do |subject, values|
-      values.each do |value|
+      values.each do
         case subject
         when "/actor/refresh"
           stream_refresh(env.response)

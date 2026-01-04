@@ -889,7 +889,7 @@ Spectator.describe MCP::Tools do
 
       context "with page and/or size parameters" do
         before_each do
-          25.times do |i|
+          25.times do
             object = Factory.create(:object)  # ameba:disable Ktistec/NoImperativeFactories
             put_in_timeline(account.actor, object)
           end

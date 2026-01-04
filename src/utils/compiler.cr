@@ -35,11 +35,11 @@ module Ktistec
                 pattern = instantiate(pattern.constant.id, arguments, options)
                 patterns << School::Pattern::None.new(pattern)
               when "assert"
-                actions << School::Action.new do |rule, context|
+                actions << School::Action.new do |_, context|
                   assert(pattern.constant.id, context, arguments, options)
                 end
               when "retract"
-                actions << School::Action.new do |rule, context|
+                actions << School::Action.new do |_, context|
                   retract(pattern.constant.id, context, arguments, options)
                 end
               else

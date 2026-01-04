@@ -318,7 +318,7 @@ Spectator.describe StreamingController::ConnectionPool do
 
     context "given a pool at capacity" do
       before_each do
-        subject.capacity.times do |i|
+        subject.capacity.times do
           connection = IO::Memory.new
           subject.push(connection)
         end

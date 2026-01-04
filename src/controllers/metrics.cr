@@ -149,7 +149,7 @@ class MetricsController
       )
     end.reject(&.points.empty?)
 
-    minmax = charts.flat_map(&.points).map(&.timestamp).minmax?
+    minmax = charts.flat_map(&.points).minmax_of?(&.timestamp)
 
     range = {range[0] || minmax.try(&.[0]), range[1] || minmax.try(&.[1])}
 

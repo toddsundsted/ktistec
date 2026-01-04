@@ -119,8 +119,7 @@ class Prompt
 
     if Dir.exists?(prompts_dir)
       Dir.glob(File.join(prompts_dir, "*.yml"))
-        .map { |f| File.info(f).modification_time }
-        .max?
+        .max_of? { |f| File.info(f).modification_time }
     end
   end
 

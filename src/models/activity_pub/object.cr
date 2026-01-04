@@ -777,7 +777,7 @@ module ActivityPub
         object_count = tuples.size
         author_count = tuples.compact_map { |t| t[:attributed_to_iri] }.uniq!.size
         root = tuples.find! { |t| t[:in_reply_to_iri].nil? }
-        max_depth = tuples.map { |t| t[:depth] }.max? || 0
+        max_depth = tuples.max_of? { |t| t[:depth] } || 0
         histogram = ThreadAnalysisService.timeline_histogram(tuples)
         participants = ThreadAnalysisService.key_participants(tuples)
         branches = ThreadAnalysisService.notable_branches(tuples)

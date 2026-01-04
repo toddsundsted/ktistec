@@ -54,10 +54,10 @@ class SearchesController
 
       ok "searches/object", env: env, object: object, message: message, query: query
     else
-      unless actors.empty?
-        ok "searches/actors", env: env, actors: actors, message: message, query: query
-      else
+      if actors.empty?
         ok "searches/form", env: env, message: message, query: query
+      else
+        ok "searches/actors", env: env, actors: actors, message: message, query: query
       end
     end
   rescue ex : Errors

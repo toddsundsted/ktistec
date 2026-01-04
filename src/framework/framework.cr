@@ -86,9 +86,9 @@ module Ktistec
     def initialize
       values =
         Ktistec.database.query_all("SELECT key, value FROM options", as: {String, String?})
-          .reduce(Hash(String, String?).new) do |values, (key, value)|
-            values[key] = value
-            values
+          .reduce(Hash(String, String?).new) do |acc, (key, value)|
+            acc[key] = value
+            acc
           end
       assign(values)
     end
@@ -209,7 +209,7 @@ module Ktistec
   class Server
     class_getter? shutting_down : Bool = false
 
-    def self.run
+    def self.run(&)
       log_levels = LogLevel.all_as_hash
       ::Log.setup log_levels.transform_values(&.severity)
 
@@ -233,7 +233,7 @@ module Ktistec
       return if @@shutting_down
       @@shutting_down = true
       Log.info { "#{Kemal.config.app_name} is going to take a rest!" } if Kemal.config.shutdown_message
-      if server = Kemal.config.server
+      if (server = Kemal.config.server)
         server.close unless server.closed?
         Kemal.config.running = false
       end

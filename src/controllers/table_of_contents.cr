@@ -85,7 +85,7 @@ class TableOfContentsController
     host = Ktistec.host
     entries = Relationship::Content::Canonical.all.compact_map do |canonical|
       iri = "#{host}#{canonical.to_iri}"
-      if (object = ActivityPub::Object.find?(iri)) && (path = object.canonical_path) && object.published
+      if (object = ActivityPub::Object.find?(iri)) && object.canonical_path && object.published
         object
       end
     end

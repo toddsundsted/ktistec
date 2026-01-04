@@ -215,7 +215,7 @@ class InboxesController
       unless activity.object.actor == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor))
+      unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
         bad_request
       end
       # compatibility with implementations that don't address accepts
@@ -227,7 +227,7 @@ class InboxesController
       unless activity.object.actor == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor))
+      unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
         bad_request
       end
       # compatibility with implementations that don't address rejects
@@ -249,7 +249,7 @@ class InboxesController
         unless object.actor == activity.actor
           bad_request
         end
-        unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
+        unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
           bad_request
         end
         deliver_to = [account.iri]

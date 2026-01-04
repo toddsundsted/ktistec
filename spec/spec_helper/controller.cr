@@ -24,14 +24,14 @@ class DummyAuth < Kemal::Handler
       env.session = session
       env.account = account
     end
-    return call_next(env)
+    call_next(env)
   end
 end
 
 class DummyCSRF < Kemal::Handler
   def call(env)
     env.session.string("csrf", "CSRF TOKEN")
-    return call_next(env)
+    call_next(env)
   end
 end
 

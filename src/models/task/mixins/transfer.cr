@@ -47,7 +47,7 @@ class Task
     # A delivery is deemed successful when the recipient is not in the
     # failures list.
     #
-    def self.is_recipient_down?(recipient_iri : String, tasks : Array(Task)) : Bool
+    def self.recipient_down?(recipient_iri : String, tasks : Array(Task)) : Bool
       failures = tasks.flat_map(&.failures).select(&.recipient.==(recipient_iri))
       return false if failures.size < 3
 
@@ -123,7 +123,7 @@ class Task
         conditions = "running = 0 AND complete = 1 AND created_at > datetime('now', '-10 days')"
         tasks = self.class.where(conditions)
         failures.map(&.recipient).each do |recipient|
-          if Task::Transfer.is_recipient_down?(recipient, tasks)
+          if Task::Transfer.recipient_down?(recipient, tasks)
             recipient_to_actor[recipient]?.try(&.down!)
           end
         end

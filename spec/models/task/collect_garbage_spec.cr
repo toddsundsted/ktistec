@@ -804,7 +804,7 @@ Spectator.describe Task::CollectGarbage do
 
       context "given more objects than the max delete count" do
         before_each do
-          11.times { Factory.create(:object, created_at: TOO_OLD) }
+          11.times { Factory.create(:object, created_at: TOO_OLD) }  # ameba:disable Ktistec/NoImperativeFactories
         end
 
         it "deletes only up to the maximum count" do
@@ -862,8 +862,10 @@ Spectator.describe Task::CollectGarbage do
 
     context "given relationships" do
       let_create!(timeline, owner: actor, object: object)
-      let_create!(inbox_relationship, owner: actor, activity: Factory.create(:activity, actor: actor, object: object))
-      let_create!(outbox_relationship, owner: actor, activity: Factory.create(:activity, actor: actor, object: object))
+      let_create(:activity, named: inbox_activity, actor: actor, object: object)
+      let_create!(inbox_relationship, owner: actor, activity: inbox_activity)
+      let_create(:activity, named: outbox_activity, actor: actor, object: object)
+      let_create!(outbox_relationship, owner: actor, activity: outbox_activity)
 
       it "deletes timeline relationship" do
         expect { subject.delete_object_and_associations(object.iri) }.to change { Relationship::Content::Timeline.count }.by(-1)

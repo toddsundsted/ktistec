@@ -2,10 +2,10 @@ require "../../framework/database"
 
 extend Ktistec::Database::Migration
 
-up do |db|
+up do
   add_column "objects", "special", "text"
 end
 
-down do |db|
+down do
   remove_column "objects", "special"
 end

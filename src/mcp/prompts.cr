@@ -90,20 +90,20 @@ module MCP
       Prompt.all.each do |prompt|
         prompt_hash = {} of String => JSON::Any
         prompt_hash["name"] = JSON::Any.new(prompt.name)
-        if title = prompt.title
+        if (title = prompt.title)
           prompt_hash["title"] = JSON::Any.new(title)
         end
-        if description = prompt.description
+        if (description = prompt.description)
           prompt_hash["description"] = JSON::Any.new(description)
         end
         arguments = [] of JSON::Any
         prompt.arguments.each do |arg|
           arg_hash = {} of String => JSON::Any
           arg_hash["name"] = JSON::Any.new(arg.name)
-          if title = arg.title
+          if (title = arg.title)
             arg_hash["title"] = JSON::Any.new(title)
           end
-          if description = arg.description
+          if (description = arg.description)
             arg_hash["description"] = JSON::Any.new(description)
           end
           arg_hash["required"] = JSON::Any.new(arg.required)
@@ -147,7 +147,7 @@ module MCP
     def self.handle_prompt(prompt : Prompt, params : JSON::Any, account : Account) : JSON::Any
       arguments = {} of String => String
       if (args = params["arguments"]?)
-        if args_hash = args.as_h?
+        if (args_hash = args.as_h?)
           args_hash.each do |key, value|
             arguments[key] = value.as_s if value.as_s?
           end
@@ -170,16 +170,16 @@ module MCP
         content_hash = {} of String => JSON::Any
         content_hash["type"] = JSON::Any.new(message.content.type.to_s.downcase)
 
-        if text = message.content.text
+        if (text = message.content.text)
           processed_text = Prompt.substitute(text, arguments, context)
           content_hash["text"] = JSON::Any.new(processed_text)
         end
 
-        if data = message.content.data
+        if (data = message.content.data)
           content_hash["data"] = JSON::Any.new(data)
         end
 
-        if mime_type = message.content.mime_type
+        if (mime_type = message.content.mime_type)
           content_hash["mimeType"] = JSON::Any.new(mime_type)
         end
 

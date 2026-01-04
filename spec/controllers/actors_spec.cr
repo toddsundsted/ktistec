@@ -129,11 +129,12 @@ Spectator.describe ActorsController do
       let_build(:create)
       let_build(:announce)
 
+      let_create!(:timeline_create, owner: actor, object: create.object)
+      let_create!(:timeline_announce, owner: actor, object: announce.object)
+
       before_each do
         put_in_outbox(owner: actor, activity: create)
-        Factory.create(:timeline_create, owner: actor, object: create.object)
         put_in_outbox(owner: actor, activity: announce)
-        Factory.create(:timeline_announce, owner: actor, object: announce.object)
       end
 
       it "with no filters it renders all posts" do

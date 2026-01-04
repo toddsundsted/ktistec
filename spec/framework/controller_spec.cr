@@ -16,7 +16,7 @@ class FooBarController
     "/foo/bar/ok"
   ]
 
-  get "/foo/bar/accepts" do |env|
+  get "/foo/bar/accepts" do |env|  # ameba:disable Lint/UnusedArgument
     if accepts?("text/html")
       ok "html"
     elsif accepts?("text/plain")
@@ -34,7 +34,7 @@ class FooBarController
     ok "turbo-streams", _target: env.params.url["target"], _operation: env.params.url["operation"], _method: env.params.url["method"]
   end
 
-  get "/foo/bar/turbo-stream" do |env|
+  get "/foo/bar/turbo-stream" do |env|  # ameba:disable Lint/UnusedArgument
     if accepts_turbo_stream?
       ok "turbo-stream", _operation: "replace", _target: "foobar"
     else
@@ -42,7 +42,7 @@ class FooBarController
     end
   end
 
-  get "/foo/bar/turbo-frame" do |env|
+  get "/foo/bar/turbo-frame" do |env|  # ameba:disable Lint/UnusedArgument
     if in_turbo_frame?
       ok "turbo-frame"
     else
@@ -50,11 +50,11 @@ class FooBarController
     end
   end
 
-  get "/foo/bar/redirect" do |env|
+  get "/foo/bar/redirect" do |env|  # ameba:disable Lint/UnusedArgument
     redirect "/foobar", 301
   end
 
-  get "/foo/bar/created" do |env|
+  get "/foo/bar/created" do |env|  # ameba:disable Lint/UnusedArgument
     created "/foobar", "body"
   end
 

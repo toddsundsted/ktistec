@@ -36,7 +36,7 @@ class Task
         end
       end
 
-      Log.trace { "#{times.label}: #{times.to_s}" }
+      Log.trace { "#{times.label}: #{times}" }
     end
   end
 end

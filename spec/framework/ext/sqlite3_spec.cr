@@ -9,23 +9,23 @@ Spectator.describe "SQLite3 extensions" do
     it "deserializes a read" do
       Ktistec.database.exec(%Q|INSERT INTO options (key, value) VALUES ('#{key}', '["one","two"]')|)
       rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
-      r = Array(Array(String)).new.tap do |r|
+      result = Array(Array(String)).new.tap do |arr|
         rs.each do
-          r << rs.read(Array(String))
+          arr << rs.read(Array(String))
         end
       end
-      expect(r).to eq([["one", "two"]])
+      expect(result).to eq([["one", "two"]])
     end
 
     it "serializes a write" do
       Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, ["one", "two"])
       rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
-      r = Array(String).new.tap do |r|
+      result = Array(String).new.tap do |arr|
         rs.each do
-          r << rs.read(String)
+          arr << rs.read(String)
         end
       end
-      expect(r).to eq([%q|["one","two"]|])
+      expect(result).to eq([%q|["one","two"]|])
     end
   end
 
@@ -46,23 +46,23 @@ Spectator.describe "SQLite3 extensions" do
     it "deserializes a read" do
       Ktistec.database.exec(%Q|INSERT INTO options (key, value) VALUES ('#{key}', '{"foo_bar":1}')|)
       rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
-      r = Array(FooBar).new.tap do |r|
+      result = Array(FooBar).new.tap do |arr|
         rs.each do
-          r << rs.read(FooBar)
+          arr << rs.read(FooBar)
         end
       end
-      expect(r).to eq([subject])
+      expect(result).to eq([subject])
     end
 
     it "serializes a write" do
       Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, subject)
       rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
-      r = Array(String).new.tap do |r|
+      result = Array(String).new.tap do |arr|
         rs.each do
-          r << rs.read(String)
+          arr << rs.read(String)
         end
       end
-      expect(r).to eq([%q|{"foo_bar":1}|])
+      expect(result).to eq([%q|{"foo_bar":1}|])
     end
   end
 
@@ -70,23 +70,23 @@ Spectator.describe "SQLite3 extensions" do
     it "deserializes a read" do
       Ktistec.database.exec(%Q|INSERT INTO options (key, value) VALUES ('#{key}', '{"foo_bar":1}')|)
       rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
-      r = Array(FooBar?).new.tap do |r|
+      result = Array(FooBar?).new.tap do |arr|
         rs.each do
-          r << rs.read(FooBar?)
+          arr << rs.read(FooBar?)
         end
       end
-      expect(r).to eq([subject])
+      expect(result).to eq([subject])
     end
 
     it "serializes a write" do
       Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, subject)
       rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
-      r = Array(String?).new.tap do |r|
+      result = Array(String?).new.tap do |arr|
         rs.each do
-          r << rs.read(String?)
+          arr << rs.read(String?)
         end
       end
-      expect(r).to eq([%q|{"foo_bar":1}|])
+      expect(result).to eq([%q|{"foo_bar":1}|])
     end
   end
 
@@ -94,23 +94,23 @@ Spectator.describe "SQLite3 extensions" do
     it "deserializes a read" do
       Ktistec.database.exec(%Q|INSERT INTO options (key, value) VALUES ('#{key}', NULL)|)
       rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
-      r = Array(FooBar?).new.tap do |r|
+      result = Array(FooBar?).new.tap do |arr|
         rs.each do
-          r << rs.read(FooBar?)
+          arr << rs.read(FooBar?)
         end
       end
-      expect(r).to eq([nil])
+      expect(result).to eq([nil])
     end
 
     it "serializes a write" do
       Ktistec.database.exec("INSERT INTO options (key, value) VALUES (?, ?)", key, nil)
       rs = Ktistec.database.query("SELECT value FROM options WHERE key = ?", key)
-      r = Array(String?).new.tap do |r|
+      result = Array(String?).new.tap do |arr|
         rs.each do
-          r << rs.read(String?)
+          arr << rs.read(String?)
         end
       end
-      expect(r).to eq([nil])
+      expect(result).to eq([nil])
     end
   end
 

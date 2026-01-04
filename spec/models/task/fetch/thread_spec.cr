@@ -101,9 +101,10 @@ Spectator.describe Task::Fetch::Thread do
   describe "#perform" do
     let_create(:object)
 
+    # these tests assume this is a "followed" thread
+    let_create!(:follow_thread_relationship, named: nil, actor: source, thread: object.thread)
+
     subject do
-      # these tests assume this is a "followed" thread
-      Factory.build(:follow_thread_relationship, actor: source, thread: object.thread).save
       described_class.new(source: source, thread: object.thread).save
     end
 
@@ -244,7 +245,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists all the uncached objects" do
-        expect{subject.perform}.to change{ {find?(origin.iri), find?(reply3.iri)}.any?(&.nil?) }.to(false)
+        expect{subject.perform}.to change{ {find?(origin.iri), find?(reply3.iri)}.any?(Nil) }.to(false)
       end
 
       it "does not fetch the local object replies collection" do
@@ -359,7 +360,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists all the replies from the collection" do
-        expect{subject.perform}.to change{ {find?(reply3.iri), find?(reply2.iri), find?(reply1.iri)}.any?(&.nil?) }.to(false)
+        expect{subject.perform}.to change{ {find?(reply3.iri), find?(reply2.iri), find?(reply1.iri)}.any?(Nil) }.to(false)
       end
 
       it "does not change the thread value" do
@@ -478,7 +479,7 @@ Spectator.describe Task::Fetch::Thread do
         end
 
         it "persists the remaining replies from the collection" do
-          expect{subject.perform(2)}.to change{ {find?(reply2.iri), find?(reply1.iri)}.any?(&.nil?) }.to(false)
+          expect{subject.perform(2)}.to change{ {find?(reply2.iri), find?(reply1.iri)}.any?(Nil) }.to(false)
         end
       end
 
@@ -578,7 +579,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists all the uncached objects" do
-        expect{subject.perform}.to change{ {find?(reply3.iri), find?(reply2.iri), find?(reply1.iri), find?(origin.iri)}.any?(&.nil?) }.to(false)
+        expect{subject.perform}.to change{ {find?(reply3.iri), find?(reply2.iri), find?(reply1.iri), find?(origin.iri)}.any?(Nil) }.to(false)
       end
 
       it "adds all the uncached objects to the horizon" do
@@ -612,7 +613,7 @@ Spectator.describe Task::Fetch::Thread do
         end
 
         it "persists all the uncached authors" do
-          expect{subject.perform}.to change{ {find?(actor3.iri), find?(actor2.iri), find?(actor1.iri), find?(actor.iri)}.any?(&.nil?) }.to(false)
+          expect{subject.perform}.to change{ {find?(actor3.iri), find?(actor2.iri), find?(actor1.iri), find?(actor.iri)}.any?(Nil) }.to(false)
         end
       end
 
@@ -745,7 +746,7 @@ Spectator.describe Task::Fetch::Thread do
         end
 
         it "persists the replies" do
-          expect{subject.perform}.to change{ {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri)}.any?(&.nil?) }.to(false)
+          expect{subject.perform}.to change{ {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri)}.any?(Nil) }.to(false)
         end
 
         it "adds the replies to the horizon" do
@@ -781,7 +782,7 @@ Spectator.describe Task::Fetch::Thread do
         end
 
         it "persists the replies" do
-          expect{subject.perform}.to change{ {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri)}.any?(&.nil?) }.to(false)
+          expect{subject.perform}.to change{ {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri)}.any?(Nil) }.to(false)
         end
 
         it "adds the replies to the horizon" do

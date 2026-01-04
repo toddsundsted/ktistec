@@ -173,7 +173,7 @@ class StreamingController
 
   get "/stream/objects/:id" do |env|
     id = env.params.url["id"].to_i
-    unless (object = ActivityPub::Object.find?(id))
+    unless ActivityPub::Object.find?(id)
       not_found
     end
     setup_response(env.response)
@@ -204,7 +204,6 @@ class StreamingController
           end
         else
           thread = object.thread(for_actor: env.account.actor)
-          count = thread.size
           task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
           follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
           body = thread_page_thread_controls(env, thread, task, follow)
@@ -219,12 +218,12 @@ class StreamingController
 
   get "/stream/actors/:id" do |env|
     id = env.params.url["id"].to_i64
-    unless (actor = ActivityPub::Actor.find?(id))
+    unless ActivityPub::Actor.find?(id)
       not_found
     end
     setup_response(env.response)
     subscribe "/actor/refresh" do |subject, values|
-      values.each do |value|
+      values.each do
         case subject
         when "/actor/refresh"
           stream_refresh(env.response)
@@ -278,13 +277,13 @@ class StreamingController
     filters = env.params.query.fetch_all("filters")
     actor = env.account.actor
     if filters.includes?("no-shares") && filters.includes?("no-replies")
-      timeline = actor.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create], exclude_replies: true)
+      actor.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create], exclude_replies: true)
     elsif filters.includes?("no-shares")
-      timeline = actor.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create])
+      actor.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create])
     elsif filters.includes?("no-replies")
-      timeline = actor.timeline(since: since, exclude_replies: true)
+      actor.timeline(since: since, exclude_replies: true)
     else
-      timeline = actor.timeline(since: since)
+      actor.timeline(since: since)
     end
   end
 

@@ -94,10 +94,10 @@ class OutboxesController
         audience: audience,
       )
     when "Publish"
-      unless (content = activity["content"]?)
+      unless activity["content"]?
         bad_request
       end
-      if (in_reply_to_iri = activity["in-reply-to"]?) && in_reply_to_iri.is_a?(String) && !(in_reply_to = ActivityPub::Object.find?(in_reply_to_iri))
+      if (in_reply_to_iri = activity["in-reply-to"]?) && in_reply_to_iri.is_a?(String) && !ActivityPub::Object.find?(in_reply_to_iri)
         bad_request
       end
       if (object_iri = activity["object"]?) && object_iri.is_a?(String) && !(object = ActivityPub::Object.find?(object_iri))
@@ -164,7 +164,7 @@ class OutboxesController
       unless object.object == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
+      unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
         bad_request
       end
       activity = ActivityPub::Activity::Accept.new(
@@ -180,7 +180,7 @@ class OutboxesController
       unless object.object == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
+      unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
         bad_request
       end
       activity = ActivityPub::Activity::Reject.new(
@@ -208,7 +208,7 @@ class OutboxesController
         end
       when ActivityPub::Activity::Follow
         to << object.object.iri
-        unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
+        unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
           bad_request
         end
       else

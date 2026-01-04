@@ -7,7 +7,7 @@ class FooBarController
 
   skip_auth ["/actors/foobar"]
 
-  get "/actors/foobar" do |env|
+  get "/actors/foobar" do
     "gotcha"
   end
 end

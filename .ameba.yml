@@ -1,0 +1,59 @@
+## Disabled
+
+Lint/Formatting:
+  Description: Reports not formatted sources
+  Enabled: false
+
+Lint/NotNil:
+  Description: Identifies usage of `not_nil!` calls
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Description: Disallows methods with a cyclomatic complexity higher than `MaxComplexity`
+  Enabled: false
+
+Naming/QueryBoolMethods:
+  Description: Reports boolean properties without the `?` suffix
+  Enabled: false
+
+Style/NegatedConditionsInUnless:
+  Description: Disallows negated conditions in `unless`
+  Enabled: false
+
+## Configured
+
+Naming/BlockParameterName:
+  Description: Disallows non-descriptive block parameter names
+  MinNameLength: 3
+  AllowNamesEndingInNumbers: true
+  AllowedNames: [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, db, ex, id, io, rs]
+  ForbiddenNames: []
+  Severity: Convention
+  Enabled: true
+
+Style/ParenthesesAroundCondition:
+  Description: Disallows redundant parentheses around control expressions
+  ExcludeTernary: false
+  AllowSafeAssignment: true
+  Severity: Convention
+  Enabled: true
+
+Lint/UselessAssign:
+  Description: Disallows useless variable assignments
+  ExcludeTypeDeclarations: true
+  Severity: Warning
+  Enabled: true
+
+Lint/SpecFilename:
+  Description: Enforces spec filenames to have `_spec` suffix
+  IgnoredDirs:
+  - spec/spec_helper
+  - spec/fixtures
+  Severity: Warning
+  Enabled: true
+
+Naming/RescuedExceptionsVariableName:
+  Description: Makes sure that rescued exceptions variables are named as expected
+  AllowedNames: [e, ex, err, exception, error]
+  Severity: Convention
+  Enabled: true

@@ -152,16 +152,16 @@ module Ktistec
           if (local && (values = attributes[:local]?)) ||
              (!local && (values = attributes[:remote]?)) ||
              (values = attributes[:all]?)
-            temporary = values.map do |name, value|
-              if name == "class" && value
-                classes.unshift(value)
+            temporary = values.compact_map do |attr_name, attr_value|
+              if attr_name == "class" && attr_value
+                classes.unshift(attr_value)
                 nil
-              elsif value
-                " #{name}='#{value}'"
+              elsif attr_value
+                " #{attr_name}='#{attr_value}'"
               else
-                " #{name}"
+                " #{attr_name}"
               end
-            end.compact
+            end
           end
           unless classes.empty?
             build << " class='#{classes.join(' ').strip}'"
@@ -284,7 +284,7 @@ module Ktistec
 
       delegate :<<, :compact, :each, :each_with_index, :group_by, :empty?, :first, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
 
-      def map(&block : T -> U) : PaginatedArray(U) forall U
+      def map(& : T -> U) : PaginatedArray(U) forall U
         PaginatedArray(U).new(size).tap do |array|
           each { |t| array << yield t }
           array.more = more?

@@ -547,7 +547,7 @@ module MCP
             ThreadQueryResult.new(
               objects_data: objects,
               objects_count: objects.size,
-              authors_count: results.map { |t| t[:attributed_to_iri] }.compact.uniq.size,
+              authors_count: results.compact_map { |t| t[:attributed_to_iri] }.uniq!.size,
               root_object_id: results.find { |t| t[:in_reply_to_iri].nil? }.try(&.[:id]),
               max_depth: results.max_of? { |t| t[:depth] } || 0
             )
@@ -688,7 +688,7 @@ module MCP
     ]) do
       Log.debug { "read_resources: user=#{mcp_user_path(account)} uris=#{uris}" }
 
-      resources_data = uris.map do |uri|
+      resources_data = uris.flat_map do |uri|
 
         # NOTE: create a fake JSON::RPC::Request to reuse existing resource reading logic
         fake_params = JSON::Any.new({
@@ -712,7 +712,7 @@ module MCP
             "data" => resource_data
           }
         end
-      end.flatten
+      end
 
       result_data = {
         "resources" => resources_data,
@@ -834,7 +834,7 @@ module MCP
 
       liked = announced = false
       inclusion = [ActivityPub::Activity::Like, ActivityPub::Activity::Announce]
-      activities = object.activities(inclusion: inclusion).select do |activity|
+      object.activities(inclusion: inclusion).each do |activity|
         if activity.actor == owner
           liked = true if activity.is_a?(ActivityPub::Activity::Like)
           announced = true if activity.is_a?(ActivityPub::Activity::Announce)

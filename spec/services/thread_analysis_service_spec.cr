@@ -23,7 +23,7 @@ Spectator.describe ThreadAnalysisService do
     it "sorts remaining participants by object count" do
       remaining = participants[1..-1]
       object_counts = remaining.map(&.object_count)
-      expect(object_counts).to eq(object_counts.sort.reverse)
+      expect(object_counts).to eq(object_counts.sort.reverse!)
     end
 
     it "includes correct object counts" do
@@ -56,7 +56,7 @@ Spectator.describe ThreadAnalysisService do
         expected_ids = tuples
           .select { |t| t[:attributed_to_iri] == participant.actor_iri }
           .map { |t| t[:id] }
-          .sort
+          .sort!
         expect(participant.object_ids.sort).to eq(expected_ids)
       end
     end
@@ -93,7 +93,7 @@ Spectator.describe ThreadAnalysisService do
 
     it "sorts branches by size" do
       branch_scores = branches.map(&.score)
-      expect(branch_scores).to eq(branch_scores.sort.reverse)
+      expect(branch_scores).to eq(branch_scores.sort.reverse!)
     end
 
     it "includes only branches with >= 5 objects" do
@@ -111,7 +111,7 @@ Spectator.describe ThreadAnalysisService do
     it "includes correct time spans" do
       branches.each do |branch|
         branch_tuples = branch.object_ids.compact_map { |id| tuples.find { |t| t[:id] == id } }
-        times = branch_tuples.compact_map { |t| t[:published] }.sort
+        times = branch_tuples.compact_map { |t| t[:published] }.sort!
         expected_range = times.size >= 2 ? {times.first, times.last} : {times.first?, times.first?}
         expect(branch.time_range).to eq(expected_range)
       end
@@ -120,7 +120,7 @@ Spectator.describe ThreadAnalysisService do
     it "includes correct author counts" do
       branches.each do |branch|
         branch_tuples = branch.object_ids.compact_map { |id| tuples.find { |t| t[:id] == id } }
-        author_count = branch_tuples.compact_map { |t| t[:attributed_to_iri] }.uniq
+        author_count = branch_tuples.compact_map { |t| t[:attributed_to_iri] }.uniq!
         expect(branch.author_count).to eq(author_count.size)
       end
     end

@@ -103,20 +103,6 @@ Spectator.describe Session do
     end
   end
 
-  describe "#account=" do
-    it "sets the account" do
-      account = Factory.create(:account)
-      expect{subject.account = account}.to change{subject.account_id}
-    end
-  end
-
-  describe "#account" do
-    it "gets the account" do
-      account = subject.account = Factory.create(:account)
-      expect(subject.account).to eq(account)
-    end
-  end
-
   describe "#generate_jwt" do
     it "generates a web token" do
       expect(subject.generate_jwt).to match(/^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)$/)

@@ -35,7 +35,7 @@ Spectator.describe Task::Fetch::Fetcher do
       super(*args, **options)
     end
 
-    def set_next_attempt_at(*args, **options)
+    def set_next_attempt_at(*args, **options)  # ameba:disable Naming/AccessorMethodName
       super(*args, **options)
     end
   end

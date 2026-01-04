@@ -11,7 +11,7 @@ module Ktistec::Handler
     def call(env)
       return call_next(env) unless env.request.method.in?("GET", "HEAD")
       path = env.request.path
-      suffix = SUFFIXES.find { |suffix| path.ends_with?("/#{suffix}") }
+      suffix = SUFFIXES.find { |sfx| path.ends_with?("/#{sfx}") }
       if suffix
         segment = "/#{suffix}"
         path = path.chomp(segment)

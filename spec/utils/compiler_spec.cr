@@ -18,7 +18,7 @@ module CompilerSpec
       raise "not implemented"
     end
 
-    def match(context : School::Context, trace : School::TraceNode? = nil, &block : School::Bindings -> Nil) : Nil
+    def match(context : School::Context, trace : School::TraceNode? = nil, &_block : School::Bindings -> Nil) : Nil
       raise "not implemented"
     end
 

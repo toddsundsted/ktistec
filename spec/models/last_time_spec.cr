@@ -41,7 +41,7 @@ Spectator.describe LastTime do
     end
 
     it "successfully validates instance" do
-      new_last_time = described_class.new(**options)
+      described_class.new(**options)
     end
   end
 end

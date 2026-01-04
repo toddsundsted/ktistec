@@ -24,7 +24,7 @@ class HTTP::Server::Context
   end
 
   private def check_authorization
-    if value = request.headers["Authorization"]?
+    if (value = request.headers["Authorization"]?)
       if value.starts_with?("Bearer ")
         value.split(" ").last
       end

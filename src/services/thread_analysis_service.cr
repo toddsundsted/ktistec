@@ -74,7 +74,7 @@ module ThreadAnalysisService
 
     top_n = participants
       .reject { |p| p.actor_iri == op_iri }
-      .sort_by { |p| -p.object_count }
+      .sort_by! { |p| -p.object_count }
       .first(limit - 1)
 
     result = [] of ParticipantInfo
@@ -114,7 +114,7 @@ module ThreadAnalysisService
         next_level_iris = [] of String
 
         current_level_iris.each do |parent_iri|
-          if children = children_map[parent_iri]?
+          if (children = children_map[parent_iri]?)
             children.each do |child|
               next_level_ids << child[:id]
               next_level_iris << child[:iri]
@@ -136,7 +136,7 @@ module ThreadAnalysisService
       to_visit_iris = [tuple[:iri]]
       visited_iris = Set(String).new
 
-      while to_visit_iris.any?
+      while !to_visit_iris.empty?
         current_iri = to_visit_iris.shift
         next if visited_iris.includes?(current_iri)
         visited_iris.add(current_iri)
@@ -150,9 +150,9 @@ module ThreadAnalysisService
 
       descendant_tuples = descendant_ids.compact_map { |id| tuples.find { |t| t[:id] == id } }
 
-      authors = descendant_tuples.compact_map { |t| t[:attributed_to_iri] }.uniq
+      authors = descendant_tuples.compact_map { |t| t[:attributed_to_iri] }.uniq!
       depths = descendant_tuples.compact_map { |t| t[:depth] }
-      times = descendant_tuples.compact_map { |t| t[:published] }.sort
+      times = descendant_tuples.compact_map { |t| t[:published] }.sort!
 
       branches << BranchInfo.new(
         root_id: tuple[:id],
@@ -220,7 +220,7 @@ module ThreadAnalysisService
       gaps << (pair[1][:published] - pair[0][:published])
     end
 
-    sorted_gaps = gaps.sort_by { |g| g.total_seconds }
+    sorted_gaps = gaps.sort_by(&.total_seconds)
     median_gap = sorted_gaps[sorted_gaps.size // 2]
 
     # threshold: minimum 6 hours, or 3x median (whichever is larger)
@@ -285,7 +285,6 @@ module ThreadAnalysisService
 
     time_start = active_objects.first[:published]
     time_end = active_objects.last[:published]
-    duration = time_end - time_start
 
     bucket_size_minutes = best_bucket_size
 
@@ -306,13 +305,13 @@ module ThreadAnalysisService
 
     buckets = [] of TimeBucket
     cumulative = 0
-    buckets_map.keys.sort.each do |bucket_start_time|
+    buckets_map.keys.sort!.each do |bucket_start_time|
       bucket_end_time = bucket_start_time + bucket_duration
 
       bucket_objects = buckets_map[bucket_start_time]
       cumulative += bucket_objects.size
 
-      author_count = bucket_objects.compact_map { |o| o[:attributed_to_iri] }.uniq.size
+      author_count = bucket_objects.compact_map { |o| o[:attributed_to_iri] }.uniq!.size
 
       buckets << TimeBucket.new(
         time_range: {bucket_start_time, bucket_end_time},

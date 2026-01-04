@@ -214,7 +214,7 @@ module ActivityPub
           end
           if media_type == "text/html"
             # remove old mentions from both to and cc
-            old_mentions = self.mentions.map(&.href).compact
+            old_mentions = self.mentions.compact_map(&.href)
             if (old_to = self.to)
               self.to = old_to - old_mentions
             end
@@ -230,8 +230,8 @@ module ActivityPub
             self.mentions = enhancements.mentions
 
             # add new mentions based on addressing
-            new_mentions = enhancements.mentions.map(&.href).compact
-            if new_mentions.any?
+            new_mentions = enhancements.mentions.compact_map(&.href)
+            if !new_mentions.empty?
               is_public = (to = self.to) && to.includes?("https://www.w3.org/ns/activitystreams#Public")
               is_private = to && to.includes?(attributed_to.try(&.followers))
               if is_public || is_private
@@ -775,9 +775,9 @@ module ActivityPub
       duration = Benchmark.realtime do
         tuples = thread_query(projection: PROJECTION_METADATA)
         object_count = tuples.size
-        author_count = tuples.compact_map { |t| t[:attributed_to_iri] }.uniq.size
+        author_count = tuples.compact_map { |t| t[:attributed_to_iri] }.uniq!.size
         root = tuples.find! { |t| t[:in_reply_to_iri].nil? }
-        max_depth = tuples.map { |t| t[:depth] }.max? || 0
+        max_depth = tuples.max_of? { |t| t[:depth] } || 0
         histogram = ThreadAnalysisService.timeline_histogram(tuples)
         participants = ThreadAnalysisService.key_participants(tuples)
         branches = ThreadAnalysisService.notable_branches(tuples)
@@ -926,7 +926,7 @@ module ActivityPub
           canonical.destroy
         end
         if (canonical.nil? || canonical.from_iri != @canonical_path) && (canonical_path = @canonical_path)
-          canonical = Relationship::Content::Canonical.new(from_iri: canonical_path, to_iri: path).save
+          Relationship::Content::Canonical.new(from_iri: canonical_path, to_iri: path).save
           if (urls = self.urls)
             urls << "#{Ktistec.host}#{canonical_path}"
           else
@@ -1092,10 +1092,10 @@ module ActivityPub
           if (language = json.dig?("http://schema.org/inLanguage", "http://schema.org/identifier")) && (language = language.as_s?)
             map["language"] = language
           elsif (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
-            content.each do |language, content|
-              if language && content
-                if language != "und" && language =~ Ktistec::Constants::LANGUAGE_RE && content == map["content"]?
-                  map["language"] = language
+            content.each do |lang, ctnt|
+              if lang && ctnt
+                if lang != "und" && lang =~ Ktistec::Constants::LANGUAGE_RE && ctnt == map["content"]?
+                  map["language"] = lang
                   break
                 end
               end

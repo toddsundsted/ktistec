@@ -54,10 +54,10 @@ class Relationship
         def self.merge_into(from, into)
           if from != into
             where(thread: from).each do |follow|
-              unless find?(actor: follow.actor, thread: into)
-                follow.assign(thread: into).save
-              else
+              if find?(actor: follow.actor, thread: into)
                 follow.destroy
+              else
+                follow.assign(thread: into).save
               end
             end
           end

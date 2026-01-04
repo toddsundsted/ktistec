@@ -292,9 +292,9 @@ end
 Spectator.describe Task::ConcurrentTask do
   setup_spec
 
-  subject do
-    Factory.build(concurrent_task)
-  end
+  let_build(:concurrent_task)
+
+  subject { concurrent_task }
 
   describe "#fiber_name" do
     subject { super.save }

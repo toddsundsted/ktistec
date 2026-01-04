@@ -6,10 +6,12 @@ require "../../../../spec_helper/factory"
 Spectator.describe Relationship::Content::Follow::Thread do
   setup_spec
 
+  let_create(:actor, named: from)
+
   let(options) do
     {
-      from_iri: Factory.create(:actor).iri,
-      to_iri: "https://#{random_string}"
+      from_iri: from.iri,
+      to_iri: "https://#{random_string}",
     }
   end
 

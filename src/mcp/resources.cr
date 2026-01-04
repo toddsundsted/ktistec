@@ -269,7 +269,7 @@ module MCP
 
       # process attachments to filter out embedded image URLs
       embedded_urls = [] of String
-      if content && (attachments = object.attachments)
+      if content && object.attachments
         begin
           html_doc = XML.parse_html(content)
           embedded_urls = html_doc.xpath_nodes("//img/@src").map(&.text)
@@ -277,7 +277,7 @@ module MCP
           # continue without filtering attachments
         end
       end
-      filtered_attachments = object.attachments.try(&.reject { |a| a.url.in?(embedded_urls) })
+      filtered_attachments = object.attachments.try(&.reject(&.url.in?(embedded_urls)))
 
       contents = Hash(String, JSON::Any).new
 
@@ -328,7 +328,7 @@ module MCP
 
       activities = object.activities(inclusion: [ActivityPub::Activity::Like, ActivityPub::Activity::Dislike, ActivityPub::Activity::Announce])
 
-      if (likes = activities.select(&.is_a?(ActivityPub::Activity::Like))).any?
+      if !(likes = activities.select(ActivityPub::Activity::Like)).empty?
         actors_data = likes.reverse.map do |like|
           JSON::Any.new({
             "uri" => JSON::Any.new(mcp_actor_path(like.actor)),
@@ -342,7 +342,7 @@ module MCP
         })
       end
 
-      if (dislikes = activities.select(&.is_a?(ActivityPub::Activity::Dislike))).any?
+      if !(dislikes = activities.select(ActivityPub::Activity::Dislike)).empty?
         actors_data = dislikes.reverse.map do |dislike|
           JSON::Any.new({
             "uri" => JSON::Any.new(mcp_actor_path(dislike.actor)),
@@ -356,7 +356,7 @@ module MCP
         })
       end
 
-      if (announces = activities.select(&.is_a?(ActivityPub::Activity::Announce))).any?
+      if !(announces = activities.select(ActivityPub::Activity::Announce)).empty?
         actors_data = announces.reverse.map do |announce|
           JSON::Any.new({
             "uri" => JSON::Any.new(mcp_actor_path(announce.actor)),
@@ -370,7 +370,7 @@ module MCP
         })
       end
 
-      if (replies = object.replies(for_actor: nil)).any? # `for_actor` is a dummy parameter
+      if !(replies = object.replies(for_actor: nil)).empty? # `for_actor` is a dummy parameter
         objects_data = replies.map do |reply|
           reply_data = {
             "uri" => JSON::Any.new(mcp_object_path(reply)),

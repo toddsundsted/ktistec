@@ -71,18 +71,18 @@ module Ktistec
         wildcard = false
         params = [] of String
         values = [] of SupportedType
-        expression.targets.each do |target|
-          case target
+        expression.targets.each do |tgt|
+          case tgt
           when School::Lit
-            if (term = block.call target.target)
+            if (term = block.call tgt.target)
               params << "?"
               values << term
             else
               params << "NULL"
             end
           when School::Var
-            if bindings.has_key?(target.name)
-              if (term = block.call bindings[target.name])
+            if bindings.has_key?(tgt.name)
+              if (term = block.call bindings[tgt.name])
                 params << "?"
                 values << term
               else

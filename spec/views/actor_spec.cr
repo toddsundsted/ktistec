@@ -51,8 +51,8 @@ Spectator.describe "actor" do
 
         let(tooltip) { subject.xpath_nodes("//a[contains(@href,'notifications')]//span[contains(@class,'label')]/@title").first?.try(&.text) }
         let(color) do
-          label = subject.xpath_nodes("//a[contains(@href,'notifications')]//span[contains(@class,'label')]").first?.try do |label|
-            label["class"].split.find(&.in? ["red", "orange", "yellow"])
+          subject.xpath_nodes("//a[contains(@href,'notifications')]//span[contains(@class,'label')]").first?.try do |elem|
+            elem["class"].split.find(&.in? ["red", "orange", "yellow"])
           end
         end
 

@@ -9,7 +9,7 @@ class WellKnownController
   get "/.well-known/webfinger" do |env|
     domain = URI.parse(host).host
 
-    bad_request unless resource = env.params.query["resource"]?
+    bad_request unless (resource = env.params.query["resource"]?)
     bad_request unless resource =~ %r<
       ^https://(#{domain})/(actors/|@)(?<username>.+)$|
       ^(acct:)?(?<username>[^@]+)@(#{domain})$|

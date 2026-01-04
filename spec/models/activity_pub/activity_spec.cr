@@ -95,11 +95,15 @@ Spectator.describe ActivityPub::Activity do
       expect(described_class.from_json_ld(activity.to_json_ld)).to eq(activity)
     end
 
+    let_build(:actor)
+    let_build(:object)
+    let_build(:activity, named: target)
+
     let(activity) do
       FooBarActivity.new(
-        actor: Factory.build(:actor),
-        object: Factory.build(:object),
-        target: Factory.build(:activity)
+        actor: actor,
+        object: object,
+        target: target
       )
     end
 

@@ -104,11 +104,8 @@ Spectator.describe "notifications partial" do
     context "given a follow hashtag notification" do
       let_build(:object, content: "This is the content.", published: Time.utc)
       let_create!(:notification_follow_hashtag, owner: actor, name: "foo")
-
-      before_each do
-        Factory.create(:hashtag, name: "foo", subject: object)
-        Factory.create(:hashtag, name: "bar", subject: object)
-      end
+      let_create!(:hashtag, named: nil, name: "foo", subject: object)
+      let_create!(:hashtag, named: nil, name: "bar", subject: object)
 
       it "renders a message" do
         expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
@@ -142,13 +139,9 @@ Spectator.describe "notifications partial" do
     context "given a follow mention notification" do
       let_build(:object, content: "This is the content.", published: Time.utc)
       let_create!(:notification_follow_mention, owner: actor, name: "foo@bar")
-
       let_create!(:follow_mention_relationship, named: nil, actor: actor, name: "foo@bar")
-
-      before_each do
-        Factory.create(:mention, name: "foo@bar", subject: object)
-        Factory.create(:mention, name: "bar@foo", subject: object)
-      end
+      let_create!(:mention, named: nil, name: "foo@bar", subject: object)
+      let_create!(:mention, named: nil, name: "bar@foo", subject: object)
 
       it "renders a message" do
         expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).

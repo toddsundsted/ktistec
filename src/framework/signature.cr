@@ -65,7 +65,7 @@ module Ktistec
         a[k] = v.delete('"')
         a
       end
-      unless (parameters.keys.sort & ["signature", "headers"]).size == 2
+      unless (parameters.keys.sort! & ["signature", "headers"]).size == 2
         raise Error.new("malformed signature")
       end
       url = URI.parse(url).normalize
@@ -95,7 +95,7 @@ module Ktistec
         raise Error.new("body digest must be signed")
       end
       signature_string =
-        split_headers_string.map do |header|
+        split_headers_string.compact_map do |header|
           case header
           when "(request-target)"
             "#{header}: #{method} #{url.path}"
@@ -116,7 +116,7 @@ module Ktistec
           when "digest"
             "#{header}: #{headers["Digest"]}"
           end
-        end.compact.join("\n")
+        end.join("\n")
       key = key_pair.public_key
       unless key.try(&.verify(OpenSSL::Digest.new("SHA256"), Base64.decode(parameters["signature"]), signature_string))
         raise Error.new("invalid signature: signed by keyId=#{parameters["keyId"]}")

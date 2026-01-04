@@ -621,7 +621,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
         it "only tries to fetch it once" do
           subject.perform
-          expect(HTTP::Client.requests.select{ |request| request === "GET https://missing/"}.size).to eq(1)
+          expect(HTTP::Client.requests.count{ |request| request === "GET https://missing/"}).to eq(1)
         end
       end
     end
@@ -696,7 +696,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
         it "only tries to fetch it once" do
           subject.perform
-          expect(HTTP::Client.requests.select{ |request| request === "GET https://missing/"}.size).to eq(1)
+          expect(HTTP::Client.requests.count{ |request| request === "GET https://missing/"}).to eq(1)
         end
       end
     end

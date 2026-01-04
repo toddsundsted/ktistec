@@ -231,7 +231,7 @@ module ActivityPub
 
             # add new mentions based on addressing
             new_mentions = enhancements.mentions.compact_map(&.href)
-            if new_mentions.any?
+            if !new_mentions.empty?
               is_public = (to = self.to) && to.includes?("https://www.w3.org/ns/activitystreams#Public")
               is_private = to && to.includes?(attributed_to.try(&.followers))
               if is_public || is_private

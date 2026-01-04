@@ -51,7 +51,7 @@ class Poll
   def adjust_votes(question, actor)
     votes = question.votes_by(actor)
     recent_votes = votes.select { |vote| vote.created_at > question.updated_at }
-    if recent_votes.any?
+    if !recent_votes.empty?
       adjusted_options = options.map do |option|
         adjustment = recent_votes.count { |v| v.name == option.name }
         Option.new(option.name, option.votes_count + adjustment)

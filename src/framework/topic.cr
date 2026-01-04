@@ -187,7 +187,7 @@ module Ktistec
           select_actions += [timeout_select_action(timeout)] if timeout
           i, subject = Channel(Int32).select(select_actions)
           if subject
-            if (subscription = subscriptions[subject]) && subscription.queue.any?
+            if (subscription = subscriptions[subject]) && !subscription.queue.empty?
               values, subscription.queue = subscription.queue, Array(String).new
               Log.trace { %Q|[#{object_id}] yielding subject=#{@subjects[subject]} values=#{values}| }
               yield @subjects[subject], values

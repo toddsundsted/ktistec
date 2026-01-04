@@ -136,7 +136,7 @@ module ThreadAnalysisService
       to_visit_iris = [tuple[:iri]]
       visited_iris = Set(String).new
 
-      while to_visit_iris.any?
+      while !to_visit_iris.empty?
         current_iri = to_visit_iris.shift
         next if visited_iris.includes?(current_iri)
         visited_iris.add(current_iri)

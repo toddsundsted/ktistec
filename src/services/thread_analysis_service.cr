@@ -74,7 +74,7 @@ module ThreadAnalysisService
 
     top_n = participants
       .reject { |p| p.actor_iri == op_iri }
-      .sort_by { |p| -p.object_count }
+      .sort_by! { |p| -p.object_count }
       .first(limit - 1)
 
     result = [] of ParticipantInfo
@@ -150,9 +150,9 @@ module ThreadAnalysisService
 
       descendant_tuples = descendant_ids.compact_map { |id| tuples.find { |t| t[:id] == id } }
 
-      authors = descendant_tuples.compact_map { |t| t[:attributed_to_iri] }.uniq
+      authors = descendant_tuples.compact_map { |t| t[:attributed_to_iri] }.uniq!
       depths = descendant_tuples.compact_map { |t| t[:depth] }
-      times = descendant_tuples.compact_map { |t| t[:published] }.sort
+      times = descendant_tuples.compact_map { |t| t[:published] }.sort!
 
       branches << BranchInfo.new(
         root_id: tuple[:id],
@@ -306,13 +306,13 @@ module ThreadAnalysisService
 
     buckets = [] of TimeBucket
     cumulative = 0
-    buckets_map.keys.sort.each do |bucket_start_time|
+    buckets_map.keys.sort!.each do |bucket_start_time|
       bucket_end_time = bucket_start_time + bucket_duration
 
       bucket_objects = buckets_map[bucket_start_time]
       cumulative += bucket_objects.size
 
-      author_count = bucket_objects.compact_map { |o| o[:attributed_to_iri] }.uniq.size
+      author_count = bucket_objects.compact_map { |o| o[:attributed_to_iri] }.uniq!.size
 
       buckets << TimeBucket.new(
         time_range: {bucket_start_time, bucket_end_time},

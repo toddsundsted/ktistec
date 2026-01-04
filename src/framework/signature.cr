@@ -65,7 +65,7 @@ module Ktistec
         a[k] = v.delete('"')
         a
       end
-      unless (parameters.keys.sort & ["signature", "headers"]).size == 2
+      unless (parameters.keys.sort! & ["signature", "headers"]).size == 2
         raise Error.new("malformed signature")
       end
       url = URI.parse(url).normalize

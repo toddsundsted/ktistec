@@ -547,7 +547,7 @@ module MCP
             ThreadQueryResult.new(
               objects_data: objects,
               objects_count: objects.size,
-              authors_count: results.compact_map { |t| t[:attributed_to_iri] }.uniq.size,
+              authors_count: results.compact_map { |t| t[:attributed_to_iri] }.uniq!.size,
               root_object_id: results.find { |t| t[:in_reply_to_iri].nil? }.try(&.[:id]),
               max_depth: results.max_of? { |t| t[:depth] } || 0
             )

@@ -1063,7 +1063,7 @@ private module ActorModelHelper
           else
             {0, icon}
           end
-        end.sort do |(a, _), (b, _)|
+        end.sort! do |(a, _), (b, _)|
           b <=> a
         end.first?
         if icon

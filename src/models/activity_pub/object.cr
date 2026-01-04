@@ -775,7 +775,7 @@ module ActivityPub
       duration = Benchmark.realtime do
         tuples = thread_query(projection: PROJECTION_METADATA)
         object_count = tuples.size
-        author_count = tuples.compact_map { |t| t[:attributed_to_iri] }.uniq.size
+        author_count = tuples.compact_map { |t| t[:attributed_to_iri] }.uniq!.size
         root = tuples.find! { |t| t[:in_reply_to_iri].nil? }
         max_depth = tuples.map { |t| t[:depth] }.max? || 0
         histogram = ThreadAnalysisService.timeline_histogram(tuples)

@@ -57,7 +57,7 @@ module Ktistec
     # Returns all versions in sorted order.
     #
     def self.all_versions
-      @@migrations.keys.sort
+      @@migrations.keys.sort!
     end
 
     # Returns all applied versions.

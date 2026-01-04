@@ -131,7 +131,7 @@ module Ktistec
     # Returns the subjects.
     #
     def subjects
-      @indexes.map { |i| @subjects[i] }.uniq
+      @indexes.map { |i| @subjects[i] }.uniq!
     end
 
     # Adds a subject.

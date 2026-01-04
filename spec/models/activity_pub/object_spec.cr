@@ -1530,7 +1530,7 @@ Spectator.describe ActivityPub::Object do
 
         it "includes hashtags" do
           result = subject.thread_query(projection: {hashtags: String?})
-          expect(result[1][:hashtags].try(&.split(",").sort)).to eq(["bar", "foo"])
+          expect(result[1][:hashtags].try(&.split(",").sort!)).to eq(["bar", "foo"])
         end
       end
 
@@ -1545,7 +1545,7 @@ Spectator.describe ActivityPub::Object do
 
         it "includes mentions" do
           result = subject.thread_query(projection: {mentions: String?})
-          expect(result[1][:mentions].try(&.split(",").sort)).to eq(["alice@example.com", "bob@example.com"])
+          expect(result[1][:mentions].try(&.split(",").sort!)).to eq(["alice@example.com", "bob@example.com"])
         end
       end
     end

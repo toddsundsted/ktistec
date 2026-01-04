@@ -34,7 +34,7 @@ class Task
             confirmed: true
           ).select(&.actor?).map(&.actor.iri)
         end
-      end.compact.sort.uniq
+      end.compact.sort!.uniq!
     end
 
     def perform

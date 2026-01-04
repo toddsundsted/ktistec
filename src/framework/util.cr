@@ -152,14 +152,14 @@ module Ktistec
           if (local && (values = attributes[:local]?)) ||
              (!local && (values = attributes[:remote]?)) ||
              (values = attributes[:all]?)
-            temporary = values.compact_map do |name, value|
-              if name == "class" && value
-                classes.unshift(value)
+            temporary = values.compact_map do |attr_name, attr_value|
+              if attr_name == "class" && attr_value
+                classes.unshift(attr_value)
                 nil
-              elsif value
-                " #{name}='#{value}'"
+              elsif attr_value
+                " #{attr_name}='#{attr_value}'"
               else
-                " #{name}"
+                " #{attr_name}"
               end
             end
           end

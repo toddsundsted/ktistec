@@ -53,16 +53,16 @@ class Task
         end
       end
 
-      counts = items.reduce(Hash(Key, Int32).new(0)) do |counts, relationship|
+      counts = items.reduce(Hash(Key, Int32).new(0)) do |acc, relationship|
         if (account_timezone = account_timezone_cache[relationship.from_iri])
           account, timezone = account_timezone
           key = Key.new(
             "#{relationship.type.split("::").last.downcase}-#{account.username}",
             relationship.created_at.in(timezone).at_beginning_of_hour
           )
-          counts[key] += 1
+          acc[key] += 1
         end
-        counts
+        acc
       end
 
       counts.each do |(key, value)|

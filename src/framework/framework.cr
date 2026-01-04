@@ -86,9 +86,9 @@ module Ktistec
     def initialize
       values =
         Ktistec.database.query_all("SELECT key, value FROM options", as: {String, String?})
-          .reduce(Hash(String, String?).new) do |values, (key, value)|
-            values[key] = value
-            values
+          .reduce(Hash(String, String?).new) do |acc, (key, value)|
+            acc[key] = value
+            acc
           end
       assign(values)
     end

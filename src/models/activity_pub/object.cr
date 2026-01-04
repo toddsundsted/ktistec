@@ -1092,10 +1092,10 @@ module ActivityPub
           if (language = json.dig?("http://schema.org/inLanguage", "http://schema.org/identifier")) && (language = language.as_s?)
             map["language"] = language
           elsif (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
-            content.each do |language, content|
-              if language && content
-                if language != "und" && language =~ Ktistec::Constants::LANGUAGE_RE && content == map["content"]?
-                  map["language"] = language
+            content.each do |lang, ctnt|
+              if lang && ctnt
+                if lang != "und" && lang =~ Ktistec::Constants::LANGUAGE_RE && ctnt == map["content"]?
+                  map["language"] = lang
                   break
                 end
               end

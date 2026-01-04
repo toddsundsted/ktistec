@@ -175,11 +175,11 @@ module Ktistec
     def subscribe(timeout : Time::Span? = nil, &)
       @frozen = true
       Log.debug { %Q|[#{object_id}] subscribing to #{subjects.join(" ")}| }
-      subscriptions = @indexes.reduce({} of Int32 => Subscription) do |subscriptions, subject|
+      subscriptions = @indexes.reduce({} of Int32 => Subscription) do |acc, subject|
         subscription = Subscription.new
         @@subscriptions[subject] << subscription
-        subscriptions[subject] = subscription
-        subscriptions
+        acc[subject] = subscription
+        acc
       end
       begin
         loop do

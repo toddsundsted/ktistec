@@ -1057,11 +1057,11 @@ private module ActorModelHelper
     json.dig?(*selector).try do |icons|
       if icons.as_a?
         icon =
-          icons.as_a.map do |icon|
-          if (width = icon.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = icon.dig?("https://www.w3.org/ns/activitystreams#height"))
-            {width.as_i * height.as_i, icon}
+          icons.as_a.map do |ico|
+          if (width = ico.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = ico.dig?("https://www.w3.org/ns/activitystreams#height"))
+            {width.as_i * height.as_i, ico}
           else
-            {0, icon}
+            {0, ico}
           end
         end.sort! do |(a, _), (b, _)|
           b <=> a

@@ -100,7 +100,7 @@ Spectator.describe PollsController do
 
       it "wraps votes in create activities" do
         post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
-        expect(question.votes_by(actor).all?(&.activities.any?(&.is_a?(ActivityPub::Activity::Create)))).to be_true
+        expect(question.votes_by(actor).all?(&.activities.any?(ActivityPub::Activity::Create))).to be_true
       end
 
       it "schedules deliveries of activities" do

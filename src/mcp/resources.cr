@@ -328,7 +328,7 @@ module MCP
 
       activities = object.activities(inclusion: [ActivityPub::Activity::Like, ActivityPub::Activity::Dislike, ActivityPub::Activity::Announce])
 
-      if (likes = activities.select(&.is_a?(ActivityPub::Activity::Like))).any?
+      if (likes = activities.select(ActivityPub::Activity::Like)).any?
         actors_data = likes.reverse.map do |like|
           JSON::Any.new({
             "uri" => JSON::Any.new(mcp_actor_path(like.actor)),
@@ -342,7 +342,7 @@ module MCP
         })
       end
 
-      if (dislikes = activities.select(&.is_a?(ActivityPub::Activity::Dislike))).any?
+      if (dislikes = activities.select(ActivityPub::Activity::Dislike)).any?
         actors_data = dislikes.reverse.map do |dislike|
           JSON::Any.new({
             "uri" => JSON::Any.new(mcp_actor_path(dislike.actor)),
@@ -356,7 +356,7 @@ module MCP
         })
       end
 
-      if (announces = activities.select(&.is_a?(ActivityPub::Activity::Announce))).any?
+      if (announces = activities.select(ActivityPub::Activity::Announce)).any?
         actors_data = announces.reverse.map do |announce|
           JSON::Any.new({
             "uri" => JSON::Any.new(mcp_actor_path(announce.actor)),

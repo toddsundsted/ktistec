@@ -219,7 +219,7 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "persists all the objects from the collection" do
-        expect{subject.perform}.to change{ {find?(object2.iri), find?(object3.iri)}.any?(&.nil?) }.to(false)
+        expect{subject.perform}.to change{ {find?(object2.iri), find?(object3.iri)}.any?(Nil) }.to(false)
       end
 
       it "changes time of last attempt" do
@@ -384,7 +384,7 @@ Spectator.describe Task::Fetch::Hashtag do
         end
 
         it "persists all the uncached authors" do
-          expect{subject.perform}.to change{ {find?(actor2.iri), find?(actor3.iri)}.any?(&.nil?) }.to(false)
+          expect{subject.perform}.to change{ {find?(actor2.iri), find?(actor3.iri)}.any?(Nil) }.to(false)
         end
       end
 
@@ -527,7 +527,7 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "persists all the objects from the API" do
-        expect{subject.perform}.to change{ {find?(object2.iri), find?(object3.iri)}.any?(&.nil?) }.to(false)
+        expect{subject.perform}.to change{ {find?(object2.iri), find?(object3.iri)}.any?(Nil) }.to(false)
       end
 
       it "changes time of last attempt" do

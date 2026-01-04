@@ -172,7 +172,7 @@ module Ktistec
     # A `timeout` may be specified to ensure the block is called
     # periodically.
     #
-    def subscribe(timeout : Time::Span? = nil, &block)
+    def subscribe(timeout : Time::Span? = nil, &)
       @frozen = true
       Log.debug { %Q|[#{object_id}] subscribing to #{subjects.join(" ")}| }
       subscriptions = @indexes.reduce({} of Int32 => Subscription) do |subscriptions, subject|

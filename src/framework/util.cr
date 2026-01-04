@@ -284,7 +284,7 @@ module Ktistec
 
       delegate :<<, :compact, :each, :each_with_index, :group_by, :empty?, :first, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
 
-      def map(&block : T -> U) : PaginatedArray(U) forall U
+      def map(& : T -> U) : PaginatedArray(U) forall U
         PaginatedArray(U).new(size).tap do |array|
           each { |t| array << yield t }
           array.more = more?

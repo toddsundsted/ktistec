@@ -1010,7 +1010,14 @@ module ActivityPub
     def self.map(json, **options)
       ModelHelper.from_json_ld(json)
     end
+  end
+end
 
+# the "object.json.ecr" view template requires the `Poll` model
+require "../poll"
+
+module ActivityPub
+  class Object
     module ModelHelper
       include Ktistec::ViewHelper
 

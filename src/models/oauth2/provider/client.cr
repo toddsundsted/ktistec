@@ -83,9 +83,7 @@ module OAuth2
       validates(client_name) { "must be present" unless client_name.presence }
 
       validates(redirect_uris) do
-        unless redirect_uris.presence
-          "must be present"
-        else
+        if redirect_uris.presence
           errors =
             redirect_uris.split.map do |uri|
               begin
@@ -98,6 +96,8 @@ module OAuth2
               end
             end.compact
           "invalid URIs: #{errors.join(", ")}" if errors.presence
+        else
+          "must be present"
         end
       end
 

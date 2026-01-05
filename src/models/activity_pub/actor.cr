@@ -1002,7 +1002,7 @@ module ActivityPub
     end
 
     def from_json_ld(json, *, include_key = false)
-      self.assign(ActorModelHelper.from_json_ld(json, include_key))
+      self.assign(self.class.map(json, include_key: include_key))
     end
 
     def self.map(json, *, include_key = false, **options)

@@ -161,6 +161,26 @@ class Task
     Task.exec(update)
   end
 
+  # Returns count of currently running tasks.
+  #
+  def self.running_count
+    count(running: true, complete: false)
+  end
+
+  # Returns count of tasks scheduled to run within the given time span.
+  #
+  def self.scheduled_soon_count(within : Time::Span = 1.minute)
+    now = Time.utc
+    threshold = now + within
+    query = <<-SQL
+      SELECT COUNT(*) FROM tasks
+       WHERE running = 0 AND complete = 0 AND backtrace IS NULL
+         AND next_attempt_at IS NOT NULL
+         AND next_attempt_at >= ? AND next_attempt_at < ?
+    SQL
+    scalar(query, now, threshold).as(Int64)
+  end
+
   # Minimum time delta threshold for applying randomization.
   #
   # Task scheduling deltas below this threshold will not be randomized

@@ -258,6 +258,94 @@ Spectator.describe Task do
     end
   end
 
+  describe ".running_count" do
+    it "returns 0" do
+      expect(::Task.running_count).to eq(0)
+    end
+
+    context "with mixed task states" do
+      let_create!(:task, named: nil, running: true, complete: false)
+      let_create!(:task, named: nil, running: false, complete: false)
+      let_create!(:task, named: nil, running: true, complete: true)
+
+      it "counts only running and incomplete tasks" do
+        expect(::Task.running_count).to eq(1)
+      end
+    end
+  end
+
+  describe ".scheduled_soon_count" do
+    let(fixed_time) { Time.utc(2024, 1, 1, 12, 0, 0) }
+
+    it "returns 0" do
+      expect(::Task.scheduled_soon_count).to eq(0)
+    end
+
+    context "with tasks" do
+      let_create!(
+        :task, named: nil,
+        running: false,
+        complete: false,
+        next_attempt_at: 30.seconds.from_now,
+      )
+
+      let_create!(
+        :task, named: nil,
+        running: false,
+        complete: false,
+        next_attempt_at: 2.minutes.from_now,
+      )
+
+      it "counts tasks scheduled within 1 minute" do
+        expect(::Task.scheduled_soon_count).to eq(1)
+      end
+
+      it "accepts custom time window" do
+        expect(::Task.scheduled_soon_count(3.minutes)).to eq(2)
+        expect(::Task.scheduled_soon_count(15.seconds)).to eq(0)
+      end
+    end
+
+    context "with running task" do
+      let_create!(
+        :task,
+        running: true,
+        complete: false,
+        next_attempt_at: 30.seconds.from_now,
+      )
+
+      it "does not count running tasks" do
+        expect(::Task.scheduled_soon_count).to eq(0)
+      end
+    end
+
+    context "with complete task" do
+      let_create!(
+        :task,
+        running: false,
+        complete: true,
+        next_attempt_at: 30.seconds.from_now,
+      )
+
+      it "does not count complete tasks" do
+        expect(::Task.scheduled_soon_count).to eq(0)
+      end
+    end
+
+    context "with failed task" do
+      let_create!(:task,
+        running: false,
+        complete: false,
+        backtrace: ["error"],
+        next_attempt_at: 30.seconds.from_now,
+      )
+
+      it "does not count failed tasks" do
+        expect(::Task.scheduled_soon_count).to eq(0)
+      end
+    end
+  end
+
   context "given a saved task" do
     subject { super.save }
 

@@ -1,20 +1,21 @@
 crystal:
+  question = poll.question
   if (is_anonymous = !env.account?)
     tallies = {options: poll.options, voters_count: poll.voters_count}
     voted_options = [] of String
     is_author = false
   else
-    tallies = poll.adjust_votes(poll.question, env.account.actor)
-    voted_options = poll.question.options_by(env.account.actor)
-    is_author = poll.question.attributed_to_iri == env.account.actor.iri
+    tallies = poll.adjust_votes(question, env.account.actor)
+    voted_options = question.options_by(env.account.actor)
+    is_author = question.attributed_to_iri == env.account.actor.iri
   end
-  is_draft = poll.question.draft?
+  is_draft = question.draft?
   is_expired = poll.expired?
   has_voted = !voted_options.empty?
   is_disabled = show_results = is_expired || has_voted || is_anonymous || (is_author && !is_draft)
   votes_count = tallies[:options].sum(&.votes_count)
-turbo-frame.ui.segment.poll id="poll-#{poll.question.id}" data-controller="poll" data-poll-id=poll.id data-turbo-permanent=true
-  form.poll-vote-form method="post" action="/polls/#{poll.id}/vote" data-poll-target="voteForm"
+turbo-frame.ui.segment.poll id="poll-#{question.id}" data-controller="poll" data-poll-id=question.id data-turbo-permanent=true
+  form.poll-vote-form method="post" action="/polls/#{question.id}/vote" data-poll-target="voteForm"
     == authenticity_token(env)
     - options_classes = [has_voted ? "voted" : nil, is_disabled ? "disabled" : nil].compact.join(" ")
     .poll-options class=options_classes

@@ -83,7 +83,7 @@ class Prompt
   # Load prompts if cache is empty or outdated.
   #
   def self.all : Array(Prompt)
-    current_mtime = get_directory_mtime
+    current_mtime = directory_mtime
 
     if current_mtime && current_mtime > @@cache_timestamp
       @@cached_prompts = load_prompts
@@ -114,13 +114,12 @@ class Prompt
   #
   # Returns `nil` if the directory does not exist or is empty.
   #
-  private def self.get_directory_mtime : Time?
+  private def self.directory_mtime : Time?
     prompts_dir = default_prompts_dir
 
     if Dir.exists?(prompts_dir)
       Dir.glob(File.join(prompts_dir, "*.yml"))
-        .map { |f| File.info(f).modification_time }
-        .max?
+        .max_of? { |f| File.info(f).modification_time }
     end
   end
 

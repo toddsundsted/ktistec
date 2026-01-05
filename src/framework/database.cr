@@ -57,7 +57,7 @@ module Ktistec
     # Returns all versions in sorted order.
     #
     def self.all_versions
-      @@migrations.keys.sort
+      @@migrations.keys.sort!
     end
 
     # Returns all applied versions.
@@ -155,7 +155,7 @@ module Ktistec
       #
       def remove_column(table, column)
         indexes(table).each do |index|
-          if (index =~ /INDEX (?<index>[^\s]+) ON (?<table>[^\s]+) \((?<columns>.*)\)/i)
+          if index =~ /INDEX (?<index>[^\s]+) ON (?<table>[^\s]+) \((?<columns>.*)\)/i
             index, table, columns = $~["index"], $~["table"], $~["columns"]
             next unless columns.split(",").map(&.split.first).includes?(column)
             Ktistec.database.exec <<-STR

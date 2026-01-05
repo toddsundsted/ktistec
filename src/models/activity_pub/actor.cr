@@ -231,7 +231,7 @@ module ActivityPub
 
     private def social_query(type, orig, dest, public = true)
       public = public ? "AND r.confirmed = 1 AND r.visible = 1" : nil
-      query = <<-QUERY
+      <<-QUERY
         SELECT #{Actor.columns(prefix: "a")}
           FROM actors AS a, relationships AS r
          WHERE a.iri = r.#{orig}
@@ -259,7 +259,7 @@ module ActivityPub
     end
 
     private def activity_query(type)
-      query = <<-QUERY
+      <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS c
@@ -275,7 +275,7 @@ module ActivityPub
     end
 
     private def activity_count_query(type)
-      query = <<-QUERY
+      <<-QUERY
          SELECT count(o.id)
            FROM objects AS o
            JOIN actors AS c
@@ -1002,7 +1002,7 @@ module ActivityPub
     end
 
     def from_json_ld(json, *, include_key = false)
-      self.assign(ActorModelHelper.from_json_ld(json, include_key))
+      self.assign(self.class.map(json, include_key: include_key))
     end
 
     def self.map(json, *, include_key = false, **options)
@@ -1057,13 +1057,13 @@ private module ActorModelHelper
     json.dig?(*selector).try do |icons|
       if icons.as_a?
         icon =
-          icons.as_a.map do |icon|
-          if (width = icon.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = icon.dig?("https://www.w3.org/ns/activitystreams#height"))
-            {width.as_i * height.as_i, icon}
+          icons.as_a.map do |ico|
+          if (width = ico.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = ico.dig?("https://www.w3.org/ns/activitystreams#height"))
+            {width.as_i * height.as_i, ico}
           else
-            {0, icon}
+            {0, ico}
           end
-        end.sort do |(a, _), (b, _)|
+        end.sort! do |(a, _), (b, _)|
           b <=> a
         end.first?
         if icon

@@ -210,10 +210,10 @@ Spectator.describe OutboxesController do
         end
 
         context "and the object is a reply" do
+          let_build(:object, named: parent)
+
           before_each do
-            object.assign(
-              in_reply_to: Factory.build(:object)
-            ).save
+            object.assign(in_reply_to: parent).save
           end
 
           it "puts the object in the actor's timeline" do

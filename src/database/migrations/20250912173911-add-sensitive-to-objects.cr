@@ -2,10 +2,10 @@ require "../../framework/database"
 
 extend Ktistec::Database::Migration
 
-up do |db|
+up do
   add_column "objects", "sensitive", "boolean DEFAULT 0"
 end
 
-down do |db|
+down do
   remove_column "objects", "sensitive"
 end

@@ -49,10 +49,13 @@ Spectator.describe InboxesController do
       expect(response.status_code).to eq(400)
     end
 
-    it "returns 200 if activity was already received and processed" do
-      activity = Factory.create(:create)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
-      expect(response.status_code).to eq(200)
+    context "when activity was already received" do
+      let_create!(:create)
+
+      it "returns 200" do
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(recursive: true)
+        expect(response.status_code).to eq(200)
+      end
     end
 
     it "returns 400 if the activity cannot be deserialized due to an unsupported type" do
@@ -432,10 +435,10 @@ Spectator.describe InboxesController do
       end
 
       context "and the object's a reply" do
+        let_build(:object, named: parent)
+
         before_each do
-          note.assign(
-            in_reply_to: Factory.build(:object)
-          ).save
+          note.assign(in_reply_to: parent).save
         end
 
         it "puts the object in the actor's timeline" do
@@ -684,10 +687,10 @@ Spectator.describe InboxesController do
       end
 
       context "and the object's a reply to some object" do
+        let_build(:object, named: parent)
+
         before_each do
-          note.assign(
-            in_reply_to: Factory.build(:object)
-          ).save
+          note.assign(in_reply_to: parent).save
         end
 
         it "does not put the object in the actor's timeline" do
@@ -698,10 +701,10 @@ Spectator.describe InboxesController do
       end
 
       context "and the object's a reply to the actor's object" do
+        let_create(:object, named: parent, attributed_to: actor)
+
         before_each do
-          note.assign(
-            in_reply_to: Factory.create(:object, attributed_to: actor)
-          ).save
+          note.assign(in_reply_to: parent).save
         end
 
         it "puts the object in the actor's notifications" do
@@ -712,7 +715,8 @@ Spectator.describe InboxesController do
       end
 
       context "and object mentions the actor" do
-        let_build(:note, attributed_to: other, mentions: [Factory.build(:mention, name: "local recipient", href: actor.iri)])
+        let_build(:mention, name: "local recipient", href: actor.iri)
+        let_build(:note, attributed_to: other, mentions: [mention])
 
         it "puts the activity in the actor's notifications" do
           create.object = note
@@ -872,10 +876,10 @@ Spectator.describe InboxesController do
       end
 
       context "and the object's a reply to the actor's object" do
+        let_create(:object, named: parent, attributed_to: actor)
+
         before_each do
-          note.assign(
-            in_reply_to: Factory.create(:object, attributed_to: actor)
-          ).save
+          note.assign(in_reply_to: parent).save
         end
 
         it "puts the object in the actor's notifications" do
@@ -886,7 +890,8 @@ Spectator.describe InboxesController do
       end
 
       context "and object mentions the actor" do
-        let_build(:note, attributed_to: other, mentions: [Factory.build(:mention, name: "local recipient", href: actor.iri)])
+        let_build(:mention, name: "local recipient", href: actor.iri)
+        let_build(:note, attributed_to: other, mentions: [mention])
 
         it "puts the activity in the actor's notifications" do
           update.object = note
@@ -1233,11 +1238,11 @@ Spectator.describe InboxesController do
         end
 
         context "and the object was a reply to the actor's object" do
+          let_create(:object, named: parent, attributed_to: actor)
+          let_create!(:notification_reply, owner: actor, object: note)
+
           before_each do
-            note.assign(
-              in_reply_to: Factory.create(:object, attributed_to: actor)
-            ).save
-            Factory.create(:notification_reply, owner: actor, object: note)
+            note.assign(in_reply_to: parent).save
           end
 
           it "removes the reply notification" do
@@ -1247,11 +1252,9 @@ Spectator.describe InboxesController do
         end
 
         context "and the object mentioned the actor" do
-          let_build(:note, attributed_to: other, mentions: [Factory.build(:mention, name: "local recipient", href: actor.iri)])
-
-          before_each do
-            Factory.create(:notification_mention, owner: actor, object: note)
-          end
+          let_build(:mention, name: "local recipient", href: actor.iri)
+          let_build(:note, attributed_to: other, mentions: [mention])
+          let_create!(:notification_mention, owner: actor, object: note)
 
           it "removes the mention notification" do
             expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.

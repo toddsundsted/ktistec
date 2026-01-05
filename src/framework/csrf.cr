@@ -84,7 +84,7 @@ module Ktistec
                         end
       current_token = context.session.string?("csrf")
       if current_token == submitted_token
-        return call_next(context)
+        call_next(context)
       else
         context.response.status_code = 403
         if (error = @error) && !error.is_a?(String)

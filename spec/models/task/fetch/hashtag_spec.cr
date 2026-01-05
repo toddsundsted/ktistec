@@ -52,9 +52,10 @@ Spectator.describe Task::Fetch::Hashtag do
   end
 
   describe "#perform" do
+    # these tests assume this is a "followed" hashtag
+    let_create!(:follow_hashtag_relationship, named: nil, actor: source, name: "hashtag")
+
     subject do
-      # these tests assume this is a "followed" hashtag
-      Factory.build(:follow_hashtag_relationship, actor: source, name: "hashtag").save
       described_class.new(source: source, name: "hashtag").save
     end
 
@@ -218,7 +219,7 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "persists all the objects from the collection" do
-        expect{subject.perform}.to change{ {find?(object2.iri), find?(object3.iri)}.any?(&.nil?) }.to(false)
+        expect{subject.perform}.to change{ {find?(object2.iri), find?(object3.iri)}.any?(Nil) }.to(false)
       end
 
       it "changes time of last attempt" do
@@ -383,7 +384,7 @@ Spectator.describe Task::Fetch::Hashtag do
         end
 
         it "persists all the uncached authors" do
-          expect{subject.perform}.to change{ {find?(actor2.iri), find?(actor3.iri)}.any?(&.nil?) }.to(false)
+          expect{subject.perform}.to change{ {find?(actor2.iri), find?(actor3.iri)}.any?(Nil) }.to(false)
         end
       end
 
@@ -526,7 +527,7 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "persists all the objects from the API" do
-        expect{subject.perform}.to change{ {find?(object2.iri), find?(object3.iri)}.any?(&.nil?) }.to(false)
+        expect{subject.perform}.to change{ {find?(object2.iri), find?(object3.iri)}.any?(Nil) }.to(false)
       end
 
       it "changes time of last attempt" do
@@ -620,7 +621,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
         it "only tries to fetch it once" do
           subject.perform
-          expect(HTTP::Client.requests.select{ |request| request === "GET https://missing/"}.size).to eq(1)
+          expect(HTTP::Client.requests.count{ |request| request === "GET https://missing/"}).to eq(1)
         end
       end
     end
@@ -695,7 +696,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
         it "only tries to fetch it once" do
           subject.perform
-          expect(HTTP::Client.requests.select{ |request| request === "GET https://missing/"}.size).to eq(1)
+          expect(HTTP::Client.requests.count{ |request| request === "GET https://missing/"}).to eq(1)
         end
       end
     end

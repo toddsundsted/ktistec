@@ -28,7 +28,7 @@ class InboxActivityProcessor
        receive_task_class : Task::Receive.class = Task::Receive
      )
     content_rules.run do
-      recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq
+      recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq!
       recipients.each { |recipient| assert ContentRules::IsRecipient.new(recipient) }
       assert ContentRules::Incoming.new(account.actor, activity)
     end

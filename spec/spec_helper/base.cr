@@ -164,7 +164,7 @@ module Ktistec
     previous_def
   end
 
-  def self.set_translator(translator : Ktistec::Translator)
+  def self.set_translator(translator : Ktistec::Translator)  # ameba:disable Naming/AccessorMethodName
     @@translator = translator
     @@mocks << translator
   end

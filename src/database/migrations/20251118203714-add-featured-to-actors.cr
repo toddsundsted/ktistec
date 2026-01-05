@@ -14,6 +14,6 @@ up do |db|
   STR
 end
 
-down do |db|
+down do
   remove_column "actors", "featured"
 end

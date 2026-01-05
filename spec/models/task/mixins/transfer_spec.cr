@@ -245,7 +245,7 @@ Spectator.describe Task::Transfer do
     end
   end
 
-  describe ".is_recipient_down?" do
+  describe ".recipient_down?" do
     let_build(:actor, named: :recipient, iri: "https://remote/recipient")
 
     # failures at various time points
@@ -285,37 +285,37 @@ Spectator.describe Task::Transfer do
 
     context "with no tasks" do
       it "returns false" do
-        expect(Task::Transfer.is_recipient_down?(recipient.iri, [] of FooBarTransfer)).to be_false
+        expect(Task::Transfer.recipient_down?(recipient.iri, [] of FooBarTransfer)).to be_false
       end
     end
 
     context "with fewer than 3 failures" do
       it "returns false" do
-        expect(Task::Transfer.is_recipient_down?(recipient.iri, [failure_5d, failure_2d])).to be_false
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_5d, failure_2d])).to be_false
       end
     end
 
     context "with 3+ failures spanning less than 80 hours" do
       it "returns false" do
-        expect(Task::Transfer.is_recipient_down?(recipient.iri, [failure_3d, failure_2d, failure_1d])).to be_false
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_3d, failure_2d, failure_1d])).to be_false
       end
     end
 
     context "with 3+ failures spanning 80+ hours without intermediate success" do
       it "returns true" do
-        expect(Task::Transfer.is_recipient_down?(recipient.iri, [failure_7d, failure_4d, failure_1d])).to be_true
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_7d, failure_4d, failure_1d])).to be_true
       end
     end
 
     context "with 3+ failures spanning 80+ hours with intermediate success" do
       it "returns false" do
-        expect(Task::Transfer.is_recipient_down?(recipient.iri, [failure_7d, success_5d, failure_4d, failure_1d])).to be_false
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_7d, success_5d, failure_4d, failure_1d])).to be_false
       end
     end
 
     context "with 3+ failures spanning 80+ hours with recent success" do
       it "returns false" do
-        expect(Task::Transfer.is_recipient_down?(recipient.iri, [failure_7d, failure_4d, failure_1d, success_now])).to be_false
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_7d, failure_4d, failure_1d, success_now])).to be_false
       end
     end
 
@@ -323,13 +323,13 @@ Spectator.describe Task::Transfer do
 
     context "with 3+ failures spanning 80+ hours with intermediate success" do
       it "returns false" do
-        expect(Task::Transfer.is_recipient_down?(recipient.iri, [failure_7d, failure_other_5d, failure_4d, failure_1d])).to be_false
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_7d, failure_other_5d, failure_4d, failure_1d])).to be_false
       end
     end
 
     context "with failures for multiple recipients" do
       it "returns true" do
-        expect(Task::Transfer.is_recipient_down?(recipient.iri, [failure_multi_7d, failure_4d, failure_1d])).to be_true
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_multi_7d, failure_4d, failure_1d])).to be_true
       end
     end
   end

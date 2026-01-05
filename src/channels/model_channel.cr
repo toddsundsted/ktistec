@@ -38,7 +38,7 @@ class ModelChannel(M)
   # A `timeout` may be specified to ensure the block is called
   # periodically.
   #
-  def subscribe(model : M, timeout : Time::Span? = nil, &block)
+  def subscribe(model : M, timeout : Time::Span? = nil, &)
     id = model.id.not_nil!
     subscription = Subscription.new
     @subscriptions[id] << subscription

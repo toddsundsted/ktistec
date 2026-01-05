@@ -1,5 +1,7 @@
 /lib/
 /log/
+/bin/ameba
+/bin/ameba.dwarf
 /node_modules/
 /public/uploads/*
 !/public/uploads/.keep

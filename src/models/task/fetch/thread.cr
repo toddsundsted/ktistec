@@ -333,10 +333,10 @@ class Task
     def self.merge_into(from, into)
       if from != into
         where(thread: from).each do |task|
-          unless find?(source: task.source, thread: into)
-            task.assign(thread: into).save
-          else
+          if find?(source: task.source, thread: into)
             task.destroy
+          else
+            task.assign(thread: into).save
           end
         end
       end

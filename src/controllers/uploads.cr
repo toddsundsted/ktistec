@@ -69,7 +69,7 @@ class UploadsController
   post "/uploads" do |env|
     filename = nil
     filepath = nil
-    env.params.files.each do |name, part|
+    env.params.files.each do |_, part|
       if part.filename.presence
         filename = env.account.actor.id.to_s
         filepath = File.join("uploads", *Tuple(String, String, String).from(UUID.random.to_s.split("-")[0..2]))

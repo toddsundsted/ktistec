@@ -16,7 +16,7 @@ class TaskWorker
 
   class_getter? running : Bool = false
 
-  def self.start
+  def self.start(&)
     @@running = true
     yield
     self.new.tap do |worker|

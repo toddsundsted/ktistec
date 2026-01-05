@@ -116,7 +116,7 @@ Spectator.describe MCP::Prompts do
       prompts = response["prompts"].as_a
       expect(prompts.size).to eq(2)  # test_prompt & whats_new
 
-      names = prompts.map { |p| p["name"].as_s }
+      names = prompts.map(&.["name"].as_s)
       expect(names).to contain("test_prompt", "whats_new")
     end
 
@@ -125,7 +125,7 @@ Spectator.describe MCP::Prompts do
         response = described_class.handle_prompts_list(prompts_list_request)
 
         prompts = response["prompts"].as_a
-        prompts.find { |p| p["name"].as_s == "test_prompt" }.not_nil!
+        prompts.find! { |p| p["name"].as_s == "test_prompt" }
       end
 
       it "returns the definition" do
@@ -153,7 +153,7 @@ Spectator.describe MCP::Prompts do
         response = described_class.handle_prompts_list(prompts_list_request)
 
         prompts = response["prompts"].as_a
-        prompts.find { |p| p["name"].as_s == "whats_new" }.not_nil!
+        prompts.find! { |p| p["name"].as_s == "whats_new" }
       end
 
       it "returns the definition" do

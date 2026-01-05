@@ -43,7 +43,7 @@ Spectator.describe Ktistec::CSRF do
 
   it "generates an authenticity token on HTML requests" do
     handler = described_class.new
-    handler.next = ->(context : HTTP::Server::Context) { }
+    handler.next = ->(_context : HTTP::Server::Context) { }
     request = HTTP::Request.new("GET", "/",
       headers: HTTP::Headers{"Accept" => %q|text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8|})
     _, client_response = process_request_and_return_response(handler, request)
@@ -52,7 +52,7 @@ Spectator.describe Ktistec::CSRF do
 
   it "does not generate an authenticity token on non-HTML requests" do
     handler = described_class.new
-    handler.next = ->(context : HTTP::Server::Context) { }
+    handler.next = ->(_context : HTTP::Server::Context) { }
     request = HTTP::Request.new("GET", "/",
       headers: HTTP::Headers{"Accept" => %q|application/json|})
     _, client_response = process_request_and_return_response(handler, request)

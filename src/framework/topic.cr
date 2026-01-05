@@ -131,7 +131,7 @@ module Ktistec
     # Returns the subjects.
     #
     def subjects
-      @indexes.map { |i| @subjects[i] }.uniq
+      @indexes.map { |i| @subjects[i] }.uniq!
     end
 
     # Adds a subject.
@@ -172,22 +172,22 @@ module Ktistec
     # A `timeout` may be specified to ensure the block is called
     # periodically.
     #
-    def subscribe(timeout : Time::Span? = nil, &block)
+    def subscribe(timeout : Time::Span? = nil, &)
       @frozen = true
       Log.debug { %Q|[#{object_id}] subscribing to #{subjects.join(" ")}| }
-      subscriptions = @indexes.reduce({} of Int32 => Subscription) do |subscriptions, subject|
+      subscriptions = @indexes.reduce({} of Int32 => Subscription) do |acc, subject|
         subscription = Subscription.new
         @@subscriptions[subject] << subscription
-        subscriptions[subject] = subscription
-        subscriptions
+        acc[subject] = subscription
+        acc
       end
       begin
         loop do
           select_actions = subscriptions.values.map(&.channel.receive_select_action)
           select_actions += [timeout_select_action(timeout)] if timeout
-          i, subject = Channel(Int32).select(select_actions)
+          _, subject = Channel(Int32).select(select_actions)
           if subject
-            if (subscription = subscriptions[subject]) && subscription.queue.any?
+            if (subscription = subscriptions[subject]) && !subscription.queue.empty?
               values, subscription.queue = subscription.queue, Array(String).new
               Log.trace { %Q|[#{object_id}] yielding subject=#{@subjects[subject]} values=#{values}| }
               yield @subjects[subject], values
@@ -219,8 +219,8 @@ module Ktistec
     def notify_subscribers(value : String = "")
       @frozen = true
       Log.debug do
-        subscriptions_count = @@subscriptions.values.map(&.size).sum
-        subjects = (0...@subjects.size).map { |i| @subjects[i] }.compact.join(" ")
+        subscriptions_count = @@subscriptions.values.sum(&.size)
+        subjects = (0...@subjects.size).compact_map { |i| @subjects[i] }.join(" ")
         "statistics - subscriptions=#{subscriptions_count} slots=#{@subjects.size} free=#{@subjects.free} | #{subjects}"
       end
       Log.trace do
@@ -228,10 +228,10 @@ module Ktistec
       end
       # look up the indexes that share the same name
       indexes =
-        @indexes.map do |index|
+        @indexes.flat_map do |index|
           name = @subjects[index]
           (0...@subjects.size).select { |i| @subjects[i] == name }
-        end.flatten
+        end
       # notify them all
       indexes.each do |subject|
         if @@subscriptions.has_key?(subject)
@@ -239,7 +239,6 @@ module Ktistec
           debounce_interval = subject_name ? self.class.debounce_interval_for(subject_name) : nil
           @@subscriptions[subject].each do |subscription|
             unless subscription.channel.closed? || subscription.queue.includes?(value)
-              was_empty = subscription.queue.empty?
               subscription.queue << value
               if debounce_interval
                 # start timer on first value. send when timer fires

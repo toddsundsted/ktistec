@@ -77,7 +77,7 @@ class Task
     @[Insignificant]
     property state : State do
         State.new.tap do |state|
-          Tag::Hashtag.where(name: name).map(&.href.presence).compact.each do |href|
+          Tag::Hashtag.where(name: name).compact_map(&.href.presence).each do |href|
             node = State::Node.new(href)
             state << node unless state.includes?(node)
           end
@@ -114,7 +114,7 @@ class Task
       # the last run. handles the regular arrival of objects via
       # ActivityPub.
       if (last_attempt_at = self.last_attempt_at)
-        Tag::Hashtag.where("name = ? AND created_at > ?", name, last_attempt_at).map(&.href.presence).compact.each do |href|
+        Tag::Hashtag.where("name = ? AND created_at > ?", name, last_attempt_at).compact_map(&.href.presence).each do |href|
           node = State::Node.new(href)
           state << node unless state.includes?(node)
         end
@@ -225,7 +225,7 @@ class Task
           fetched, object = find_or_fetch_object(item)
           next if object.nil?
           if (hashtags = object.hashtags)
-            hashtags.select{ |h| h.name.downcase == name }.map(&.href).compact.each do |href|
+            hashtags.select{ |h| h.name.downcase == name }.compact_map(&.href).each do |href|
               new = State::Node.new(href)
               state << new unless state.includes?(new)
             end

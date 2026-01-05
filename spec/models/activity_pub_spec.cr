@@ -53,7 +53,7 @@ Spectator.describe ActivityPub do
       end
     end
 
-    subject { Factory.create(:activity) }
+    let_create(:activity)
 
     it "creates an instance if one doesn't exist" do
       json = %q[{"@id":"https://test.test/bar_foo","@type":"Activity"}]
@@ -61,8 +61,8 @@ Spectator.describe ActivityPub do
     end
 
     it "updates the instance if it already exists" do
-      json = %Q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"#{subject.iri}","@type":"Activity","summary":"foo bar baz"}]
-      expect{described_class.from_json_ld(json).save}.to change{subject.reload!.summary}
+      json = %Q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"#{activity.iri}","@type":"Activity","summary":"foo bar baz"}]
+      expect{described_class.from_json_ld(json).save}.to change{activity.reload!.summary}
     end
   end
 

@@ -35,11 +35,11 @@ module Ktistec
                 pattern = instantiate(pattern.constant.id, arguments, options)
                 patterns << School::Pattern::None.new(pattern)
               when "assert"
-                actions << School::Action.new do |rule, context|
+                actions << School::Action.new do |_, context|
                   assert(pattern.constant.id, context, arguments, options)
                 end
               when "retract"
-                actions << School::Action.new do |rule, context|
+                actions << School::Action.new do |_, context|
                   retract(pattern.constant.id, context, arguments, options)
                 end
               else
@@ -104,8 +104,8 @@ module Ktistec
       when Ktistec::FunctionOperator
         case node.left.id
         when "within"
-          right = node.right.map do |node|
-            if (exp = compile_expression(node)).is_a?(School::Atomic)
+          right = node.right.map do |arg|
+            if (exp = compile_expression(arg)).is_a?(School::Atomic)
               exp.as(School::Atomic)
             else
               raise LinkError.new(self, "argument must be atomic")

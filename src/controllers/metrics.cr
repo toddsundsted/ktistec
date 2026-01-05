@@ -40,7 +40,7 @@ class MetricsController
           in Granularity::Yearly
             current = _begin.at_beginning_of_year
           end
-          while (current <= _end)
+          while current <= _end
             case granularity
             in Granularity::Hourly
               result << current.to_s("%Y-%m-%d %H:00")
@@ -149,7 +149,7 @@ class MetricsController
       )
     end.reject(&.points.empty?)
 
-    minmax = charts.flat_map(&.points).map(&.timestamp).minmax?
+    minmax = charts.flat_map(&.points).minmax_of?(&.timestamp)
 
     range = {range[0] || minmax.try(&.[0]), range[1] || minmax.try(&.[1])}
 

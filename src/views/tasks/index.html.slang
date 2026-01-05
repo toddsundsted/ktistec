@@ -1,6 +1,30 @@
 - content_for "title" do
   | Tasks
 h1 Tasks
+- if running_count > 0
+  .ui.red.icon.message
+    .content
+      .header Tasks Running
+      p #{pluralize(running_count, "task")} currently running.
+    a.ui.basic.tiny.right.floated.button href=Ktistec::ViewHelper.tasks_path
+      i.refresh.icon
+      | Refresh
+- elsif scheduled_soon_count > 0
+  .ui.yellow.icon.message
+    .content
+      .header Tasks Starting Soon
+      p #{pluralize(scheduled_soon_count, "task")} scheduled to run within one minute.
+    a.ui.basic.tiny.right.floated.button href=Ktistec::ViewHelper.tasks_path
+      i.refresh.icon
+      | Refresh
+- else
+  .ui.green.icon.message
+    .content
+      .header All Tasks Idle
+      p No tasks are running or scheduled to start soon.
+    a.ui.basic.tiny.right.floated.button href=Ktistec::ViewHelper.tasks_path
+      i.refresh.icon
+      | Refresh
 - if tasks.empty?
   .ui.basic.very.padded.center.aligned.segment
     .ui.icon.header

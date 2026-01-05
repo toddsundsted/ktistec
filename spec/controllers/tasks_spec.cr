@@ -155,6 +155,50 @@ Spectator.describe TasksController do
           expect(XML.parse_html(response.body).xpath_nodes("//table/tr/td")).not_to have("")
         end
       end
+
+      it "renders idle status" do
+        get "/tasks", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class, 'green') and contains(@class, 'message')]//div[@class='header']")).to have("All Tasks Idle")
+      end
+
+      it "includes idle status" do
+        get "/tasks", ACCEPT_JSON
+        json = JSON.parse(response.body)
+        expect(json.dig("status", "type")).to eq("idle")
+        expect(json.dig("status", "message")).to eq("No tasks are running or scheduled to start soon.")
+      end
+
+      context "with running task" do
+        let_create!(:task, running: true, complete: false)
+
+        it "renders running status" do
+          get "/tasks", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class, 'red') and contains(@class, 'message')]//div[@class='header']")).to have("Tasks Running")
+        end
+
+        it "includes running status" do
+          get "/tasks", ACCEPT_JSON
+          json = JSON.parse(response.body)
+          expect(json.dig("status", "type")).to eq("running")
+          expect(json.dig("status", "message")).to eq("1 task currently running.")
+        end
+      end
+
+      context "with task scheduled soon" do
+        let_create!(:task, running: false, complete: false, next_attempt_at: 30.seconds.from_now)
+
+        it "renders scheduled status" do
+          get "/tasks", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class, 'yellow') and contains(@class, 'message')]//div[@class='header']")).to have("Tasks Starting Soon")
+        end
+
+        it "includes scheduled status" do
+          get "/tasks", ACCEPT_JSON
+          json = JSON.parse(response.body)
+          expect(json.dig("status", "type")).to eq("scheduled")
+          expect(json.dig("status", "message")).to eq("1 task scheduled to run within one minute.")
+        end
+      end
     end
   end
 end

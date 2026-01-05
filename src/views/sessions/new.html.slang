@@ -4,7 +4,7 @@ form.ui.form class=(message ? "error" : "") action=sessions_path method="POST"
   - if message
     .ui.error.message
       .header = message
-  == input_tag("Username", nil, username)
+  == input_tag("Username", nil, username, autofocus: true)
   == input_tag("Password", nil, password, type: "password")
   == submit_button("Sign In")
 p.small.text Ktistec Version #{Ktistec::VERSION}

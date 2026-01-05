@@ -25,14 +25,19 @@ Spectator.describe SettingsController do
           expect(response.status_code).to eq(200)
         end
 
-        it "renders a form" do
+        it "renders a form for name, summary, image, and icon" do
           get "/settings", headers
           expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='name']][.//input[@name='summary']][.//input[@name='image']][.//input[@name='icon']]")).not_to be_empty
         end
 
-        it "renders a form" do
+        it "renders a form for site, image, description, footer" do
           get "/settings", headers
-          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='footer']][.//input[@name='site']]")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//form[.//input[@name='site']][.//input[@name='image']][.//textarea[@name='description']][.//input[@name='footer']]")).not_to be_empty
+        end
+
+        it "renders radio buttons for default_editor" do
+          get "/settings", headers
+          expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='default_editor'][@type='radio']")).not_to be_empty
         end
 
         before_each do
@@ -96,16 +101,21 @@ Spectator.describe SettingsController do
       end
 
       context "and accepting JSON" do
-        let(headers) { HTTP::Headers.new }
+        let(headers) { HTTP::Headers{"Accept" => "application/json"} }
 
         it "succeeds" do
           get "/settings", headers
           expect(response.status_code).to eq(200)
         end
 
-        it "renders an object" do
+        it "renders an object with name, summary, image, and icon" do
           get "/settings", headers
-          expect(JSON.parse(response.body).as_h.keys).to have("name", "summary", "image", "icon", "footer", "site")
+          expect(JSON.parse(response.body).dig("actor").as_h.keys).to have("name", "summary", "image", "icon")
+        end
+
+        it "renders an object with site, image, description, and footer" do
+          get "/settings", headers
+          expect(JSON.parse(response.body).dig("site").as_h.keys).to have("site", "image", "description", "footer")
         end
       end
     end
@@ -121,6 +131,28 @@ Spectator.describe SettingsController do
       sign_in(as: actor.username)
 
       let(account) { Global.account.not_nil! }
+
+      context "when changing the password" do
+        let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
+
+        before_each do
+          Session.new(account).save
+          Session.new(account).save
+        end
+
+        pre_condition { expect(account.sessions.size).to eq(3) }
+
+        it "invalidates existing sessions" do
+          expect { post "/settings/actor", headers, "password=foobarbaz1%21" }.
+            to change { account.reload!.sessions.size }.from(3).to(0)
+        end
+
+        it "redirects to the sign-in page" do
+          post "/settings/actor", headers, "password=foobarbaz1%21"
+          expect(response.status_code).to eq(302)
+          expect(response.headers.to_a).to have({"Location", ["/sessions"]})
+        end
+      end
 
       context "and posting urlencoded data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
@@ -186,6 +218,25 @@ Spectator.describe SettingsController do
           it "does not update the timezone if blank" do
             expect{post "/settings/actor", headers, "timezone="}.
               not_to change{account.reload!.timezone}
+          end
+        end
+
+        it "updates the default_editor to markdown" do
+          post "/settings/actor", headers, "default_editor=text%2Fmarkdown"
+          expect(account.reload!.default_editor).to eq("text/markdown")
+        end
+
+        it "updates the default_editor to rich text" do
+          post "/settings/actor", headers, "default_editor=text%2Fhtml%3B+editor%3Dtrix"
+          expect(account.reload!.default_editor).to eq("text/html; editor=trix")
+        end
+
+        context "given an account with markdown as default editor" do
+          before_each { account.assign(default_editor: "text/markdown").save }
+
+          it "does not update the default_editor if not provided" do
+            expect{post "/settings/actor", headers, "name=Test"}.
+              not_to change{account.reload!.default_editor}
           end
         end
 
@@ -367,6 +418,25 @@ Spectator.describe SettingsController do
           end
         end
 
+        it "updates the default_editor to markdown" do
+          post "/settings/actor", headers, %q|{"default_editor":"text/markdown"}|
+          expect(account.reload!.default_editor).to eq("text/markdown")
+        end
+
+        it "updates the default_editor to rich text" do
+          post "/settings/actor", headers, %q|{"default_editor":"text/html; editor=trix"}|
+          expect(account.reload!.default_editor).to eq("text/html; editor=trix")
+        end
+
+        context "given an account with markdown as default editor" do
+          before_each { account.assign(default_editor: "text/markdown").save }
+
+          it "does not update the default_editor if not provided" do
+            expect{post "/settings/actor", headers, %q|{"name":"Test"}|}.
+              not_to change{account.reload!.default_editor}
+          end
+        end
+
         it "updates the password" do
           expect{post "/settings/actor", headers, %q|{"password":"foobarbaz1!"}|}.
             to change{account.reload!.encrypted_password}
@@ -455,6 +525,20 @@ Spectator.describe SettingsController do
             not_to change{Ktistec.settings.site}
         end
 
+        it "changes the description" do
+          expect {post "/settings/service", headers, "description=<p>Server+description</p>"}.
+            to change{Ktistec.settings.description}
+        end
+
+        context "given a description" do
+          before_each { Ktistec.settings.assign({"description" => "<p>Server description</p>"}).save }
+
+          it "clears the description if blank" do
+            expect {post "/settings/service", headers, "description="}.
+              to change{Ktistec.settings.description}.from("<p>Server description</p>").to("")
+          end
+        end
+
         it "changes the footer" do
           expect {post "/settings/service", headers, "footer=Copyright+Blah+Blah"}.
             to change{Ktistec.settings.footer}
@@ -463,9 +547,66 @@ Spectator.describe SettingsController do
         context "given a footer" do
           before_each { Ktistec.settings.assign({"footer" => "Copyright Blah Blah"}).save }
 
-          it "changes the footer if blank" do
+          it "clears the footer if blank" do
             expect {post "/settings/service", headers, "footer="}.
               to change{Ktistec.settings.footer}.from("Copyright Blah Blah").to("")
+          end
+        end
+
+        it "changes the image" do
+          expect {post "/settings/service", headers, "image=%2Ffoo%2Fbar%2Fbaz"}.
+            to change{Ktistec.settings.image}.from(nil).to("https://test.test/foo/bar/baz")
+        end
+
+        context "given an image" do
+          before_each { Ktistec.settings.assign({"image" => "https://test.test/foo/bar/baz"}).save }
+
+          it "removes the image" do
+            expect {post "/settings/service", headers, "image="}.
+              to change{Ktistec.settings.image}.from("https://test.test/foo/bar/baz").to(nil)
+          end
+        end
+      end
+
+      context "and posting form data" do
+        let(form) do
+          String.build do |io|
+            HTTP::FormData.build(io) do |form_data|
+              metadata = HTTP::FormData::FileMetadata.new(filename: "image.jpg")
+              form_data.file("image", IO::Memory.new("0123456789"), metadata)
+            end
+          end
+        end
+
+        let(headers) do
+          HTTP::Headers{"Content-Type" => %Q{multipart/form-data; boundary="#{form.lines.first[2..-1]}"}}
+        end
+
+        macro uploaded_image(settings)
+          "#{Dir.tempdir}#{URI.parse(Ktistec.{{settings}}.image.not_nil!).path}"
+        end
+
+        it "updates the image" do
+          expect{post "/settings/service", headers, form}.to change{Ktistec.settings.image}.from(nil)
+        end
+
+        it "stores the image file" do
+          post "/settings/service", headers, form
+          expect(File.exists?(uploaded_image(settings))).to be(true)
+        end
+
+        it "makes the image file readable" do
+          post "/settings/service", headers, form
+          expect(File.info(uploaded_image(settings)).permissions).to contain(File::Permissions[OtherRead, GroupRead, OwnerRead])
+        end
+
+        context "given existing image" do
+          before_each do
+            Ktistec.settings.assign({"image" => "https://test.test/foo/bar.jpg"}).save
+          end
+
+          it "updates the image" do
+            expect{post "/settings/service", headers, form}.to change{Ktistec.settings.image}.from("https://test.test/foo/bar.jpg")
           end
         end
       end
@@ -495,6 +636,20 @@ Spectator.describe SettingsController do
             not_to change{Ktistec.settings.site}
         end
 
+        it "changes the description" do
+          expect {post "/settings/service", headers, %q|{"description":"<p>Server description</p>"}|}.
+            to change{Ktistec.settings.description}
+        end
+
+        context "given a description" do
+          before_each { Ktistec.settings.assign({"description" => "<p>Server description</p>"}).save }
+
+          it "clears the description if blank" do
+            expect {post "/settings/service", headers, %q|{"description":""}|}.
+              to change{Ktistec.settings.description}.from("<p>Server description</p>").to("")
+          end
+        end
+
         it "changes the footer" do
           expect {post "/settings/service", headers, %q|{"footer":"Copyright Blah Blah"}|}.
             to change{Ktistec.settings.footer}
@@ -506,6 +661,20 @@ Spectator.describe SettingsController do
           it "changes the footer if blank" do
             expect {post "/settings/service", headers, %q|{"footer":""}|}.
               to change{Ktistec.settings.footer}.from("Copyright Blah Blah").to("")
+          end
+        end
+
+        it "changes the image" do
+          expect {post "/settings/service", headers, %q|{"image":"/foo/bar/baz"}|}.
+            to change{Ktistec.settings.image}.from(nil).to("https://test.test/foo/bar/baz")
+        end
+
+        context "given an image" do
+          before_each { Ktistec.settings.assign({"image" => "https://test.test/foo/bar/baz"}).save }
+
+          it "removes the image" do
+            expect {post "/settings/service", headers, %q|{"image":null}|}.
+              to change{Ktistec.settings.image}.from("https://test.test/foo/bar/baz").to(nil)
           end
         end
       end

@@ -14,6 +14,28 @@ p
   == input_tag("Language", account, language, data: {"controller" => "default-language", "placeholder-only" => true})
   == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone", "placeholder-only" => true})
   == input_tag("Password", account, password, type: "password", placeholder: "Leave blank to leave unchanged")
+  .ui.fields
+    .field
+      .ui.checkbox
+        input type="checkbox" name="auto_approve_followers" value="1" checked=account.auto_approve_followers
+        label Automatically approve new followers
+    .field
+      .ui.checkbox
+        input type="checkbox" name="auto_follow_back" value="1" checked=account.auto_follow_back
+        label Automatically follow back when followed
+  crystal:
+    is_rich_text = account.default_editor == "text/html; editor=trix"
+    is_markdown = account.default_editor == "text/markdown"
+  .inline.fields
+    label for="default_editor" Default Editor
+    .field
+      .ui.radio.checkbox
+        input#rich-text-editor type="radio" name="default_editor" value="text/html; editor=trix" checked=is_rich_text
+        label for="rich-text-editor" Rich Text
+    .field
+      .ui.radio.checkbox
+        input#markdown-editor type="radio" name="default_editor" value="text/markdown" checked=is_markdown
+        label for="markdown-editor" Markdown
   crystal:
     attachments = actor.attachments || [] of ActivityPub::Actor::Attachment
     attachments.size.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1) do |i|
@@ -59,9 +81,11 @@ p
       i.checkmark.icon
       | Yes
 h1 Site Settings
-== form_tag(settings, "/settings/service") do
+== form_tag(settings, "/settings/service", form: "data") do
   == error_messages(settings)
   == input_tag("Site Name", settings, site)
+  == input_tag("Site Image", settings, image, class: "filepond", type: "file")
+  == trix_editor("Description", settings, description)
   == input_tag("Footer", settings, footer)
   crystal:
     can_deepl = ENV["DEEPL_API_KEY"]?
@@ -75,17 +99,17 @@ h1 Site Settings
       - if can_deepl
         .field
           .ui.radio.checkbox
-            input type="radio" name="translator_service" value="deepl" checked=is_deepl
-            label DeepL
+            input#deepl-service type="radio" name="translator_service" value="deepl" checked=is_deepl
+            label for="deepl-service" DeepL
       - if can_libretranslate
         .field
           .ui.radio.checkbox
-            input type="radio" name="translator_service" value="libretranslate" checked=is_libretranslate
-            label LibreTranslate
+            input#libretranslate-service type="radio" name="translator_service" value="libretranslate" checked=is_libretranslate
+            label for="libretranslate-service" LibreTranslate
       .field
         .ui.radio.checkbox
-          input type="radio" name="translator_service" value="" checked=(!is_deepl && !is_libretranslate)
-          label None
+          input#no-service type="radio" name="translator_service" value="" checked=(!is_deepl && !is_libretranslate)
+          label for="no-service" None
     .field
       label Translator Service URL
       input type="text" name="translator_url" value=settings.translator_url
@@ -103,5 +127,4 @@ h1 Site Settings
         depending on the service) and restart the server. Configuration
         options will replace this text.
   == submit_button("Update")
-p.small.text Ktistec Version #{Ktistec::VERSION}
 br.transition.hidden

@@ -36,12 +36,12 @@ Spectator.describe ActivityPub::Actor do
       expect{subject.assign(username: "foobar").save}.to change{subject.followers}
     end
 
-    it "assigns urls" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.urls}
+    it "assigns featured" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.featured}
     end
 
-    it "assigns attachments" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.attachments}
+    it "assigns urls" do
+      expect{subject.assign(username: "foobar").save}.to change{subject.urls}
     end
 
     it "doesn't assign if the actor isn't local" do
@@ -80,6 +80,60 @@ Spectator.describe ActivityPub::Actor do
 
       it "matches on the iri" do
         expect(described_class.match?("foo@bar.com")).to eq(actor)
+      end
+    end
+  end
+
+  describe ".search_by_username" do
+    let_create!(:actor, named: :alice, username: "alice")
+    let_create!(:actor, named: :alicia, username: "alicia")
+    let_create!(:actor, named: :bob, username: "bob")
+    let_create!(:actor, named: :bobby, username: "bobby")
+
+    it "returns actors matching the prefix" do
+      results = described_class.search_by_username("al")
+      expect(results.map(&.username)).to contain_exactly("alice", "alicia")
+    end
+
+    it "returns results ordered alphabetically" do
+      results = described_class.search_by_username("al")
+      expect(results.map(&.username)).to eq(["alice", "alicia"])
+    end
+
+    it "respects the limit parameter" do
+      results = described_class.search_by_username("", limit: 2)
+      expect(results.size).to eq(2)
+    end
+
+    it "returns empty array when no matches found" do
+      results = described_class.search_by_username("xyz")
+      expect(results).to be_empty
+    end
+
+    it "excludes deleted actors" do
+      alice.delete!
+      results = described_class.search_by_username("al")
+      expect(results.map(&.username)).to eq(["alicia"])
+    end
+
+    it "excludes blocked actors" do
+      alice.block!
+      results = described_class.search_by_username("al")
+      expect(results.map(&.username)).to eq(["alicia"])
+    end
+
+    context "with SQL wildcard character in username" do
+      let_create!(:actor, named: :test_underscore, username: "test_user")
+      let_create!(:actor, named: :test_percent, username: "test%special")
+
+      it "treats underscore as literal character" do
+        results = described_class.search_by_username("test_")
+        expect(results.map(&.username)).to eq(["test_user"])
+      end
+
+      it "treats percent as literal character" do
+        results = described_class.search_by_username("test%")
+        expect(results.map(&.username)).to eq(["test%special"])
       end
     end
   end
@@ -147,9 +201,12 @@ Spectator.describe ActivityPub::Actor do
           "https://www.w3.org/ns/activitystreams",
           "https://w3id.org/security/v1",
           {
+            "featured":{"@id":"http://joinmastodon.org/ns#featured","@type":"@id"},
             "schema":"http://schema.org#",
             "PropertyValue":"schema:PropertyValue",
-            "value":"schema:value"
+            "value":"schema:value",
+            "toot":"http://joinmastodon.org/ns#",
+            "Emoji":"toot:Emoji"
           }
         ],
         "@id":"https://remote/foo_bar",
@@ -164,6 +221,7 @@ Spectator.describe ActivityPub::Actor do
         "outbox": "outbox link",
         "following": "following link",
         "followers": "followers link",
+        "featured": "featured link",
         "name":"Foo Bar",
         "summary": "<p></p>",
         "icon": {
@@ -181,6 +239,9 @@ Spectator.describe ActivityPub::Actor do
           {"name": "Blog", "type": "PropertyValue", "value": "https://somewhere.example.com/this-is-a-long-url-that-should-be-truncated"},
           {"name": "Website", "type": "PropertyValue", "value": "http://site.example.com"},
           {"name": "", "type": "invalid entry", "value": "http://site.example.com"}
+        ],
+        "tag": [
+          {"type":"Emoji","name":":batman:","icon":{"type":"Image","mediaType":"image/png","url":"https://example.com/batman.png"}}
         ]
       }
     JSON
@@ -256,6 +317,15 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  # matcher
+  class ::Tag
+    def ===(other : Tag)
+      self.type == other.type &&
+        self.name == other.name &&
+        self.href == other.href
+    end
+  end
+
   describe ".from_json_ld" do
     it "instantiates the subclass" do
       actor = described_class.from_json_ld(json)
@@ -271,11 +341,14 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
       expect(actor.followers).to eq("followers link")
+      expect(actor.featured).to eq("featured link")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
+      expect(actor.shared_inbox).to be_nil
+      expect(actor.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
 
       expect(actor.attachments).not_to be_nil
       attachments = actor.attachments.not_nil!
@@ -300,6 +373,15 @@ Spectator.describe ActivityPub::Actor do
         expect(actor.urls).to eq(["url one", "url two"])
       end
     end
+
+    context "given `sharedInbox`" do
+      let(json) { super.gsub(/"inbox": "inbox link"/, %q|"endpoints": {"sharedInbox": "https://remote/shared-inbox"}, "inbox": "inbox link"|) }
+
+      it "parses the `sharedInbox` from `endpoint`s" do
+        actor = described_class.from_json_ld(json).save
+        expect(actor.shared_inbox).to eq("https://remote/shared-inbox")
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -312,11 +394,14 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
       expect(actor.followers).to eq("followers link")
+      expect(actor.featured).to eq("featured link")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon link")
       expect(actor.image).to eq("image link")
       expect(actor.urls).to eq(["url link"])
+      expect(actor.shared_inbox).to be_nil
+      expect(actor.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
 
       expect(actor.attachments).not_to be_nil
       attachments = actor.attachments.not_nil!
@@ -339,6 +424,15 @@ Spectator.describe ActivityPub::Actor do
       it "parses the array of URLs" do
         actor = described_class.new.from_json_ld(json)
         expect(actor.urls).to eq(["url one", "url two"])
+      end
+    end
+
+    context "given `sharedInbox`" do
+      let(json) { super.gsub(/"inbox": "inbox link"/, %q|"endpoints": {"sharedInbox": "https://remote/shared-inbox"}, "inbox": "inbox link"|) }
+
+      it "updates `shared_inbox`" do
+        actor = described_class.new.from_json_ld(json).save
+        expect(actor.shared_inbox).to eq("https://remote/shared-inbox")
       end
     end
   end
@@ -366,11 +460,55 @@ Spectator.describe ActivityPub::Actor do
       end
     end
 
+    context "given a shared inbox" do
+      before_each { actor.assign(shared_inbox: "https://remote/shared-inbox") }
+
+      it "renders `sharedInbox`" do
+        expect(actor.to_json_ld).to match(/"endpoints":\{[^}]*"sharedInbox":"https:\/\/remote\/shared-inbox"[^}]*\}/)
+      end
+    end
+
+    context "given a local actor" do
+      let_build(:actor, local: true)
+
+      it "renders `proxyUrl`" do
+        expect(actor.to_json_ld).to match(/"endpoints":\{[^}]*"proxyUrl":"https:\/\/test.test\/proxy"[^}]*\}/)
+      end
+    end
+
     context "given an array of attachments" do
       it "renders the array of attachments, with html links" do
         expect(actor.to_json_ld).to match(/"attachment":\[[^\]]+\]/)
         expect(actor.to_json_ld).to match(%r{"value\":\"<a href=\\\"https://somewhere.example.com/this-is-a-long-url-that-should-be-truncated\\\" target=\\\"_blank\\\" rel=\\\"ugc\\\"><span class=\\\"invisible\\\">https://</span><span class=\\\"ellipsis\\\">somewhere.example.com/this-is-</span><span class=\\\"invisible\\\">a-long-url-that-should-be-truncated</span></a>\"})
         expect(actor.to_json_ld).to match(%r{"value\":\"<a href=\\\"http://site.example.com\\\" target=\\\"_blank\\\" rel=\\\"ugc\\\"><span class=\\\"invisible\\\">http://</span><span>site.example.com</span></a>\"})
+      end
+    end
+
+    it "does not render manuallyApprovesFollowers" do
+      expect(JSON.parse(actor.to_json_ld).as_h.has_key?("manuallyApprovesFollowers")).to be_false
+    end
+
+    context "given a local actor with an account" do
+      let(account) { register }
+
+      context "when auto_approve_followers is true" do
+        before_each do
+          account.assign(auto_approve_followers: true).save
+        end
+
+        it "renders manuallyApprovesFollowers as false" do
+          expect(JSON.parse(account.actor.to_json_ld).as_h["manuallyApprovesFollowers"]).to eq(false)
+        end
+      end
+
+      context "when auto_approve_followers is false" do
+        before_each do
+          account.assign(auto_approve_followers: false).save
+        end
+
+        it "renders manuallyApprovesFollowers as true" do
+          expect(JSON.parse(account.actor.to_json_ld).as_h["manuallyApprovesFollowers"]).to eq(true)
+        end
       end
     end
   end
@@ -522,39 +660,111 @@ Spectator.describe ActivityPub::Actor do
     create_like(4)
     create_like(5)
 
+    let(since) { KTISTEC_EPOCH }
+
     it "instantiates the correct subclass" do
       expect(subject.likes(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.likes(since: since)).to eq(5)
     end
 
     it "filters out deleted posts" do
       note5.delete!
       expect(subject.likes(1, 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
       note5.block!
       expect(subject.likes(1, 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
     end
 
     it "filters out posts by deleted actors" do
       note5.attributed_to.delete!
       expect(subject.likes(1, 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
     end
 
     it "filters out posts by blocked actors" do
       note5.attributed_to.block!
       expect(subject.likes(1, 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
     end
 
     it "filters out posts if the like has been undone" do
       like5.undo!
       expect(subject.likes(1, 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
     end
 
     it "paginates the results" do
       expect(subject.likes(1, 2)).to eq([note5, note4])
       expect(subject.likes(2, 2)).to eq([note3, note2])
       expect(subject.likes(2, 2).more?).to be_true
+    end
+  end
+
+  describe "#dislikes" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_dislike(index)
+      let_create!(:note, named: note{{index}})
+      let_create!(:dislike, named: dislike{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_dislike(1)
+    create_dislike(2)
+    create_dislike(3)
+    create_dislike(4)
+    create_dislike(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.dislikes(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.dislikes(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      note5.attributed_to.delete!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      note5.attributed_to.block!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts if the dislike has been undone" do
+      dislike5.undo!
+      expect(subject.dislikes(1, 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "paginates the results" do
+      expect(subject.dislikes(1, 2)).to eq([note5, note4])
+      expect(subject.dislikes(2, 2)).to eq([note3, note2])
+      expect(subject.dislikes(2, 2).more?).to be_true
     end
   end
 
@@ -572,39 +782,168 @@ Spectator.describe ActivityPub::Actor do
     create_announce(4)
     create_announce(5)
 
+    let(since) { KTISTEC_EPOCH }
+
     it "instantiates the correct subclass" do
       expect(subject.announces(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.announces(since: since)).to eq(5)
     end
 
     it "filters out deleted posts" do
       note5.delete!
       expect(subject.announces(1, 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
       note5.block!
       expect(subject.announces(1, 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
     end
 
     it "filters out posts by deleted actors" do
       note5.attributed_to.delete!
       expect(subject.announces(1, 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
     end
 
     it "filters out posts by blocked actors" do
       note5.attributed_to.block!
       expect(subject.announces(1, 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
     end
 
     it "filters out posts if the announce has been undone" do
       announce5.undo!
       expect(subject.announces(1, 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
     end
 
     it "paginates the results" do
       expect(subject.announces(1, 2)).to eq([note5, note4])
       expect(subject.announces(2, 2)).to eq([note3, note2])
       expect(subject.announces(2, 2).more?).to be_true
+    end
+  end
+
+  describe "#bookmarks" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_bookmark(index)
+      let_create!(:note, named: note{{index}})
+      let_create!(:bookmark_relationship, named: bookmark{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_bookmark(1)
+    create_bookmark(2)
+    create_bookmark(3)
+    create_bookmark(4)
+    create_bookmark(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.bookmarks(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.bookmarks(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.bookmarks(1, 2)).to eq([note4, note3])
+      expect(subject.bookmarks(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.bookmarks(1, 2)).to eq([note4, note3])
+      expect(subject.bookmarks(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      note5.attributed_to.delete!
+      expect(subject.bookmarks(1, 2)).to eq([note4, note3])
+      expect(subject.bookmarks(since: since)).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      note5.attributed_to.block!
+      expect(subject.bookmarks(1, 2)).to eq([note4, note3])
+      expect(subject.bookmarks(since: since)).to eq(4)
+    end
+
+    it "paginates the results" do
+      expect(subject.bookmarks(1, 2)).to eq([note5, note4])
+      expect(subject.bookmarks(2, 2)).to eq([note3, note2])
+      expect(subject.bookmarks(2, 2).more?).to be_true
+    end
+
+    it "returns results in reverse chronological order" do
+      expect(subject.bookmarks(1, 5)).to eq([note5, note4, note3, note2, note1])
+    end
+  end
+
+  describe "#pins" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_pin(index)
+      let_create!(:note, named: note{{index}}, attributed_to: subject, local: true)
+      let_create!(:pin_relationship, named: pin{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_pin(1)
+    create_pin(2)
+    create_pin(3)
+    create_pin(4)
+    create_pin(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.pins.first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.pins(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.pins).to eq([note4, note3, note2, note1])
+      expect(subject.pins(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.pins).to eq([note4, note3, note2, note1])
+      expect(subject.pins(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      subject.delete!
+      expect(subject.pins).to be_empty
+      expect(subject.pins(since: since)).to eq(0)
+    end
+
+    it "filters out posts by blocked actors" do
+      subject.block!
+      expect(subject.pins).to be_empty
+      expect(subject.pins(since: since)).to eq(0)
+    end
+
+    it "paginates the results" do
+      expect(subject.pins(1, 2)).to eq([note5, note4])
+      expect(subject.pins(2, 2)).to eq([note3, note2])
+      expect(subject.pins(2, 2).more?).to be_true
+    end
+
+    it "returns results in reverse chronological order" do
+      expect(subject.pins(1, 5)).to eq([note5, note4, note3, note2, note1])
     end
   end
 
@@ -622,28 +961,38 @@ Spectator.describe ActivityPub::Actor do
     create_draft(4)
     create_draft(5)
 
+    let(since) { KTISTEC_EPOCH }
+
     it "instantiates the correct subclass" do
       expect(subject.drafts(1, 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.drafts(since: since)).to eq(5)
     end
 
     it "filters out deleted posts" do
       note5.delete!
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
       note5.block!
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "filters out published posts" do
       note5.assign(published: Time.utc).save
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "includes only posts attributed to subject" do
       note5.assign(attributed_to: other).save
       expect(subject.drafts(1, 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
     end
 
     it "paginates the results" do
@@ -958,18 +1307,118 @@ Spectator.describe ActivityPub::Actor do
 
     it "filters out deleted posts" do
       post5.delete!
-      expect(subject.known_posts(1, 2)).to eq([post3, post1])
+      expect(subject.known_posts(1, 3)).to eq([post3, post1])
     end
 
     it "filters out blocked posts" do
       post5.block!
-      expect(subject.known_posts(1, 2)).to eq([post3, post1])
+      expect(subject.known_posts(1, 3)).to eq([post3, post1])
+    end
+
+    it "filters out draft posts" do
+      post5.assign(published: nil).save
+      expect(subject.known_posts(1, 3)).to eq([post3, post1])
+    end
+
+    context "given a pinned post" do
+      let_create!(:pin_relationship, actor: subject, object: post1)
+
+      it "returns the pinned post first" do
+        expect(subject.known_posts(1, 3)).to eq([post1, post5, post3])
+      end
+
+      it "does not duplicate pinned posts" do
+        result = subject.known_posts(1, 10)
+        expect(result.to_a.count { |o| o.id == post1.id }).to eq(1)
+      end
     end
 
     it "paginates the results" do
       expect(subject.known_posts(1, 2)).to eq([post5, post3])
       expect(subject.known_posts(2, 2)).to eq([post1])
       expect(subject.known_posts(2, 2).more?).not_to be_true
+    end
+  end
+
+  describe "#public_posts_with_pins" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro post(index)
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
+      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
+      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.public_posts_with_pins(1, 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "filters out deleted posts" do
+      object5.delete!
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out blocked posts" do
+      object5.block!
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete!
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block!
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out non-public posts" do
+      object5.assign(visible: false).save
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out replies" do
+      object5.assign(in_reply_to: object3).save
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts belonging to undone activities" do
+      activity5.undo!
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    # only local (not cached) actors have an outbox
+    it "filters out posts that are not in an outbox" do
+      outbox5.destroy
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
+    end
+
+    context "given a pinned post" do
+      let_create!(:object, named: object1, attributed_to: subject)
+      let_create!(:pin_relationship, actor: subject, object: object1)
+
+      it "returns the pinned post first" do
+        expect(subject.public_posts_with_pins(1, 3)).to eq([object1, object5, object4])
+      end
+
+      it "does not duplicate pinned posts" do
+        result = subject.public_posts_with_pins(1, 10)
+        expect(result.to_a.count { |o| o.id == object1.id }).to eq(1)
+      end
+    end
+
+    it "paginates the results" do
+      expect(subject.public_posts_with_pins(1, 2)).to eq([object5, object4])
+      expect(subject.public_posts_with_pins(3, 2)).to eq([object1])
+      expect(subject.public_posts_with_pins(3, 2).more?).not_to be_true
     end
   end
 
@@ -1034,9 +1483,6 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.public_posts(1, 2)).to eq([object4, object3])
     end
 
-    let_build(:create, actor: subject, object: object5)
-    let_build(:outbox_relationship, named: :outbox, owner: subject, activity: create)
-
     it "paginates the results" do
       expect(subject.public_posts(1, 2)).to eq([object5, object4])
       expect(subject.public_posts(3, 2)).to eq([object1])
@@ -1060,49 +1506,64 @@ Spectator.describe ActivityPub::Actor do
     post(4)
     post(5)
 
+    let(since) { KTISTEC_EPOCH }
+
     it "instantiates the correct subclass" do
       expect(subject.all_posts(1, 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "returns the count" do
+      expect(subject.all_posts(since: since)).to eq(5)
+      expect(subject.all_posts(since: object1.created_at)).to eq(4)
     end
 
     it "filters out deleted posts" do
       object5.delete!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     it "filters out blocked posts" do
       object5.block!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     it "filters out posts by deleted actors" do
       actor5.delete!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     it "filters out posts by blocked actors" do
       actor5.block!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     it "includes non-public posts" do
       object5.assign(visible: false).save
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
+      expect(subject.all_posts(since: since)).to eq(5)
     end
 
     it "includes replies" do
       object5.assign(in_reply_to: object3).save
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
+      expect(subject.all_posts(since: since)).to eq(5)
     end
 
     it "filters out posts belonging to undone activities" do
       activity5.undo!
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     # only local (not cached) actors have an outbox
     it "filters out posts that are not in an outbox" do
       outbox5.destroy
       expect(subject.all_posts(1, 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
     end
 
     let_build(:create, actor: subject, object: object5)
@@ -1140,6 +1601,7 @@ Spectator.describe ActivityPub::Actor do
 
     it "returns the count" do
       expect(subject.timeline(since: since)).to eq(5)
+      expect(subject.timeline(since: timeline1.created_at)).to eq(4)
     end
 
     it "filters out deleted posts" do
@@ -1179,17 +1641,17 @@ Spectator.describe ActivityPub::Actor do
     context "given a prior create not in timeline" do
       let_create!(:create, actor: actor5, object: object5)
 
-      it "includes announcements by default" do
+      it "includes announces by default" do
         expect(subject.timeline(page: 1, size: 2)).to eq([timeline5, timeline4])
         expect(subject.timeline(since: since)).to eq(5)
       end
 
-      it "includes announcements" do
+      it "includes announces" do
         expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Announce], page: 1, size: 2)).to eq([timeline5, timeline4])
         expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Announce])).to eq(5)
       end
 
-      it "filters out announcements" do
+      it "filters out announces" do
         expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Create], page: 1, size: 2)).to be_empty
         expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create])).to eq(0)
       end
@@ -1267,6 +1729,7 @@ Spectator.describe ActivityPub::Actor do
 
     it "returns the count" do
       expect(subject.notifications(since: since)).to eq(5)
+      expect(subject.notifications(since: notification1.created_at)).to eq(4)
     end
 
     it "filters out undone activities" do
@@ -1359,6 +1822,83 @@ Spectator.describe ActivityPub::Actor do
     it "returns the handle" do
       expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar").handle).to eq("foobar@test.test")
       expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar").handle).to eq("foobar@remote")
+    end
+
+    it "returns '[blocked]' when actor is blocked" do
+      expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar", blocked_at: Time.utc).handle).to eq("[blocked]")
+      expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar", blocked_at: Time.utc).handle).to eq("[blocked]")
+    end
+  end
+
+  describe "#display_name" do
+    let_build(:actor, name: "John Doe", username: "john")
+
+    it "returns name when available" do
+      expect(actor.display_name).to eq("John Doe")
+    end
+
+    it "returns username when name is blank" do
+      actor.name = nil
+      expect(actor.display_name).to eq("john")
+    end
+
+    it "returns iri when name and username are blank" do
+      actor.name = actor.username = nil
+      expect(actor.display_name).to eq(actor.iri)
+    end
+
+    it "returns '[blocked]' when actor is blocked" do
+      actor.block!
+      expect(actor.display_name).to eq("[blocked]")
+    end
+  end
+
+  describe "#followed_actors" do
+    let_build(:actor)
+    let_build(:actor, named: :other)
+
+    it "returns empty set" do
+      expect(actor.followed_actors).to be_empty
+    end
+
+    context "given a follow" do
+      let_create!(:follow_relationship, actor: actor, object: other)
+
+      it "returns followed actors" do
+        expect(actor.followed_actors).to contain(other.iri)
+      end
+    end
+  end
+
+  describe "#followed_hashtags" do
+    let_build(:actor)
+
+    it "returns empty set" do
+      expect(actor.followed_hashtags).to be_empty
+    end
+
+    context "given a follow" do
+      let_create!(:follow_hashtag_relationship, actor: actor, name: "crystal")
+
+      it "returns set of followed hashtags" do
+        expect(actor.followed_hashtags).to contain("crystal")
+      end
+    end
+  end
+
+  describe "#followed_mentions" do
+    let_build(:actor)
+
+    it "returns empty set" do
+      expect(actor.followed_mentions).to be_empty
+    end
+
+    context "given a follow" do
+      let_create!(:follow_mention_relationship, actor: actor, name: "alice@example.com")
+
+      it "returns set of followed mentions" do
+        expect(actor.followed_mentions).to contain("alice@example.com")
+      end
     end
   end
 end

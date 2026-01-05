@@ -84,7 +84,7 @@ module Ktistec
       @index = 0
     end
 
-    private def forward_while(&block)
+    private def forward_while(&)
       @index += 1
       while @index < @size
         c = @input[@index]

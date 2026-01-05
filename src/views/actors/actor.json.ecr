@@ -3,6 +3,8 @@
     "https://www.w3.org/ns/activitystreams",
     "https://w3id.org/security/v1",
     {
+      "manuallyApprovesFollowers":"as:manuallyApprovesFollowers",
+      "featured":{"@id":"http://joinmastodon.org/ns#featured","@type":"@id"},
       "schema":"http://schema.org#",
       "PropertyValue":"schema:PropertyValue",
       "value":"schema:value"
@@ -18,14 +20,19 @@
     "publicKeyPem":<%= pem_public_key.to_json %>
   },
   <%- end -%>
-  <%- if (inbox = actor.inbox) -%>
-  <%# some services (e.g. PeerTube) expect a "shared" inbox %>
-  <%# proffer the actor's inbox %>
+  <%- endpoints = {} of String => String -%>
   <%- if actor.local? -%>
-  "endpoints": {
-    "sharedInbox": <%= inbox.to_json %>
-  },
+    <%- endpoints["proxyUrl"] = "#{host}/proxy" -%>
   <%- end -%>
+  <%- if (shared_inbox = actor.shared_inbox) -%>
+    <%- endpoints["sharedInbox"] = shared_inbox -%>
+  <%- elsif actor.local? && (inbox = actor.inbox) -%>
+    <%- endpoints["sharedInbox"] = inbox -%>
+  <%- end -%>
+  <%- unless endpoints.empty? -%>
+  "endpoints":<%= endpoints.to_json %>,
+  <%- end -%>
+  <%- if (inbox = actor.inbox) -%>
   "inbox":<%= inbox.to_json %>,
   <%- end -%>
   <%- if (outbox = actor.outbox) -%>
@@ -36,6 +43,9 @@
   <%- end -%>
   <%- if (followers = actor.followers) -%>
   "followers":<%= followers.to_json %>,
+  <%- end -%>
+  <%- if (featured = actor.featured) -%>
+  "featured":<%= featured.to_json %>,
   <%- end -%>
   <%- if (name = actor.name) -%>
   "name":<%= name.to_json %>,
@@ -70,6 +80,9 @@
   <%- elsif urls.size > 0 -%>
   "url":<%= urls.first.to_json %>,
   <%- end -%>
+  <%- end -%>
+  <%- if (account = Account.find?(iri: actor.iri)) -%>
+  "manuallyApprovesFollowers":<%= (!account.auto_approve_followers).to_json %>,
   <%- end -%>
   "type":<%= actor.type.split("::").last.to_json %>,
   "id":<%= actor.iri.to_json %>

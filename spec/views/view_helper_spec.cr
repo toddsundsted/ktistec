@@ -1,6 +1,9 @@
 require "../../src/views/view_helper"
+require "../../src/models/activity_pub/actor/person"
+require "../../src/models/activity_pub/object/note"
 
 require "../spec_helper/controller"
+require "../spec_helper/factory"
 
 class FooBarController
   include Ktistec::Controller
@@ -109,6 +112,157 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".addressing" do
+    let_build(:actor, local: true)
+
+    context "when visibility is public" do
+      let(params) { {"visibility" => "public"} }
+
+      it "puts public collection in to field" do
+        _, to, _ = self.class.addressing(params, actor)
+        expect(to).to contain("https://www.w3.org/ns/activitystreams#Public")
+      end
+
+      it "puts followers collection in cc field" do
+        _, _, cc = self.class.addressing(params, actor)
+        expect(cc).to contain(actor.followers)
+      end
+
+      it "returns visible as true" do
+        visible, _, _ = self.class.addressing(params, actor)
+        expect(visible).to be_true
+      end
+    end
+
+    context "when visibility is private" do
+      let(params) { {"visibility" => "private"} }
+
+      it "puts followers collection in to field" do
+        _, to, _ = self.class.addressing(params, actor)
+        expect(to).to contain(actor.followers)
+      end
+
+      it "does not put followers collection in cc field" do
+        _, _, cc = self.class.addressing(params, actor)
+        expect(cc).not_to contain(actor.followers)
+      end
+
+      it "returns visible as false" do
+        visible, _, _ = self.class.addressing(params, actor)
+        expect(visible).to be_false
+      end
+    end
+
+    context "when visibility is direct" do
+      let(params) { {"visibility" => "direct"} }
+
+      it "does not put anything in to field" do
+        _, to, _ = self.class.addressing(params, actor)
+        expect(to).to be_empty
+      end
+
+      it "does not put anything in cc field" do
+        _, _, cc = self.class.addressing(params, actor)
+        expect(cc).to be_empty
+      end
+
+      it "returns visible as false" do
+        visible, _, _ = self.class.addressing(params, actor)
+        expect(visible).to be_false
+      end
+    end
+  end
+
+  describe ".visibility" do
+    let_build(:object, local: true)
+    let(actor) { object.attributed_to }
+
+    context "when object addresses the public collection" do
+      it "returns public" do
+        object.assign(to: ["https://www.w3.org/ns/activitystreams#Public", "https://remote/actors/foo"], cc: nil)
+        expect(self.class.visibility(actor, object)).to eq("public")
+      end
+    end
+
+    context "when object addresses the public collection" do
+      it "returns public" do
+        object.assign(to: ["https://remote/actors/foo"], cc: ["https://www.w3.org/ns/activitystreams#Public"])
+        expect(self.class.visibility(actor, object)).to eq("public")
+      end
+    end
+
+    context "when object addresses the followers collection" do
+      it "returns private" do
+        object.assign(to: [actor.followers.not_nil!, "https://remote/actors/foo"], cc: nil)
+        expect(self.class.visibility(actor, object)).to eq("private")
+      end
+    end
+
+    context "when object addresses the followers collection" do
+      it "returns private" do
+        object.assign(to: ["https://remote/actors/foo"], cc: [actor.followers.not_nil!])
+        expect(self.class.visibility(actor, object)).to eq("private")
+      end
+    end
+
+    context "when object addresses neither the public collection nor the followers collection" do
+      it "returns direct" do
+        object.assign(to: ["https://remote/actors/foo"], cc: ["https://remote/actors/bar"])
+        expect(self.class.visibility(actor, object)).to eq("direct")
+      end
+    end
+
+    context "when both to and cc are empty arrays" do
+      it "returns direct" do
+        object.assign(to: [] of String, cc: [] of String)
+        expect(self.class.visibility(actor, object)).to eq("direct")
+      end
+    end
+
+    context "when both to and cc are nil" do
+      context "and object is not a reply" do
+        it "returns public" do
+          object.assign(to: nil, cc: nil)
+          expect(self.class.visibility(actor, object)).to eq("public")
+        end
+      end
+
+      context "and object is a reply" do
+        let_build(:object, named: :parent)
+
+        before_each { object.assign(to: nil, cc: nil, in_reply_to: parent) }
+
+        context "and parent addresses the public collection" do
+          it "returns public" do
+            object.assign(to: nil, cc: ["https://www.w3.org/ns/activitystreams#Public", "https://remote/actors/foo"])
+            expect(self.class.visibility(actor, object)).to eq("public")
+          end
+        end
+
+        context "and parent addresses the public collection" do
+          it "returns public" do
+            object.assign(to: ["https://www.w3.org/ns/activitystreams#Public"], cc: ["https://remote/actors/foo"])
+            expect(self.class.visibility(actor, object)).to eq("public")
+          end
+        end
+
+        context "and parent addresses the followers collection" do
+          it "returns direct" do
+            parent.assign(to: [actor.followers.not_nil!], cc: nil)
+            expect(self.class.visibility(actor, object)).to eq("direct")
+          end
+        end
+
+        context "and parent addresses the followers collection" do
+          it "returns direct" do
+            parent.assign(to: nil, cc: [actor.followers.not_nil!])
+            expect(self.class.visibility(actor, object)).to eq("direct")
+          end
+        end
+      end
+    end
+  end
+
   describe ".wrap_link" do
     let(link) { "https://example.com/this-is-a-url" }
 
@@ -209,6 +363,88 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".actor_icon" do
+    let_build(:actor)
+
+    let(classes) { nil }
+    subject { XML.parse_html(self.class.actor_icon(actor, classes), PARSER_OPTIONS) }
+
+    context "when actor is nil" do
+      subject { XML.parse_html(self.class.actor_icon(nil), PARSER_OPTIONS) }
+
+      it "renders fallback icon" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/fallback.png")
+      end
+    end
+
+    context "when icon is nil" do
+      before_each { actor.assign(icon: nil).save }
+
+      it "renders fallback icon" do
+        src = subject.xpath_nodes("//img/@src").map(&.text).first
+        expect(src).to match(/\/images\/avatars\/color-\d+\.png/)
+      end
+    end
+
+    context "when icon is blank" do
+      before_each { actor.assign(icon: "").save }
+
+      it "renders fallback icon" do
+        src = subject.xpath_nodes("//img/@src").map(&.text).first
+        expect(src).to match(/\/images\/avatars\/color-\d+\.png/)
+      end
+    end
+
+    context "when actor is down" do
+      before_each { actor.assign(icon: "https://example.com/icon.png").save.down! }
+
+      it "renders fallback icon" do
+        src = subject.xpath_nodes("//img/@src").map(&.text).first
+        expect(src).to match(/\/images\/avatars\/color-\d+\.png/)
+      end
+    end
+
+    context "when actor is deleted" do
+      before_each { actor.assign(icon: "https://example.com/icon.png").save.delete! }
+
+      it "renders the deleted icon" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/deleted.png")
+      end
+    end
+
+    context "when actor is blocked" do
+      before_each { actor.assign(icon: "https://example.com/icon.png").save.block! }
+
+      it "renders the blocked icono" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/blocked.png")
+      end
+    end
+
+    context "given an icon" do
+      before_each { actor.assign(icon: "https://example.com/icon.png", name: "Test Actor").save }
+
+      it "renders an img tag with src attribute" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("https://example.com/icon.png")
+      end
+
+      it "renders an img tag with alt attribute" do
+        expect(subject.xpath_nodes("//img/@alt").map(&.text)).to contain_exactly("Test Actor")
+      end
+
+      it "renders an img tag with data-actor-id attribute" do
+        expect(subject.xpath_nodes("//img/@data-actor-id").map(&.text)).to contain_exactly(actor.id.to_s)
+      end
+
+      context "and classes" do
+        let(classes) { "ui avatar image" }
+
+        it "renders an img tag with the classes" do
+          expect(subject.xpath_nodes("//img/@class").map(&.text)).to contain_exactly("ui avatar image")
+        end
+      end
+    end
+  end
+
   describe "activity_button" do
     subject do
       XML.parse_html(activity_button("/foobar", "https://object", "Zap", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }, PARSER_OPTIONS).document
@@ -231,7 +467,7 @@ Spectator.describe "helpers" do
     end
 
     it "emits a form with a hidden input specifying the visibility" do
-      expect(subject.xpath_nodes("/form/input[@name='public']/@value")).to contain_exactly("1")
+      expect(subject.xpath_nodes("/form/input[@name='visibility']/@value")).to contain_exactly("public")
     end
 
     it "specifies the action" do
@@ -301,7 +537,7 @@ Spectator.describe "helpers" do
 
   describe "form_button" do
     subject do
-      XML.parse_html(form_button("/foobar", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }, PARSER_OPTIONS).document
+      XML.parse_html(form_button("/foobar", method: "PUT", form_id: "woof", form_class: "blarg", button_id: "beep", button_class: "honk", csrf: "CSRF") { "<div/>" }, PARSER_OPTIONS).document
     end
 
     it "emits a form with nested content" do
@@ -320,8 +556,16 @@ Spectator.describe "helpers" do
       expect(subject.xpath_nodes("/form/@method")).to contain_exactly("PUT")
     end
 
+    it "specifies the form id " do
+      expect(subject.xpath_nodes("/form/@id")).to contain_exactly("woof")
+    end
+
     it "specifies the form class" do
       expect(subject.xpath_nodes("/form/@class")).to contain_exactly("blarg")
+    end
+
+    it "specifies the button id" do
+      expect(subject.xpath_nodes("/form/button/@id")).to contain_exactly("beep")
     end
 
     it "specifies the button class" do
@@ -497,7 +741,7 @@ Spectator.describe "helpers" do
 
   describe "input_tag" do
     subject do
-      XML.parse_html(input_tag("Label", model, field, class: "blarg", type: "foobar", placeholder: "quoz"), PARSER_OPTIONS).document
+      XML.parse_html(input_tag("Label", model, field, id: "woof", class: "blarg", type: "foobar", placeholder: "quoz"), PARSER_OPTIONS).document
     end
 
     it "emits div containing label and input tags" do
@@ -514,6 +758,10 @@ Spectator.describe "helpers" do
 
     it "emits an input tag with the associated value" do
       expect(subject.xpath_nodes("/div/input/@value")).to contain_exactly("Value")
+    end
+
+    it "specifies the id" do
+      expect(subject.xpath_nodes("/div/input/@id")).to contain_exactly("woof")
     end
 
     it "specifies the class" do
@@ -565,11 +813,107 @@ Spectator.describe "helpers" do
         expect(subject.xpath_nodes("/div/input/@value")).to contain_exactly(%q|Value with ampersand & "quotes".|)
       end
     end
+
+    context "given autofocus" do
+      subject do
+        XML.parse_html(input_tag("Label", model, field, autofocus: true), PARSER_OPTIONS).document
+      end
+
+      it "specifies the autofocus attribute" do
+        expect(subject.xpath_nodes("/div/input/@autofocus")).not_to be_empty
+      end
+    end
+  end
+
+  describe "textarea_tag" do
+    subject do
+      XML.parse_html(textarea_tag("Label", model, :field, id: "woof", class: "blarg", rows: 4, placeholder: "quoz"), PARSER_OPTIONS).document
+    end
+
+    it "emits div containing label and textarea tags" do
+      expect(subject.xpath_nodes("/div[label][textarea]")).not_to be_empty
+    end
+
+    it "emits a label tag with the label text" do
+      expect(subject.xpath_nodes("/div/label/text()")).to contain_exactly("Label")
+    end
+
+    it "emits a textarea tag with the specified name" do
+      expect(subject.xpath_nodes("/div/textarea/@name")).to contain_exactly("field")
+    end
+
+    it "emits a textarea tag with the associated text" do
+      expect(subject.xpath_nodes("/div/textarea/text()")).to contain_exactly("Value")
+    end
+
+    it "specifies the id" do
+      expect(subject.xpath_nodes("/div/textarea/@id")).to contain_exactly("woof")
+    end
+
+    it "specifies the class" do
+      expect(subject.xpath_nodes("/div/textarea/@class")).to contain_exactly("blarg")
+    end
+
+    it "overrides the default rows" do
+      expect(subject.xpath_nodes("/div/textarea/@rows")).to contain_exactly("4")
+    end
+
+    it "specifies the placeholder" do
+      expect(subject.xpath_nodes("/div/textarea/@placeholder")).to contain_exactly("quoz")
+    end
+
+    it "sets the error class" do
+      expect(subject.xpath_nodes("/div/@class")).to contain_exactly("field error")
+    end
+
+    context "given data attributes" do
+      subject do
+        XML.parse_html(textarea_tag("Label", model, :field, data: {"foo" => "bar", "abc" => "xyz"}), PARSER_OPTIONS).document
+      end
+
+      it "emits data attributes" do
+        expect(subject.xpath_nodes("/div/textarea/@*[starts-with(name(),'data-')]")).to contain_exactly("bar", "xyz")
+      end
+    end
+
+    context "given a nil model" do
+      subject do
+        XML.parse_html(textarea_tag("Label", nil, :field), PARSER_OPTIONS).document
+      end
+
+      it "emits a textarea tag with the specified name" do
+        expect(subject.xpath_nodes("/div/textarea/@name")).to contain_exactly("field")
+      end
+
+      it "does not set the error class" do
+        expect(subject.xpath_nodes("/div/@class")).to contain_exactly("field")
+      end
+    end
+
+    context "given a value with HTML characters" do
+      before_each do
+        model.field = %q|Value with <tags> & "quotes".|
+      end
+
+      it "emits a textarea tag with the associated value" do
+        expect(subject.xpath_nodes("/div/textarea/text()")).to contain_exactly(%q|Value with <tags> & "quotes".|)
+      end
+    end
+
+    context "given autofocus" do
+      subject do
+        XML.parse_html(textarea_tag("Label", model, :field, autofocus: true), PARSER_OPTIONS).document
+      end
+
+      it "specifies the autofocus attribute" do
+        expect(subject.xpath_nodes("/div/textarea/@autofocus")).not_to be_empty
+      end
+    end
   end
 
   describe "select_tag" do
     subject do
-      XML.parse_html(select_tag("Label", model, field, {one: "One", two: "Two"}, class: "blarg"), PARSER_OPTIONS).document
+      XML.parse_html(select_tag("Label", model, field, {one: "One", two: "Two"}, id: "woof", class: "blarg"), PARSER_OPTIONS).document
     end
 
     it "emits div containing label and select tags" do
@@ -610,6 +954,10 @@ Spectator.describe "helpers" do
       end
     end
 
+    it "specifies the id" do
+      expect(subject.xpath_nodes("/div/select/@id")).to contain_exactly("woof")
+    end
+
     it "specifies the class" do
       expect(subject.xpath_nodes("/div/select/@class")).to contain_exactly("blarg")
     end
@@ -635,6 +983,58 @@ Spectator.describe "helpers" do
 
       it "emits a select tag with the specified name" do
         expect(subject.xpath_nodes("/div/select/@name")).to contain_exactly("field")
+      end
+
+      it "does not set the error class" do
+        expect(subject.xpath_nodes("/div/@class")).to contain_exactly("field")
+      end
+    end
+  end
+
+  describe "trix_editor" do
+    subject do
+      XML.parse_html(trix_editor("Label", model, field, id: "woof", class: "blarg"), PARSER_OPTIONS).document
+    end
+
+    it "emits div containing label, trix-editor and textarea tags" do
+      expect(subject.xpath_nodes("/div[label][trix-editor][textarea]")).not_to be_empty
+    end
+
+    it "includes data-turbo-permanent on field" do
+      expect(subject.xpath_nodes("/div/@data-turbo-permanent")).to_not be_empty
+    end
+
+    it "emits a label tag with the label text" do
+      expect(subject.xpath_nodes("/div/label/text()")).to contain_exactly("Label")
+    end
+
+    it "emits a trix-editor with the specified input attribute" do
+      expect(subject.xpath_nodes("/div/trix-editor/@input")).to contain_exactly("woof")
+    end
+
+    it "specifies the custom class on trix-editor" do
+      expect(subject.xpath_nodes("/div/trix-editor/@class")).to contain_exactly("blarg")
+    end
+
+    it "emits a textarea with the associated value" do
+      expect(subject.xpath_nodes("/div/textarea/text()")).to contain_exactly("Value")
+    end
+
+    it "emits a textarea with the specified id" do
+      expect(subject.xpath_nodes("/div/textarea/@id")).to contain_exactly("woof")
+    end
+
+    it "emits a textarea with the specified name" do
+      expect(subject.xpath_nodes("/div/textarea/@name")).to contain_exactly("field")
+    end
+
+    it "sets the error class" do
+      expect(subject.xpath_nodes("/div/@class")).to contain_exactly("field error")
+    end
+
+    context "given a nil model" do
+      subject do
+        XML.parse_html(trix_editor("Label", nil, field), PARSER_OPTIONS).document
       end
 
       it "does not set the error class" do
@@ -704,9 +1104,7 @@ Spectator.describe "helpers" do
     let(host) { Ktistec.settings.host }
 
     subject do
-      JSON.parse(String.build { |content_io|
-        activity_pub_collection(collection)
-      })
+      JSON.parse(String.build { |content_io| activity_pub_collection(collection) })  # ameba:disable Lint/UnusedArgument
     end
 
     it "generates a JSON-LD document" do
@@ -989,6 +1387,12 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "render_as_text" do
+    it "strips all HTML" do
+      expect(t("<p>Foo Bar</p>")).to eq("Foo Bar\n")
+    end
+  end
+
   describe "pluralize" do
     it "pluralizes the noun" do
       expect(pluralize(0, "fox")).to eq("fox")
@@ -1030,6 +1434,84 @@ Spectator.describe "helpers" do
   describe "id" do
     it "generates an id" do
       expect(id).to match(/^[a-zA-Z0-9_-]+$/)
+    end
+  end
+
+  ## Pagination helpers
+
+  describe "pagination_params" do
+    it "ensures page is at least 1" do
+      env = env_factory("GET", "/?page=0")
+      result = self.class.pagination_params(env)
+      expect(result[:page]).to eq(1)
+    end
+
+    it "ignores negative page numbers" do
+      env = env_factory("GET", "/?page=-5")
+      result = self.class.pagination_params(env)
+      expect(result[:page]).to eq(1)
+    end
+
+    context "when user is not authenticated" do
+      it "allows size up to 20" do
+        env = env_factory("GET", "/?page=2&size=20")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(2)
+        expect(result[:size]).to eq(20)
+      end
+
+      it "limits size to 20" do
+        env = env_factory("GET", "/?page=2&size=21")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(2)
+        expect(result[:size]).to eq(20)
+      end
+
+      it "uses default size of 10 when no size specified" do
+        env = env_factory("GET", "/?page=1")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(1)
+        expect(result[:size]).to eq(10)
+      end
+
+      it "uses requested size when under the limit" do
+        env = env_factory("GET", "/?size=15")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(1)
+        expect(result[:size]).to eq(15)
+      end
+    end
+
+    context "when user is authenticated" do
+      sign_in
+
+      it "allows size up to 1000" do
+        env = env_factory("GET", "/?page=3&size=1000")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(3)
+        expect(result[:size]).to eq(1000)
+      end
+
+      it "limits size to 1000" do
+        env = env_factory("GET", "/?size=1001")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(1)
+        expect(result[:size]).to eq(1000)
+      end
+
+      it "uses default size of 10 when no size specified" do
+        env = env_factory("GET", "/?page=1")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(1)
+        expect(result[:size]).to eq(10)
+      end
+
+      it "uses requested size when under the limit" do
+        env = env_factory("GET", "/?size=500")
+        result = self.class.pagination_params(env)
+        expect(result[:page]).to eq(1)
+        expect(result[:size]).to eq(500)
+      end
     end
   end
 
@@ -1696,6 +2178,289 @@ Spectator.describe "helpers" do
   describe "remote_interaction_path" do
     it "gets the remote interaction path" do
       expect(remote_interaction_path).to eq("/remote-interaction")
+    end
+  end
+
+  ## Theming helpers
+
+  describe ".actor_type_class" do
+    let_build(:person)
+
+    it "returns actor type class" do
+      expect(self.class.actor_type_class(person)).to eq("actor-person")
+    end
+
+    context "given nil" do
+      it "returns empty string" do
+        expect(self.class.actor_type_class(nil)).to eq("")
+      end
+    end
+  end
+
+  describe ".object_type_class" do
+    let_build(:note)
+
+    it "returns object type class" do
+      expect(self.class.object_type_class(note)).to eq("object-note")
+    end
+
+    context "given nil" do
+      it "returns empty string" do
+        expect(self.class.object_type_class(nil)).to eq("")
+      end
+    end
+  end
+
+  describe ".object_states" do
+    let_build(:note)
+
+    subject { self.class.object_states(note) }
+
+    it "only includes visibility-public" do
+      expect(subject).to contain_exactly("visibility-public")
+    end
+
+    context "when object is sensitive" do
+      before_each { note.assign(sensitive: true) }
+
+      it "includes is-sensitive" do
+        expect(subject).to contain("is-sensitive")
+      end
+    end
+
+    context "when object is local" do
+      let_build(:note, local: true)
+
+      it "includes is-draft" do
+        expect(subject).to contain("is-draft")
+      end
+
+      context "and is published" do
+        before_each { note.assign(published: Time.local) }
+
+        it "does not include is-draft" do
+          expect(subject).to_not contain("is-draft")
+        end
+      end
+    end
+
+    context "when object is deleted" do
+      before_each { note.delete! }
+
+      it "includes is-deleted" do
+        expect(subject).to contain("is-deleted")
+      end
+    end
+
+    context "when object is blocked" do
+      before_each { note.block! }
+
+      it "includes is-blocked" do
+        expect(subject).to contain("is-blocked")
+      end
+    end
+
+    context "when object has replies" do
+      before_each { note.assign(replies_count: 5_i64) }
+
+      it "includes has-replies" do
+        expect(subject).to contain("has-replies")
+      end
+    end
+
+    context "when object has media attachments" do
+      let(attachment) do
+        ActivityPub::Object::Attachment.new(
+          url: "https://example.com/image.jpg",
+          media_type: "image/jpeg"
+        )
+      end
+
+      before_each do
+        note.assign(attachments: [attachment])
+      end
+
+      it "includes has-media" do
+        expect(subject).to contain("has-media")
+      end
+    end
+
+    context "when object is addressed to followers only" do
+      before_each do
+        note.assign(to: [note.attributed_to.followers.not_nil!])
+      end
+
+      it "includes visibility-private" do
+        expect(subject).to contain("visibility-private")
+      end
+    end
+
+    context "when object is addressed to specific actors" do
+      let_build(:actor)
+
+      before_each do
+        note.assign(to: [actor.iri])
+      end
+
+      it "includes visibility-direct" do
+        expect(subject).to contain("visibility-direct")
+      end
+    end
+  end
+
+  describe ".actor_states" do
+    let_build(:actor, named: :author)
+    let_build(:actor, named: :actor)
+    let_build(:note, attributed_to: author)
+    let(followed_actors) { nil }
+
+    subject do
+      self.class.actor_states(
+        note, author, actor,
+        followed_actors,
+      )
+    end
+
+    it "returns empty array" do
+      expect(subject).to be_empty
+    end
+
+    context "with followed author" do
+      let(followed_actors) { Set{author.iri} }
+
+      it "includes author-followed-by-me" do
+        expect(subject).to contain("author-followed-by-me")
+      end
+
+      it "does not include actor-followed-by-me" do
+        expect(subject).not_to contain("actor-followed-by-me")
+      end
+
+      context "and followed actor" do
+        let(followed_actors) { Set{author.iri, actor.iri} }
+
+        it "includes author-followed-by-me and actor-followed-by-me" do
+          expect(subject).to contain("author-followed-by-me", "actor-followed-by-me")
+        end
+
+        context "unless actor is the author" do
+          let(:actor) { author }
+
+          it "does not include actor-followed-by-me" do
+            expect(subject).not_to contain("actor-followed-by-me")
+          end
+        end
+      end
+    end
+  end
+
+  describe ".mention_states" do
+    let_build(:note)
+    let_build(:actor)
+
+    subject { self.class.mention_states(note, actor) }
+
+    it "returns empty array" do
+      expect(subject).to be_empty
+    end
+
+    context "when actor is mentioned" do
+      let_build(:actor, named: other)
+
+      let_create!(:mention, named: nil, href: actor.iri, name: "me", subject: note)
+      let_create!(:mention, named: nil, href: other.iri, name: "other", subject: note)
+
+      it "includes mentions-me" do
+        expect(subject).to contain("mentions-me")
+      end
+
+      it "does not include mentions-only-me" do
+        expect(subject).not_to contain("mentions-only-me")
+      end
+    end
+
+    context "when actor is the only mention" do
+      let_create!(:mention, named: nil, href: actor.iri, name: "me", subject: note)
+
+      it "does not include mentions-me" do
+        expect(subject).not_to contain("mentions-me")
+      end
+
+      it "includes mentions-only-me" do
+        expect(subject).to contain("mentions-only-me")
+      end
+    end
+  end
+
+  describe ".object_data_attributes" do
+    let_create(:note)
+    let_build(:actor, named: :author, username: "alice")
+    let_build(:actor, named: :sharer, username: "bob")
+    let_create!(:hashtag, named: nil, name: "ruby", subject: note)
+    let_create!(:hashtag, named: nil, name: "crystal", subject: note)
+    let_create!(:mention, named: nil, name: "alice", subject: note)
+    let_create!(:mention, named: nil, name: "bob", subject: note)
+    let(followed_hashtags) { nil }
+    let(followed_mentions) { nil }
+
+    subject do
+      self.class.object_data_attributes(
+        note, author, sharer,
+        followed_hashtags,
+        followed_mentions,
+      )
+    end
+
+    it "includes object ID" do
+      expect(subject["data-object-id"]).to eq(note.id.to_s)
+    end
+
+    it "includes author handle" do
+      expect(subject["data-author-handle"]).to eq("alice@remote")
+    end
+
+    it "includes author IRI" do
+      expect(subject["data-author-iri"]).to eq(author.iri)
+    end
+
+    it "includes actor handle" do
+      expect(subject["data-actor-handle"]).to eq("bob@remote")
+    end
+
+    it "includes actor IRI" do
+      expect(subject["data-actor-iri"]).to eq(sharer.iri)
+    end
+
+    it "does not include data-followed-hashtags" do
+      expect(subject.has_key?("data-followed-hashtags")).to be_false
+    end
+
+    context "with followed hashtags" do
+      let(followed_hashtags) { Set{"ruby", "golang"} }
+
+      it "includes data-followed-hashtags" do
+        expect(subject["data-followed-hashtags"]).to eq("ruby")
+      end
+    end
+
+    it "does not include data-followed-mentions" do
+      expect(subject.has_key?("data-followed-mentions")).to be_false
+    end
+
+    context "with followed mentions" do
+      let(followed_mentions) { Set{"alice", "charlie"} }
+
+      it "includes data-followed-mentions" do
+        expect(subject["data-followed-mentions"]).to eq("alice")
+      end
+    end
+
+    it "includes data-hashtags" do
+      expect(subject["data-hashtags"]).to eq("ruby crystal")
+    end
+
+    it "includes data-mentions" do
+      expect(subject["data-mentions"]).to eq("alice bob")
     end
   end
 end

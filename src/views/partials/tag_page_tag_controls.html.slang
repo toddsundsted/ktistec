@@ -3,8 +3,8 @@ crystal:
   _follow = follow
 turbo-frame#tag_page_tag_controls
   .ui.thread.segments
-    .ui.segment
-      p
+    .ui.basic.segment
+      p: strong
         a href=hashtag_path(hashtag) ##{hashtag}
         - if count > 0
           span< #{pluralize(count, "hashtag")}
@@ -23,5 +23,4 @@ turbo-frame#tag_page_tag_controls
             == authenticity_token(env)
             .ui.buttons
               button.ui.primary.button type="submit" formaction=follow_hashtag_path(hashtag) Follow
-              .or
               button.ui.button type="submit" formaction=start_fetch_hashtag_path(hashtag) Fetch Once

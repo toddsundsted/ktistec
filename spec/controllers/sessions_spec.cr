@@ -12,7 +12,7 @@ Spectator.describe SessionsController do
   let(username) { random_username }
   let(password) { random_password }
 
-  let!(account) { Factory.create(:account, username: username, password: password) }
+  let_create!(:account, username: username, password: password)
   let(session) { Session.new(account).save }
   let(payload) { {jti: session.session_key, iat: Time.utc} }
   let(jwt) { Ktistec::JWT.encode(payload) }
@@ -77,7 +77,7 @@ Spectator.describe SessionsController do
 
       it "redirects to the path" do
         body = "username=#{username}&password=#{password}"
-        post "/sessions", HTML_HEADERS.add("Cookie", "AuthToken=#{jwt}"), body
+        post "/sessions", HTML_HEADERS.add("Cookie", "__Host-AuthToken=#{jwt}"), body
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/foo/bar/baz"]})
       end
@@ -87,6 +87,21 @@ Spectator.describe SessionsController do
         post "/sessions", JSON_HEADERS.add("Authorization", "Bearer #{jwt}"), body
         expect(response.status_code).to eq(200)
         expect(JSON.parse(response.body)["redirect_path"]).to eq("/foo/bar/baz")
+      end
+    end
+
+    context "cookie attributes" do
+      it "sets a secure, host-only cookie" do
+        body = "username=#{username}&password=#{password}"
+        post "/sessions", HTML_HEADERS, body
+
+        expect(response.status_code).to eq(302)
+
+        set_cookie_header = response.headers["Set-Cookie"]
+        expect(set_cookie_header).to contain("__Host-AuthToken=")
+        expect(set_cookie_header).to contain("path=/")
+        expect(set_cookie_header).to contain("HttpOnly")
+        expect(set_cookie_header).to contain("Secure")
       end
     end
   end
@@ -105,7 +120,7 @@ Spectator.describe SessionsController do
     end
 
     it "destroys session and redirects" do
-      headers = HTTP::Headers{"Cookie" => "AuthToken=#{jwt}", "Accept" => "text/html"}
+      headers = HTTP::Headers{"Cookie" => "__Host-AuthToken=#{jwt}", "Accept" => "text/html"}
       expect{delete "/sessions", headers}.to change{Session.count}.by(-1)
       expect(response.status_code).to eq(302)
       expect(response.headers.to_a).to have({"Location", ["/sessions"]})

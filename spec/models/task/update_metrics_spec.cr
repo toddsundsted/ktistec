@@ -24,16 +24,16 @@ Spectator.describe Task::UpdateMetrics do
     end
   end
 
-  describe ".schedule_unless_exists" do
+  describe ".ensure_scheduled" do
     it "schedules a new task" do
-      expect{described_class.schedule_unless_exists}.to change{described_class.count}.by(1)
+      expect{described_class.ensure_scheduled}.to change{described_class.count}.by(1)
     end
 
     context "given an existing task" do
       before_each { described_class.new.schedule }
 
       it "does not schedule a new task" do
-        expect{described_class.schedule_unless_exists}.not_to change{described_class.count}
+        expect{described_class.ensure_scheduled}.not_to change{described_class.count}
       end
     end
   end
@@ -71,15 +71,15 @@ Spectator.describe Task::UpdateMetrics do
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 1, 1])
       end
 
-      it "accumulates points for activities on the same day" do
+      it "accumulates points for activities on the same hour" do
         inbox5.assign(created_at: Time.utc(2016, 2, 4, 10, 10, 10)).save
         expect{subject.perform}.to change{Point.count}.by(4)
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 2])
       end
 
       it "accumulates points in the timezone of the account" do
-        account.assign(timezone: "Etc/GMT+8").save
-        inbox5.assign(created_at: Time.utc(2016, 2, 5, 4, 10, 10)).save
+        account.assign(timezone: "Asia/Kolkata").save  # UTC+5:30
+        inbox5.assign(created_at: Time.utc(2016, 2, 4, 9, 40, 30)).save
         expect{subject.perform}.to change{Point.count}.by(4)
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 2])
       end
@@ -91,11 +91,29 @@ Spectator.describe Task::UpdateMetrics do
       end
 
       context "point already exists" do
-        let_create!(:point, chart: inbox, timestamp: Time.utc(2016, 2, 5, 0, 0, 0), value: 2)
+        let_create!(:point, chart: inbox, timestamp: Time.utc(2016, 2, 5, 10, 0, 0), value: 2)
 
         it "increments point value" do
           expect{subject.perform}.to change{Point.count}.by(4)
           expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 1, 3])
+        end
+      end
+
+      context "when account has been terminated" do
+        before_each { account.destroy }
+
+        it "does not raise an error" do
+          expect{subject.perform}.not_to raise_error
+        end
+
+        it "does not create points for orphaned relationships" do
+          expect{subject.perform}.not_to change{Point.count}
+          expect(Point.chart(inbox).map(&.value)).to be_empty
+        end
+
+        it "does not set the last_id" do
+          subject.perform
+          expect(subject.last_id).not_to be_nil
         end
       end
 

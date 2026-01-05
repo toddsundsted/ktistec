@@ -7,7 +7,8 @@ class FooBarController
 
   skip_auth [
     "/foo/bar/accepts",
-    "/foo/bar/turbo-streams/:operation/:target",
+    "/foo/bar/turbo-streams/:target/:operation",
+    "/foo/bar/turbo-streams/:target/:operation/:method",
     "/foo/bar/turbo-stream",
     "/foo/bar/turbo-frame",
     "/foo/bar/redirect",
@@ -15,7 +16,7 @@ class FooBarController
     "/foo/bar/ok"
   ]
 
-  get "/foo/bar/accepts" do |env|
+  get "/foo/bar/accepts" do |env|  # ameba:disable Lint/UnusedArgument
     if accepts?("text/html")
       ok "html"
     elsif accepts?("text/plain")
@@ -25,11 +26,15 @@ class FooBarController
     end
   end
 
-  get "/foo/bar/turbo-streams/:operation/:target" do |env|
-    ok "turbo-streams", _operation: env.params.url["operation"], _target: env.params.url["target"]
+  get "/foo/bar/turbo-streams/:target/:operation" do |env|
+    ok "turbo-streams", _target: env.params.url["target"], _operation: env.params.url["operation"]
   end
 
-  get "/foo/bar/turbo-stream" do |env|
+  get "/foo/bar/turbo-streams/:target/:operation/:method" do |env|
+    ok "turbo-streams", _target: env.params.url["target"], _operation: env.params.url["operation"], _method: env.params.url["method"]
+  end
+
+  get "/foo/bar/turbo-stream" do |env|  # ameba:disable Lint/UnusedArgument
     if accepts_turbo_stream?
       ok "turbo-stream", _operation: "replace", _target: "foobar"
     else
@@ -37,7 +42,7 @@ class FooBarController
     end
   end
 
-  get "/foo/bar/turbo-frame" do |env|
+  get "/foo/bar/turbo-frame" do |env|  # ameba:disable Lint/UnusedArgument
     if in_turbo_frame?
       ok "turbo-frame"
     else
@@ -45,11 +50,11 @@ class FooBarController
     end
   end
 
-  get "/foo/bar/redirect" do |env|
+  get "/foo/bar/redirect" do |env|  # ameba:disable Lint/UnusedArgument
     redirect "/foobar", 301
   end
 
-  get "/foo/bar/created" do |env|
+  get "/foo/bar/created" do |env|  # ameba:disable Lint/UnusedArgument
     created "/foobar", "body"
   end
 
@@ -91,10 +96,17 @@ Spectator.describe Ktistec::Controller do
     end
   end
 
-  describe "GET /foo/bar/turbo-streams/:operation/:target" do
+  describe "GET /foo/bar/turbo-streams/:target/:operation" do
     it "responds with turbo-streams" do
-      get "/foo/bar/turbo-streams/append/foo-bar", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
-      expect(XML.parse_html(response.body).xpath_string("string(//turbo-stream[@action='append'][@target='foo-bar']/template//h1)")).to eq("turbo-streams")
+      get "/foo/bar/turbo-streams/foo-bar/append", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
+      expect(XML.parse_html(response.body).xpath_string("string(//turbo-stream[@target='foo-bar'][@action='append'][not(@method)]/template//h1)")).to eq("turbo-streams")
+    end
+  end
+
+  describe "GET /foo/bar/turbo-streams/:target/:operation/:method" do
+    it "responds with turbo-streams" do
+      get "/foo/bar/turbo-streams/foo-bar/append/before", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
+      expect(XML.parse_html(response.body).xpath_string("string(//turbo-stream[@target='foo-bar'][@action='append'][@method='before']/template//h1)")).to eq("turbo-streams")
     end
   end
 
@@ -167,14 +179,14 @@ Spectator.describe Ktistec::Controller do
       expect(XML.parse_html(response.body).xpath_nodes("//cite").first).to eq("html")
     end
 
-    it "responds with json by default" do
+    it "responds with html by default" do
       get "/foo/bar/ok"
-      expect(JSON.parse(response.body)).to eq("json")
+      expect(XML.parse_html(response.body).xpath_nodes("//cite").first).to eq("html")
     end
 
-    it "prefers json" do
+    it "prefers html" do
       get "/foo/bar/ok", HTTP::Headers{"Accept" => "application/json, text/plain, text/html"}
-      expect(JSON.parse(response.body)).to eq("json")
+      expect(XML.parse_html(response.body).xpath_nodes("//cite").first).to eq("html")
     end
 
     it "sets the content type" do

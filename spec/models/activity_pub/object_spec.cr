@@ -1,6 +1,7 @@
 require "../../../src/models/activity_pub/object"
 require "../../../src/models/activity_pub/activity/announce"
 require "../../../src/models/activity_pub/activity/like"
+require "../../../src/services/thread_analysis_service"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
@@ -12,7 +13,10 @@ Spectator.describe ActivityPub::Object do
   setup_spec
 
   describe "#source=" do
-    subject { described_class.new(iri: "https://test.test/objects/#{random_string}") }
+    let_build(:object, local: true)
+
+    subject { object }
+
     let_create!(:actor, named: :foo, iri: "https://bar.com/foo", urls: ["https://bar.com/@foo"], username: "foo")
     let_create!(:actor, named: :bar, iri: "https://foo.com/bar", urls: ["https://foo.com/@bar"], username: "bar")
     let(source) { ActivityPub::Object::Source.new("foobar #foobar @foo@bar.com", "text/html") }
@@ -49,12 +53,92 @@ Spectator.describe ActivityPub::Object do
       expect{subject.assign(iri: "https://remote/object", source: source).save}.not_to change{subject.content}
     end
 
-    context "addressing (to)" do
+    context "addressing" do
       let_create!(:mention, subject: subject, href: bar.iri, name: bar.username)
 
       it "replaces mentions" do
         subject.assign(to: ["https://test.test/actor", "https://foo.com/bar"], source: source).save
         expect(subject.to).to eq(["https://test.test/actor", "https://bar.com/foo"])
+      end
+
+      let(followers) { subject.attributed_to.followers.not_nil! }
+
+      context "when object is public" do
+        before_each do
+          subject.assign(
+            to: ["https://www.w3.org/ns/activitystreams#Public"],
+            cc: [followers],
+            source: source
+          ).save
+        end
+
+        it "sets the to field" do
+          expect(subject.to).to contain_exactly("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "sets the cc field" do
+          expect(subject.cc).to contain_exactly(followers, "https://bar.com/foo")
+        end
+      end
+
+      context "when object is private" do
+        before_each do
+          subject.assign(
+            to: [followers],
+            cc: [] of String,
+            source: source
+          ).save
+        end
+
+        it "sets the to field" do
+          expect(subject.to).to contain_exactly(followers)
+        end
+
+        it "sets the cc field" do
+          expect(subject.cc).to contain_exactly("https://bar.com/foo")
+        end
+      end
+
+      context "when object is direct" do
+        before_each do
+          subject.assign(
+            to: [] of String,
+            cc: [] of String,
+            source: source
+          ).save
+        end
+
+        it "sets the to field" do
+          expect(subject.to).to contain_exactly("https://bar.com/foo")
+        end
+
+        it "sets the cc field" do
+          expect(subject.cc).to be_empty
+        end
+      end
+    end
+
+    context "with markdown" do
+      let(markdown_source) { ActivityPub::Object::Source.new("# Heading\n\nThis is **bold** and this is *italic*.", "text/markdown") }
+
+      it "converts markdown to HTML" do
+        subject.assign(source: markdown_source).save
+
+        expect(subject.content).to match(/<h1>Heading<\/h1>/)
+        expect(subject.content).to match(/<strong>bold<\/strong>/)
+        expect(subject.content).to match(/<em>italic<\/em>/)
+      end
+
+      it "sets subject media type to text/html" do
+        expect{subject.assign(source: markdown_source).save}.to change{subject.media_type}.to("text/html")
+      end
+
+      context "given a remote object" do
+        before_each { subject.assign(iri: "https://remote/object").save }
+
+        it "doesn't convert markdown to HTML" do
+          expect{subject.assign(source: markdown_source).save}.not_to change{subject.content}
+        end
       end
     end
   end
@@ -104,12 +188,6 @@ Spectator.describe ActivityPub::Object do
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
     end
-
-    it "caches the replies" do
-      object = described_class.from_json_ld(json)
-      expect(object.replies).to be_a(ActivityPub::Collection)
-      expect(object.replies.iri).to eq("replies link")
-    end
   end
 
   let(json) do
@@ -117,18 +195,22 @@ Spectator.describe ActivityPub::Object do
       {
         "@context":[
           "https://www.w3.org/ns/activitystreams",
-          {"Hashtag":"as:Hashtag"}
+          {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"},
+          {"toot":"http://joinmastodon.org/ns#"}
         ],
         "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",
         "published":"2016-02-15T10:20:30Z",
+        "updated":"2016-02-15T11:30:45Z",
         "attributedTo":"attributed to link",
         "inReplyTo":"in reply to link",
         "replies":"replies link",
         "to":"to link",
         "cc":["cc link"],
+        "audience":["audience link"],
         "name":"123",
         "summary":"abc",
+        "sensitive":true,
         "content":"abc",
         "contentMap":{
           "en":"abc"
@@ -136,7 +218,8 @@ Spectator.describe ActivityPub::Object do
         "mediaType":"xyz",
         "tag":[
           {"type":"Hashtag","href":"hashtag href","name":"#hashtag"},
-          {"type":"Mention","href":"mention href","name":"@mention"}
+          {"type":"Mention","href":"mention href","name":"@mention"},
+          {"type":"toot:Emoji","name":":batman:","icon":{"type":"Image","mediaType":"image/png","url":"https://example.com/batman.png"}}
         ],
         "attachment":[
           {
@@ -169,18 +252,22 @@ Spectator.describe ActivityPub::Object do
       object = described_class.from_json_ld(json).save
       expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
+      expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.audience).to eq(["audience link"])
       expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
+      expect(object.sensitive).to be_true
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
       expect(object.mentions.first).to match(Tag::Mention.new(name: "mention", href: "mention href"))
+      expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
       expect(object.urls).to eq(["url link"])
     end
@@ -230,6 +317,33 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "when emoji name is null" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":null|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
+    context "when emoji name is blank" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":""|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
+    context "when emoji icon url is null" do
+      let(json) { super.gsub(%q|"url":"https://example.com/batman.png"|, %q|"url":null|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
     context "when attachment url is null" do
       let(json) { super.gsub(%q|"url":"attachment link"|, %q|"url":null|) }
 
@@ -266,6 +380,42 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "with focalPoint field" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.2,-0.4]|) }
+
+      it "deserializes focal point" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.2, -0.4})])
+      end
+    end
+
+    context "with focalPoint at center" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,0.0]|) }
+
+      it "deserializes center focal point" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.0, 0.0})])
+      end
+    end
+
+    context "with malformed focalPoint" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,null]|) }
+
+      it "handles malformed focal point gracefully" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
+      end
+    end
+
+    context "with unsupported language" do
+      let(json) { super.gsub(%q|"en":"abc"|, %q|"unsupported":"abc"|) }
+
+      it "ignores the language" do
+        object = described_class.from_json_ld(json).save
+        expect(object.language).to be_nil
+      end
+    end
+
     # support Lemmy-style language property
     context "when language is present" do
       let(json) do
@@ -290,6 +440,25 @@ Spectator.describe ActivityPub::Object do
         expect(object.language).to eq("en")
       end
     end
+
+    context "when sensitive property is missing" do
+      let(json) do
+        <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "@id":"https://remote/foo_bar",
+            "@type":"FooBarObject"
+          }
+        JSON
+      end
+
+      it "defaults sensitive to false" do
+        object = described_class.from_json_ld(json).save
+        expect(object.sensitive).to be_false
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -297,18 +466,22 @@ Spectator.describe ActivityPub::Object do
       object = described_class.new.from_json_ld(json).save
       expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
+      expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
+      expect(object.audience).to eq(["audience link"])
       expect(object.language).to eq("en")
       expect(object.name).to eq("123")
       expect(object.summary).to eq("abc")
+      expect(object.sensitive).to be_true
       expect(object.content).to eq("abc")
       expect(object.media_type).to eq("xyz")
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
       expect(object.mentions.first).to match(Tag::Mention.new(name: "mention", href: "mention href"))
+      expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
       expect(object.urls).to eq(["url link"])
     end
@@ -358,6 +531,33 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "when emoji name is null" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":null|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
+    context "when emoji name is blank" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":""|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
+    context "when emoji icon url is null" do
+      let(json) { super.gsub(%q|"url":"https://example.com/batman.png"|, %q|"url":null|) }
+
+      it "is ignored" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
     context "when attachment url is null" do
       let(json) { super.gsub(%q|"url":"attachment link"|, %q|"url":null|) }
 
@@ -394,6 +594,42 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "with focalPoint field" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.2,-0.4]|) }
+
+      it "deserializes focal point" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.2, -0.4})])
+      end
+    end
+
+    context "with focalPoint at center" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,0.0]|) }
+
+      it "deserializes center focal point" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.0, 0.0})])
+      end
+    end
+
+    context "with malformed focalPoint" do
+      let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.0,null]|) }
+
+      it "handles malformed focal point gracefully" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
+      end
+    end
+
+    context "with unsupported language" do
+      let(json) { super.gsub(%q|"en":"abc"|, %q|"unsupported":"abc"|) }
+
+      it "ignores the language" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.language).to be_nil
+      end
+    end
+
     # support Lemmy-style language property
     context "when language is present" do
       let(json) do
@@ -418,12 +654,58 @@ Spectator.describe ActivityPub::Object do
         expect(object.language).to eq("en")
       end
     end
+
+    context "when sensitive property is missing" do
+      let(json) do
+        <<-JSON
+          {
+            "@context":[
+              "https://www.w3.org/ns/activitystreams"
+            ],
+            "@id":"https://remote/foo_bar",
+            "@type":"FooBarObject"
+          }
+        JSON
+      end
+
+      it "defaults sensitive to false" do
+        object = described_class.from_json_ld(json).save
+        expect(object.sensitive).to be_false
+      end
+    end
   end
 
   describe "#to_json_ld" do
     it "renders an identical instance" do
       object = described_class.from_json_ld(json)
       expect(described_class.from_json_ld(object.to_json_ld)).to eq(object)
+    end
+
+    context "with focal point" do
+      let(:object) do
+        described_class.new(
+          iri: "https://test.test/objects/#{random_string}",
+          attachments: [ActivityPub::Object::Attachment.new("https://example.com/image.jpg", "image/jpeg", "Test image", {0.5, -0.25})]
+        ).save
+      end
+
+      let(json_ld) { JSON.parse(object.to_json_ld) }
+
+      it "includes toot context in output" do
+        context = json_ld["@context"].as_a
+        toot_context = context.find! { |c| c.as_h? && c.as_h.has_key?("toot") }
+        expect(toot_context.as_h["toot"]).to eq("http://joinmastodon.org/ns#")
+      end
+
+      it "serializes focal point in attachment" do
+        attachments = json_ld["attachment"].as_a
+        expect(attachments.first["focalPoint"]).to eq([0.5, -0.25])
+      end
+
+      it "round-trips focal point correctly" do
+        restored = described_class.from_json_ld(object.to_json_ld)
+        expect(restored.attachments).to eq(object.attachments)
+      end
     end
 
     it "does not render a content map" do
@@ -434,20 +716,38 @@ Spectator.describe ActivityPub::Object do
       expect(JSON.parse(object.to_json_ld).as_h).not_to have_key("contentMap")
     end
 
-    it "renders hashtags" do
-      object = described_class.new(
-        iri: "https://test.test/object",
-        hashtags: [Factory.build(:hashtag, name: "foo", href: "https://test.test/tags/foo")]
-      ).save
-      expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Hashtag", "name" => "#foo", "href" => "https://test.test/tags/foo"})
+    context "with hashtags" do
+      let_build(:hashtag, name: "foo", href: "https://test.test/tags/foo")
+
+      it "renders hashtags" do
+        object = described_class.new(iri: "https://test.test/object", hashtags: [hashtag]).save
+        expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Hashtag", "name" => "#foo", "href" => "https://test.test/tags/foo"})
+      end
     end
 
-    it "renders mentions" do
+    context "with mentions" do
+      let_build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo")
+
+      it "renders mentions" do
+        object = described_class.new(iri: "https://test.test/object", mentions: [mention]).save
+        expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Mention", "name" => "@foo@test.test", "href" => "https://test.test/actors/foo"})
+      end
+    end
+
+    it "renders sensitive property when true" do
       object = described_class.new(
         iri: "https://test.test/object",
-        mentions: [Factory.build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo")]
+        sensitive: true
       ).save
-      expect(JSON.parse(object.to_json_ld).dig("tag").as_a).to contain_exactly({"type" => "Mention", "name" => "@foo@test.test", "href" => "https://test.test/actors/foo"})
+      expect(JSON.parse(object.to_json_ld).as_h["sensitive"]).to eq(true)
+    end
+
+    it "does not render sensitive property when false" do
+      object = described_class.new(
+        iri: "https://test.test/object",
+        sensitive: false
+      ).save
+      expect(JSON.parse(object.to_json_ld).as_h.has_key?("sensitive")).to be_false
     end
   end
 
@@ -534,6 +834,19 @@ Spectator.describe ActivityPub::Object do
       expect(described_class.federated_posts(2, 2)).to eq([post1])
       expect(described_class.federated_posts(2, 2).more?).not_to be_true
     end
+
+    context "with a draft post" do
+      let_create!(
+        :object, named: :draft_post,
+        published: nil,
+        visible: true,
+        local: true,
+      )
+
+      it "filters out draft posts" do
+        expect(described_class.federated_posts(1, 10)).not_to contain(draft_post)
+      end
+    end
   end
 
   describe ".federated_posts_count" do
@@ -580,27 +893,45 @@ Spectator.describe ActivityPub::Object do
     it "filters out non-public posts" do
       expect(described_class.federated_posts_count).to eq(3)
     end
+
+    context "with a draft post" do
+      let_create!(
+        :object, named: :draft_post,
+        published: nil,
+        visible: true,
+        local: true
+      )
+
+      it "filters out draft posts" do
+        expect(described_class.federated_posts_count).to eq(3)
+      end
+    end
+  end
+
+  macro public_post(index, factory)
+    {% if factory == :create %}
+      let_build(:object, named: post{{index}}, attributed_to: actor)
+      let_build(:create, named: activity{{index}}, actor: actor, object: post{{index}})
+    {% elsif factory == :announce %}
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
+      let_build(:announce, named: activity{{index}}, actor: actor, object: post{{index}})
+    {% elsif factory == :like %}
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
+      let_build(:like, named: activity{{index}}, actor: actor, object: post{{index}})
+    {% end %}
+    before_each { put_in_outbox(actor, activity{{index}}) }
   end
 
   describe ".public_posts" do
     let(actor) { register.actor }
 
-    macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: actor, object: post{{index}})
-      let_create!(
-        :outbox_relationship, named: relationship{{index}},
-        owner: actor,
-        activity: activity{{index}}
-      )
-    end
-
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
+    public_post(1, :announce)
+    public_post(2, :create)
+    public_post(3, :announce)
+    public_post(4, :create)
+    public_post(5, :announce)
 
     it "instantiates the correct subclass" do
       expect(described_class.public_posts(1, 2).first).to be_a(ActivityPub::Object)
@@ -654,22 +985,11 @@ Spectator.describe ActivityPub::Object do
   describe ".public_posts_count" do
     let(actor) { register.actor }
 
-    macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: actor, object: post{{index}})
-      let_create!(
-        :outbox_relationship, named: relationship{{index}},
-        owner: actor,
-        activity: activity{{index}}
-      )
-    end
-
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
+    public_post(1, :announce)
+    public_post(2, :create)
+    public_post(3, :announce)
+    public_post(4, :create)
+    public_post(5, :announce)
 
     it "instantiates the correct subclass" do
       expect(described_class.public_posts_count).to be_a(Int64)
@@ -718,6 +1038,44 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe ".latest_public_post" do
+    let(actor) { register.actor }
+
+    it "returns -1 if there are no posts" do
+      expect(described_class.latest_public_post).to eq(-1)
+    end
+
+    context "given posts" do
+      public_post(1, :announce)
+      public_post(2, :create)
+      public_post(3, :announce)
+
+      # the type of the returned identifier is unspecified, but we
+      # know it's the id of the activity associated with the latest
+      # post, so test for that.
+
+      it "returns the id" do
+        expect(described_class.latest_public_post).to eq(activity3.id)
+      end
+
+      it "ignores activities from remote actors" do
+        activity3.assign(actor: post3.attributed_to).save
+        expect(described_class.latest_public_post).to eq(activity2.id)
+      end
+
+      it "ignores activities that are undone" do
+        activity3.undo!
+        expect(described_class.latest_public_post).to eq(activity2.id)
+      end
+
+      public_post(4, :like)
+
+      it "ignores activities that are not create or announce" do
+        expect(described_class.latest_public_post).to eq(activity3.id)
+      end
+    end
+  end
+
   describe "#with_statistics!" do
     let(object) do
       described_class.new(
@@ -727,22 +1085,33 @@ Spectator.describe ActivityPub::Object do
 
     let_build(:announce, object: object)
     let_build(:like, object: object)
+    let_build(:dislike, object: object)
 
     it "updates announces count" do
       announce.save
       expect(object.with_statistics!.announces_count).to eq(1)
       expect(object.with_statistics!.likes_count).to eq(0)
+      expect(object.with_statistics!.dislikes_count).to eq(0)
     end
 
     it "updates likes count" do
       like.save
       expect(object.with_statistics!.announces_count).to eq(0)
       expect(object.with_statistics!.likes_count).to eq(1)
+      expect(object.with_statistics!.dislikes_count).to eq(0)
+    end
+
+    it "updates dislikes count" do
+      dislike.save
+      expect(object.with_statistics!.announces_count).to eq(0)
+      expect(object.with_statistics!.likes_count).to eq(0)
+      expect(object.with_statistics!.dislikes_count).to eq(1)
     end
 
     it "doesn't fail when the object hasn't been saved" do
       expect(object.with_statistics!.announces_count).to eq(0)
       expect(object.with_statistics!.likes_count).to eq(0)
+      expect(object.with_statistics!.dislikes_count).to eq(0)
     end
 
     it "filters out undone announces" do
@@ -753,6 +1122,11 @@ Spectator.describe ActivityPub::Object do
     it "filters out undone likes" do
       like.save.undo!
       expect(object.with_statistics!.likes_count).to eq(0)
+    end
+
+    it "filters out undone dislikes" do
+      dislike.save.undo!
+      expect(object.with_statistics!.dislikes_count).to eq(0)
     end
   end
 
@@ -808,11 +1182,30 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#thread!" do
+    let_build(:object)
+
+    it "updates the thread" do
+      expect{object.thread!}.to change{object.thread}.from(nil).to(object.iri)
+    end
+
+    it "saves the updated object" do
+      expect{object.thread!}.to change{ActivityPub::Object.find?(object.iri)}.from(nil).to(object)
+    end
+
+    it "returns the thread" do
+      expect(object.thread!).to eq(object.iri)
+    end
+  end
+
   context "when threaded" do
+    let_build(:actor)
+
     subject do
       described_class.new(
         iri: "https://test.test/objects/#{random_string}",
-        attributed_to: Factory.build(:actor)
+        attributed_to: actor,
+        visible: true,
       ).save
     end
 
@@ -823,7 +1216,8 @@ Spectator.describe ActivityPub::Object do
         described_class.new(
           iri: "https://test.test/objects/#{random_string}",
           attributed_to: {{actor}},
-          in_reply_to: {{object}}
+          in_reply_to: {{object}},
+          visible: true,
         ).save
       end
     end
@@ -841,6 +1235,15 @@ Spectator.describe ActivityPub::Object do
     reply_to!(object1, object2)
     reply_to!(object2, object3)
     reply_to!(object4, object5)
+
+    # special objects like votes are excluded
+
+    let_create!(
+      :object, named: vote,
+      in_reply_to: subject,
+      visible: true,
+      special: "vote",
+    )
 
     describe "#with_replies_count!" do
       it "returns the count of replies" do
@@ -979,6 +1382,11 @@ Spectator.describe ActivityPub::Object do
           actor4.destroy
           expect(subject.replies(approved_by: actor)).to be_empty
         end
+
+        it "omits non-visible replies even when approved" do
+          object4.assign(visible: false).save
+          expect(subject.replies(approved_by: actor)).not_to contain(object4)
+        end
       end
     end
 
@@ -991,28 +1399,8 @@ Spectator.describe ActivityPub::Object do
         expect(object5.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5])
       end
 
-      it "omits deleted replies and their children" do
-        object4.delete!
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
-      it "omits blocked replies and their children" do
-        object4.block!
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
       it "omits destroyed replies and their children" do
         object4.destroy
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
-      it "omits replies with deleted attributed to actors" do
-        actor4.delete!
-        expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
-      end
-
-      it "omits replies with blocked attributed to actors" do
-        actor4.block!
         expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3])
       end
 
@@ -1023,6 +1411,23 @@ Spectator.describe ActivityPub::Object do
 
       it "returns the depths" do
         expect(object5.thread(for_actor: actor).map(&.depth)).to eq([0, 1, 2, 3, 1, 2])
+      end
+
+      context "when the root is missing" do
+        before_each { subject.assign(in_reply_to_iri: "https://no.where/object").save }
+
+        it "returns the thread" do
+          # the operation above changes all of the `thread` properties in the thread, so reload
+          expect(subject.thread(for_actor: actor)).to eq([subject, object1, object2, object3, object4, object5].map(&.reload!))
+        end
+      end
+
+      context "given a reply by the original poster" do
+        before_each { object4.assign(attributed_to: subject.attributed_to).save }
+
+        it "prioritizes the reply" do
+          expect(subject.thread(for_actor: actor)).to eq([subject, object4, object5, object1, object2, object3])
+        end
       end
 
       context "given an approval" do
@@ -1041,6 +1446,106 @@ Spectator.describe ActivityPub::Object do
             object4.assign(attributed_to: actor).save
             expect(subject.thread(approved_by: actor)).to eq([subject, object5])
           end
+
+          it "doesn't include non-visible replies even when approved" do
+            object5.assign(visible: false).save
+            expect(subject.thread(approved_by: actor)).not_to contain(object5)
+          end
+        end
+      end
+    end
+
+    describe "#thread_query" do
+      let_build(:actor)
+
+      let(projection) { {id: Int64, iri: String, depth: Int32} }
+
+      it "returns projection fields" do
+        result = subject.thread_query(projection: projection)
+        expect(result.size).to eq(6)
+        first = result.first
+        expect(first[:id]).to eq(subject.id)
+        expect(first[:iri]).to eq(subject.iri)
+        expect(first[:depth]).to eq(0)
+      end
+
+      it "returns the same objects in the same order as `thread`" do
+        result1 = subject.thread_query(projection: projection)
+        result2 = subject.thread(for_actor: actor)
+        expect(result1.size).to eq(result2.size)
+        expect(result1.map { |r| r[:id] }).to eq(result2.map(&.id))
+        expect(result1.map { |r| r[:iri] }).to eq(result2.map(&.iri))
+      end
+
+      it "omits destroyed replies and their children" do
+        object4.destroy
+        result = subject.thread_query(projection: projection)
+        expect(result.size).to eq(4)
+        expect(result.map { |r| r[:iri] }).to eq([subject, object1, object2, object3].map(&.iri))
+      end
+
+      it "omits replies with destroyed attributed to actors" do
+        actor4.destroy
+        result = subject.thread_query(projection: projection)
+        expect(result.size).to eq(4)
+        expect(result.map { |r| r[:iri] }).to eq([subject, object1, object2, object3].map(&.iri))
+      end
+
+      it "includes deleted status for non-deleted objects" do
+        result = subject.thread_query(projection: {deleted: Bool})
+        expect(result[1][:deleted]).to be_false
+      end
+
+      context "given a deleted object" do
+        before_each { object1.delete! }
+
+        it "includes deleted status for deleted objects" do
+          result = subject.thread_query(projection: {deleted: Bool})
+          expect(result[1][:deleted]).to be_true
+        end
+      end
+
+      it "includes blocked status for non-blocked objects" do
+        result = subject.thread_query(projection: {blocked: Bool})
+        expect(result[1][:blocked]).to be_false
+      end
+
+      context "given a blocked object" do
+        before_each { object1.block! }
+
+        it "includes blocked status for blocked objects" do
+          result = subject.thread_query(projection: {blocked: Bool})
+          expect(result[1][:blocked]).to be_true
+        end
+      end
+
+      it "returns nil for hashtags" do
+        result = subject.thread_query(projection: {hashtags: String?})
+        expect(result[1][:hashtags]).to be_nil
+      end
+
+      context "given hashtags" do
+        let_create!(:hashtag, named: nil, subject: object1, name: "foo")
+        let_create!(:hashtag, named: nil, subject: object1, name: "bar")
+
+        it "includes hashtags" do
+          result = subject.thread_query(projection: {hashtags: String?})
+          expect(result[1][:hashtags].try(&.split(",").sort!)).to eq(["bar", "foo"])
+        end
+      end
+
+      it "returns nil for mentions" do
+        result = subject.thread_query(projection: {mentions: String?})
+        expect(result[1][:mentions]).to be_nil
+      end
+
+      context "given mentions" do
+        let_create!(:mention, named: nil, subject: object1, name: "alice@example.com")
+        let_create!(:mention, named: nil, subject: object1, name: "bob@example.com")
+
+        it "includes mentions" do
+          result = subject.thread_query(projection: {mentions: String?})
+          expect(result[1][:mentions].try(&.split(",").sort!)).to eq(["alice@example.com", "bob@example.com"])
         end
       end
     end
@@ -1085,26 +1590,112 @@ Spectator.describe ActivityPub::Object do
       it "returns the depths" do
         expect(object5.ancestors.map(&.depth)).to eq([0, 1, 2])
       end
+    end
 
-      context "given an actor" do
-        let_build(:actor)
+    describe "#descendants" do
+      it "returns all descendants" do
+        expect(subject.descendants).to eq([subject, object1, object2, object3, object4, object5])
+        expect(object1.descendants).to eq([object1, object2, object3])
+        expect(object5.descendants).to eq([object5])
+      end
 
-        it "only includes the subject" do
-          expect(object5.ancestors(actor)).to eq([subject])
-        end
+      it "omits deleted replies and their children" do
+        object2.delete!
+        expect(object1.descendants).to eq([object1])
+      end
 
-        context "and an approved object" do
-          let_create!(:approved_relationship, named: :approved, actor: actor, object: object5)
+      it "omits blocked replies and their children" do
+        object2.block!
+        expect(object1.descendants).to eq([object1])
+      end
 
-          it "omits unapproved replies but includes their approved parents" do
-            expect(object5.ancestors(actor)).to eq([object5, subject])
-          end
+      it "omits destroyed replies and their children" do
+        object2.destroy
+        expect(object1.descendants).to eq([object1])
+      end
 
-          it "doesn't include the actor's unapproved replies" do
-            object4.assign(attributed_to: actor).save
-            expect(object5.ancestors(actor)).to eq([object5, subject])
-          end
-        end
+      it "omits replies with deleted attributed to actors" do
+        actor2.delete!
+        expect(object1.descendants).to eq([object1])
+      end
+
+      it "omits replies with blocked attributed to actors" do
+        actor2.block!
+        expect(object1.descendants).to eq([object1])
+      end
+
+      it "omits replies with destroyed attributed to actors" do
+        actor2.destroy
+        expect(object1.descendants).to eq([object1])
+      end
+
+      it "returns the depths" do
+        expect(object1.descendants.map(&.depth)).to eq([0, 1, 2])
+      end
+    end
+  end
+
+  describe "#analyze_thread" do
+    let_build(:actor)
+    let(base_time) { Time.utc(2025, 1, 1, 10, 0) }
+
+    def make_test_thread(structure : Array({time_offset: Time::Span, parent_idx: Int32?, author_idx: Int32}))
+      actors = (0...6).map do |i|
+        Factory.create(:actor, iri: "https://test.test/actors/#{('a'.ord + i).chr}")  # ameba:disable Ktistec/NoImperativeFactories
+      end
+      objects = [] of ActivityPub::Object
+      structure.each do |spec|
+        parent = (idx = spec[:parent_idx]) ? objects[idx] : nil
+        object = Factory.create(  # ameba:disable Ktistec/NoImperativeFactories
+          :object,
+          in_reply_to: parent,
+          attributed_to: actors[spec[:author_idx]],
+          published: base_time + spec[:time_offset]
+        )
+        objects << object
+      end
+      objects.first
+    end
+
+    context "with small test thread" do
+      let(root) do
+        make_test_thread([
+          {time_offset: 0.minutes, parent_idx: nil, author_idx: 0},    # root by author_a
+          {time_offset: 5.minutes, parent_idx: 0, author_idx: 1},      # reply1 by author_b
+          {time_offset: 10.minutes, parent_idx: 1, author_idx: 2},     # branch_reply1 by author_c
+          {time_offset: 15.minutes, parent_idx: 1, author_idx: 3},     # branch_reply2 by author_d
+          {time_offset: 20.minutes, parent_idx: 1, author_idx: 4},     # branch_reply3 by author_e
+          {time_offset: 25.minutes, parent_idx: 1, author_idx: 5},     # branch_reply4 by author_f
+          {time_offset: 30.minutes, parent_idx: 1, author_idx: 0},     # branch_reply5 by author_a (OP)
+        ])
+      end
+
+      subject { root.analyze_thread(for_actor: actor) }
+
+      it "includes basic statistics" do
+        expect(subject.object_count).to eq(7)
+        expect(subject.author_count).to eq(6)
+        expect(subject.max_depth).to eq(2)
+      end
+
+      it "includes thread_id" do
+        expect(subject.thread_id).to eq(root.thread)
+      end
+
+      it "includes root_object_id" do
+        expect(subject.root_object_id).to eq(root.id)
+      end
+
+      it "includes key_participants" do
+        expect(subject.key_participants.first.actor_iri).to eq(root.attributed_to_iri)
+      end
+
+      it "includes notable_branches" do
+        expect(subject.notable_branches.size).to eq(1)
+      end
+
+      it "includes timeline_histogram" do
+        expect(subject.timeline_histogram.not_nil!.total_objects).to eq(7)
       end
     end
   end
@@ -1337,8 +1928,9 @@ Spectator.describe ActivityPub::Object do
   end
 
   describe "#tags" do
-    let(hashtag) { Factory.build(:hashtag, name: "foo", href: "https://test.test/tags/foo") }
-    let(mention) { Factory.build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo") }
+    let_build(:hashtag, name: "foo", href: "https://test.test/tags/foo")
+    let_build(:mention, name: "foo@test.test", href: "https://test.test/actors/foo")
+
     subject do
       described_class.new(
         iri: "https://test.test/object",
@@ -1349,6 +1941,204 @@ Spectator.describe ActivityPub::Object do
 
     it "returns tags" do
       expect(subject.tags).to contain_exactly(hashtag, mention)
+    end
+  end
+
+  describe "#preview" do
+    let_build(:object, summary: nil, content: nil)
+
+    it "returns nil" do
+      expect(object.preview).to be_nil
+    end
+
+    context "with content" do
+      before_each { object.assign(content: "original content") }
+
+      it "returns content" do
+        expect(object.preview).to eq("original content")
+      end
+
+      context "and content translation" do
+        let_create!(:translation, origin: object, content: "translated content")
+
+        it "returns content translation" do
+          expect(object.preview).to eq("translated content")
+        end
+
+        context "and summary" do
+          before_each { object.assign(summary: "original summary") }
+
+          it "returns summary" do
+            expect(object.preview).to eq("original summary")
+          end
+
+          context "and summary translation" do
+            let_create!(:translation, origin: object, summary: "translated summary")
+
+            it "returns summary translation" do
+              expect(object.preview).to eq("translated summary")
+            end
+          end
+
+          context "with name" do
+            before_each { object.assign(name: "original name") }
+
+            it "returns name" do
+              expect(object.preview).to eq("original name")
+            end
+
+            context "and name translation" do
+              let_create!(:translation, origin: object, name: "translated name")
+
+              it "returns name translation" do
+                expect(object.preview).to eq("translated name")
+              end
+            end
+          end
+        end
+      end
+    end
+
+    context "with multiple translations" do
+      before_each { object.assign(summary: "original summary", content: "original content") }
+
+      let_create!(:translation, named: nil, origin: object, summary: "first translated summary", content: "first translated content")
+      let_create!(:translation, named: nil, origin: object, summary: "second translated summary", content: "second translated content")
+
+      it "uses most recent translation" do
+        expect(object.preview).to eq("second translated summary")
+      end
+    end
+
+    context "with blank values" do
+      before_each { object.assign(summary: nil, content: "original content") }
+
+      let_create!(:translation, origin: object, summary: "", content: "  ")
+
+      it "ignores blank values" do
+        expect(object.preview).to eq("original content")
+      end
+    end
+  end
+end
+
+Spectator.describe ActivityPub::Object::ModelHelper do
+  let(json) do
+    <<-JSON
+      {
+        "@context":[
+          "https://www.w3.org/ns/activitystreams"
+        ],
+        "@id":"https://test.test/object",
+        "@type":"FooBarObject",
+        "replies":{
+          "@id":"replies link",
+          "@type":"Collection"
+        }
+      }
+    JSON
+  end
+
+  describe ".from_json_ld" do
+    let(object) { described_class.from_json_ld(json) }
+
+    it "populates replies_iri" do
+      expect(object["replies_iri"]).to eq("replies link")
+    end
+
+    it "does not populate replies" do
+      expect(object.has_key?("replies")).to be_false
+    end
+
+    context "given a replies collection with the same host" do
+      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"@id":"https://test.test/replies",|) }
+
+      it "populates replies" do
+        expect(object["replies"]).to be_a(ActivityPub::Collection)
+        expect(object["replies"].as(ActivityPub::Collection).iri).to eq("https://test.test/replies")
+      end
+    end
+
+    context "given object without an id" do  # should never happen, but...
+      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"@id":"https://test.test/replies",|).gsub(%q|"@id":"https://test.test/object",|, "") }
+
+      it "does not populate replies" do
+        expect(object.has_key?("replies")).to be_false
+      end
+    end
+
+    context "given replies with a different host" do
+      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"id":"https://different/replies",|) }
+
+      it "does not populate replies" do
+        expect(object.has_key?("replies")).to be_false
+      end
+    end
+
+    context "given replies without an id" do
+      let(json) { super.gsub(%q|"@id":"replies link",|, "") }
+
+      it "populates replies" do
+        expect(object["replies"]).to be_a(ActivityPub::Collection)
+      end
+    end
+  end
+end
+
+Spectator.describe ActivityPub::Object::Attachment do
+  def create_attachment(focal_point : Tuple(Float64, Float64)? = nil)
+    ActivityPub::Object::Attachment.new(
+      "https://example.com/image.jpg",
+      "image/jpeg",
+      nil,
+      focal_point
+    )
+  end
+
+  describe "#has_focal_point?" do
+    it "returns false for missing focal point" do
+      attachment = create_attachment
+
+      expect(attachment.has_focal_point?).to be_false
+    end
+
+    it "returns true for valid position" do
+      attachment = create_attachment({0.0, 0.0})
+
+      expect(attachment.has_focal_point?).to be_true
+    end
+
+    it "returns true for valid positions" do
+      attachment = create_attachment({-0.6, 0.07})
+
+      expect(attachment.has_focal_point?).to be_true
+    end
+  end
+
+  describe "#normalized_focal_point" do
+    it "converts Mastodon coordinates" do
+      attachment = create_attachment({0.2, -0.4})
+
+      normalized = attachment.normalized_focal_point.not_nil!
+      # with exaggeration (strength=0.75):
+      expect(normalized[0]).to be_within(0.001).of(0.6778)
+      expect(normalized[1]).to be_within(0.001).of(0.7990)
+    end
+  end
+
+  describe "#css_object_position" do
+    it "generates correct CSS values" do
+      attachment = create_attachment({0.2, -0.4})
+
+      css = attachment.css_object_position
+      expect(css).to eq("67.78% 79.91%")
+    end
+
+    it "returns center fallback when no focal point" do
+      attachment = create_attachment
+
+      css = attachment.css_object_position
+      expect(css).to eq("50% 50%")
     end
   end
 end

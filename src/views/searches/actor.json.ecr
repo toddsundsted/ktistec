@@ -1,7 +1,7 @@
 {
   <%- if message -%>
-  "msg":"<%= message%>",
+  "msg":<%= message.to_json %>,
   <%- end -%>
-  "actor":<%= actor.to_json %>,
-  "query":"<%= query %>"
+  "query":<%= query.to_json %>,
+  "actor":<%= actor.to_json %>
 }

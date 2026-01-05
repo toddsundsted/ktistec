@@ -124,17 +124,17 @@ Spectator.describe HomeController do
       end
 
       it "rerenders if params are invalid" do
-        body = "username=&password=a1!&name=&summary=&timezone=&language=en"
+        body = "username=&password=a1!&name=&summary=&timezone=&language=en&type=Invalid"
         post "/", HTML_HEADERS, body
         expect(response.status_code).to eq(422)
-        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/username is too short, password is too short/)
+        expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/div").first).to match(/username is too short, password is too short, type is not valid/)
       end
 
       it "rerenders if params are invalid" do
-        body = {username: "", password: "a1!", name: "", summary: "", timezone: "", language: "en"}.to_json
+        body = {username: "", password: "a1!", name: "", summary: "", timezone: "", language: "en", type: "Invalid"}.to_json
         post "/", JSON_HEADERS, body
         expect(response.status_code).to eq(422)
-        expect(JSON.parse(response.body)["errors"].as_h).to eq({"username" => ["is too short"], "password" => ["is too short"]})
+        expect(JSON.parse(response.body)["errors"].as_h).to eq({"username" => ["is too short"], "password" => ["is too short"], "type" => ["is not valid"]})
       end
 
       let(query_string) { "username=#{username}&password=#{password}&name=&summary=&timezone=&language=en" }
@@ -149,8 +149,18 @@ Spectator.describe HomeController do
         expect{post "/", HTML_HEADERS, query_string}.to change{Account.count}.by(1)
       end
 
-      it "creates actor" do
-        expect{post "/", HTML_HEADERS, query_string}.to change{ActivityPub::Actor.count}.by(1)
+      it "creates actor of type ActivityPub::Actor::Person by default" do
+        post "/", HTML_HEADERS, query_string
+        actor = Account.find(username: username).actor
+        expect(actor.class).to eq(ActivityPub::Actor::Person)
+        expect(actor.type).to eq("ActivityPub::Actor::Person")
+      end
+
+      it "creates actor of type ActivityPub::Actor::Organization" do
+        post "/", HTML_HEADERS, query_string + "&type=ActivityPub::Actor::Organization"
+        actor = Account.find(username: username).actor
+        expect(actor.class).to eq(ActivityPub::Actor)
+        expect(actor.type).to eq("ActivityPub::Actor::Organization")
       end
 
       it "associates account and actor" do
@@ -170,8 +180,18 @@ Spectator.describe HomeController do
         expect{post "/", JSON_HEADERS, json_string}.to change{Account.count}.by(1)
       end
 
-      it "creates actor" do
-        expect{post "/", JSON_HEADERS, json_string}.to change{ActivityPub::Actor.count}.by(1)
+      it "creates actor of type ActivityPub::Actor::Person by default" do
+        post "/", JSON_HEADERS, json_string
+        actor = Account.find(username: username).actor
+        expect(actor.class).to eq(ActivityPub::Actor::Person)
+        expect(actor.type).to eq("ActivityPub::Actor::Person")
+      end
+
+      it "creates actor of type ActivityPub::Actor::Organization" do
+        post "/", JSON_HEADERS, JSON.parse(json_string).as_h.merge({"type" => "ActivityPub::Actor::Organization"}).to_json
+        actor = Account.find(username: username).actor
+        expect(actor.class).to eq(ActivityPub::Actor)
+        expect(actor.type).to eq("ActivityPub::Actor::Organization")
       end
 
       it "associates account and actor" do
@@ -186,10 +206,38 @@ Spectator.describe HomeController do
 
     context "if unauthenticated" do
       describe "GET /" do
-        it "renders a list of local actors" do
+        it "succeeds" do
           get "/", HTML_HEADERS
           expect(response.status_code).to eq(200)
-          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'segments')]//a[contains(@href,'#{username}')]/@href")).to contain_exactly(/\/@#{username}/)
+          # no local actors, only posts on this page
+        end
+
+        after_each { Ktistec.set_default_settings }
+
+        context "without a site description" do
+          before_each { Ktistec.settings.clear_description }
+
+          it "does not display site description" do
+            get "/", HTML_HEADERS
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'ui segment event')]")).to be_empty
+          end
+        end
+
+        context "with a site description" do
+          before_each { Ktistec.settings.assign({"description" => "<p>Welcome to our server!</p>"}).save }
+
+          it "displays site description" do
+            get "/", HTML_HEADERS
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'ui segment event')]//p").first).to eq("Welcome to our server!")
+          end
+        end
+
+        it "includes RSS feed discovery link in HTML head" do
+          get "/", HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          html = XML.parse_html(response.body)
+          rss_link = html.xpath_node("//link[@rel='alternate'][@type='application/rss+xml'][@href='/feed.rss']")
+          expect(rss_link.try(&.["title"])).to eq("Test: RSS Feed")
         end
 
         it "renders a list of local actors" do
@@ -216,7 +264,7 @@ Spectator.describe HomeController do
 
             it "renders the object's create aspect" do
               get "/", HTML_HEADERS
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/)
             end
           end
 
@@ -227,7 +275,7 @@ Spectator.describe HomeController do
 
             it "renders the object's announce aspect" do
               get "/", HTML_HEADERS
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-announce/)
             end
           end
 
@@ -239,7 +287,7 @@ Spectator.describe HomeController do
 
             it "renders the object's create aspect" do
               get "/", HTML_HEADERS
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/)
             end
           end
         end
@@ -257,7 +305,7 @@ Spectator.describe HomeController do
 
             it "renders the object's announce aspect" do
               get "/", HTML_HEADERS
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-announce/)
             end
           end
         end
@@ -292,6 +340,40 @@ Spectator.describe HomeController do
         post "/", JSON_HEADERS
         expect(response.status_code).to eq(404)
       end
+    end
+  end
+
+  describe "GET /feed.rss" do
+    let!(account) { register(username, password) }
+
+    it "returns correct content type" do
+      get "/feed.rss"
+      expect(response.status_code).to eq(200)
+      expect(response.headers["Content-Type"]).to eq("application/rss+xml; charset=utf-8")
+    end
+
+    it "returns valid RSS" do
+      get "/feed.rss"
+      expect(response.status_code).to eq(200)
+      xml = XML.parse(response.body)
+      expect(xml.xpath_node("//rss")).to_not be_nil
+      expect(xml.xpath_node("//channel")).to_not be_nil
+    end
+
+    let_build(:create)
+
+    it "includes public posts" do
+      put_in_outbox(account.actor, create)
+
+      get "/feed.rss", HTML_HEADERS
+      expect(response.status_code).to eq(200)
+      xml = XML.parse(response.body)
+      expect(xml.xpath_nodes("//item")).to_not be_empty
+      expect(xml.xpath_node("//item/title")).to_not be_nil
+      expect(xml.xpath_node("//item/link")).to_not be_nil
+      expect(xml.xpath_node("//item/description")).to_not be_nil
+      expect(xml.xpath_node("//item/pubDate")).to_not be_nil
+      expect(xml.xpath_node("//item/guid")).to_not be_nil
     end
   end
 end

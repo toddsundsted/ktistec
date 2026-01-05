@@ -137,9 +137,9 @@ end
 
 ## Mailbox Notifications
 
-rule "create/reply"
+rule "object activity/reply"
   condition activity, InMailboxOf, actor
-  condition CreateActivity, activity, object: object
+  condition ObjectActivity, activity, object: object
   condition Object, object, attributed_to: not actor
   condition Object, object, in_reply_to: other
   condition Object, other, attributed_to: actor
@@ -151,14 +151,13 @@ end
 rule "delete/reply"
   condition delete, InMailboxOf, actor
   condition DeleteActivity, delete, object: object
-  condition CreateActivity, activity, object: object
   any NotificationReply, owner: actor, object: object
   retract NotificationReply, owner: actor, object: object
 end
 
-rule "create/mention"
+rule "object activity/mention"
   condition activity, InMailboxOf, actor
-  condition CreateActivity, activity, object: object
+  condition ObjectActivity, activity, object: object
   condition Object, object, attributed_to: not actor
   any Mention, mention, subject: object, href: actor.iri
   none NotificationMention, owner: actor, object: object
@@ -169,7 +168,6 @@ end
 rule "delete/mention"
   condition delete, InMailboxOf, actor
   condition DeleteActivity, delete, object: object
-  condition CreateActivity, activity, object: object
   any NotificationMention, owner: actor, object: object
   retract NotificationMention, owner: actor, object: object
 end
@@ -224,6 +222,31 @@ rule "undo/like"
   retract NotificationLike, owner: actor, activity: activity
 end
 
+rule "dislike, step 1"
+  condition activity, InMailboxOf, actor
+  condition DislikeActivity, activity, object: object
+  condition Object, object, attributed_to: actor
+  # remove any previous notifications about this object
+  condition DislikeActivity, previous, object: object
+  condition NotificationDislike, owner: actor, activity: previous
+  retract NotificationDislike, owner: actor, activity: previous
+end
+
+rule "dislike, step 2"
+  condition activity, InMailboxOf, actor
+  condition DislikeActivity, activity, object: object
+  condition Object, object, attributed_to: actor
+  none NotificationDislike, owner: actor, activity: activity
+  assert NotificationDislike, owner: actor, activity: activity
+end
+
+rule "undo/dislike"
+  condition undo, InMailboxOf, actor
+  condition UndoActivity, undo, object: activity
+  any NotificationDislike, owner: actor, activity: activity
+  retract NotificationDislike, owner: actor, activity: activity
+end
+
 rule "follow"
   condition activity, InMailboxOf, actor
   condition FollowActivity, activity, object: actor
@@ -240,9 +263,12 @@ end
 
 ## Follow Notifications
 
+# only notify on the *first* activity for an object!
+
 rule "incoming activity for object"
   condition Incoming, actor, activity
   condition ObjectActivity, activity, object: object
+  none ObjectActivity, not activity, object: object
   assert CheckFollowFor, actor, object
 end
 

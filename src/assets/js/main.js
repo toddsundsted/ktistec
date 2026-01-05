@@ -76,34 +76,34 @@ Trix.config.textAttributes.code = { tagName: "code", inheritable: true }
 Trix.config.textAttributes.sub = { tagName: "sub", inheritable: true }
 Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
 
-// prevent morphing of the editor, lightgallery, and images. each has
-// client state that will be lost if the page is refreshed/morphed.
-// see: https://github.com/hotwired/turbo-rails/issues/533
-// see: https://github.com/hotwired/turbo/issues/1083
-
-addEventListener("turbo:before-morph-element", (event) => {
-  const { target } = event
-  if (target.tagName == "FORM" && target.classList.contains("editor")) {
-    event.preventDefault()
-  } else if (target.tagName == "DIV" && target.classList.contains("lg-container")) {
-    event.preventDefault()
-  } else if (target.tagName == "IMG" && target.dataset.lgId) {
-    event.preventDefault()
-  }
-})
-
 // monitor the stream sources on the page. if any are closed, remove
 // them, which ensures they are recreated when the page refreshes.
 
 // to prevent the monitor from spamming the server during maintenance
-// or other downtime events, delay the start of the check for 60
+// or other downtime events, delay the start of the check for 6 * 10
 // seconds. then check every 10 seconds. after refreshing the page,
-// again delay the start of the check for 60 seconds. note that this
-// code will not be reloaded if the page is refreshed.
+// again delay the start of the check for 6 * 10 seconds. note that
+// this code will not be reloaded if the page is refreshed.
 
 ;(function () {
   let counter = 0
   let closed = false
+  let checking = false
+
+  function checkConnectivity(callback) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+    fetch(window.location.origin, { method: 'HEAD', cache: 'no-store', signal: controller.signal })
+      .then(response => {
+        clearTimeout(timeoutId)
+        callback(response.status >= 200)
+      })
+      .catch(error => {
+        clearTimeout(timeoutId)
+        callback(false)
+      })
+  }
 
   setInterval(function () {
     counter = counter + 1
@@ -113,11 +113,23 @@ addEventListener("turbo:before-morph-element", (event) => {
         closed = true
       }
     })
-    if (counter > 5 && closed) {
-      console.log("counter", counter, "closed", closed, "|", "refreshing", window.location.href)
-      session.refresh(window.location.href)
-      counter = 0
-      closed = false
+
+    if (counter > 5 && closed && !checking) {
+      checking = true
+      checkConnectivity(function (isOnline) {
+        if (isOnline) {
+          document.body.classList.remove('offline');
+          console.debug("counter", counter, "closed", closed, "|", "refreshing", window.location.href)
+          session.refresh(window.location.href)
+          counter = 0
+          closed = false
+          checking = false
+        } else {
+          document.body.classList.add('offline');
+          console.debug("counter", counter, "closed", closed, "|", "server unreachable, waiting to refresh", window.location.href)
+          checking = false
+        }
+      })
     }
   }, 10000)
 })()

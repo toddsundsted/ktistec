@@ -3,6 +3,7 @@ require "openssl_ext"
 
 require "../framework/model"
 require "../framework/model/**"
+require "./oauth2/provider/access_token"
 require "./activity_pub/actor"
 require "./last_time"
 require "./session"
@@ -33,7 +34,7 @@ class Account
   @[Assignable]
   @password : String?
 
-  # Password encryption and key generation should be expensive
+  # NOTE: Password encryption and key generation should be expensive
   # operations in normal use cases. Parameterize `cost` and `size` so
   # that they can be redefined in test, where the expense just makes
   # the tests run more slowly.
@@ -75,7 +76,7 @@ class Account
 
   def before_validate
     if changed?(:username)
-      clear!(:username)
+      clear_changed!(:username)
       if (username = self.username)
         host = Ktistec.host
         self.iri = "#{host}/actors/#{username}"
@@ -101,7 +102,7 @@ class Account
 
   def before_save
     if changed?(:actor)
-      clear!(:actor)
+      clear_changed!(:actor)
       if (actor = self.actor?) && actor.pem_public_key.nil? && actor.pem_private_key.nil?
         keypair = OpenSSL::RSA.generate(self.size, 17)
         actor.pem_public_key = keypair.public_key.to_pem
@@ -126,11 +127,23 @@ class Account
   validates(timezone) { "is unsupported" unless check_timezone?(timezone) }
 
   @[Persistent]
+  property auto_approve_followers : Bool { false }
+
+  @[Persistent]
+  property auto_follow_back : Bool { false }
+
+  @[Persistent]
+  property default_editor : String { "text/html; editor=trix" }
+  validates(default_editor) { "is not a valid editor" unless default_editor.in?("text/html; editor=trix", "text/markdown") }
+
+  @[Persistent]
   property iri : String { "" }
 
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri
 
   has_many sessions
+
+  has_many oauth_access_tokens, class_name: OAuth2::Provider::AccessToken
 
   has_many last_times
 
@@ -165,5 +178,20 @@ class Account
       LastTime.new(account: self, name: LAST_NOTIFICATIONS_CHECKED_AT)
     last_time.assign(timestamp: time).save
     self
+  end
+
+  # Returns count of monthly active accounts (accounts with any
+  # activity in the last 30 days).
+  #
+  def self.monthly_active_accounts_count
+    query = <<-QUERY
+        SELECT COUNT(DISTINCT a.id)
+          FROM accounts AS a
+          JOIN activities AS t
+            ON t.actor_iri = a.iri
+         WHERE t.published >= ?
+           AND t.undone_at IS NULL
+    QUERY
+    Account.scalar(query, 30.days.ago).as(Int64)
   end
 end

@@ -15,6 +15,8 @@ class Task
       if Kemal.config.env == "production"
         perform_backup
       end
+    ensure
+      self.next_attempt_at = randomized_next_attempt_at(1.day)
     end
 
     def perform_backup
@@ -25,7 +27,7 @@ class Task
       Log.trace { "database backup beginning" }
 
       times = Benchmark.measure("backup times") do
-        DB.open(backup) do |db_backup|
+        DB.open("sqlite3://#{backup}") do |db_backup|
           db_backup.using_connection do |conn_backup|
             Ktistec.database.using_connection do |conn_db|
               conn_db.dump(conn_backup)
@@ -34,9 +36,7 @@ class Task
         end
       end
 
-      Log.trace { "#{times.label}: #{times.to_s}" }
-    ensure
-      self.next_attempt_at = 1.day.from_now
+      Log.trace { "#{times.label}: #{times}" }
     end
   end
 end

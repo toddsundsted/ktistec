@@ -1,5 +1,5 @@
 name: ktistec
-version: 2.4.4
+version: 3.2.6
 
 authors:
   - Todd Sundsted <todd@sundsted.com>
@@ -11,25 +11,28 @@ targets:
 dependencies:
   kemal:
     github: kemalcr/kemal
-    version: ~> 1.5.0
+    version: ~> 1.7.0
   slang:
     github: toddsundsted/slang
-    version: ~> 2.0.0
+    version: ~> 2.0.3
   sqlite3:
     github: crystal-lang/crystal-sqlite3
     version: ~> 0.20
   libxml_ext:
     github: toddsundsted/libxml_ext
-    version: ~> 0.1.0
+    version: 0.1.2
   openssl_ext:
     github: toddsundsted/openssl_ext
     version: ~> 0.1.6
+  host_meta:
+    github: toddsundsted/host_meta
+    version: ~> 0.2.4
   web_finger:
     github: toddsundsted/web_finger
-    version: ~> 0.2.5
+    version: ~> 0.2.6
   school:
     github: toddsundsted/school
-    version: ~> 0.2.4
+    version: ~> 0.3.0
   markd:
     github: icyleaf/markd
     version: ~> 0.5.0
@@ -38,8 +41,11 @@ development_dependencies:
   spectator:
     gitlab: arctic-fox/spectator
     version: ~> 0.12.0
+  ameba:
+    github: crystal-ameba/ameba
+    version: ~> 1.6.0
 
-crystal: 1.2.2
+crystal: "< 1.17.0"
 
 libraries:
   libsqlite3: ">= 3.11.0"

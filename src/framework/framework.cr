@@ -5,7 +5,16 @@ require "uri"
 require "./ext/array"
 require "./ext/hash"
 require "./ext/log"
+
+# the SQLite extensions required by "database", below, use `Log`.
+# ensure that, at this point, at a minimum, the default log level set
+# in the environment is respected. `setup` with values from the
+# database happens when the server starts running (see below).
+
+Log.setup_from_env
+
 require "./database"
+require "./themes"
 require "../utils/translator"
 
 module Ktistec
@@ -50,8 +59,8 @@ module Ktistec
         end
     end
 
-    def ==(other)
-      other.is_a?(LogLevel) && @source == other.source && @severity == other.severity
+    def ==(other : self)
+      @source == other.source && @severity == other.severity
     end
   end
 
@@ -61,13 +70,15 @@ module Ktistec
     PROPERTIES = {
       host: String,
       site: String,
+      image: String,
+      description: String,
       footer: String,
       translator_service: String,
       translator_url: String,
     }
 
     {% for property, type in PROPERTIES %}
-      property {{property.id}} : {{type.id}}?
+      getter {{property.id}} : {{type.id}}?
     {% end %}
 
     getter errors = Hash(String, Array(String)).new
@@ -75,17 +86,20 @@ module Ktistec
     def initialize
       values =
         Ktistec.database.query_all("SELECT key, value FROM options", as: {String, String?})
-          .reduce(Hash(String, String?).new) do |values, (key, value)|
-            values[key] = value
-            values
+          .reduce(Hash(String, String?).new) do |acc, (key, value)|
+            acc[key] = value
+            acc
           end
       assign(values)
     end
+
+    class_getter nonce = 0_i64
 
     def assign(options)
       {% for property, type in PROPERTIES %}
         @{{property.id}} = options["{{property.id}}"].as({{type.id}}?) if options.has_key?("{{property.id}}")
       {% end %}
+      @@nonce += 1
       self
     end
 
@@ -193,14 +207,40 @@ module Ktistec
   #     end
   #
   class Server
-    def self.run
+    class_getter? shutting_down : Bool = false
+
+    def self.run(&)
       log_levels = LogLevel.all_as_hash
       ::Log.setup log_levels.transform_values(&.severity)
+
+      Themes.discover_files(Kemal.config.public_folder)
+
       with new yield
+
+      unless Kemal.config.env == "test"
+        Signal::INT.trap { shutdown }
+        Signal::TERM.trap { shutdown }
+      end
+
       Kemal.config.app_name = "Ktistec"
+
       # work around Kemal's handling of the command line when running specs...
       argv = (Kemal.config.env == "test") ? typeof(ARGV).new : ARGV
-      Kemal.run argv
+      Kemal.run(argv, trap_signal: false)
+    end
+
+    def self.shutdown
+      return if @@shutting_down
+      @@shutting_down = true
+      Log.info { "#{Kemal.config.app_name} is going to take a rest!" } if Kemal.config.shutdown_message
+      if (server = Kemal.config.server)
+        server.close unless server.closed?
+        Kemal.config.running = false
+      end
+      TaskWorker.stop
+      unless Kemal.config.env == "test"
+        exit(0)
+      end
     end
   end
 

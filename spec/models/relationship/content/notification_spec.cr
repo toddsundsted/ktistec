@@ -10,10 +10,12 @@ Spectator.describe Relationship::Content::Notification do
     # a non-abstract version to test
   end
 
+  let_create(:actor, named: from)
+
   let(options) do
     {
-      from_iri: Factory.create(:actor).iri,
-      to_iri: "anything"
+      from_iri: from.iri,
+      to_iri: "anything",
     }
   end
 

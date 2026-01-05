@@ -332,7 +332,7 @@ Spectator.describe InteractionsController do
 
         it "renders the remote object" do
           get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Fobjects%2Ffoobar", HTML_HEADERS
-          expect(XML.parse_html(response.body).xpath_nodes("//a[.//button[text()='Source']][@href='https://remote/objects/foobar']")).not_to be_empty
+          expect(XML.parse_html(response.body).xpath_nodes("//a[@href='https://remote/objects/foobar'][text()='Source']")).not_to be_empty
         end
 
         it "returns the object" do

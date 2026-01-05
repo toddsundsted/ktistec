@@ -7,25 +7,26 @@ require "../activity_pub"
 
 require "../../views/view_helper"
 
-module ActivityModelRenderer
-  include Ktistec::ViewHelper
-
-  def self.to_json_ld(activity, recursive)
-    render "src/views/activities/activity.json.ecr"
-  end
-end
-
 module ActivityPub
   class Activity
     include Ktistec::Model
     include Ktistec::Model::Common
     include Ktistec::Model::Linked
-    include Ktistec::Model::Serialized
     include Ktistec::Model::Polymorphic
     include Ktistec::Model::Undoable
     include ActivityPub
 
     @@table_name = "activities"
+
+    ALIASES = [
+      "ActivityPub::Activity::Add",
+      "ActivityPub::Activity::Block",
+      "ActivityPub::Activity::Flag",
+      "ActivityPub::Activity::Listen",
+      "ActivityPub::Activity::Read",
+      "ActivityPub::Activity::Remove",
+      "ActivityPub::Activity::View",
+    ]
 
     @[Persistent]
     property visible : Bool { false }
@@ -54,6 +55,9 @@ module ActivityPub
     property cc : Array(String)?
 
     @[Persistent]
+    property audience : Array(String)?
+
+    @[Persistent]
     property summary : String?
 
     def display_date(timezone = nil)
@@ -69,43 +73,74 @@ module ActivityPub
       (published || created_at).in(timezone)
     end
 
-    @@recursive : Symbol | Bool = :default
+    class_getter recursive : Symbol | Bool = :default
 
-    def to_json_ld(recursive = @@recursive)
-      ActivityModelRenderer.to_json_ld(self, recursive)
+    def to_json_ld(recursive = self.class.recursive)
+      ModelHelper.to_json_ld(self, recursive)
     end
 
     def from_json_ld(json)
       self.assign(self.class.map(json))
     end
 
-    def self.map(json : JSON::Any | String | IO, **options)
-      json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
-      {
-        "iri" => json.dig?("@id").try(&.as_s),
-        "_type" => json.dig?("@type").try(&.as_s.split("#").last),
-        "published" => (p = dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
-        # either pick up the actor's id or the embedded actor
-        "actor_iri" => json.dig?("https://www.w3.org/ns/activitystreams#actor").try(&.as_s?),
-        "actor" => if (actor = json.dig?("https://www.w3.org/ns/activitystreams#actor")) && actor.as_h?
-          ActivityPub.from_json_ld(actor)
-        end,
-        # either pick up the object's id or the embedded object
-        "object_iri" => json.dig?("https://www.w3.org/ns/activitystreams#object").try(&.as_s?),
-        "object" => if (object = json.dig?("https://www.w3.org/ns/activitystreams#object")) && object.as_h?
-          ActivityPub.from_json_ld(object)
-        end,
-        # either pick up the target's id or the embedded target
-        "target_iri" => json.dig?("https://www.w3.org/ns/activitystreams#target").try(&.as_s?),
-        "target" => if (target = json.dig?("https://www.w3.org/ns/activitystreams#target")) && target.as_h?
-          ActivityPub.from_json_ld(target)
-        end,
-        "to" => to = dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
-        "cc" => cc = dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
-        "summary" => dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-        # use addressing to establish visibility
-        "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
-      }.compact
+    def self.map(json, **options)
+      ModelHelper.from_json_ld(json)
+    end
+
+    module ModelHelper
+      include Ktistec::ViewHelper
+
+      def self.to_json_ld(activity, recursive)
+        render "src/views/activities/activity.json.ecr"
+      end
+
+      def self.from_json_ld(json : JSON::Any | String | IO)
+        json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+        activity_host = (activity_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(activity_iri) : nil
+        {
+          "iri" => json.dig?("@id").try(&.as_s),
+          "_type" => json.dig?("@type").try(&.as_s.split("#").last),
+          "published" => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
+          # pick up the actor's id and the embedded actor if the hosts match
+          "actor_iri" => if (actor = json.dig?("https://www.w3.org/ns/activitystreams#actor"))
+            actor.as_s? || actor.dig?("@id").try(&.as_s?)
+          end,
+          "actor" => if actor && actor.as_h?
+            if (actor_iri = actor.dig?("@id").try(&.as_s?)) && activity_host && parse_host(actor_iri) == activity_host
+              ActivityPub.from_json_ld(actor, default: ActivityPub::Actor)
+            end
+          end,
+          # pick up the object's id and the embedded object if the hosts match
+          "object_iri" => if (object = json.dig?("https://www.w3.org/ns/activitystreams#object"))
+            object.as_s? || object.dig?("@id").try(&.as_s?)
+          end,
+          "object" => if object && object.as_h?
+            if (object_iri = object.dig?("@id").try(&.as_s?)) && activity_host && parse_host(object_iri) == activity_host
+              ActivityPub.from_json_ld(object, default: ActivityPub::Object)
+            end
+          end,
+          # pick up the target's id and the embedded target if the hosts match
+          "target_iri" => if (target = json.dig?("https://www.w3.org/ns/activitystreams#target"))
+            target.as_s? || target.dig?("@id").try(&.as_s?)
+          end,
+          "target" => if target && target.as_h?
+            if (target_iri = target.dig?("@id").try(&.as_s?)) && activity_host && parse_host(target_iri) == activity_host
+              ActivityPub.from_json_ld(target, default: ActivityPub::Object)
+            end
+          end,
+          "to" => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
+          "cc" => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+          "audience" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#audience"),
+          "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+          # use addressing to establish visibility
+          "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
+        }.compact
+      end
+
+      private def self.parse_host(uri)
+        URI.parse(uri).host
+      rescue URI::Error
+      end
     end
   end
 end

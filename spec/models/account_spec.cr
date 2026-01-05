@@ -81,6 +81,11 @@ Spectator.describe Account do
       new_account = described_class.new(username: "", password: "", timezone: "Foo/Bar")
       expect(new_account.validate["timezone"]).to eq(["is unsupported"])
     end
+
+    it "rejects the default editor as invalid" do
+      new_account = described_class.new(username: "", password: "", default_editor: "text/plain")
+      expect(new_account.validate["default_editor"]).to eq(["is not a valid editor"])
+    end
   end
 
   context "given an actor to associate with" do
@@ -114,6 +119,37 @@ Spectator.describe Account do
   describe "#sessions" do
     it "gets related sessions" do
       expect(subject.sessions).to be_empty
+    end
+  end
+
+  describe ".monthly_active_accounts_count" do
+    let!(actor) { register.actor }
+
+    context "given an activity within the last 30 days" do
+      let_create!(:activity, actor: actor, published: 15.days.ago)
+
+      it "returns a count of 1" do
+        count = described_class.monthly_active_accounts_count
+        expect(count).to eq(1)
+      end
+
+      context "that was undone" do
+        before_each { activity.undo! }
+
+        it "returns a count of 0" do
+          count = described_class.monthly_active_accounts_count
+          expect(count).to eq(0)
+        end
+      end
+    end
+
+    context "given an activity older than 30 days" do
+      let_create!(:activity, actor: actor, published: 45.days.ago)
+
+      it "returns a count of 0" do
+        count = described_class.monthly_active_accounts_count
+        expect(count).to eq(0)
+      end
     end
   end
 end

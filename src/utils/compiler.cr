@@ -35,12 +35,12 @@ module Ktistec
                 pattern = instantiate(pattern.constant.id, arguments, options)
                 patterns << School::Pattern::None.new(pattern)
               when "assert"
-                actions << School::Action.new do |rule, bindings|
-                  assert(pattern.constant.id, bindings, arguments, options)
+                actions << School::Action.new do |_, context|
+                  assert(pattern.constant.id, context, arguments, options)
                 end
               when "retract"
-                actions << School::Action.new do |rule, bindings|
-                  retract(pattern.constant.id, bindings, arguments, options)
+                actions << School::Action.new do |_, context|
+                  retract(pattern.constant.id, context, arguments, options)
                 end
               else
                 # this should never happen
@@ -104,8 +104,8 @@ module Ktistec
       when Ktistec::FunctionOperator
         case node.left.id
         when "within"
-          right = node.right.map do |node|
-            if (exp = compile_expression(node)).is_a?(School::Atomic)
+          right = node.right.map do |arg|
+            if (exp = compile_expression(arg)).is_a?(School::Atomic)
               exp.as(School::Atomic)
             else
               raise LinkError.new(self, "argument must be atomic")
@@ -191,54 +191,54 @@ module Ktistec
           raise LinkError.new(self, "undefined constant: #{name}")
         end
       end
-      private def assert(name, bindings, arguments, options)
+      private def assert(name, context, arguments, options)
         case name
         {% for clazz in CONSTANTS %}
           when {{clazz.stringify.split("::").last}}
             {% if clazz < School::Pattern %}
               raise LinkError.new(self, "too many arguments") if arguments.size > 1
-              {{clazz}}.assert(transform_arguments(bindings, arguments)[0]?, transform_options(bindings, options))
+              {{clazz}}.assert(transform_arguments(context.bindings, arguments)[0]?, transform_options(context.bindings, options))
             {% elsif clazz < School::Relationship %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 2
-              arguments = transform_arguments(bindings, arguments)
+              arguments = transform_arguments(context.bindings, arguments)
               a = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
               b = arguments[1].as({{clazz.ancestors[0].type_vars[1]}})
-              School::Fact.assert({{clazz}}.new(a, b))
+              context.facts.add({{clazz}}.new(a, b))
             {% elsif clazz < School::Property %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 1
-              arguments = transform_arguments(bindings, arguments)
+              arguments = transform_arguments(context.bindings, arguments)
               c = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
-              School::Fact.assert({{clazz}}.new(c))
+              context.facts.add({{clazz}}.new(c))
             {% elsif clazz < School::Fact %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 0
-              School::Fact.assert({{clazz}}.new)
+              context.facts.add({{clazz}}.new)
             {% end %}
         {% end %}
         else
           raise LinkError.new(self, "undefined constant: #{name}")
         end
       end
-      private def retract(name, bindings, arguments, options)
+      private def retract(name, context, arguments, options)
         case name
         {% for clazz in CONSTANTS %}
           when {{clazz.stringify.split("::").last}}
             {% if clazz < School::Pattern %}
               raise LinkError.new(self, "too many arguments") if arguments.size > 1
-              {{clazz}}.retract(transform_arguments(bindings, arguments)[0]?, transform_options(bindings, options))
+              {{clazz}}.retract(transform_arguments(context.bindings, arguments)[0]?, transform_options(context.bindings, options))
             {% elsif clazz < School::Relationship %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 2
-              arguments = transform_arguments(bindings, arguments)
+              arguments = transform_arguments(context.bindings, arguments)
               a = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
               b = arguments[1].as({{clazz.ancestors[0].type_vars[1]}})
-              School::Fact.retract({{clazz}}.new(a, b))
+              context.facts.delete({{clazz}}.new(a, b))
             {% elsif clazz < School::Property %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 1
-              arguments = transform_arguments(bindings, arguments)
+              arguments = transform_arguments(context.bindings, arguments)
               c = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
-              School::Fact.retract({{clazz}}.new(c))
+              context.facts.delete({{clazz}}.new(c))
             {% elsif clazz < School::Fact %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 0
-              School::Fact.retract({{clazz}}.new)
+              context.facts.delete({{clazz}}.new)
             {% end %}
         {% end %}
         else

@@ -1,24 +1,26 @@
-nav.ui.top.fixed.inverted.navigation.menu
+nav.ui.top.fixed.inverted.navigation.menu data-turbo-prefetch="false"
   .ui.text.container
     - if (_account = env.account?)
-      a.item href=actor_path(_account) Home
-      a.item href=search_path Search
-      a.item href=everything_path Everything
-      .compact.menu
-        .ui.simple.dropdown.item
-          | Advanced
-          i.dropdown.icon
-          .menu
-            a.item href=settings_path Settings
-            a.item href=filters_path Filters
-            a.item href=metrics_path Metrics
-            a.item href=tasks_path Tasks
+      a.item href=actor_path(_account)
+        i.home.icon
+        span.text Home
+      a.item href=search_path
+        i.search.icon
+        span.text Search
+      a.item href=everything_path
+        i.globe.icon
+        span.text Everything
+      a.item href=admin_path
+        i.cog.icon
+        span.text Admin
       .right.menu
         == form_tag(nil, sessions_path, method: "DELETE", class: "form") do
-          .ui.action.input
+          .ui.input
             input.link.item type="submit" value="Sign Out"
     - elsif Account.count > 0
-      a.item href=home_path Home
+      a.item href=home_path
+        i.home.icon
+        span.text Home
       .right.menu
         a.item href=sessions_path Sign In
     - else

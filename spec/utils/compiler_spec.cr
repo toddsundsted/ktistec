@@ -18,7 +18,7 @@ module CompilerSpec
       raise "not implemented"
     end
 
-    def match(bindings : School::Bindings, trace : School::TraceNode? = nil, &block : School::Bindings -> Nil) : Nil
+    def match(context : School::Context, trace : School::TraceNode? = nil, &_block : School::Bindings -> Nil) : Nil
       raise "not implemented"
     end
 
@@ -182,16 +182,20 @@ Spectator.describe Ktistec::Compiler do
 
             let(bindings) { School::Bindings{"foo" => "bar", "bar" => "foo", "foo_bar" => "foo_bar"} }
 
+            let(facts) { Set(School::Fact).new }
+
+            let(context) { School::Context.new(bindings, facts) }
+
             it "invokes assert method" do
               target = "foo_bar"
               options = Hash(String, School::DomainTypes).new.merge({"foo" => 12345})
-              expect{actions[0].call(rule, bindings)}.to change{CompilerSpec::FooBar.calls}.to([CompilerSpec::FooBar::Call.new("assert", target, options)])
+              expect{actions[0].call(rule, context)}.to change{CompilerSpec::FooBar.calls}.to([CompilerSpec::FooBar::Call.new("assert", target, options)])
             end
 
             it "invokes retract method" do
               target = "foo_bar"
               options = Hash(String, School::DomainTypes).new.merge({"foo" => "foo"})
-              expect{actions[1].call(rule, bindings)}.to change{CompilerSpec::FooBar.calls}.to([CompilerSpec::FooBar::Call.new("retract", target, options)])
+              expect{actions[1].call(rule, context)}.to change{CompilerSpec::FooBar.calls}.to([CompilerSpec::FooBar::Call.new("retract", target, options)])
             end
           end
         end
@@ -295,35 +299,35 @@ Spectator.describe Ktistec::Compiler do
 
       let(empty_set) { Set(School::Fact).new }
 
-      let(bindings) { School::Bindings.new }
+      let(context) { School::Context.new(School::Bindings.new, domain.facts) }
 
-      before_each { School::Fact.clear! }
+      let(domain) { subject.compile }
 
       context "and a rule definition asserting a fact" do
         let(input) { %q|rule "name" assert Foo end| }
 
         it "defines actions" do
-          expect(subject.compile.rules.first.actions.size).to eq(1)
+          expect(domain.rules.first.actions.size).to eq(1)
         end
 
         it "asserts a fact" do
-          rule = subject.compile.rules.first
-          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(Set{fact})
+          rule = domain.rules.first
+          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(Set{fact})
         end
       end
 
       context "and a rule definition retracting a fact" do
         let(input) { %q|rule "name" retract Foo end| }
 
-        before_each { School::Fact.assert(fact) }
+        before_each { domain.assert(fact) }
 
         it "defines actions" do
-          expect(subject.compile.rules.first.actions.size).to eq(1)
+          expect(domain.rules.first.actions.size).to eq(1)
         end
 
         it "retracts a fact" do
-          rule = subject.compile.rules.first
-          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(empty_set)
+          rule = domain.rules.first
+          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(empty_set)
         end
       end
     end
@@ -345,35 +349,35 @@ Spectator.describe Ktistec::Compiler do
 
       let(empty_set) { Set(School::Fact).new }
 
-      let(bindings) { School::Bindings.new }
+      let(context) { School::Context.new(School::Bindings.new, domain.facts) }
 
-      before_each { School::Fact.clear! }
+      let(domain) { subject.compile }
 
       context "and a rule definition asserting a property fact" do
         let(input) { %q|rule "name" assert Bar, "abc" end| }
 
         it "defines actions" do
-          expect(subject.compile.rules.first.actions.size).to eq(1)
+          expect(domain.rules.first.actions.size).to eq(1)
         end
 
         it "asserts a fact" do
-          rule = subject.compile.rules.first
-          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(Set{fact})
+          rule = domain.rules.first
+          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(Set{fact})
         end
       end
 
       context "and a rule definition retracting a property fact" do
         let(input) { %q|rule "name" retract Bar, "abc" end| }
 
-        before_each { School::Fact.assert(fact) }
+        before_each { domain.assert(fact) }
 
         it "defines actions" do
-          expect(subject.compile.rules.first.actions.size).to eq(1)
+          expect(domain.rules.first.actions.size).to eq(1)
         end
 
         it "retracts a fact" do
-          rule = subject.compile.rules.first
-          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(empty_set)
+          rule = domain.rules.first
+          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(empty_set)
         end
       end
     end
@@ -395,35 +399,35 @@ Spectator.describe Ktistec::Compiler do
 
       let(empty_set) { Set(School::Fact).new }
 
-      let(bindings) { School::Bindings.new }
+      let(context) { School::Context.new(School::Bindings.new, domain.facts) }
 
-      before_each { School::Fact.clear! }
+      let(domain) { subject.compile }
 
       context "and a rule definition asserting a relationship fact" do
         let(input) { %q|rule "name" assert Baz, "one", "two" end| }
 
         it "defines actions" do
-          expect(subject.compile.rules.first.actions.size).to eq(1)
+          expect(domain.rules.first.actions.size).to eq(1)
         end
 
         it "asserts a fact" do
-          rule = subject.compile.rules.first
-          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(Set{fact})
+          rule = domain.rules.first
+          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(Set{fact})
         end
       end
 
       context "and a rule definition retracting a relationship fact" do
         let(input) { %q|rule "name" retract Baz, "one", "two" end| }
 
-        before_each { School::Fact.assert(fact) }
+        before_each { domain.assert(fact) }
 
         it "defines actions" do
-          expect(subject.compile.rules.first.actions.size).to eq(1)
+          expect(domain.rules.first.actions.size).to eq(1)
         end
 
         it "retracts a fact" do
-          rule = subject.compile.rules.first
-          expect{rule.actions.first.call(rule, bindings)}.to change{School::Fact.facts}.to(empty_set)
+          rule = domain.rules.first
+          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(empty_set)
         end
       end
     end

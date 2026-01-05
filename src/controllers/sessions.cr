@@ -12,7 +12,7 @@ class SessionsController
   post "/sessions" do |env|
     username, password = params(env)
 
-    if account = account?(username, password)
+    if (account = account?(username, password))
       # get the `redirect_after_auth_path` from the old session.
       redirect_path = env.session.string?("redirect_after_auth_path") || actor_path(account)
 

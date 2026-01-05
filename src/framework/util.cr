@@ -89,27 +89,28 @@ module Ktistec
     private ATTRIBUTES = {
       a: {
         keep: ["href"],
-        remote: [{"target", "_blank"}, {"rel", "ugc"}],
+        remote: [{"target", "_blank"}, {"rel", "external ugc"}],
         local: [{"data-turbo-frame", "_top"}],
-        key: "href"
+        key: "href",
       },
       img: {
-        keep: ["src", "alt"],
-        all: [{"class", "ui image"}, {"loading", "lazy"}]
+        keep: ["src", "alt", "title"],
+        all: [{"class", "ui image"}, {"loading", "lazy"}],
+        class: ["emoji"],
       },
       audio: {
         keep: ["src"],
-        all: [{"controls", nil}]
+        all: [{"class", "ui audio"}, {"controls", nil}],
       },
       video: {
         keep: ["src"],
-        all: [{"controls", nil}]
+        all: [{"class", "ui video"}, {"controls", nil}],
       },
       source: {
         keep: ["src", "type"],
       },
       span: {
-        class: ["invisible", "ellipsis"]
+        class: ["invisible", "ellipsis"],
       }
     }
 
@@ -137,20 +138,36 @@ module Ktistec
             end
           end
           if (classes = attributes[:class]?) && (class_attribute = html.attributes["class"]?)
-            classes = (classes & class_attribute.content.split).join(' ')
-            build << " class='#{classes}'" if classes.presence
+            classes = classes & class_attribute.content.split
+          else
+            classes = [] of String
           end
           local =
             if (key = attributes[:key]?) && (value = html.attributes[key]?)
               uri = URI.parse(value.text)
-              (!uri.scheme && !uri.host) || Ktistec.host == "#{uri.scheme}://#{uri.host}"
+              server = URI.parse(Ktistec.host)
+              (!uri.scheme && !uri.host && !uri.port) ||
+                (uri.scheme == server.scheme && uri.host == server.host && uri.port == server.port)
             end
           if (local && (values = attributes[:local]?)) ||
              (!local && (values = attributes[:remote]?)) ||
              (values = attributes[:all]?)
-            build << values.map do |name, value|
-              value ? " #{name}='#{value}'" : " #{name}"
-            end.join
+            temporary = values.compact_map do |attr_name, attr_value|
+              if attr_name == "class" && attr_value
+                classes.unshift(attr_value)
+                nil
+              elsif attr_value
+                " #{attr_name}='#{attr_value}'"
+              else
+                " #{attr_name}"
+              end
+            end
+          end
+          unless classes.empty?
+            build << " class='#{classes.join(' ').strip}'"
+          end
+          if temporary
+            build << temporary.join
           end
           build << ">"
         else
@@ -168,6 +185,14 @@ module Ktistec
       elsif html.text?
         html.to_s(build)
       end
+    end
+
+    # Renders content as simple text and truncates to the given
+    # length.
+    #
+    def render_as_text_and_truncate(content : String, length : Int, *, ellipsis = "…")
+      text = render_as_text(content)
+      text.size > length ? text[0, length - ellipsis.size] + ellipsis : text
     end
 
     # Converts the array of words to comma-separated sentence form
@@ -257,9 +282,9 @@ module Ktistec
         @array = Array(T).new(size)
       end
 
-      delegate :<<, :each, :each_with_index, :empty?, :first, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
+      delegate :<<, :compact, :each, :each_with_index, :group_by, :empty?, :first, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
 
-      def map(&block : T -> U) : PaginatedArray(U) forall U
+      def map(& : T -> U) : PaginatedArray(U) forall U
         PaginatedArray(U).new(size).tap do |array|
           each { |t| array << yield t }
           array.more = more?

@@ -1,0 +1,253 @@
+/**
+  * Semantic UI Overrides
+  *
+  * This file overrides just enough of Semantic UI's default styles to
+  * get light/dark mode theming working.
+  *
+  */
+
+body {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Anchors */
+
+a {
+    .anchor-color();
+    &:hover {
+        .anchor-color-hover();
+    }
+}
+
+/* Buttons */
+
+.ui.primary.button, .ui.primary.buttons .button {
+    background-color: var(--semantic-primary);
+    &:hover {
+        .semantic-primary-hover();
+    }
+}
+
+/* Cards and segments */
+
+.ui.segments, .ui.card {
+    background-color: var(--color-transparent) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 1px 2px 0 var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.ui.card .content .header {
+    color: var(--text-primary) !important;
+}
+
+/* Inputs and forms */
+
+.ui.form textarea,
+.ui.form .ui.selection.dropdown,
+.ui.form input[type=text],
+.ui.form input[type=password],
+trix-editor {
+    background-color: var(--bg-input) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.ui.form .field.error {
+    textarea,
+    .ui.selection.dropdown,
+    input[type="text"],
+    input[type=password] {
+        .text-error() !important;
+        .bg-error() !important;
+        .shadow-error() !important;
+    }
+}
+
+.ui.form .field label,
+.ui.form .inline.fields label,
+.ui.slider.checkbox label {
+    color: var(--text-primary) !important;
+}
+.ui.slider.checkbox input:checked ~ label,
+.ui.slider.checkbox input:checked:focus ~ label {
+    color: var(--text-primary) !important;
+}
+.ui.toggle.checkbox input:checked ~ label,
+.ui.toggle.checkbox input:checked:focus ~ label {
+    color: var(--semantic-primary) !important;
+    &::before {
+        background-color: .anchor-color()[color] !important;
+    }
+}
+
+/* Trix Toolbar */
+
+trix-toolbar {
+    .trix-toolbar-container {
+        button.trix-active {
+            background-color: var(--semantic-primary) !important;
+        }
+        button:hover {
+            .semantic-primary-hover() !important;
+        }
+    }
+    .trix-dialog {
+        .bg-transparent() !important;
+        color: var(--text-primary) !important;
+    }
+    .trix-input, .trix-button {
+        .bg-transparent() !important;
+        color: var(--text-primary) !important;
+        border-color: var(--border-color) !important
+    }
+}
+
+/* Labels */
+
+.ui.labels .label {
+    background-color: var(--bg-label) !important;
+    color: var(--text-secondary) !important;
+
+    &:hover {
+        .bg-label-hover() !important;
+    }
+}
+
+/* Navigation Bars */
+
+nav.ui.inverted.menu {
+    background-color: var(--bg-nav-bar) !important;
+    .item {
+        color: var(--text-nav-bar) !important;
+    }
+}
+
+/* Menus */
+
+.ui.secondary.menu {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    .item {
+        color: var(--text-primary) !important;
+        &:hover {
+            .bg-hover() !important;
+            color: var(--text-primary) !important;
+        }
+    }
+}
+
+.ui.icon.menu {
+    background-color: var(--bg-icon-menu) !important;
+    color: var(--text-primary) !important;
+    .item {
+        color: var(--text-primary) !important;
+    }
+}
+
+/* Admin Menu */
+
+.ui.very.relaxed.list > .item > .content {
+    a {
+        color: var(--semantic-primary) !important;
+    }
+    .description {
+        color: var(--text-primary);
+    }
+}
+
+/* Tables */
+
+.ui.table {
+    color: var(--text-primary) !important;
+    background-color: var(--color-transparent) !important;
+    border: 1px solid var(--border-color) !important;
+    tr td {
+        border-top: 1px solid var(--border-color) !important;
+    }
+    &.basic {
+        border: none !important;
+        tr td {
+            border-top: 1px solid var(--border-color) !important;
+        }
+    }
+    &.structured.celled {
+        tr td {
+            border-right: 1px solid var(--border-color) !important;
+        }
+    }
+}
+
+/* Headers and descriptions */
+
+.ui.header, .ui.dividing.header {
+    color: var(--text-primary) !important;
+}
+
+/* Messages */
+
+.ui.info.message {
+    .bg-info();
+    .text-info();
+    .header { .header-info(); }
+    .shadow-info();
+}
+
+.ui.warning.message {
+    .bg-warning();
+    .text-warning();
+    .header { .header-warning(); }
+    .shadow-warning();
+}
+
+.ui.error.message {
+    .bg-error();
+    .text-error();
+    .header { .header-error(); }
+    .shadow-error();
+}
+
+/* Feed elements */
+
+.ui.feed .event .label .icon {
+    color: var(--text-secondary) !important;
+}
+
+.ui.feed .event .content .date {
+    .text-muted() !important;
+}
+
+.ui.feed .event .content .summary {
+    color: var(--text-primary) !important;
+}
+
+.ui.feed .event .content .extra.text {
+    color: var(--text-primary) !important;
+}
+
+.ui.feed .event .content .meta {
+    color: var(--text-secondary);
+}
+
+// fixes a specificity issue with exactly these elements
+.ui.feed .event .content .meta a:hover .icon {
+    color: inherit;
+}
+
+/* Dropdowns */
+
+.ui.menu .ui.dropdown .menu {
+    background-color: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.ui.menu .ui.dropdown .menu .item {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+.ui.menu .ui.dropdown .menu .item:hover {
+    .bg-hover() !important;
+    color: var(--text-primary) !important;
+}

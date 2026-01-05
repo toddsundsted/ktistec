@@ -15,11 +15,18 @@ class Tag
 
     def after_create
       Ktistec::Topic{"/tags/#{name}"}.notify_subscribers(subject.id.to_s)
+      super unless subject.draft?
+    end
+
+    def after_destroy
+      super unless subject.draft?
     end
 
     # Returns the most recent object with the given hashtag.
     #
-    # Orders objects by `id` (not `published`).
+    # Orders objects by `id` as an acceptable proxy for "most recent".
+    # (This prevents the query from using a temporary b-tree for
+    # ordering).
     #
     # Includes private (not visible) objects.
     #
@@ -29,16 +36,13 @@ class Tag
           FROM objects AS o
           JOIN tags AS t
             ON t.subject_iri = o.iri
-           AND t.type = "#{Tag::Hashtag}"
+           AND t.type = '#{self}'
           JOIN actors AS a
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
            AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
-      ORDER BY o.id DESC
+           #{common_filters(objects: "o", actors: "a")}
+      ORDER BY t.id DESC
          LIMIT 1
       QUERY
       ActivityPub::Object.query_all(query, name).first?
@@ -48,106 +52,128 @@ class Tag
     #
     # Includes private (not visible) objects.
     #
-    # If `created_after` is specified, only incude objects created
-    # after (not published after) that time.
+    # Orders objects by `id` for consistency with the query above.
     #
-    def self.all_objects(name, page = 1, size = 10, created_after after = Time::UNIX_EPOCH)
+    def self.all_objects(name, page = 1, size = 10)
       query = <<-QUERY
         SELECT #{ActivityPub::Object.columns(prefix: "o")}
           FROM objects AS o
           JOIN tags AS t
             ON t.subject_iri = o.iri
-           AND t.type = "#{Tag::Hashtag}"
+           AND t.type = '#{self}'
           JOIN actors AS a
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
-           AND o.created_at > ?
            AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
-      ORDER BY o.published DESC
+           #{common_filters(objects: "o", actors: "a")}
+      ORDER BY t.id DESC
          LIMIT ? OFFSET ?
       QUERY
-      ActivityPub::Object.query_and_paginate(query, name, after, page: page, size: size)
+      ActivityPub::Object.query_and_paginate(query, name, page: page, size: size)
     end
 
-    # Returns the count of objects with the given hashtag.
+    # Returns the count of objects with the given hashtag since the
+    # given time.
     #
-    def self.all_objects_count(name, created_after after = Time::UNIX_EPOCH)
+    # Uses the same filters as `all_objects(name, page, size)` but adds
+    # a time-based filter on the tag's `created_at` timestamp.
+    #
+    # Includes private (not visible) objects for consistency.
+    #
+    def self.all_objects(name, since : Time)
       query = <<-QUERY
         SELECT count(*)
           FROM objects AS o
           JOIN tags AS t
             ON t.subject_iri = o.iri
-           AND t.type = "#{Tag::Hashtag}"
+           AND t.type = '#{self}'
           JOIN actors AS a
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
-           AND o.created_at > ?
            AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
+           #{common_filters(objects: "o", actors: "a")}
+           AND t.created_at > ?
       QUERY
-      ActivityPub::Object.scalar(query, name, after).as(Int64)
+      ActivityPub::Object.scalar(query, name, since).as(Int64)
     end
 
-    # Returns the public objects with the given hashtag.
+    # Returns the count of objects with the given hashtag.
     #
-    # Does not include private (not visible) objects. Includes
-    # approved remote objects.
+    # Uses the statistics table since there is no high cardinality way to
+    # subset and count the objects with a given hashtag.
     #
-    def self.public_objects(name, page = 1, size = 10)
+    def self.all_objects_count(name)
+      query = <<-QUERY
+        SELECT coalesce(sum(count), 0)
+          FROM tag_statistics
+         WHERE type = ?
+           AND name = ?
+      QUERY
+      ActivityPub::Object.scalar(query, short_type, name).as(Int64)
+    end
+
+    # Returns the site's public posts with the given hashtag.
+    #
+    # Does not include private (not visible) posts. Includes
+    # other's posts that have been shared.
+    #
+    def self.public_posts(name, page = 1, size = 10)
+      # note: disqualify the index on tag *name* because, although it
+      # has high cardinality, the distribution of names is very uneven
+      # and this method is likely to be called on those tags it would
+      # help the least (the most popular).
       query = <<-QUERY
         SELECT #{ActivityPub::Object.columns(prefix: "o")}
-             FROM objects AS o
-             JOIN tags AS t
-               ON t.subject_iri = o.iri
-              AND t.type = "#{Tag::Hashtag}"
-             JOIN actors AS a
-               ON a.iri = o.attributed_to_iri
-        LEFT JOIN relationships AS r
-               ON r.to_iri = o.iri
-              AND r.type = "#{Relationship::Content::Approved}"
-            WHERE t.name = ?
-              AND o.visible = 1
-              AND (o.iri LIKE "#{Ktistec.host}%" OR r.id)
-              AND o.published IS NOT NULL
-              AND o.deleted_at IS NULL
-              AND o.blocked_at IS NULL
-              AND a.deleted_at IS NULL
-              AND a.blocked_at IS NULL
-         ORDER BY o.published DESC
-            LIMIT ? OFFSET ?
+          FROM objects AS o
+          JOIN activities AS a
+            ON a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+           AND a.object_iri = o.iri
+          JOIN relationships AS r
+            ON r.type = '#{Relationship::Content::Outbox}'
+           AND r.to_iri = a.iri
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN tags AS g
+            ON g.subject_iri = o.iri
+           AND g.type = '#{Tag::Hashtag}'
+           AND +g.name = ?
+         WHERE o.visible = 1
+           AND o.published IS NOT NULL
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
+        ORDER BY r.id DESC
+           LIMIT ? OFFSET ?
       QUERY
       ActivityPub::Object.query_and_paginate(query, name, page: page, size: size)
     end
 
-    # Returns the count of public objects with the given hashtag.
+    # Returns the count of public posts with the given hashtag.
     #
-    def self.public_objects_count(name)
+    # Does not include private (not visible) posts. Includes
+    # other's posts that have been shared.
+    #
+    def self.public_posts_count(name)
+      # note: disqualify the index on tag *name* because, although it
+      # has high cardinality, the distribution of names is very uneven
+      # and this method is likely to be called on those tags it would
+      # help the least (the most popular).
       query = <<-QUERY
-         SELECT count(*)
-           FROM objects AS o
-           JOIN tags AS t
-             ON t.subject_iri = o.iri
-            AND t.type = "#{Tag::Hashtag}"
-           JOIN actors AS a
-             ON a.iri = o.attributed_to_iri
-      LEFT JOIN relationships AS r
-             ON r.to_iri = o.iri
-            AND r.type = "#{Relationship::Content::Approved}"
-          WHERE t.name = ?
-            AND o.visible = 1
-            AND (o.iri LIKE "#{Ktistec.host}%" OR r.id)
-            AND o.published IS NOT NULL
-            AND o.deleted_at IS NULL
-            AND o.blocked_at IS NULL
-            AND a.deleted_at IS NULL
-            AND a.blocked_at IS NULL
+        SELECT count(*)
+          FROM objects AS o
+          JOIN activities AS a
+            ON a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+           AND a.object_iri = o.iri
+          JOIN relationships AS r
+            ON r.type = '#{Relationship::Content::Outbox}'
+           AND r.to_iri = a.iri
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN tags AS g
+            ON g.subject_iri = o.iri
+           AND g.type = '#{Tag::Hashtag}'
+           AND +g.name = ?
+         WHERE o.visible = 1
+           AND o.published IS NOT NULL
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
       QUERY
       ActivityPub::Object.scalar(query, name).as(Int64)
     end

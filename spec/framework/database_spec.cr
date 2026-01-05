@@ -70,20 +70,20 @@ Spectator.describe Ktistec::Database::Migration do
     Ktistec.database.exec <<-STR
     CREATE TABLE foobars (
     id integer PRIMARY KEY AUTOINCREMENT,
-    name varchar(244) NOT NULL DEFAULT "",
+    name varchar(244) NOT NULL DEFAULT '',
     value integer
     )
     STR
     Ktistec.database.exec <<-STR
     CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)
     STR
-    Ktistec.database.exec %q|INSERT INTO foobars VALUES (1, "one", 1)|
-    Ktistec.database.exec %q|INSERT INTO foobars VALUES (2, "two", 2)|
+    Ktistec.database.exec %q|INSERT INTO foobars VALUES (1, 'one', 1)|
+    Ktistec.database.exec %q|INSERT INTO foobars VALUES (2, 'two', 2)|
   end
 
   describe ".columns" do
     it "returns the table's columns" do
-      expect(subject.columns("foobars")).to contain_exactly(%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ""|, %q|value integer|)
+      expect(subject.columns("foobars")).to contain_exactly(%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ''|, %q|value integer|)
     end
   end
 
@@ -95,7 +95,7 @@ Spectator.describe Ktistec::Database::Migration do
 
   describe ".add_column" do
     it "adds the column" do
-      expect{subject.add_column("foobars", "other", "text", index: "ASC")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ""|, %q|value integer|, %q|other text|])
+      expect{subject.add_column("foobars", "other", "text", index: "ASC")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ''|, %q|value integer|, %q|other text|])
     end
 
     it "adds the index" do
@@ -109,7 +109,7 @@ Spectator.describe Ktistec::Database::Migration do
     end
 
     it "removes the column" do
-      expect{subject.remove_column("foobars", "other")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ""|, %q|value integer|])
+      expect{subject.remove_column("foobars", "other")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ''|, %q|value integer|])
     end
 
     it "removes the index" do

@@ -1,11 +1,18 @@
 require "../framework/controller"
+require "../services/description_enhancer"
 require "../models/activity_pub/activity/follow"
 require "../models/activity_pub/actor/person"
+require "../utils/rss"
 
 class HomeController
   include Ktistec::Controller
 
+  PERSON = ActivityPub::Actor::Person.to_s
+
   skip_auth ["/"], GET, POST
+  skip_auth ["/feed.rss"], GET
+  skip_auth ["/robots.txt"], GET
+  skip_auth ["/license"], GET
 
   get "/" do |env|
     if !Ktistec.settings.host.presence || !Ktistec.settings.site.presence
@@ -15,7 +22,7 @@ class HomeController
     elsif (accounts = Account.all).empty?
       # `username` and `password` properties are not nilable
       account = Account.new(username: "", password: "")
-      actor = ActivityPub::Actor.new
+      actor = ActivityPub::Actor.new(type: PERSON)
 
       account.actor = actor
 
@@ -29,6 +36,30 @@ class HomeController
     end
   end
 
+  get "/feed.rss" do |env|
+    objects = ActivityPub::Object.public_posts(**pagination_params(env))
+
+    site_name = Ktistec.site
+    site_host = Ktistec.host
+
+    env.response.content_type = "application/rss+xml; charset=utf-8"
+
+    Ktistec::RSS.generate_rss_feed(
+      objects, site_name, site_host,
+      "#{site_name}: RSS Feed"
+    )
+  end
+
+  get "/robots.txt" do |env|
+    env.response.content_type = "text/plain"
+    render "src/views/pages/robots.txt.ecr"
+  end
+
+  get "/license" do |env|
+    env.response.content_type = "text/html; charset=utf-8"
+    render "src/views/pages/license.html.slang", "src/views/layouts/default.html.ecr"
+  end
+
   post "/" do |env|
     if !Ktistec.settings.host.presence || !Ktistec.settings.site.presence
       settings = Ktistec.settings.assign(step_1_params(env))
@@ -40,11 +71,11 @@ class HomeController
       else
         unprocessable_entity "home/step_1", env: env, settings: settings
       end
-    elsif (accounts = Account.all).empty?
+    elsif Account.all.empty?
       params = step_2_params(env)
 
       account = Account.new(params)
-      actor = ActivityPub::Actor::Person.new(params)
+      actor = ActivityPub::Actor.new(params)
 
       account.actor = actor
 
@@ -85,7 +116,10 @@ class HomeController
       "name" => params["name"].as(String),
       "summary" => params["summary"].as(String),
       "language" => params["language"].as(String),
-      "timezone" => params["timezone"].as(String)
+      "timezone" => params["timezone"].as(String),
+      "auto_approve_followers" => params["auto_approve_followers"]?.in?("1", true) || false,
+      "auto_follow_back" => params["auto_follow_back"]?.in?("1", true) || false,
+      "type" => params["type"]?.try(&.as(String)) || PERSON,
     }
   end
 end

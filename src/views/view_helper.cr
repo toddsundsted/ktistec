@@ -3,6 +3,9 @@ require "slang"
 require "kemal"
 require "markd"
 
+require "../utils/emoji"
+require "../utils/paths"
+
 # Redefine the `render` macros provided by Kemal.
 
 # Render a view with a layout as the superview.
@@ -22,6 +25,7 @@ macro render(content, layout)
   Ktistec::ViewHelper.{{layout.id}}(
     env,
     yield_content("title"),
+    yield_content("og_metadata"),
     yield_content("head"),
     %content
   )
@@ -36,16 +40,95 @@ macro render(content)
 end
 
 module Ktistec::ViewHelper
+  include Utils::Paths
+
   module ClassMethods
     def depth(object)
       object ? "depth-#{Math.min(object.depth, 9)}" : ""
     end
 
-    def activity(activity)
-      activity ? "activity-#{activity.class.to_s.split("::").last.downcase}" : ""
+    def activity_type_class(activity)
+      activity ? "activity-#{activity.type.split("::").last.downcase}" : ""
     end
 
-    def object_partial(env, object, actor = object.attributed_to, author = actor, *, activity = nil, with_detail = false, for_thread = nil)
+    def actor_type_class(actor)
+      actor ? "actor-#{actor.type.split("::").last.downcase}" : ""
+    end
+
+    def object_type_class(object)
+      object ? "object-#{object.type.split("::").last.downcase}" : ""
+    end
+
+    def object_states(object)
+      states = [] of String
+      states << "is-sensitive" if object.sensitive
+      states << "is-draft" if object.draft?
+      states << "is-deleted" if object.deleted?
+      states << "is-blocked" if object.blocked?
+      states << "has-replies" if object.replies_count > 0
+      states << "has-media" if object.attachments.try { |a| a.size > 0 }
+      if (attributed_to = object.attributed_to?)
+        states << "visibility-#{visibility(attributed_to, object)}"
+      end
+      states
+    end
+
+    def actor_states(object, author, actor, followed_actors)
+      states = [] of String
+      if followed_actors
+        states << "author-followed-by-me" if author && followed_actors.includes?(author.iri)
+        states << "actor-followed-by-me" if actor && actor != author && followed_actors.includes?(actor.iri)
+      end
+      states
+    end
+
+    def mention_states(object, actor)
+      states = [] of String
+      object_mentions = object.mentions
+      is_mentioned = object_mentions.any? { |m| m.href == actor.iri }
+      if is_mentioned
+        states << (object_mentions.size == 1 ? "mentions-only-me" : "mentions-me")
+      end
+      states
+    end
+
+    def object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
+      attrs = {} of String => String
+      if (id = object.id)
+        attrs["data-object-id"] = id.to_s
+      end
+      if author
+        attrs["data-author-handle"] = author.handle
+        attrs["data-author-iri"] = author.iri
+      end
+      if actor && actor != author
+        attrs["data-actor-handle"] = actor.handle
+        attrs["data-actor-iri"] = actor.iri
+      end
+      object_hashtags = object.hashtags.map(&.name.downcase)
+      if object_hashtags.presence
+        attrs["data-hashtags"] = object_hashtags.first(10).join(" ")
+      end
+      if followed_hashtags
+        matched = object_hashtags.select { |hashtag| followed_hashtags.includes?(hashtag) }
+        if matched.presence
+          attrs["data-followed-hashtags"] = matched.join(" ")
+        end
+      end
+      object_mentions = object.mentions.map(&.name.downcase)
+      if object_mentions.presence
+        attrs["data-mentions"] = object_mentions.first(10).join(" ")
+      end
+      if followed_mentions
+        matched = object_mentions.select { |mention| followed_mentions.includes?(mention) }
+        if matched.presence
+          attrs["data-followed-mentions"] = matched.join(" ")
+        end
+      end
+      attrs
+    end
+
+    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, for_thread = nil, for_actor = nil, highlight = false)
       if for_thread
         render "src/views/partials/thread.html.slang"
       elsif with_detail
@@ -67,10 +150,14 @@ module Ktistec::ViewHelper
       render "src/views/partials/thread_page_thread_controls.html.slang"
     end
 
+    # NOTE: This method is redefined when running tests. It sets the
+    # `max_size` to 20, regardless of account authentication.
+
     def pagination_params(env)
+      max_size = env.account? ? 1000 : 20
       {
         page: Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
-        size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, 1000)
+        size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, max_size)
       }
     end
 
@@ -78,6 +165,54 @@ module Ktistec::ViewHelper
       query = env.params.query
       page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1
       render "src/views/partials/paginator.html.slang"
+    end
+
+    PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
+    # Derives visibility and to/cc addressing from the "visibility"
+    # param.
+    #
+    def addressing(params, actor)
+      to = Set(String).new
+      cc = Set(String).new
+      case (visibility = params.fetch("visibility", "private"))
+      when "public"
+        to << PUBLIC
+        if (followers = actor.followers)
+          cc << followers
+        end
+      when "private"
+        if (followers = actor.followers)
+          to << followers
+        end
+      else
+        # not public, no followers
+      end
+      {visibility == "public", to, cc}
+    end
+
+    # Derives visibility from to/cc addressing.
+    #
+    # If the object has explicit addressing, uses that. Otherwise, if
+    # the object is a reply, inherits from the parent: public posts
+    # are public, everything else is direct.  Otherwise, defaults to
+    # public.
+    #
+    def visibility(actor, object)
+      if (addresses = [object.to, object.cc].compact).presence
+        addresses = addresses.flatten
+        if addresses.includes?(PUBLIC)
+          "public"
+        elsif addresses.includes?(actor.followers)
+          "private"
+        else
+          "direct"
+        end
+      elsif (in_reply_to = object.in_reply_to?) && (addresses = [in_reply_to.to, in_reply_to.cc].compact).presence
+        addresses.flatten.includes?(PUBLIC) ? "public" : "direct"
+      else
+        "public"
+      end
     end
 
     # Wraps a string in a link if it is a URL.
@@ -118,6 +253,100 @@ module Ktistec::ViewHelper
     def wrap_filter_term(str)
       str = str.gsub(/\\?[%_]/) { %Q|<span class="wildcard">#{$0}</span>| }
       %Q|<span class="ui filter term">#{str}</span>|
+    end
+
+    # Returns a tuple of {count, color, tooltip} for actor notifications.
+    #
+    def notification_count_and_color(actor, since : Time?)
+      count = actor.notifications(since: since)
+      label_color = "yellow"
+      tooltip = false
+      if count > 0
+        notifications = actor.notifications(size: count)
+        groups =
+          notifications.group_by do |notification|
+            case notification
+            in Relationship::Content::Notification::Follow
+              "follow"
+            in Relationship::Content::Notification::Reply
+              "reply"
+            in Relationship::Content::Notification::Mention
+              "mention"
+            in Relationship::Content::Notification::Announce, Relationship::Content::Notification::Like, Relationship::Content::Notification::Dislike
+              "social"
+            in Relationship::Content::Notification::Follow::Hashtag, Relationship::Content::Notification::Follow::Mention, Relationship::Content::Notification::Follow::Thread, Relationship::Content::Notification::Poll::Expiry
+              "content"
+            in Relationship::Content::Notification
+              "other"
+            end
+          end
+        if groups.has_key?("follow") || groups.has_key?("reply") || groups.has_key?("mention")
+          label_color = "red"
+        elsif groups.has_key?("social")
+          label_color = "orange"
+        end
+        type_order = ["follow", "reply", "mention", "social", "content", "other"]
+        tooltip = groups.to_a.sort_by { |type, _| type_order.index(type) || 99 }.map { |type, items| "#{type} #{items.size}" }.join(" | ")
+      end
+      {count, label_color, tooltip}
+    end
+
+    ACTOR_COLOR_COUNT = 12
+
+    def actor_icon(actor, classes = nil)
+      if actor
+        if actor.deleted?
+          src = "/images/avatars/deleted.png"
+          alt = "Deleted user"
+        elsif actor.blocked?
+          src = "/images/avatars/blocked.png"
+          alt = "Blocked user"
+        elsif !actor.down? && (icon = actor.icon.presence)
+          src = icon
+          alt = actor.display_name
+        else
+          if (actor_id = actor.id)
+            color = actor_id % ACTOR_COLOR_COUNT
+            src = "/images/avatars/color-#{color}.png"
+            alt = actor.display_name
+          else
+            src = "/images/avatars/fallback.png"
+            alt = "User"
+          end
+        end
+      else
+        src = "/images/avatars/fallback.png"
+        alt = "User"
+      end
+      attrs = [
+        %Q|src="#{src}"|,
+        %Q|alt="#{::HTML.escape(alt)}"|,
+      ]
+      attrs.push %Q|data-actor-id="#{actor.id}"| if actor && actor.id
+      attrs.unshift %Q|class="#{classes}"| if classes
+      %Q|<img #{attrs.join(" ")}>|
+    end
+
+    def actor_type(actor)
+      icon = if actor
+        case actor.type.split("::").last
+        when "Person"
+          "user"
+        when "Group"
+          "users"
+        when "Organization"
+          "university"
+        when "Service"
+          "plug"
+        when "Application"
+          "laptop"
+        else
+          "user"
+        end
+      else
+        "user"
+      end
+      %Q|<i class="actor-type-overlay #{icon} icon"></i>|
     end
   end
 
@@ -210,7 +439,7 @@ module Ktistec::ViewHelper
     #{%input}\
     <input type="hidden" name="object" value="#{{{object}}}">\
     <input type="hidden" name="type" value="#{{{type || text}}}">\
-    <input type="hidden" name="public" value="#{{{public}} ? 1 : nil}">\
+    <input type="hidden" name="visibility" value="#{{{public}} ? "public" : "private"}">\
     <button #{%button_attrs.join(" ")} type="submit">\
     #{%block}\
     </button>\
@@ -220,7 +449,7 @@ module Ktistec::ViewHelper
 
   # General purpose form-powered button.
   #
-  macro form_button(arg1, action = nil, method = "POST", form_class = "ui inline form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
+  macro form_button(arg1, action = nil, method = "POST", form_id = nil, form_class = "ui inline form", button_id = nil, button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
     {% if block %}
       {% action = arg1 %}
       %block =
@@ -242,6 +471,9 @@ module Ktistec::ViewHelper
       %csrf = ""
     {% end %}
     %form_attrs = [
+      {% if form_id %}
+        %Q|id="#{{{form_id}}}"|,
+      {% end %}
       %Q|class="#{{{form_class}}}"|,
       %Q|action="#{{{action}}}"|,
       %Q|method="#{{{method}}}"|,
@@ -252,6 +484,9 @@ module Ktistec::ViewHelper
       {% end %}
     ]
     %button_attrs = [
+      {% if button_id %}
+        %Q|id="#{{{button_id}}}"|,
+      {% end %}
       %Q|class="#{{{button_class}}}"|,
       {% if button_data %}
         {% for key, value in button_data %}
@@ -339,7 +574,7 @@ module Ktistec::ViewHelper
     HTML
   end
 
-  macro input_tag(label, model, field, class _class = "", type = "text", placeholder = nil, data = nil)
+  macro input_tag(label, model, field, id = nil, class _class = "", type = "text", placeholder = nil, autofocus = nil, data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -357,8 +592,14 @@ module Ktistec::ViewHelper
       %Q|type="#{{{type}}}"|,
       %Q|name="#{%name}"|,
       %Q|value="#{%value}"|,
+      {% if id %}
+        %Q|id="#{{{id}}}"|,
+      {% end %}
       {% if placeholder %}
         %Q|placeholder="#{{{placeholder}}}"|,
+      {% end %}
+      {% if autofocus %}
+        %Q|autofocus|,
       {% end %}
       {% if data %}
         {% for key, value in data %}
@@ -374,7 +615,47 @@ module Ktistec::ViewHelper
     HTML
   end
 
-  macro select_tag(label, model, field, options, selected = nil, class _class = "ui selection dropdown", data = nil)
+  macro textarea_tag(label, model, field, id = nil, class _class = "", rows = 4, placeholder = nil, autofocus = nil, data = nil)
+    {% if model %}
+      %classes =
+        {{model}}.errors.has_key?("{{field.id}}") ?
+          "field error" :
+          "field"
+      %name = {{field.id.stringify}}
+      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
+    {% else %}
+      %classes = "field"
+      %name = {{field.id.stringify}}
+      %value = nil
+    {% end %}
+    %attributes = [
+      %Q|class="#{{{_class}}}"|,
+      %Q|name="#{%name}"|,
+      %Q|rows="#{{{rows}}}"|,
+      {% if id %}
+        %Q|id="#{{{id}}}"|,
+      {% end %}
+      {% if placeholder %}
+        %Q|placeholder="#{{{placeholder}}}"|,
+      {% end %}
+      {% if autofocus %}
+        %Q|autofocus|,
+      {% end %}
+      {% if data %}
+        {% for key, value in data %}
+          %Q|data-{{key.id}}="#{{{value}}}"|,
+        {% end %}
+      {% end %}
+    ]
+    <<-HTML
+    <div class="#{%classes}">\
+    <label>#{{{label}}}</label>\
+    <textarea #{%attributes.join(" ")}>#{%value}</textarea>\
+    </div>
+    HTML
+  end
+
+  macro select_tag(label, model, field, options, selected = nil, id = nil, class _class = "ui selection dropdown", data = nil)
     {% if model %}
       %classes =
         {{model}}.errors.has_key?("{{field.id}}") ?
@@ -390,6 +671,9 @@ module Ktistec::ViewHelper
     %attributes = [
       %Q|class="#{{{_class}}}"|,
       %Q|name="#{%name}"|,
+      {% if id %}
+        %Q|id="#{{{id}}}"|,
+      {% end %}
       {% if data %}
         {% for key, value in data %}
           %Q|data-{{key.id}}="#{{{value}}}"|,
@@ -407,6 +691,41 @@ module Ktistec::ViewHelper
     <div class="#{%classes}">\
     <label>#{{{label}}}</label>\
     <select #{%attributes.join(" ")}>#{%options.join("")}</select>\
+    </div>
+    HTML
+  end
+
+  macro trix_editor(label, model, field, id = nil, class _class = "")
+    {% if model %}
+      %classes =
+        {{model}}.errors.has_key?("{{field.id}}") ?
+          "field error" :
+          "field"
+      %name = {{field.id.stringify}}
+      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
+    {% else %}
+      %classes = "field"
+      %name = {{field.id.stringify}}
+      %value = nil
+    {% end %}
+    %id = {{id}} || "#{%name}-#{Time.utc.to_unix_ms}"
+    %trix_editor_attributes = [
+      %Q|data-controller="editor--trix"|,
+      %Q|input="#{%id}"|,
+      {% if _class %}
+        %Q|class="#{{{_class}}}"|,
+      {% end %}
+    ]
+    %textarea_attributes = [
+      %Q|id="#{%id}"|,
+      %Q|name="#{%name}"|,
+      %Q|rows="4"|,
+    ]
+    <<-HTML
+    <div class="#{%classes}" data-turbo-permanent>\
+    <label>#{{{label}}}</label>\
+    <trix-editor #{%trix_editor_attributes.join(" ")}></trix-editor>\
+    <textarea #{%textarea_attributes.join(" ")}>#{%value}</textarea>\
     </div>
     HTML
   end
@@ -583,6 +902,24 @@ module Ktistec::ViewHelper
     Ktistec::Util.sanitize({{str}})
   end
 
+  # Renders HTML as plain text by stripping out all HTML.
+  #
+  # For use in views:
+  #     <%= t string %>
+  #
+  macro t(str)
+    Ktistec::Util.render_as_text({{str}})
+  end
+
+  # Renders HTML as plain text and truncates it to `n` characters.
+  #
+  # For use in views:
+  #     <%= … string, n %>
+  #
+  macro …(str, n)
+    Ktistec::Util.render_as_text_and_truncate({{str}}, {{n}})
+  end
+
   # Transforms the span of time between two different times into
   # words.
   #
@@ -637,7 +974,7 @@ module Ktistec::ViewHelper
   # view helpers. View helpers for partials are *not* automatically
   # generated.
 
-  def self._layout_src_views_layouts_default_html_ecr(env, title, head, content)
+  def self._layout_src_views_layouts_default_html_ecr(env, title, og_metadata, head, content)
     render "src/views/layouts/default.html.ecr"
   end
 
@@ -649,277 +986,11 @@ module Ktistec::ViewHelper
     render "src/views/partials/collection.json.ecr"
   end
 
-  def self._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, for_thread)
+  def self._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, for_thread, for_actor)
     render "src/views/partials/object/content.html.slang"
   end
 
   def self._view_src_views_partials_object_label_html_slang(env, author, actor)
     render "src/views/partials/object/label.html.slang"
-  end
-
-  ## Path helpers
-
-  # notes:
-  # 1) path helpers that use other path helpers should do so
-  # explicitly via `Ktistec::ViewHelper` so that they can be used
-  # without requiring the caller include the `Ktistec::ViewHelper`
-  # module.
-  # 2) macro conditionals should be used to sequester code paths that
-  # require `env` from code paths that do not.
-
-  macro back_path
-    env.request.headers.fetch("Referer", "/")
-  end
-
-  macro home_path
-    "/"
-  end
-
-  macro everything_path
-    "/everything"
-  end
-
-  macro sessions_path
-    "/sessions"
-  end
-
-  macro search_path
-    "/search"
-  end
-
-  macro settings_path
-    "/settings"
-  end
-
-  macro filters_path
-    "/filters"
-  end
-
-  macro filter_path(filter = nil)
-    {% if filter %}
-      "/filters/#{{{filter}}.id}"
-    {% else %}
-      "/filters/#{env.params.url["id"]}"
-    {% end %}
-  end
-
-  macro system_path
-    "/system"
-  end
-
-  macro metrics_path
-    "/metrics"
-  end
-
-  macro tasks_path
-    "/tasks"
-  end
-
-  macro remote_activity_path(activity = nil)
-    {% if activity %}
-      "/remote/activities/#{{{activity}}.id}"
-    {% else %}
-      "/remote/activities/#{env.params.url["id"]}"
-    {% end %}
-  end
-
-  macro activity_path(activity = nil)
-    {% if activity %}
-      "/activities/#{{{activity}}.uid}"
-    {% else %}
-      "/activities/#{env.params.url["id"]}"
-    {% end %}
-  end
-
-  macro anchor(object = nil)
-    {% if object %}
-      "object-#{{{object}}.id}"
-    {% else %}
-      "object-#{env.params.url["id"]}"
-    {% end %}
-  end
-
-  macro objects_path
-    "/objects"
-  end
-
-  macro remote_object_path(object = nil)
-    {% if object %}
-      "/remote/objects/#{{{object}}.id}"
-    {% else %}
-      "/remote/objects/#{env.params.url["id"]}"
-    {% end %}
-  end
-
-  macro object_path(object = nil)
-    {% if object %}
-      "/objects/#{{{object}}.uid}"
-    {% else %}
-      "/objects/#{env.params.url["id"]}"
-    {% end %}
-  end
-
-  macro remote_thread_path(object = nil, anchor = true)
-    {% if anchor %}
-      "#{Ktistec::ViewHelper.remote_object_path({{object}})}/thread##{Ktistec::ViewHelper.anchor({{object}})}"
-    {% else %}
-      "#{Ktistec::ViewHelper.remote_object_path({{object}})}/thread"
-    {% end %}
-  end
-
-  macro thread_path(object = nil, anchor = true)
-    {% if anchor %}
-      "#{Ktistec::ViewHelper.object_path({{object}})}/thread##{Ktistec::ViewHelper.anchor({{object}})}"
-    {% else %}
-      "#{Ktistec::ViewHelper.object_path({{object}})}/thread"
-    {% end %}
-  end
-
-  macro edit_object_path(object = nil)
-    "#{Ktistec::ViewHelper.object_path({{object}})}/edit"
-  end
-
-  macro reply_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/reply"
-  end
-
-  macro approve_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/approve"
-  end
-
-  macro unapprove_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/unapprove"
-  end
-
-  macro block_object_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/block"
-  end
-
-  macro unblock_object_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/unblock"
-  end
-
-  macro follow_thread_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/follow"
-  end
-
-  macro unfollow_thread_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/unfollow"
-  end
-
-  macro start_fetch_thread_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/fetch/start"
-  end
-
-  macro cancel_fetch_thread_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/fetch/cancel"
-  end
-
-  macro object_remote_reply_path(object = nil)
-    "#{Ktistec::ViewHelper.object_path({{object}})}/remote-reply"
-  end
-
-  macro object_remote_like_path(object = nil)
-    "#{Ktistec::ViewHelper.object_path({{object}})}/remote-like"
-  end
-
-  macro object_remote_share_path(object = nil)
-    "#{Ktistec::ViewHelper.object_path({{object}})}/remote-share"
-  end
-
-  macro create_translation_object_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/translation/create"
-  end
-
-  macro clear_translation_object_path(object = nil)
-    "#{Ktistec::ViewHelper.remote_object_path({{object}})}/translation/clear"
-  end
-
-  macro remote_actor_path(actor = nil)
-    {% if actor %}
-      "/remote/actors/#{{{actor}}.id}"
-    {% else %}
-      "/remote/actors/#{env.params.url["id"]}"
-    {% end %}
-  end
-
-  macro actor_path(actor = nil)
-    {% if actor %}
-      "/actors/#{{{actor}}.uid}"
-    {% else %}
-      "/actors/#{env.params.url["username"]}"
-    {% end %}
-  end
-
-  macro block_actor_path(actor = nil)
-    "#{Ktistec::ViewHelper.remote_actor_path({{actor}})}/block"
-  end
-
-  macro unblock_actor_path(actor = nil)
-    "#{Ktistec::ViewHelper.remote_actor_path({{actor}})}/unblock"
-  end
-
-  macro actor_relationships_path(actor = nil, relationship = nil)
-    {% if relationship %}
-      "#{Ktistec::ViewHelper.actor_path({{actor}})}/#{{{relationship}}}"
-    {% else %}
-      "#{Ktistec::ViewHelper.actor_path({{actor}})}/#{env.params.url["relationship"]}"
-    {% end %}
-  end
-
-  macro outbox_path(actor = nil)
-    Ktistec::ViewHelper.actor_relationships_path({{actor}}, "outbox")
-  end
-
-  macro inbox_path(actor = nil)
-    Ktistec::ViewHelper.actor_relationships_path({{actor}}, "inbox")
-  end
-
-  macro actor_remote_follow_path(actor = nil)
-    "#{Ktistec::ViewHelper.actor_path({{actor}})}/remote-follow"
-  end
-
-  macro hashtag_path(hashtag = nil)
-    {% if hashtag %}
-      "/tags/#{{{hashtag}}}"
-    {% else %}
-      "/tags/#{env.params.url["hashtag"]}"
-    {% end %}
-  end
-
-  macro follow_hashtag_path(hashtag = nil)
-    "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/follow"
-  end
-
-  macro unfollow_hashtag_path(hashtag = nil)
-    "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/unfollow"
-  end
-
-  macro start_fetch_hashtag_path(hashtag = nil)
-    "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/fetch/start"
-  end
-
-  macro cancel_fetch_hashtag_path(hashtag = nil)
-    "#{Ktistec::ViewHelper.hashtag_path({{hashtag}})}/fetch/cancel"
-  end
-
-  macro mention_path(mention = nil)
-    {% if mention %}
-      "/mentions/#{{{mention}}}"
-    {% else %}
-      "/mentions/#{env.params.url["mention"]}"
-    {% end %}
-  end
-
-  macro follow_mention_path(mention = nil)
-    "#{Ktistec::ViewHelper.mention_path({{mention}})}/follow"
-  end
-
-  macro unfollow_mention_path(mention = nil)
-    "#{Ktistec::ViewHelper.mention_path({{mention}})}/unfollow"
-  end
-
-  macro remote_interaction_path
-    "/remote-interaction"
   end
 end

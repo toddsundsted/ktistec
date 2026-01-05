@@ -7,23 +7,38 @@ class SearchesController
   include Ktistec::Controller
 
   get "/search" do |env|
-    message = nil
     actor_or_object = nil
+    actors = [] of ActivityPub::Actor
+    message = nil
 
     if (query = env.params.query["query"]?)
       query = query.strip
-      url = Ktistec::Network.resolve(query)
-      actor_or_object =
-        if url.starts_with?("#{host}/actors/")
-          ActivityPub::Actor.find(url)
-        elsif url.starts_with?("#{host}/objects/")
-          ActivityPub::Object.find(url)
+
+      # is this a simple username search? (with optional leading "@")
+      if query =~ /^@?([a-zA-Z0-9_]+)$/ && !query.includes?("://")
+        prefix = query.lstrip('@')
+        if prefix.size > 100
+          message = "Query too long (maximum 100 characters)"
         else
-          headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-          Ktistec::Open.open(env.account.actor, url, headers) do |response|
-            ActivityPub.from_json_ld(response.body, include_key: true)
+          actors = ActivityPub::Actor.search_by_username(prefix)
+          if actors.empty?
+            message = %Q|No actors found matching "#{prefix}"|
           end
         end
+      else
+        url = Ktistec::Network.resolve(query)
+        actor_or_object =
+          if url.starts_with?("#{host}/actors/")
+            ActivityPub::Actor.find(url)
+          elsif url.starts_with?("#{host}/objects/")
+            ActivityPub::Object.find(url)
+          else
+            headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
+            Ktistec::Open.open(env.account.actor, url, headers) do |response|
+              ActivityPub.from_json_ld(response.body, include_key: true)
+            end
+          end
+      end
     end
 
     case actor_or_object
@@ -39,7 +54,11 @@ class SearchesController
 
       ok "searches/object", env: env, object: object, message: message, query: query
     else
-      ok "searches/form", env: env, message: message, query: query
+      if actors.empty?
+        ok "searches/form", env: env, message: message, query: query
+      else
+        ok "searches/actors", env: env, actors: actors, message: message, query: query
+      end
     end
   rescue ex : Errors
     bad_request "searches/form", env: env, message: ex.message, query: query

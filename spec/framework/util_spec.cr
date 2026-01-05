@@ -62,7 +62,7 @@ Spectator.describe Ktistec::Util do
 
     it "preserves href on links, adds target and rel attributes to remote links" do
       content = "<a class='foo bar' href='https://remote/index.html'>a link</a>"
-      expect(described_class.sanitize(content)).to eq("<a href='https://remote/index.html' target='_blank' rel='ugc'>a link</a>")
+      expect(described_class.sanitize(content)).to eq("<a href='https://remote/index.html' target='_blank' rel='external ugc'>a link</a>")
     end
 
     it "preserves href on links, adds data-turbo-frame attribute to local links" do
@@ -75,19 +75,24 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("<a href='/index.html' data-turbo-frame='_top'>a link</a>")
     end
 
+    it "preserves 'emoji' in class attribute on img elements" do
+      content = "<img class='emoji foo bar' src='https://test.test/emoji.png' alt=':emoji:'>"
+      expect(described_class.sanitize(content)).to eq("<img src='https://test.test/emoji.png' alt=':emoji:' class='ui image emoji' loading='lazy'>")
+    end
+
     it "preserves src and alt on images, adds loading attribute and compatibility classes" do
       content = "<img src='https://test.test/pic.jpg' alt='picture'>"
       expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' alt='picture' class='ui image' loading='lazy'>")
     end
 
-    it "preserves src on audio, adds controls attribute" do
+    it "preserves src on audio, adds controls attribute and compatibility classes" do
       content = "<audio src='https://test.test/snd.mp3'></audio>"
-      expect(described_class.sanitize(content)).to eq("<audio src='https://test.test/snd.mp3' controls></audio>")
+      expect(described_class.sanitize(content)).to eq("<audio src='https://test.test/snd.mp3' class='ui audio' controls></audio>")
     end
 
-    it "preserves src on video, adds controls attribute" do
+    it "preserves src on video, adds controls attribute and compatibility classes" do
       content = "<video src='https://test.test/vid.mp4'></video>"
-      expect(described_class.sanitize(content)).to eq("<video src='https://test.test/vid.mp4' controls></video>")
+      expect(described_class.sanitize(content)).to eq("<video src='https://test.test/vid.mp4' class='ui video' controls></video>")
     end
 
     # for presentation of mastodon compatible profile metadata
@@ -144,7 +149,7 @@ Spectator.describe Ktistec::Util do
     end
   end
 
-  describe ",distance_of_time_in_words" do
+  describe ".distance_of_time_in_words" do
     def self.test_pairs
       [
         {14.seconds, "less than a minute"},

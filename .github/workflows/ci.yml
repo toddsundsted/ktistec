@@ -9,7 +9,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        crystal: [latest]
+        crystal: ['1.16.3']
     runs-on: ${{ matrix.os }}
     steps:
       - name: Download source
@@ -22,6 +22,9 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
                brew install libxml2
+          elif [ "$RUNNER_OS" == "Linux" ]; then
+               # See: https://github.com/crystal-lang/crystal/issues/7177
+               sudo apt update && sudo apt install -y lld
           fi
         shell: bash
       - name: Install shards
@@ -29,9 +32,12 @@ jobs:
       - name: Run tests
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-               LOG_LEVEL=NONE PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/opt/libxml2/lib/pkgconfig" crystal spec
-          else
-               LOG_LEVEL=NONE crystal spec
+               PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/opt/libxml2/lib/pkgconfig" crystal spec
+          elif [ "$RUNNER_OS" == "Linux" ]; then
+               # Run in batches of 25 to avoid some build memory/time limit that causes the suite set to be canceled.
+               find spec -name "*_spec.cr" | xargs -n 25 crystal spec --link-flags="-fuse-ld=lld"
           fi
+        env:
+          LOG_LEVEL: NONE
       - name: Build
         run: shards build

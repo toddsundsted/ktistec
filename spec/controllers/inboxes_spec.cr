@@ -6,8 +6,14 @@ require "../spec_helper/controller"
 require "../spec_helper/factory"
 require "../spec_helper/network"
 
-Spectator.describe RelationshipsController do
+Spectator.describe InboxesController do
   setup_spec
+
+  after_each do
+    Ktistec::Server.clear_shutdown!
+  end
+
+  PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 
   describe "POST /actors/:username/inbox" do
     let!(actor) { register.actor }
@@ -25,6 +31,12 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(404)
     end
 
+    it "returns 503 if the server is shutting down" do
+      Ktistec::Server.shutting_down = true
+      post "/actors/#{actor.username}/inbox", headers, ""
+      expect(response.status_code).to eq(503)
+    end
+
     it "returns 400 if activity is blank" do
       post "/actors/#{actor.username}/inbox", headers, ""
       expect(JSON.parse(response.body)["msg"]).to eq("body is blank")
@@ -37,36 +49,13 @@ Spectator.describe RelationshipsController do
       expect(response.status_code).to eq(400)
     end
 
-    it "returns 409 if activity was already received and processed" do
-      activity = Factory.create(:create)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(recursive: true)
-      expect(response.status_code).to eq(409)
-    end
+    context "when activity was already received" do
+      let_create!(:create)
 
-    # mastodon compatibility
-    it "does not return 409 if the activity is accept" do
-      activity = Factory.create(:accept)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).not_to eq(409)
-    end
-
-    # mastodon compatibility
-    it "does not return 409 if the activity is reject" do
-      activity = Factory.create(:reject)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).not_to eq(409)
-    end
-
-    it "returns 403 if the activity claims to be local" do
-      activity.assign(iri: "https://test.test/activities/foo_bar")
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).to eq(403)
-    end
-
-    it "returns 403 if the activity's actor claims to be local" do
-      activity.assign(actor_iri: actor.iri)
-      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-      expect(response.status_code).to eq(403)
+      it "returns 200" do
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(recursive: true)
+        expect(response.status_code).to eq(200)
+      end
     end
 
     it "returns 400 if the activity cannot be deserialized due to an unsupported type" do
@@ -339,6 +328,12 @@ Spectator.describe RelationshipsController do
         context "but the public key is wrong" do
           before_each { other.dup.assign(pem_public_key: "").save }
 
+          before_each do
+            # surgically remove only the note so that the object
+            # fetching fallback in the controller doesn't succeed
+            HTTP::Client.objects.delete(note.iri)
+          end
+
           it "retrieves the activity from the origin" do
             post "/actors/#{actor.username}/inbox", headers, json_ld
             expect(HTTP::Client.requests).to have("GET #{activity.iri}")
@@ -440,10 +435,10 @@ Spectator.describe RelationshipsController do
       end
 
       context "and the object's a reply" do
+        let_build(:object, named: parent)
+
         before_each do
-          note.assign(
-            in_reply_to: Factory.build(:object)
-          ).save
+          note.assign(in_reply_to: parent).save
         end
 
         it "puts the object in the actor's timeline" do
@@ -477,8 +472,6 @@ Spectator.describe RelationshipsController do
           end
         end
       end
-
-      PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 
       context "and the activity is addressed to the public collection" do
         before_each do
@@ -568,6 +561,63 @@ Spectator.describe RelationshipsController do
       end
     end
 
+    context "on dislike" do
+      let_build(:note, attributed_to: other)
+      let_build(:dislike, actor: other, object: nil, to: [actor.iri])
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", dislike.to_json_ld(true), "application/json") }
+
+      it "returns 400 if no object is included" do
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "fetches object if remote" do
+        dislike.object_iri = note.iri
+        HTTP::Client.objects << note
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(HTTP::Client.last?).to match("GET #{note.iri}")
+      end
+
+      it "doesn't fetch the object if embedded" do
+        dislike.object = note
+        HTTP::Client.objects << note
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "fetches the attributed to actor" do
+        dislike.object = note
+        note.attributed_to_iri = "https://remote/actors/123"
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
+      end
+
+      it "saves the object" do
+        dislike.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
+          to change{ActivityPub::Object.count(iri: note.iri)}.by(1)
+      end
+
+      it "puts the activity in the actor's inbox" do
+        dislike.object = note
+        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
+          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+      end
+
+      it "puts the activity in the actor's notifications" do
+        dislike.object = note.assign(attributed_to: actor)
+        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
+          to change{Notification.count(from_iri: actor.iri)}.by(1)
+      end
+
+      it "does not put the object in the actor's timeline" do
+        dislike.object = note.assign(attributed_to: actor)
+        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
+          not_to change{Timeline.count(from_iri: actor.iri)}
+      end
+    end
+
     context "on create" do
       let_build(:note, attributed_to: other)
       let_build(:create, actor: other, object: nil, to: [actor.iri])
@@ -636,11 +686,11 @@ Spectator.describe RelationshipsController do
         end
       end
 
-      context "and the object's a reply" do
+      context "and the object's a reply to some object" do
+        let_build(:object, named: parent)
+
         before_each do
-          note.assign(
-            in_reply_to: Factory.build(:object)
-          ).save
+          note.assign(in_reply_to: parent).save
         end
 
         it "does not put the object in the actor's timeline" do
@@ -650,8 +700,23 @@ Spectator.describe RelationshipsController do
         end
       end
 
+      context "and the object's a reply to the actor's object" do
+        let_create(:object, named: parent, attributed_to: actor)
+
+        before_each do
+          note.assign(in_reply_to: parent).save
+        end
+
+        it "puts the object in the actor's notifications" do
+          create.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+            to change{Notification.count(from_iri: actor.iri)}.by(1)
+        end
+      end
+
       context "and object mentions the actor" do
-        let_build(:note, attributed_to: other, mentions: [Factory.build(:mention, name: "local recipient", href: actor.iri)])
+        let_build(:mention, name: "local recipient", href: actor.iri)
+        let_build(:note, attributed_to: other, mentions: [mention])
 
         it "puts the activity in the actor's notifications" do
           create.object = note
@@ -685,8 +750,6 @@ Spectator.describe RelationshipsController do
         end
       end
 
-      PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
-
       context "and the activity is addressed to the public collection" do
         before_each do
           create.assign(to: [PUBLIC])
@@ -708,6 +771,27 @@ Spectator.describe RelationshipsController do
             expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
               to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
           end
+        end
+      end
+
+      context "signature is not valid but the remote object can be fetched" do
+        let(headers) { Ktistec::Signature.sign(other, "", "{}", "") }
+
+        before_each { create.object = note }
+
+        it "checks for the existence of the object" do
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(HTTP::Client.requests).to have("GET #{note.iri}")
+        end
+
+        it "saves the object" do
+          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
+            to change{note.class.find?(note.iri)}.from(nil)
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(response.status_code).to eq(200)
         end
       end
 
@@ -788,6 +872,31 @@ Spectator.describe RelationshipsController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
           expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "and the object's a reply to the actor's object" do
+        let_create(:object, named: parent, attributed_to: actor)
+
+        before_each do
+          note.assign(in_reply_to: parent).save
+        end
+
+        it "puts the object in the actor's notifications" do
+          update.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
+            to change{Notification.count(from_iri: actor.iri)}.by(1)
+        end
+      end
+
+      context "and object mentions the actor" do
+        let_build(:mention, name: "local recipient", href: actor.iri)
+        let_build(:note, attributed_to: other, mentions: [mention])
+
+        it "puts the activity in the actor's notifications" do
+          update.object = note
+          expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
+            to change{Notification.count(from_iri: actor.iri)}.by(1)
         end
       end
     end
@@ -932,7 +1041,7 @@ Spectator.describe RelationshipsController do
     end
 
     context "on reject" do
-      let_create!(:follow_relationship, named: :relationship, actor: actor, object: other, confirmed: true)
+      let_create!(:follow_relationship, named: :relationship, actor: actor, object: other, confirmed: false)
       let_create(:follow, actor: actor, object: other)
       let_build(:reject, actor: other, object: follow)
 
@@ -975,16 +1084,6 @@ Spectator.describe RelationshipsController do
       let_build(:undo, actor: other, object: nil)
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", undo.to_json_ld, "application/json") }
-
-      class ::UndoneActivity
-        include Ktistec::Model
-        include Ktistec::Model::Common
-
-        @@table_name = "activities"
-
-        @[Persistent]
-        property undone_at : Time?
-      end
 
       context "an announce" do
         let_create(:announce, actor: other)
@@ -1116,16 +1215,6 @@ Spectator.describe RelationshipsController do
 
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 
-        class ::DeletedObject
-          include Ktistec::Model
-          include Ktistec::Model::Common
-
-          @@table_name = "objects"
-
-          @[Persistent]
-          property deleted_at : Time?
-        end
-
         it "returns 400 if the object does not exist" do
           note.destroy
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
@@ -1146,6 +1235,31 @@ Spectator.describe RelationshipsController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the object was a reply to the actor's object" do
+          let_create(:object, named: parent, attributed_to: actor)
+          let_create!(:notification_reply, owner: actor, object: note)
+
+          before_each do
+            note.assign(in_reply_to: parent).save
+          end
+
+          it "removes the reply notification" do
+            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
+              to change{Notification.count(from_iri: actor.iri)}.by(-1)
+          end
+        end
+
+        context "and the object mentioned the actor" do
+          let_build(:mention, name: "local recipient", href: actor.iri)
+          let_build(:note, attributed_to: other, mentions: [mention])
+          let_create!(:notification_mention, owner: actor, object: note)
+
+          it "removes the mention notification" do
+            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
+              to change{Notification.count(from_iri: actor.iri)}.by(-1)
+          end
         end
 
         context "using a tombstone" do
@@ -1191,16 +1305,6 @@ Spectator.describe RelationshipsController do
 
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 
-        class ::DeletedActor
-          include Ktistec::Model
-          include Ktistec::Model::Common
-
-          @@table_name = "actors"
-
-          @[Persistent]
-          property deleted_at : Time?
-        end
-
         it "returns 400 if the actor does not exist" do
           other.destroy
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
@@ -1240,6 +1344,329 @@ Spectator.describe RelationshipsController do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
             expect(response.status_code).to eq(200)
           end
+        end
+      end
+    end
+
+    context "Lemmy compatibility" do
+      let_create(:actor, named: :community, iri: "https://lemmy.ml/c/opensource")
+      let_create(:actor, named: :lemmy_user, iri: "https://lemmy.world/u/testuser")
+
+      let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
+
+      context "wrapped Create activity (post)" do
+        let_build(:object, named: :page, attributed_to: lemmy_user)
+        let_build(:create, actor: lemmy_user, object: page)
+        let_build(:announce, actor: community, object_iri: create.iri)
+
+        let(wrapped_json) do
+          # manually construct Announce{Create{Page}} like Lemmy sends
+          {
+            "@context" => "https://www.w3.org/ns/activitystreams",
+            "type" => "Announce",
+            "id" => announce.iri,
+            "actor" => community.iri,
+            "object" => JSON.parse(create.to_json_ld(recursive: true))
+          }.to_json
+        end
+
+        before_each do
+          # the inner Create activity needs to be fetchable for verification
+          HTTP::Client.activities << create
+          HTTP::Client.objects << page
+        end
+
+        it "saves the inner Create activity" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            to change{ActivityPub::Activity::Create.count}.by(1)
+        end
+
+        it "saves the Object" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            to change{ActivityPub::Object.count}.by(1)
+        end
+
+        it "does not save the Announce wrapper" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            not_to change{ActivityPub::Activity::Announce.count}
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, wrapped_json
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "wrapped Create activity (comment)" do
+        let_build(:note, attributed_to: lemmy_user)
+        let_build(:create, actor: lemmy_user, object: note)
+        let_build(:announce, actor: community, object_iri: create.iri)
+
+        let(wrapped_json) do
+          {
+            "@context" => "https://www.w3.org/ns/activitystreams",
+            "type" => "Announce",
+            "id" => announce.iri,
+            "actor" => community.iri,
+            "object" => JSON.parse(create.to_json_ld(recursive: true))
+          }.to_json
+        end
+
+        before_each do
+          HTTP::Client.activities << create
+          HTTP::Client.objects << note
+        end
+
+        it "saves the inner Create activity" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            to change{ActivityPub::Activity::Create.count}.by(1)
+        end
+
+        it "saves the Note" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            to change{ActivityPub::Object.count}.by(1)
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, wrapped_json
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "wrapped Like activity" do
+        let_create(:object, attributed_to: actor)
+        let_build(:like, actor: lemmy_user, object: object)
+        let_build(:announce, actor: community, object_iri: like.iri)
+
+        let(wrapped_json) do
+          {
+            "@context" => "https://www.w3.org/ns/activitystreams",
+            "type" => "Announce",
+            "id" => announce.iri,
+            "actor" => community.iri,
+            "object" => JSON.parse(like.to_json_ld)
+          }.to_json
+        end
+
+        before_each do
+          HTTP::Client.activities << like
+        end
+
+        it "saves the inner Like activity" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            to change{ActivityPub::Activity::Like.count}.by(1)
+        end
+
+        it "does not save the Announce wrapper" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            not_to change{ActivityPub::Activity::Announce.count}
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, wrapped_json
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "wrapped Dislike activity" do
+        let_create(:object, attributed_to: actor)
+        let_build(:dislike, actor: lemmy_user, object: object)
+        let_build(:announce, actor: community, object_iri: dislike.iri)
+
+        let(wrapped_json) do
+          {
+            "@context" => "https://www.w3.org/ns/activitystreams",
+            "type" => "Announce",
+            "id" => announce.iri,
+            "actor" => community.iri,
+            "object" => JSON.parse(dislike.to_json_ld)
+          }.to_json
+        end
+
+        before_each do
+          HTTP::Client.activities << dislike
+        end
+
+        it "saves the inner Dislike activity" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            to change{ActivityPub::Activity::Dislike.count}.by(1)
+        end
+
+        it "does not save the Announce wrapper" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            not_to change{ActivityPub::Activity::Announce.count}
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, wrapped_json
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "wrapped Update activity" do
+        let_create(:object, attributed_to: lemmy_user)
+        let_build(:update, actor: lemmy_user, object: object)
+        let_build(:announce, actor: community, object_iri: update.iri)
+
+        let(wrapped_json) do
+          {
+            "@context" => "https://www.w3.org/ns/activitystreams",
+            "type" => "Announce",
+            "id" => announce.iri,
+            "actor" => community.iri,
+            "object" => JSON.parse(update.to_json_ld(recursive: true))
+          }.to_json
+        end
+
+        before_each do
+          HTTP::Client.activities << update
+          HTTP::Client.objects << object
+        end
+
+        it "saves the inner Update activity" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            to change{ActivityPub::Activity::Update.count}.by(1)
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, wrapped_json
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "wrapped Undo activity" do
+        let_create(:like, actor: lemmy_user)
+        let_build(:undo, actor: lemmy_user, object: like)
+        let_build(:announce, actor: community, object_iri: undo.iri)
+
+        let(wrapped_json) do
+          {
+            "@context" => "https://www.w3.org/ns/activitystreams",
+            "type" => "Announce",
+            "id" => announce.iri,
+            "actor" => community.iri,
+            "object" => JSON.parse(undo.to_json_ld)
+          }.to_json
+        end
+
+        before_each do
+          HTTP::Client.activities << undo
+        end
+
+        it "saves the inner Undo activity" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            to change{ActivityPub::Activity::Undo.count}.by(1)
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, wrapped_json
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "wrapped Delete activity" do
+        let_create(:actor, named: :lemmy_user_with_keys, iri: "https://lemmy.world/u/testuser", with_keys: true)  # WHY???????
+        let_create(:object, attributed_to: lemmy_user_with_keys)
+        let_build(:delete, actor: lemmy_user_with_keys, object: object)
+        let_build(:announce, actor: community, object_iri: delete.iri)
+
+        let(wrapped_json) do
+          {
+            "@context" => "https://www.w3.org/ns/activitystreams",
+            "type" => "Announce",
+            "id" => announce.iri,
+            "actor" => community.iri,
+            "object" => JSON.parse(delete.to_json_ld)
+          }.to_json
+        end
+
+        let(headers) { Ktistec::Signature.sign(lemmy_user_with_keys, "https://test.test/actors/#{actor.username}/inbox", wrapped_json, "application/json") }
+
+        it "saves the inner Delete activity" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            to change{ActivityPub::Activity::Delete.count}.by(1)
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, wrapped_json
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "unsupported wrapped activity type" do
+        let_build(:follow, actor: lemmy_user, object: actor)
+        let_build(:announce, actor: community, object_iri: follow.iri)
+
+        let(wrapped_json) do
+          {
+            "@context" => "https://www.w3.org/ns/activitystreams",
+            "type" => "Announce",
+            "id" => announce.iri,
+            "actor" => community.iri,
+            "object" => JSON.parse(follow.to_json_ld)
+          }.to_json
+        end
+
+        before_each do
+          HTTP::Client.activities << announce
+        end
+
+        it "does not save the inner Follow activity" do
+          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
+            not_to change{ActivityPub::Activity::Follow.count}
+        end
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, wrapped_json
+          expect(response.status_code).to eq(400)
+        end
+      end
+
+      context "malformed wrapped activity" do
+        let_build(:announce, actor: community)
+
+        let(wrapped_json) do
+          {
+            "@context" => "https://www.w3.org/ns/activitystreams",
+            "type" => "Announce",
+            "id" => announce.iri,
+            "actor" => community.iri,
+            "object" => {
+              "type" => "Like",
+              # missing required fields like id, actor, object
+            }
+          }.to_json
+        end
+
+        before_each do
+          HTTP::Client.activities << announce
+        end
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, wrapped_json
+          expect(response.status_code).to eq(400)
+        end
+      end
+
+      context "regular Announce (Mastodon boost)" do
+        let_create(:object, attributed_to: other)
+        let_build(:announce, actor: other, object: object)
+
+        before_each do
+          HTTP::Client.objects << object
+          HTTP::Client.activities << announce
+        end
+
+        let(json_ld) { announce.to_json_ld }
+
+        it "saves the activity" do
+          expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
+            to change{ActivityPub::Activity::Announce.count}.by(1)
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(response.status_code).to eq(200)
         end
       end
     end

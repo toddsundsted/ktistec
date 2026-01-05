@@ -16,6 +16,6 @@ up do |db|
   STR
 end
 
-down do |db|
+down do
   remove_column "activities", "undone_at"
 end

@@ -86,7 +86,7 @@ class Task
             end
           end
         end
-      end.compact.sort.uniq
+      end.compact.sort!.uniq!
     end
 
     def perform

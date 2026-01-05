@@ -21,7 +21,7 @@ class Task
     validates(activity) { "missing: #{subject_iri}" unless activity? }
 
     def recipients
-      [activity.to, activity.cc, sender.iri].flatten.flat_map do |recipient|
+      [activity.to, activity.cc, activity.audience, sender.iri].flatten.flat_map do |recipient|
         if recipient == PUBLIC
           # no-op
         elsif recipient == sender.iri
@@ -34,7 +34,7 @@ class Task
             confirmed: true
           ).select(&.actor?).map(&.actor.iri)
         end
-      end.compact.sort.uniq
+      end.compact.sort!.uniq!
     end
 
     def perform

@@ -8,7 +8,7 @@
   <%- elsif (actor_iri = activity.actor_iri) -%>
   "actor":<%= actor_iri.to_json %>,
   <%- end -%>
-  <%- if recursive && activity.responds_to?(:object) && (object = activity.object?) -%>
+  <%- if recursive && activity.responds_to?(:object) && (object = activity.object?(include_undone: true)) -%>
   "object":<%= object.to_json_ld %>,
   <%- elsif (object_iri = activity.object_iri) -%>
   "object":<%= object_iri.to_json %>,
@@ -23,6 +23,13 @@
   <%- end -%>
   <%- if (cc = activity.cc) -%>
   "cc":<%= cc.to_json %>,
+  <%- end -%>
+  <%- if (audience = activity.audience) -%>
+  <%- if audience.size > 1 -%>
+  "audience":<%= audience.to_json %>,
+  <%- elsif audience.size == 1 -%>
+  "audience":<%= audience.first.to_json %>,
+  <%- end -%>
   <%- end -%>
   <%- if (summary = activity.summary) -%>
   "summary":<%= summary.to_json %>,

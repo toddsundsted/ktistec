@@ -102,6 +102,14 @@ class Task
 
   def self.scheduled(now = Time.utc, reserve = false)
     if reserve
+      cleanup = <<-SQL
+         DELETE FROM tasks
+          WHERE running = 0
+            AND complete = 1
+            AND backtrace IS NULL
+            AND created_at < ?
+      SQL
+      exec(cleanup, now - 2.hours)
       query = <<-SQL
          UPDATE tasks
             SET running = 1
@@ -129,8 +137,12 @@ class Task
     end
   end
 
-  def schedule(@next_attempt_at = nil)
+  # NOTE: This method is redefined when running tests. Invoking
+  # `schedule` immediately invokes `perform`.
+
+  def schedule(next_attempt_at = nil)
     raise "Not runnable" unless runnable? || complete
+    self.next_attempt_at = next_attempt_at if next_attempt_at
     self.complete = false
     TaskWorker.schedule(self)
   end
@@ -147,5 +159,87 @@ class Task
   def self.clean_up_running_tasks
     update = "UPDATE tasks SET running = 0 WHERE running = 1"
     Task.exec(update)
+  end
+
+  # Returns count of currently running tasks.
+  #
+  def self.running_count
+    count(running: true, complete: false)
+  end
+
+  # Returns count of tasks scheduled to run within the given time span.
+  #
+  def self.scheduled_soon_count(within : Time::Span = 1.minute)
+    now = Time.utc
+    threshold = now + within
+    query = <<-SQL
+      SELECT COUNT(*) FROM tasks
+       WHERE running = 0 AND complete = 0 AND backtrace IS NULL
+         AND next_attempt_at IS NOT NULL
+         AND next_attempt_at >= ? AND next_attempt_at < ?
+    SQL
+    scalar(query, now, threshold).as(Int64)
+  end
+
+  # Minimum time delta threshold for applying randomization.
+  #
+  # Task scheduling deltas below this threshold will not be randomized
+  # to maintain precision for short-interval tasks.
+  #
+  MIN_RANDOMIZATION_THRESHOLD = 5.minutes
+
+  # Threshold for adaptive randomization calculation .
+  #
+  # Intervals shorter than this use `ADAPTIVE_RANDOMIZATION_PERCENTAGE_SHORT`.
+  # Intervals longer than or equal to this use `ADAPTIVE_RANDOMIZATION_PERCENTAGE_LONG`.
+  #
+  ADAPTIVE_RANDOMIZATION_THRESHOLD = 6.hours
+
+  # Adaptive randomization percentage for short intervals.
+  #
+  # This percentage represents the total randomization range (e.g., 0.05 = 5%
+  # total range, meaning ±2.5%). Used when adaptive randomization is enabled
+  # and the interval is shorter than `ADAPTIVE_RANDOMIZATION_THRESHOLD`.
+  #
+  ADAPTIVE_RANDOMIZATION_PERCENTAGE_SHORT = 0.05
+
+  # Adaptive randomization percentage for long intervals.
+  #
+  # This percentage represents the total randomization range (e.g., 0.025 = 2.5%
+  # total range, meaning ±1.25%). Used when adaptive randomization is enabled
+  # and the interval is greater than or equal to `ADAPTIVE_RANDOMIZATION_THRESHOLD`.
+  #
+  ADAPTIVE_RANDOMIZATION_PERCENTAGE_LONG = 0.025
+
+  # Returns a randomized next attempt time based on the given delta.
+  #
+  # Applies proportional randomization to prevent tasks from running in
+  # lockstep after server restarts. The randomization amount is adaptive
+  # unless explicitly provided.
+  #
+  # ## Parameters
+  #
+  # - `delta` - The base time delta for scheduling
+  # - `randomization_percentage` - Optional percentage override. When `nil`,
+  #   an adaptive percentage is calculated based on interval length.
+  #
+  # ## General Behavior
+  #
+  # - For deltas less than `MIN_RANDOMIZATION_THRESHOLD`, returns the exact
+  #   time delta (no randomization).
+  # - For deltas greater than or equal to the threshold, returns a time
+  #   within a percentage range of the delta (e.g., 5% means 97.5% to 102.5%
+  #   of the delta).
+  #
+  protected def randomized_next_attempt_at(delta : Time::Span, randomization_percentage : Float64? = nil) : Time
+    if delta < MIN_RANDOMIZATION_THRESHOLD
+      delta.from_now
+    else
+      percentage = randomization_percentage || (delta < ADAPTIVE_RANDOMIZATION_THRESHOLD ? ADAPTIVE_RANDOMIZATION_PERCENTAGE_SHORT : ADAPTIVE_RANDOMIZATION_PERCENTAGE_LONG)
+      half_range = delta.total_seconds * percentage / 2.0
+      random_variation = Random::DEFAULT.rand(-half_range..half_range)
+      adjusted_delta = delta + random_variation.seconds
+      adjusted_delta.from_now
+    end
   end
 end

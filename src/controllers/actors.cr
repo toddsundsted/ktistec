@@ -1,33 +1,85 @@
 require "../framework/controller"
 require "../models/task/refresh_actor"
+require "../utils/rss"
 
-require "../models/relationship/content/follow/hashtag"
-require "../models/relationship/content/follow/mention"
 require "../models/relationship/content/notification/follow/hashtag"
 require "../models/relationship/content/notification/follow/mention"
 require "../models/relationship/content/notification/follow/thread"
+require "../models/relationship/content/notification/poll/expiry"
 
 class ActorsController
   include Ktistec::Controller
 
-  skip_auth ["/actors/:username", "/actors/:username/public-posts"], GET
+  skip_auth [
+    "/actors/:username",
+    "/actors/:username/public-posts",
+    "/actors/:username/feed.rss",
+    "/actors/:username/featured",
+  ], GET
+
+  # Authorizes account access.
+  #
+  # Returns the account if it exists, `nil` otherwise.
+  #
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"])
+  end
+
+  # Authorizes account access.
+  #
+  # Returns the account if the authenticated user owns it, `nil`
+  # otherwise.
+  #
+  private def self.get_account_with_ownership(env)
+    if (account = Account.find?(username: env.params.url["username"]))
+      if env.account? == account
+        account
+      end
+    end
+  end
+
+  # Authorizes actor access.
+  #
+  # Returns the actor if it exists, `nil` otherwise.
+  #
+  private def self.get_actor(id)
+    ActivityPub::Actor.find?(id)
+  end
+
+  # these actions render views about local actors for both anonymous
+  # and authenticated users.
 
   get "/actors/:username" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+    unless (account = get_account(env))
       not_found
     end
 
     actor = account.actor
 
+    if env.account?
+      if env.params.query.has_key?("filters")
+        filters = env.params.query.fetch_all("filters").reject(&.empty?)
+        if !filters.empty?
+          env.session.string("timeline_filters", filters.join(","))
+        else
+          env.session.delete("timeline_filters")
+          redirect "/actors/#{account.username}"
+        end
+      else
+        if (filters = env.session.string?("timeline_filters"))
+          unless filters.empty?
+            query_string = %Q|filters=#{filters.split(",").join("&filters=")}|
+            redirect "/actors/#{account.username}?#{query_string}"
+          end
+        end
+      end
+    end
+
     ok "actors/actor", env: env, actor: actor
   end
 
   get "/actors/:username/public-posts" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+    unless (account = get_account(env))
       not_found
     end
 
@@ -38,14 +90,32 @@ class ActorsController
     ok "actors/public_posts", env: env, actor: actor, objects: objects
   end
 
-  get "/actors/:username/posts" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+  get "/actors/:username/feed.rss" do |env|
+    unless (account = get_account(env))
       not_found
     end
-    unless account == env.account
-      forbidden
+
+    actor = account.actor
+
+    objects = actor.public_posts(**pagination_params(env))
+
+    actor_name = actor.display_name
+    actor_url = actor.display_link
+
+    env.response.content_type = "application/rss+xml; charset=utf-8"
+
+    Ktistec::RSS.generate_rss_feed(
+      objects, actor_name, actor_url,
+      "#{actor_name}: RSS Feed"
+    )
+  end
+
+  # these actions render views about the authenticated local actor
+  # itself.
+
+  get "/actors/:username/posts" do |env|
+    unless (account = get_account_with_ownership(env))
+      not_found
     end
 
     actor = account.actor
@@ -55,14 +125,33 @@ class ActorsController
     ok "actors/posts", env: env, actor: actor, objects: objects
   end
 
-  get "/actors/:username/timeline" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+  get "/actors/:username/bookmarks" do |env|
+    unless (account = get_account_with_ownership(env))
       not_found
     end
-    unless account == env.account
-      forbidden
+
+    actor = account.actor
+
+    objects = actor.bookmarks(**pagination_params(env))
+
+    ok "actors/bookmarks", env: env, actor: actor, objects: objects
+  end
+
+  get "/actors/:username/featured" do |env|
+    unless (account = get_account(env))
+      not_found
+    end
+
+    actor = account.actor
+
+    objects = actor.pins(**pagination_params(env))
+
+    ok "actors/featured", env: env, objects: objects
+  end
+
+  get "/actors/:username/timeline" do |env|
+    unless (account = get_account_with_ownership(env))
+      not_found
     end
 
     actor = account.actor
@@ -75,13 +164,8 @@ class ActorsController
   end
 
   get "/actors/:username/notifications" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+    unless (account = get_account_with_ownership(env))
       not_found
-    end
-    unless account == env.account
-      forbidden
     end
 
     actor = account.actor
@@ -94,27 +178,30 @@ class ActorsController
   end
 
   get "/actors/:username/drafts" do |env|
-    username = env.params.url["username"]
-
-    unless (account = Account.find?(username: username))
+    unless (account = get_account_with_ownership(env))
       not_found
-    end
-    unless account == env.account
-      forbidden
     end
 
     drafts = account.actor.drafts(**pagination_params(env))
 
-    ok "objects/index", env: env, drafts: drafts ### wow, should this be called drafts instead of objects?
+    ok "objects/index", env: env, drafts: drafts
   end
 
+  # these actions render views of and operator on remote/cached
+  # actors for authenticated users.
+
   get "/remote/actors/:id" do |env|
-    unless (actor = ActivityPub::Actor.find?(id_param(env)))
+    unless (actor = get_actor(id_param(env)))
       not_found
     end
 
     ok "actors/remote", env: env, actor: actor
   end
+
+  # MULTI_USER NOTE: block and unblock operations set/clear a global
+  # `blocked_at` timestamp that hides the actor from ALL users. this
+  # is a single-user design remnant. proper multi-user support would
+  # require per-user blocking relationships.
 
   post "/remote/actors/:id/block" do |env|
     unless (actor = ActivityPub::Actor.find?(id_param(env)))
@@ -137,14 +224,28 @@ class ActorsController
   end
 
   post "/remote/actors/:id/refresh" do |env|
-    unless (actor = ActivityPub::Actor.find?(id_param(env)))
+    unless (actor = get_actor(id_param(env)))
       not_found
     end
 
     unless Task::RefreshActor.exists?(actor.iri)
-      Task::RefreshActor.new(source: env.account.actor, actor: actor).schedule
+      sync_featured_collection = env.params.body["sync-featured-collection"]? != "false"
+      state = Task::RefreshActor::State.new(sync_featured_collection: sync_featured_collection)
+      Task::RefreshActor.new(source: env.account.actor, actor: actor, state: state).schedule
     end
 
-    ok
+    if accepts_turbo_stream?
+      id = "actor-#{actor.id}-refresh-button"
+      env.response.content_type = "text/vnd.turbo-stream.html"
+      String.build do |str|
+        str << %(<turbo-stream action="replace" target="#{id}">)
+        str << %(<template>)
+        str << %(<button class="ui button disabled"><i class="sync loading icon"></i> Refresh</button>)
+        str << %(</template>)
+        str << %(</turbo-stream>)
+      end
+    else
+      ok
+    end
   end
 end

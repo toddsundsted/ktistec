@@ -1,35 +1,81 @@
-abstract class Factory
-  macro build(type, **options)
-    {{type.id}}_factory({{options.double_splat}})
-  end
+# Use factories to build or create (build and save) test objects for
+# use in specs.
 
-  macro create(type, **options)
-    {{type.id}}_factory({{options.double_splat}}).save
-  end
-end
+# `KTISTEC_EPOCH` is used to generate unique but reproducible
+# timestamps for test data so tests are deterministic.
 
 KTISTEC_EPOCH = Time.utc(2016, 2, 15, 10, 20, 0)
 
+# `KTISTEC_FACTORY_STATE` holds factory state.
+
 KTISTEC_FACTORY_STATE = {:nonce => 0, :moment => 0}
 
-macro let_build(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
-  {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
+# A `Factory` with two macros:
+#
+# `build(type, **options): When invoked, this macro expands to a call
+# to the factory method for the given type, passing all options through.
+#
+# `create(type, **options)`: Same as build, but after building the
+# object, it also saves the object.
+#
+# Typically, do not use these macros directly. Use the four macros
+# below.
+
+abstract class Factory
+  macro build(type, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **__options)
+    {{type.id}}_factory(created_at: {{created_at}}, {{__options.double_splat}})
+  end
+
+  macro create(type, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **__options)
+    {{type.id}}_factory(created_at: {{created_at}}, {{__options.double_splat}}).save
+  end
 end
 
-macro let_build!(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
+# Four additional macros to simplify test setup, inspired by RSpec’s
+# `let`/`let!` helpers.
+#
+# Each macro generates a `let` or `let!` block for a test object:
+# `let` defines a lazy-evaluated variable; `let!` is eager (evaluated
+# at the start of the section of specs).
+#
+# The macros accept a type (e.g., `:actor` or `actor`), an optional
+# identifier name via the `named` parameter (by default, the name is
+# the name of the type), a `created_at` timestamp (the default is
+# successive epoch + 1s, 2s, ... times), and any number of additional
+# options for the underlying factory.
+#
+# If `named` is not provided, a unique, anonymous name is generated
+# using the `nonce` counter.
+#
+# Use these macros at the top of `describe` and `context` blocks to
+# introduce test objects. For example:
+#
+#   let_create(object) # creates an object named `object`
+#
+# To assign a different name, or to create an anonymous object, used
+# the `named` parameter, as follows:
+#
+#   let_create(object, named: post) # assigns the object to `post`
+#   let_create(object, named: nil)  # is anonymous
+
+macro let_build(type, named = false, **__options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let!({{(named || type).id}}) { Factory.build({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
+  let({{(named || type).id}}) { Factory.build({{type}}, {{__options.double_splat}}) }
 end
 
-macro let_create(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
+macro let_build!(type, named = false, **__options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
+  let!({{(named || type).id}}) { Factory.build({{type}}, {{__options.double_splat}}) }
 end
 
-macro let_create!(type, named = false, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **options)
+macro let_create(type, named = false, **__options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let!({{(named || type).id}}) { Factory.create({{type}}, created_at: {{created_at}}, {{options.double_splat}}) }
+  let({{(named || type).id}}) { Factory.create({{type}}, {{__options.double_splat}}) }
+end
+
+macro let_create!(type, named = false, **__options)
+  {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
+  let!({{(named || type).id}}) { Factory.create({{type}}, {{__options.double_splat}}) }
 end
 
 def base_url(iri, thing, local = nil)
@@ -49,6 +95,9 @@ def base_url(iri, thing, local = nil)
   "#{uri.scheme}://#{uri.host}"
 end
 
+# Available factories are identified by methods that end in `_factory`
+# below (e.g. `actor`, `object`).
+
 # actor factories
 
 def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **options)
@@ -67,10 +116,15 @@ def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **
       inbox: "#{iri}/inbox",
       followers: "#{iri}/followers",
       following: "#{iri}/following",
+      featured: "#{iri}/featured",
       pem_public_key: pem_public_key,
       pem_private_key: pem_private_key
     }.merge(options)
   )
+end
+
+def person_factory(**options)
+  actor_factory(ActivityPub::Actor::Person, **options)
 end
 
 # object factories
@@ -90,12 +144,12 @@ def note_factory(**options)
   object_factory(ActivityPub::Object::Note, **options)
 end
 
-def tombstone_factory(**options)
-  object_factory(ActivityPub::Object::Tombstone, **options)
+def question_factory(**options)
+  object_factory(ActivityPub::Object::Question, **options)
 end
 
-def video_factory(**options)
-  object_factory(ActivityPub::Object::Video, **options)
+def tombstone_factory(**options)
+  object_factory(ActivityPub::Object::Tombstone, **options)
 end
 
 # activity factories
@@ -126,6 +180,12 @@ def like_factory(actor_iri = nil, actor = false, object_iri = nil, object = fals
   actor = actor_factory unless actor_iri || actor.nil? || actor
   object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
   activity_factory(ActivityPub::Activity::Like, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
+end
+
+def dislike_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
+  actor = actor_factory unless actor_iri || actor.nil? || actor
+  object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
+  activity_factory(ActivityPub::Activity::Dislike, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
 end
 
 def create_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
@@ -194,6 +254,10 @@ def notification_like_factory(**options)
   notification_factory(Relationship::Content::Notification::Like, ActivityPub::Activity::Like, **options)
 end
 
+def notification_dislike_factory(**options)
+  notification_factory(Relationship::Content::Notification::Dislike, ActivityPub::Activity::Dislike, **options)
+end
+
 def notification_follow_factory(**options)
   notification_factory(Relationship::Content::Notification::Follow, ActivityPub::Activity::Follow, **options)
 end
@@ -206,16 +270,24 @@ def notification_follow_mention_factory(**options)
   notification_factory(Relationship::Content::Notification::Follow::Mention, **{activity: nil}.merge(options))
 end
 
-def notification_follow_thread_factory(**options)
-  notification_factory(Relationship::Content::Notification::Follow::Thread, **{activity: nil}.merge(options))
+def notification_follow_thread_factory(object_iri = nil, object = false, **options)
+  object = object_factory unless object_iri || object.nil? || object
+  notification_factory(Relationship::Content::Notification::Follow::Thread, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
 end
 
-def notification_reply_factory(**options)
-  notification_factory(Relationship::Content::Notification::Reply, **{activity: nil}.merge(options))
+def notification_poll_expiry_factory(question_iri = nil, question = false, **options)
+  question = question_factory unless question_iri || question.nil? || question
+  notification_factory(Relationship::Content::Notification::Poll::Expiry, **{question_iri: question_iri, question: question, activity: nil}.merge(options))
 end
 
-def notification_mention_factory(**options)
-  notification_factory(Relationship::Content::Notification::Mention, **{activity: nil}.merge(options))
+def notification_reply_factory(object_iri = nil, object = false, **options)
+  object = object_factory unless object_iri || object.nil? || object
+  notification_factory(Relationship::Content::Notification::Reply, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
+end
+
+def notification_mention_factory(object_iri = nil, object = false, **options)
+  object = object_factory unless object_iri || object.nil? || object
+  notification_factory(Relationship::Content::Notification::Mention, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
 end
 
 def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
@@ -266,6 +338,18 @@ def approved_relationship_factory(**options)
   relationship_factory(Relationship::Content::Approved, **options)
 end
 
+def bookmark_relationship_factory(object_iri = nil, object = false, actor_iri = nil, actor = false, **options)
+  actor = actor_factory unless actor_iri || actor.nil? || actor
+  object = object_factory(attributed_to_iri: actor_iri, attributed_to: actor) unless object_iri || object.nil? || object
+  relationship_factory(Relationship::Content::Bookmark, **{from_iri: actor_iri, actor: actor, to_iri: object_iri, object: object}.merge(options))
+end
+
+def pin_relationship_factory(object_iri = nil, object = false, actor_iri = nil, actor = false, **options)
+  actor = actor_factory unless actor_iri || actor.nil? || actor
+  object = object_factory(attributed_to_iri: actor_iri, attributed_to: actor) unless object_iri || object.nil? || object
+  relationship_factory(Relationship::Content::Pin, **{from_iri: actor_iri, actor: actor, to_iri: object_iri, object: object}.merge(options))
+end
+
 def canonical_relationship_factory(**options)
   relationship_factory(Relationship::Content::Canonical, **options)
 end
@@ -286,13 +370,40 @@ def fetch_thread_task_factory(source_iri = nil, source = false, **options)
   task_factory(Task::Fetch::Thread, **{source: source, source_iri: source_iri}.merge(options))
 end
 
-class Factory::ConcurrentTask < Task
-  include Task::ConcurrentTask
-
-  def perform
-    # no-op
-  end
+def handle_follow_request_task_factory(source_iri = nil, recipient = false, subject_iri = nil, activity = false, **options)
+  recipient = actor_factory(local: true) unless source_iri || recipient.nil? || recipient
+  activity = follow_factory unless subject_iri || activity.nil? || activity
+  task_factory(
+    Task::HandleFollowRequest,
+    **{recipient: recipient || nil, source_iri: source_iri, activity: activity || nil, subject_iri: subject_iri}.merge(options)
+  )
 end
+
+def notify_poll_expiry_task_factory(subject_iri = nil, question = false, **options)
+  question = question_factory unless subject_iri || question.nil? || question
+  task_factory(
+    Task::NotifyPollExpiry,
+    **{question: question || nil, subject_iri: subject_iri}.merge(options)
+  )
+end
+
+def distribute_poll_updates_task_factory(subject_iri = nil, question = false, **options)
+  question = question_factory unless subject_iri || question.nil? || question
+  task_factory(
+    Task::DistributePollUpdates,
+    **{question: question || nil, subject_iri: subject_iri}.merge(options)
+  )
+end
+
+{% if @top_level.has_constant?("Task") %}
+  class Factory::ConcurrentTask < Task
+    include Task::ConcurrentTask
+
+    def perform
+      # no-op
+    end
+  end
+{% end %}
 
 def concurrent_task_factory(**options)
   # tests using concurrent tasks depend on tasks being assigned unique ids
@@ -313,10 +424,22 @@ def mention_factory(**options)
   tag_factory(Tag::Mention, **options)
 end
 
+def emoji_factory(**options)
+  tag_factory(Tag::Emoji, **options)
+end
+
 # point factory
 
 def point_factory(clazz = Point, **options)
   clazz.new(**options)
+end
+
+# poll factory
+
+def poll_factory(clazz = Poll, question_iri = nil, question = false, options = nil, **__options)
+  question = question_factory unless question_iri || question.nil? || question
+  options ||= [Poll::Option.new("Yes"), Poll::Option.new("No")]
+  clazz.new(**{question_iri: question_iri, question: question, options: options}.merge(__options))
 end
 
 # filter term factory
@@ -348,7 +471,23 @@ def account_factory(clazz = Account, actor_iri = nil, actor = false, username = 
   clazz.new(**{actor_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, actor: actor, username: username, password: password, language: language}.merge(options))
 end
 
-# other helpers
+# oauth2 factories
+
+def oauth2_provider_client_factory(clazz = OAuth2::Provider::Client, **options)
+  clazz.new(**{client_id: random_string, client_secret: random_string, client_name: random_string, redirect_uris: "https://example.com/callback", scope: "read"}.merge(options))
+end
+
+def oauth2_provider_access_token_factory(clazz = OAuth2::Provider::AccessToken, *, client, account, **options)
+  clazz.new(**{token: "token", client_id: client.id, account_id: account.id, expires_at: Time.utc, scope: "read"}.merge(options))
+end
+
+# Helpers methods for common operations.
+#
+# Use the `put_in_...` methods to add objects to common collections.
+# Use `do_follow` to create a new social follow.  Use `register` to
+# create a registered actor.  This is a common pattern:
+#
+#     let(actor) { register.actor }
 
 def put_in_inbox(owner : ActivityPub::Actor, activity : ActivityPub::Activity)
   Factory.create(:inbox_relationship, owner: owner, activity: activity)
@@ -368,11 +507,11 @@ def put_in_outbox(owner : ActivityPub::Actor, object : ActivityPub::Object)
   Factory.create(:outbox_relationship, owner: owner, activity: activity)
 end
 
-def put_in_notifications(owner : ActivityPub::Actor, *, mention : ActivityPub::Activity::Create)
+def put_in_notifications(owner : ActivityPub::Actor, *, mention : ActivityPub::Activity::ObjectActivity)
   Factory.create(:notification_mention, owner: owner, object: mention.object)
 end
 
-def put_in_notifications(owner : ActivityPub::Actor, *, reply : ActivityPub::Activity::Create)
+def put_in_notifications(owner : ActivityPub::Actor, *, reply : ActivityPub::Activity::ObjectActivity)
   Factory.create(:notification_reply, owner: owner, object: reply.object)
 end
 
@@ -382,6 +521,10 @@ end
 
 def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Like)
   Factory.create(:notification_like, owner: owner, activity: activity)
+end
+
+def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Dislike)
+  Factory.create(:notification_dislike, owner: owner, activity: activity)
 end
 
 def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Activity::Follow)

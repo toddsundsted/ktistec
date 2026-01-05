@@ -1,11 +1,14 @@
 require "../framework/controller"
 require "../models/activity_pub/activity/**"
-require "../models/activity_pub/object/note"
-require "../models/task/deliver"
-require "../rules/content_rules"
+require "../services/object_factory"
+require "../services/outbox_activity_processor"
 
-class RelationshipsController
+class OutboxesController
   include Ktistec::Controller
+
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"]?)
+  end
 
   post "/actors/:username/outbox" do |env|
     unless (account = get_account(env))
@@ -15,25 +18,26 @@ class RelationshipsController
       forbidden
     end
 
-    activity = (env.params.body.presence || env.params.json).to_h.transform_values(&.to_s)
+    activity = (env.params.body.presence || env.params.json).to_h.transform_values do |value|
+      value.is_a?(Array) ? value.map(&.to_s) : value.to_s
+    end
+
+    if (temp_iri = activity["object"]?) && temp_iri.is_a?(String)
+      object_iri = temp_iri
+    end
 
     case activity["type"]?
     when "Announce"
-      unless (iri = activity["object"]?) && (object = ActivityPub::Object.find?(iri))
+      unless object_iri && (object = ActivityPub::Object.find?(object_iri))
         bad_request
       end
       now = Time.utc
-      visible = activity["public"]? == "true"
-      to = [] of String
-      if visible
-        to << "https://www.w3.org/ns/activitystreams#Public"
-      end
+      visible, to, cc = addressing(activity, account.actor)
       if (attributed_to = object.attributed_to?)
         to << attributed_to.iri
       end
-      cc = [] of String
-      if (followers = account.actor.followers)
-        cc << followers
+      if object.audience
+        audience = object.audience
       end
       activity = ActivityPub::Activity::Announce.new(
         iri: "#{host}/activities/#{id}",
@@ -41,25 +45,21 @@ class RelationshipsController
         object: object,
         published: now,
         visible: visible,
-        to: to,
-        cc: cc
+        to: to.to_a,
+        cc: cc.to_a,
+        audience: audience,
       )
     when "Like"
-      unless (iri = activity["object"]?) && (object = ActivityPub::Object.find?(iri))
+      unless object_iri && (object = ActivityPub::Object.find?(object_iri))
         bad_request
       end
       now = Time.utc
-      visible = activity["public"]? == "true"
-      to = [] of String
-      if visible
-        to << "https://www.w3.org/ns/activitystreams#Public"
-      end
+      visible, to, cc = addressing(activity, account.actor)
       if (attributed_to = object.attributed_to?)
         to << attributed_to.iri
       end
-      cc = [] of String
-      if (followers = account.actor.followers)
-        cc << followers
+      if object.audience
+        audience = object.audience
       end
       activity = ActivityPub::Activity::Like.new(
         iri: "#{host}/activities/#{id}",
@@ -67,56 +67,49 @@ class RelationshipsController
         object: object,
         published: now,
         visible: visible,
-        to: to,
-        cc: cc
+        to: to.to_a,
+        cc: cc.to_a,
+        audience: audience,
+      )
+    when "Dislike"
+      unless object_iri && (object = ActivityPub::Object.find?(object_iri))
+        bad_request
+      end
+      now = Time.utc
+      visible, to, cc = addressing(activity, account.actor)
+      if (attributed_to = object.attributed_to?)
+        to << attributed_to.iri
+      end
+      if object.audience
+        audience = object.audience
+      end
+      activity = ActivityPub::Activity::Dislike.new(
+        iri: "#{host}/activities/#{id}",
+        actor: account.actor,
+        object: object,
+        published: now,
+        visible: visible,
+        to: to.to_a,
+        cc: cc.to_a,
+        audience: audience,
       )
     when "Publish"
-      unless (content = activity["content"]?)
+      unless activity["content"]?
         bad_request
       end
-      if (in_reply_to_iri = activity["in-reply-to"]?) && !(in_reply_to = ActivityPub::Object.find?(in_reply_to_iri))
+      if (in_reply_to_iri = activity["in-reply-to"]?) && in_reply_to_iri.is_a?(String) && !ActivityPub::Object.find?(in_reply_to_iri)
         bad_request
       end
-      if (object_iri = activity["object"]?) && !(object = ActivityPub::Object.find?(object_iri))
+      if (object_iri = activity["object"]?) && object_iri.is_a?(String) && !(object = ActivityPub::Object.find?(object_iri))
         bad_request
       end
       if object && object.attributed_to != account.actor
         forbidden
       end
-      visible = activity["public"]? == "true"
-      to = activity["to"]?.presence.try(&.split(",")) || [] of String
-      if (attributed_to = in_reply_to.try(&.attributed_to?))
-        to |= [attributed_to.iri]
-      end
-      if visible
-        to << "https://www.w3.org/ns/activitystreams#Public"
-      end
-      cc = activity["cc"]?.presence.try(&.split(",")) || [] of String
-      if (followers = account.actor.followers)
-        cc << followers
-      end
-      language = activity["language"]?.presence
-      name = activity["name"]?.presence
-      summary = activity["summary"]?.presence
-      canonical_path = activity["canonical_path"]?.presence
-      activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
-      iri = "#{host}/objects/#{id}"
-      object ||= ActivityPub::Object::Note.new(iri: iri)
-      object.assign(
-        source: ActivityPub::Object::Source.new(content, "text/html; editor=trix"),
-        attributed_to_iri: account.iri,
-        in_reply_to_iri: in_reply_to_iri,
-        replies_iri: "#{iri}/replies",
-        language: language,
-        name: name,
-        summary: summary,
-        canonical_path: canonical_path,
-        visible: visible,
-        to: to,
-        cc: cc
-      )
+      result = ObjectFactory.build_from_params(activity, account.actor, object)
+      object = result.object
       # validate ensures properties are populated from source
-      unless object.valid?
+      unless result.valid?
         if accepts_turbo_stream?
           unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _target: %Q<object-#{object.id || "new"}>
         elsif object.new_record?
@@ -125,6 +118,7 @@ class RelationshipsController
           unprocessable_entity "objects/edit", env: env, object: object, recursive: false
         end
       end
+      activity = (object.nil? || object.draft?) ? ActivityPub::Activity::Create.new : ActivityPub::Activity::Update.new
       # hack to sidestep typing of unions as their nearest common ancestor
       if activity.responds_to?(:actor=) && activity.responds_to?(:object=)
         activity.assign(
@@ -133,17 +127,25 @@ class RelationshipsController
           object: object,
           visible: object.visible,
           to: object.to,
-          cc: object.cc
+          cc: object.cc,
+          audience: object.audience,
         )
       end
       unless activity.responds_to?(:valid_for_send?) && activity.valid_for_send?
         bad_request
       end
-      # after validating make published
-      time = object.published || Time.utc
-      object.published = activity.published = time
+      # after validating, set timestamps based on activity type
+      # use `assign` so that associated objects are marked as changed
+      time = Time.utc
+      if activity.is_a?(ActivityPub::Activity::Update)
+        object.assign(updated: time)
+        activity.assign(published: time)
+      else
+        object.assign(published: time)
+        activity.assign(published: time)
+      end
     when "Follow"
-      unless (iri = activity["object"]?) && (object = ActivityPub::Actor.find?(iri))
+      unless object_iri && (object = ActivityPub::Actor.find?(object_iri))
         bad_request
       end
       activity = ActivityPub::Activity::Follow.new(
@@ -156,13 +158,13 @@ class RelationshipsController
         bad_request
       end
     when "Accept"
-      unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))
+      unless object_iri && (object = ActivityPub::Activity::Follow.find?(object_iri))
         bad_request
       end
       unless object.object == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
+      unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
         bad_request
       end
       activity = ActivityPub::Activity::Accept.new(
@@ -172,13 +174,13 @@ class RelationshipsController
         to: [object.actor.iri]
       )
     when "Reject"
-      unless (iri = activity["object"]?) && (object = ActivityPub::Activity::Follow.find?(iri))
+      unless object_iri && (object = ActivityPub::Activity::Follow.find?(object_iri))
         bad_request
       end
       unless object.object == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
+      unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
         bad_request
       end
       activity = ActivityPub::Activity::Reject.new(
@@ -188,7 +190,7 @@ class RelationshipsController
         to: [object.actor.iri]
       )
     when "Undo"
-      unless (iri = activity["object"]?) && (object = ActivityPub::Activity.find?(iri))
+      unless object_iri && (object = ActivityPub::Activity.find?(object_iri))
         bad_request
       end
       unless object.actor == account.actor
@@ -197,7 +199,7 @@ class RelationshipsController
       to = [] of String
       cc = [] of String
       case object
-      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like
+      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
         if (attributed_to = object.object.attributed_to?)
           to << attributed_to.iri
         end
@@ -206,7 +208,7 @@ class RelationshipsController
         end
       when ActivityPub::Activity::Follow
         to << object.object.iri
-        unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
+        unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
           bad_request
         end
       else
@@ -220,7 +222,7 @@ class RelationshipsController
         cc: cc
       )
     when "Delete"
-      if (iri = activity["object"]?)
+      if (iri = object_iri)
         if (object = ActivityPub::Object.find?(iri))
           unless object.local?
             bad_request
@@ -251,50 +253,7 @@ class RelationshipsController
 
     activity.save
 
-    ContentRules.new.run do
-      assert ContentRules::Outgoing.new(account.actor, activity)
-    end
-
-    # handle side-effects
-
-    case activity
-    when ActivityPub::Activity::Follow
-      unless Relationship::Social::Follow.find?(actor: activity.actor, object: activity.object, visible: false)
-        Relationship::Social::Follow.new(
-          actor: activity.actor,
-          object: activity.object,
-          visible: false
-        ).save(skip_associated: true)
-      end
-    when ActivityPub::Activity::Accept
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: true).save
-      end
-    when ActivityPub::Activity::Reject
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: false).save
-      end
-    when ActivityPub::Activity::Undo
-      case (object = activity.object)
-      when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
-          follow.destroy
-        end
-      end
-      activity.object.undo!
-    when ActivityPub::Activity::Delete
-      case (object = activity.object?)
-      when ActivityPub::Object
-        object.delete!
-      when ActivityPub::Actor
-        object.delete!
-      end
-    end
-
-    Task::Deliver.new(
-      sender: account.actor,
-      activity: activity
-    ).schedule
+    OutboxActivityProcessor.process(account, activity)
 
     if accepts?("application/ld+json", "application/activity+json", "application/json")
       unless activity.is_a?(ActivityPub::Activity::Delete)
@@ -313,7 +272,11 @@ class RelationshipsController
           redirect actor_path
         end
       end
-      redirect back_path
+      if accepts_turbo_stream?
+        turbo_stream_refresh
+      else
+        redirect back_path
+      end
     end
   end
 
@@ -328,9 +291,5 @@ class RelationshipsController
     activities = account.actor.in_outbox(**pagination_params(env), public: env.account? != account)
 
     ok "relationships/outbox", env: env, activities: activities
-  end
-
-  private def self.get_account(env)
-    Account.find?(username: env.params.url["username"]?)
   end
 end

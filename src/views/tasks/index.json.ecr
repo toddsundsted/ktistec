@@ -1,4 +1,16 @@
 {
+  "status": {
+    <%- if running_count > 0 -%>
+      "type": "running",
+      "message": "<%= pluralize(running_count, "task") %> currently running."
+    <%- elsif scheduled_soon_count > 0 -%>
+      "type": "scheduled",
+      "message": "<%= pluralize(scheduled_soon_count, "task") %> scheduled to run within one minute."
+    <%- else -%>
+      "type": "idle",
+      "message": "No tasks are running or scheduled to start soon."
+    <%- end -%>
+  },
   "tasks":[
     <%- tasks.each_with_index do |task, i| -%>
       {

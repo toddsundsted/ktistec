@@ -7,79 +7,68 @@ crystal:
   if (content = translation.try(&.content).presence || object.content.presence)
     html = (object.media_type == "text/markdown") ? markdown_to_html(content) : content
   end
-  if (attachments = object.attachments)
+  object_emojis = Tag::Emoji.where(subject: object)
+  actor_emojis = Tag::Emoji.where(subject: actor)
+  author_emojis = (author.iri != actor.iri) ? Tag::Emoji.where(subject: author) : actor_emojis
+  if (attachments = object.attachments.dup)  # don't modify the object
     if html
       urls = XML.parse_html(html).xpath_nodes("//img/@src").map(&.text)
       attachments.reject! { |a| a.url.in?(urls) }
     end
   end
-.content data-controller="image-gallery"
+  is_blocked = object.blocked? || author.blocked? || actor.blocked?
+  is_deleted = object.deleted? || author.deleted? || actor.deleted?
+.content data-controller="image-viewer" data-action="click->image-viewer#handleClick"
   .summary
+    - if for_thread && (parent = object.in_reply_to?)
+      crystal:
+        parent_in_thread = for_thread.try { |thread| thread.any? { |reply| reply.id == parent.id } }
+        parent_href = parent_in_thread ? "##{anchor(parent)}" : remote_thread_path(parent)
+        parent_text = parent.attributed_to?.try(&.handle)
+      a.in-reply-to.float-right data-turbo-frame="_top" href=parent_href title=parent_text
+        i.arrow.up.icon
     - if object.draft?
       | draft created
-      a.date = object.short_date(timezone)
+      a.date< = object.short_date(timezone)
     - else
+      - if for_actor && (pin = Relationship::Content::Pin.find?(actor: for_actor, object: object))
+        span.float-right
+          i.pin.icon
       - if account
         - if author != actor
-          a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = actor.display_name
+          a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) == s Ktistec::Emoji.emojify(actor.display_name, actor_emojis)
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
+          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) == s Ktistec::Emoji.emojify(author.display_name, author_emojis)
         - else
-          a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = author.display_name
+          a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) == s Ktistec::Emoji.emojify(author.display_name, author_emojis)
           | posted
-        a.date data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
+        a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
       - else
         - if author != actor
-          a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = actor.display_name
+          a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link == s Ktistec::Emoji.emojify(actor.display_name, actor_emojis)
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
+          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link == s Ktistec::Emoji.emojify(author.display_name, author_emojis)
         - else
-          a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = author.display_name
+          a.user> data-turbo-frame="_top" title=author.handle href=author.display_link == s Ktistec::Emoji.emojify(author.display_name, author_emojis)
           | posted
-        a.date data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
-  - if object.blocked?
-    .extra.text
-      em This object is blocked!
-  - else
-    - if attachments && (attachment = attachments.shift?)
-      - if attachment.image?
-        img.ui.extra.attachment.image src=attachment.url alt=attachment.caption
-      - elsif attachment.video?
-        video.ui.extra.attachment.video src=attachment.url controls=true
-      - elsif attachment.audio?
-        audio.ui.extra.attachment.audio src=attachment.url controls=true
-      - unless attachments.empty?
-        .extra.media
-          - attachments.each do |attachment|
-            - if attachment.image?
-              img.ui.attachment.image src=attachment.url alt=attachment.caption
-            - elsif attachment.video?
-              video.ui.attachment.video src=attachment.url controls=true
-            - elsif attachment.audio?
-              audio.ui.attachment.audio src=attachment.url controls=true
+        a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
+  - unless is_blocked
     - if (name = translation.try(&.name).presence || object.name.presence)
       .extra.text
         - if object.external?
-          a href=object.display_link target="_blank" : strong = name
+          a href=object.display_link target="_blank"
+            strong = name
         - else
           strong = name
     - if (summary = translation.try(&.summary).presence || object.summary.presence)
-      details.extra.text open=with_detail
-        summary = summary
-        - if with_detail
-          div
-            == s html
-        - else
-          div data-controller="clickable-background" data-clickable-background-href-value=href
-            == s html
+      details open=with_detail
+        summary
+          - if object.sensitive
+            i.red.eye.slash.icon
+          == t summary
+        == render "src/views/partials/object/content/body.html.slang"
     - else
-      .extra.text
-        - if with_detail
-          div
-            == s html
-        - else
-          div data-controller="clickable-background" data-clickable-background-href-value=href
-            == s html
+      == render "src/views/partials/object/content/body.html.slang"
     - if with_detail && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq
@@ -93,25 +82,37 @@ crystal:
             - mentions.each do |mention|
               - handle = no_duplicate_handles ? mention.split("@").first : mention
               a.ui.small.label data-turbo-frame="_top" href=mention_path(mention) @#{handle}
-      - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
-        .extra.detail
-          - activities.each do |activity|
-            - if activity.actor?
-              a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
-                - if (icon = activity.actor.icon)
-                  img.ui.avatar.image data-actor-id=activity.actor.id src=icon
-                - else
-                  i.user.icon
-                - case activity
-                - when ActivityPub::Activity::Announce
-                  i.share.icon
-                - when ActivityPub::Activity::Like
-                  i.thumbs.up.icon
+  - if author.deleted? || actor.deleted?
+    .extra.text
+      em This actor is deleted!
+  - elsif author.blocked? || actor.blocked?
+    .extra.text
+      em This actor is blocked!
+  - elsif object.deleted?
+    .extra.text
+      em This content is deleted!
+  - elsif object.blocked?
+    .extra.text
+      em This content is blocked!
   .meta
-    - if account && object.blocked?
+    - if account && object.deleted?
+      - if object.cached?
+        a.ui.mini.iconic.button.source target="_blank" href=object.display_link
+          i.external.arrow.icon
+          | Source
+    - elsif account && object.blocked?
       == form_button unblock_object_path(object), button_class: "ui button mini iconic" do
         i.times.icon
         | Unblock
+      - if object.cached?
+        a.ui.mini.iconic.button.source target="_blank" href=object.display_link
+          i.external.arrow.icon
+          | Source
+    - elsif account && (author.blocked? || actor.blocked?)
+      - if object.cached?
+        a.ui.mini.iconic.button.source target="_blank" href=object.display_link
+          i.external.arrow.icon
+          | Source
     - elsif account && object.draft?
       a data-turbo-frame="_top" href=edit_object_path(object)
         button.ui.mini.iconic.button
@@ -148,6 +149,23 @@ crystal:
         == activity_button(outbox_path(account), object.iri, "Announce", button_class: "ui button mini iconic") do
           i.share.icon
           = pluralize(c, "Share")
+      - if (bookmark = Relationship::Content::Bookmark.find?(actor: account.actor, object: object))
+        == form_button bookmark_path(object), method: "DELETE", button_class: "ui button mini blue iconic" do
+          i.bookmark.icon
+          | Bookmark
+      - else
+        == form_button bookmark_path(object), button_class: "ui button mini iconic" do
+          i.bookmark.outline.icon
+          | Bookmark
+      - if author == account.actor
+        - if (pin =  Relationship::Content::Pin.find?(actor: account.actor, object: object))
+          == form_button pin_path(object), method: "DELETE", button_class: "ui button mini blue iconic" do
+            i.pin.icon
+            | Pin
+        - else
+          == form_button pin_path(object), button_class: "ui button mini iconic" do
+            i.pin.icon
+            | Pin
       - if translation
         == form_button clear_translation_object_path(object), button_class: "ui button mini purple iconic" do
           i.paper.plane.icon
@@ -163,14 +181,14 @@ crystal:
           form.ui.form method="POST" action=unapprove_path(object) data-controller="checkbox-submit"
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
             .ui.mini.toggle.checkbox.checked
-              input type="checkbox" name="public" checked="checked" data-action="change->checkbox-submit#change"
-              label Public
+              input id="object-#{object.id}-public" type="checkbox" name="public" checked="checked" data-action="change->checkbox-submit#change"
+              label for="object-#{object.id}-public" Public
         - else
           form.ui.form method="POST" action=approve_path(object) data-controller="checkbox-submit"
             input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
             .ui.mini.toggle.checkbox
-              input type="checkbox" name="public" data-action="change->checkbox-submit#change"
-              label Public
+              input id="object-#{object.id}-public" type="checkbox" name="public" data-action="change->checkbox-submit#change"
+              label for="object-#{object.id}-public" Public
       - if author == account.actor
         a data-turbo-frame="_top" href=edit_object_path(object)
           button.ui.mini.iconic.button
@@ -184,10 +202,9 @@ crystal:
           i.times.icon
           | Block
       - if object.cached?
-        a.source target="_blank" href=object.display_link
-          button.ui.mini.iconic.button
-            i.external.arrow.icon
-            | Source
+        a.ui.mini.iconic.button.source target="_blank" href=object.display_link
+          i.external.arrow.icon
+          | Source
     - elsif object.local?
       - object.with_statistics!.with_replies_count!(approved_by: object.attributed_to)
       - if (c = object.replies_count) > 0 || object.in_reply_to?.try(&.approved_by?(object.attributed_to))
@@ -207,3 +224,15 @@ crystal:
         button.ui.mini.iconic.button
           i.share.icon
           = pluralize(object.announces_count, "Share")
+  - if account && with_detail && !is_blocked
+    - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
+      .extra.detail
+        - activities.each do |activity|
+          - if activity.actor?
+            a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
+              == actor_icon(activity.actor, "ui avatar image")
+              - case activity
+              - when ActivityPub::Activity::Announce
+                i.share.icon
+              - when ActivityPub::Activity::Like
+                i.thumbs.up.icon

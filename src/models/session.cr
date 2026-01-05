@@ -11,12 +11,6 @@ class Session
   include Ktistec::Model
   include Ktistec::Model::Common
 
-  # Allocates a new session for an account.
-  #
-  def self.new(_account account : Account)
-    new(account: account)
-  end
-
   @[Persistent]
   property session_key : String { Random::Secure.urlsafe_base64 }
 
@@ -26,6 +20,18 @@ class Session
   @[Persistent]
   property account_id : Int64?
   belongs_to account
+
+  # Allocates a new session for an account.
+  #
+  def self.new(_account account : Account)
+    new(account: account)
+  end
+
+  # Removes every session associated with an account.
+  #
+  def self.invalidate_for(account : Account)
+    exec("DELETE FROM sessions WHERE account_id = ?", account.id)
+  end
 
   def body
     JSON.parse(body_json)
@@ -94,8 +100,12 @@ class Session
   rescue Ktistec::JWT::Error | Ktistec::Model::NotFound
   end
 
-  def self.clean_up_stale_sessions(time = 1.day.ago)
-    delete = "DELETE FROM sessions WHERE account_id IS NULL AND updated_at < ?"
-    exec(delete, time)
+  def self.clean_up_stale_sessions
+    delete = <<-QUERY
+      DELETE FROM sessions
+       WHERE (account_id IS NULL AND updated_at < datetime('now', '-1 hour'))
+          OR (updated_at < datetime('now', '-1 month'))
+    QUERY
+    exec(delete)
   end
 end

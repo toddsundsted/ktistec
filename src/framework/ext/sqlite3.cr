@@ -100,12 +100,10 @@ module Ktistec
     LibSQLite3.version.tap do |version|
       version = String.new(version)
       if LibSQLite3.version_number < 3035000
-        puts "Ktistec requires SQLite3 version 3.35.0 or later (linked version is #{version})."
+        STDERR.puts "Ktistec requires SQLite3 version 3.35.0 or later (linked version is #{version})."
         exit -1
       elsif LibSQLite3.version_number.in?(3039000...3041000)
-        puts "Disabling Bloom filter optimization for SQLite3 version #{version}."
-      else
-        puts "SQLite3 version #{version}"
+        STDERR.puts "Disabling Bloom filter optimization for SQLite3 version #{version}."
       end
     end
   end

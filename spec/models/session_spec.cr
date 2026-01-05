@@ -103,20 +103,6 @@ Spectator.describe Session do
     end
   end
 
-  describe "#account=" do
-    it "sets the account" do
-      account = Factory.create(:account)
-      expect{subject.account = account}.to change{subject.account_id}
-    end
-  end
-
-  describe "#account" do
-    it "gets the account" do
-      account = subject.account = Factory.create(:account)
-      expect(subject.account).to eq(account)
-    end
-  end
-
   describe "#generate_jwt" do
     it "generates a web token" do
       expect(subject.generate_jwt).to match(/^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)$/)
@@ -139,19 +125,35 @@ Spectator.describe Session do
     end
   end
 
-  let(anonymous) { described_class.new.save }
-
   describe ".clean_up_stale_sessions" do
-    before_each do
-      Ktistec.database.exec(
-        "UPDATE sessions SET updated_at = date('now', '-2 days') WHERE id IN (?, ?)",
-        anonymous.id,
-        subject.id
-      )
+    let(anonymous) { described_class.new.save }
+    let(authenticated) { described_class.new(account).save }
+
+    context "given an old, anonymous session" do
+      before_each do
+        Ktistec.database.exec(
+          "UPDATE sessions SET updated_at = datetime('now', '-2 hours') WHERE id IN (?, ?)",
+          anonymous.id,
+          subject.id,
+        )
+      end
+
+      it "destroys the anonymous session" do
+        expect{Session.clean_up_stale_sessions}.to change{Session.count}.by(-1)
+      end
     end
 
-    it "removes old, anonymous sessions" do
-      expect{Session.clean_up_stale_sessions}.to change{Session.count}.by(-1)
+    context "givan an old, authenticated session" do
+      before_each do
+        Ktistec.database.exec(
+          "UPDATE sessions SET updated_at = datetime('now', '-35 days') WHERE id = ?",
+          authenticated.id,
+        )
+      end
+
+      it "destroys the old session" do
+        expect{Session.clean_up_stale_sessions}.to change{Session.count}.by(-1)
+      end
     end
   end
 end

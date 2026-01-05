@@ -1,7 +1,10 @@
 h1 Search
 p
-  | Search the Fediverse for users by their username (“user@host.com”),
-    or look up a user or a post by its URL.
+  | Search by:
+ul
+  li Username (e.g., "alice") - searches cached users only, supports prefix matching
+  li Full handle (e.g., "alice@host.com") - fetches remote users
+  li URL - fetches remote users and posts
 form.ui.form class=(message ? "error" : "") method="GET"
   - if message
     .ui.error.message

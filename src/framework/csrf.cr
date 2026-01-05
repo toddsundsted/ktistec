@@ -22,6 +22,9 @@
 
 require "kemal"
 
+require "./ext/context"
+require "./controller"
+
 module Ktistec
   # CSRF preventing middleware.
   #
@@ -31,7 +34,8 @@ module Ktistec
          @allowed_routes = [] of String,
          @allowed_methods = %w(GET HEAD OPTIONS TRACE),
          # these are the only content types/encodings that a browser
-         # should be able to submit cross-domain by default.
+         # should be able to submit cross-domain by default. see:
+         # https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests
          @enforced_content_types = %w(application/x-www-form-urlencoded multipart/form-data text/plain),
          @parameter_name = "authenticity_token",
          @error : String | (HTTP::Server::Context -> String) = "Forbidden (CSRF)"
@@ -51,15 +55,19 @@ module Ktistec
     def call(context)
       return call_next(context) if exclude_match?(context)
 
-      unless context.session.string?("csrf")
-        csrf_token = Random::Secure.hex(16)
-        context.session.string("csrf", csrf_token)
-        context.response.cookies << HTTP::Cookie.new(
-          name: @parameter_name,
-          value: csrf_token,
-          expires: Time.local.to_utc + 1.hour,
-          http_only: false
-        )
+      if context.accepts?("text/html")
+        unless context.session.string?("csrf")
+          csrf_token = Random::Secure.hex(16)
+          context.session.string("csrf", csrf_token)
+          context.response.cookies << HTTP::Cookie.new(
+            name: "__Secure-#{@parameter_name}",
+            value: csrf_token,
+            path: "/",
+            expires: Time.local.to_utc + 1.hour,
+            http_only: false,
+            secure: true,
+          )
+        end
       end
 
       content_type = context.request.headers["Content-Type"]?.try(&.split(";").first.strip.presence)
@@ -74,11 +82,9 @@ module Ktistec
                         else
                           "nothing"
                         end
-      current_token = context.session.string("csrf")
+      current_token = context.session.string?("csrf")
       if current_token == submitted_token
-        # reset the token so it can't be used again
-        # context.session.string("csrf", Random::Secure.hex(16))
-        return call_next(context)
+        call_next(context)
       else
         context.response.status_code = 403
         if (error = @error) && !error.is_a?(String)
@@ -91,6 +97,6 @@ module Ktistec
   end
 
   add_handler CSRF.new(
-    allowed_routes: ["/actors/:username/inbox"]
+    allowed_routes: ["/actors/:username/inbox", "/oauth/token"]
   )
 end

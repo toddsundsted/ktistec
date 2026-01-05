@@ -20,7 +20,9 @@ class Point
       SELECT DISTINCT chart
         FROM points
     QUERY
-    Ktistec.database.query_all(query, as: String)
+    Internal.log_query(query) do
+      Ktistec.database.query_all(query, as: String)
+    end
   end
 
   def self.chart(chart, begin _begin = nil, end _end = nil)

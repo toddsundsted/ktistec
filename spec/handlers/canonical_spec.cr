@@ -1,4 +1,5 @@
 require "../../src/handlers/canonical"
+require "../../src/framework/controller"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"
@@ -8,7 +9,7 @@ class FooBarController
 
   skip_auth ["/foo/bar/secret", "/foo/bar/secret/*"], GET
 
-  get "/foo/bar/secret" do |env|
+  get "/foo/bar/secret" do
   end
 
   get "/foo/bar/secret/:segment" do |env|
@@ -73,6 +74,18 @@ Spectator.describe Ktistec::Handler::Canonical do
           get "/foo/bar/secret/#{segment}", ACCEPT_HTML
           expect(response.status_code).to eq(301)
           expect(response.headers["Location"]).to eq("/does/not/exist/#{segment}")
+        end
+      end
+
+      context "and a HEAD request" do
+        it "returns 200" do
+          head "/does/not/exist", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns 301" do
+          head "/foo/bar/secret", ACCEPT_HTML
+          expect(response.status_code).to eq(301)
         end
       end
     end

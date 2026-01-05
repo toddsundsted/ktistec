@@ -1,9 +1,9 @@
 require "../../src/models/activity_pub/object/note"
-require "../../src/models/activity_pub/object/video"
+require "../../src/models/activity_pub/object/question"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
 require "../../src/models/translation"
-require "../../src/views/view_helper"
+require "../../src/framework/controller"
 require "../../src/utils/translator"
 
 require "../spec_helper/factory"
@@ -15,9 +15,11 @@ Spectator.describe "object partials" do
   include Ktistec::Controller
 
   describe "label.html.slang" do
+    let(env) { env_factory("GET", "/object") }
+
     subject do
       begin
-        XML.parse_html(render "./src/views/partials/object/label.html.slang")
+        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_label_html_slang(env, author, actor))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -31,13 +33,45 @@ Spectator.describe "object partials" do
       it "renders one profile icon" do
         expect(subject.xpath_nodes("//img/@src")).to contain_exactly(author.icon)
       end
+
+      context "and the author is deleted" do
+        before_each { author.delete! }
+
+        it "renders the deleted icon" do
+          expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain("/images/avatars/deleted.png")
+        end
+      end
+
+      context "and the author is blocked" do
+        before_each { author.block! }
+
+        it "renders the blocked icon" do
+          expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain("/images/avatars/blocked.png")
+        end
+      end
     end
 
     context "the actor is not the author" do
       let_build(:actor, named: author, icon: random_string)
 
       it "renders two profile icons" do
-        expect(subject.xpath_nodes("//img/@src")).to contain_exactly(author.icon, actor.icon)
+        expect(subject.xpath_nodes("//img/@src")).to contain_exactly(actor.icon, author.icon)
+      end
+
+      context "and the actor is deleted" do
+        before_each { actor.delete! }
+
+        it "renders the deleted icon" do
+          expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain("/images/avatars/deleted.png")
+        end
+      end
+
+      context "and the actor is blocked" do
+        before_each { actor.block! }
+
+        it "renders the blocked icon" do
+          expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain("/images/avatars/blocked.png")
+        end
       end
     end
   end
@@ -47,7 +81,7 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        XML.parse_html(render "./src/views/partials/object/content.html.slang")
+        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, for_thread, for_actor))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -62,6 +96,7 @@ Spectator.describe "object partials" do
 
     let(with_detail) { false }
     let(for_thread) { nil }
+    let(for_actor) { nil }
 
     context "given HTML content" do
       before_each { object.assign(content: "<ul><li>One</li><li>Two</li></ul>", media_type: "text/html") }
@@ -112,17 +147,17 @@ Spectator.describe "object partials" do
     end
 
     context "given a summary" do
-      before_each { object.assign(summary: "Foo Bar Baz") }
+      before_each { object.assign(summary: "<p>Foo Bar Baz</p>") }
 
-      it "renders the summary" do
-        expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bar Baz")
+      it "renders the summary as plain text" do
+        expect(subject.xpath_nodes("//details/summary/text()")).to have("Foo Bar Baz\n")
       end
 
       context "and a translation" do
-        let_create!(:translation, origin: object, summary: "Foo Bàr Bàz")
+        let_create!(:translation, origin: object, summary: "<p>Foo Bàr Bàz</p>")
 
-        it "renders the translation of the summary" do
-          expect(subject.xpath_nodes("//*[@class='extra text']//text()")).to have("Foo Bàr Bàz")
+        it "renders the translation of the summary as plain text" do
+          expect(subject.xpath_nodes("//details/summary/text()")).to have("Foo Bàr Bàz\n")
         end
       end
     end
@@ -204,6 +239,18 @@ Spectator.describe "object partials" do
 
     # threads
 
+    it "does not render a back link to the parent" do
+      expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]")).to be_empty
+    end
+
+    context "given a reply" do
+      before_each { object.assign(in_reply_to: original).save }
+
+      it "does not render a back link to the parent" do
+        expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]")).to be_empty
+      end
+    end
+
     it "does not render a button to the threaded conversation" do
       object.assign(in_reply_to: original).save
       expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
@@ -242,6 +289,24 @@ Spectator.describe "object partials" do
       context "when viewing a thread" do
         let(for_thread) { [original] }
 
+        it "does not render a back link to the parent" do
+          expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]")).to be_empty
+        end
+
+        context "given a reply" do
+          before_each { object.assign(in_reply_to: original).save }
+
+          it "renders a link back to the parent in thread view" do
+            expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]/@href").map(&.text)).
+              to contain_exactly("#object-#{original.id}")
+          end
+
+          it "renders a link back to the parent in thread view" do
+            expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]/@title").map(&.text)).
+              to contain_exactly("@remote")
+          end
+        end
+
         it "does not render a button to the threaded conversation" do
           object.assign(in_reply_to: original).save
           expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
@@ -271,14 +336,14 @@ Spectator.describe "object partials" do
       end
 
       context "given hashtags with the same name" do
+        let_build(:hashtag, named: one, name: "bar")
+        let_build(:hashtag, named: two, name: "bar")
+
         let(with_detail) { true }
 
         before_each do
           object.assign(
-            hashtags: [
-              Factory.build(:hashtag, name: "bar"),
-              Factory.build(:hashtag, name: "bar")
-            ]
+            hashtags: [one, two]
           )
         end
 
@@ -289,14 +354,14 @@ Spectator.describe "object partials" do
       end
 
       context "given mentions with the same name" do
+        let_build(:mention, named: one, name: "bar@one.com")
+        let_build(:mention, named: two, name: "bar@one.com")
+
         let(with_detail) { true }
 
         before_each do
           object.assign(
-            mentions: [
-              Factory.build(:mention, name: "bar@one.com"),
-              Factory.build(:mention, name: "bar@one.com")
-            ]
+            mentions: [one, two]
           )
         end
 
@@ -307,14 +372,14 @@ Spectator.describe "object partials" do
       end
 
       context "given mentions with different names but the same handle" do
+        let_build(:mention, named: one, name: "bar@one.com")
+        let_build(:mention, named: two, name: "bar@two.com")
+
         let(with_detail) { true }
 
         before_each do
           object.assign(
-            mentions: [
-              Factory.build(:mention, name: "bar@one.com"),
-              Factory.build(:mention, name: "bar@two.com")
-            ]
+            mentions: [one, two]
           )
         end
 
@@ -325,14 +390,14 @@ Spectator.describe "object partials" do
       end
 
       context "given mentions with different names" do
+        let_build(:mention, named: one, name: "foo@one.com")
+        let_build(:mention, named: two, name: "bar@two.com")
+
         let(with_detail) { true }
 
         before_each do
           object.assign(
-            mentions: [
-              Factory.build(:mention, name: "foo@one.com"),
-              Factory.build(:mention, name: "bar@two.com")
-            ]
+            mentions: [one, two]
           )
         end
 
@@ -392,6 +457,130 @@ Spectator.describe "object partials" do
         it "renders a button to edit" do
           expect(subject.xpath_nodes("//button/text()")).to have("Edit")
         end
+      end
+    end
+
+    # deleted
+
+    context "when author is deleted" do
+      before_each { author.delete! }
+
+      it "indicates the author is deleted" do
+        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+      end
+
+      context "when authenticated" do
+        sign_in
+
+        it "indicates the author is deleted" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+        end
+      end
+    end
+
+    context "given an author that is not the actor" do
+      let_create(:actor, named: author)
+
+      context "when author is deleted" do
+        before_each { author.delete! }
+
+        it "indicates the author is deleted" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+        end
+
+        context "when authenticated" do
+          sign_in
+
+          it "indicates the author is deleted" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+          end
+        end
+      end
+
+      context "when actor is deleted" do
+        before_each { actor.delete! }
+
+        it "indicates the actor is deleted" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+        end
+
+        context "when authenticated" do
+          sign_in
+
+          it "indicates the actor is deleted" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is deleted/)
+          end
+        end
+      end
+    end
+
+    context "when object is deleted" do
+      before_each { object.delete! }
+
+      it "indicates the object is deleted" do
+        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/This content is deleted/)
+      end
+    end
+
+    # blocked
+
+    context "when author is blocked" do
+      before_each { author.block! }
+
+      it "indicates the author is blocked" do
+        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+      end
+
+      context "when authenticated" do
+        sign_in
+
+        it "indicates the author is blocked" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+        end
+      end
+    end
+
+    context "given an author that is not the actor" do
+      let_create(:actor, named: author)
+
+      context "when author is blocked" do
+        before_each { author.block! }
+
+        it "indicates the author is blocked" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+        end
+
+        context "when authenticated" do
+          sign_in
+
+          it "indicates the author is blocked" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+          end
+        end
+      end
+
+      context "when actor is blocked" do
+        before_each { actor.block! }
+
+        it "indicates the actor is blocked" do
+          expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+        end
+
+        context "when authenticated" do
+          sign_in
+
+          it "indicates the actor is blocked" do
+            expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/actor is blocked/)
+          end
+        end
+      end
+    end
+
+    context "when object is blocked" do
+      before_each { object.block! }
+
+      it "indicates the object is blocked" do
+        expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/This content is blocked/)
       end
     end
 
@@ -508,7 +697,11 @@ Spectator.describe "object partials" do
     # hosting
 
     context "if object content is externally hosted" do
-      let_create!(:video, named: :object, name: "Foo Bar Baz")
+      class ExternalObject < ActivityPub::Object
+        # objects are externally hosted by default
+      end
+
+      let(object) { ExternalObject.new(name: "Foo Bar Baz") }
 
       pre_condition { expect(object.external?).to be_true }
 
@@ -564,6 +757,171 @@ Spectator.describe "object partials" do
 
       it "renders the activity type as a class" do
         expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
+      end
+    end
+
+    context "with multiple state classes" do
+      let_create!(:object, sensitive: true, replies_count: 2_i64)
+      let_create!(:mention, subject: object, name: "testuser")
+
+      it "contains expected class values" do
+        class_attr = subject.xpath_nodes("//*[contains(@class,'event')]/@class").first.content
+        classes = class_attr.split(/\s+/)
+        expect(classes).to contain_exactly(
+          "event",
+          "activity-like",
+          "actor-actor",
+          "object-object",
+          "is-sensitive",
+          "has-replies",
+          "visibility-public",
+        ).in_any_order
+      end
+    end
+  end
+
+  describe "object.json.ecr" do
+    let(env) { env_factory("GET", "/object") }
+
+    subject do
+      JSON.parse(render "src/views/partials/object.json.ecr")
+    end
+
+    describe "Question with oneOf" do
+      let_build(
+        :actor, named: :author,
+      )
+      let_build(
+        :question, named: :object,
+        attributed_to: author,
+        published: Time.utc,
+      )
+      let_create!(
+        :poll,
+        question: object,
+        options: [
+          Poll::Option.new("Option 1", 5),
+          Poll::Option.new("Option 2", 3),
+        ],
+        multiple_choice: false,
+        voters_count: 8,
+        closed_at: 1.day.from_now,
+      )
+      let(recursive) { false }
+
+      it "includes `oneOf`" do
+        expect(subject["oneOf"]).not_to be_nil
+      end
+
+      it "does not include `anyOf`" do
+        expect(subject["anyOf"]?).to be_nil
+      end
+
+      it "includes correct number of options" do
+        expect(subject["oneOf"].as_a.size).to eq(2)
+      end
+
+      it "includes option names" do
+        expect(subject["oneOf"][0]["name"]).to eq("Option 1")
+        expect(subject["oneOf"][1]["name"]).to eq("Option 2")
+      end
+
+      it "includes vote counts" do
+        expect(subject["oneOf"][0]["replies"]["totalItems"]).to eq(5)
+        expect(subject["oneOf"][1]["replies"]["totalItems"]).to eq(3)
+      end
+
+      it "includes `votersCount`" do
+        expect(subject["votersCount"]).to eq(8)
+      end
+
+      it "has matching `endTime` and `closed` values" do
+        expect(subject["endTime"]).to eq(subject["closed"])
+      end
+    end
+
+    describe "Question with anyOf" do
+      let_build(
+        :actor, named: :author,
+      )
+      let_build(
+        :question, named: :object,
+        attributed_to: author,
+        published: Time.utc,
+      )
+      let_create!(
+        :poll,
+        question: object,
+        options: [
+          Poll::Option.new("Choice A", 7),
+          Poll::Option.new("Choice B", 2),
+        ],
+        multiple_choice: true,
+        voters_count: 15,
+        closed_at: 2.days.from_now,
+      )
+      let(recursive) { false }
+
+      it "includes `anyOf`" do
+        expect(subject["anyOf"]).not_to be_nil
+      end
+
+      it "does not include `oneOf`" do
+        expect(subject["oneOf"]?).to be_nil
+      end
+
+      it "includes correct number of options" do
+        expect(subject["anyOf"].as_a.size).to eq(2)
+      end
+
+      it "includes option names" do
+        expect(subject["anyOf"][0]["name"]).to eq("Choice A")
+        expect(subject["anyOf"][1]["name"]).to eq("Choice B")
+      end
+
+      it "includes vote counts" do
+        expect(subject["anyOf"][0]["replies"]["totalItems"]).to eq(7)
+        expect(subject["anyOf"][1]["replies"]["totalItems"]).to eq(2)
+      end
+
+      it "includes `votersCount`" do
+        expect(subject["votersCount"]).to eq(15)
+      end
+
+      it "has matching `endTime` and `closed` values" do
+        expect(subject["endTime"]).to eq(subject["closed"])
+      end
+    end
+
+    context "given a poll" do
+      let_build(
+        :actor, named: :author,
+      )
+      let_build(
+        :question, named: :object,
+        attributed_to: author,
+        published: Time.utc,
+      )
+      let_create!(
+        :poll,
+        question: object,
+        options: [
+          Poll::Option.new("Yes", 0),
+          Poll::Option.new("No", 0),
+        ],
+      )
+      let(recursive) { false }
+
+      it "does not include `votersCount`" do
+        expect(subject["votersCount"]?).to be_nil
+      end
+
+      it "does not include `endTime`" do
+        expect(subject["endTime"]?).to be_nil
+      end
+
+      it "does not include `closed`" do
+        expect(subject["closed"]?).to be_nil
       end
     end
   end

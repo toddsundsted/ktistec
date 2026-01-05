@@ -1,10 +1,16 @@
 {
-  <%= field_pair(actor, name) %>
-  <%= field_pair(actor, summary) %>
-  <%= field_pair(account, language) %>
-  <%= field_pair(account, timezone) %>
-  <%= field_pair(actor, image) %>
-  <%= field_pair(actor, icon) %>
-  <%= field_pair(settings, site) %>
-  <%= field_pair(settings, footer, false) %>
+  "actor":{
+    <%= field_pair(actor, name) %>
+    <%= field_pair(actor, summary) %>
+    <%= field_pair(account, language) %>
+    <%= field_pair(account, timezone) %>
+    <%= field_pair(actor, image) %>
+    <%= field_pair(actor, icon, false) %>
+  },
+  "site":{
+    <%= field_pair(settings, site) %>
+    <%= field_pair(settings, image) %>
+    <%= field_pair(settings, description) %>
+    <%= field_pair(settings, footer, false) %>
+  }
 }

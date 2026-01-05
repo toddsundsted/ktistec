@@ -69,7 +69,8 @@ class Task
     rescue File::NotFoundError
       # directory does not exist
     ensure
-      self.next_attempt_at = 1.hour.from_now
+      self.next_attempt_at = randomized_next_attempt_at(1.hour)
+      session.destroy if session
     end
   end
 end

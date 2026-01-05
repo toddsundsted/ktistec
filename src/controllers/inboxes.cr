@@ -3,18 +3,25 @@ require "../framework/controller"
 require "../framework/open"
 require "../framework/signature"
 require "../models/activity_pub/activity/**"
-require "../models/task/receive"
-require "../rules/content_rules"
+require "../services/inbox_activity_processor"
 
-class RelationshipsController
+class InboxesController
   include Ktistec::Controller
 
   Log = ::Log.for("inbox")
 
   skip_auth ["/actors/:username/inbox"], POST
 
+  private def self.get_account(env)
+    Account.find?(username: env.params.url["username"]?)
+  end
+
   post "/actors/:username/inbox" do |env|
     request_id = env.request.object_id
+
+    if Ktistec::Server.shutting_down?
+      service_unavailable
+    end
 
     unless (account = get_account(env))
       not_found
@@ -25,17 +32,26 @@ class RelationshipsController
 
     Log.trace { "[#{request_id}] new post" }
 
+    json_ld = Ktistec::JSON_LD.expand(JSON.parse(body))
+
+    # unwrap Lemmy's Announce activity, if present
+
+    json_ld = unwrap_lemmy_announce(json_ld, request_id)
+
     activity =
       begin
-        ActivityPub::Activity.from_json_ld(body)
+        ActivityPub::Activity.from_json_ld(json_ld)
       rescue Ktistec::Model::TypeError
         bad_request("Unsupported Type")
       end
 
     Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
-    if activity.local?
-      forbidden
+    # this is, strictly speaking, not required because this method
+    # should be idempotent, but it avoids a lot of unnecessary work
+
+    if Relationship::Content::Inbox.find?(owner: account.actor, activity: activity)
+      ok
     end
 
     # if the activity is signed but we don't have the actor's public
@@ -66,10 +82,6 @@ class RelationshipsController
 
     Log.trace { "[#{request_id}] actor iri=#{actor.iri}" }
 
-    if actor.local?
-      forbidden
-    end
-
     verified = false
 
     # 2
@@ -93,17 +105,23 @@ class RelationshipsController
       end
     end
 
-    # mastodon issues identifiers for activities that cannot be
+    # some servers issue identifiers for activities that cannot be
     # dereferenced (they are the identifier of the object or actor
     # plus a URL fragment).  so as a last resort, when dealing with an
     # activity that can't otherwise be verified, check on the object
-    # or actor.  if the activity is an update, and the object exists,
-    # or the activity is a delete, but the object or actor does not
-    # exit, consider the activity valid.
+    # or actor.  if the activity is a create or an update, and the
+    # object exists, or the activity is a delete, but the object or
+    # actor does not exist, consider the activity verified.
 
     unless verified
       if (object_iri = activity.object_iri)
-        if activity.is_a?(ActivityPub::Activity::Update)
+        if activity.is_a?(ActivityPub::Activity::Create)
+          Log.trace { "[#{request_id}] checking object of create iri=#{object_iri}" }
+          if (temporary = ActivityPub::Object.dereference?(account.actor, object_iri, ignore_cached: true))
+            activity.object = temporary
+            verified = true
+          end
+        elsif activity.is_a?(ActivityPub::Activity::Update)
           Log.trace { "[#{request_id}] checking object of update iri=#{object_iri}" }
           if (temporary = ActivityPub::Object.dereference?(account.actor, object_iri, ignore_cached: true))
             activity.object = temporary
@@ -113,6 +131,7 @@ class RelationshipsController
           Log.trace { "[#{request_id}] checking object of delete iri=#{object_iri}" }
           headers = Ktistec::Signature.sign(account.actor, object_iri, method: :get)
           headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
+          headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
           response = HTTP::Client.get(object_iri, headers)
           if response.status_code.in?([404, 410])
             verified = true
@@ -141,6 +160,11 @@ class RelationshipsController
       unless object.attributed_to?(account.actor, dereference: true)
         bad_request
       end
+    # DESIGN DECISION: Actors can both Like AND Dislike the same
+    # object. This is intentional - it accurately captures federated
+    # state. Some ActivityPub implementations may allow users to both
+    # upvote and downvote the same content. Ktistec preserves this
+    # state as received.
     when ActivityPub::Activity::Like
       unless (object = activity.object?(account.actor, dereference: true))
         bad_request
@@ -149,6 +173,15 @@ class RelationshipsController
         bad_request
       end
       # compatibility with implementations that don't address likes
+      deliver_to = [account.iri]
+    when ActivityPub::Activity::Dislike
+      unless (object = activity.object?(account.actor, dereference: true))
+        bad_request
+      end
+      unless object.attributed_to?(account.actor, dereference: true)
+        bad_request
+      end
+      # compatibility with implementations that don't address dislikes
       deliver_to = [account.iri]
     when ActivityPub::Activity::Create
       unless (object = activity.object?(account.actor, dereference: true, ignore_cached: true))
@@ -182,7 +215,7 @@ class RelationshipsController
       unless activity.object.actor == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor))
+      unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
         bad_request
       end
       # compatibility with implementations that don't address accepts
@@ -194,7 +227,7 @@ class RelationshipsController
       unless activity.object.actor == account.actor
         bad_request
       end
-      unless (follow = Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor))
+      unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
         bad_request
       end
       # compatibility with implementations that don't address rejects
@@ -216,7 +249,7 @@ class RelationshipsController
         unless object.actor == activity.actor
           bad_request
         end
-        unless (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
+        unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
           bad_request
         end
         deliver_to = [account.iri]
@@ -249,77 +282,17 @@ class RelationshipsController
       bad_request("Activity Not Supported")
     end
 
-    # check to see if the activity already exists and save it -- this
-    # should be atomic under fibers but is not thread-safe. this
-    # prevents duplicate activities being created if the server
-    # receives the same activity multiple times. this can happen in
-    # practice because the validation steps above take time and
-    # servers acting as relays forward activities they've received,
-    # and those activities can arrive while the original activity is
-    # being validated.
+    # check to see if the activity already exists. if not, save it
 
-    if ActivityPub::Activity.find?(activity.iri)
-      # mastodon reissues identifiers for accept and reject
-      # activities. since these are implemented, here, as idempotent
-      # operations, don't respond with conflict.
-      unless activity.class.in?([ActivityPub::Activity::Accept, ActivityPub::Activity::Reject])
-        conflict
-      end
+    if (temporary = ActivityPub::Activity.find?(activity.iri))
+      activity = temporary
+    else
+      activity.save
     end
-
-    activity.save
 
     Log.trace { "[#{request_id}] saved id=#{activity.id}" }
 
-    ContentRules.new.run do
-      recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq
-      recipients.each { |recipient| assert ContentRules::IsRecipient.new(recipient) }
-      assert ContentRules::Incoming.new(account.actor, activity)
-    end
-
-    # handle side-effects
-
-    case activity
-    when ActivityPub::Activity::Follow
-      if activity.object == account.actor
-        unless Relationship::Social::Follow.find?(actor: activity.actor, object: activity.object)
-          Relationship::Social::Follow.new(
-            actor: activity.actor,
-            object: activity.object,
-            visible: false
-          ).save(skip_associated: true)
-        end
-      end
-    when ActivityPub::Activity::Accept
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: true).save
-      end
-    when ActivityPub::Activity::Reject
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: false).save
-      end
-    when ActivityPub::Activity::Undo
-      case (object = activity.object)
-      when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
-          follow.destroy
-        end
-      end
-      activity.object.undo!
-    when ActivityPub::Activity::Delete
-      case (object = activity.object?)
-      when ActivityPub::Object
-        object.delete!
-      when ActivityPub::Actor
-        object.delete!
-      end
-    end
-
-    Task::Receive.new(
-      receiver: account.actor,
-      activity: activity,
-      deliver_to: deliver_to
-    ).schedule
+    InboxActivityProcessor.process(account, activity, deliver_to)
 
     Log.trace { "[#{request_id}] complete" }
 
@@ -339,7 +312,30 @@ class RelationshipsController
     ok "relationships/inbox", env: env, account: account, activities: activities
   end
 
-  private def self.get_account(env)
-    Account.find?(username: env.params.url["username"]?)
+  private def self.unwrap_lemmy_announce(json_ld, request_id)
+    type = json_ld.dig?("@type").try(&.as_s)
+    return json_ld unless type == "https://www.w3.org/ns/activitystreams#Announce"
+
+    object = json_ld["https://www.w3.org/ns/activitystreams#object"]?
+    return json_ld unless object && object.as_h?
+
+    supported_types = [
+      "https://www.w3.org/ns/activitystreams#Create",
+      "https://www.w3.org/ns/activitystreams#Like",
+      "https://www.w3.org/ns/activitystreams#Dislike",
+      "https://www.w3.org/ns/activitystreams#Update",
+      "https://www.w3.org/ns/activitystreams#Undo",
+      "https://www.w3.org/ns/activitystreams#Delete"
+    ]
+
+    type = object.dig?("@type").try(&.as_s)
+    return json_ld unless type && type.in?(supported_types)
+
+    Log.debug { "[#{request_id}] unwrapped #{type.split("#").last} from Announce" }
+
+    object
+  rescue ex
+    Log.warn { "[#{request_id}] failed to unwrap Announce: #{ex.message}" }
+    json_ld
   end
 end

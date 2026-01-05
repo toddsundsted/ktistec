@@ -3,6 +3,21 @@ require "../../src/controllers/actors"
 require "../spec_helper/controller"
 require "../spec_helper/factory"
 
+# redefine as public for testing
+class ActorsController
+  def self.get_account(env)
+    previous_def(env)
+  end
+
+  def self.get_account_with_ownership(env)
+    previous_def(env)
+  end
+
+  def self.get_actor(env)
+    previous_def(env)
+  end
+end
+
 Spectator.describe ActorsController do
   setup_spec
 
@@ -10,6 +25,72 @@ Spectator.describe ActorsController do
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
 
   let(actor) { register.actor }
+
+  describe ".get_account" do
+    let(account) { register }
+
+    it "returns nil" do
+      env = env_factory("GET", "/actors/nonexistent/posts")
+      result = ActorsController.get_account(env)
+      expect(result).to be_nil
+    end
+
+    it "returns account" do
+      env = env_factory("GET", "/actors/#{account.username}/posts")
+      result = ActorsController.get_account(env)
+      expect(result).to eq(account)
+    end
+  end
+
+  describe ".get_account_with_ownership" do
+    let(account) { register }
+
+    it "returns nil" do
+      env = env_factory("GET", "/actors/nonexistent/posts")
+      result = ActorsController.get_account_with_ownership(env)
+      expect(result).to be_nil
+    end
+
+    it "returns nil" do
+      env = env_factory("GET", "/actors/#{account.username}/posts")
+      result = ActorsController.get_account_with_ownership(env)
+      expect(result).to be_nil
+    end
+
+    context "when authenticated" do
+      sign_in(as: account.username)
+
+      it "returns account" do
+        env = env_factory("GET", "/actors/#{account.username}/posts")
+        result = ActorsController.get_account_with_ownership(env)
+        expect(result).to eq(account)
+      end
+
+      context "given another account" do
+        let(other_account) { register }
+
+        it "returns nil" do
+          env = env_factory("GET", "/actors/#{other_account.username}/posts")
+          result = ActorsController.get_account_with_ownership(env)
+          expect(result).to be_nil
+        end
+      end
+    end
+  end
+
+  describe ".get_actor" do
+    let_create!(:actor)
+
+    it "returns nil" do
+      result = ActorsController.get_actor(999999)
+      expect(result).to be_nil
+    end
+
+    it "returns actor" do
+      result = ActorsController.get_actor(actor.id)
+      expect(result).to eq(actor)
+    end
+  end
 
   describe "GET /actors/:username" do
     it "returns 404 if not found" do
@@ -48,21 +129,22 @@ Spectator.describe ActorsController do
       let_build(:create)
       let_build(:announce)
 
+      let_create!(:timeline_create, owner: actor, object: create.object)
+      let_create!(:timeline_announce, owner: actor, object: announce.object)
+
       before_each do
         put_in_outbox(owner: actor, activity: create)
-        Factory.create(:timeline_create, owner: actor, object: create.object)
         put_in_outbox(owner: actor, activity: announce)
-        Factory.create(:timeline_announce, owner: actor, object: announce.object)
       end
 
       it "with no filters it renders all posts" do
         get "/actors/#{actor.username}?filters=none", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create", "event activity-announce").in_any_order
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/, /event activity-announce/).in_any_order
       end
 
       it "filters out shares from posts" do
         get "/actors/#{actor.username}?filters=no-shares", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/)
       end
 
       context "given a reply" do
@@ -70,15 +152,141 @@ Spectator.describe ActorsController do
 
         it "with no filters it renders all posts" do
           get "/actors/#{actor.username}?filters=none", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create", "event activity-announce").in_any_order
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/, /event activity-announce/).in_any_order
         end
 
         it "filters out replies from posts" do
           get "/actors/#{actor.username}?filters=no-replies", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-announce/)
+        end
+      end
+
+      describe "filter preferences" do
+        it "stores filter preferences in session" do
+          get "/actors/#{actor.username}?filters=custom-filter", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(Global.session.not_nil!.string?("timeline_filters")).to eq("custom-filter")
+        end
+
+        it "handles empty filters gracefully" do
+          Global.session.not_nil!.delete("timeline_filters")
+          get "/actors/#{actor.username}", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+        end
+
+        it "handles empty filters gracefully" do
+          Global.session.not_nil!.string("timeline_filters", "")
+          get "/actors/#{actor.username}", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+        end
+
+        it "uses stored filters and redirects" do
+          Global.session.not_nil!.string("timeline_filters", "custom-filter")
+          get "/actors/#{actor.username}", ACCEPT_HTML
+          expect(response.status_code).to eq(302)
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}?filters=custom-filter")
+        end
+
+        it "removes the query string" do
+          Global.session.not_nil!.string("timeline_filters", "custom-filter")
+          get "/actors/#{actor.username}?filters=", ACCEPT_HTML
+          expect(response.status_code).to eq(302)
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}")
+        end
+
+        it "clears stored filters" do
+          Global.session.not_nil!.string("timeline_filters", "custom-filter")
+          get "/actors/#{actor.username}?filters=", ACCEPT_HTML
+          expect(Global.session.not_nil!.string?("timeline_filters")).to be_nil
         end
       end
     end
+
+    describe "filter preferences" do
+      it "does not store filter preferences" do
+        get "/actors/#{actor.username}?filters=custom-filter", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+        expect(Global.session).to be_nil
+      end
+    end
+
+    it "includes RSS feed discovery link in HTML head when unauthenticated" do
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      html = XML.parse_html(response.body)
+      rss_link = html.xpath_node("//link[@rel='alternate'][@type='application/rss+xml'][@href='/actors/#{actor.username}/feed.rss']")
+      expect(rss_link.try(&.["title"])).to eq("#{actor.display_name}: RSS Feed")
+    end
+
+    it "includes og:url metadata" do
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      html = XML.parse_html(response.body)
+      og_url = html.xpath_node("//meta[@property='og:url']")
+      expect(og_url.try(&.["content"])).to eq("#{Ktistec.host}/@#{actor.username}")
+    end
+
+    it "includes profile:username" do
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      html = XML.parse_html(response.body)
+      profile_username = html.xpath_node("//meta[@property='profile:username']")
+      expect(profile_username.try(&.["content"])).to eq(actor.username)
+    end
+
+    it "includes og:image" do
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      html = XML.parse_html(response.body)
+      og_image = html.xpath_node("//meta[@property='og:image']")
+      expect(og_image.try(&.["content"])).to eq("https://test.test/images/logo.png")
+    end
+
+    it "includes og:image:alt" do
+      get "/actors/#{actor.username}", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+      html = XML.parse_html(response.body)
+      og_image_alt = html.xpath_node("//meta[@property='og:image:alt']")
+      expect(og_image_alt.try(&.["content"])).to eq(actor.username)
+    end
+  end
+
+  describe "GET /actors/:username/feed.rss" do
+    it "returns 404 if not found" do
+      get "/actors/missing/feed.rss"
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns correct content type" do
+      get "/actors/#{actor.username}/feed.rss"
+      expect(response.status_code).to eq(200)
+      expect(response.headers["Content-Type"]).to eq("application/rss+xml; charset=utf-8")
+    end
+
+    it "returns valid RSS" do
+      get "/actors/#{actor.username}/feed.rss"
+      expect(response.status_code).to eq(200)
+      xml = XML.parse(response.body)
+      expect(xml.xpath_node("//rss")).to_not be_nil
+      expect(xml.xpath_node("//channel")).to_not be_nil
+    end
+
+    let_build(:create, actor: actor)
+
+    it "includes public posts in RSS feed" do
+      put_in_outbox(owner: actor, activity: create)
+
+      get "/actors/#{actor.username}/feed.rss"
+      expect(response.status_code).to eq(200)
+      xml = XML.parse(response.body)
+      expect(xml.xpath_nodes("//item")).to_not be_empty
+      expect(xml.xpath_node("//item/title")).to_not be_nil
+      expect(xml.xpath_node("//item/link")).to_not be_nil
+      expect(xml.xpath_node("//item/description")).to_not be_nil
+      expect(xml.xpath_node("//item/pubDate")).to_not be_nil
+      expect(xml.xpath_node("//item/guid")).to_not be_nil
+    end
+
   end
 
   describe "GET /actors/:username/public-posts" do
@@ -116,7 +324,7 @@ Spectator.describe ActorsController do
 
         it "renders the object's create aspect" do
           get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
         end
       end
 
@@ -125,7 +333,7 @@ Spectator.describe ActorsController do
 
         it "renders the object's announce aspect" do
           get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
         end
       end
 
@@ -137,7 +345,7 @@ Spectator.describe ActorsController do
 
         it "renders the object's create aspect" do
           get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
         end
       end
     end
@@ -155,7 +363,7 @@ Spectator.describe ActorsController do
 
         it "renders the object's announce aspect" do
           get "/actors/#{actor.username}/public-posts", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
         end
       end
     end
@@ -195,14 +403,14 @@ Spectator.describe ActorsController do
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/posts", ACCEPT_HTML
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/posts", ACCEPT_JSON
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
       it "succeeds" do
@@ -229,7 +437,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
           end
         end
 
@@ -238,7 +446,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
           end
         end
 
@@ -250,7 +458,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
           end
         end
       end
@@ -268,7 +476,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
           end
         end
       end
@@ -282,6 +490,124 @@ Spectator.describe ActorsController do
         get "/actors/#{actor.username}/posts", ACCEPT_JSON
         expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
       end
+    end
+  end
+
+  describe "GET /actors/:username/bookmarks" do
+    it "returns 401 if not authorized" do
+      get "/actors/missing/bookmarks", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/actors/missing/bookmarks", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "returns 404 if not found" do
+        get "/actors/missing/bookmarks", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if not found" do
+        get "/actors/missing/bookmarks", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if different account" do
+        get "/actors/#{register.actor.username}/bookmarks", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if different account" do
+        get "/actors/#{register.actor.username}/bookmarks", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/bookmarks", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/bookmarks", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      context "with bookmarked objects" do
+        let_create(:object, named: :note, visible: true, published: Time.utc)
+        let_create!(:bookmark_relationship, actor: actor, object: note)
+
+        it "renders bookmarked objects" do
+          get "/actors/#{actor.username}/bookmarks", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]")).not_to be_empty
+        end
+
+        it "renders bookmarked objects" do
+          get "/actors/#{actor.username}/bookmarks", ACCEPT_JSON
+          expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).not_to be_empty
+        end
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/bookmarks", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]")).to be_empty
+      end
+
+      it "renders the collection" do
+        get "/actors/#{actor.username}/bookmarks", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
+      end
+    end
+  end
+
+  describe "GET /actors/:username/featured" do
+    it "returns 404 if not found" do
+      get "/actors/missing/featured", ACCEPT_HTML
+      expect(response.status_code).to eq(404)
+    end
+
+    it "returns 404 if not found" do
+      get "/actors/missing/featured", ACCEPT_JSON
+      expect(response.status_code).to eq(404)
+    end
+
+    it "succeeds" do
+      get "/actors/#{actor.username}/featured", ACCEPT_HTML
+      expect(response.status_code).to eq(200)
+    end
+
+    it "succeeds" do
+      get "/actors/#{actor.username}/featured", ACCEPT_JSON
+      expect(response.status_code).to eq(200)
+    end
+
+    context "with pinned/featured objects" do
+      let_create(:object, named: note, attributed_to: actor, visible: true)
+      let_create!(:pin_relationship, actor: actor, object: note)
+
+      it "renders featured objects" do
+        get "/actors/#{actor.username}/featured", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]")).not_to be_empty
+      end
+
+      it "renders featured objects" do
+        get "/actors/#{actor.username}/featured", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).not_to be_empty
+      end
+    end
+
+    it "renders an empty collection" do
+      get "/actors/#{actor.username}/featured", ACCEPT_HTML
+      expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]")).to be_empty
+    end
+
+    it "renders an empty collection" do
+      get "/actors/#{actor.username}/featured", ACCEPT_JSON
+      expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
     end
   end
 
@@ -309,14 +635,14 @@ Spectator.describe ActorsController do
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/timeline", ACCEPT_HTML
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/timeline", ACCEPT_JSON
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
       it "succeeds" do
@@ -354,7 +680,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
           end
         end
 
@@ -366,7 +692,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
           end
         end
       end
@@ -382,7 +708,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
           end
         end
 
@@ -394,7 +720,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
           end
         end
 
@@ -407,7 +733,7 @@ Spectator.describe ActorsController do
 
           it "renders the object without aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/^event\s/)
           end
         end
 
@@ -420,7 +746,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's create aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
           end
         end
 
@@ -433,7 +759,7 @@ Spectator.describe ActorsController do
 
           it "renders the object's announce aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
           end
         end
 
@@ -447,7 +773,7 @@ Spectator.describe ActorsController do
 
           it "renders the object without aspect" do
             get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/^event\s/)
           end
 
           context "and a create" do
@@ -457,7 +783,7 @@ Spectator.describe ActorsController do
 
             it "renders the object's create aspect" do
               get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-create")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
             end
           end
 
@@ -468,7 +794,7 @@ Spectator.describe ActorsController do
 
             it "renders the object's announce aspect" do
               get "/actors/#{actor.username}/timeline", ACCEPT_HTML
-              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event activity-announce")
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
             end
           end
         end
@@ -482,6 +808,20 @@ Spectator.describe ActorsController do
       it "renders an empty collection" do
         get "/actors/#{actor.username}/timeline", ACCEPT_JSON
         expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to be_empty
+      end
+
+      describe "turbo-stream-source pagination" do
+        it "includes turbo-stream-source on first page" do
+          get "/actors/#{actor.username}/timeline", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).to contain("turbo-stream-source")
+        end
+
+        it "excludes turbo-stream-source on subsequent pages" do
+          get "/actors/#{actor.username}/timeline?page=2", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).to_not contain("turbo-stream-source")
+        end
       end
     end
   end
@@ -510,14 +850,14 @@ Spectator.describe ActorsController do
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/notifications", ACCEPT_HTML
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/notifications", ACCEPT_JSON
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
       it "succeeds" do
@@ -576,14 +916,14 @@ Spectator.describe ActorsController do
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/drafts", ACCEPT_HTML
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
-      it "returns 403 if different account" do
+      it "returns 404 if different account" do
         get "/actors/#{register.actor.username}/drafts", ACCEPT_JSON
-        expect(response.status_code).to eq(403)
+        expect(response.status_code).to eq(404)
       end
 
       it "succeeds" do
@@ -643,13 +983,13 @@ Spectator.describe ActorsController do
       it "renders the actor" do
         get "/remote/actors/#{actor.id}", ACCEPT_HTML
         expect(response.status_code).to eq(200)
-        expect(XML.parse_html(response.body).xpath_nodes("/html")).not_to be_empty
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'segment')]/a[contains(@href,'/remote/actors/#{actor.id}')]/text()").first).to eq(actor.display_name)
       end
 
       it "renders the actor" do
         get "/remote/actors/#{actor.id}", ACCEPT_JSON
         expect(response.status_code).to eq(200)
-        expect(JSON.parse(response.body).dig("id")).to be_truthy
+        expect(JSON.parse(response.body).dig("id")).to eq(actor.iri)
       end
     end
   end
@@ -732,7 +1072,27 @@ Spectator.describe ActorsController do
 
       it "schedules the refresh task" do
         expect{post "/remote/actors/#{actor.id}/refresh"}.
-          to change{Task::RefreshActor.exists?(actor.iri)}
+          to change{Task::RefreshActor.find?(actor: actor)}
+      end
+
+      it "syncs the featured collection" do
+        post "/remote/actors/#{actor.id}/refresh"
+        expect(Task::RefreshActor.find(actor: actor).state.sync_featured_collection).to be_true
+      end
+
+      it "does not sync the featured collection" do
+        post "/remote/actors/#{actor.id}/refresh", HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"}, "sync-featured-collection=false"
+        expect(Task::RefreshActor.find(actor: actor).state.sync_featured_collection).to be_false
+      end
+
+      it "renders a turbo stream replace message" do
+        post "/remote/actors/#{actor.id}/refresh", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
+        expect(XML.parse_html(response.body).xpath_nodes("//turbo-stream[@action='replace']/@target")).to contain_exactly("actor-#{actor.id}-refresh-button")
+      end
+
+      it "it succeeds" do
+        post "/remote/actors/#{actor.id}/refresh"
+        expect(response.status_code).to eq(200)
       end
     end
   end

@@ -16,17 +16,23 @@
         <link rel="stylesheet" href="/3rd/semantic-2.4.1.min.css"/>
         <script>
           window.Ktistec = {
-            csrf: '<%= env.session.string?("csrf") %>'
+            csrf: '<%= env.session.string?("csrf") %>',
+            auth: <%= !!env.session.account? %>
           }
         </script>
         <link rel="stylesheet" href="/dist/site.css"/>
         <script src="/dist/site.bundle.js"></script>
+        <%= Ktistec::Themes.css_tags %>
+        <%= Ktistec::Themes.js_tags %>
+        <%= og_metadata %>
         <%= head %>
     </head>
-    <body class="dimmable">
+    <body class="dimmable" <%= env.account? ? %q|data-controller="xray"| : nil %>>
         <%= render "src/views/partials/modals.html.slang" %>
         <%= render "src/views/partials/header.html.slang" %>
-        <div class="ui text container">
+        <%= render "src/views/partials/banner.html.slang" %>
+        <%- wide = (path = env.request.path).starts_with?("/.design-system") || path.starts_with?("/admin/") -%>
+        <div class="<%= wide ? "ui container" : "ui text container" %>">
             <%= content %>
         </div>
         <%= render "src/views/partials/footer.html.slang" %>

@@ -84,19 +84,55 @@ class Account
   end
 end
 
+module ViewHelper
+  def pagination_params(env)
+    max_size = 20 # override the limit to 20 for testing instead of 1000
+    {
+      page: Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
+      size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, max_size)
+    }
+  end
+end
+
+# NOTE: when testing, avoid managing concurrency by calling `perform`
+# immediately after `schedule`. the task worker doesn't run during
+# testing, so use task worker `perform` to mimic its behavior.
+
+class TaskWorker
+  class_property instance : self { self.new }
+
+  def perform(task)
+    previous_def(task)
+  end
+end
+
 class Task
+  class_property schedule_but_dont_perform : Bool = false
+
   def schedule(next_attempt_at = nil)
-    previous_def(next_attempt_at).tap { perform } # always perform when testing
+    previous_def(next_attempt_at).tap do |task|
+      TaskWorker.instance.perform(task) unless task.class.schedule_but_dont_perform
+    end
   end
 end
 
 ## Test setup/teardown
 
 module Ktistec
-  @@db_file = "sqlite3://#{File.tempname("ktistec-test", ".db")}"
+  @@db_uri = "sqlite3://#{File.tempname("ktistec-test", ".db")}"
+
+  class Server
+    class_setter shutting_down
+
+    def self.clear_shutdown!
+      @@shutting_down = false
+    end
+  end
 
   class Settings
-    {% for property in PROPERTIES %}
+    {% for property, type in PROPERTIES %}
+      setter {{property.id}} : {{type.id}}?
+
       def clear_{{property.id}}
         Ktistec.database.exec("DELETE FROM options WHERE key = ?", "{{property.id}}")
         @{{property.id}} = nil
@@ -115,6 +151,8 @@ module Ktistec
     Ktistec.settings.assign({
       "host" => "https://test.test/",
       "site" => "Test",
+      "image" => nil,
+      "description" => nil,
       "footer" => nil,
     }).save
   end
@@ -126,7 +164,7 @@ module Ktistec
     previous_def
   end
 
-  def self.set_translator(translator : Ktistec::Translator)
+  def self.set_translator(translator : Ktistec::Translator)  # ameba:disable Naming/AccessorMethodName
     @@translator = translator
     @@mocks << translator
   end
@@ -148,6 +186,12 @@ end
 AFTER_PROCS << -> do
   Ktistec.database.exec "ROLLBACK"
 end
+
+{% if @top_level.has_constant?("Tag") %}
+  BEFORE_PROCS << -> do
+    Tag.cache.clear
+  end
+{% end %}
 
 macro setup_spec
   before_each { BEFORE_PROCS.each(&.call) }

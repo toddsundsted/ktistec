@@ -31,7 +31,29 @@ Spectator.describe ActivityPub do
       expect(described_class.from_json_ld(%q[{"@type":"Note"}])).to be_a(ActivityPub::Object::Note)
     end
 
-    subject { Factory.create(:activity) }
+    context "given aliases" do
+      pre_condition do
+        expect(ActivityPub::Actor::ALIASES).to have("ActivityPub::Actor::Organization")
+        expect(ActivityPub::Object::ALIASES).to have("ActivityPub::Object::Place")
+      end
+
+      it "instantiates the base class" do
+        expect(described_class.from_json_ld(%q[{"@type":"Organization"}])).to be_a(ActivityPub::Actor)
+        expect(described_class.from_json_ld(%q[{"@type":"Place"}])).to be_a(ActivityPub::Object)
+      end
+
+      it "persists the correct type" do
+        actor = described_class.from_json_ld(%q[{"@type":"Organization"}]).as(ActivityPub::Actor)
+        expect(actor.type).to eq("ActivityPub::Actor::Organization")
+      end
+
+      it "persists the correct type" do
+        object = described_class.from_json_ld(%q[{"@type":"Place"}]).as(ActivityPub::Object)
+        expect(object.type).to eq("ActivityPub::Object::Place")
+      end
+    end
+
+    let_create(:activity)
 
     it "creates an instance if one doesn't exist" do
       json = %q[{"@id":"https://test.test/bar_foo","@type":"Activity"}]
@@ -39,8 +61,8 @@ Spectator.describe ActivityPub do
     end
 
     it "updates the instance if it already exists" do
-      json = %Q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"#{subject.iri}","@type":"Activity","summary":"foo bar baz"}]
-      expect{described_class.from_json_ld(json).save}.to change{subject.reload!.summary}
+      json = %Q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"#{activity.iri}","@type":"Activity","summary":"foo bar baz"}]
+      expect{described_class.from_json_ld(json).save}.to change{activity.reload!.summary}
     end
   end
 

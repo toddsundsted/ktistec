@@ -35,7 +35,7 @@ Spectator.describe Task::Fetch::Fetcher do
       super(*args, **options)
     end
 
-    def set_next_attempt_at(*args, **options)
+    def set_next_attempt_at(*args, **options)  # ameba:disable Naming/AccessorMethodName
       super(*args, **options)
     end
   end
@@ -288,6 +288,17 @@ Spectator.describe Task::Fetch::Fetcher do
         it "returns true" do
           expect(subject.find_or_fetch_object(object.iri, include_blocked: true).first).
             to be_true
+        end
+      end
+
+      context "when the server is shutting down" do
+        after_each do
+          Ktistec::Server.clear_shutdown!
+        end
+
+        it "raises an exception" do
+          Ktistec::Server.shutdown
+          expect{ subject.find_or_fetch_object(object.iri).first }.to raise_error(TaskWorker::ServerShutdownException)
         end
       end
     end

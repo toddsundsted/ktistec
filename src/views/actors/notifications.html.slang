@@ -17,93 +17,101 @@
           crystal:
             activity = notification.activity
             activities = activity.object.activities(inclusion: activity.type)
+            emojis = Tag::Emoji.where(subject: activity.actor)
           .label
-            - if (icon = activity.actor.icon)
-              img data-actor-id=activity.actor.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a> href=remote_actor_path(activity.actor) == s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
               - if activities.size > 1
                 | and #{pluralize(activities.size - 1, "other")} shared
               - else
                 | shared
               a< href=remote_object_path(activity.object) your post
               | .
-            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+            - if (content = activity.object.preview)
               .extra.meta.truncated
-                == content
+                == … content, 150
         - in Relationship::Content::Notification::Like
           crystal:
             activity = notification.activity
             activities = activity.object.activities(inclusion: activity.type)
+            emojis = Tag::Emoji.where(subject: activity.actor)
           .label
-            - if (icon = activity.actor.icon)
-              img data-actor-id=activity.actor.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a> href=remote_actor_path(activity.actor) == s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
               - if activities.size > 1
                 | and #{pluralize(activities.size - 1, "other")} liked
               - else
                 | liked
               a< href=remote_object_path(activity.object) your post
               | .
-            - if (content = Ktistec::Util.render_as_text(activity.object.content).presence)
+            - if (content = activity.object.preview)
               .extra.meta.truncated
-                == content
+                == … content, 150
+        - in Relationship::Content::Notification::Dislike
+          crystal:
+            activity = notification.activity
+            activities = activity.object.activities(inclusion: activity.type)
+            emojis = Tag::Emoji.where(subject: activity.actor)
+          .label
+            == actor_icon(activity.actor)
+          .content
+            .summary
+              a> href=remote_actor_path(activity.actor) == s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
+              - if activities.size > 1
+                | and #{pluralize(activities.size - 1, "other")} disliked
+              - else
+                | disliked
+              a< href=remote_object_path(activity.object) your post
+              | .
+            - if (content = activity.object.preview)
+              .extra.meta.truncated
+                == … content, 150
         - in Relationship::Content::Notification::Reply
           crystal:
             object = notification.object
-            content = Ktistec::Util.render_as_text(object.content).presence
+            content = object.preview
             attributed_to = object.attributed_to
             in_reply_to = object.in_reply_to
+            emojis = Tag::Emoji.where(subject: attributed_to)
           .label
-            - if (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(attributed_to)
           .content
             .summary
-              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+              a> href=remote_actor_path(attributed_to) == s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
               a> href=remote_object_path(object) replied to
               a< href=remote_object_path(in_reply_to) your post
               | .
             - if content
               .extra.meta.truncated
-                == content
+                == … content, 150
         - in Relationship::Content::Notification::Mention
           crystal:
             object = notification.object
-            content = Ktistec::Util.render_as_text(object.content).presence
+            content = object.preview
             attributed_to = object.attributed_to
+            emojis = Tag::Emoji.where(subject: attributed_to)
           .label
-            - if (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(attributed_to)
           .content
             .summary
-              a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+              a> href=remote_actor_path(attributed_to) == s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
               a> href=remote_object_path(object) mentioned
               | you.
             - if content
               .extra.meta.truncated
-                == content
+                == … content, 150
         - in Relationship::Content::Notification::Follow::Hashtag
           crystal:
             name = notification.name
             object = Tag::Hashtag.most_recent_object(name)
-            content = object ? Ktistec::Util.render_as_text(object.content).presence : nil
+            content = object ? object.preview : nil
             attributed_to = object.try(&.attributed_to)
           .label
-            - if attributed_to && (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(attributed_to)
           .content
             .summary
               | There are new posts tagged with
@@ -111,18 +119,15 @@
               | .
             - if content
               .extra.meta.truncated
-                == content
+                == … content, 150
         - in Relationship::Content::Notification::Follow::Mention
           crystal:
             name = notification.name
             object = Tag::Mention.most_recent_object(name)
-            content = object ? Ktistec::Util.render_as_text(object.content).presence : nil
+            content = object ? object.preview : nil
             attributed_to = object.try(&.attributed_to)
           .label
-            - if attributed_to && (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(attributed_to)
           .content
             .summary
               | There are new posts that mention
@@ -130,17 +135,16 @@
               | .
             - if content
               .extra.meta.truncated
-                == content
+                == … content, 150
         - in Relationship::Content::Notification::Follow
-          - activity = notification.activity
+          crystal:
+            activity = notification.activity
+            emojis = Tag::Emoji.where(subject: activity.actor)
           .label
-            - if (icon = activity.actor.icon)
-              img data-actor-id=activity.actor.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = activity.actor.display_name
+              a> href=remote_actor_path(activity.actor) == s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
               | followed you.
             - unless (response = activity.accepted_or_rejected?)
               .extra.text
@@ -158,13 +162,11 @@
         - in Relationship::Content::Notification::Follow::Thread
           crystal:
             object = notification.object
-            content = Ktistec::Util.render_as_text(object.content).presence
+            content = object.preview
             attributed_to = object.attributed_to
+            emojis = Tag::Emoji.where(subject: attributed_to)
           .label
-            - if (icon = attributed_to.icon)
-              img data-actor-id=attributed_to.id src=icon
-            - else
-              i.user.icon
+            == actor_icon(attributed_to)
           .content
             .summary
               - if object.iri == object.thread
@@ -172,12 +174,26 @@
                 a<> href=remote_thread_path(object) a thread
                 | you follow.
               - else
-                a> href=remote_actor_path(attributed_to) = attributed_to.display_name
+                a> href=remote_actor_path(attributed_to) == s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
                 a> href=remote_object_path(object) replied to a thread
                 | you follow.
             - if content
               .extra.meta.truncated
-                == content
+                == … content, 150
+        - in Relationship::Content::Notification::Poll::Expiry
+          crystal:
+            question = notification.question
+            attributed_to = question.attributed_to
+          .label
+            == actor_icon(attributed_to)
+          .content
+            .summary
+              | A poll
+              a<> href=remote_object_path(question) you voted in
+              | has ended.
+            - if (content = question.preview)
+              .extra.meta.truncated
+                == … content, 150
         - in Relationship::Content::Notification
           / This can't happen!
   == paginate(env, notifications)

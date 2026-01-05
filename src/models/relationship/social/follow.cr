@@ -23,6 +23,93 @@ class Relationship
       def activity?
         ActivityPub::Activity::Follow.where(QUERY, from_iri, to_iri).first?
       end
+
+      private def self.follow_query(direction)
+        <<-QUERY
+          SELECT #{columns}
+            FROM relationships
+           WHERE type = '#{self}'
+             AND #{direction} = ?
+          ORDER BY id DESC
+           LIMIT ? OFFSET ?
+        QUERY
+      end
+
+      private def self.follow_count_query(direction)
+        <<-QUERY
+          SELECT COUNT(*)
+            FROM relationships
+           WHERE type = '#{self}'
+             AND #{direction} = ?
+             AND created_at >= ?
+        QUERY
+      end
+
+      # Returns followers.
+      #
+      # Returns relationships where the actor is being followed (`to_iri`).
+      #
+      # Results are ordered by most recent first.
+      #
+      def self.followers_for(actor_iri : String, page = 1, size = 10)
+        query = follow_query("to_iri")
+        query_and_paginate(query, actor_iri, page: page, size: size)
+      end
+
+      # Returns following.
+      #
+      # Returns relationships where the actor is following others (`from_iri`).
+      #
+      # Results are ordered by most recent first.
+      #
+      def self.following_for(actor_iri : String, page = 1, size = 10)
+        query = follow_query("from_iri")
+        query_and_paginate(query, actor_iri, page: page, size: size)
+      end
+      # Returns count of followers.
+      #
+      # Returns count of relationships where the actor is being
+      # followed (`to_iri`) created on or after the given timestamp.
+      #
+      def self.followers_since(actor_iri : String, since : Time)
+        query = follow_count_query("to_iri")
+        Ktistec.database.scalar(query, actor_iri, since).as(Int64)
+      end
+
+      # Returns count of following.
+      #
+      # Returns count of relationships where the actor is following
+      # others (`from_iri`) created on or after the given timestamp.
+      #
+      def self.following_since(actor_iri : String, since : Time)
+        query = follow_count_query("from_iri")
+        Ktistec.database.scalar(query, actor_iri, since).as(Int64)
+      end
+
+      # Returns true if the follow relationship has been accepted.
+      #
+      def accepted?
+        if (follow_activity = self.activity?)
+          follow_activity.accepted_or_rejected?.is_a?(ActivityPub::Activity::Accept)
+        end
+      end
+
+      # Returns true if the follow relationship has been rejected.
+      #
+      def rejected?
+        if (follow_activity = self.activity?)
+          follow_activity.accepted_or_rejected?.is_a?(ActivityPub::Activity::Reject)
+        end
+      end
+
+      # Returns true if the follow relationship is pending.
+      #
+      # A follow is pending if it has not been accepted or rejected
+      # (confirmed = false).
+      #
+      def pending?
+        !confirmed
+      end
     end
   end
 end

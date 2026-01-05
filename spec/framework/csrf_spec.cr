@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+require "spectator"
+
 require "../../src/framework/csrf"
 
-require "../spec_helper/controller"
-
-def process_request_and_return_response(handler, request)
+private def process_request_and_return_response(handler, request)
   io = IO::Memory.new
   response = HTTP::Server::Response.new(io)
   context = HTTP::Server::Context.new(request, response)
@@ -39,6 +39,24 @@ Spectator.describe Ktistec::CSRF do
     request = HTTP::Request.new("GET", "/")
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
+  end
+
+  it "generates an authenticity token on HTML requests" do
+    handler = described_class.new
+    handler.next = ->(_context : HTTP::Server::Context) { }
+    request = HTTP::Request.new("GET", "/",
+      headers: HTTP::Headers{"Accept" => %q|text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8|})
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.cookies["__Secure-authenticity_token"]?.try(&.value)).not_to be_nil
+  end
+
+  it "does not generate an authenticity token on non-HTML requests" do
+    handler = described_class.new
+    handler.next = ->(_context : HTTP::Server::Context) { }
+    request = HTTP::Request.new("GET", "/",
+      headers: HTTP::Headers{"Accept" => %q|application/json|})
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.cookies["__Secure-authenticity_token"]?.try(&.value)).to be_nil
   end
 
   it "allows POSTs with safe content types" do
@@ -92,18 +110,17 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "authenticity_token=cemal&hasan=lamec",
-      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"})
+      headers: HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"})
     context, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
 
-    jwt = client_response.headers["X-Auth-Token"]
     csrf = context.session.string("csrf")
 
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "authenticity_token=#{csrf}&hasan=lamec",
       headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded",
-                             "Authorization" => "Bearer #{jwt}"})
+                             "Cookie" => client_response.headers["Set-Cookie"]})
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
   end
@@ -112,18 +129,17 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "hasan=lamec",
-      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"})
+      headers: HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"})
     context, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
 
-    jwt = client_response.headers["X-Auth-Token"]
     csrf = context.session.string("csrf")
 
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "hasan=lamec",
       headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded",
-                             "Authorization" => "Bearer #{jwt}",
+                             "Cookie" => client_response.headers["Set-Cookie"],
                              "X-CSRF-Token" => csrf})
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)

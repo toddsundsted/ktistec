@@ -11,11 +11,11 @@ Spectator.describe "partials" do
   include Ktistec::ViewHelper::ClassMethods
 
   describe "collection.json.ecr" do
+    let_build(:object, named: foo, iri: "foo")
+    let_build(:object, named: bar, iri: "bar")
+
     let(collection) do
-      Ktistec::Util::PaginatedArray{
-        Factory.build(:object, iri: "foo"),
-        Factory.build(:object, iri: "bar")
-      }
+      Ktistec::Util::PaginatedArray{foo, bar}
     end
 
     let(env) { env_factory("GET", "/collection#{query}") }
@@ -101,16 +101,16 @@ Spectator.describe "partials" do
     end
   end
 
-  macro follow(from, to, confirmed = true)
+  macro follow(from, to, confirmed = true, follow_activity = nil, follow_relationship = nil)
     let_create!(
       :follow,
-      named: nil,
+      named: {{follow_activity}},
       actor: {{from}},
       object: {{to}}
     )
     let_create!(
       :follow_relationship,
-      named: nil,
+      named: {{follow_relationship}},
       actor: {{from}},
       object: {{to}},
       confirmed: {{confirmed}}
@@ -246,6 +246,38 @@ Spectator.describe "partials" do
           not_to contain("Cancel")
       end
     end
+
+    context "given a thread with <10 posts" do
+      let(:thread) { Array.new(5) { object } }
+
+      it "does not render the full analysis link" do
+        expect(subject.xpath_nodes("//a[contains(text(),'full analysis')]")).to be_empty
+      end
+    end
+
+    context "given a thread with 10+ posts" do
+      let(:thread) { Array.new(15) { object } }
+
+      it "renders the full analysis link" do
+        expect(subject.xpath_nodes("//a[contains(text(),'full analysis')]")).not_to be_empty
+      end
+
+      context "given a fetch task" do
+        let(task) { new_double(:task, running: true, complete: false) }
+
+        it "does not render the full analysis link" do
+          expect(subject.xpath_nodes("//a[contains(text(),'full analysis')]")).to be_empty
+        end
+
+        context "that is not running" do
+          let(task) { new_double(:task, running: false, complete: true) }
+
+          it "renders the full analysis link" do
+            expect(subject.xpath_nodes("//a[contains(text(),'full analysis')]")).not_to be_empty
+          end
+        end
+      end
+    end
   end
 
   describe "actor-panel.html.slang" do
@@ -306,7 +338,7 @@ Spectator.describe "partials" do
       end
 
       context "and following actor" do
-        follow(account.actor, actor)
+        follow(account.actor, actor, follow_activity: follow_activity, follow_relationship: follow_relationship)
 
         it "renders a button to unfollow" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Unfollow")
@@ -315,10 +347,112 @@ Spectator.describe "partials" do
         it "does not render a button to block" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Block")
         end
+
+        context "when follow request is pending" do
+          before_each do
+            follow_relationship.assign(confirmed: false).save
+          end
+
+          it "displays pending follow request status" do
+            expect(subject.xpath_nodes("//div[contains(@class,'status')]/text()")).to have(/request .* pending/)
+          end
+        end
+
+        context "when follow request was accepted" do
+          let_create!(:accept, actor: actor, object: follow_activity)
+
+          it "displays accepted follow request status with timestamp" do
+            expect(subject.xpath_nodes("//div[contains(@class,'status')]/text()")).to have(/accepted .* ago/)
+          end
+        end
+
+        context "when follow request was rejected" do
+          let_create!(:reject, actor: actor, object: follow_activity)
+
+          it "displays rejected follow request status with timestamp" do
+            expect(subject.xpath_nodes("//div[contains(@class,'status')]/text()")).to have(/rejected .* ago/)
+          end
+        end
       end
 
       it "renders a button to follow" do
         expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+      end
+
+      context "having not accepted or rejected a follow" do
+        follow(actor, account.actor, confirmed: false)
+
+        it "renders a button to accept" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Accept")
+        end
+
+        it "renders a button to reject" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject")
+        end
+
+        it "renders a button to follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+        end
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+        end
+      end
+
+      context "having accepted a follow" do
+        follow(actor, account.actor, confirmed: true, follow_activity: follow_activity)
+
+        let_create!(:accept, actor: account.actor, object: follow_activity)
+
+        it "does not render a button to accept" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Accept")
+        end
+
+        it "does not render a button to reject" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Reject")
+        end
+
+        it "renders a button to reject instead" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject Instead")
+        end
+
+        it "renders a button to follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+        end
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+        end
+      end
+
+      context "having rejected a follow" do
+        follow(actor, account.actor, confirmed: true, follow_activity: follow_activity)
+
+        let_create!(:reject, actor: account.actor, object: follow_activity)
+
+        it "does not render a button to accept" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Accept")
+        end
+
+        it "does not render a button to reject" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Reject")
+        end
+
+        it "does not render a button to reject instead" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Reject Instead")
+        end
+
+        it "renders a button to accept now" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Accept Instead")
+        end
+
+        it "renders a button to follow" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
+        end
+
+        it "renders a button to block" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+        end
       end
 
       context "and actor is blocked" do
@@ -343,6 +477,14 @@ Spectator.describe "partials" do
 
       it "renders a button to block" do
         expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+      end
+
+      it "renders a button to refresh" do
+        expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Refresh")
+      end
+
+      it "renders the last refresh time" do
+        expect(subject.xpath_nodes("//div[contains(@class, 'status')]/text()")).to have(/refreshed/)
       end
 
       context "and actor is down" do
@@ -519,7 +661,6 @@ Spectator.describe "partials" do
     end
 
     let_build(:object, local: true)
-    let_build(:object, named: :original)
 
     context "if authenticated" do
       let(account) { register }
@@ -538,8 +679,8 @@ Spectator.describe "partials" do
             to be_empty
         end
 
-        it "includes an input to save draft" do
-          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
+        it "includes an input to create draft" do
+          expect(subject.xpath_nodes("//button[text()='Create Draft']")).
             not_to be_empty
         end
 
@@ -585,11 +726,46 @@ Spectator.describe "partials" do
       end
 
       context "given a reply" do
-        before_each { object.assign(in_reply_to: original).save }
+        let_build(:object, named: :original)
+        let_build(:object, named: :intermediate, in_reply_to: original)
+
+        before_each do
+          original.attributed_to.username = "actor1"
+          intermediate.attributed_to.username = "actor2"
+          object.assign(in_reply_to: intermediate).save
+        end
 
         it "renders an input with the replied to object's iri" do
           expect(subject.xpath_nodes("//input[@name='in-reply-to']/@value")).
-            to have(original.iri)
+            to have(intermediate.iri)
+        end
+
+        it "prepopulates editor with mentions" do
+          expect(subject.xpath_nodes("//textarea[@name='content']/text()").first).
+            to eq("@#{intermediate.attributed_to.handle} @#{original.attributed_to.handle} ")
+        end
+
+        it "does not render details" do
+          expect(subject.xpath_nodes("//details")).to be_empty
+        end
+
+        it "includes an input to send reply" do
+          expect(subject.xpath_nodes("//button[text()='Send Reply']")).
+            not_to be_empty
+        end
+      end
+
+      context "given a self-reply" do
+        let_build(:object, named: :original)
+
+        before_each do
+          original.attributed_to = account.actor
+          object.assign(in_reply_to: original).save
+        end
+
+        it "does not self-mention" do
+          expect(subject.xpath_nodes("//textarea[@name='content']/text()")).
+            to be_empty
         end
       end
 
@@ -599,12 +775,12 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_true }
 
         it "includes an input to publish post" do
-          expect(subject.xpath_nodes("//input[@value='Publish Post']")).
+          expect(subject.xpath_nodes("//button[text()='Publish Post']")).
             not_to be_empty
         end
 
-        it "includes an input to save draft" do
-          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
+        it "includes an input to update draft" do
+          expect(subject.xpath_nodes("//button[text()='Update Draft']")).
             not_to be_empty
         end
 
@@ -620,18 +796,128 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_false }
 
         it "includes an input to update post" do
-          expect(subject.xpath_nodes("//input[@value='Update Post']")).
+          expect(subject.xpath_nodes("//button[text()='Update Post']")).
             not_to be_empty
         end
 
         it "does not include an input to save draft" do
-          expect(subject.xpath_nodes("//input[@value='Save Draft']")).
+          expect(subject.xpath_nodes("//button[contains(text(),'Draft')]")).
             to be_empty
         end
 
         it "does not include a link to return to drafts" do
           expect(subject.xpath_nodes("//a[text()='To Drafts']")).
             to be_empty
+        end
+      end
+
+      context "visibility" do
+        PUBLIC_PATH = "//form//input[@type='radio'][@value='public'][@checked]"
+        PRIVATE_PATH = "//form//input[@type='radio'][@value='private'][@checked]"
+        DIRECT_PATH = "//form//input[@type='radio'][@value='direct'][@checked]"
+
+        it "renders the public checkbox as checked" do
+          expect(subject.xpath_nodes(PUBLIC_PATH)).not_to be_empty
+          expect(subject.xpath_nodes(PRIVATE_PATH)).to be_empty
+          expect(subject.xpath_nodes(DIRECT_PATH)).to be_empty
+        end
+
+        context "given an object with addressing" do
+          before_each { object.to = object.cc = [] of String }
+
+          context "when it is addressed to a specific actor" do
+            before_each { object.to = ["http://example.com/actor"] }
+
+            it "renders the direct checkbox as checked" do
+              expect(subject.xpath_nodes(DIRECT_PATH)).not_to be_empty
+            end
+          end
+
+          context "when it is addressed to the author's followers" do
+            before_each { object.cc = [object.attributed_to.followers.not_nil!] }
+
+            it "renders the private checkbox as checked" do
+              expect(subject.xpath_nodes(PRIVATE_PATH)).not_to be_empty
+            end
+          end
+        end
+      end
+
+      context "when default editor is text/html" do
+        before_each { Global.account.not_nil!.assign(default_editor: "text/html; editor=trix") }
+
+        it "renders the trix editor" do
+          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+        end
+
+        it "sets media-type to text/html" do
+          expect(subject.xpath_nodes("//input[@name='media-type']/@value").first).to eq("text/html; editor=trix")
+        end
+
+        context "but object is text/markdown" do
+          before_each do
+            object.source = ActivityPub::Object::Source.new("# Test", "text/markdown")
+          end
+
+          it "renders the markdown editor" do
+            expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).not_to be_empty
+          end
+
+          it "sets media-type to text/markdown" do
+            expect(subject.xpath_nodes("//input[@name='media-type']/@value").first).to eq("text/markdown")
+          end
+        end
+      end
+
+      context "when default editor is text/markdown" do
+        before_each { Global.account.not_nil!.assign(default_editor: "text/markdown") }
+
+        it "renders the markdown editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).not_to be_empty
+        end
+
+        it "sets media-type to text/markdown" do
+          expect(subject.xpath_nodes("//input[@name='media-type']/@value").first).to eq("text/markdown")
+        end
+
+        context "but object is text/html" do
+          before_each do
+            object.source = ActivityPub::Object::Source.new("<p>Test</p>", "text/html; editor=trix")
+          end
+
+          it "renders the trix editor" do
+            expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+          end
+
+          it "sets media-type to text/html" do
+            expect(subject.xpath_nodes("//input[@name='media-type']/@value").first).to eq("text/html; editor=trix")
+          end
+        end
+      end
+
+      context "when object has no source" do
+        before_each do
+          Global.account.not_nil!.assign(default_editor: "text/markdown")
+          object.assign(source: nil).save
+        end
+
+        pre_condition { expect(object.new_record?).to be_false }
+
+        it "renders trix editor regardless of account default" do
+          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+        end
+      end
+
+      context "when object is new" do
+        before_each do
+          Global.account.not_nil!.assign(default_editor: "text/markdown")
+          object.assign(source: nil)
+        end
+
+        pre_condition { expect(object.new_record?).to be_true }
+
+        it "uses account default" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).not_to be_empty
         end
       end
 
@@ -653,7 +939,6 @@ Spectator.describe "partials" do
     end
 
     let_build(:object, local: true)
-    let_build(:object, named: :original)
 
     context "if authenticated" do
       let(account) { register }
@@ -686,6 +971,18 @@ Spectator.describe "partials" do
             expect(subject["language"]).to eq("fr")
           end
         end
+
+        it "does not render the media-type" do
+          expect(subject.as_h.has_key?("media-type")).to be_false
+        end
+
+        context "given an assigned media_type" do
+          before_each { object.assign(media_type: "text/markdown") }
+
+          it "renders the assigned media-type" do
+            expect(subject["media-type"]).to eq("text/markdown")
+          end
+        end
       end
 
       context "given a saved object" do
@@ -699,10 +996,38 @@ Spectator.describe "partials" do
       end
 
       context "given a reply" do
+        let_build(:object, named: :original)
+
         before_each { object.assign(in_reply_to: original).save }
 
         it "renders the replies to object's iri" do
           expect(subject["in-reply-to"]?).to eq(original.iri)
+        end
+      end
+
+      context "visibility" do
+        it "renders public visibility" do
+          expect(subject["visibility"]).to eq("public")
+        end
+
+        context "given an object with addressing" do
+          before_each { object.to = object.cc = [] of String }
+
+          context "when it is addressed to a specific actor" do
+            before_each { object.to = ["http://example.com/actor"] }
+
+            it "renders direct visibility" do
+              expect(subject["visibility"]).to eq("direct")
+            end
+          end
+
+          context "when it is addressed to the author's followers" do
+            before_each { object.cc = [object.attributed_to.followers.not_nil!] }
+
+            it "renders private visibility" do
+              expect(subject["visibility"]).to eq("private")
+            end
+          end
         end
       end
 
@@ -711,63 +1036,6 @@ Spectator.describe "partials" do
 
         it "renders the errors" do
           expect(subject["errors"]["object"]).to eq(["has errors"])
-        end
-      end
-    end
-  end
-
-  describe "reply.html.slang" do
-    let(env) { env_factory("GET", "/object") }
-
-    module ::Ktistec::ViewHelper
-      def self.render_reply_html_slang(env, object)
-        render "./src/views/objects/reply.html.slang"
-      end
-    end
-
-    subject do
-      begin
-        XML.parse_html(Ktistec::ViewHelper.render_reply_html_slang(env, object))
-      rescue XML::Error
-        XML.parse_html("<div/>").document
-      end
-    end
-
-    context "if authenticated" do
-      let(account) { register }
-
-      sign_in(as: account.username)
-
-      let_build(:actor, named: :actor1, username: "actor1")
-      let_build(:actor, named: :actor2, username: "actor2")
-      let_build(:object, named: :original, attributed_to: env.account.actor)
-      let_build(:object, named: :object1, attributed_to: actor1, in_reply_to: original)
-      let_build(:object, named: :object2, attributed_to: actor2, in_reply_to: object1)
-
-      let!(object) { object2.save }
-
-      it "prepopulates editor with mentions" do
-        expect(subject.xpath_nodes("//textarea[@name='content']/text()").first).
-          to eq("@#{actor2.handle} @#{actor1.handle} ")
-      end
-
-      it "uses the default language" do
-        expect(subject.xpath_nodes("//input[@name='language']/@value").first).to eq("en")
-      end
-
-      context "if no default language is set" do
-        before_each { Global.account.not_nil!.language = nil }
-
-        it "does not render an input for language" do
-          expect(subject.xpath_nodes("//input[@name='language']")).to be_empty
-        end
-      end
-
-      context "given an assigned language" do
-        before_each { object.assign(language: "fr") }
-
-        it "uses the default language" do
-          expect(subject.xpath_nodes("//input[@name='language']/@value").first).to eq("en")
         end
       end
     end

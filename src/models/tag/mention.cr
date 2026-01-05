@@ -22,11 +22,18 @@ class Tag
 
     def after_create
       Ktistec::Topic{"/mentions/#{name}"}.notify_subscribers(subject.id.to_s)
+      super unless subject.draft?
     end
 
-    # Returns the most recent objects with the given mention.
+    def after_destroy
+      super unless subject.draft?
+    end
+
+    # Returns the most recent object with the given mention.
     #
-    # Orders objects by `id` (not `published`).
+    # Orders objects by `id` as an acceptable proxy for "most recent".
+    # (This prevents the query from using a temporary b-tree for
+    # ordering).
     #
     # Includes private (not visible) objects.
     #
@@ -36,16 +43,13 @@ class Tag
           FROM objects AS o
           JOIN tags AS t
             ON t.subject_iri = o.iri
-           AND t.type = "#{Tag::Mention}"
+           AND t.type = '#{self}'
           JOIN actors AS a
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
            AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
-      ORDER BY o.id DESC
+           #{common_filters(objects: "o", actors: "a")}
+      ORDER BY t.id DESC
          LIMIT 1
       QUERY
       ActivityPub::Object.query_all(query, name).first?
@@ -55,46 +59,64 @@ class Tag
     #
     # Includes private (not visible) objects.
     #
+    # Orders objects by `id` for consistency with the query above.
+    #
     def self.all_objects(name, page = 1, size = 10)
       query = <<-QUERY
         SELECT #{ActivityPub::Object.columns(prefix: "o")}
           FROM objects AS o
           JOIN tags AS t
             ON t.subject_iri = o.iri
-           AND t.type = "#{Tag::Mention}"
+           AND t.type = '#{self}'
           JOIN actors AS a
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
            AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
-      ORDER BY o.published DESC
+           #{common_filters(objects: "o", actors: "a")}
+      ORDER BY t.id DESC
          LIMIT ? OFFSET ?
       QUERY
       ActivityPub::Object.query_and_paginate(query, name, page: page, size: size)
     end
 
-    # Returns the count of objects with the given mention.
+    # Returns the count of objects with the given mention since the
+    # given time.
     #
-    def self.all_objects_count(name)
+    # Uses the same filters as `all_objects(name, page, size)` but adds
+    # a time-based filter on the tag's `created_at` timestamp.
+    #
+    # Includes private (not visible) objects for consistency.
+    #
+    def self.all_objects(name, since : Time)
       query = <<-QUERY
         SELECT count(*)
           FROM objects AS o
           JOIN tags AS t
             ON t.subject_iri = o.iri
-           AND t.type = "#{Tag::Mention}"
+           AND t.type = '#{self}'
           JOIN actors AS a
             ON a.iri = o.attributed_to_iri
          WHERE t.name = ?
            AND o.published IS NOT NULL
-           AND o.deleted_at IS NULL
-           AND o.blocked_at IS NULL
-           AND a.deleted_at IS NULL
-           AND a.blocked_at IS NULL
+           #{common_filters(objects: "o", actors: "a")}
+           AND t.created_at > ?
       QUERY
-      ActivityPub::Object.scalar(query, name).as(Int64)
+      ActivityPub::Object.scalar(query, name, since).as(Int64)
+    end
+
+    # Returns the count of objects with the given mention.
+    #
+    # Uses the statistics table since there is no high cardinality way to
+    # subset and count the objects with a given mention.
+    #
+    def self.all_objects_count(name)
+      query = <<-QUERY
+        SELECT coalesce(sum(count), 0)
+          FROM tag_statistics
+         WHERE type = ?
+           AND name = ?
+      QUERY
+      ActivityPub::Object.scalar(query, short_type, name).as(Int64)
     end
   end
 end

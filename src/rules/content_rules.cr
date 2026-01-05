@@ -29,12 +29,14 @@ class ContentRules
   Ktistec::Rule.make_pattern(CreateActivity, ActivityPub::Activity::Create, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(AnnounceActivity, ActivityPub::Activity::Announce, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(LikeActivity, ActivityPub::Activity::Like, associations: [:object])
+  Ktistec::Rule.make_pattern(DislikeActivity, ActivityPub::Activity::Dislike, associations: [:object])
   Ktistec::Rule.make_pattern(FollowActivity, ActivityPub::Activity::Follow, associations: [:object])
   Ktistec::Rule.make_pattern(DeleteActivity, ActivityPub::Activity::Delete, associations: [:object])
   Ktistec::Rule.make_pattern(UndoActivity, ActivityPub::Activity::Undo, associations: [:object])
   Ktistec::Rule.make_pattern(Outbox, Relationship::Content::Outbox, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(Inbox, Relationship::Content::Inbox, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationLike, Relationship::Content::Notification::Like, associations: [:owner, :activity])
+  Ktistec::Rule.make_pattern(NotificationDislike, Relationship::Content::Notification::Dislike, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationAnnounce, Relationship::Content::Notification::Announce, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationFollow, Relationship::Content::Notification::Follow, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationFollowHashtag, Relationship::Content::Notification::Follow::Hashtag, associations: [:owner], properties: [:name])
@@ -66,12 +68,14 @@ class ContentRules
   Ktistec::Compiler.register_constant(ContentRules::CreateActivity)
   Ktistec::Compiler.register_constant(ContentRules::AnnounceActivity)
   Ktistec::Compiler.register_constant(ContentRules::LikeActivity)
+  Ktistec::Compiler.register_constant(ContentRules::DislikeActivity)
   Ktistec::Compiler.register_constant(ContentRules::FollowActivity)
   Ktistec::Compiler.register_constant(ContentRules::DeleteActivity)
   Ktistec::Compiler.register_constant(ContentRules::UndoActivity)
   Ktistec::Compiler.register_constant(ContentRules::Outbox)
   Ktistec::Compiler.register_constant(ContentRules::Inbox)
   Ktistec::Compiler.register_constant(ContentRules::NotificationLike)
+  Ktistec::Compiler.register_constant(ContentRules::NotificationDislike)
   Ktistec::Compiler.register_constant(ContentRules::NotificationAnnounce)
   Ktistec::Compiler.register_constant(ContentRules::NotificationFollow)
   Ktistec::Compiler.register_constant(ContentRules::NotificationFollowHashtag)
@@ -104,9 +108,9 @@ class ContentRules
     compiler.compile
   end
 
-  def run
-    School::Fact.clear!
-    with School::Fact yield
-    self.class.domain.run
+  def run(&)
+    domain = self.class.domain.copy(independent_facts: true)
+    with domain yield
+    domain.run
   end
 end

@@ -1,10 +1,14 @@
 {
   "@context":[
     "https://www.w3.org/ns/activitystreams",
-    {"Hashtag":"as:Hashtag"}
+    {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"},
+    {"toot":"http://joinmastodon.org/ns#","focalPoint":"toot:focalPoint","votersCount":"toot:votersCount","closed":"toot:closed"}
   ],
   <%- if (published = object.published) -%>
   "published":<%= published.to_rfc3339(fraction_digits: 3).to_json %>,
+  <%- end -%>
+  <%- if (updated = object.updated) -%>
+  "updated":<%= updated.to_rfc3339(fraction_digits: 3).to_json %>,
   <%- end -%>
   <%- if (attributed_to_iri = object.attributed_to_iri) -%>
   "attributedTo":<%= attributed_to_iri.to_json %>,
@@ -23,11 +27,17 @@
   <%- if (cc = object.cc) -%>
   "cc":<%= cc.to_json %>,
   <%- end -%>
+  <%- if (audience = object.audience) -%>
+  "audience":<%= audience.to_json %>,
+  <%- end -%>
   <%- if (name = object.name) -%>
   "name":<%= name.to_json %>,
   <%- end -%>
   <%- if (summary = object.summary) -%>
   "summary":<%= summary.to_json %>,
+  <%- end -%>
+  <%- if object.sensitive -%>
+  "sensitive":true,
   <%- end -%>
   <%- if (content = object.content) -%>
   "content":<%= content.to_json %>,
@@ -56,6 +66,31 @@
   <%- end -%>
   <%- if (urls = object.urls) -%>
   "url":<%= urls.to_json %>,
+  <%- end -%>
+  <%- if (poll = Poll.find?(question: object)) -%>
+  <%- if poll.multiple_choice -%>
+  "anyOf":[
+  <%- else -%>
+  "oneOf":[
+  <%- end -%>
+    <%- poll.options.each_with_index do |option, i| -%>
+    {
+      "type":"Note",
+      "name":<%= option.name.to_json %>,
+      "replies":{
+        "type":"Collection",
+        "totalItems":<%= option.votes_count %>
+      }
+    }<%= comma(poll.options, i) %>
+    <%- end -%>
+  ],
+  <%- if (voters_count = poll.voters_count) -%>
+  "votersCount":<%= voters_count %>,
+  <%- end -%>
+  <%- if (closed_at = poll.closed_at) -%>
+  "endTime":<%= closed_at.to_rfc3339(fraction_digits: 3).to_json %>,
+  "closed":<%= closed_at.to_rfc3339(fraction_digits: 3).to_json %>,
+  <%- end -%>
   <%- end -%>
   "type":<%= object.type.split("::").last.to_json %>,
   "id":<%= object.iri.to_json %>

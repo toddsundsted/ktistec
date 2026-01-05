@@ -4,6 +4,19 @@ require "../models/filter_term"
 class FiltersController
   include Ktistec::Controller
 
+  # Authorizes filter term access.
+  #
+  # Returns the filter term if the authenticated user owns it, `nil`
+  # otherwise.
+  #
+  private def self.get_filter_term(env, id)
+    if (term = FilterTerm.find?(id))
+      if (account = env.account?) && account.actor == term.actor
+        term
+      end
+    end
+  end
+
   get "/filters" do |env|
     actor = env.account.actor
 
@@ -27,14 +40,8 @@ class FiltersController
   end
 
   delete "/filters/:id" do |env|
-    actor = env.account.actor
-
-    unless (term = FilterTerm.find?(env.params.url["id"].to_i64))
+    unless (term = get_filter_term(env, id_param(env)))
       not_found
-    end
-
-    unless term.actor == actor
-      forbidden
     end
 
     term.destroy

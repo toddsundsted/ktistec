@@ -137,6 +137,11 @@ Spectator.describe WellKnownController do
   end
 
   context "nodeinfo" do
+    before_each do
+      WellKnownController.cached_posts_count = WellKnownController::CachedPostsCount.new(0, 0)
+      WellKnownController.cached_mau_count = WellKnownController::CachedMAUCount.new(0, 0)
+    end
+
     it "returns 200" do
       get "/.well-known/nodeinfo"
       expect(response.status_code).to eq(200)
@@ -178,14 +183,131 @@ Spectator.describe WellKnownController do
 
     it "returns usage" do
       get "/.well-known/nodeinfo/2.1"
-      message = {"users" => {"total" => 1}, "localPosts" => 0}
+      message = {"users" => {"total" => 1, "activeMonth" => 0}, "localPosts" => 0}
       expect(JSON.parse(response.body)["usage"].as_h).to eq(message)
+    end
+
+    context "with a recent activity" do
+      let_create!(:activity, named: nil, actor: account.actor, published: 15.days.ago)
+
+      it "returns MAU count of 1" do
+        get "/.well-known/nodeinfo/2.1"
+        usage = JSON.parse(response.body)["usage"].as_h
+        expect(usage["users"].as_h["activeMonth"]).to eq(1)
+      end
     end
 
     it "returns metadata" do
       get "/.well-known/nodeinfo/2.1"
       message = {"siteName" => "Test"}
       expect(JSON.parse(response.body)["metadata"].as_h).to eq(message)
+    end
+  end
+
+  {% begin %}
+    {% for path in ["oauth-protected-resource", "oauth-protected-resource/mcp"] %}
+      context {{path}} do
+        it "returns 200" do
+          get "/.well-known/{{path.id}}"
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns the resource identifier" do
+          get "/.well-known/{{path.id}}"
+          expect(JSON.parse(response.body)["resource"]).to eq("https://test.test")
+        end
+
+        it "returns the authorization servers" do
+          get "/.well-known/{{path.id}}"
+          expect(JSON.parse(response.body)["authorization_servers"]).to eq(["https://test.test"])
+        end
+
+        it "returns the scopes supported" do
+          get "/.well-known/{{path.id}}"
+          expect(JSON.parse(response.body)["scopes_supported"]).to eq(["mcp"])
+        end
+
+        it "returns the bearer methods supported" do
+          get "/.well-known/{{path.id}}"
+          expect(JSON.parse(response.body)["bearer_methods_supported"]).to eq(["header"])
+        end
+
+        it "sets CORS headers" do
+          get "/.well-known/{{path.id}}"
+          expect(response.headers["Access-Control-Allow-Origin"]).to eq("*")
+          expect(response.headers["Access-Control-Allow-Methods"]).to eq("OPTIONS, GET")
+          expect(response.headers["Access-Control-Allow-Headers"]).to match(/MCP-Protocol-Version/)
+        end
+
+        it "sets the content type" do
+          get "/.well-known/{{path.id}}"
+          expect(response.headers["Content-Type"]).to eq("application/json")
+        end
+      end
+    {% end %}
+  {% end %}
+
+  context "oauth-authorization-server" do
+    it "returns 200" do
+      get "/.well-known/oauth-authorization-server"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns the issuer" do
+      get "/.well-known/oauth-authorization-server"
+      expect(JSON.parse(response.body)["issuer"]).to eq("https://test.test")
+    end
+
+    it "returns the registration endpoint" do
+      get "/.well-known/oauth-authorization-server"
+      expect(JSON.parse(response.body)["registration_endpoint"]).to eq("https://test.test/oauth/register")
+    end
+
+    it "returns the authorization endpoint" do
+      get "/.well-known/oauth-authorization-server"
+      expect(JSON.parse(response.body)["authorization_endpoint"]).to eq("https://test.test/oauth/authorize")
+    end
+
+    it "returns the token endpoint" do
+      get "/.well-known/oauth-authorization-server"
+      expect(JSON.parse(response.body)["token_endpoint"]).to eq("https://test.test/oauth/token")
+    end
+
+    it "returns the scopes supported" do
+      get "/.well-known/oauth-authorization-server"
+      expect(JSON.parse(response.body)["scopes_supported"]).to eq(["mcp"])
+    end
+
+    it "returns the response types supported" do
+      get "/.well-known/oauth-authorization-server"
+      expect(JSON.parse(response.body)["response_types_supported"]).to eq(["code"])
+    end
+
+    it "returns the grant types supported" do
+      get "/.well-known/oauth-authorization-server"
+      expect(JSON.parse(response.body)["grant_types_supported"]).to eq(["authorization_code"])
+    end
+
+    it "returns the token endpoint auth methods supported" do
+      get "/.well-known/oauth-authorization-server"
+      expect(JSON.parse(response.body)["token_endpoint_auth_methods_supported"]).to eq(["client_secret_basic"])
+    end
+
+    it "returns the code challenge methods supported" do
+      get "/.well-known/oauth-authorization-server"
+      expect(JSON.parse(response.body)["code_challenge_methods_supported"]).to eq(["S256"])
+    end
+
+    it "sets CORS headers" do
+      get "/.well-known/oauth-authorization-server"
+      expect(response.headers["Access-Control-Allow-Origin"]).to eq("*")
+      expect(response.headers["Access-Control-Allow-Methods"]).to eq("OPTIONS, GET")
+      expect(response.headers["Access-Control-Allow-Headers"]).to match(/MCP-Protocol-Version/)
+    end
+
+    it "sets the content type" do
+      get "/.well-known/oauth-authorization-server"
+      expect(response.headers["Content-Type"]).to eq("application/json")
     end
   end
 end

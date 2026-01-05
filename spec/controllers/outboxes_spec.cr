@@ -4,10 +4,10 @@ require "../spec_helper/controller"
 require "../spec_helper/factory"
 require "../spec_helper/network"
 
-Spectator.describe RelationshipsController do
+Spectator.describe OutboxesController do
   setup_spec
 
-  HTML_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/vnd.turbo-stream.html, text/html"}
+  HTML_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
   JSON_HEADERS = HTTP::Headers{"Content-Type" => "application/json", "Accept" => "application/json"}
 
   describe "POST /actors/:username/outbox" do
@@ -91,6 +91,15 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(302)
         end
 
+        context "given a Turbo Streams request" do
+          let(html_headers) { HTML_HEADERS.dup.add("Accept", "text/vnd.turbo-stream.html") }
+
+          it "returns 200 when successful" do
+            post "/actors/#{actor.username}/outbox", html_headers, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
+            expect(response.status_code).to eq(200)
+          end
+        end
+
         it "returns 201 when successful" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|
           expect(response.status_code).to eq(201)
@@ -107,32 +116,32 @@ Spectator.describe RelationshipsController do
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&public="
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&visibility="
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","public":false}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","visibility":null}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
@@ -146,14 +155,14 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
         end
 
         it "puts the activity in the actor's outbox" do
@@ -201,10 +210,10 @@ Spectator.describe RelationshipsController do
         end
 
         context "and the object is a reply" do
+          let_build(:object, named: parent)
+
           before_each do
-            object.assign(
-              in_reply_to: Factory.build(:object)
-            ).save
+            object.assign(in_reply_to: parent).save
           end
 
           it "puts the object in the actor's timeline" do
@@ -251,6 +260,15 @@ Spectator.describe RelationshipsController do
           expect(response.status_code).to eq(302)
         end
 
+        context "given a Turbo Streams request" do
+          let(html_headers) { HTML_HEADERS.dup.add("Accept", "text/vnd.turbo-stream.html") }
+
+          it "returns 200 when successful" do
+            post "/actors/#{actor.username}/outbox", html_headers, "type=Like&object=#{URI.encode_www_form(object.iri)}"
+            expect(response.status_code).to eq(200)
+          end
+        end
+
         it "returns 201 when successful" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|
           expect(response.status_code).to eq(201)
@@ -267,32 +285,32 @@ Spectator.describe RelationshipsController do
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&public="
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&visibility=private"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","public":false}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","visibility":"private"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
@@ -306,14 +324,14 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
         end
 
         it "puts the activity in the actor's outbox" do
@@ -347,6 +365,143 @@ Spectator.describe RelationshipsController do
         end
       end
 
+      context "on dislike" do
+        before_each do
+          actor.assign(followers: "#{actor.iri}/followers").save
+        end
+
+        it "returns 400 if the object iri is missing" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the object iri is missing" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike"}|
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if object does not exist" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=https%3A%2F%2Fremote%2Fobjects%2Fblah_blah"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if object does not exist" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"https://remote/objects/blah_blah"}|
+          expect(response.status_code).to eq(400)
+        end
+
+        let_create(:object, attributed_to: other)
+
+        it "redirects when successful" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
+          expect(response.status_code).to eq(302)
+        end
+
+        context "given a Turbo Streams request" do
+          let(html_headers) { HTML_HEADERS.dup.add("Accept", "text/vnd.turbo-stream.html") }
+
+          it "returns 200 when successful" do
+            post "/actors/#{actor.username}/outbox", html_headers, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        it "returns 201 when successful" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
+          expect(response.status_code).to eq(201)
+        end
+
+        it "creates a dislike activity" do
+          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"}.
+            to change{ActivityPub::Activity::Dislike.count(actor_iri: actor.iri)}.by(1)
+        end
+
+        it "creates a dislike activity" do
+          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|}.
+            to change{ActivityPub::Activity::Dislike.count(actor_iri: actor.iri)}.by(1)
+        end
+
+        it "does not create a visible activity if not public" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}&visibility=private"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
+        end
+
+        it "does not create a visible activity if not public" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}","visibility":"private"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
+        end
+
+        it "creates a visible activity if public" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}&visibility=public"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+        end
+
+        it "creates a visible activity if public" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}","visibility":"public"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+        end
+
+        it "addresses (to) the public collection" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}&visibility=public"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "addresses (to) the public collection" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}","visibility":"public"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "addresses (to) the object's actor" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (to) the object's actor" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (to) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
+        end
+
+        it "addresses (to) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+
+        it "does not put the object in the actor's timeline" do
+          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"}.
+            not_to change{Timeline.count(from_iri: actor.iri)}
+        end
+
+        it "does not put the object in the actor's timeline" do
+          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|}.
+            not_to change{Timeline.count(from_iri: actor.iri)}
+        end
+      end
+
       context "on publish" do
         before_each do
           actor.assign(followers: "#{actor.iri}/followers").save
@@ -366,22 +521,22 @@ Spectator.describe RelationshipsController do
 
         context "when validation fails" do
           it "returns 422" do
-            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical_path=foo%2Fbar"
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical-path=foo%2Fbar"
             expect(response.status_code).to eq(422)
           end
 
           it "returns 422" do
-            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical_path":"foo/bar"}|
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical-path":"foo/bar"}|
             expect(response.status_code).to eq(422)
           end
 
           it "renders an error message" do
-            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical_path=foo%2Fbar"
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical-path=foo%2Fbar"
             expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]")).not_to be_empty
           end
 
           it "renders an error message" do
-            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical_path":"foo/bar"}|
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical-path":"foo/bar"}|
             expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
           end
         end
@@ -476,6 +631,42 @@ Spectator.describe RelationshipsController do
           end
         end
 
+        it "sets the default media type" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"
+          expect(new_object.source.not_nil!.media_type).to eq("text/html; editor=trix")
+        end
+
+        it "sets the default media type" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|
+          expect(new_object.source.not_nil!.media_type).to eq("text/html; editor=trix")
+        end
+
+        context "given a media-type" do
+          it "sets the media type" do
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&media-type=text%2Fmarkdown"
+            expect(new_object.source.not_nil!.media_type).to eq("text/markdown")
+          end
+
+          it "sets the media type" do
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","media-type":"text/markdown"}|
+            expect(new_object.source.not_nil!.media_type).to eq("text/markdown")
+          end
+
+          it "converts to HTML" do
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=%23+Heading%0A%0AThis+is+**bold**&media-type=text%2Fmarkdown"
+            expect(new_object.content).to match(/<h1>Heading<\/h1>/)
+            expect(new_object.content).to match(/<strong>bold<\/strong>/)
+            expect(new_object.media_type).to eq("text/html")
+          end
+
+          it "converts to HTML" do
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"# Heading\\n\\nThis is **bold**","media-type":"text/markdown"}|
+            expect(new_object.content).to match(/<h1>Heading<\/h1>/)
+            expect(new_object.content).to match(/<strong>bold<\/strong>/)
+            expect(new_object.media_type).to eq("text/html")
+          end
+        end
+
         context "given a canonical path" do
           before_all do
             unless Kemal::RouteHandler::INSTANCE.lookup_route("GET", "/objects/:id").found?
@@ -484,12 +675,12 @@ Spectator.describe RelationshipsController do
           end
 
           it "sets the canonical path" do
-            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical_path=%2Ffoo%2Fbar%2Fbaz"
+            post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&canonical-path=%2Ffoo%2Fbar%2Fbaz"
             expect(new_object.canonical_path).to eq("/foo/bar/baz")
           end
 
           it "sets the canonical path" do
-            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical_path":"/foo/bar/baz"}|
+            post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","canonical-path":"/foo/bar/baz"}|
             expect(new_object.canonical_path).to eq("/foo/bar/baz")
           end
         end
@@ -539,6 +730,16 @@ Spectator.describe RelationshipsController do
           it "changes the published timestamp" do
             expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
               to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
+          end
+
+          it "does not change the updated timestamp" do
+            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
+              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
+          end
+
+          it "does not change the updated timestamp" do
+            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
+              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
           end
 
           it "returns 400 if object does not exist" do
@@ -609,6 +810,16 @@ Spectator.describe RelationshipsController do
               not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
           end
 
+          it "changes the updated timestamp" do
+            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
+              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
+          end
+
+          it "changes the updated timestamp" do
+            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
+              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
+          end
+
           it "changes the content" do
             expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
               to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).content}
@@ -653,42 +864,42 @@ Spectator.describe RelationshipsController do
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&public="
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=private"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","public":false}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"private"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "creates a visible activity if public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
         end
 
         it "does not create a visible object if not public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&public="
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=private"
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_false
         end
 
         it "does not create a visible object if not public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","public":false}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"private"}|
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_false
         end
 
         it "creates a visible object if public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=public"
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_true
         end
 
         it "creates a visible object if public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"public"}|
           expect(ActivityPub::Object.find(attributed_to_iri: actor.iri).visible).to be_true
         end
 
@@ -732,24 +943,26 @@ Spectator.describe RelationshipsController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
-        it "addresses (to) all mentioned actors" do
+        it "addresses (cc) all mentioned actors" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=@#{other.username}@test.test"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
         end
 
-        it "addresses (to) all mentioned actors" do
+        it "addresses (cc) all mentioned actors" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"@#{other.username}@test.test"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
         end
 
-        it "addresses (to) the specified actor and all mentioned actors" do
+        it "addresses (to) the specified actor and (cc) all mentioned actors" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=@#{other.username}@test.test&to=#{URI.encode_www_form(actor.iri)}"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.iri, other.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
         end
 
-        it "addresses (to) the specified actor and all mentioned actors" do
+        it "addresses (to) the specified actor and (cc) all mentioned actors" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"@#{other.username}@test.test","to":"#{actor.iri}"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.iri, other.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.iri)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(other.iri)
         end
 
         it "addresses (cc) the specified actor" do
@@ -763,23 +976,65 @@ Spectator.describe RelationshipsController do
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&public=true"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
         it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","public":true}|
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
-        it "addresses (cc) the actor's followers collection" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        it "does not address the public collection when visibility is private" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=private"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "does not address the public collection when visibility is private" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"private"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "does not address the public collection when visibility is direct" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=direct"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "does not address the public collection when visibility is direct" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"direct"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "addresses (to) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
+        end
+
+        it "addresses (to) the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
+        end
+
+        it "does not address the actor's followers when visibility is direct" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=direct"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).not_to contain(actor.followers)
+        end
+
+        it "does not address the actor's followers when visibility is direct" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"direct"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).not_to contain(actor.followers)
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).not_to contain(actor.followers)
+        end
+
+        it "does not address (cc) the actor's followers when visibility is direct" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test&visibility=direct"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).not_to contain(actor.followers)
+        end
+
+        it "does not address (cc) the actor's followers when visibility is direct" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test","visibility":"direct"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).cc).not_to contain(actor.followers)
         end
 
         it "addresses (to) the replied to object's attributed to actor" do
@@ -885,6 +1140,15 @@ Spectator.describe RelationshipsController do
         it "redirects when successful" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Follow&object=#{object.iri}"
           expect(response.status_code).to eq(302)
+        end
+
+        context "given a Turbo Streams request" do
+          let(html_headers) { HTML_HEADERS.dup.add("Accept", "text/vnd.turbo-stream.html") }
+
+          it "returns 200 when successful" do
+            post "/actors/#{actor.username}/outbox", html_headers, "type=Follow&object=#{object.iri}"
+            expect(response.status_code).to eq(200)
+          end
         end
 
         it "returns 201 when successful" do
@@ -1023,7 +1287,7 @@ Spectator.describe RelationshipsController do
       end
 
       context "on reject" do
-        let_create!(:follow_relationship, named: :relationship, actor: other, object: actor, confirmed: true)
+        let_create!(:follow_relationship, named: :relationship, actor: other, object: actor, confirmed: false)
         let_create!(:follow, actor: other, object: actor)
 
         it "returns 400 if a follow activity does not exist" do
@@ -1243,6 +1507,79 @@ Spectator.describe RelationshipsController do
 
         it "sends the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{like.iri}"}|
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+      end
+
+      context "when undoing a dislike" do
+        let_build(:object, attributed_to: other)
+        let_create!(:dislike, actor: actor, object: object)
+
+        before_each do
+          actor.assign(followers: "#{actor.iri}/followers").save
+        end
+
+        it "returns 400 if the dislike activity does not exist" do
+          dislike.destroy
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the dislike activity does not exist" do
+          dislike.destroy
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the dislike activity does not belong to the actor" do
+          dislike.assign(actor: other).save
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the dislike activity does not belong to the actor" do
+          dislike.assign(actor: other).save
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
+          expect(response.status_code).to eq(400)
+        end
+
+        it "addresses (cc) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
+          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "addresses (cc) the actor's followers collection" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
+          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+        end
+
+        it "undoes the dislike" do
+          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"}.
+            to change{ActivityPub::Activity.count(iri: dislike.iri)}.by(-1)
+        end
+
+        it "undoes the dislike" do
+          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|}.
+            to change{ActivityPub::Activity.count(iri: dislike.iri)}.by(-1)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "puts the activity in the actor's outbox" do
+          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|}.
+            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+        end
+
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
+          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+        end
+
+        it "sends the activity to the other's inbox" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
           expect(HTTP::Client.requests).to have("POST #{other.inbox}")
         end
       end

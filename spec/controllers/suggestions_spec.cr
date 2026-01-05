@@ -15,7 +15,7 @@ Spectator.describe SuggestionsController do
     context "when authorized" do
       sign_in
 
-      let_build(:object)
+      let_create(:object, published: Time.local)
 
       context "hashtag" do
         macro create_tag(name)

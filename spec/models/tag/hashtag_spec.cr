@@ -3,6 +3,15 @@ require "../../../src/models/tag/hashtag"
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
+class Tag
+  class_property hashtag_recount_count : Int64 = 0
+
+  private def recount
+    Tag.hashtag_recount_count += 1
+    previous_def
+  end
+end
+
 Spectator.describe Tag::Hashtag do
   setup_spec
 
@@ -21,28 +30,52 @@ Spectator.describe Tag::Hashtag do
   end
 
   describe "#save" do
-    let_build(:object)
+    let_build(:object, local: true)
 
     it "strips the leading #" do
       new_tag = described_class.new(subject: object, name: "#foo")
       expect{new_tag.save}.to change{new_tag.name}.from("#foo").to("foo")
     end
+
+    pre_condition { expect(object.draft?).to be_true }
+
+    it "does not change the count" do
+      new_tag = described_class.new(subject: object, name: "#foo")
+      expect{new_tag.save}.not_to change{Tag.hashtag_recount_count}
+    end
   end
 
-  let_build(:actor, named: :author)
+  describe "#destroy" do
+    let_create(:object, local: true)
+
+    pre_condition { expect(object.draft?).to be_true }
+
+    it "does not change the count" do
+      new_tag = described_class.new(subject: object, name: "#foo")
+      expect{new_tag.destroy}.not_to change{Tag.hashtag_recount_count}
+    end
+  end
+
+  let!(author) { register.actor }
 
   macro create_tagged_object(index, *tags)
     let_create!(
       :object, named: object{{index}},
       attributed_to: author,
       published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-      local: true
+      local: true,
+    )
+    let_create!(
+      :create, named: create{{index}},
+      object: object{{index}},
+      actor: author,
     )
     before_each do
+      put_in_outbox(author, create{{index}})
       {% for tag in tags %}
         described_class.new(
           name: {{tag}},
-          subject: object{{index}}
+          subject: object{{index}},
         ).save
       {% end %}
     end
@@ -131,30 +164,71 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.all_objects("foo")).to be_empty
     end
 
-    context "given an older object" do
-      let_create!(
-        :object, named: :older,
-        attributed_to: author,
-        published: Time.utc(2015, 2, 15, 10, 20, 10),
-        created_at: Time.utc(2015, 2, 15, 10, 20, 10),
-        local: true
-      )
-      before_each do
-        described_class.new(
-          name: "foo",
-          subject: older
-        ).save
-      end
-
-      it "filters out the older object" do
-        expect(described_class.all_objects("foo", created_after: Time.utc(2016, 1, 1))).not_to have(older)
-      end
-    end
-
     it "paginates the results" do
       expect(described_class.all_objects("foo", 1, 2)).to eq([object5, object4])
       expect(described_class.all_objects("foo", 2, 2)).to eq([object3, object2])
       expect(described_class.all_objects("foo", 2, 2).more?).to be_true
+    end
+  end
+
+  describe ".all_objects with since parameter" do
+    create_tagged_object(1, "foo")
+    create_tagged_object(2, "foo", "bar")
+    create_tagged_object(3, "foo")
+
+    let(since) { Time.utc(2016, 2, 15, 10, 30, 0) }
+
+    before_each do
+      described_class.where(name: "foo", subject_iri: object1.iri).first.assign(created_at: since - 1.5.hours).save
+      described_class.where(name: "foo", subject_iri: object2.iri).first.assign(created_at: since + 30.minutes).save
+      described_class.where(name: "bar", subject_iri: object2.iri).first.assign(created_at: since + 30.minutes).save
+      described_class.where(name: "foo", subject_iri: object3.iri).first.assign(created_at: since + 1.5.hours).save
+    end
+
+    it "returns count of objects tagged since given time" do
+      expect(described_class.all_objects("foo", since)).to eq(2)
+    end
+
+    it "returns count of objects tagged since given time" do
+      expect(described_class.all_objects("bar", since)).to eq(1)
+    end
+
+    it "returns zero when no objects tagged since given time" do
+      expect(described_class.all_objects("foo", since + 3.hours)).to eq(0)
+    end
+
+    it "returns zero for non-existent tag" do
+      expect(described_class.all_objects("nonexistent", since - 3.hours)).to eq(0)
+    end
+
+    it "filters out draft objects" do
+      object2.assign(published: nil).save
+      expect(described_class.all_objects("foo", since)).to eq(1)
+    end
+
+    it "filters out deleted objects" do
+      object2.delete!
+      expect(described_class.all_objects("foo", since)).to eq(1)
+    end
+
+    it "filters out blocked objects" do
+      object2.block!
+      expect(described_class.all_objects("foo", since)).to eq(1)
+    end
+
+    it "filters out objects with deleted attributed to actors" do
+      author.delete!
+      expect(described_class.all_objects("foo", since)).to eq(0)
+    end
+
+    it "filters out objects with blocked attributed to actors" do
+      author.block!
+      expect(described_class.all_objects("foo", since)).to eq(0)
+    end
+
+    it "filters out objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.all_objects("foo", since)).to eq(0)
     end
   end
 
@@ -169,58 +243,12 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.all_objects_count("bar")).to eq(2)
     end
 
-    it "filters out draft objects" do
-      object5.assign(published: nil).save
-      expect(described_class.all_objects_count("foo")).to eq(4)
-    end
-
-    it "filters out deleted objects" do
-      object5.delete!
-      expect(described_class.all_objects_count("foo")).to eq(4)
-    end
-
-    it "filters out blocked objects" do
-      object5.block!
-      expect(described_class.all_objects_count("foo")).to eq(4)
-    end
-
-    it "filters out objects with deleted attributed to actors" do
-      author.delete!
-      expect(described_class.all_objects_count("foo")).to eq(0)
-    end
-
-    it "filters out objects with blocked attributed to actors" do
-      author.block!
-      expect(described_class.all_objects_count("foo")).to eq(0)
-    end
-
-    it "filters out objects with destroyed attributed to actors" do
-      author.destroy
-      expect(described_class.all_objects_count("foo")).to eq(0)
-    end
-
-    context "given an older object" do
-      let_create!(
-        :object, named: :older,
-        attributed_to: author,
-        published: Time.utc(2015, 2, 15, 10, 20, 10),
-        created_at: Time.utc(2015, 2, 15, 10, 20, 10),
-        local: true
-      )
-      before_each do
-        described_class.new(
-          name: "foo",
-          subject: older
-        ).save
-      end
-
-      it "filters out the older object" do
-        expect(described_class.all_objects_count("foo", created_after: Time.utc(2016, 1, 1))).to eq(5)
-      end
+    it "returns zero" do
+      expect(described_class.all_objects_count("thud")).to eq(0)
     end
   end
 
-  describe ".public_objects" do
+  describe ".public_posts" do
     create_tagged_object(1, "foo", "bar")
     create_tagged_object(2, "foo")
     create_tagged_object(3, "foo", "bar")
@@ -228,77 +256,65 @@ Spectator.describe Tag::Hashtag do
     create_tagged_object(5, "foo", "quux")
 
     it "returns objects with the tag" do
-      expect(described_class.public_objects("bar")).to eq([object3, object1])
+      expect(described_class.public_posts("bar")).to eq([object3, object1])
     end
 
     it "filters out non-published objects" do
       object5.assign(published: nil).save
-      expect(described_class.public_objects("foo")).not_to have(object5)
+      expect(described_class.public_posts("foo")).not_to have(object5)
     end
 
     it "filters out non-visible objects" do
       object5.assign(visible: false).save
-      expect(described_class.public_objects("foo")).not_to have(object5)
+      expect(described_class.public_posts("foo")).not_to have(object5)
     end
 
     it "filters out deleted objects" do
       object5.delete!
-      expect(described_class.public_objects("foo")).not_to have(object5)
+      expect(described_class.public_posts("foo")).not_to have(object5)
     end
 
     it "filters out blocked objects" do
       object5.block!
-      expect(described_class.public_objects("foo")).not_to have(object5)
+      expect(described_class.public_posts("foo")).not_to have(object5)
     end
 
     it "filters out objects with deleted attributed to actors" do
       author.delete!
-      expect(described_class.public_objects("foo")).to be_empty
+      expect(described_class.public_posts("foo")).to be_empty
     end
 
     it "filters out objects with blocked attributed to actors" do
       author.block!
-      expect(described_class.public_objects("foo")).to be_empty
+      expect(described_class.public_posts("foo")).to be_empty
     end
 
     it "filters out objects with destroyed attributed to actors" do
       author.destroy
-      expect(described_class.public_objects("foo")).to be_empty
+      expect(described_class.public_posts("foo")).to be_empty
     end
 
-    context "given a remote object" do
-      let_create!(
-        :object, named: :remote,
-        published: Time.utc(2016, 2, 15, 10, 20, 10),
-      )
+    context "given a shared object" do
+      let_create!(:object, named: shared, published: Time.utc(2016, 2, 15, 10, 20, 6))
+      let_create!(:announce, object: shared, actor: author)
       before_each do
-        described_class.new(
-          name: "foo",
-          subject: remote
-        ).save
+        put_in_outbox(author, announce)
+        described_class.new(name: "foo", subject: shared).save
       end
 
-      it "filters out the object" do
-        expect(described_class.public_objects("foo")).not_to have(remote)
-      end
-
-      context "that has been approved" do
-        before_each { author.approve(remote) }
-
-        it "includes the object" do
-          expect(described_class.public_objects("foo")).to have(remote)
-        end
+      it "includes the shared object" do
+        expect(described_class.public_posts("foo")).to have(shared)
       end
     end
 
     it "paginates the results" do
-      expect(described_class.public_objects("foo", 1, 2)).to eq([object5, object4])
-      expect(described_class.public_objects("foo", 2, 2)).to eq([object3, object2])
-      expect(described_class.public_objects("foo", 2, 2).more?).to be_true
+      expect(described_class.public_posts("foo", 1, 2)).to eq([object5, object4])
+      expect(described_class.public_posts("foo", 2, 2)).to eq([object3, object2])
+      expect(described_class.public_posts("foo", 2, 2).more?).to be_true
     end
   end
 
-  describe ".public_objects_count" do
+  describe ".public_posts_count" do
     create_tagged_object(1, "foo", "bar")
     create_tagged_object(2, "foo")
     create_tagged_object(3, "foo", "bar")
@@ -306,66 +322,54 @@ Spectator.describe Tag::Hashtag do
     create_tagged_object(5, "foo", "quux")
 
     it "returns count of objects with the tag" do
-      expect(described_class.public_objects_count("bar")).to eq(2)
+      expect(described_class.public_posts_count("bar")).to eq(2)
     end
 
     it "filters out non-published objects" do
       object5.assign(published: nil).save
-      expect(described_class.public_objects_count("foo")).to eq(4)
+      expect(described_class.public_posts_count("foo")).to eq(4)
     end
 
     it "filters out non-visible objects" do
       object5.assign(visible: false).save
-      expect(described_class.public_objects_count("foo")).to eq(4)
+      expect(described_class.public_posts_count("foo")).to eq(4)
     end
 
     it "filters out deleted objects" do
       object5.delete!
-      expect(described_class.public_objects_count("foo")).to eq(4)
+      expect(described_class.public_posts_count("foo")).to eq(4)
     end
 
     it "filters out blocked objects" do
       object5.block!
-      expect(described_class.public_objects_count("foo")).to eq(4)
+      expect(described_class.public_posts_count("foo")).to eq(4)
     end
 
     it "filters out objects with deleted attributed to actors" do
       author.delete!
-      expect(described_class.public_objects_count("foo")).to eq(0)
+      expect(described_class.public_posts_count("foo")).to eq(0)
     end
 
     it "filters out objects with blocked attributed to actors" do
       author.block!
-      expect(described_class.public_objects_count("foo")).to eq(0)
+      expect(described_class.public_posts_count("foo")).to eq(0)
     end
 
     it "filters out objects with destroyed attributed to actors" do
       author.destroy
-      expect(described_class.public_objects_count("foo")).to eq(0)
+      expect(described_class.public_posts_count("foo")).to eq(0)
     end
 
-    context "given a remote object" do
-      let_create!(
-        :object, named: :remote,
-        published: Time.utc(2016, 2, 15, 10, 20, 10),
-      )
+    context "given a shared object" do
+      let_create!(:object, named: shared, published: Time.utc(2016, 2, 15, 10, 20, 6))
+      let_create!(:announce, object: shared, actor: author)
       before_each do
-        described_class.new(
-          name: "foo",
-          subject: remote
-        ).save
+        put_in_outbox(author, announce)
+        described_class.new(name: "foo", subject: shared).save
       end
 
-      it "filters out the object" do
-        expect(described_class.public_objects_count("foo")).to eq(5)
-      end
-
-      context "that has been approved" do
-        before_each { author.approve(remote) }
-
-        it "includes the object" do
-          expect(described_class.public_objects_count("foo")).to eq(6)
-        end
+      it "includes the shared object" do
+        expect(described_class.public_posts_count("foo")).to eq(6)
       end
     end
   end

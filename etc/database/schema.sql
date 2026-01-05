@@ -50,6 +50,22 @@ INSERT INTO migrations VALUES(20241208053239,'create-translations');
 INSERT INTO migrations VALUES(20241211124721,'add-language-to-accounts');
 INSERT INTO migrations VALUES(20241214103109,'add-language-to-objects');
 INSERT INTO migrations VALUES(20250101054127,'delete-old-notifications');
+INSERT INTO migrations VALUES(20250201104126,'remove-indexes');
+INSERT INTO migrations VALUES(20250708194418,'add-foreign-key-indexes');
+INSERT INTO migrations VALUES(20250722140704,'create-oauth-clients');
+INSERT INTO migrations VALUES(20250722140705,'create-oauth-access-tokens');
+INSERT INTO migrations VALUES(20250726164700,'add-actors-username-index');
+INSERT INTO migrations VALUES(20250806054107,'add-last-accessed-at-to-oauth-clients');
+INSERT INTO migrations VALUES(20250813134500,'add-manual-to-oauth-clients');
+INSERT INTO migrations VALUES(20250912173911,'add-sensitive-to-objects');
+INSERT INTO migrations VALUES(20250913001217,'add-updated-to-objects');
+INSERT INTO migrations VALUES(20251023134551,'add-shared-inbox-to-actors');
+INSERT INTO migrations VALUES(20251025184317,'add-audience-to-activities-and-objects');
+INSERT INTO migrations VALUES(20251031153342,'add-auto-approve-followers-to-accounts');
+INSERT INTO migrations VALUES(20251031205133,'add-auto-follow-back-to-accounts');
+INSERT INTO migrations VALUES(20251118203714,'add-featured-to-actors');
+INSERT INTO migrations VALUES(20251208090435,'add-polls-table');
+INSERT INTO migrations VALUES(20251215082458,'add-special-to-objects');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -59,7 +75,9 @@ CREATE TABLE accounts (
     iri varchar(255) NOT NULL COLLATE NOCASE,
     timezone varchar(244) NOT NULL DEFAULT "",
     state text,
-    language varchar(244) COLLATE NOCASE
+    language varchar(244) COLLATE NOCASE,
+    auto_approve_followers BOOLEAN NOT NULL DEFAULT 0,
+    auto_follow_back BOOLEAN NOT NULL DEFAULT 0
   );
 CREATE TABLE sessions (
     id integer PRIMARY KEY AUTOINCREMENT,
@@ -90,30 +108,9 @@ CREATE TABLE actors (
     "deleted_at" datetime,
     "blocked_at" datetime,
     "attachments" text,
-    "down_at" datetime
-  );
-CREATE TABLE relationships (
-    id integer PRIMARY KEY AUTOINCREMENT,
-    created_at datetime NOT NULL,
-    updated_at datetime NOT NULL,
-    type varchar(63) NOT NULL,
-    from_iri varchar(255) NOT NULL COLLATE NOCASE,
-    to_iri varchar(255) NOT NULL COLLATE NOCASE,
-    confirmed boolean,
-    visible boolean
-  );
-CREATE TABLE collections (
-    id integer PRIMARY KEY AUTOINCREMENT,
-    created_at datetime NOT NULL,
-    updated_at datetime NOT NULL,
-    iri varchar(255) NOT NULL COLLATE NOCASE,
-    items_iris text,
-    total_items integer,
-    first_iri varchar(255),
-    last_iri varchar(255),
-    prev_iri varchar(255),
-    next_iri varchar(255),
-    current_iri varchar(255)
+    "down_at" datetime,
+    "shared_inbox" text,
+    "featured" text
   );
 CREATE TABLE objects (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -138,7 +135,11 @@ CREATE TABLE objects (
     "blocked_at" datetime,
     "name" text,
     "thread" text COLLATE NOCASE,
-    "language" varchar(244) COLLATE NOCASE
+    "language" varchar(244) COLLATE NOCASE,
+    "sensitive" boolean DEFAULT 0,
+    "updated" datetime,
+    "audience" text,
+    "special" text
   );
 CREATE TABLE activities (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -154,22 +155,31 @@ CREATE TABLE activities (
     "to" text,
     "cc" text,
     "summary" text,
-    "undone_at" datetime
+    "undone_at" datetime,
+    "audience" text
   );
-CREATE TABLE tasks (
-    "id" integer PRIMARY KEY AUTOINCREMENT,
-    "created_at" datetime NOT NULL,
-    "updated_at" datetime NOT NULL,
-    "type" varchar(63) NOT NULL,
-    "source_iri" text COLLATE NOCASE,
-    "subject_iri" text COLLATE NOCASE,
-    "failures" text,
-    "running" boolean DEFAULT 0,
-    "complete" boolean DEFAULT 0,
-    "backtrace" text,
-    "next_attempt_at" datetime,
-    "last_attempt_at" datetime,
-    "state" text
+CREATE TABLE collections (
+    id integer PRIMARY KEY AUTOINCREMENT,
+    created_at datetime NOT NULL,
+    updated_at datetime NOT NULL,
+    iri varchar(255) NOT NULL COLLATE NOCASE,
+    items_iris text,
+    total_items integer,
+    first_iri varchar(255),
+    last_iri varchar(255),
+    prev_iri varchar(255),
+    next_iri varchar(255),
+    current_iri varchar(255)
+  );
+CREATE TABLE relationships (
+    id integer PRIMARY KEY AUTOINCREMENT,
+    created_at datetime NOT NULL,
+    updated_at datetime NOT NULL,
+    type varchar(63) NOT NULL,
+    from_iri varchar(255) NOT NULL COLLATE NOCASE,
+    to_iri varchar(255) NOT NULL COLLATE NOCASE,
+    confirmed boolean,
+    visible boolean
   );
 CREATE TABLE tags (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -186,6 +196,21 @@ CREATE TABLE tag_statistics (
     "count" integer,
     PRIMARY KEY("type", "name")
   ) WITHOUT ROWID;
+CREATE TABLE tasks (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL,
+    "type" varchar(63) NOT NULL,
+    "source_iri" text COLLATE NOCASE,
+    "subject_iri" text COLLATE NOCASE,
+    "failures" text,
+    "running" boolean DEFAULT 0,
+    "complete" boolean DEFAULT 0,
+    "backtrace" text,
+    "next_attempt_at" datetime,
+    "last_attempt_at" datetime,
+    "state" text
+  );
 CREATE TABLE points (
     "id" integer PRIMARY KEY AUTOINCREMENT,
     "chart" varchar(63) NOT NULL,
@@ -216,60 +241,98 @@ CREATE TABLE translations (
     "content" text,
     "name" text
   );
-CREATE INDEX idx_accounts_iri
-    ON accounts (iri ASC);
+CREATE TABLE oauth_clients (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL,
+    "client_id" varchar(255) NOT NULL,
+    "client_secret" varchar(255) NOT NULL,
+    "client_name" varchar(255) NOT NULL,
+    "redirect_uris" text NOT NULL,
+    "scope" varchar(255) NOT NULL,
+    "last_accessed_at" datetime,
+    "manual" boolean NOT NULL DEFAULT 0
+  );
+CREATE TABLE oauth_access_tokens (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL,
+    "token" varchar(255) NOT NULL,
+    "client_id" integer NOT NULL,
+    "account_id" integer NOT NULL,
+    "expires_at" datetime NOT NULL,
+    "scope" varchar(255) NOT NULL
+  );
+CREATE TABLE polls (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "question_iri" varchar(255) NOT NULL,
+    "options" text NOT NULL,
+    "multiple_choice" integer NOT NULL DEFAULT 0,
+    "voters_count" integer,
+    "closed_at" datetime,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL
+  );
 CREATE UNIQUE INDEX idx_accounts_username
     ON accounts (username ASC);
+CREATE INDEX idx_accounts_iri
+    ON accounts (iri ASC);
 CREATE UNIQUE INDEX idx_sessions_session_key
     ON sessions (session_key ASC);
-CREATE INDEX idx_sessions_account_id
-    ON sessions (account_id ASC);
-CREATE INDEX idx_sessions_updated_at
-    ON sessions (updated_at DESC);
+CREATE UNIQUE INDEX idx_actors_iri
+    ON actors (iri ASC);
 CREATE INDEX idx_actors_username
     ON actors (username ASC);
+CREATE UNIQUE INDEX idx_objects_iri
+    ON objects (iri ASC);
+CREATE INDEX idx_objects_in_reply_to_iri
+    ON objects (in_reply_to_iri ASC);
+CREATE INDEX idx_objects_attributed_to_iri
+    ON objects (attributed_to_iri ASC);
+CREATE INDEX idx_objects_thread
+    ON objects (thread ASC);
+CREATE UNIQUE INDEX idx_activities_iri
+    ON activities (iri ASC);
+CREATE INDEX idx_activities_actor_iri
+    ON activities (actor_iri ASC);
+CREATE INDEX idx_activities_object_iri
+    ON activities (object_iri ASC);
+CREATE INDEX idx_activities_target_iri
+    ON activities (target_iri ASC);
+CREATE UNIQUE INDEX idx_collections_iri
+    ON collections (iri ASC);
 CREATE INDEX idx_relationships_to_iri
     ON relationships (to_iri ASC);
 CREATE INDEX idx_relationships_type
     ON relationships (type ASC);
 CREATE INDEX idx_relationships_created_at
     ON relationships (created_at DESC);
-CREATE UNIQUE INDEX idx_collections_iri
-    ON collections (iri ASC);
-CREATE INDEX idx_objects_in_reply_to_iri
-    ON objects (in_reply_to_iri ASC);
-CREATE INDEX idx_objects_published
-    ON objects (published ASC);
-CREATE INDEX idx_objects_thread
-    ON objects (thread ASC);
-CREATE UNIQUE INDEX idx_activities_iri
-    ON activities (iri ASC);
-CREATE INDEX idx_activities_object_iri
-    ON activities (object_iri ASC);
-CREATE INDEX idx_tasks_running_complete_backtrace
-    ON tasks (running ASC, complete ASC, backtrace ASC);
-CREATE INDEX idx_tasks_subject_iri
-    ON tasks (subject_iri ASC);
+CREATE INDEX idx_relationships_from_iri_type
+    ON relationships (from_iri ASC, type ASC);
 CREATE INDEX idx_tags_type_subject_iri
     ON tags (type ASC, subject_iri ASC);
 CREATE INDEX idx_tags_type_name
     ON tags (type ASC, name ASC);
+CREATE INDEX idx_tasks_running_complete_backtrace
+    ON tasks (running ASC, complete ASC, backtrace ASC);
+CREATE INDEX idx_tasks_subject_iri
+    ON tasks (subject_iri ASC);
 CREATE INDEX idx_points_chart_timestamp
     ON points (chart ASC, timestamp ASC);
-CREATE INDEX idx_objects_attributed_to_iri
-    ON objects (attributed_to_iri ASC);
-CREATE INDEX idx_activities_actor_iri
-    ON activities (actor_iri ASC);
-CREATE INDEX idx_activities_target_iri
-    ON activities (target_iri ASC);
-CREATE UNIQUE INDEX idx_actors_iri
-    ON actors (iri ASC);
-CREATE UNIQUE INDEX idx_objects_iri
-    ON objects (iri ASC);
 CREATE INDEX idx_filter_terms_actor_id
     ON filter_terms (actor_id ASC);
 CREATE INDEX idx_last_times_name
     ON last_times (name ASC);
 CREATE INDEX idx_translations_origin_id
     ON translations (origin_id ASC);
+CREATE UNIQUE INDEX idx_oauth_clients_client_id
+    ON oauth_clients (client_id ASC);
+CREATE UNIQUE INDEX idx_oauth_access_tokens_token
+    ON oauth_access_tokens (token ASC);
+CREATE INDEX idx_oauth_access_tokens_client_id
+    ON oauth_access_tokens (client_id ASC);
+CREATE INDEX idx_oauth_access_tokens_account_id
+    ON oauth_access_tokens (account_id ASC);
+CREATE UNIQUE INDEX idx_polls_question_iri
+    ON polls (question_iri);
 COMMIT;

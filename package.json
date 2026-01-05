@@ -3,15 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "webpack --config webpack.prod.js"
+    "prebuild": "npm run test",
+    "build": "webpack --config webpack.prod.js",
+    "test": "vitest run"
   },
   "devDependencies": {
     "css-loader": "^5.1.2",
     "css-minimizer-webpack-plugin": "^7.0.0",
+    "jsdom": "^27.2.0",
     "less": "^4.1.1",
     "less-loader": "^8.0.0",
     "mini-css-extract-plugin": "^2.9.1",
     "style-loader": "^2.0.0",
+    "vitest": "^4.0.14",
     "webpack": "^5.95.0",
     "webpack-cli": "^5.1.4",
     "webpack-merge": "^6.0.1"
@@ -19,14 +23,13 @@
   "dependencies": {
     "@hotwired/stimulus": "^3.2.2",
     "@hotwired/stimulus-webpack-helpers": "^1.0.1",
-    "@hotwired/turbo": "^8.0.4",
+    "@hotwired/turbo": "^8.0.5",
     "chart.js": "^4.4.2",
     "filepond": "^4.31.1",
     "filepond-plugin-file-validate-type": "^1.2.9",
     "filepond-plugin-image-preview": "^4.6.12",
     "filepond-plugin-image-resize": "^2.0.10",
     "filepond-plugin-image-transform": "^3.8.7",
-    "lightgallery": "^2.7.2",
     "trix": "^2.1.7"
   }
 }

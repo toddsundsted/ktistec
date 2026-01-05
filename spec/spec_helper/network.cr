@@ -72,6 +72,14 @@ class HTTP::Client
     @@cache.clear
   end
 
+  # Note: Short-circuit client instantiation to avoid costly and
+  # unnecessary construction.
+
+  def initialize(uri : URI)
+    @host = uri.host.not_nil!
+    @port = uri.port || 80
+  end
+
   def self.get(url : String | URI, headers : HTTP::Headers? = nil)
     url = URI.parse(url) if url.is_a?(String)
     new(url).get(url.request_target, headers)
@@ -198,44 +206,43 @@ module WebFinger
       raise WebFinger::NotFoundError.new("Invalid account")
     end
     name = $~["name"]?
-    host = $~["host"]?
-    case account
-    when /no-such-host/
+    host = $~["host"]
+    if name =~ /no-such-name/
+      raise WebFinger::NotFoundError.new("No such name")
+    elsif host =~ /no-such-host/
       raise WebFinger::NotFoundError.new("No such host")
+    elsif name
+      WebFinger::Result.from_json(<<-JSON
+        {
+          "links":[
+            {
+              "rel":"self",
+              "href":"https://#{host}/actors/#{name}"
+            },
+            {
+              "rel":"http://ostatus.org/schema/1.0/subscribe",
+              "template":"https://#{host}/authorize-interaction?uri={uri}"
+            }
+          ]
+        }
+        JSON
+      )
     else
-      if name
-        WebFinger::Result.from_json(<<-JSON
-          {
-            "links":[
-              {
-                "rel":"self",
-                "href":"https://#{host}/actors/#{name}"
-              },
-              {
-                "rel":"http://ostatus.org/schema/1.0/subscribe",
-                "template":"https://#{host}/authorize-interaction?uri={uri}"
-              }
-            ]
-          }
-          JSON
-        )
-      else
-        WebFinger::Result.from_json(<<-JSON
-          {
-            "links":[
-              {
-                "rel":"self",
-                "href":"https://#{host}"
-              },
-              {
-                "rel":"http://ostatus.org/schema/1.0/subscribe",
-                "template":"https://#{host}/authorize-interaction?uri={uri}"
-              }
-            ]
-          }
-          JSON
-        )
-      end
+      WebFinger::Result.from_json(<<-JSON
+        {
+          "links":[
+            {
+              "rel":"self",
+              "href":"https://#{host}"
+            },
+            {
+              "rel":"http://ostatus.org/schema/1.0/subscribe",
+              "template":"https://#{host}/authorize-interaction?uri={uri}"
+            }
+          ]
+        }
+        JSON
+      )
     end
   end
 end

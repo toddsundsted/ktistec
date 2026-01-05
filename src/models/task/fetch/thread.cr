@@ -179,6 +179,7 @@ class Task
         end
       count = 0
       start = Time.monotonic
+      shutting_down = false
       begin
         maximum.times do
           # It's possible to have two tasks following two parts of a
@@ -204,6 +205,9 @@ class Task
           Ktistec::Topic{thread}.notify_subscribers(object.id.to_s)
           count += 1
         end
+      rescue ex : TaskWorker::ServerShutdownException
+        shutting_down = true
+        raise ex
       ensure
         duration = (Time.monotonic - start).total_seconds
         duration = sprintf("%.3f", duration)
@@ -212,6 +216,8 @@ class Task
           # ensure that when this instance is eventually saved, it too
           # is set as complete.
           self.complete = true
+        elsif shutting_down
+          Log.debug { "perform [#{id}] - server shutting down! - #{duration} seconds, #{count} fetched" }
         else
           Log.debug { "perform [#{id}] - complete - #{duration} seconds, #{count} fetched" }
         end
@@ -241,6 +247,8 @@ class Task
     end
 
     property been_fetched = Set(String).new
+
+    property newly_discovered_objects = Set(ActivityPub::Object).new
 
     # Fetches out through the horizon.
     #
@@ -276,11 +284,20 @@ class Task
               been_fetched << object.iri
               state.cached_object = node.id
               state.cache =
-                if (temporary = ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true))
-                  Log.trace { "fetch_out [#{id}] - iri: #{object.iri}" }
-                  if (replies = temporary.replies?) || ((replies_iri = temporary.replies_iri) && (replies = ActivityPub::Collection.dereference?(source, replies_iri)))
-                    if (iris = replies.all_item_iris(source))
-                      iris
+                begin
+                  # avoid refetching a newly discovered object
+                  temporary =
+                    if newly_discovered_objects.delete(object)
+                      object
+                    else
+                      ActivityPub::Object.dereference?(source, object.iri, ignore_cached: true)
+                    end
+                  if temporary
+                    Log.trace { "fetch_out [#{id}] - iri: #{object.iri}" }
+                    if (replies = temporary.replies?) || ((replies_iri = temporary.replies_iri) && (replies = ActivityPub::Collection.dereference?(source, replies_iri)))
+                      if (iris = replies.all_item_iris(source))
+                        iris
+                      end
                     end
                   end
                 end
@@ -297,7 +314,10 @@ class Task
               unless state.includes?(new)
                 node.last_success_at = now
                 state << new
-                return object if fetched
+                if fetched
+                  newly_discovered_objects << object
+                  return object
+                end
               end
             end
           end
@@ -313,10 +333,10 @@ class Task
     def self.merge_into(from, into)
       if from != into
         where(thread: from).each do |task|
-          unless find?(source: task.source, thread: into)
-            task.assign(thread: into).save
-          else
+          if find?(source: task.source, thread: into)
             task.destroy
+          else
+            task.assign(thread: into).save
           end
         end
       end

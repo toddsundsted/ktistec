@@ -10,6 +10,18 @@ export default class extends Controller {
     let buttonCancel = modal.querySelector(".ui.button.cancel")
     let body = document.querySelector("body")
 
+    // dynamically update modal text content
+    Object.keys(this.element.dataset).forEach(key => {
+      if (key.startsWith('modal') && key.length > 5) {
+        // convert camelCase to kebab-case and remove prefix
+        let className = key.replace(/([A-Z])/g, '-$1').toLowerCase().slice(6)
+        let elements = modal.querySelectorAll(`.${className}`)
+        elements.forEach(element => {
+          element.textContent = this.element.dataset[key]
+        })
+      }
+    })
+
     if (!modal.parentElement.classList.contains("dimmer")) {
       let div = document.createElement("div")
       div.classList.add("ui")

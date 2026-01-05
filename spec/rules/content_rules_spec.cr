@@ -39,6 +39,7 @@ Spectator.describe ContentRules do
   let_build(:actor, named: other)
   let_build(:object, attributed_to: other)
   let_create(:create, actor: other, object: object)
+  let_create(:update, actor: other, object: object)
   let_create(:announce, actor: other, object: object)
   let_create(:like, actor: other, object: object)
   let_create(:follow, actor: other, object: owner)
@@ -182,14 +183,19 @@ Spectator.describe ContentRules do
       end
 
       context "object mentions the owner" do
+        let_build(:mention, name: owner.iri, href: owner.iri)
+
         before_each do
-          object.assign(mentions: [
-            Factory.build(:mention, name: owner.iri, href: owner.iri)
-          ])
+          object.assign(mentions: [mention])
         end
 
         it "adds the object to the notifications" do
           run(owner, create)
+          expect(owner.notifications.map(&.object_or_activity)).to have(object)
+        end
+
+        it "adds the object to the notifications" do
+          run(owner, update)
           expect(owner.notifications.map(&.object_or_activity)).to have(object)
         end
 
@@ -200,14 +206,19 @@ Spectator.describe ContentRules do
             run(owner, create)
             expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
           end
+
+          it "does not add the object to the notifications" do
+            run(owner, update)
+            expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
+          end
         end
       end
 
       context "object mentions another actor" do
+        let_build(:mention, name: other.iri, href: other.iri)
+
         before_each do
-          object.assign(mentions: [
-            Factory.build(:mention, name: other.iri, href: other.iri)
-          ])
+          object.assign(mentions: [mention])
         end
 
         it "does not add the object to the notifications" do
@@ -217,9 +228,8 @@ Spectator.describe ContentRules do
       end
 
       context "another object mentions the owner" do
-        let_create!(:object, named: nil, mentions: [
-          Factory.build(:mention, name: owner.iri, href: owner.iri)
-        ])
+        let_build(:mention, name: owner.iri, href: owner.iri)
+        let_create!(:object, named: nil, mentions: [mention])
 
         it "does not add the object to the notifications" do
           run(owner, create)
@@ -228,14 +238,19 @@ Spectator.describe ContentRules do
       end
 
       context "object is in reply to an object attributed to the owner" do
+        let_build(:object, named: parent, attributed_to: owner)
+
         before_each do
-          object.assign(in_reply_to:
-            Factory.build(:object, attributed_to: owner)
-          )
+          object.assign(in_reply_to: parent)
         end
 
         it "adds the reply to the notifications" do
           run(owner, create)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+
+        it "adds the object to the notifications" do
+          run(owner, update)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
 
@@ -246,14 +261,19 @@ Spectator.describe ContentRules do
             run(owner, create)
             expect(owner.notifications.map(&.object_or_activity)).to be_empty
           end
+
+          it "does not add the object to the notifications" do
+            run(owner, update)
+            expect(owner.notifications.map(&.object_or_activity)).to be_empty
+          end
         end
       end
 
       context "object is in reply to an object attributed to another actor" do
+        let_build(:object, named: parent, attributed_to: other)
+
         before_each do
-          object.assign(in_reply_to:
-            Factory.build(:object, attributed_to: other)
-          )
+          object.assign(in_reply_to: parent)
         end
 
         it "does not add the reply to the notifications" do
@@ -305,9 +325,8 @@ Spectator.describe ContentRules do
       end
 
       context "another object is in reply to an object attributed to the owner" do
-        let_create!(:object, named: nil, in_reply_to:
-          Factory.build(:object, attributed_to: owner)
-        )
+        let_build(:object, named: parent, attributed_to: owner)
+        let_create!(:object, named: nil, in_reply_to: parent)
 
         it "does not add the reply to the notifications" do
           run(owner, create)
@@ -316,13 +335,11 @@ Spectator.describe ContentRules do
       end
 
       context "object both is in reply to an object attributed to the owner and mentions the owner" do
+        let_build(:object, named: parent, attributed_to: owner)
+        let_build(:mention, name: owner.iri, href: owner.iri)
+
         before_each do
-          object.assign(
-            in_reply_to: Factory.build(:object, attributed_to: owner),
-            mentions: [
-              Factory.build(:mention, name: owner.iri, href: owner.iri)
-            ]
-          )
+          object.assign(in_reply_to: parent, mentions: [mention])
         end
 
         it "adds the object to the notifications once" do
@@ -337,10 +354,8 @@ Spectator.describe ContentRules do
       end
 
       context "object is tagged with hashtags" do
-        before_each do
-          Factory.create(:hashtag, name: "foo", href: "https://test.test/tags/foo", subject: object)
-          Factory.create(:hashtag, name: "bar", href: "https://remote/tags/bar", subject: object)
-        end
+        let_create!(:hashtag, named: nil, name: "foo", href: "https://test.test/tags/foo", subject: object)
+        let_create!(:hashtag, named: nil, name: "bar", href: "https://remote/tags/bar", subject: object)
 
         context "where object is attributed to the owner" do
           let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "foo")
@@ -416,10 +431,8 @@ Spectator.describe ContentRules do
       end
 
       context "object is tagged with mentions" do
-        before_each do
-          Factory.create(:mention, name: "foo@remote.com", subject: object)
-          Factory.create(:mention, name: "bar@remote.com", subject: object)
-        end
+        let_create!(:mention, named: nil, name: "foo@remote.com", subject: object)
+        let_create!(:mention, named: nil, name: "bar@remote.com", subject: object)
 
         context "where object is attributed to the owner" do
           let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "foo@remote.com")
@@ -496,10 +509,10 @@ Spectator.describe ContentRules do
 
       context "object is tagged with a hashtag and a mention and is a reply" do
         let_build(:object, named: origin, attributed_to: other)
+        let_create!(:hashtag, named: nil, name: "foo", href: "https://remote/tags/foo", subject: object)
+        let_create!(:mention, named: nil, name: "bar@remote.com", subject: object)
 
         before_each do
-          Factory.create(:hashtag, name: "foo", href: "https://remote/tags/foo", subject: object)
-          Factory.create(:mention, name: "bar@remote.com", subject: object)
           object.assign(in_reply_to: origin).save
         end
 
@@ -603,6 +616,15 @@ Spectator.describe ContentRules do
           expect(owner.notifications.map(&.to_iri)).to have("hashtag")
         end
       end
+
+      context "and an activity for the object already exists" do
+        before_each { create.save }
+
+        it "does not add the object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.to_iri)).to be_empty
+        end
+      end
     end
 
     context "given notifications with a followed mention already added" do
@@ -648,6 +670,15 @@ Spectator.describe ContentRules do
         it "adds the object to the notifications" do
           run(owner, announce)
           expect(owner.notifications.map(&.to_iri)).to have("mention@remote.com")
+        end
+      end
+
+      context "and an activity for the object already exists" do
+        before_each { create.save }
+
+        it "does not add the object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.to_iri)).to be_empty
         end
       end
     end
@@ -699,9 +730,18 @@ Spectator.describe ContentRules do
           expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
         end
       end
+
+      context "and an activity for the object already exists" do
+        before_each { create.save }
+
+        it "does not add the object to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.object_or_activity)).to be_empty
+        end
+      end
     end
 
-    context "given notifications with mention already added" do
+    context "given notifications with mention added via create" do
       before_each do
         put_in_notifications(owner, mention: create)
       end
@@ -737,7 +777,29 @@ Spectator.describe ContentRules do
       end
     end
 
-    context "given notifications with reply already added" do
+    context "given notifications with mention added via update" do
+      before_each do
+        put_in_notifications(owner, mention: update)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+
+      it "removes the mention from the notifications" do
+        run(owner, delete)
+        expect(Notification.where(from_iri: owner.iri)).to be_empty
+      end
+
+      context "and an unrelated delete" do
+        let_create(:delete, named: unrelated)
+
+        it "does not remove the mention from the notifications" do
+          run(owner, unrelated)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+      end
+    end
+
+    context "given notifications with reply added via create" do
       before_each do
         put_in_notifications(owner, reply: create)
       end
@@ -773,6 +835,28 @@ Spectator.describe ContentRules do
       end
     end
 
+    context "given notifications with reply added via update" do
+      before_each do
+        put_in_notifications(owner, reply: update)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([object]) }
+
+      it "removes the reply from the notifications" do
+        run(owner, delete)
+        expect(Notification.where(from_iri: owner.iri)).to be_empty
+      end
+
+      context "and an unrelated delete" do
+        let_create(:delete, named: unrelated)
+
+        it "does not remove the reply from the notifications" do
+          run(owner, unrelated)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([object])
+        end
+      end
+    end
+
     context "given notifications with an announce already added" do
       before_each do
         undo.assign(object: announce).save
@@ -799,9 +883,9 @@ Spectator.describe ContentRules do
 
     context "given notifications with another announce for the same object" do
       let_create(:announce, named: another, object: object)
+      let_create!(:notification_announce, owner: owner, activity: another)
 
       before_each do
-        Factory.create(:notification_announce, owner: owner, activity: another)
         object.assign(attributed_to: owner)
       end
 
@@ -844,9 +928,9 @@ Spectator.describe ContentRules do
 
     context "given notifications with another like for the same object" do
       let_create(:like, named: another, object: object)
+      let_create!(:notification_like, owner: owner, activity: another)
 
       before_each do
-        Factory.create(:notification_like, owner: owner, activity: another)
         object.assign(attributed_to: owner)
       end
 
@@ -979,10 +1063,10 @@ Spectator.describe ContentRules do
       end
 
       context "object mentions the owner" do
+        let_build(:mention, name: owner.iri, href: owner.iri)
+
         before_each do
-          object.assign(mentions: [
-            Factory.build(:mention, name: owner.iri, href: owner.iri)
-          ])
+          object.assign(mentions: [mention])
         end
 
         it "adds the object to the timeline" do
@@ -997,11 +1081,11 @@ Spectator.describe ContentRules do
       end
 
       context "object mentions the owner and another actor" do
+        let_build(:mention, named: owner_mention, name: owner.iri, href: owner.iri)
+        let_build(:mention, named: other_mention, name: other.iri, href: other.iri)
+
         before_each do
-          object.assign(mentions: [
-            Factory.build(:mention, name: owner.iri, href: owner.iri),
-            Factory.build(:mention, name: other.iri, href: other.iri)
-          ])
+          object.assign(mentions: [owner_mention, other_mention])
         end
 
         it "adds the object to the timeline" do
@@ -1016,10 +1100,10 @@ Spectator.describe ContentRules do
       end
 
       context "object mentions another actor" do
+        let_build(:mention, name: other.iri, href: other.iri)
+
         before_each do
-          object.assign(mentions: [
-            Factory.build(:mention, name: other.iri, href: other.iri)
-          ])
+          object.assign(mentions: [mention])
         end
 
         it "does not add the object to the timeline" do

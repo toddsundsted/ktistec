@@ -234,6 +234,49 @@ Spectator.describe ActivityPub::Object::Question do
     end
   end
 
+  describe "#from_json_ld" do
+    let(question) { poll.question }
+
+    let(json_string) do
+      <<-JSON
+      {
+        "@context": [
+          "https://www.w3.org/ns/activitystreams",
+          {"votersCount": "http://joinmastodon.org/ns#votersCount"}
+        ],
+        "id": #{question.iri.to_json},
+        "type": "Question",
+        "content": "Do you like polls?",
+        "oneOf": [
+          {
+            "type": "Note",
+            "name": "Yes",
+            "replies": {"type": "Collection", "totalItems": 42}
+          },
+          {
+            "type": "Note",
+            "name": "No",
+            "replies": {"type": "Collection", "totalItems": 8}
+          }
+        ],
+        "votersCount": 50
+      }
+      JSON
+    end
+
+    it "replaces poll instance" do
+      expect{question.from_json_ld(json_string)}.to change{question.poll}.from(poll)
+    end
+
+    it "updates voters count" do
+      expect{question.from_json_ld(json_string)}.to change{question.poll.voters_count}.to(50)
+    end
+
+    it "updates content" do
+      expect{question.from_json_ld(json_string)}.to change{question.content}.to("Do you like polls?")
+    end
+  end
+
   describe "#save" do
     let_create(:question)
 

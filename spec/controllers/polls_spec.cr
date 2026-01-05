@@ -20,12 +20,12 @@ Spectator.describe PollsController do
     let(actor) { register.actor }
 
     it "returns 401 if not authorized" do
-      post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes"
+      post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes"
       expect(response.status_code).to eq(401)
     end
 
     it "returns 401 if not authorized" do
-      post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+      post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
       expect(response.status_code).to eq(401)
     end
 
@@ -34,77 +34,77 @@ Spectator.describe PollsController do
 
       it "rejects votes on expired polls" do
         poll.assign(closed_at: 1.day.ago).save
-        post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes"
+        post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes"
         expect(response.status_code).to eq(422)
       end
 
       it "rejects votes on expired polls" do
         poll.assign(closed_at: 1.day.ago).save
-        post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+        post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
         expect(response.status_code).to eq(422)
       end
 
       it "rejects votes from poll author" do
         question.assign(attributed_to: actor).save
-        post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes"
+        post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes"
         expect(response.status_code).to eq(422)
       end
 
       it "rejects votes from poll author" do
         question.assign(attributed_to: actor).save
-        post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+        post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
         expect(response.status_code).to eq(422)
       end
 
       it "requires at least one option" do
-        post "/polls/#{poll.id}/vote", HTML_HEADERS, "options="
+        post "/polls/#{question.id}/vote", HTML_HEADERS, "options="
         expect(response.status_code).to eq(422)
       end
 
       it "requires at least one option" do
-        post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": []})
+        post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": []})
         expect(response.status_code).to eq(422)
       end
 
       it "validates options exist in poll" do
-        post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Invalid"
+        post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Invalid"
         expect(response.status_code).to eq(422)
       end
 
       it "validates options exist in poll" do
-        post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Invalid"]})
+        post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Invalid"]})
         expect(response.status_code).to eq(422)
       end
 
       # For each vote
 
       it "assigns published" do
-        post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes"
+        post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes"
         expect(question.votes_by(actor).all?(&.published.is_a?(Time))).to be_true
       end
 
       it "assigns special" do
-        post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes"
+        post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes"
         expect(question.votes_by(actor).all?(&.special.==("vote"))).to be_true
       end
 
       it "assigns to" do
-        post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+        post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
         expect(question.votes_by(actor).flat_map(&.to)).to contain_exactly(question.attributed_to.iri)
       end
 
       it "does not assign cc" do
-        post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+        post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
         expect(question.votes_by(actor).flat_map(&.cc)).to be_empty
       end
 
       it "wraps votes in create activities" do
-        post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+        post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
         expect(question.votes_by(actor).all?(&.activities.any?(ActivityPub::Activity::Create))).to be_true
       end
 
       it "schedules deliveries of activities" do
-        post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+        post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
 
         question.votes_by(actor).each do |vote|
           create_activity = ActivityPub::Activity::Create.find(actor: actor, object: vote)
@@ -119,11 +119,11 @@ Spectator.describe PollsController do
           before_each { poll.assign(closed_at: future_time).save }
 
           it "creates notification task" do
-            expect { post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes" }.to change { Task::NotifyPollExpiry.count }.by(1)
+            expect { post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes" }.to change { Task::NotifyPollExpiry.count }.by(1)
           end
 
           it "schedules task for poll closed_at time" do
-            post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes"
+            post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes"
             task = Task::NotifyPollExpiry.find(question: question)
             expect(task.next_attempt_at).to be_close(future_time, 1.second)
           end
@@ -135,7 +135,7 @@ Spectator.describe PollsController do
           let_create!(:notify_poll_expiry_task, question: question)
 
           it "does not create another task" do
-            expect { post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes" }.not_to change { Task::NotifyPollExpiry.count }
+            expect { post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes" }.not_to change { Task::NotifyPollExpiry.count }
           end
         end
 
@@ -143,7 +143,7 @@ Spectator.describe PollsController do
           before_each { poll.assign(closed_at: nil).save }
 
           it "does not create task" do
-            expect { post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes" }.not_to change { Task::NotifyPollExpiry.count }
+            expect { post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes" }.not_to change { Task::NotifyPollExpiry.count }
           end
         end
 
@@ -151,40 +151,40 @@ Spectator.describe PollsController do
           let_create(:poll, question: question, closed_at: 1.day.ago)
 
           it "does not create task" do
-            expect { post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes" }.not_to change { Task::NotifyPollExpiry.count }
+            expect { post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes" }.not_to change { Task::NotifyPollExpiry.count }
           end
         end
       end
 
       context "with single-choice poll" do
         it "prevents multiple selections" do
-          post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes&options=No"
+          post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes&options=No"
           expect(response.status_code).to eq(422)
         end
 
         it "prevents multiple selections" do
-          post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes", "No"]})
+          post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes", "No"]})
           expect(response.status_code).to eq(422)
         end
 
         it "prevents more than one votes" do
-          post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes"
+          post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes"
           expect(response.status_code).to eq(302)
 
-          post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=No"
+          post "/polls/#{question.id}/vote", HTML_HEADERS, "options=No"
           expect(response.status_code).to eq(422)
         end
 
         it "prevents more than one votes" do
-          post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+          post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
           expect(response.status_code).to eq(302)
 
-          post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["No"]})
+          post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["No"]})
           expect(response.status_code).to eq(422)
         end
 
         it "creates vote and returns success" do
-          post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes"
+          post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes"
           expect(response.status_code).to eq(302)
 
           votes = question.votes_by(actor)
@@ -193,7 +193,7 @@ Spectator.describe PollsController do
         end
 
         it "creates vote and returns success" do
-          post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+          post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
           expect(response.status_code).to eq(302)
 
           votes = question.votes_by(actor)
@@ -206,33 +206,33 @@ Spectator.describe PollsController do
         before_each { poll.assign(multiple_choice: true).save }
 
         it "allows multiple selections" do
-          post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes&options=No"
+          post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes&options=No"
           expect(response.status_code).to eq(302)
         end
 
         it "allows multiple selections" do
-          post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes", "No"]})
+          post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes", "No"]})
           expect(response.status_code).to eq(302)
         end
 
         it "prevents more than one votes" do
-          post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes"
+          post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes"
           expect(response.status_code).to eq(302)
 
-          post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=No"
+          post "/polls/#{question.id}/vote", HTML_HEADERS, "options=No"
           expect(response.status_code).to eq(422)
         end
 
         it "prevents more than one votes" do
-          post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
+          post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes"]})
           expect(response.status_code).to eq(302)
 
-          post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["No"]})
+          post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["No"]})
           expect(response.status_code).to eq(422)
         end
 
         it "creates votes and returns success" do
-          post "/polls/#{poll.id}/vote", HTML_HEADERS, "options=Yes&options=No"
+          post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes&options=No"
           expect(response.status_code).to eq(302)
 
           votes = question.votes_by(actor)
@@ -241,7 +241,7 @@ Spectator.describe PollsController do
         end
 
         it "creates votes and returns success" do
-          post "/polls/#{poll.id}/vote", JSON_HEADERS, %({"options": ["Yes", "No"]})
+          post "/polls/#{question.id}/vote", JSON_HEADERS, %({"options": ["Yes", "No"]})
           expect(response.status_code).to eq(302)
 
           votes = question.votes_by(actor)

@@ -8,9 +8,11 @@ class PollsController
   include Ktistec::Controller
 
   post "/polls/:id/vote" do |env|
-    unless (poll = Poll.find?(id_param(env)))
+    unless (question = ActivityPub::Object::Question.find?(id_param(env)))
       not_found
     end
+
+    poll = question.poll
 
     if poll.expired?
       unprocessable_entity "Poll has expired"
@@ -44,7 +46,6 @@ class PollsController
     end
 
     actor = env.account.actor
-    question = poll.question
 
     if question.attributed_to == actor
       unprocessable_entity("Authors cannot vote on their own polls")

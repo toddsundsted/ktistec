@@ -1,4 +1,5 @@
-FROM 84codes/crystal:latest-alpine AS builder
+FROM alpine:edge AS builder
+RUN apk add --update crystal shards yaml-dev musl-dev make
 RUN apk update && apk upgrade && apk add sqlite-static
 WORKDIR /build/
 ARG version

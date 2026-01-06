@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.2.7]
+### Added
+- Backend support for creating polls.
+- Advanced theming support with new classes, data attributes, and view helpers.
+- Task status display on admin page showing running and imminently scheduled task counts.
+
+### Fixed
+- Poll vote form now correctly submits `Question` ID.
+
+### Changed
+- Move location of Ktistec version notice. (fixes [#133](https://github.com/toddsundsted/ktistec/issues/133))
+- Updated admin menu for better accessibility and less clutter.
+
 ## [v3.2.6]
 ### Added
 - Support for editing alt text in the Trix editor. (fixes [#52](https://github.com/toddsundsted/ktistec/issues/52))
@@ -603,6 +616,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.2.7]: https://github.com/toddsundsted/ktistec/compare/480c0c6f...c37790ba
 [v3.2.6]: https://github.com/toddsundsted/ktistec/compare/28674aa8...79e17af6
 [v3.2.5]: https://github.com/toddsundsted/ktistec/compare/2e91c174...20946f62
 [v3.2.4]: https://github.com/toddsundsted/ktistec/compare/7de86aa4...107553e8

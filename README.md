@@ -144,10 +144,11 @@ automatically rendered when present.
 
 ### Polls
 
-Ktistec supports viewing and voting on polls from federated servers.
-When a post includes a poll, you can see the available options and
-vote directly from your timeline. Poll results are updated in
-real-time as votes are federated across the network.
+Ktistec supports creating, viewing, and voting on polls. Create polls
+when composing posts to gather feedback from your followers. When a
+post includes a poll, you can see the available options and vote
+directly from your timeline. Poll results are updated in real-time as
+votes are federated across the network.
 
 ### Control over comment visibility
 

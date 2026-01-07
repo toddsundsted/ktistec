@@ -1027,7 +1027,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "does not run the callback on associated instance if it's not a new record" do
-        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val") #.tap(&.clear_changed!)
+        all_caps_model = AllCapsModel.new(id: 9999_i64, key: "Key", val: "Val")
         expect { FooBarModel.new(not_nil_model: all_caps_model).save }.not_to change { all_caps_model.before_create_called }.from(false)
       end
     end

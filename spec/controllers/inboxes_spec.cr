@@ -1565,7 +1565,7 @@ Spectator.describe InboxesController do
       end
 
       context "wrapped Delete activity" do
-        let_create(:actor, named: :lemmy_user_with_keys, iri: "https://lemmy.world/u/testuser", with_keys: true)  # WHY???????
+        let_create(:actor, named: :lemmy_user_with_keys, iri: "https://lemmy.world/u/testuser", with_keys: true)
         let_create(:object, attributed_to: lemmy_user_with_keys)
         let_build(:delete, actor: lemmy_user_with_keys, object: object)
         let_build(:announce, actor: community, object_iri: delete.iri)

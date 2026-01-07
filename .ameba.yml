@@ -1,9 +1,5 @@
 ## Disabled
 
-Lint/Formatting:
-  Description: Reports not formatted sources
-  Enabled: false
-
 Lint/NotNil:
   Description: Identifies usage of `not_nil!` calls
   Enabled: false

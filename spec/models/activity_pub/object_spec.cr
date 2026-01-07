@@ -1646,12 +1646,7 @@ Spectator.describe ActivityPub::Object do
       objects = [] of ActivityPub::Object
       structure.each do |spec|
         parent = (idx = spec[:parent_idx]) ? objects[idx] : nil
-        object = Factory.create( # ameba:disable Ktistec/NoImperativeFactories
-          :object,
-          in_reply_to: parent,
-          attributed_to: actors[spec[:author_idx]],
-          published: base_time + spec[:time_offset]
-        )
+        object = Factory.create(:object, in_reply_to: parent, attributed_to: actors[spec[:author_idx]], published: base_time + spec[:time_offset]) # ameba:disable Ktistec/NoImperativeFactories
         objects << object
       end
       objects.first

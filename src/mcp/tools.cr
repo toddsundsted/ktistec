@@ -31,10 +31,10 @@ module MCP
       default: String | Int32 | Bool | Time | Array(String) | Array(Int32) | Array(Bool) | Nil,
       enum: Array(String)?, # enum values for string types
       # array-specific properties
-      items: String?,       # type of array items ("string", "integer")
-      min_items: Int32?,    # minimum array length
-      max_items: Int32?,    # maximum array length
-      unique_items: Bool?,  # whether array elements must be unique
+      items: String?, # type of array items ("string", "integer")
+      min_items: Int32?,
+      max_items: Int32?,
+      unique_items: Bool?,
     )
 
     alias ToolDefinition = NamedTuple(

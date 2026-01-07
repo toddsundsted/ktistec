@@ -147,7 +147,8 @@ Spectator.describe ActivityPub::Actor do
         KNFcMekDexfrLUk8EjP0psKcm9AGVefYvfKtD2cAGhF6UTZKVUUZRmECARE=
         -----END PUBLIC KEY-----
         KEY
-      ),
+
+        ),
       pem_private_key: (<<-KEY
         -----BEGIN PRIVATE KEY-----
         MIIBUQIBADANBgkqhkiG9w0BAQEFAASCATswggE3AgEAAkEAqvX/fS/C1CjNTMoC
@@ -160,7 +161,8 @@ Spectator.describe ActivityPub::Actor do
         +4EIKbQ=
         -----END PRIVATE KEY-----
         KEY
-      ),
+
+        ),
     ).save
   end
 

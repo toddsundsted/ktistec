@@ -27,7 +27,7 @@ Spectator.describe Ktistec::JSON_LD do
 
     it "raises an error" do
       json = "[]"
-      expect{described_class.expand(json)}.to raise_error(Ktistec::JSON_LD::Error)
+      expect { described_class.expand(json) }.to raise_error(Ktistec::JSON_LD::Error)
     end
   end
 

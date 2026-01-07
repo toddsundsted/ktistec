@@ -12,7 +12,7 @@ Spectator.describe Relationship::Social::Follow do
   let(options) do
     {
       from_iri: from.iri,
-      to_iri: to.iri,
+      to_iri:   to.iri,
     }
   end
 

@@ -104,22 +104,22 @@ class HomeController
     params = accepts?("text/html") ? env.params.body : env.params.json
     {
       "host" => params["host"].as(String),
-      "site" => params["site"].as(String)
+      "site" => params["site"].as(String),
     }
   end
 
   private def self.step_2_params(env)
     params = accepts?("text/html") ? env.params.body : env.params.json
     {
-      "username" => params["username"].as(String),
-      "password" => params["password"].as(String),
-      "name" => params["name"].as(String),
-      "summary" => params["summary"].as(String),
-      "language" => params["language"].as(String),
-      "timezone" => params["timezone"].as(String),
+      "username"               => params["username"].as(String),
+      "password"               => params["password"].as(String),
+      "name"                   => params["name"].as(String),
+      "summary"                => params["summary"].as(String),
+      "language"               => params["language"].as(String),
+      "timezone"               => params["timezone"].as(String),
       "auto_approve_followers" => params["auto_approve_followers"]?.in?("1", true) || false,
-      "auto_follow_back" => params["auto_follow_back"]?.in?("1", true) || false,
-      "type" => params["type"]?.try(&.as(String)) || PERSON,
+      "auto_follow_back"       => params["auto_follow_back"]?.in?("1", true) || false,
+      "type"                   => params["type"]?.try(&.as(String)) || PERSON,
     }
   end
 end

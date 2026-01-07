@@ -157,7 +157,7 @@ module Ktistec::ViewHelper
       max_size = env.account? ? 1000 : 20
       {
         page: Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
-        size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, max_size)
+        size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, max_size),
       }
     end
 
@@ -328,24 +328,25 @@ module Ktistec::ViewHelper
     end
 
     def actor_type(actor)
-      icon = if actor
-        case actor.type.split("::").last
-        when "Person"
-          "user"
-        when "Group"
-          "users"
-        when "Organization"
-          "university"
-        when "Service"
-          "plug"
-        when "Application"
-          "laptop"
+      icon =
+        if actor
+          case actor.type.split("::").last
+          when "Person"
+            "user"
+          when "Group"
+            "users"
+          when "Organization"
+            "university"
+          when "Service"
+            "plug"
+          when "Application"
+            "laptop"
+          else
+            "user"
+          end
         else
           "user"
         end
-      else
-        "user"
-      end
       %Q|<i class="actor-type-overlay #{icon} icon"></i>|
     end
   end
@@ -369,7 +370,7 @@ module Ktistec::ViewHelper
     {% end %}
   end
 
-  ## Parameter coercion
+  # Parameter coercion
 
   macro id_param(env, type = :url, name = "id")
     begin
@@ -389,19 +390,19 @@ module Ktistec::ViewHelper
     end
   end
 
-  ## HTML helpers
+  # HTML helpers
 
   # Posts an activity to an outbox.
   #
   macro activity_button(arg1, arg2, arg3, type = nil, method = "POST", public = true, form_class = "ui inline form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
     {% if block %}
-      {% action = arg1 ; object = arg2 ; type = arg3 %}
+      {% action = arg1; object = arg2; type = arg3 %}
       %block =
         begin
           {{block.body}}
         end
     {% else %}
-      {% action = arg2 ; object = arg3 ; text = arg1 %}
+      {% action = arg2; object = arg3; text = arg1 %}
       %block = {{text}}
     {% end %}
     {% if method == "DELETE" %}
@@ -746,7 +747,7 @@ module Ktistec::ViewHelper
     end.join
   end
 
-  ## JSON helpers
+  # JSON helpers
 
   # Renders an ActivityPub collection as JSON-LD.
   #
@@ -806,7 +807,7 @@ module Ktistec::ViewHelper
     %Q|"{{field.id}}":#{%value}#{%comma}|
   end
 
-  ## Task helpers
+  # Task helpers
 
   # Returns the task status line.
   #
@@ -885,7 +886,7 @@ module Ktistec::ViewHelper
     end
   end
 
-  ## General purpose helpers
+  # General purpose helpers
 
   # Returns the host.
   #
@@ -968,7 +969,7 @@ module Ktistec::ViewHelper
     Ktistec::Util.id
   end
 
-  ## View helpers
+  # View helpers
 
   # The naming below matches the format of automatically generated
   # view helpers. View helpers for partials are *not* automatically

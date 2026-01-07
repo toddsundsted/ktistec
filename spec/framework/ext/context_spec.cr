@@ -18,7 +18,7 @@ Spectator.describe HTTP::Server::Context do
   setup_spec
 
   it "creates a new session" do
-    expect{get "/foo/bar/session"}.to change{Session.count}.by(1)
+    expect { get "/foo/bar/session" }.to change { Session.count }.by(1)
   end
 
   it "returns the session token in a cookie" do

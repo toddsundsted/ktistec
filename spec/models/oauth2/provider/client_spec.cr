@@ -74,7 +74,7 @@ Spectator.describe OAuth2::Provider::Client do
   describe "#destroy" do
     it "destroys associated access tokens" do
       token_id = access_token.id
-      expect{client.destroy}.to change{OAuth2::Provider::AccessToken.count}.by(-1)
+      expect { client.destroy }.to change { OAuth2::Provider::AccessToken.count }.by(-1)
       expect(OAuth2::Provider::AccessToken.find?(token_id)).to be_nil
     end
   end

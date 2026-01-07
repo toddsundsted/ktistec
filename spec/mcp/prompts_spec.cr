@@ -33,18 +33,18 @@ Spectator.describe MCP::Prompts do
     style_text = style.empty? ? "" : " in a #{style} style"
     JSON::Any.new([
       JSON::Any.new({
-        "role" => JSON::Any.new("user"),
+        "role"    => JSON::Any.new("user"),
         "content" => JSON::Any.new({
           "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new("Please discuss #{topic}#{style_text}.")
-        })
+          "text" => JSON::Any.new("Please discuss #{topic}#{style_text}."),
+        }),
       }),
       JSON::Any.new({
-        "role" => JSON::Any.new("assistant"),
+        "role"    => JSON::Any.new("assistant"),
         "content" => JSON::Any.new({
           "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new("The request cost is 0.01 KTs.")
-        })
+          "text" => JSON::Any.new("The request cost is 0.01 KTs."),
+        }),
       }),
     ])
   end
@@ -114,7 +114,7 @@ Spectator.describe MCP::Prompts do
       response = described_class.handle_prompts_list(prompts_list_request)
 
       prompts = response["prompts"].as_a
-      expect(prompts.size).to eq(2)  # test_prompt & whats_new
+      expect(prompts.size).to eq(2) # test_prompt & whats_new
 
       names = prompts.map(&.["name"].as_s)
       expect(names).to contain("test_prompt", "whats_new")

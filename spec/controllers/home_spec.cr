@@ -67,28 +67,28 @@ Spectator.describe HomeController do
 
       it "sets host and redirects" do
         body = "host=https://foo_bar&site=Foo+Bar"
-        expect{post "/", HTML_HEADERS, body}.to change{Ktistec.settings.host}
+        expect { post "/", HTML_HEADERS, body }.to change { Ktistec.settings.host }
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end
 
       it "sets site and redirects" do
         body = "host=https://foo_bar&site=Foo+Bar"
-        expect{post "/", HTML_HEADERS, body}.to change{Ktistec.settings.site}
+        expect { post "/", HTML_HEADERS, body }.to change { Ktistec.settings.site }
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end
 
       it "sets host and redirects" do
         body = {host: "https://foo_bar", site: "Foo Bar"}.to_json
-        expect{post "/", JSON_HEADERS, body}.to change{Ktistec.settings.host}
+        expect { post "/", JSON_HEADERS, body }.to change { Ktistec.settings.host }
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end
 
       it "sets site and redirects" do
         body = {host: "https://foo_bar", site: "Foo Bar"}.to_json
-        expect{post "/", JSON_HEADERS, body}.to change{Ktistec.settings.site}
+        expect { post "/", JSON_HEADERS, body }.to change { Ktistec.settings.site }
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end
@@ -146,7 +146,7 @@ Spectator.describe HomeController do
       end
 
       it "creates account" do
-        expect{post "/", HTML_HEADERS, query_string}.to change{Account.count}.by(1)
+        expect { post "/", HTML_HEADERS, query_string }.to change { Account.count }.by(1)
       end
 
       it "creates actor of type ActivityPub::Actor::Person by default" do
@@ -177,7 +177,7 @@ Spectator.describe HomeController do
       end
 
       it "creates account" do
-        expect{post "/", JSON_HEADERS, json_string}.to change{Account.count}.by(1)
+        expect { post "/", JSON_HEADERS, json_string }.to change { Account.count }.by(1)
       end
 
       it "creates actor of type ActivityPub::Actor::Person by default" do
@@ -319,13 +319,13 @@ Spectator.describe HomeController do
         it "redirects to the user's page" do
           get "/", HTML_HEADERS
           expect(response.status_code).to eq(302)
-          expect(response.headers.to_a).to have({"Location", ["/actors\/#{username}"]})
+          expect(response.headers.to_a).to have({"Location", ["/actors/#{username}"]})
         end
 
         it "redirects to the user's page" do
           get "/", JSON_HEADERS
           expect(response.status_code).to eq(302)
-          expect(response.headers.to_a).to have({"Location", ["/actors\/#{username}"]})
+          expect(response.headers.to_a).to have({"Location", ["/actors/#{username}"]})
         end
       end
     end

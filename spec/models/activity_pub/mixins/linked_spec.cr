@@ -37,12 +37,12 @@ Spectator.describe Ktistec::Model::Linked do
     def self.map(json, **options)
       json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
       {
-        "iri" => json.dig?("@id").try(&.as_s),
-        "_type" => json.dig?("@type").try(&.as_s.split("#").last),
+        "iri"              => json.dig?("@id").try(&.as_s),
+        "_type"            => json.dig?("@type").try(&.as_s.split("#").last),
         "linked_model_iri" => json.dig?("https://www.w3.org/ns/activitystreams#linked").try(&.as_s?),
-        "linked_model" => if (linked_model = json.dig?("https://www.w3.org/ns/activitystreams#linked")) && linked_model.as_h?
+        "linked_model"     => if (linked_model = json.dig?("https://www.w3.org/ns/activitystreams#linked")) && linked_model.as_h?
           ActivityPub.from_json_ld(linked_model)
-        end
+        end,
       }.compact
     end
   end
@@ -271,7 +271,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "does not raise an error" do
-        expect{subject.linked_model?(key_pair, dereference: true)}.not_to raise_error
+        expect { subject.linked_model?(key_pair, dereference: true) }.not_to raise_error
       end
     end
 
@@ -282,7 +282,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "does not raise an error" do
-        expect{subject.linked_model?(key_pair, dereference: true)}.not_to raise_error
+        expect { subject.linked_model?(key_pair, dereference: true) }.not_to raise_error
       end
     end
 
@@ -293,7 +293,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "does not raise an error" do
-        expect{subject.linked_model?(key_pair, dereference: true)}.not_to raise_error
+        expect { subject.linked_model?(key_pair, dereference: true) }.not_to raise_error
       end
     end
 
@@ -304,7 +304,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "does not raise an error" do
-        expect{subject.linked_model?(key_pair, dereference: true)}.not_to raise_error
+        expect { subject.linked_model?(key_pair, dereference: true) }.not_to raise_error
       end
     end
   end
@@ -438,7 +438,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "does not raise an error" do
-        expect{subject.dereference?(key_pair, object.iri)}.not_to raise_error
+        expect { subject.dereference?(key_pair, object.iri) }.not_to raise_error
       end
     end
 
@@ -448,7 +448,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "does not raise an error" do
-        expect{subject.dereference?(key_pair, object.iri)}.not_to raise_error
+        expect { subject.dereference?(key_pair, object.iri) }.not_to raise_error
       end
     end
 
@@ -458,7 +458,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "does not raise an error" do
-        expect{subject.dereference?(key_pair, object.iri)}.not_to raise_error
+        expect { subject.dereference?(key_pair, object.iri) }.not_to raise_error
       end
     end
 
@@ -468,7 +468,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "does not raise an error" do
-        expect{subject.dereference?(key_pair, object.iri)}.not_to raise_error
+        expect { subject.dereference?(key_pair, object.iri) }.not_to raise_error
       end
     end
   end

@@ -11,14 +11,14 @@ Spectator.describe Task::CollectGarbage do
 
   describe ".ensure_scheduled" do
     it "schedules a new task" do
-      expect{described_class.ensure_scheduled}.to change{described_class.count}.by(1)
+      expect { described_class.ensure_scheduled }.to change { described_class.count }.by(1)
     end
 
     context "given an existing task" do
       before_each { described_class.new.schedule }
 
       it "does not schedule a new task" do
-        expect{described_class.ensure_scheduled}.not_to change{described_class.count}
+        expect { described_class.ensure_scheduled }.not_to change { described_class.count }
       end
     end
   end
@@ -804,11 +804,11 @@ Spectator.describe Task::CollectGarbage do
 
       context "given more objects than the max delete count" do
         before_each do
-          11.times { Factory.create(:object, created_at: TOO_OLD) }  # ameba:disable Ktistec/NoImperativeFactories
+          11.times { Factory.create(:object, created_at: TOO_OLD) } # ameba:disable Ktistec/NoImperativeFactories
         end
 
         it "deletes only up to the maximum count" do
-          expect{ subject.perform(max_delete_count: 10) }.to change { ActivityPub::Object.count }.by(-10)
+          expect { subject.perform(max_delete_count: 10) }.to change { ActivityPub::Object.count }.by(-10)
         end
       end
     end

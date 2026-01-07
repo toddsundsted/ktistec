@@ -13,9 +13,9 @@ Spectator.describe ObjectBuilder::QuestionBuilder do
   describe "#build" do
     let(params) do
       {
-        "content" => "What is your favorite color?",
+        "content"      => "What is your favorite color?",
         "poll-options" => ["Red", "Blue", "Green"],
-        "visibility" => "public",
+        "visibility"   => "public",
       }
     end
 

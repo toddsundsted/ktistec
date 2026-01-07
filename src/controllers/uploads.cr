@@ -56,7 +56,7 @@ class UploadsController
     end
 
     filename = $1 # full filename (e.g., "123.txt")
-    id_str = $2 # actor ID (e.g., "123")
+    id_str = $2   # actor ID (e.g., "123")
 
     actor_id = id_str.to_i64? || return nil
 

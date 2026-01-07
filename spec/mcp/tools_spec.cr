@@ -18,12 +18,12 @@ Spectator.describe MCP::Tools do
     {name: "created_at", type: "time", description: "Creation timestamp"},
   ]) do
     JSON::Any.new({
-      "user" => JSON::Any.new(user),
-      "query" => JSON::Any.new(query),
-      "limit" => JSON::Any.new(limit),
+      "user"            => JSON::Any.new(user),
+      "query"           => JSON::Any.new(query),
+      "limit"           => JSON::Any.new(limit),
       "include_replies" => JSON::Any.new(include_replies),
-      "created_at" => created_at ? JSON::Any.new(created_at.to_rfc3339) : JSON::Any.new(nil),
-      "quota" => JSON::Any.new(99),
+      "created_at"      => created_at ? JSON::Any.new(created_at.to_rfc3339) : JSON::Any.new(nil),
+      "quota"           => JSON::Any.new(99),
     })
   end
 
@@ -38,8 +38,8 @@ Spectator.describe MCP::Tools do
     flag_count = flags.count(true)
 
     JSON::Any.new({
-      "tag_count" => JSON::Any.new(tag_count),
-      "score_sum" => JSON::Any.new(score_sum),
+      "tag_count"  => JSON::Any.new(tag_count),
+      "score_sum"  => JSON::Any.new(score_sum),
       "flag_count" => JSON::Any.new(flag_count),
     })
   end
@@ -48,11 +48,11 @@ Spectator.describe MCP::Tools do
     it "validates and extracts arguments" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("test_user"),
-          "query" => JSON::Any.new("test query"),
-          "limit" => JSON::Any.new(25),
+          "user"            => JSON::Any.new("test_user"),
+          "query"           => JSON::Any.new("test query"),
+          "limit"           => JSON::Any.new(25),
           "include_replies" => JSON::Any.new(true),
-        })
+        }),
       })
 
       result = described_class.handle_tool_test_tool(params, account)
@@ -65,9 +65,9 @@ Spectator.describe MCP::Tools do
     it "supplies default values for optional arguments" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("test_user"),
+          "user"  => JSON::Any.new("test_user"),
           "query" => JSON::Any.new("test query"),
-        })
+        }),
       })
 
       result = described_class.handle_tool_test_tool(params, account)
@@ -78,11 +78,11 @@ Spectator.describe MCP::Tools do
     it "invokes block" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("test_user"),
-          "query" => JSON::Any.new("test query"),
-          "limit" => JSON::Any.new(25),
+          "user"            => JSON::Any.new("test_user"),
+          "query"           => JSON::Any.new("test query"),
+          "limit"           => JSON::Any.new(25),
           "include_replies" => JSON::Any.new(true),
-        })
+        }),
       })
 
       result = described_class.handle_tool_test_tool(params, account)
@@ -106,9 +106,9 @@ Spectator.describe MCP::Tools do
     it "validates string type" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new(123),
+          "user"  => JSON::Any.new(123),
           "query" => JSON::Any.new("test query"),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`user` must be a string/)
@@ -117,9 +117,9 @@ Spectator.describe MCP::Tools do
     it "validates string regex" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("INVALID123"),
+          "user"  => JSON::Any.new("INVALID123"),
           "query" => JSON::Any.new("test query"),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`user` format is invalid/)
@@ -128,10 +128,10 @@ Spectator.describe MCP::Tools do
     it "validates integer type" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("test_user"),
+          "user"  => JSON::Any.new("test_user"),
           "query" => JSON::Any.new("test query"),
           "limit" => JSON::Any.new("not_an_integer"),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be an integer/)
@@ -140,10 +140,10 @@ Spectator.describe MCP::Tools do
     it "validates integer maximum" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("test_user"),
+          "user"  => JSON::Any.new("test_user"),
           "query" => JSON::Any.new("test query"),
           "limit" => JSON::Any.new(100),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be <= 50/)
@@ -152,10 +152,10 @@ Spectator.describe MCP::Tools do
     it "validates integer minimum" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("test_user"),
+          "user"  => JSON::Any.new("test_user"),
           "query" => JSON::Any.new("test query"),
           "limit" => JSON::Any.new(1),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`limit` must be >= 1/)
@@ -164,10 +164,10 @@ Spectator.describe MCP::Tools do
     it "validates boolean type" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("test_user"),
-          "query" => JSON::Any.new("test query"),
+          "user"            => JSON::Any.new("test_user"),
+          "query"           => JSON::Any.new("test query"),
           "include_replies" => JSON::Any.new("not_a_boolean"),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`include_replies` must be a boolean/)
@@ -176,10 +176,10 @@ Spectator.describe MCP::Tools do
     it "validates time type" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("test_user"),
-          "query" => JSON::Any.new("test query"),
+          "user"       => JSON::Any.new("test_user"),
+          "query"      => JSON::Any.new("test query"),
           "created_at" => JSON::Any.new(123),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a RFC3339 timestamp/)
@@ -188,10 +188,10 @@ Spectator.describe MCP::Tools do
     it "validates time format" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("test_user"),
-          "query" => JSON::Any.new("test query"),
+          "user"       => JSON::Any.new("test_user"),
+          "query"      => JSON::Any.new("test query"),
           "created_at" => JSON::Any.new("invalid-time-format"),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_tool(params, account) }.to raise_error(MCPError, /`created_at` must be a RFC3339 timestamp/)
@@ -201,10 +201,10 @@ Spectator.describe MCP::Tools do
       timestamp = "2024-01-15T10:30:00Z"
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "user" => JSON::Any.new("test_user"),
-          "query" => JSON::Any.new("test query"),
+          "user"       => JSON::Any.new("test_user"),
+          "query"      => JSON::Any.new("test query"),
           "created_at" => JSON::Any.new(timestamp),
-        })
+        }),
       })
 
       result = described_class.handle_tool_test_tool(params, account)
@@ -216,10 +216,10 @@ Spectator.describe MCP::Tools do
     it "accepts valid arrays" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "tags" => JSON::Any.new(["unique", "valid", "strings"].map { |s| JSON::Any.new(s) }),
+          "tags"   => JSON::Any.new(["unique", "valid", "strings"].map { |s| JSON::Any.new(s) }),
           "scores" => JSON::Any.new([1, 2, 3].map { |i| JSON::Any.new(i) }),
-          "flags" => JSON::Any.new([true, false, true].map { |b| JSON::Any.new(b) }),
-        })
+          "flags"  => JSON::Any.new([true, false, true].map { |b| JSON::Any.new(b) }),
+        }),
       })
 
       result = described_class.handle_tool_test_array_tool(params, account)
@@ -235,7 +235,7 @@ Spectator.describe MCP::Tools do
           "tags" => JSON::Any.new(["tag1", "tag2"].map { |s| JSON::Any.new(s) }),
           # scores parameter is optional, so it can be omitted to test the default value
           # flags parameter is optional, so it can be omitted to test the default value
-        })
+        }),
       })
 
       result = described_class.handle_tool_test_array_tool(params, account)
@@ -247,7 +247,7 @@ Spectator.describe MCP::Tools do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
           "tags" => JSON::Any.new("not_an_array"),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` must be an array/)
@@ -257,7 +257,7 @@ Spectator.describe MCP::Tools do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
           "tags" => JSON::Any.new([JSON::Any.new(123), JSON::Any.new("valid_string")]),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`tags\[0\]` must be a string/)
@@ -266,9 +266,9 @@ Spectator.describe MCP::Tools do
     it "validates integer array item types" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "tags" => JSON::Any.new(["valid", "array"].map { |s| JSON::Any.new(s) }),
+          "tags"   => JSON::Any.new(["valid", "array"].map { |s| JSON::Any.new(s) }),
           "scores" => JSON::Any.new([JSON::Any.new(1), JSON::Any.new("not_an_integer"), JSON::Any.new(3)]),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`scores\[1\]` must be an integer/)
@@ -277,9 +277,9 @@ Spectator.describe MCP::Tools do
     it "validates boolean array item types" do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
-          "tags" => JSON::Any.new(["valid", "array"].map { |s| JSON::Any.new(s) }),
+          "tags"  => JSON::Any.new(["valid", "array"].map { |s| JSON::Any.new(s) }),
           "flags" => JSON::Any.new([JSON::Any.new(true), JSON::Any.new(false), JSON::Any.new("not_a_boolean")]),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`flags\[2\]` must be a boolean/)
@@ -289,7 +289,7 @@ Spectator.describe MCP::Tools do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
           "tags" => JSON::Any.new([] of JSON::Any),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` size must be >= 1/)
@@ -299,7 +299,7 @@ Spectator.describe MCP::Tools do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
           "tags" => JSON::Any.new(["1", "2", "3", "4", "5", "6", "7", "8", "9"].map { |s| JSON::Any.new(s) }),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` size must be <= 8/)
@@ -309,7 +309,7 @@ Spectator.describe MCP::Tools do
       params = JSON::Any.new({
         "arguments" => JSON::Any.new({
           "tags" => JSON::Any.new(["unique", "array", "unique"].map { |s| JSON::Any.new(s) }),
-        })
+        }),
       })
 
       expect { described_class.handle_tool_test_array_tool(params, account) }.to raise_error(MCPError, /`tags` items must be unique/)
@@ -890,7 +890,7 @@ Spectator.describe MCP::Tools do
       context "with page and/or size parameters" do
         before_each do
           25.times do
-            object = Factory.create(:object)  # ameba:disable Ktistec/NoImperativeFactories
+            object = Factory.create(:object) # ameba:disable Ktistec/NoImperativeFactories
             put_in_timeline(account.actor, object)
           end
         end

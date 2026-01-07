@@ -14,8 +14,8 @@ end
 class BaseTask < Task
   def initialize(options = Hash(String, String).new)
     options = {
-      "source_iri" => "https://test.test/#{random_string}",
-      "subject_iri" => "https://test.test/#{random_string}"
+      "source_iri"  => "https://test.test/#{random_string}",
+      "subject_iri" => "https://test.test/#{random_string}",
     }.merge(options)
     super(options)
   end
@@ -97,7 +97,7 @@ Spectator.describe TaskWorker do
       end
 
       it "waits for scheduled tasks to complete" do
-        expect { spawn_and_yield ; TaskWorker.stop }.to change { task.reload!.complete }.from(false).to(true)
+        expect { spawn_and_yield; TaskWorker.stop }.to change { task.reload!.complete }.from(false).to(true)
       end
     end
   end

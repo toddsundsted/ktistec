@@ -9,7 +9,7 @@ class FooBarTransfer < Task
   include Task::Transfer
 
   @source_iri = ""
-  @subject_iri  = ""
+  @subject_iri = ""
 
   # redefine private method as public for testing
   def sanitize_log_message(message : String, max_length : Int32 = 200) : String
@@ -109,8 +109,8 @@ Spectator.describe Task::Transfer do
       end
 
       it "doesn't raise an error" do
-        expect{subject.transfer(activity, from: transferer, to: [local_recipient.iri])}.
-          not_to raise_error(OpenSSL::Error)
+        expect { subject.transfer(activity, from: transferer, to: [local_recipient.iri]) }
+          .not_to raise_error(OpenSSL::Error)
       end
 
       it "stores the failure reason" do
@@ -119,8 +119,8 @@ Spectator.describe Task::Transfer do
       end
 
       it "does not mark the recipient as down" do
-        expect{subject.transfer(activity, from: transferer, to: [local_recipient.iri])}.
-          not_to change{local_recipient.down?}
+        expect { subject.transfer(activity, from: transferer, to: [local_recipient.iri]) }
+          .not_to change { local_recipient.down? }
       end
     end
 
@@ -131,8 +131,8 @@ Spectator.describe Task::Transfer do
       end
 
       it "doesn't raise an error" do
-        expect{subject.transfer(activity, from: transferer, to: [local_recipient.iri])}.
-          not_to raise_error(IO::Error)
+        expect { subject.transfer(activity, from: transferer, to: [local_recipient.iri]) }
+          .not_to raise_error(IO::Error)
       end
 
       it "stores the failure reason" do
@@ -141,8 +141,8 @@ Spectator.describe Task::Transfer do
       end
 
       it "does not mark the recipient as down" do
-        expect{subject.transfer(activity, from: transferer, to: [local_recipient.iri])}.
-          not_to change{local_recipient.down?}
+        expect { subject.transfer(activity, from: transferer, to: [local_recipient.iri]) }
+          .not_to change { local_recipient.down? }
       end
     end
 
@@ -157,8 +157,8 @@ Spectator.describe Task::Transfer do
       end
 
       it "marks the recipient as down" do
-        expect{subject.transfer(activity, from: transferer, to: [remote_recipient.iri])}.
-          to change{remote_recipient.reload!.down?}.to(true)
+        expect { subject.transfer(activity, from: transferer, to: [remote_recipient.iri]) }
+          .to change { remote_recipient.reload!.down? }.to(true)
       end
     end
 
@@ -173,8 +173,8 @@ Spectator.describe Task::Transfer do
       end
 
       it "does not mark the recipient as down" do
-        expect{subject.transfer(activity, from: transferer, to: [remote_recipient.iri])}.
-          not_to change{remote_recipient.reload!.down?}.from(false)
+        expect { subject.transfer(activity, from: transferer, to: [remote_recipient.iri]) }
+          .not_to change { remote_recipient.reload!.down? }.from(false)
       end
     end
 

@@ -153,7 +153,7 @@ class Account
     username
   end
 
-  private LAST_TIMELINE_CHECKED_AT = "last_timeline_checked_at"
+  private LAST_TIMELINE_CHECKED_AT      = "last_timeline_checked_at"
   private LAST_NOTIFICATIONS_CHECKED_AT = "last_notifications_checked_at"
 
   def last_timeline_checked_at
@@ -168,14 +168,14 @@ class Account
 
   def update_last_timeline_checked_at(time = Time.utc)
     last_time = LastTime.find?(account: self, name: LAST_TIMELINE_CHECKED_AT) ||
-      LastTime.new(account: self, name: LAST_TIMELINE_CHECKED_AT)
+                LastTime.new(account: self, name: LAST_TIMELINE_CHECKED_AT)
     last_time.assign(timestamp: time).save
     self
   end
 
   def update_last_notifications_checked_at(time = Time.utc)
     last_time = LastTime.find?(account: self, name: LAST_NOTIFICATIONS_CHECKED_AT) ||
-      LastTime.new(account: self, name: LAST_NOTIFICATIONS_CHECKED_AT)
+                LastTime.new(account: self, name: LAST_NOTIFICATIONS_CHECKED_AT)
     last_time.assign(timestamp: time).save
     self
   end

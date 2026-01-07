@@ -10,7 +10,7 @@ require "../../src/framework"
 require "../../src/models/account"
 require "../../src/models/task"
 
-## Helpers for spec matchers
+# Helpers for spec matchers
 
 class String
   def ===(other : HTTP::Request)
@@ -72,7 +72,7 @@ class Array(T)
   end
 end
 
-## Redefinitions
+# Redefinitions
 
 class Account
   private def cost
@@ -89,7 +89,7 @@ module ViewHelper
     max_size = 20 # override the limit to 20 for testing instead of 1000
     {
       page: Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
-      size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, max_size)
+      size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, max_size),
     }
   end
 end
@@ -116,7 +116,7 @@ class Task
   end
 end
 
-## Test setup/teardown
+# Test setup/teardown
 
 module Ktistec
   @@db_uri = "sqlite3://#{File.tempname("ktistec-test", ".db")}"
@@ -149,11 +149,11 @@ module Ktistec
 
   def self.set_default_settings
     Ktistec.settings.assign({
-      "host" => "https://test.test/",
-      "site" => "Test",
-      "image" => nil,
+      "host"        => "https://test.test/",
+      "site"        => "Test",
+      "image"       => nil,
       "description" => nil,
-      "footer" => nil,
+      "footer"      => nil,
     }).save
   end
 
@@ -164,7 +164,7 @@ module Ktistec
     previous_def
   end
 
-  def self.set_translator(translator : Ktistec::Translator)  # ameba:disable Naming/AccessorMethodName
+  def self.set_translator(translator : Ktistec::Translator) # ameba:disable Naming/AccessorMethodName
     @@translator = translator
     @@mocks << translator
   end
@@ -178,7 +178,7 @@ module Ktistec
 end
 
 BEFORE_PROCS = [] of Proc(Nil)
-AFTER_PROCS = [] of Proc(Nil)
+AFTER_PROCS  = [] of Proc(Nil)
 
 BEFORE_PROCS << -> do
   Ktistec.database.exec "SAVEPOINT __each__"
@@ -198,7 +198,7 @@ macro setup_spec
   after_each { AFTER_PROCS.each(&.call) }
 end
 
-## Helpers for test instance creation
+# Helpers for test instance creation
 
 def self.random_string
   ('a'..'z').to_a.shuffle.first(8).join
@@ -212,7 +212,7 @@ def self.random_password
   random_string + "1="
 end
 
-## Test configuration
+# Test configuration
 
 Kemal.config.public_folder = Dir.tempdir
 

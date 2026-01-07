@@ -105,9 +105,9 @@ class OAuth2Controller
     env.response.status_code = 201
 
     {
-      "client_id" => client.client_id,
+      "client_id"     => client.client_id,
       "client_secret" => client.client_secret,
-      "client_name" => client.client_name,
+      "client_name"   => client.client_name,
       "redirect_uris" => client.redirect_uris.split,
     }.to_json
   end
@@ -260,7 +260,7 @@ class OAuth2Controller
 
       redirect_uri = URI.parse(redirect_uri)
       redirect_uri.query = "code=#{code}&state=#{state}"
-     end
+    end
 
     env.response.redirect redirect_uri.to_s
   end
@@ -370,10 +370,10 @@ class OAuth2Controller
     ).save
 
     {
-      token_type: "Bearer",
+      token_type:   "Bearer",
       access_token: access_token.token,
-      expires_in: 30.days.to_i,
-      scope: access_token.scope,
+      expires_in:   30.days.to_i,
+      scope:        access_token.scope,
     }.to_json
   end
 end

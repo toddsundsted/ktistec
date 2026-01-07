@@ -29,8 +29,8 @@ Spectator.describe MCPController do
   def authenticated_headers
     HTTP::Headers{
       "Authorization" => "Bearer oauth_token_123",
-      "Content-Type" => "application/json",
-      "Accept" => "application/json",
+      "Content-Type"  => "application/json",
+      "Accept"        => "application/json",
     }
   end
 

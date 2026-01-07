@@ -87,7 +87,7 @@ module Ktistec
           id = parts[3].to_i64
           instance =
             case parts[2]
-            when "actors" then ActivityPub::Actor.find?(id)
+            when "actors"  then ActivityPub::Actor.find?(id)
             when "objects" then ActivityPub::Object.find?(id)
             end
           if instance && instance.local?

@@ -92,7 +92,7 @@ class MCPController
         error_response = JSON::RPC::Response.new(request.id.not_nil!, error: error)
         mcp_response 404, error_response
       end
-    rescue ex: JSON::ParseException
+    rescue ex : JSON::ParseException
       Log.warn { "parse error: #{ex.message}" }
       error = JSON::RPC::Response::Error.new(JSON::RPC::ErrorCodes::PARSE_ERROR, "Parse error")
       error_response = JSON::RPC::Response.new("null", error: error)
@@ -115,9 +115,9 @@ class MCPController
     server_version = protocol_version(client_version)
     JSON::Any.new({
       "protocolVersion" => JSON::Any.new(server_version),
-      "serverInfo" => JSON::Any.new({
-        "name" => JSON::Any.new("Ktistec MCP Server"),
-        "version" => JSON::Any.new(Ktistec::VERSION)
+      "serverInfo"      => JSON::Any.new({
+        "name"    => JSON::Any.new("Ktistec MCP Server"),
+        "version" => JSON::Any.new(Ktistec::VERSION),
       }),
       "instructions" => JSON::Any.new(
         "This server provides access to the ActivityPub objects, activities, actors, and collections " \
@@ -131,10 +131,10 @@ class MCPController
         "more detail about this server, including collections supported and their naming conventions."
       ),
       "capabilities" => JSON::Any.new({
-        "resources" => JSON::Any.new({} of String => JSON::Any),
+        "resources"         => JSON::Any.new({} of String => JSON::Any),
         "resourceTemplates" => JSON::Any.new({} of String => JSON::Any),
-        "tools" => JSON::Any.new({} of String => JSON::Any),
-        "prompts" => JSON::Any.new({} of String => JSON::Any),
+        "tools"             => JSON::Any.new({} of String => JSON::Any),
+        "prompts"           => JSON::Any.new({} of String => JSON::Any),
       }),
     })
   end

@@ -79,8 +79,8 @@ Spectator.describe InboxActivityProcessor do
       let_create(:follow, named: :follow_activity, actor: other, object: account.actor)
 
       it "creates a follow relationship" do
-        expect { InboxActivityProcessor.process(account, follow_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }.
-          to change { Relationship::Social::Follow.count }.by(1)
+        expect { InboxActivityProcessor.process(account, follow_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }
+          .to change { Relationship::Social::Follow.count }.by(1)
       end
 
       context "given another actor" do
@@ -89,8 +89,8 @@ Spectator.describe InboxActivityProcessor do
         before_each { follow_activity.assign(object: other_actor).save }
 
         it "does not create a follow relationship" do
-          expect { InboxActivityProcessor.process(account, follow_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }.
-            not_to change { Relationship::Social::Follow.count }
+          expect { InboxActivityProcessor.process(account, follow_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }
+            .not_to change { Relationship::Social::Follow.count }
         end
       end
 
@@ -124,8 +124,8 @@ Spectator.describe InboxActivityProcessor do
         let_create!(:follow_relationship, actor: other, object: account.actor, visible: false)
 
         it "does not create a duplicate relationship" do
-          expect { InboxActivityProcessor.process(account, follow_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }.
-            not_to change { Relationship::Social::Follow.count }
+          expect { InboxActivityProcessor.process(account, follow_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }
+            .not_to change { Relationship::Social::Follow.count }
         end
       end
     end
@@ -136,8 +136,8 @@ Spectator.describe InboxActivityProcessor do
       let_create(:accept, named: :accept_activity, actor: other, object: follow_activity)
 
       it "confirms the follow relationship" do
-        expect { InboxActivityProcessor.process(account, accept_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }.
-          to change { follow_relationship.reload!.confirmed }.from(false).to(true)
+        expect { InboxActivityProcessor.process(account, accept_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }
+          .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
       end
 
       it "schedules receive task" do
@@ -154,8 +154,8 @@ Spectator.describe InboxActivityProcessor do
       let_create(:reject, named: :reject_activity, actor: other, object: follow_activity)
 
       it "confirms the follow relationship" do
-        expect { InboxActivityProcessor.process(account, reject_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }.
-          to change { follow_relationship.reload!.confirmed }.from(false).to(true)
+        expect { InboxActivityProcessor.process(account, reject_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }
+          .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
       end
 
       it "schedules receive task" do
@@ -175,13 +175,13 @@ Spectator.describe InboxActivityProcessor do
         pre_condition { expect(follow_relationship).not_to be_nil }
 
         it "destroys the follow relationship" do
-          expect { InboxActivityProcessor.process(account, undo_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }.
-            to change { Relationship::Social::Follow.count }.by(-1)
+          expect { InboxActivityProcessor.process(account, undo_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }
+            .to change { Relationship::Social::Follow.count }.by(-1)
         end
 
         it "marks the follow activity as undone" do
-          expect { InboxActivityProcessor.process(account, undo_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }.
-            to change { follow_activity.reload!.undone_at }.from(nil)
+          expect { InboxActivityProcessor.process(account, undo_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }
+            .to change { follow_activity.reload!.undone_at }.from(nil)
         end
 
         it "schedules receive task" do
@@ -197,8 +197,8 @@ Spectator.describe InboxActivityProcessor do
         let_create(:undo, named: :undo_activity, actor: other, object: announce_activity)
 
         it "marks the announce activity as undone" do
-          expect { InboxActivityProcessor.process(account, undo_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }.
-            to change { announce_activity.reload!.undone_at }.from(nil)
+          expect { InboxActivityProcessor.process(account, undo_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }
+            .to change { announce_activity.reload!.undone_at }.from(nil)
         end
 
         it "schedules receive task" do
@@ -216,8 +216,8 @@ Spectator.describe InboxActivityProcessor do
         let_create(:delete, named: :delete_activity, actor: other, object: object_to_delete)
 
         it "marks the object as deleted" do
-          expect { InboxActivityProcessor.process(account, delete_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }.
-            to change { object_to_delete.reload!.deleted_at }.from(nil)
+          expect { InboxActivityProcessor.process(account, delete_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }
+            .to change { object_to_delete.reload!.deleted_at }.from(nil)
         end
 
         it "schedules receive task" do
@@ -232,8 +232,8 @@ Spectator.describe InboxActivityProcessor do
         let_create(:delete, named: :delete_activity, actor: other, object: other)
 
         it "marks the actor as deleted" do
-          expect { InboxActivityProcessor.process(account, delete_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }.
-            to change { other.reload!.deleted_at }.from(nil)
+          expect { InboxActivityProcessor.process(account, delete_activity, nil, ContentRules.new, MockHandleFollowRequestTask, MockReceiveTask) }
+            .to change { other.reload!.deleted_at }.from(nil)
         end
 
         it "schedules receive task" do

@@ -8,10 +8,10 @@ module ObjectBuilder
     def build(
       params : Hash(String, String | Array(String)),
       actor : ActivityPub::Actor,
-      object : ActivityPub::Object? = nil
+      object : ActivityPub::Object? = nil,
     ) : BuildResult
       iri = "#{Ktistec.host}/objects/#{Ktistec::Util.id}"
-      note = object || ActivityPub::Object::Note.new(iri: iri)  # intentionally handle any object type
+      note = object || ActivityPub::Object::Note.new(iri: iri) # intentionally handle any object type
       result = BuildResult.new(note)
 
       in_reply_to_iri = extract_string(params, "in-reply-to")

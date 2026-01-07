@@ -30,7 +30,7 @@ Spectator.describe Ktistec::DescriptionEnhancer do
     context "with valid description" do
       before_each do
         Ktistec.settings.assign({
-          "description" => "<p>#hashtag</p><script>alert('xss')</script><img src='src' onerror='alert(1)'>"
+          "description" => "<p>#hashtag</p><script>alert('xss')</script><img src='src' onerror='alert(1)'>",
         })
       end
 

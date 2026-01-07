@@ -11,7 +11,7 @@ Spectator.describe Relationship::Content::Follow::Hashtag do
   let(options) do
     {
       from_iri: from.iri,
-      to_iri: random_string,
+      to_iri:   random_string,
     }
   end
 
@@ -38,7 +38,7 @@ Spectator.describe Relationship::Content::Follow::Hashtag do
     subject { described_class.new(**options) }
 
     it "sets to_iri" do
-      expect{subject.assign(name: "tag")}.to change{subject.to_iri}
+      expect { subject.assign(name: "tag") }.to change { subject.to_iri }
     end
   end
 

@@ -66,6 +66,7 @@ class Relationship
         query = follow_query("from_iri")
         query_and_paginate(query, actor_iri, page: page, size: size)
       end
+
       # Returns count of followers.
       #
       # Returns count of relationships where the actor is being

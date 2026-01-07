@@ -20,30 +20,28 @@ module MCP
 
     class_property result_pager = ResultsPager(JSON::Any).new
 
-    alias ToolPropertyDefinition =
-      NamedTuple(
-        name: String,
-        type: String,
-        description: String,
-        required: Bool,
-        matches: Regex?,
-        minimum: Int32?,
-        maximum: Int32?,
-        default: String | Int32 | Bool | Time | Array(String) | Array(Int32) | Array(Bool) | Nil,
-        enum: Array(String)?,     # enum values for string types
-        # array-specific properties
-        items: String?,           # type of array items ("string", "integer")
-        min_items: Int32?,        # minimum array length
-        max_items: Int32?,        # maximum array length
-        unique_items: Bool?,      # whether array elements must be unique
-      )
+    alias ToolPropertyDefinition = NamedTuple(
+      name: String,
+      type: String,
+      description: String,
+      required: Bool,
+      matches: Regex?,
+      minimum: Int32?,
+      maximum: Int32?,
+      default: String | Int32 | Bool | Time | Array(String) | Array(Int32) | Array(Bool) | Nil,
+      enum: Array(String)?, # enum values for string types
+      # array-specific properties
+      items: String?,       # type of array items ("string", "integer")
+      min_items: Int32?,    # minimum array length
+      max_items: Int32?,    # maximum array length
+      unique_items: Bool?,  # whether array elements must be unique
+    )
 
-    alias ToolDefinition =
-      NamedTuple(
-        name: String,
-        description: String,
-        properties: Array(ToolPropertyDefinition),
-      )
+    alias ToolDefinition = NamedTuple(
+      name: String,
+      description: String,
+      properties: Array(ToolPropertyDefinition),
+    )
 
     TOOL_DEFINITIONS = [] of ToolDefinition
 
@@ -238,9 +236,9 @@ module MCP
     def_tool(
       "paginate_collection",
       "Paginate through collections of ActivityPub objects, activities, and actors. Use this tool when you want to inspect the contents of a collection.", [
-        {name: "name", type: "string", description: "Name of the collection to paginate", required: true, matches: NAME_REGEX},
-        {name: "page", type: "integer", description: "Page number (optional, defaults to 1)", minimum: 1, default: 1},
-        {name: "size", type: "integer", description: "Number of items per page (optional, defaults to 10, maximum 1000)", minimum: 1, maximum: 20, default: 10},
+      {name: "name", type: "string", description: "Name of the collection to paginate", required: true, matches: NAME_REGEX},
+      {name: "page", type: "integer", description: "Page number (optional, defaults to 1)", minimum: 1, default: 1},
+      {name: "size", type: "integer", description: "Number of items per page (optional, defaults to 10, maximum 1000)", minimum: 1, maximum: 20, default: 10},
     ]) do
       unless account.reload!
         raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -311,9 +309,9 @@ module MCP
           objects = followers.map do |relationship|
             follower = relationship.actor
             JSON::Any.new({
-              "actor_id" => JSON::Any.new(follower.id),
+              "actor_id"     => JSON::Any.new(follower.id),
               "actor_handle" => JSON::Any.new(follower.handle),
-              "confirmed" => JSON::Any.new(relationship.confirmed)
+              "confirmed"    => JSON::Any.new(relationship.confirmed),
             })
           end
           {objects, followers.more?}
@@ -322,9 +320,9 @@ module MCP
           objects = following.map do |relationship|
             followed = relationship.object
             JSON::Any.new({
-              "actor_id" => JSON::Any.new(followed.id),
+              "actor_id"     => JSON::Any.new(followed.id),
               "actor_handle" => JSON::Any.new(followed.handle),
-              "confirmed" => JSON::Any.new(relationship.confirmed)
+              "confirmed"    => JSON::Any.new(relationship.confirmed),
             })
           end
           {objects, following.more?}
@@ -350,22 +348,22 @@ module MCP
 
       result_data = {
         "objects" => objects.to_a,
-        "more" => more,
+        "more"    => more,
       }
 
       JSON::Any.new({
         "content" => JSON::Any.new([JSON::Any.new({
           "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new(result_data.to_json)
-        })])
+          "text" => JSON::Any.new(result_data.to_json),
+        })]),
       })
     end
 
     def_tool(
       "count_collection_since",
       "Count items in ActivityPub collections since a given time. Use this tool when you want to know if new items have been added in the last day/week/month.", [
-        {name: "name", type: "string", description: "Name of the collection to count", required: true, matches: NAME_REGEX},
-        {name: "since", type: "time", description: "Time (RFC3339) to count from", required: true},
+      {name: "name", type: "string", description: "Name of the collection to count", required: true, matches: NAME_REGEX},
+      {name: "since", type: "time", description: "Time (RFC3339) to count from", required: true},
     ]) do
       unless account.reload!
         raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -414,14 +412,14 @@ module MCP
 
       result_data = {
         "counted_at" => current_time.to_rfc3339,
-        "count" => count,
+        "count"      => count,
       }
 
       JSON::Any.new({
         "content" => JSON::Any.new([JSON::Any.new({
           "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new(result_data.to_json)
-        })])
+          "text" => JSON::Any.new(result_data.to_json),
+        })]),
       })
     end
 
@@ -469,8 +467,9 @@ module MCP
         raise MCPError.new("Must provide either 'object_id' or 'cursor'.", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
-      # PAGINATION MODE
       if (cursor = arguments["cursor"]?.try(&.as_s))
+        # PAGINATION MODE
+
         Log.debug { "get_thread (pagination): user=#{mcp_user_path(account)} cursor=#{cursor[0..8]}..." }
 
         pager_response = @@result_pager.fetch(cursor)
@@ -478,13 +477,13 @@ module MCP
         next_cursor = pager_response[:cursor]
 
         result_data = {
-          "objects" => page_objects,
-          "cursor" => next_cursor,
+          "objects"  => page_objects,
+          "cursor"   => next_cursor,
           "has_more" => !!next_cursor,
         }
-
-      # INITIAL QUERY MODE
       else
+        # INITIAL QUERY MODE
+
         object_id = arguments["object_id"].as_i64
         projection = arguments["projection"]?.try(&.as_s) || "metadata"
         page_size = arguments["page_size"]?.try(&.as_i) || 25
@@ -528,8 +527,8 @@ module MCP
               hash["iri"] = JSON::Any.new(tuple[:iri])
               if tuple[:attributed_to_iri] && (attributed_to = thread_obj.attributed_to?)
                 hash["actor"] = JSON::Any.new({
-                  "id" => JSON::Any.new(attributed_to.id),
-                  "handle" => JSON::Any.new(attributed_to.handle)
+                  "id"     => JSON::Any.new(attributed_to.id),
+                  "handle" => JSON::Any.new(attributed_to.handle),
                 })
               else
                 hash["actor"] = JSON::Any.new(nil)
@@ -560,23 +559,23 @@ module MCP
         cursor_value = pager_response[:cursor]
 
         result_data = {
-          "objects" => page_objects,
-          "cursor" => cursor_value,
-          "has_more" => !!cursor_value,
-          "projection" => projection,
-          "page_size" => page_size,
-          "objects_count" => query_result.objects_count,
-          "authors_count" => query_result.authors_count,
+          "objects"        => page_objects,
+          "cursor"         => cursor_value,
+          "has_more"       => !!cursor_value,
+          "projection"     => projection,
+          "page_size"      => page_size,
+          "objects_count"  => query_result.objects_count,
+          "authors_count"  => query_result.authors_count,
           "root_object_id" => query_result.root_object_id,
-          "max_depth" => query_result.max_depth,
+          "max_depth"      => query_result.max_depth,
         }
       end
 
       JSON::Any.new({
         "content" => JSON::Any.new([JSON::Any.new({
           "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new(result_data.to_json)
-        })])
+          "text" => JSON::Any.new(result_data.to_json),
+        })]),
       })
     end
 
@@ -618,54 +617,54 @@ module MCP
       analysis = thread_object.analyze_thread(for_actor: account.actor)
 
       result = {
-        "thread_id" => analysis.thread_id,
-        "object_count" => analysis.object_count,
-        "author_count" => analysis.author_count,
+        "thread_id"      => analysis.thread_id,
+        "object_count"   => analysis.object_count,
+        "author_count"   => analysis.author_count,
         "root_object_id" => analysis.root_object_id,
-        "max_depth" => analysis.max_depth,
-        "duration_ms" => analysis.duration_ms,
+        "max_depth"      => analysis.max_depth,
+        "duration_ms"    => analysis.duration_ms,
 
         "key_participants" => analysis.key_participants.map do |p|
           actor = ActivityPub::Actor.find?(iri: p.actor_iri)
           {
             "actor" => {
-              "id" => actor ? actor.id : nil,
+              "id"     => actor ? actor.id : nil,
               "handle" => actor ? actor.handle : nil,
             },
             "object_count" => p.object_count,
-            "depth_range" => [p.depth_range[0], p.depth_range[1]],
-            "time_range" => format_time_range(p.time_range),
-            "object_ids" => p.object_ids,
+            "depth_range"  => [p.depth_range[0], p.depth_range[1]],
+            "time_range"   => format_time_range(p.time_range),
+            "object_ids"   => p.object_ids,
           }
         end,
 
         "notable_branches" => analysis.notable_branches.map do |b|
           {
-            "root_id" => b.root_id,
+            "root_id"      => b.root_id,
             "root_preview" => (preview = ActivityPub::Object.find(b.root_id).preview) && Ktistec::Util.render_as_text_and_truncate(preview, 120),
             "object_count" => b.object_count,
             "author_count" => b.author_count,
-            "depth_range" => [b.depth_range[0], b.depth_range[1]],
-            "time_range" => format_time_range(b.time_range),
-            "object_ids" => b.object_ids,
+            "depth_range"  => [b.depth_range[0], b.depth_range[1]],
+            "time_range"   => format_time_range(b.time_range),
+            "object_ids"   => b.object_ids,
           }
         end,
 
         "timeline_histogram" => if (histogram = analysis.timeline_histogram)
           {
-            "time_range" => format_time_range(histogram.time_range),
-            "total_objects" => histogram.total_objects,
-            "outliers_excluded" => histogram.outliers_excluded,
+            "time_range"          => format_time_range(histogram.time_range),
+            "total_objects"       => histogram.total_objects,
+            "outliers_excluded"   => histogram.outliers_excluded,
             "bucket_size_minutes" => histogram.bucket_size_minutes,
-            "buckets" => histogram.buckets.map do |bucket|
+            "buckets"             => histogram.buckets.map do |bucket|
               {
-                "time_range" => format_time_range(bucket.time_range),
-                "object_count" => bucket.object_count,
+                "time_range"       => format_time_range(bucket.time_range),
+                "object_count"     => bucket.object_count,
                 "cumulative_count" => bucket.cumulative_count,
-                "author_count" => bucket.author_count,
-                "object_ids" => bucket.object_ids,
+                "author_count"     => bucket.author_count,
+                "object_ids"       => bucket.object_ids,
               }
-            end
+            end,
           }
         end,
       }
@@ -673,8 +672,8 @@ module MCP
       JSON::Any.new({
         "content" => JSON::Any.new([JSON::Any.new({
           "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new(result.to_json)
-        })])
+          "text" => JSON::Any.new(result.to_json),
+        })]),
       })
     end
 
@@ -684,15 +683,14 @@ module MCP
       "templated resources (actors, objects) and static resources (information, users). Supports batched reads (comma-separated " \
       "IDs of resources of the same type). Use this tool as a universal fallback when resources are not supported by an MCP " \
       "client.", [
-        {name: "uris", type: "array", description: "Resource URIs to read (e.g., ['ktistec://actors/123,456', 'ktistec://objects/456,789'])", required: true, items: "string"},
+      {name: "uris", type: "array", description: "Resource URIs to read (e.g., ['ktistec://actors/123,456', 'ktistec://objects/456,789'])", required: true, items: "string"},
     ]) do
       Log.debug { "read_resources: user=#{mcp_user_path(account)} uris=#{uris}" }
 
       resources_data = uris.flat_map do |uri|
-
         # NOTE: create a fake JSON::RPC::Request to reuse existing resource reading logic
         fake_params = JSON::Any.new({
-          "uri" => JSON::Any.new(uri)
+          "uri" => JSON::Any.new(uri),
         })
         fake_request = JSON::RPC::Request.new(
           "resources/read",
@@ -708,8 +706,8 @@ module MCP
         contents.map do |content|
           resource_data = JSON.parse(content["text"].as_s)
           {
-            "uri" => content["uri"],
-            "data" => resource_data
+            "uri"  => content["uri"],
+            "data" => resource_data,
           }
         end
       end
@@ -721,8 +719,8 @@ module MCP
       JSON::Any.new({
         "content" => JSON::Any.new([JSON::Any.new({
           "type" => JSON::Any.new("text"),
-          "text" => JSON::Any.new(result_data.to_json)
-        })])
+          "text" => JSON::Any.new(result_data.to_json),
+        })]),
       })
     end
 
@@ -858,35 +856,33 @@ module MCP
       case notification
       in Relationship::Content::Notification::Mention
         JSON::Any.new({
-          "type" => JSON::Any.new("mention"),
-          "status" => notification_status(notification),
-          "object_id" => JSON::Any.new(notification.object.id),
-          "actor_id" => JSON::Any.new(notification.object.attributed_to.id),
+          "type"       => JSON::Any.new("mention"),
+          "status"     => notification_status(notification),
+          "object_id"  => JSON::Any.new(notification.object.id),
+          "actor_id"   => JSON::Any.new(notification.object.attributed_to.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       in Relationship::Content::Notification::Reply
         JSON::Any.new({
-          "type" => JSON::Any.new("reply"),
-          "status" => notification_status(notification),
-          "object_id" => JSON::Any.new(notification.object.id),
-          "actor_id" => JSON::Any.new(notification.object.attributed_to.id),
-          "parent_id" => JSON::Any.new(notification.object.in_reply_to.not_nil!.id),
+          "type"       => JSON::Any.new("reply"),
+          "status"     => notification_status(notification),
+          "object_id"  => JSON::Any.new(notification.object.id),
+          "actor_id"   => JSON::Any.new(notification.object.attributed_to.id),
+          "parent_id"  => JSON::Any.new(notification.object.in_reply_to.not_nil!.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       in Relationship::Content::Notification::Follow
         response = notification.activity.as(ActivityPub::Activity::Follow).accepted_or_rejected?
-        status = response ?
-          "#{response.class.name.split("::").last.downcase}ed" :
-          "new"
+        status = response ? "#{response.class.name.split("::").last.downcase}ed" : "new"
         JSON::Any.new({
-          "type" => JSON::Any.new("follow"),
-          "status" => JSON::Any.new(status),
+          "type"        => JSON::Any.new("follow"),
+          "status"      => JSON::Any.new(status),
           "follower_id" => JSON::Any.new(notification.activity.actor.id),
           "followee_id" => JSON::Any.new(notification.owner.id),
-          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_actor_path(notification.activity.actor)}"),
-          "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+          "action_url"  => JSON::Any.new("#{Ktistec.host}#{remote_actor_path(notification.activity.actor)}"),
+          "created_at"  => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       in Relationship::Content::Notification::Like
         object = notification.activity.object
@@ -895,18 +891,18 @@ module MCP
         latest_likes = likes.reverse.first(5).map do |like|
           JSON::Any.new({
             "actor_id" => JSON::Any.new(like.actor.id),
-            "handle" => JSON::Any.new(like.actor.handle),
+            "handle"   => JSON::Any.new(like.actor.handle),
             "liked_at" => JSON::Any.new(like.created_at.to_rfc3339),
           })
         end
         JSON::Any.new({
-          "type" => JSON::Any.new("like"),
-          "total_likes" => JSON::Any.new(likes.size),
+          "type"         => JSON::Any.new("like"),
+          "total_likes"  => JSON::Any.new(likes.size),
           "latest_likes" => JSON::Any.new({
-            "count" => JSON::Any.new(latest_likes.size),
-            "actors" => JSON::Any.new(latest_likes)
+            "count"  => JSON::Any.new(latest_likes.size),
+            "actors" => JSON::Any.new(latest_likes),
           }),
-          "object_id" => JSON::Any.new(object.id),
+          "object_id"  => JSON::Any.new(object.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
@@ -916,19 +912,19 @@ module MCP
         # five latest dislikes
         latest_dislikes = dislikes.reverse.first(5).map do |dislike|
           JSON::Any.new({
-            "actor_id" => JSON::Any.new(dislike.actor.id),
-            "handle" => JSON::Any.new(dislike.actor.handle),
+            "actor_id"    => JSON::Any.new(dislike.actor.id),
+            "handle"      => JSON::Any.new(dislike.actor.handle),
             "disliked_at" => JSON::Any.new(dislike.created_at.to_rfc3339),
           })
         end
         JSON::Any.new({
-          "type" => JSON::Any.new("dislike"),
-          "total_dislikes" => JSON::Any.new(dislikes.size),
+          "type"            => JSON::Any.new("dislike"),
+          "total_dislikes"  => JSON::Any.new(dislikes.size),
           "latest_dislikes" => JSON::Any.new({
-            "count" => JSON::Any.new(latest_dislikes.size),
-            "actors" => JSON::Any.new(latest_dislikes)
+            "count"  => JSON::Any.new(latest_dislikes.size),
+            "actors" => JSON::Any.new(latest_dislikes),
           }),
-          "object_id" => JSON::Any.new(object.id),
+          "object_id"  => JSON::Any.new(object.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
@@ -938,26 +934,26 @@ module MCP
         # five latest announces
         latest_announces = announces.reverse.first(5).map do |announce|
           JSON::Any.new({
-            "actor_id" => JSON::Any.new(announce.actor.id),
-            "handle" => JSON::Any.new(announce.actor.handle),
+            "actor_id"     => JSON::Any.new(announce.actor.id),
+            "handle"       => JSON::Any.new(announce.actor.handle),
             "announced_at" => JSON::Any.new(announce.created_at.to_rfc3339),
           })
         end
         JSON::Any.new({
-          "type" => JSON::Any.new("announce"),
-          "total_announces" => JSON::Any.new(announces.size),
+          "type"             => JSON::Any.new("announce"),
+          "total_announces"  => JSON::Any.new(announces.size),
           "latest_announces" => JSON::Any.new({
-            "count" => JSON::Any.new(latest_announces.size),
-            "actors" => JSON::Any.new(latest_announces)
+            "count"  => JSON::Any.new(latest_announces.size),
+            "actors" => JSON::Any.new(latest_announces),
           }),
-          "object_id" => JSON::Any.new(object.id),
+          "object_id"  => JSON::Any.new(object.id),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       in Relationship::Content::Notification::Follow::Hashtag
         JSON::Any.new({
-          "type" => JSON::Any.new("follow_hashtag"),
-          "hashtag" => JSON::Any.new(notification.name),
+          "type"       => JSON::Any.new("follow_hashtag"),
+          "hashtag"    => JSON::Any.new(notification.name),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{hashtag_path(notification.name)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         }).tap do |json|
@@ -967,8 +963,8 @@ module MCP
         end
       in Relationship::Content::Notification::Follow::Mention
         JSON::Any.new({
-          "type" => JSON::Any.new("follow_mention"),
-          "mention" => JSON::Any.new(notification.name),
+          "type"       => JSON::Any.new("follow_mention"),
+          "mention"    => JSON::Any.new(notification.name),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{mention_path(notification.name)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         }).tap do |json|
@@ -978,20 +974,20 @@ module MCP
         end
       in Relationship::Content::Notification::Follow::Thread
         JSON::Any.new({
-          "type" => JSON::Any.new("follow_thread"),
-          "thread" => JSON::Any.new(notification.object.thread),
+          "type"             => JSON::Any.new("follow_thread"),
+          "thread"           => JSON::Any.new(notification.object.thread),
           "latest_object_id" => JSON::Any.new(notification.object.id),
-          "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_thread_path(notification.object, anchor: false)}"),
-          "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
+          "action_url"       => JSON::Any.new("#{Ktistec.host}#{remote_thread_path(notification.object, anchor: false)}"),
+          "created_at"       => JSON::Any.new(notification.created_at.to_rfc3339),
         })
       in Relationship::Content::Notification::Poll::Expiry
         votes = notification.question.votes_by(notification.owner).map do |vote|
           JSON::Any.new(vote.id)
         end
         JSON::Any.new({
-          "type" => JSON::Any.new("poll_expiry"),
-          "question" => JSON::Any.new(notification.question.name),
-          "votes" => JSON::Any.new(votes),
+          "type"       => JSON::Any.new("poll_expiry"),
+          "question"   => JSON::Any.new(notification.question.name),
+          "votes"      => JSON::Any.new(votes),
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.question)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })

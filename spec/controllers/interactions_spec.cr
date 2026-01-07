@@ -289,8 +289,8 @@ Spectator.describe InteractionsController do
           end
 
           it "updates the public key" do
-            expect{get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", HTML_HEADERS}.
-              to change{foobar.reload!.pem_public_key}.to("NEW PEM PUBLIC KEY")
+            expect { get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", HTML_HEADERS }
+              .to change { foobar.reload!.pem_public_key }.to("NEW PEM PUBLIC KEY")
           end
         end
 
@@ -298,7 +298,7 @@ Spectator.describe InteractionsController do
           before_each { foobar.assign(iri: "https://test.test/actors/foobar").save }
 
           it "doesn't fetch the actor" do
-            expect{get "/authorize-interaction?uri=https%3A%2F%2Ftest.test%2Factors%2Ffoobar", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
+            expect { get "/authorize-interaction?uri=https%3A%2F%2Ftest.test%2Factors%2Ffoobar", HTML_HEADERS }.not_to change { ActivityPub::Actor.count }
             expect(HTTP::Client.requests).not_to have("GET #{foobar.iri}")
           end
         end
@@ -307,7 +307,7 @@ Spectator.describe InteractionsController do
           before_each { foobar.save.down! }
 
           it "marks the actor as up" do
-            expect{get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", HTML_HEADERS}.to change{foobar.reload!.up?}.to(true)
+            expect { get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", HTML_HEADERS }.to change { foobar.reload!.up? }.to(true)
           end
         end
       end
@@ -344,7 +344,7 @@ Spectator.describe InteractionsController do
           before_each { foobar.assign(iri: "https://test.test/objects/foobar").save }
 
           it "doesn't fetch the object" do
-            expect{get "/authorize-interaction?uri=https%3A%2F%2Ftest.test%2Fobjects%2Ffoobar", HTML_HEADERS}.not_to change{ActivityPub::Object.count}
+            expect { get "/authorize-interaction?uri=https%3A%2F%2Ftest.test%2Fobjects%2Ffoobar", HTML_HEADERS }.not_to change { ActivityPub::Object.count }
             expect(HTTP::Client.requests).not_to have("GET #{foobar.iri}")
           end
         end

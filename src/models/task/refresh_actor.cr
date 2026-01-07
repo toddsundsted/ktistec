@@ -91,7 +91,7 @@ class Task
       (new_iris_set - current_iris_set).each do |object_iri|
         if (object = ActivityPub::Object.dereference?(source, object_iri))
           pin = Relationship::Content::Pin.new(actor: actor, object: object)
-          pin.save if pin.valid?  # saves the object, too
+          pin.save if pin.valid? # saves the object, too
         end
       end
     end

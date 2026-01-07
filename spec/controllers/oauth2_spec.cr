@@ -16,7 +16,7 @@ Spectator.describe OAuth2Controller do
     let(body) do
       {
         "redirect_uris" => "https://client.example.com/callback",
-        "client_name" => "Test Client"
+        "client_name"   => "Test Client",
       }
     end
 
@@ -166,8 +166,8 @@ Spectator.describe OAuth2Controller do
 
         # assert that the client is not persisted to the database before and after each test
 
-        pre_condition { expect{client.reload!}.to raise_error(Ktistec::Model::NotFound) }
-        post_condition { expect{client.reload!}.to raise_error(Ktistec::Model::NotFound) }
+        pre_condition { expect { client.reload! }.to raise_error(Ktistec::Model::NotFound) }
+        post_condition { expect { client.reload! }.to raise_error(Ktistec::Model::NotFound) }
 
         it "renders the consent screen" do
           get "/oauth/authorize?#{query}", headers: HTML_HEADERS
@@ -275,7 +275,7 @@ Spectator.describe OAuth2Controller do
           it "deletes and does not promote the provisional client" do
             post "/oauth/authorize", headers: HTML_HEADERS, body: body
             expect(OAuth2Controller.provisional_clients).not_to have(client)
-            expect{client.reload!}.to raise_error(Ktistec::Model::NotFound)
+            expect { client.reload! }.to raise_error(Ktistec::Model::NotFound)
           end
         end
       end

@@ -11,8 +11,8 @@ Spectator.describe Task::Fetch::Thread do
 
   let(options) do
     {
-      source_iri: source.iri,
-      subject_iri: "https://#{random_string}"
+      source_iri:  source.iri,
+      subject_iri: "https://#{random_string}",
     }
   end
 
@@ -39,7 +39,7 @@ Spectator.describe Task::Fetch::Thread do
     subject { described_class.new(**options) }
 
     it "sets subject_iri" do
-      expect{subject.assign(thread: "https://thread")}.to change{subject.subject_iri}
+      expect { subject.assign(thread: "https://thread") }.to change { subject.subject_iri }
     end
   end
 
@@ -145,11 +145,11 @@ Spectator.describe Task::Fetch::Thread do
       pre_condition { expect(node.id).to eq(object.id) }
 
       it "changes time of last attempt" do
-        expect{subject.perform}.to change{node.last_attempt_at}
+        expect { subject.perform }.to change { node.last_attempt_at }
       end
 
       it "does not change time of last success" do
-        expect{subject.perform}.not_to change{node.last_success_at}
+        expect { subject.perform }.not_to change { node.last_success_at }
       end
     end
 
@@ -173,11 +173,11 @@ Spectator.describe Task::Fetch::Thread do
       pre_condition { expect(node.id).to eq(object.id) }
 
       it "changes time of last attempt" do
-        expect{subject.perform}.to change{node.last_attempt_at}
+        expect { subject.perform }.to change { node.last_attempt_at }
       end
 
       it "changes time of last success" do
-        expect{subject.perform}.to change{node.last_success_at}
+        expect { subject.perform }.to change { node.last_success_at }
       end
     end
 
@@ -202,11 +202,11 @@ Spectator.describe Task::Fetch::Thread do
       pre_condition { expect(node.id).to eq(object.id) }
 
       it "changes time of last attempt" do
-        expect{subject.perform}.to change{node.last_attempt_at}
+        expect { subject.perform }.to change { node.last_attempt_at }
       end
 
       it "changes time of last success" do
-        expect{subject.perform}.to change{node.last_success_at}
+        expect { subject.perform }.to change { node.last_success_at }
       end
     end
 
@@ -245,7 +245,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists all the uncached objects" do
-        expect{subject.perform}.to change{ {find?(origin.iri), find?(reply3.iri)}.any?(Nil) }.to(false)
+        expect { subject.perform }.to change { {find?(origin.iri), find?(reply3.iri)}.any?(Nil) }.to(false)
       end
 
       it "does not fetch the local object replies collection" do
@@ -261,11 +261,11 @@ Spectator.describe Task::Fetch::Thread do
       let(node) { subject.state.nodes.find! { |node| node.id == object.id } }
 
       it "changes time of last attempt" do
-        expect{subject.perform}.to change{node.last_attempt_at}
+        expect { subject.perform }.to change { node.last_attempt_at }
       end
 
       it "does not change time of last success" do
-        expect{subject.perform}.not_to change{node.last_success_at}
+        expect { subject.perform }.not_to change { node.last_success_at }
       end
 
       context "and a later reply" do
@@ -281,11 +281,11 @@ Spectator.describe Task::Fetch::Thread do
         end
 
         it "changes time of last attempt" do
-          expect{subject.perform}.to change{node.last_attempt_at}
+          expect { subject.perform }.to change { node.last_attempt_at }
         end
 
         it "changes time of last success" do
-          expect{subject.perform}.to change{node.last_success_at}
+          expect { subject.perform }.to change { node.last_success_at }
         end
       end
     end
@@ -327,11 +327,11 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists a reply from the collection" do
-        expect{subject.perform(1)}.to change{find?(reply3.iri)}
+        expect { subject.perform(1) }.to change { find?(reply3.iri) }
       end
 
       it "does not change the thread value" do
-        expect{subject.perform(1)}.not_to change{subject.thread}
+        expect { subject.perform(1) }.not_to change { subject.thread }
       end
 
       it "adds a reply to the horizon" do
@@ -351,7 +351,7 @@ Spectator.describe Task::Fetch::Thread do
 
       it "fetches the collection once" do
         subject.perform
-        expect(HTTP::Client.requests.count { |request| request === "GET #{replies.iri}"}).to eq(1)
+        expect(HTTP::Client.requests.count { |request| request === "GET #{replies.iri}" }).to eq(1)
       end
 
       it "fetches all the replies from the collection" do
@@ -360,11 +360,11 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists all the replies from the collection" do
-        expect{subject.perform}.to change{ {find?(reply3.iri), find?(reply2.iri), find?(reply1.iri)}.any?(Nil) }.to(false)
+        expect { subject.perform }.to change { {find?(reply3.iri), find?(reply2.iri), find?(reply1.iri)}.any?(Nil) }.to(false)
       end
 
       it "does not change the thread value" do
-        expect{subject.perform}.not_to change{subject.thread}
+        expect { subject.perform }.not_to change { subject.thread }
       end
 
       it "adds all the replies to the horizon" do
@@ -479,7 +479,7 @@ Spectator.describe Task::Fetch::Thread do
         end
 
         it "persists the remaining replies from the collection" do
-          expect{subject.perform(2)}.to change{ {find?(reply2.iri), find?(reply1.iri)}.any?(Nil) }.to(false)
+          expect { subject.perform(2) }.to change { {find?(reply2.iri), find?(reply1.iri)}.any?(Nil) }.to(false)
         end
       end
 
@@ -551,7 +551,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists the nearest uncached object" do
-        expect{subject.perform(1)}.to change{find?(reply3.iri)}
+        expect { subject.perform(1) }.to change { find?(reply3.iri) }
       end
 
       it "adds the nearest uncached object to the horizon" do
@@ -560,7 +560,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "updates the thread value" do
-        expect{subject.perform(1)}.to change{subject.thread}.to(reply3.in_reply_to_iri)
+        expect { subject.perform(1) }.to change { subject.thread }.to(reply3.in_reply_to_iri)
       end
 
       it "does not set the root object" do
@@ -579,7 +579,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists all the uncached objects" do
-        expect{subject.perform}.to change{ {find?(reply3.iri), find?(reply2.iri), find?(reply1.iri), find?(origin.iri)}.any?(Nil) }.to(false)
+        expect { subject.perform }.to change { {find?(reply3.iri), find?(reply2.iri), find?(reply1.iri), find?(origin.iri)}.any?(Nil) }.to(false)
       end
 
       it "adds all the uncached objects to the horizon" do
@@ -588,7 +588,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "updates the thread value" do
-        expect{subject.perform}.to change{subject.thread}.to(origin.iri)
+        expect { subject.perform }.to change { subject.thread }.to(origin.iri)
       end
 
       it "sets the root object" do
@@ -613,7 +613,7 @@ Spectator.describe Task::Fetch::Thread do
         end
 
         it "persists all the uncached authors" do
-          expect{subject.perform}.to change{ {find?(actor3.iri), find?(actor2.iri), find?(actor1.iri), find?(actor.iri)}.any?(Nil) }.to(false)
+          expect { subject.perform }.to change { {find?(actor3.iri), find?(actor2.iri), find?(actor1.iri), find?(actor.iri)}.any?(Nil) }.to(false)
         end
       end
 
@@ -746,7 +746,7 @@ Spectator.describe Task::Fetch::Thread do
         end
 
         it "persists the replies" do
-          expect{subject.perform}.to change{ {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri)}.any?(Nil) }.to(false)
+          expect { subject.perform }.to change { {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri)}.any?(Nil) }.to(false)
         end
 
         it "adds the replies to the horizon" do
@@ -782,7 +782,7 @@ Spectator.describe Task::Fetch::Thread do
         end
 
         it "persists the replies" do
-          expect{subject.perform}.to change{ {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri)}.any?(Nil) }.to(false)
+          expect { subject.perform }.to change { {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri)}.any?(Nil) }.to(false)
         end
 
         it "adds the replies to the horizon" do
@@ -846,7 +846,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "persists the replies from the collections" do
-        expect{subject.perform}.to change{ {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri), find?(reply4.iri), find?(reply5.iri)} }
+        expect { subject.perform }.to change { {find?(reply2.iri), find?(reply1.iri), find?(reply3.iri), find?(reply4.iri), find?(reply5.iri)} }
       end
 
       it "adds the replies from the collections to the horizon" do
@@ -855,7 +855,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       it "does not update the thread value" do
-        expect{subject.perform}.not_to change{subject.thread}
+        expect { subject.perform }.not_to change { subject.thread }
       end
 
       it "sets the next attempt in the near future" do
@@ -864,7 +864,7 @@ Spectator.describe Task::Fetch::Thread do
       end
 
       context "with all replies fetched" do
-        before_each { subject.perform}
+        before_each { subject.perform }
 
         it "sets the next attempt in the far future" do
           subject.perform
@@ -878,22 +878,22 @@ Spectator.describe Task::Fetch::Thread do
     subject { described_class.new(**options).save }
 
     it "updates task if thread changes" do
-      expect{described_class.merge_into(subject.thread, "https://new_thread")}.to change{subject.reload!.thread}.to("https://new_thread")
+      expect { described_class.merge_into(subject.thread, "https://new_thread") }.to change { subject.reload!.thread }.to("https://new_thread")
     end
 
     context "given an existing task for thread" do
       let_create!(:fetch_thread_task, named: existing, source: subject.source, thread: "https://new_thread")
 
       it "merges the tasks" do
-        expect{described_class.merge_into(subject.thread, existing.thread)}.to change{described_class.count}.by(-1)
+        expect { described_class.merge_into(subject.thread, existing.thread) }.to change { described_class.count }.by(-1)
       end
 
       it "destroys the task which is merged from" do
-        expect{described_class.merge_into(subject.thread, existing.thread)}.to change{described_class.find?(subject.id)}.to(nil)
+        expect { described_class.merge_into(subject.thread, existing.thread) }.to change { described_class.find?(subject.id) }.to(nil)
       end
 
       it "does not destroy the task which is merged to" do
-        expect{described_class.merge_into(subject.thread, existing.thread)}.not_to change{described_class.find?(existing.id)}
+        expect { described_class.merge_into(subject.thread, existing.thread) }.not_to change { described_class.find?(existing.id) }
       end
     end
   end
@@ -1010,17 +1010,19 @@ Spectator.describe ActivityPub::Object do
     let_build(:actor)
     let_create!(:fetch_thread_task, named: nil, source: actor, thread: object.save.thread)
 
-    def all_fetches ; Task::Fetch::Thread.all end
+    def all_fetches
+      Task::Fetch::Thread.all
+    end
 
     it "updates fetch tasks when thread changes" do
-      expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{all_fetches.map(&.subject_iri)}.to(["https://elsewhere"])
+      expect { object.assign(in_reply_to_iri: "https://elsewhere").save }.to change { all_fetches.map(&.subject_iri) }.to(["https://elsewhere"])
     end
 
     context "given an existing fetch task" do
       let_create!(:fetch_thread_task, named: nil, source: actor, thread: "https://elsewhere")
 
       it "updates fetch tasks when thread changes" do
-        expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{all_fetches.map(&.subject_iri)}.to(["https://elsewhere"])
+        expect { object.assign(in_reply_to_iri: "https://elsewhere").save }.to change { all_fetches.map(&.subject_iri) }.to(["https://elsewhere"])
       end
     end
   end

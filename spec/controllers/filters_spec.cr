@@ -119,13 +119,13 @@ Spectator.describe FiltersController do
       end
 
       it "adds a new content filter term" do
-        expect{post "/filters", HTML_HEADERS, "term=Foo+Bar"}.
-          to change{FilterTerm.count}
+        expect { post "/filters", HTML_HEADERS, "term=Foo+Bar" }
+          .to change { FilterTerm.count }
       end
 
       it "adds a new content filter term" do
-        expect{post "/filters", JSON_HEADERS, %q|{"term":"Foo+Bar"}|}.
-          to change{FilterTerm.count}
+        expect { post "/filters", JSON_HEADERS, %q|{"term":"Foo+Bar"}| }
+          .to change { FilterTerm.count }
       end
 
       it "returns 422 if term is blank" do
@@ -226,13 +226,13 @@ Spectator.describe FiltersController do
         end
 
         it "destroys the term" do
-          expect{delete "/filters/#{term1.id}", HTML_HEADERS}.
-            to change{FilterTerm.count}
+          expect { delete "/filters/#{term1.id}", HTML_HEADERS }
+            .to change { FilterTerm.count }
         end
 
         it "destroys the term" do
-          expect{delete "/filters/#{term1.id}", JSON_HEADERS}.
-            to change{FilterTerm.count}
+          expect { delete "/filters/#{term1.id}", JSON_HEADERS }
+            .to change { FilterTerm.count }
         end
       end
     end

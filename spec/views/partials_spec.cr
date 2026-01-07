@@ -137,8 +137,8 @@ Spectator.describe "partials" do
     end
 
     it "renders a follow and a fetch button" do
-      expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
-        to contain_exactly("Follow", "Fetch Once")
+      expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']"))
+        .to contain_exactly("Follow", "Fetch Once")
     end
 
     def_double :follow, destroyed?: false
@@ -147,8 +147,8 @@ Spectator.describe "partials" do
       let(follow) { new_double(:follow) }
 
       it "renders an unfollow button" do
-        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
-          to contain_exactly("Unfollow")
+        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']"))
+          .to contain_exactly("Unfollow")
       end
     end
 
@@ -156,8 +156,8 @@ Spectator.describe "partials" do
       let(follow) { new_double(:follow, destroyed?: true) }
 
       it "does not render an unfollow button" do
-        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
-          not_to contain("Unfollow")
+        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']"))
+          .not_to contain("Unfollow")
       end
     end
 
@@ -167,8 +167,8 @@ Spectator.describe "partials" do
       let(task) { new_double(:task) }
 
       it "renders a cancel button" do
-        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
-          to contain_exactly("Cancel")
+        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']"))
+          .to contain_exactly("Cancel")
       end
     end
 
@@ -176,8 +176,8 @@ Spectator.describe "partials" do
       let(task) { new_double(:task, complete: true) }
 
       it "does not render a cancel button" do
-        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']")).
-          not_to contain("Cancel")
+        expect(subject.xpath_nodes("//*[contains(@id,'tag_page_tag_controls')]//button[@type='submit']"))
+          .not_to contain("Cancel")
       end
     end
   end
@@ -203,8 +203,8 @@ Spectator.describe "partials" do
     end
 
     it "renders a follow and a fetch button" do
-      expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
-        to contain_exactly("Follow", "Fetch Once")
+      expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']"))
+        .to contain_exactly("Follow", "Fetch Once")
     end
 
     def_double :follow, destroyed?: false
@@ -213,8 +213,8 @@ Spectator.describe "partials" do
       let(follow) { new_double(:follow) }
 
       it "renders an unfollow button" do
-        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
-          to contain_exactly("Unfollow")
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']"))
+          .to contain_exactly("Unfollow")
       end
     end
 
@@ -222,8 +222,8 @@ Spectator.describe "partials" do
       let(follow) { new_double(:follow, destroyed?: true) }
 
       it "does not render an unfollow button" do
-        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
-          not_to contain("Unfollow")
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']"))
+          .not_to contain("Unfollow")
       end
     end
 
@@ -233,8 +233,8 @@ Spectator.describe "partials" do
       let(task) { new_double(:task) }
 
       it "renders a cancel button" do
-        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
-          to contain_exactly("Cancel")
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']"))
+          .to contain_exactly("Cancel")
       end
     end
 
@@ -242,8 +242,8 @@ Spectator.describe "partials" do
       let(task) { new_double(:task, complete: true) }
 
       it "does not render a cancel button" do
-        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']")).
-          not_to contain("Cancel")
+        expect(subject.xpath_nodes("//*[contains(@id,'thread_page_thread_controls')]//button[@type='submit']"))
+          .not_to contain("Cancel")
       end
     end
 
@@ -314,8 +314,8 @@ Spectator.describe "partials" do
         before_each { actor.down! }
 
         it "does not render a down warning message" do
-          expect(subject.xpath_nodes("//div[contains(@class,'message')][contains(@class,'warning')]//text()")).
-            to be_empty
+          expect(subject.xpath_nodes("//div[contains(@class,'message')][contains(@class,'warning')]//text()"))
+            .to be_empty
         end
       end
     end
@@ -491,8 +491,8 @@ Spectator.describe "partials" do
         before_each { actor.down! }
 
         it "renders a down warning message" do
-          expect(subject.xpath_nodes("//div[contains(@class,'message')][contains(@class,'warning')]//text()")).
-            to have(/actor is marked as down/)
+          expect(subject.xpath_nodes("//div[contains(@class,'message')][contains(@class,'warning')]//text()"))
+            .to have(/actor is marked as down/)
         end
       end
     end
@@ -675,18 +675,18 @@ Spectator.describe "partials" do
         end
 
         it "does not render an input with the object iri" do
-          expect(subject.xpath_nodes("//input[@name='object']")).
-            to be_empty
+          expect(subject.xpath_nodes("//input[@name='object']"))
+            .to be_empty
         end
 
         it "includes an input to create draft" do
-          expect(subject.xpath_nodes("//button[text()='Create Draft']")).
-            not_to be_empty
+          expect(subject.xpath_nodes("//button[text()='Create Draft']"))
+            .not_to be_empty
         end
 
         it "does not include a link to return to drafts" do
-          expect(subject.xpath_nodes("//a[text()='To Drafts']")).
-            to be_empty
+          expect(subject.xpath_nodes("//a[text()='To Drafts']"))
+            .to be_empty
         end
 
         it "uses the default language" do
@@ -720,8 +720,8 @@ Spectator.describe "partials" do
         end
 
         it "renders an input with the object iri" do
-          expect(subject.xpath_nodes("//input[@name='object']/@value")).
-            to have(object.iri)
+          expect(subject.xpath_nodes("//input[@name='object']/@value"))
+            .to have(object.iri)
         end
       end
 
@@ -736,13 +736,13 @@ Spectator.describe "partials" do
         end
 
         it "renders an input with the replied to object's iri" do
-          expect(subject.xpath_nodes("//input[@name='in-reply-to']/@value")).
-            to have(intermediate.iri)
+          expect(subject.xpath_nodes("//input[@name='in-reply-to']/@value"))
+            .to have(intermediate.iri)
         end
 
         it "prepopulates editor with mentions" do
-          expect(subject.xpath_nodes("//textarea[@name='content']/text()").first).
-            to eq("@#{intermediate.attributed_to.handle} @#{original.attributed_to.handle} ")
+          expect(subject.xpath_nodes("//textarea[@name='content']/text()").first)
+            .to eq("@#{intermediate.attributed_to.handle} @#{original.attributed_to.handle} ")
         end
 
         it "does not render details" do
@@ -750,8 +750,8 @@ Spectator.describe "partials" do
         end
 
         it "includes an input to send reply" do
-          expect(subject.xpath_nodes("//button[text()='Send Reply']")).
-            not_to be_empty
+          expect(subject.xpath_nodes("//button[text()='Send Reply']"))
+            .not_to be_empty
         end
       end
 
@@ -764,8 +764,8 @@ Spectator.describe "partials" do
         end
 
         it "does not self-mention" do
-          expect(subject.xpath_nodes("//textarea[@name='content']/text()")).
-            to be_empty
+          expect(subject.xpath_nodes("//textarea[@name='content']/text()"))
+            .to be_empty
         end
       end
 
@@ -775,18 +775,18 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_true }
 
         it "includes an input to publish post" do
-          expect(subject.xpath_nodes("//button[text()='Publish Post']")).
-            not_to be_empty
+          expect(subject.xpath_nodes("//button[text()='Publish Post']"))
+            .not_to be_empty
         end
 
         it "includes an input to update draft" do
-          expect(subject.xpath_nodes("//button[text()='Update Draft']")).
-            not_to be_empty
+          expect(subject.xpath_nodes("//button[text()='Update Draft']"))
+            .not_to be_empty
         end
 
         it "includes a link to return to drafts" do
-          expect(subject.xpath_nodes("//a[text()='To Drafts']")).
-            not_to be_empty
+          expect(subject.xpath_nodes("//a[text()='To Drafts']"))
+            .not_to be_empty
         end
       end
 
@@ -796,25 +796,25 @@ Spectator.describe "partials" do
         pre_condition { expect(object.draft?).to be_false }
 
         it "includes an input to update post" do
-          expect(subject.xpath_nodes("//button[text()='Update Post']")).
-            not_to be_empty
+          expect(subject.xpath_nodes("//button[text()='Update Post']"))
+            .not_to be_empty
         end
 
         it "does not include an input to save draft" do
-          expect(subject.xpath_nodes("//button[contains(text(),'Draft')]")).
-            to be_empty
+          expect(subject.xpath_nodes("//button[contains(text(),'Draft')]"))
+            .to be_empty
         end
 
         it "does not include a link to return to drafts" do
-          expect(subject.xpath_nodes("//a[text()='To Drafts']")).
-            to be_empty
+          expect(subject.xpath_nodes("//a[text()='To Drafts']"))
+            .to be_empty
         end
       end
 
       context "visibility" do
-        PUBLIC_PATH = "//form//input[@type='radio'][@value='public'][@checked]"
+        PUBLIC_PATH  = "//form//input[@type='radio'][@value='public'][@checked]"
         PRIVATE_PATH = "//form//input[@type='radio'][@value='private'][@checked]"
-        DIRECT_PATH = "//form//input[@type='radio'][@value='direct'][@checked]"
+        DIRECT_PATH  = "//form//input[@type='radio'][@value='direct'][@checked]"
 
         it "renders the public checkbox as checked" do
           expect(subject.xpath_nodes(PUBLIC_PATH)).not_to be_empty

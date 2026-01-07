@@ -23,11 +23,11 @@ class OutboxActivityProcessor
   # - For delete: The object/actor being deleted must be local and owned by the account
   #
   def self.process(
-       account : Account,
-       activity : ActivityPub::Activity,
-       content_rules : ContentRules = ContentRules.new,
-       deliver_task_class : Task::Deliver.class = Task::Deliver
-     )
+    account : Account,
+    activity : ActivityPub::Activity,
+    content_rules : ContentRules = ContentRules.new,
+    deliver_task_class : Task::Deliver.class = Task::Deliver,
+  )
     content_rules.run do
       assert ContentRules::Outgoing.new(account.actor, activity)
     end

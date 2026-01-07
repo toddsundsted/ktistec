@@ -7,21 +7,19 @@ module MCP
   module Prompts
     Log = ::Log.for("mcp")
 
-    alias PromptArgumentDefinition =
-      NamedTuple(
-        name: String,
-        title: String?,
-        description: String?,
-        required: Bool,
-      )
+    alias PromptArgumentDefinition = NamedTuple(
+      name: String,
+      title: String?,
+      description: String?,
+      required: Bool,
+    )
 
-    alias PromptDefinition =
-      NamedTuple(
-        name: String,
-        title: String?,
-        description: String?,
-        arguments: Array(PromptArgumentDefinition),
-      )
+    alias PromptDefinition = NamedTuple(
+      name: String,
+      title: String?,
+      description: String?,
+      arguments: Array(PromptArgumentDefinition),
+    )
 
     PROMPT_DEFINITIONS = [] of PromptDefinition
 
@@ -114,7 +112,7 @@ module MCP
       end
 
       JSON::Any.new({
-        "prompts" => JSON::Any.new(prompts)
+        "prompts" => JSON::Any.new(prompts),
       })
     end
 
@@ -157,8 +155,8 @@ module MCP
       context = {
         "language" => account.language || "",
         "timezone" => account.timezone || "UTC",
-        "host" => Ktistec.host,
-        "site" => Ktistec.site,
+        "host"     => Ktistec.host,
+        "site"     => Ktistec.site,
       }
 
       messages = [] of JSON::Any
@@ -188,7 +186,7 @@ module MCP
       end
 
       JSON::Any.new({
-        "messages" => JSON::Any.new(messages)
+        "messages" => JSON::Any.new(messages),
       })
     end
   end

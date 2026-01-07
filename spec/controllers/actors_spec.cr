@@ -286,7 +286,6 @@ Spectator.describe ActorsController do
       expect(xml.xpath_node("//item/pubDate")).to_not be_nil
       expect(xml.xpath_node("//item/guid")).to_not be_nil
     end
-
   end
 
   describe "GET /actors/:username/public-posts" do
@@ -656,13 +655,13 @@ Spectator.describe ActorsController do
       end
 
       it "updates the last checked timestamp" do
-        expect{get "/actors/#{actor.username}/timeline", ACCEPT_HTML}.
-          to change{Account.find(username: actor.username).last_timeline_checked_at}
+        expect { get "/actors/#{actor.username}/timeline", ACCEPT_HTML }
+          .to change { Account.find(username: actor.username).last_timeline_checked_at }
       end
 
       it "updates the last checked timestamp" do
-        expect{get "/actors/#{actor.username}/timeline", ACCEPT_JSON}.
-          to change{Account.find(username: actor.username).last_timeline_checked_at}
+        expect { get "/actors/#{actor.username}/timeline", ACCEPT_JSON }
+          .to change { Account.find(username: actor.username).last_timeline_checked_at }
       end
 
       let_build(:object, attributed_to: author)
@@ -871,13 +870,13 @@ Spectator.describe ActorsController do
       end
 
       it "updates the last checked timestamp" do
-        expect{get "/actors/#{actor.username}/notifications", ACCEPT_HTML}.
-          to change{Account.find(username: actor.username).last_notifications_checked_at}
+        expect { get "/actors/#{actor.username}/notifications", ACCEPT_HTML }
+          .to change { Account.find(username: actor.username).last_notifications_checked_at }
       end
 
       it "updates the last checked timestamp" do
-        expect{get "/actors/#{actor.username}/notifications", ACCEPT_JSON}.
-          to change{Account.find(username: actor.username).last_notifications_checked_at}
+        expect { get "/actors/#{actor.username}/notifications", ACCEPT_JSON }
+          .to change { Account.find(username: actor.username).last_notifications_checked_at }
       end
 
       it "renders an empty collection" do
@@ -1018,8 +1017,8 @@ Spectator.describe ActorsController do
       end
 
       it "blocks the actor" do
-        expect{post "/remote/actors/#{actor.id}/block"}.
-          to change{actor.reload!.blocked?}
+        expect { post "/remote/actors/#{actor.id}/block" }
+          .to change { actor.reload!.blocked? }
       end
     end
   end
@@ -1048,8 +1047,8 @@ Spectator.describe ActorsController do
       end
 
       it "unblocks the actor" do
-        expect{post "/remote/actors/#{actor.id}/unblock"}.
-          to change{actor.reload!.blocked?}
+        expect { post "/remote/actors/#{actor.id}/unblock" }
+          .to change { actor.reload!.blocked? }
       end
     end
   end
@@ -1071,8 +1070,8 @@ Spectator.describe ActorsController do
       end
 
       it "schedules the refresh task" do
-        expect{post "/remote/actors/#{actor.id}/refresh"}.
-          to change{Task::RefreshActor.find?(actor: actor)}
+        expect { post "/remote/actors/#{actor.id}/refresh" }
+          .to change { Task::RefreshActor.find?(actor: actor) }
       end
 
       it "syncs the featured collection" do

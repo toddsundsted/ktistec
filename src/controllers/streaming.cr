@@ -15,7 +15,7 @@ class StreamingController
     raise Ktistec::Topic::Stop.new
   end
 
-  ## Turbo Stream Action helpers
+  # Turbo Stream Action helpers
 
   # Renders action to replace the actor icon.
   #
@@ -260,7 +260,7 @@ class StreamingController
             replace_actor_icon(env.response, id)
           end
         when "#{actor_path(env.account.actor)}/notifications"
-          replace_notifications_label(env.response,  env.account)
+          replace_notifications_label(env.response, env.account)
         when "#{actor_path(env.account.actor)}/timeline"
           if (count = timeline_count(env, since)) > first_count
             Log.trace { "next - since: #{since} first_count: #{first_count} count: #{count}" }
@@ -308,7 +308,7 @@ class StreamingController
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
     # call `upgrade` to write the headers to the output
-    response.upgrade {}
+    response.upgrade { }
     response.flush
   end
 

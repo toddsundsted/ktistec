@@ -10,7 +10,7 @@ class FooBarController
 
   skip_auth [
     "/foo/bar/id_param/:id",
-    "/foo/bar/iri_param/:id"
+    "/foo/bar/iri_param/:id",
   ]
 
   get "/foo/bar/id_param/:id" do |env|
@@ -72,11 +72,11 @@ Spectator.describe "helpers" do
 
   let(collection) { Ktistec::Util::PaginatedArray(Model).new }
 
-  ## HTML helpers
+  # HTML helpers
 
   PARSER_OPTIONS =
     XML::HTMLParserOptions::NOIMPLIED |
-    XML::HTMLParserOptions::NODEFDTD
+      XML::HTMLParserOptions::NODEFDTD
 
   describe "paginate" do
     let(query) { "" }
@@ -1094,7 +1094,7 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## JSON helpers
+  # JSON helpers
 
   describe "activity_pub_collection" do
     let(query) { "" }
@@ -1104,7 +1104,7 @@ Spectator.describe "helpers" do
     let(host) { Ktistec.settings.host }
 
     subject do
-      JSON.parse(String.build { |content_io| activity_pub_collection(collection) })  # ameba:disable Lint/UnusedArgument
+      JSON.parse(String.build { |content_io| activity_pub_collection(collection) }) # ameba:disable Lint/UnusedArgument
     end
 
     it "generates a JSON-LD document" do
@@ -1192,7 +1192,7 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## Task helpers
+  # Task helpers
 
   describe "task_status_line" do
     def_double :task,
@@ -1304,7 +1304,7 @@ Spectator.describe "helpers" do
         let(collection) do
           [
             new_double(:published_object, published: 50.hours.ago),
-            new_double(:published_object, published: 70.hours.ago)
+            new_double(:published_object, published: 70.hours.ago),
           ]
         end
 
@@ -1373,7 +1373,7 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## General purpose helpers
+  # General purpose helpers
 
   describe "host" do
     it "returns the host" do
@@ -1437,7 +1437,7 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## Pagination helpers
+  # Pagination helpers
 
   describe "pagination_params" do
     it "ensures page is at least 1" do
@@ -1515,7 +1515,7 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## Path helpers
+  # Path helpers
 
   double :path_double do
     stub def id
@@ -2181,7 +2181,7 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## Theming helpers
+  # Theming helpers
 
   describe ".actor_type_class" do
     let_build(:person)

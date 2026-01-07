@@ -30,24 +30,24 @@ class Tag
     self.class.short_type
   end
 
-    # Adds common filters to a query.
-    #
-    macro common_filters(**options)
-      <<-FILTERS
-        {% if (key = options[:objects]) %}
-          AND {{key.id}}.special is NULL
-          AND {{key.id}}.deleted_at is NULL
-          AND {{key.id}}.blocked_at is NULL
-        {% end %}
-        {% if (key = options[:actors]) %}
-          AND {{key.id}}.deleted_at IS NULL
-          AND {{key.id}}.blocked_at IS NULL
-        {% end %}
-        {% if (key = options[:activities]) %}
-          AND {{key.id}}.undone_at IS NULL
-        {% end %}
-      FILTERS
-    end
+  # Adds common filters to a query.
+  #
+  macro common_filters(**options)
+    <<-FILTERS
+      {% if (key = options[:objects]) %}
+        AND {{key.id}}.special is NULL
+        AND {{key.id}}.deleted_at is NULL
+        AND {{key.id}}.blocked_at is NULL
+      {% end %}
+      {% if (key = options[:actors]) %}
+        AND {{key.id}}.deleted_at IS NULL
+        AND {{key.id}}.blocked_at IS NULL
+      {% end %}
+      {% if (key = options[:activities]) %}
+        AND {{key.id}}.undone_at IS NULL
+      {% end %}
+    FILTERS
+  end
 
   # Matches on tag prefix.
   #

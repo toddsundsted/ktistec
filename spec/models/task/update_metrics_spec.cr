@@ -26,14 +26,14 @@ Spectator.describe Task::UpdateMetrics do
 
   describe ".ensure_scheduled" do
     it "schedules a new task" do
-      expect{described_class.ensure_scheduled}.to change{described_class.count}.by(1)
+      expect { described_class.ensure_scheduled }.to change { described_class.count }.by(1)
     end
 
     context "given an existing task" do
       before_each { described_class.new.schedule }
 
       it "does not schedule a new task" do
-        expect{described_class.ensure_scheduled}.not_to change{described_class.count}
+        expect { described_class.ensure_scheduled }.not_to change { described_class.count }
       end
     end
   end
@@ -67,26 +67,26 @@ Spectator.describe Task::UpdateMetrics do
       let(inbox) { "inbox-#{account.username}" }
 
       it "creates points" do
-        expect{subject.perform}.to change{Point.count}.by(5)
+        expect { subject.perform }.to change { Point.count }.by(5)
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 1, 1])
       end
 
       it "accumulates points for activities on the same hour" do
         inbox5.assign(created_at: Time.utc(2016, 2, 4, 10, 10, 10)).save
-        expect{subject.perform}.to change{Point.count}.by(4)
+        expect { subject.perform }.to change { Point.count }.by(4)
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 2])
       end
 
       it "accumulates points in the timezone of the account" do
-        account.assign(timezone: "Asia/Kolkata").save  # UTC+5:30
+        account.assign(timezone: "Asia/Kolkata").save # UTC+5:30
         inbox5.assign(created_at: Time.utc(2016, 2, 4, 9, 40, 30)).save
-        expect{subject.perform}.to change{Point.count}.by(4)
+        expect { subject.perform }.to change { Point.count }.by(4)
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 2])
       end
 
       it "creates points for activities created since the last run" do
         subject.last_id = inbox3.id
-        expect{subject.perform}.to change{Point.count}.by(2)
+        expect { subject.perform }.to change { Point.count }.by(2)
         expect(Point.chart(inbox).map(&.value)).to eq([1, 1])
       end
 
@@ -94,7 +94,7 @@ Spectator.describe Task::UpdateMetrics do
         let_create!(:point, chart: inbox, timestamp: Time.utc(2016, 2, 5, 10, 0, 0), value: 2)
 
         it "increments point value" do
-          expect{subject.perform}.to change{Point.count}.by(4)
+          expect { subject.perform }.to change { Point.count }.by(4)
           expect(Point.chart(inbox).map(&.value)).to eq([1, 1, 1, 1, 3])
         end
       end
@@ -103,11 +103,11 @@ Spectator.describe Task::UpdateMetrics do
         before_each { account.destroy }
 
         it "does not raise an error" do
-          expect{subject.perform}.not_to raise_error
+          expect { subject.perform }.not_to raise_error
         end
 
         it "does not create points for orphaned relationships" do
-          expect{subject.perform}.not_to change{Point.count}
+          expect { subject.perform }.not_to change { Point.count }
           expect(Point.chart(inbox).map(&.value)).to be_empty
         end
 

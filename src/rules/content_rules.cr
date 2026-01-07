@@ -53,11 +53,20 @@ class ContentRules
   Ktistec::Rule.make_pattern(FollowThread, Relationship::Content::Follow::Thread, associations: [:actor], properties: [:thread])
   Ktistec::Rule.make_pattern(Filter, FilterTerm, associations: [:actor], properties: [:term])
 
-  class Outgoing < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
-  class Incoming < School::Relationship(ActivityPub::Actor, ActivityPub::Activity) end
-  class InMailboxOf < School::Relationship(ActivityPub::Activity, ActivityPub::Actor) end
-  class IsRecipient < School::Property(String) end
-  class CheckFollowFor < School::Relationship(ActivityPub::Actor, ActivityPub::Object) end
+  class Outgoing < School::Relationship(ActivityPub::Actor, ActivityPub::Activity)
+  end
+
+  class Incoming < School::Relationship(ActivityPub::Actor, ActivityPub::Activity)
+  end
+
+  class InMailboxOf < School::Relationship(ActivityPub::Activity, ActivityPub::Actor)
+  end
+
+  class IsRecipient < School::Property(String)
+  end
+
+  class CheckFollowFor < School::Relationship(ActivityPub::Actor, ActivityPub::Object)
+  end
 
   Ktistec::Compiler.register_constant(ContentRules::Actor)
   Ktistec::Compiler.register_constant(ContentRules::Activity)

@@ -41,7 +41,7 @@ Spectator.describe Task::DistributePollUpdates do
     end
 
     context "given a remote question" do
-      let_create!(:question)  # remote by default
+      let_create!(:question) # remote by default
 
       it "does not create `Update`" do
         expect { distribute_poll_updates_task.perform }.not_to change { ActivityPub::Activity::Update.count }
@@ -82,7 +82,7 @@ Spectator.describe Task::DistributePollUpdates do
         end
 
         it "updates `updated_at`" do
-          expect { sleep 0.01.seconds ; distribute_poll_updates_task.perform }.to change { question.reload!.updated_at }
+          expect { sleep 0.01.seconds; distribute_poll_updates_task.perform }.to change { question.reload!.updated_at }
         end
 
         it "creates `Update`" do

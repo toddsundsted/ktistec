@@ -120,37 +120,37 @@ Spectator.describe SearchesController do
 
       context "given a handle to an actor" do
         it "retrieves and saves an actor" do
-          expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect { get "/search?query=foo_bar@remote", HTML_HEADERS }.to change { ActivityPub::Actor.count }.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an actor" do
-          expect{get "/search?query=foo_bar@remote", JSON_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect { get "/search?query=foo_bar@remote", JSON_HEADERS }.to change { ActivityPub::Actor.count }.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
 
         it "works with a leading @ if present" do
-          expect{get "/search?query=@foo_bar@remote", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect { get "/search?query=@foo_bar@remote", HTML_HEADERS }.to change { ActivityPub::Actor.count }.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "works with a leading @ if present" do
-          expect{get "/search?query=@foo_bar@remote", JSON_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect { get "/search?query=@foo_bar@remote", JSON_HEADERS }.to change { ActivityPub::Actor.count }.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
 
         it "ignores surrounding whitespace if present" do
-          expect{get "/search?query=+foo_bar@remote+", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect { get "/search?query=+foo_bar@remote+", HTML_HEADERS }.to change { ActivityPub::Actor.count }.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "ignores surrounding whitespace if present" do
-          expect{get "/search?query=+foo_bar@remote+", JSON_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect { get "/search?query=+foo_bar@remote+", JSON_HEADERS }.to change { ActivityPub::Actor.count }.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
@@ -159,12 +159,12 @@ Spectator.describe SearchesController do
           before_each { other.assign(username: "bar_foo").save }
 
           it "updates the actor" do
-            expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
+            expect { get "/search?query=foo_bar@remote", HTML_HEADERS }.not_to change { ActivityPub::Actor.count }
             expect(other.reload!.username).to eq("foo_bar")
           end
 
           it "updates the actor" do
-            expect{get "/search?query=foo_bar@remote", JSON_HEADERS}.not_to change{ActivityPub::Actor.count}
+            expect { get "/search?query=foo_bar@remote", JSON_HEADERS }.not_to change { ActivityPub::Actor.count }
             expect(other.reload!.username).to eq("foo_bar")
           end
 
@@ -190,7 +190,7 @@ Spectator.describe SearchesController do
             end
 
             it "updates the public key" do
-              expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.to change{other.reload!.pem_public_key}.to("NEW PEM PUBLIC KEY")
+              expect { get "/search?query=foo_bar@remote", HTML_HEADERS }.to change { other.reload!.pem_public_key }.to("NEW PEM PUBLIC KEY")
             end
           end
         end
@@ -199,7 +199,7 @@ Spectator.describe SearchesController do
           before_each { other.assign(iri: "https://test.test/actors/foo_bar").save }
 
           it "doesn't fetch the actor" do
-            expect{get "/search?query=foo_bar@test.test", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
+            expect { get "/search?query=foo_bar@test.test", HTML_HEADERS }.not_to change { ActivityPub::Actor.count }
             expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
           end
         end
@@ -208,20 +208,20 @@ Spectator.describe SearchesController do
           before_each { other.save.down! }
 
           it "marks the actor as up" do
-            expect{get "/search?query=foo_bar@remote", HTML_HEADERS}.to change{other.reload!.up?}.to(true)
+            expect { get "/search?query=foo_bar@remote", HTML_HEADERS }.to change { other.reload!.up? }.to(true)
           end
         end
       end
 
       context "given a URL to an actor" do
         it "retrieves and saves an actor" do
-          expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect { get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS }.to change { ActivityPub::Actor.count }.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div/a[contains(text(),'foo_bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an actor" do
-          expect{get "/search?query=https://remote/actors/foo_bar", JSON_HEADERS}.to change{ActivityPub::Actor.count}.by(1)
+          expect { get "/search?query=https://remote/actors/foo_bar", JSON_HEADERS }.to change { ActivityPub::Actor.count }.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
@@ -230,12 +230,12 @@ Spectator.describe SearchesController do
           before_each { other.assign(username: "bar_foo").save }
 
           it "updates the actor" do
-            expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
+            expect { get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS }.not_to change { ActivityPub::Actor.count }
             expect(other.reload!.username).to eq("foo_bar")
           end
 
           it "updates the actor" do
-            expect{get "/search?query=https://remote/actors/foo_bar", JSON_HEADERS}.not_to change{ActivityPub::Actor.count}
+            expect { get "/search?query=https://remote/actors/foo_bar", JSON_HEADERS }.not_to change { ActivityPub::Actor.count }
             expect(other.reload!.username).to eq("foo_bar")
           end
 
@@ -261,7 +261,7 @@ Spectator.describe SearchesController do
             end
 
             it "updates the public key" do
-              expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.to change{other.reload!.pem_public_key}.to("NEW PEM PUBLIC KEY")
+              expect { get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS }.to change { other.reload!.pem_public_key }.to("NEW PEM PUBLIC KEY")
             end
           end
         end
@@ -270,7 +270,7 @@ Spectator.describe SearchesController do
           before_each { other.assign(iri: "https://test.test/actors/foo_bar").save }
 
           it "doesn't fetch the actor" do
-            expect{get "/search?query=https://test.test/actors/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Actor.count}
+            expect { get "/search?query=https://test.test/actors/foo_bar", HTML_HEADERS }.not_to change { ActivityPub::Actor.count }
             expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
           end
         end
@@ -279,20 +279,20 @@ Spectator.describe SearchesController do
           before_each { other.save.down! }
 
           it "marks the actor as up" do
-            expect{get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS}.to change{other.reload!.up?}.to(true)
+            expect { get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS }.to change { other.reload!.up? }.to(true)
           end
         end
       end
 
       context "given a URL to an object" do
         it "retrieves and saves an object" do
-          expect{get "/search?query=https://remote/objects/foo_bar", HTML_HEADERS}.to change{ActivityPub::Object.count}.by(1)
+          expect { get "/search?query=https://remote/objects/foo_bar", HTML_HEADERS }.to change { ActivityPub::Object.count }.by(1)
           expect(response.status_code).to eq(200)
           expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo bar')]")).not_to be_empty
         end
 
         it "retrieves and saves an object" do
-          expect{get "/search?query=https://remote/objects/foo_bar", JSON_HEADERS}.to change{ActivityPub::Object.count}.by(1)
+          expect { get "/search?query=https://remote/objects/foo_bar", JSON_HEADERS }.to change { ActivityPub::Object.count }.by(1)
           expect(response.status_code).to eq(200)
           expect(JSON.parse(response.body).as_h.dig("object", "content")).to eq("foo bar")
         end
@@ -301,12 +301,12 @@ Spectator.describe SearchesController do
           before_each { object.assign(content: "bar foo").save }
 
           it "updates the object" do
-            expect{get "/search?query=https://remote/objects/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Object.count}
+            expect { get "/search?query=https://remote/objects/foo_bar", HTML_HEADERS }.not_to change { ActivityPub::Object.count }
             expect(object.reload!.content).to eq("foo bar")
           end
 
           it "updates the object" do
-            expect{get "/search?query=https://remote/objects/foo_bar", JSON_HEADERS}.not_to change{ActivityPub::Object.count}
+            expect { get "/search?query=https://remote/objects/foo_bar", JSON_HEADERS }.not_to change { ActivityPub::Object.count }
             expect(object.reload!.content).to eq("foo bar")
           end
 
@@ -333,7 +333,7 @@ Spectator.describe SearchesController do
           before_each { object.assign(iri: "https://test.test/objects/foo_bar").save }
 
           it "doesn't fetch the object" do
-            expect{get "/search?query=https://test.test/objects/foo_bar", HTML_HEADERS}.not_to change{ActivityPub::Object.count}
+            expect { get "/search?query=https://test.test/objects/foo_bar", HTML_HEADERS }.not_to change { ActivityPub::Object.count }
             expect(HTTP::Client.requests).not_to have("GET #{object.iri}")
           end
         end

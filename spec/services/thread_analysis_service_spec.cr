@@ -78,12 +78,12 @@ Spectator.describe ThreadAnalysisService do
   def make_thread(offsets : Array(Time::Span))
     offsets.map_with_index do |offset, idx|
       {
-        id: (idx + 1).to_i64,
-        iri: "https://test/#{idx + 1}",
-        in_reply_to_iri: idx == 0 ? nil : "https://test/1",
+        id:                (idx + 1).to_i64,
+        iri:               "https://test/#{idx + 1}",
+        in_reply_to_iri:   idx == 0 ? nil : "https://test/1",
         attributed_to_iri: "https://test/actor#{idx + 1}",
-        published: base_time + offset,
-        depth: idx == 0 ? 0 : 1
+        published:         base_time + offset,
+        depth:             idx == 0 ? 0 : 1,
       }
     end
   end
@@ -170,8 +170,8 @@ Spectator.describe ThreadAnalysisService do
 
     it "returns histogram with correct bucket size" do
       duration = histogram.time_range[1] - histogram.time_range[0]
-      expect(duration.total_hours).to be_between(24, 72)   # hours
-      expect(histogram.bucket_size_minutes).to eq(6 * 60)  # minutes
+      expect(duration.total_hours).to be_between(24, 72)  # hours
+      expect(histogram.bucket_size_minutes).to eq(6 * 60) # minutes
     end
 
     it "computes unique author counts per bucket" do

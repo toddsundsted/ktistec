@@ -21,12 +21,12 @@ module Ktistec
     # `nil`) given a rules domain type.
     #
     def self.condition(
-         table : String,
-         column : String,
-         expression : School::Expression,
-         bindings : School::Bindings,
-         block : School::DomainTypes -> SupportedType?
-       ) : ConditionPair?
+      table : String,
+      column : String,
+      expression : School::Expression,
+      bindings : School::Bindings,
+      block : School::DomainTypes -> SupportedType?,
+    ) : ConditionPair?
       case expression
       when School::Lit
         if (term = block.call expression.target)

@@ -15,10 +15,10 @@ class HTTP::Server::Context
     @accepts ||=
       if (accept = self.request.headers["Accept"]?)
         accept.split(",").reduce(Hash(String, String).new) do |accepts, content_type|
-          accepts.merge({ content_type.split(";").first.strip => content_type })
+          accepts.merge({content_type.split(";").first.strip => content_type})
         end
       elsif (content_type = self.request.headers["Content-Type"]?)
-        { content_type.split(";").first.strip => content_type }
+        {content_type.split(";").first.strip => content_type}
       else
         {} of String => String
       end
@@ -72,7 +72,7 @@ module Ktistec
       %q|<turbo-stream action="refresh"><template></template></turbo-stream>|
     end
 
-    VIEWS = {} of String => {String, String, String?}
+    VIEWS = {} of String => { String, String, String? }
 
     macro register_view(key, view, layout = nil, **opts)
       {%

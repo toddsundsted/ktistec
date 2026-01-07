@@ -15,7 +15,7 @@ Spectator.describe Relationship::Content::Notification do
   let(options) do
     {
       from_iri: from.iri,
-      to_iri: "anything",
+      to_iri:   "anything",
     }
   end
 

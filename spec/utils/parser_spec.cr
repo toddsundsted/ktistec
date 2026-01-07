@@ -24,12 +24,12 @@ Spectator.describe Ktistec::PrefixOperator do
 
     it "consumes the expression to the right" do
       parser = Ktistec::Parser.new("foo")
-      expect{subject.nud(parser)}.to change{subject.right?.try(&.id)}.to("foo")
+      expect { subject.nud(parser) }.to change { subject.right?.try(&.id) }.to("foo")
     end
 
     it "raises an error if there is no expression to the right" do
       parser = Ktistec::Parser.new("   ")
-      expect{subject.nud(parser)}.to raise_error(Ktistec::Parser::SyntaxError, /expecting expression/)
+      expect { subject.nud(parser) }.to raise_error(Ktistec::Parser::SyntaxError, /expecting expression/)
     end
   end
 end
@@ -47,12 +47,12 @@ Spectator.describe Ktistec::InfixOperator do
 
     it "consumes the expression to the right" do
       parser = Ktistec::Parser.new("foo")
-      expect{subject.led(parser, left)}.to change{subject.right?.try(&.id)}.to("foo")
+      expect { subject.led(parser, left) }.to change { subject.right?.try(&.id) }.to("foo")
     end
 
     it "raises an error if there is no expression to the right" do
       parser = Ktistec::Parser.new("   ")
-      expect{subject.led(parser, left)}.to raise_error(Ktistec::Parser::SyntaxError, /expecting expression/)
+      expect { subject.led(parser, left) }.to raise_error(Ktistec::Parser::SyntaxError, /expecting expression/)
     end
   end
 end
@@ -81,17 +81,17 @@ Spectator.describe Ktistec::RuleDefinition::Pattern do
 
     it "raises on error if option key is invalid" do
       parser = Ktistec::Parser.new(%q|condition Constant, 123: 123|).tap(&.current)
-      expect{described_class.new("condition").parse(parser)}.to raise_error(Ktistec::Parser::SyntaxError, /key must be an identifier/)
+      expect { described_class.new("condition").parse(parser) }.to raise_error(Ktistec::Parser::SyntaxError, /key must be an identifier/)
     end
 
     it "raises an error if definition includes multiple constants" do
       parser = Ktistec::Parser.new(%q|condition Foo, Bar|).tap(&.current)
-      expect{described_class.new("condition").parse(parser)}.to raise_error(Ktistec::Parser::SyntaxError, /multiple constants are not permitted/)
+      expect { described_class.new("condition").parse(parser) }.to raise_error(Ktistec::Parser::SyntaxError, /multiple constants are not permitted/)
     end
 
     it "raises an error if definition does not include a constant" do
       parser = Ktistec::Parser.new(%q|condition foo, bar|).tap(&.current)
-      expect{described_class.new("condition").parse(parser)}.to raise_error(Ktistec::Parser::SyntaxError, /missing a constant/)
+      expect { described_class.new("condition").parse(parser) }.to raise_error(Ktistec::Parser::SyntaxError, /missing a constant/)
     end
   end
 
@@ -132,27 +132,27 @@ Spectator.describe Ktistec::RuleDefinition do
 
     it "parses the name" do
       parser = Ktistec::Parser.new(%q|rule "name" end|).tap(&.current)
-      expect{subject.std(parser)}.to change{subject.name?}.to("name")
+      expect { subject.std(parser) }.to change { subject.name? }.to("name")
     end
 
     it "parses the trace keyword" do
       parser = Ktistec::Parser.new(%q|rule "name" trace end|).tap(&.current)
-      expect{subject.std(parser)}.to change{subject.trace}.to(true)
+      expect { subject.std(parser) }.to change { subject.trace }.to(true)
     end
 
     it "parses the patterns" do
       parser = Ktistec::Parser.new(%q|rule "name" condition One condition Two end|).tap(&.current)
-      expect{subject.std(parser)}.to change{subject.patterns.size}.to(2)
+      expect { subject.std(parser) }.to change { subject.patterns.size }.to(2)
     end
 
     it "raises an error if name is not a literal string" do
       parser = Ktistec::Parser.new(%q|rule 123 end|).tap(&.current)
-      expect{subject.std(parser)}.to raise_error(Ktistec::Parser::SyntaxError, /name must be a literal string/)
+      expect { subject.std(parser) }.to raise_error(Ktistec::Parser::SyntaxError, /name must be a literal string/)
     end
 
     it "raises an error if end is missing" do
       parser = Ktistec::Parser.new(%q|rule "name"|).tap(&.current)
-      expect{subject.std(parser)}.to raise_error(Ktistec::Parser::SyntaxError, /missing token: end/)
+      expect { subject.std(parser) }.to raise_error(Ktistec::Parser::SyntaxError, /missing token: end/)
     end
   end
 
@@ -183,7 +183,7 @@ Spectator.describe Ktistec::Parser do
 
     it "is an operator" do
       parser = described_class.new(".")
-      expect{parser.current}.to be_a(Ktistec::Operator)
+      expect { parser.current }.to be_a(Ktistec::Operator)
     end
 
     it "is a rule definition" do
@@ -198,19 +198,19 @@ Spectator.describe Ktistec::Parser do
 
     it "raises an error when string is unterminated" do
       parser = described_class.new(%q|"|)
-      expect{parser.current}.to raise_error(Ktistec::Parser::SyntaxError, /unterminated string/)
+      expect { parser.current }.to raise_error(Ktistec::Parser::SyntaxError, /unterminated string/)
     end
 
     it "raises an error when operator is invalid" do
       parser = described_class.new("∙")
-      expect{parser.current}.to raise_error(Ktistec::Parser::SyntaxError, /invalid operator/)
+      expect { parser.current }.to raise_error(Ktistec::Parser::SyntaxError, /invalid operator/)
     end
   end
 
   describe "#advance" do
     it "raises an error if specified id does not match the current node's id" do
       parser = described_class.new("").tap(&.current)
-      expect{parser.advance("foo")}.to raise_error(Ktistec::Parser::SyntaxError, /missing token: foo/)
+      expect { parser.advance("foo") }.to raise_error(Ktistec::Parser::SyntaxError, /missing token: foo/)
     end
   end
 
@@ -245,12 +245,12 @@ Spectator.describe Ktistec::Parser do
 
       it "raises an error if there is no expression to the right" do
         parser = described_class.new(%q|not|)
-        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /expecting expression/)
+        expect { parser.expression }.to raise_error(Ktistec::Parser::SyntaxError, /expecting expression/)
       end
 
       it "raises an error if there is no expression to the right" do
         parser = described_class.new(%q|not,|)
-        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \,/)
+        expect { parser.expression }.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \,/)
       end
     end
 
@@ -281,17 +281,17 @@ Spectator.describe Ktistec::Parser do
 
       it "raises an error if there is no expression to the right" do
         parser = described_class.new(%q|a.|)
-        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /expecting expression/)
+        expect { parser.expression }.to raise_error(Ktistec::Parser::SyntaxError, /expecting expression/)
       end
 
       it "raises an error if there is no expression to the right" do
         parser = described_class.new(%q|a.,|)
-        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \,/)
+        expect { parser.expression }.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \,/)
       end
 
       it "raises an error if there is no expression to the left" do
         parser = described_class.new(%q|.b|)
-        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \./)
+        expect { parser.expression }.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \./)
       end
     end
 
@@ -326,22 +326,22 @@ Spectator.describe Ktistec::Parser do
 
       it "raises an error if there is no closing parenthesis" do
         parser = described_class.new(%q|within(|)
-        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /missing token: \)/)
+        expect { parser.expression }.to raise_error(Ktistec::Parser::SyntaxError, /missing token: \)/)
       end
 
       it "raises an error if there is no closing parenthesis" do
         parser = described_class.new(%q|within(,|)
-        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \,/)
+        expect { parser.expression }.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \,/)
       end
 
       it "raises an error if there is no expression to the left" do
         parser = described_class.new(%q|()|)
-        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \(/)
+        expect { parser.expression }.to raise_error(Ktistec::Parser::SyntaxError, /unexpected token: \(/)
       end
 
       it "raises an error if the expression to the left is not an identifier" do
         parser = described_class.new(%q|5()|)
-        expect{parser.expression}.to raise_error(Ktistec::Parser::SyntaxError, /expecting identifier/)
+        expect { parser.expression }.to raise_error(Ktistec::Parser::SyntaxError, /expecting identifier/)
       end
     end
   end
@@ -365,7 +365,7 @@ Spectator.describe Ktistec::Parser do
 
       it "raises an error if end is missing" do
         parser = described_class.new(%q|rule "name"|)
-        expect{parser.statement}.to raise_error(Ktistec::Parser::SyntaxError, /missing token: end/)
+        expect { parser.statement }.to raise_error(Ktistec::Parser::SyntaxError, /missing token: end/)
       end
     end
   end

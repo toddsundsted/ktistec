@@ -96,7 +96,7 @@ Spectator.describe ObjectBuilder::BuilderBase do
       let(params) do
         {
           "visibility" => "public",
-          "to" => "https://example.com/actor1,https://example.com/actor2",
+          "to"         => "https://example.com/actor1,https://example.com/actor2",
         }
       end
 
@@ -111,7 +111,7 @@ Spectator.describe ObjectBuilder::BuilderBase do
       let(params) do
         {
           "visibility" => "public",
-          "cc" => "https://example.com/actor3,https://example.com/actor4",
+          "cc"         => "https://example.com/actor3,https://example.com/actor4",
         }
       end
 
@@ -153,9 +153,9 @@ Spectator.describe ObjectBuilder::BuilderBase do
     let_build(:note, local: true)
     let(addressing) do
       {
-        visible: true,
-        to: Set{"https://www.w3.org/ns/activitystreams#Public"}.as(Set(String)),
-        cc: Set{actor.followers.not_nil!}.as(Set(String)),
+        visible:  true,
+        to:       Set{"https://www.w3.org/ns/activitystreams#Public"}.as(Set(String)),
+        cc:       Set{actor.followers.not_nil!}.as(Set(String)),
         audience: nil.as(Array(String)?),
       }
     end
@@ -163,12 +163,12 @@ Spectator.describe ObjectBuilder::BuilderBase do
     context "with all parameters" do
       let(params) do
         {
-          "name" => "Note title",
-          "summary" => "Content warning",
-          "content" => "Note content",
-          "media-type" => "text/plain",
-          "sensitive" => "true",
-          "language" => "en",
+          "name"           => "Note title",
+          "summary"        => "Content warning",
+          "content"        => "Note content",
+          "media-type"     => "text/plain",
+          "sensitive"      => "true",
+          "language"       => "en",
           "canonical-path" => "/custom/path",
         }
       end

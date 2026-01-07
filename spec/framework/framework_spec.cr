@@ -39,7 +39,7 @@ Spectator.describe Ktistec::LogLevel do
       expect(described_class.all_as_hash).to eq({
         "foo.bar" => bar,
         "foo.baz" => baz,
-        "foo.qux" => qux
+        "foo.qux" => qux,
       })
     end
   end
@@ -72,26 +72,26 @@ Spectator.describe Ktistec::Settings do
   describe "#assign" do
     it "sets the host" do
       subject.clear_host
-      expect{subject.assign({"host" => "HOST"})}.to change{subject.host}
+      expect { subject.assign({"host" => "HOST"}) }.to change { subject.host }
     end
 
     it "sets the site" do
       subject.clear_site
-      expect{subject.assign({"site" => "SITE"})}.to change{subject.site}
+      expect { subject.assign({"site" => "SITE"}) }.to change { subject.site }
     end
 
     it "sets the description" do
       subject.clear_description
-      expect{subject.assign({"description" => "DESCRIPTION"})}.to change{subject.description}
+      expect { subject.assign({"description" => "DESCRIPTION"}) }.to change { subject.description }
     end
 
     it "sets the footer" do
       subject.clear_footer
-      expect{subject.assign({"footer" => "FOOTER"})}.to change{subject.footer}
+      expect { subject.assign({"footer" => "FOOTER"}) }.to change { subject.footer }
     end
 
     it "increments the nonce" do
-      expect{ subject.assign({} of String => String) }.to change{ subject.class.nonce }.by(1)
+      expect { subject.assign({} of String => String) }.to change { subject.class.nonce }.by(1)
     end
   end
 
@@ -246,7 +246,7 @@ Spectator.describe Ktistec do
           pre_condition { expect(Ktistec.translator).to be_a(Ktistec::Translator::DeepLTranslator) }
 
           it "instantiates a new translator when the settings change" do
-            expect{Ktistec.settings.assign({"translator_service" => "libretranslate"}).save}.to change{Ktistec.translator}
+            expect { Ktistec.settings.assign({"translator_service" => "libretranslate"}).save }.to change { Ktistec.translator }
           end
         end
       end
@@ -280,7 +280,7 @@ Spectator.describe Ktistec do
           pre_condition { expect(Ktistec.translator).to be_a(Ktistec::Translator::LibreTranslateTranslator) }
 
           it "instantiates a new translator when the settings change" do
-            expect{Ktistec.settings.assign({"translator_service" => "deepl"}).save}.to change{Ktistec.translator}
+            expect { Ktistec.settings.assign({"translator_service" => "deepl"}).save }.to change { Ktistec.translator }
           end
         end
       end

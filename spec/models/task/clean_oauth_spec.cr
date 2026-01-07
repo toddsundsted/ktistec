@@ -128,7 +128,6 @@ Spectator.describe Task::CleanOauth do
           expect(remaining_clients).to contain_exactly(accessed_recently, not_accessed_recently)
         end
       end
-
     end
   end
 end

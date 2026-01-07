@@ -54,14 +54,14 @@ class Task
 
     def recipients
       [activity.to, activity.cc, self.deliver_to].flatten.flat_map do |recipient|
-        # 1. recipient is the receiver
         if recipient == receiver.iri
+          # 1. recipient is the receiver
           recipient
-        # 2. recipient is the receiver's followers collection, and
-        # this activity's object is a reply to an object attributed to
-        # the receiver and the recipient is in all ancestor object's
-        # recipients. replace with the followers.
         elsif recipient && recipient =~ /^#{receiver.iri}\/followers$/
+          # 2. recipient is the receiver's followers collection, and
+          # this activity's object is a reply to an object attributed to
+          # the receiver and the recipient is in all ancestor object's
+          # recipients. replace with the followers.
           if (object_iri = activity.object_iri) && (reply = ActivityPub::Object.dereference?(receiver, object_iri))
             if (ancestors = ancestors(reply)) && (object = ancestors.last?)
               if (actor = object.attributed_to?(receiver, dereference: true)) && actor == receiver
@@ -74,10 +74,10 @@ class Task
               end
             end
           end
-        # 3. receiver is a follower of the sender and the recipinet is
-        # either the public collection or the sender's followers
-        # collection.  replace with the receiver.
         elsif (sender = activity.actor?(receiver, dereference: true))
+          # 3. receiver is a follower of the sender and the recipinet is
+          # either the public collection or the sender's followers
+          # collection.  replace with the receiver.
           if receiver.follows?(sender, confirmed: true)
             if recipient == PUBLIC
               receiver.iri

@@ -1,3 +1,11 @@
+Globs:
+  - "**/*.cr"
+  - "!lib"
+
+Excluded:
+  - "src/views/**/*.slang"
+  - "src/views/**/*.ecr"
+
 ## Disabled
 
 Lint/NotNil:

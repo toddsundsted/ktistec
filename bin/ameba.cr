@@ -45,4 +45,6 @@ module Ameba::Rule::Ktistec
   end
 end
 
+require "../src/ameba/ktistec/no_direct_factory_calls"
+
 require "ameba/cli"

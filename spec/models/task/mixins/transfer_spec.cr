@@ -36,7 +36,7 @@ Spectator.describe Task::Transfer do
   let_create!(:actor, named: :remote_recipient, iri: "https://remote/actors/remote")
 
   def failed_transfer_factory(recipient_iri = nil, recipient = false, created_at = Time.utc)
-    recipient = actor_factory unless recipient_iri || recipient.nil? || recipient
+    recipient = actor_factory unless recipient_iri || recipient.nil? || recipient # ameba:disable Ktistec/NoDirectFactoryCalls
     failure = Task::Transfer::Failure.new(recipient.as(ActivityPub::Actor).iri, "failure", created_at)
     FooBarTransfer.new(**{running: false, complete: true, failures: [failure], created_at: created_at})
   end

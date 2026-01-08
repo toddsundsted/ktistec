@@ -20,7 +20,7 @@ Spectator.describe ActivitiesController do
   let_create!(:activity, named: :remote)
 
   describe ".get_activity" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     it "returns visible activities" do
       result = ActivitiesController.get_activity(env, visible.iri)

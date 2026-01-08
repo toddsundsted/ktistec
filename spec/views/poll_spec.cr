@@ -28,7 +28,7 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
     multiple_choice: false,
   )
 
-  let(env) { env_factory("GET", "/") }
+  let(env) { make_env("GET", "/") }
 
   let(object_emojis) { [] of Tag::Emoji }
 

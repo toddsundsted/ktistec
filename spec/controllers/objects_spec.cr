@@ -71,7 +71,7 @@ Spectator.describe ObjectsController do
   )
 
   describe ".get_object" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     it "returns visible objects" do
       result = ObjectsController.get_object(env, visible.iri)
@@ -183,7 +183,7 @@ Spectator.describe ObjectsController do
   end
 
   describe ".get_object_editable" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     it "returns nil" do
       result = ObjectsController.get_object_editable(env, visible.iri)
@@ -224,7 +224,7 @@ Spectator.describe ObjectsController do
   end
 
   describe ".get_object_approvable" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     it "returns nil" do
       result = ObjectsController.get_object_approvable(env, reply.iri)

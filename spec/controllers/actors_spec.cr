@@ -30,13 +30,13 @@ Spectator.describe ActorsController do
     let(account) { register }
 
     it "returns nil" do
-      env = env_factory("GET", "/actors/nonexistent/posts")
+      env = make_env("GET", "/actors/nonexistent/posts")
       result = ActorsController.get_account(env)
       expect(result).to be_nil
     end
 
     it "returns account" do
-      env = env_factory("GET", "/actors/#{account.username}/posts")
+      env = make_env("GET", "/actors/#{account.username}/posts")
       result = ActorsController.get_account(env)
       expect(result).to eq(account)
     end
@@ -46,13 +46,13 @@ Spectator.describe ActorsController do
     let(account) { register }
 
     it "returns nil" do
-      env = env_factory("GET", "/actors/nonexistent/posts")
+      env = make_env("GET", "/actors/nonexistent/posts")
       result = ActorsController.get_account_with_ownership(env)
       expect(result).to be_nil
     end
 
     it "returns nil" do
-      env = env_factory("GET", "/actors/#{account.username}/posts")
+      env = make_env("GET", "/actors/#{account.username}/posts")
       result = ActorsController.get_account_with_ownership(env)
       expect(result).to be_nil
     end
@@ -61,7 +61,7 @@ Spectator.describe ActorsController do
       sign_in(as: account.username)
 
       it "returns account" do
-        env = env_factory("GET", "/actors/#{account.username}/posts")
+        env = make_env("GET", "/actors/#{account.username}/posts")
         result = ActorsController.get_account_with_ownership(env)
         expect(result).to eq(account)
       end
@@ -70,7 +70,7 @@ Spectator.describe ActorsController do
         let(other_account) { register }
 
         it "returns nil" do
-          env = env_factory("GET", "/actors/#{other_account.username}/posts")
+          env = make_env("GET", "/actors/#{other_account.username}/posts")
           result = ActorsController.get_account_with_ownership(env)
           expect(result).to be_nil
         end

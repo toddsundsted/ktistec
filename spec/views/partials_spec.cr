@@ -18,7 +18,7 @@ Spectator.describe "partials" do
       Ktistec::Util::PaginatedArray{foo, bar}
     end
 
-    let(env) { env_factory("GET", "/collection#{query}") }
+    let(env) { make_env("GET", "/collection#{query}") }
 
     subject { JSON.parse(render "./src/views/partials/collection.json.ecr") }
 
@@ -122,7 +122,7 @@ Spectator.describe "partials" do
 
     let(hashtag) { "foobar" }
 
-    let(env) { env_factory("GET", "/tags/#{hashtag}") }
+    let(env) { make_env("GET", "/tags/#{hashtag}") }
 
     let(task) { nil }
     let(follow) { nil }
@@ -187,7 +187,7 @@ Spectator.describe "partials" do
 
     let_create(:object)
 
-    let(env) { env_factory("GET", "/remote/objects/#{object.id}/thread") }
+    let(env) { make_env("GET", "/remote/objects/#{object.id}/thread") }
 
     let(:thread) { object.thread(for_actor: object.attributed_to) }
 
@@ -283,7 +283,7 @@ Spectator.describe "partials" do
   describe "actor-panel.html.slang" do
     let_create(:actor)
 
-    let(env) { env_factory("GET", "/actor") }
+    let(env) { make_env("GET", "/actor") }
 
     subject do
       begin
@@ -501,7 +501,7 @@ Spectator.describe "partials" do
   describe "actor-card.html.slang" do
     let_create(:actor)
 
-    let(env) { env_factory("GET", "/actors/foo_bar") }
+    let(env) { make_env("GET", "/actors/foo_bar") }
 
     subject do
       begin
@@ -552,7 +552,7 @@ Spectator.describe "partials" do
       # the other actor is a follower.
 
       context "and on a page of actors the actor is following" do
-        let(env) { env_factory("GET", "/actors/foo_bar/following") }
+        let(env) { make_env("GET", "/actors/foo_bar/following") }
 
         follow(actor, account.actor, confirmed: false)
 
@@ -572,7 +572,7 @@ Spectator.describe "partials" do
       # otherwise, on a page of the actors who are followers of the actor...
 
       context "having not accepted or rejected a follow" do
-        let(env) { env_factory("GET", "/actors/foo_bar/followers") }
+        let(env) { make_env("GET", "/actors/foo_bar/followers") }
 
         follow(actor, account.actor, confirmed: false)
 
@@ -606,7 +606,7 @@ Spectator.describe "partials" do
       end
 
       context "having accepted or rejected a follow" do
-        let(env) { env_factory("GET", "/actors/foo_bar/followers") }
+        let(env) { make_env("GET", "/actors/foo_bar/followers") }
 
         follow(actor, account.actor, confirmed: true)
 
@@ -654,7 +654,7 @@ Spectator.describe "partials" do
   end
 
   describe "editor.html.slang" do
-    let(env) { env_factory("GET", "/editor") }
+    let(env) { make_env("GET", "/editor") }
 
     subject do
       XML.parse_html(render "./src/views/partials/editor.html.slang")
@@ -932,7 +932,7 @@ Spectator.describe "partials" do
   end
 
   describe "editor.json.ecr" do
-    let(env) { env_factory("GET", "/editor") }
+    let(env) { make_env("GET", "/editor") }
 
     subject do
       JSON.parse(render "./src/views/partials/editor.json.ecr")

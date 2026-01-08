@@ -15,7 +15,7 @@ Spectator.describe "notifications partial" do
   include Ktistec::ViewHelper::ClassMethods
 
   describe "notifications.html.slang" do
-    let(env) { env_factory("GET", "/notifications") }
+    let(env) { make_env("GET", "/notifications") }
 
     subject do
       begin
@@ -214,7 +214,7 @@ Spectator.describe "notifications partial" do
   end
 
   describe "notifications.json.ecr" do
-    let(env) { env_factory("GET", "/notifications") }
+    let(env) { make_env("GET", "/notifications") }
 
     subject do
       begin

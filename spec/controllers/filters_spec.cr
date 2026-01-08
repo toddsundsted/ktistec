@@ -16,7 +16,7 @@ Spectator.describe FiltersController do
   let(actor) { register.actor }
 
   describe ".get_filter_term" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     let_create!(:filter_term, named: test_term, actor: actor, term: "test")
     let_create!(:filter_term, named: other_term, term: "other")

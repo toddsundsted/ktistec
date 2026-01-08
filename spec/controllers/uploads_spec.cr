@@ -22,7 +22,7 @@ Spectator.describe UploadsController do
   let(current_actor_id) { Global.account.try(&.actor.id) }
 
   describe ".get_upload" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     let(actor1) { register.actor }
     let(actor2) { register.actor }

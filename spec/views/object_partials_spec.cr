@@ -15,7 +15,7 @@ Spectator.describe "object partials" do
   include Ktistec::Controller
 
   describe "label.html.slang" do
-    let(env) { env_factory("GET", "/object") }
+    let(env) { make_env("GET", "/object") }
 
     subject do
       begin
@@ -77,7 +77,7 @@ Spectator.describe "object partials" do
   end
 
   describe "content.html.slang" do
-    let(env) { env_factory("GET", "/object") }
+    let(env) { make_env("GET", "/object") }
 
     subject do
       begin
@@ -722,7 +722,7 @@ Spectator.describe "object partials" do
   end
 
   describe "object_partial" do
-    let(env) { env_factory("GET", "/object") }
+    let(env) { make_env("GET", "/object") }
 
     subject do
       begin
@@ -781,7 +781,7 @@ Spectator.describe "object partials" do
   end
 
   describe "object.json.ecr" do
-    let(env) { env_factory("GET", "/object") }
+    let(env) { make_env("GET", "/object") }
 
     subject do
       JSON.parse(render "src/views/partials/object.json.ecr")

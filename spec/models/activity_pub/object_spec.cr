@@ -143,6 +143,68 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#supported_editors" do
+    RichText = ActivityPub::Object::EditorType::RichText
+    Markdown = ActivityPub::Object::EditorType::Markdown
+    Poll     = ActivityPub::Object::EditorType::Poll
+
+    let_build(:object)
+
+    it "returns all editor types" do
+      expect(object.supported_editors).to contain_exactly(RichText, Markdown, Poll).in_any_order
+    end
+
+    it "returns RichText and Poll" do
+      object.source = ActivityPub::Object::Source.new("content", "text/html")
+      expect(object.supported_editors).to contain_exactly(RichText, Poll).in_any_order
+    end
+
+    it "returns RichText and Poll" do
+      object.source = ActivityPub::Object::Source.new("content", "text/html; charset=utf-8")
+      expect(object.supported_editors).to contain_exactly(RichText, Poll).in_any_order
+    end
+
+    it "returns Markdown and Poll" do
+      object.source = ActivityPub::Object::Source.new("content", "text/markdown")
+      expect(object.supported_editors).to contain_exactly(Markdown, Poll).in_any_order
+    end
+
+    it "returns Markdown and Poll" do
+      object.source = ActivityPub::Object::Source.new("content", "text/markdown; charset=utf-8")
+      expect(object.supported_editors).to contain_exactly(Markdown, Poll).in_any_order
+    end
+
+    context "and unsupported media type" do
+      it "returns only Poll" do
+        object.source = ActivityPub::Object::Source.new("content", "text/plain")
+        expect(object.supported_editors).to contain_exactly(Poll)
+      end
+    end
+
+    let_build(:note)
+
+    it "returns RichText and Markdown" do
+      expect(note.supported_editors).to contain_exactly(RichText, Markdown).in_any_order
+    end
+
+    it "returns only RichText" do
+      note.source = ActivityPub::Object::Source.new("content", "text/html")
+      expect(note.supported_editors).to contain_exactly(RichText)
+    end
+
+    it "returns only Markdown" do
+      note.source = ActivityPub::Object::Source.new("content", "text/markdown")
+      expect(note.supported_editors).to contain_exactly(Markdown)
+    end
+
+    context "and unsupported media type" do
+      it "returns empty array" do
+        note.source = ActivityPub::Object::Source.new("content", "text/plain")
+        expect(note.supported_editors).to be_empty
+      end
+    end
+  end
+
   context "when validating" do
     subject { described_class.new(iri: "https://test.test/#{random_string}") }
 

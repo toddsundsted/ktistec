@@ -7,6 +7,43 @@ require "../../../spec_helper/factory"
 Spectator.describe ActivityPub::Object::Question do
   setup_spec
 
+  describe "#supported_editors" do
+    RichText = ActivityPub::Object::EditorType::RichText
+    Markdown = ActivityPub::Object::EditorType::Markdown
+    Poll     = ActivityPub::Object::EditorType::Poll
+
+    let_build(:question)
+
+    context "with no source" do
+      it "returns RichText, Markdown, and Poll" do
+        expect(question.supported_editors).to contain_exactly(RichText, Markdown, Poll).in_any_order
+      end
+    end
+
+    context "with source" do
+      context "and text/html media type" do
+        it "returns RichText and Poll" do
+          question.source = ActivityPub::Object::Source.new("content", "text/html")
+          expect(question.supported_editors).to contain_exactly(RichText, Poll).in_any_order
+        end
+      end
+
+      context "and text/markdown media type" do
+        it "returns Markdown and Poll" do
+          question.source = ActivityPub::Object::Source.new("content", "text/markdown")
+          expect(question.supported_editors).to contain_exactly(Markdown, Poll).in_any_order
+        end
+      end
+
+      context "and unsupported media type" do
+        it "returns only Poll" do
+          question.source = ActivityPub::Object::Source.new("content", "text/plain")
+          expect(question.supported_editors).to contain_exactly(Poll).in_any_order
+        end
+      end
+    end
+  end
+
   describe ".map" do
     let(attrs) { ActivityPub::Object::Question.map(json_string) }
     let(poll) { attrs["poll"].as(Poll) }

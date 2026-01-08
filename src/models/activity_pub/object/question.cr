@@ -6,6 +6,14 @@ class ActivityPub::Object
   class Question < ActivityPub::Object
     has_one poll, foreign_key: question_iri, primary_key: iri, inverse_of: question
 
+    # Returns the editor types supported for Question objects.
+    #
+    def supported_editors
+      editors = super
+      editors << EditorType::Poll unless editors.includes?(EditorType::Poll)
+      editors
+    end
+
     def votes : Array(ActivityPub::Object::Note)
       ActivityPub::Object::Note.where(
         "in_reply_to_iri = ? AND special = 'vote'",

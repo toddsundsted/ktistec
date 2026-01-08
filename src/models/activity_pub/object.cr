@@ -121,6 +121,40 @@ module ActivityPub
     @[Persistent]
     property source : Source?
 
+    enum EditorType
+      RichText
+      Markdown
+      Poll
+    end
+
+    # Returns the editor types supported for this object.
+    #
+    def supported_editors
+      is_base_class = self.class == ActivityPub::Object
+
+      if (source = self.source)
+        media_type = source.media_type.split(";").map(&.strip).first?
+
+        source_editors = [] of EditorType
+        if media_type && media_type.starts_with?("text/html")
+          source_editors << EditorType::RichText
+        elsif media_type && media_type.starts_with?("text/markdown")
+          source_editors << EditorType::Markdown
+        end
+        if is_base_class
+          source_editors << EditorType::Poll
+        end
+
+        source_editors
+      else
+        if is_base_class
+          EditorType.values
+        else
+          [EditorType::RichText, EditorType::Markdown]
+        end
+      end
+    end
+
     struct Attachment
       include JSON::Serializable
 

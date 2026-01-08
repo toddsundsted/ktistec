@@ -52,7 +52,7 @@ class FiltersController
   private def self.params(env)
     params = (env.params.body.presence || env.params.json.presence).not_nil!
     {
-      "term" => params["term"]?.try(&.to_s)
+      "term" => params["term"]?.try(&.to_s),
     }
   end
 end

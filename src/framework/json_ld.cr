@@ -11,7 +11,7 @@ private def empty
 end
 
 module Ktistec
-  module JSON_LD  # ameba:disable Naming/TypeNames
+  module JSON_LD # ameba:disable Naming/TypeNames
     Log = ::Log.for(self)
 
     class Error < Exception

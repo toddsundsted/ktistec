@@ -142,7 +142,7 @@ class Prompt
           rescue ex
             Log.warn { "Failed to load prompt #{file_path}: #{ex.message}" }
           end
-      end
+        end
     end
 
     prompts

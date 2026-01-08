@@ -24,13 +24,13 @@ Spectator.describe RelationshipsController do
     let(account) { register }
 
     it "returns nil" do
-      env = env_factory("GET", "/actors/nonexistent/following")
+      env = make_env("GET", "/actors/nonexistent/following")
       result = RelationshipsController.get_account(env)
       expect(result).to be_nil
     end
 
     it "returns account" do
-      env = env_factory("GET", "/actors/#{account.username}/following")
+      env = make_env("GET", "/actors/#{account.username}/following")
       result = RelationshipsController.get_account(env)
       expect(result).to eq(account)
     end
@@ -40,13 +40,13 @@ Spectator.describe RelationshipsController do
     let(account) { register }
 
     it "returns nil" do
-      env = env_factory("GET", "/actors/nonexistent/likes")
+      env = make_env("GET", "/actors/nonexistent/likes")
       result = RelationshipsController.get_account_with_ownership(env)
       expect(result).to be_nil
     end
 
     it "returns nil" do
-      env = env_factory("GET", "/actors/#{account.username}/likes")
+      env = make_env("GET", "/actors/#{account.username}/likes")
       result = RelationshipsController.get_account_with_ownership(env)
       expect(result).to be_nil
     end
@@ -55,7 +55,7 @@ Spectator.describe RelationshipsController do
       sign_in(as: account.username)
 
       it "returns account" do
-        env = env_factory("GET", "/actors/#{account.username}/likes")
+        env = make_env("GET", "/actors/#{account.username}/likes")
         result = RelationshipsController.get_account_with_ownership(env)
         expect(result).to eq(account)
       end
@@ -64,7 +64,7 @@ Spectator.describe RelationshipsController do
         let(other_account) { register }
 
         it "returns nil" do
-          env = env_factory("GET", "/actors/#{other_account.username}/likes")
+          env = make_env("GET", "/actors/#{other_account.username}/likes")
           result = RelationshipsController.get_account_with_ownership(env)
           expect(result).to be_nil
         end

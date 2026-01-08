@@ -32,11 +32,11 @@ Spectator.describe Ktistec::Model::Blockable do
     pre_condition { expect(blockable.blocked?).to be_false }
 
     it "blocks the instance" do
-      expect{blockable.block!}.to change{blockable.blocked?}
+      expect { blockable.block! }.to change { blockable.blocked? }
     end
 
     it "sets blocked_at" do
-      expect{blockable.block!}.to change{blockable.reload!.blocked_at}
+      expect { blockable.block! }.to change { blockable.reload!.blocked_at }
     end
   end
 
@@ -46,11 +46,11 @@ Spectator.describe Ktistec::Model::Blockable do
     pre_condition { expect(blockable.blocked?).to be_true }
 
     it "unblocks the instance" do
-      expect{blockable.unblock!}.to change{blockable.blocked?}
+      expect { blockable.unblock! }.to change { blockable.blocked? }
     end
 
     it "clears blocked_at" do
-      expect{blockable.unblock!}.to change{blockable.reload!.blocked_at}
+      expect { blockable.unblock! }.to change { blockable.reload!.blocked_at }
     end
   end
 end

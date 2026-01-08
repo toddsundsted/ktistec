@@ -26,8 +26,8 @@ Spectator.describe Task::RefreshActor do
 
   let(options) do
     {
-      source_iri: source.iri,
-      subject_iri: actor.iri
+      source_iri:  source.iri,
+      subject_iri: actor.iri,
     }
   end
 
@@ -127,8 +127,8 @@ Spectator.describe Task::RefreshActor do
     end
 
     it "updates the actor" do
-      expect{subject.perform}.
-        to change{actor.reload!.username}
+      expect { subject.perform }
+        .to change { actor.reload!.username }
     end
 
     macro make_subscription(topic, &block)
@@ -152,7 +152,7 @@ Spectator.describe Task::RefreshActor do
         expect do
           subject.perform
           Fiber.yield
-        end.to change{notifications[0]}.by(1)
+        end.to change { notifications[0] }.by(1)
       end
 
       context "when refresh fails" do
@@ -162,7 +162,7 @@ Spectator.describe Task::RefreshActor do
           expect do
             subject.perform
             Fiber.yield
-          end.not_to change{notifications[0]}
+          end.not_to change { notifications[0] }
         end
       end
     end
@@ -171,14 +171,14 @@ Spectator.describe Task::RefreshActor do
       before_each { actor.down! }
 
       it "marks the actor as up" do
-        expect{subject.perform}.to change{actor.reload!.down?}.from(true).to(false)
+        expect { subject.perform }.to change { actor.reload!.down? }.from(true).to(false)
       end
 
       context "and refresh fails" do
         let(actor) { super.assign(iri: "https://remote/returns-404") }
 
         it "does not mark the actor as up" do
-          expect{subject.perform}.not_to change{actor.reload!.down?}
+          expect { subject.perform }.not_to change { actor.reload!.down? }
         end
       end
     end
@@ -190,21 +190,21 @@ Spectator.describe Task::RefreshActor do
         let(actor) { super.assign(iri: "https://remote/returns-404") }
 
         it "marks the actor as down" do
-          expect{subject.perform}.to change{actor.reload!.down?}.from(false).to(true)
+          expect { subject.perform }.to change { actor.reload!.down? }.from(false).to(true)
         end
       end
     end
 
     it "documents the error if fetch fails" do
       actor.iri = "https://remote/returns-404"
-      expect{subject.perform}.
-        to change{subject.failures.dup}
+      expect { subject.perform }
+        .to change { subject.failures.dup }
     end
 
     alias Pin = Relationship::Content::Pin
 
     it "does not create any pins" do
-      expect{subject.perform}.not_to change{Pin.count}
+      expect { subject.perform }.not_to change { Pin.count }
     end
 
     context "given a local actor with a collection of featured posts" do
@@ -243,7 +243,7 @@ Spectator.describe Task::RefreshActor do
       end
 
       it "creates pins for featured objects" do
-        expect{subject.perform}.to change{Pin.count}.by(2)
+        expect { subject.perform }.to change { Pin.count }.by(2)
         expect(Pin.find?(actor: actor, object: object1)).to be_truthy
         expect(Pin.find?(actor: actor, object: object2)).to be_truthy
       end
@@ -278,15 +278,15 @@ Spectator.describe Task::RefreshActor do
         let_create!(:pin_relationship, named: :pin3, actor: actor, object: object3)
 
         it "keeps pins still in collection" do
-          expect{subject.perform}.not_to change{!!Pin.find?(actor: actor, object: object1)}
+          expect { subject.perform }.not_to change { !!Pin.find?(actor: actor, object: object1) }
         end
 
         it "removes pins no longer in collection" do
-          expect{subject.perform}.to change{!!Pin.find?(actor: actor, object: object3)}.from(true).to(false)
+          expect { subject.perform }.to change { !!Pin.find?(actor: actor, object: object3) }.from(true).to(false)
         end
 
         it "adds new pins in collection" do
-          expect{subject.perform}.to change{!!Pin.find?(actor: actor, object: object2)}.from(false).to(true)
+          expect { subject.perform }.to change { !!Pin.find?(actor: actor, object: object2) }.from(false).to(true)
         end
       end
 
@@ -297,11 +297,11 @@ Spectator.describe Task::RefreshActor do
         end
 
         it "refreshes the actor" do
-          expect{subject.perform}.to change{actor.reload!.username}
+          expect { subject.perform }.to change { actor.reload!.username }
         end
 
         it "does not fail" do
-          expect{subject.perform}.not_to raise_error
+          expect { subject.perform }.not_to raise_error
         end
       end
 
@@ -313,11 +313,11 @@ Spectator.describe Task::RefreshActor do
         end
 
         it "skips the failed pin" do
-          expect{subject.perform}.not_to change{!!Pin.find?(actor: actor, object: object1)}
+          expect { subject.perform }.not_to change { !!Pin.find?(actor: actor, object: object1) }
         end
 
         it "creates remaining pins" do
-          expect{subject.perform}.to change{!!Pin.find?(actor: actor, object: object2)}.from(false).to(true)
+          expect { subject.perform }.to change { !!Pin.find?(actor: actor, object: object2) }.from(false).to(true)
         end
       end
 
@@ -336,11 +336,11 @@ Spectator.describe Task::RefreshActor do
         end
 
         it "skips the invalid pin" do
-          expect{subject.perform}.not_to change{!!Pin.find?(actor: actor, object: other_object)}
+          expect { subject.perform }.not_to change { !!Pin.find?(actor: actor, object: other_object) }
         end
 
         it "does not fail" do
-          expect{subject.perform}.not_to raise_error
+          expect { subject.perform }.not_to raise_error
         end
       end
 
@@ -386,7 +386,7 @@ Spectator.describe Task::RefreshActor do
         end
 
         it "creates pins for featured objects" do
-          expect{subject.perform}.to change{Pin.count}.by(3)
+          expect { subject.perform }.to change { Pin.count }.by(3)
           expect(Pin.find?(actor: actor, object: object1)).to be_truthy
           expect(Pin.find?(actor: actor, object: object2)).to be_truthy
           expect(Pin.find?(actor: actor, object: object3)).to be_truthy

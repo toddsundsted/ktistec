@@ -212,8 +212,8 @@ Spectator.describe Ktistec::HTML do
 
       it "returns hashtags" do
         content = %q|<div>#hashtag</div>|
-        expect(described_class.enhance(content).hashtags).
-          to eq([Ktistec::HTML::Hashtag.new(name: "hashtag", href: "#{Ktistec.host}/tags/hashtag")])
+        expect(described_class.enhance(content).hashtags)
+          .to eq([Ktistec::HTML::Hashtag.new(name: "hashtag", href: "#{Ktistec.host}/tags/hashtag")])
       end
 
       context "given full-width hash sign" do
@@ -229,8 +229,8 @@ Spectator.describe Ktistec::HTML do
 
         it "returns hashtags" do
           content = %q|<div>＃モノクロ写真</div>|
-          expect(described_class.enhance(content).hashtags).
-            to eq([Ktistec::HTML::Hashtag.new(name: "モノクロ写真", href: "#{Ktistec.host}/tags/モノクロ写真")])
+          expect(described_class.enhance(content).hashtags)
+            .to eq([Ktistec::HTML::Hashtag.new(name: "モノクロ写真", href: "#{Ktistec.host}/tags/モノクロ写真")])
         end
       end
     end
@@ -270,8 +270,8 @@ Spectator.describe Ktistec::HTML do
 
       it "returns mentions" do
         content = %q|<div>@foo@bar.com</div>|
-        expect(described_class.enhance(content).mentions).
-          to eq([Ktistec::HTML::Mention.new(name: "foo@bar.com", href: "https://bar.com/actors/foo")])
+        expect(described_class.enhance(content).mentions)
+          .to eq([Ktistec::HTML::Mention.new(name: "foo@bar.com", href: "https://bar.com/actors/foo")])
       end
 
       context "given a mention of an uncached actor" do
@@ -284,8 +284,8 @@ Spectator.describe Ktistec::HTML do
 
         it "returns mentions" do
           content = %q|<div>@foobar@remote</div>|
-          expect(described_class.enhance(content).mentions).
-            to eq([Ktistec::HTML::Mention.new(name: "foobar@remote", href: "https://remote/actors/foobar")])
+          expect(described_class.enhance(content).mentions)
+            .to eq([Ktistec::HTML::Mention.new(name: "foobar@remote", href: "https://remote/actors/foobar")])
         end
       end
 
@@ -297,16 +297,16 @@ Spectator.describe Ktistec::HTML do
 
         it "doesn't return mentions" do
           content = %q|<div>@no-such-name@no-such-host.com</div>|
-          expect(described_class.enhance(content).mentions).
-            to be_empty
+          expect(described_class.enhance(content).mentions)
+            .to be_empty
         end
       end
     end
 
     it "handles both hashtags and mentions" do
       content = %q|<div>#hashtag @bar@foo.com</div>|
-      expect(described_class.enhance(content).content).
-        to eq(%Q|<p><a href="#{Ktistec.host}/tags/hashtag" class="hashtag" rel="tag">#hashtag</a> <a href="https://foo.com/actors/bar" class="mention" rel="tag">@bar@foo.com</a></p>|)
+      expect(described_class.enhance(content).content)
+        .to eq(%Q|<p><a href="#{Ktistec.host}/tags/hashtag" class="hashtag" rel="tag">#hashtag</a> <a href="https://foo.com/actors/bar" class="mention" rel="tag">@bar@foo.com</a></p>|)
     end
 
     context "bare URLs" do

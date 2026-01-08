@@ -15,21 +15,21 @@ module MCP
       resources = [] of JSON::Any
 
       resources << JSON::Any.new({
-        "uri" => JSON::Any.new(mcp_information_path),
+        "uri"      => JSON::Any.new(mcp_information_path),
         "mimeType" => JSON::Any.new("application/json"),
-        "name" => JSON::Any.new("Instance Information"),
+        "name"     => JSON::Any.new("Instance Information"),
       })
 
       Account.all.each do |account|
         resources << JSON::Any.new({
-          "uri" => JSON::Any.new(mcp_user_path(account)),
+          "uri"      => JSON::Any.new(mcp_user_path(account)),
           "mimeType" => JSON::Any.new("application/json"),
-          "name" => JSON::Any.new(account.username),
+          "name"     => JSON::Any.new(account.username),
         })
       end
 
       JSON::Any.new({
-        "resources" => JSON::Any.new(resources)
+        "resources" => JSON::Any.new(resources),
       })
     end
 
@@ -37,27 +37,27 @@ module MCP
       templates = [
         JSON::Any.new({
           "uriTemplate" => JSON::Any.new("ktistec://actors/{id*}"),
-          "mimeType" => JSON::Any.new("application/json"),
+          "mimeType"    => JSON::Any.new("application/json"),
           "description" => JSON::Any.new(
             "Retrieve ActivityPub actor profiles including name, summary, icon, attachments, and URLs. Supports single ID " \
             "(ktistec://actors/123) or comma-separated IDs for batch retrieval (ktistec://actors/123,456,789)."
           ),
           "title" => JSON::Any.new("ActivityPub Actor"),
-          "name" => JSON::Any.new("Actor"),
+          "name"  => JSON::Any.new("Actor"),
         }),
         JSON::Any.new({
           "uriTemplate" => JSON::Any.new("ktistec://objects/{id*}"),
-          "mimeType" => JSON::Any.new("application/json"),
+          "mimeType"    => JSON::Any.new("application/json"),
           "description" => JSON::Any.new(
             "Access ActivityPub posts/objects with name, summary, content, metadata, and relationships. Supports single ID " \
             "(ktistec://objects/123) or comma-separated IDs for batch retrieval (ktistec://objects/123,456,789)."
           ),
           "title" => JSON::Any.new("ActivityPub Object"),
-          "name" => JSON::Any.new("Object"),
-        })
+          "name"  => JSON::Any.new("Object"),
+        }),
       ]
       JSON::Any.new({
-        "resourceTemplates" => JSON::Any.new(templates)
+        "resourceTemplates" => JSON::Any.new(templates),
       })
     end
 
@@ -89,18 +89,17 @@ module MCP
         text_data["actor_uri"] = JSON::Any.new(mcp_actor_path(account.actor))
 
         user_data = {
-          "uri" => JSON::Any.new(uri),
+          "uri"      => JSON::Any.new(uri),
           "mimeType" => JSON::Any.new("application/json"),
-          "name" => JSON::Any.new(account.username),
-          "text" => JSON::Any.new(text_data.to_json),
+          "name"     => JSON::Any.new(account.username),
+          "text"     => JSON::Any.new(text_data.to_json),
         }
 
         JSON::Any.new({
           "contents" => JSON::Any.new([
-            JSON::Any.new(user_data)
-          ])
+            JSON::Any.new(user_data),
+          ]),
         })
-
       elsif uri =~ /^ktistec:\/\/actors\/(\d+(,\d+)*)$/
         contents =
           $1.split(",").map(&.to_i64).map do |actor_id|
@@ -111,19 +110,18 @@ module MCP
             text_data = actor_contents(actor)
 
             actor_data = {
-              "uri" => JSON::Any.new(mcp_actor_path(actor)),
+              "uri"      => JSON::Any.new(mcp_actor_path(actor)),
               "mimeType" => JSON::Any.new("application/json"),
-              "name" => JSON::Any.new(actor.name || "Actor #{actor.id}"),
-              "text" => JSON::Any.new(text_data.to_json),
+              "name"     => JSON::Any.new(actor.name || "Actor #{actor.id}"),
+              "text"     => JSON::Any.new(text_data.to_json),
             }
 
             JSON::Any.new(actor_data)
           end
 
         JSON::Any.new({
-          "contents" => JSON::Any.new(contents)
+          "contents" => JSON::Any.new(contents),
         })
-
       elsif uri =~ /^ktistec:\/\/objects\/(\d+(,\d+)*)$/
         contents =
           $1.split(",").map(&.to_i64).map do |object_id|
@@ -134,35 +132,33 @@ module MCP
             text_data = object_contents(object)
 
             object_data = {
-              "uri" => JSON::Any.new(mcp_object_path(object)),
+              "uri"      => JSON::Any.new(mcp_object_path(object)),
               "mimeType" => JSON::Any.new("application/json"),
-              "name" => JSON::Any.new(object.name || "Object #{object.id}"),
-              "text" => JSON::Any.new(text_data.to_json),
+              "name"     => JSON::Any.new(object.name || "Object #{object.id}"),
+              "text"     => JSON::Any.new(text_data.to_json),
             }
 
             JSON::Any.new(object_data)
           end
 
         JSON::Any.new({
-          "contents" => JSON::Any.new(contents)
+          "contents" => JSON::Any.new(contents),
         })
-
       elsif uri == mcp_information_path
         text_data = instance_information(account)
 
         information_data = {
-          "uri" => JSON::Any.new(uri),
+          "uri"      => JSON::Any.new(uri),
           "mimeType" => JSON::Any.new("application/json"),
-          "name" => JSON::Any.new("Instance Information"),
-          "text" => JSON::Any.new(text_data.to_json),
+          "name"     => JSON::Any.new("Instance Information"),
+          "text"     => JSON::Any.new(text_data.to_json),
         }
 
         JSON::Any.new({
           "contents" => JSON::Any.new([
-            JSON::Any.new(information_data)
-          ])
+            JSON::Any.new(information_data),
+          ]),
         })
-
       else
         raise MCPError.new("Unsupported URI scheme: #{uri}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
@@ -179,7 +175,7 @@ module MCP
 
       # authenticated user information
       contents["authenticated_user"] = JSON::Any.new({
-        "uri" => JSON::Any.new(mcp_user_path(account)),
+        "uri"      => JSON::Any.new(mcp_user_path(account)),
         "username" => JSON::Any.new(account.username),
         "language" => JSON::Any.new(account.language || ""),
         "timezone" => JSON::Any.new(account.timezone),
@@ -202,10 +198,10 @@ module MCP
 
       # supported formatted collections
       contents["collection_formats"] = JSON::Any.new({
-        "hashtag" => JSON::Any.new(%q(hashtag#{name})),
-        "mention" => JSON::Any.new(%q(mention@{name})),
+        "hashtag"  => JSON::Any.new(%q(hashtag#{name})),
+        "mention"  => JSON::Any.new(%q(mention@{name})),
         "examples" => JSON::Any.new({
-          "hashtag#krypton" => JSON::Any.new("The collection of posts tagged with #krypton"),
+          "hashtag#krypton"  => JSON::Any.new("The collection of posts tagged with #krypton"),
           "mention@mxyzptlk" => JSON::Any.new("The collection of posts mentioning the user @mxyzptlk"),
         }),
       })
@@ -220,9 +216,9 @@ module MCP
 
       # statistics
       contents["statistics"] = JSON::Any.new({
-        "total_users" => JSON::Any.new(Account.all.size.to_i64),
-        "total_actors" => JSON::Any.new(ActivityPub::Actor.all.size.to_i64),
-        "total_objects" => JSON::Any.new(ActivityPub::Object.all.size.to_i64)
+        "total_users"   => JSON::Any.new(Account.all.size.to_i64),
+        "total_actors"  => JSON::Any.new(ActivityPub::Actor.all.size.to_i64),
+        "total_objects" => JSON::Any.new(ActivityPub::Object.all.size.to_i64),
       })
 
       contents
@@ -313,9 +309,9 @@ module MCP
       if filtered_attachments && !filtered_attachments.empty?
         attachment_data = filtered_attachments.map do |attachment|
           JSON::Any.new({
-            "url" => JSON::Any.new(attachment.url),
+            "url"        => JSON::Any.new(attachment.url),
             "media_type" => JSON::Any.new(attachment.media_type),
-            "caption" => JSON::Any.new(attachment.caption || "")
+            "caption"    => JSON::Any.new(attachment.caption || ""),
           })
         end
         contents["attachments"] = JSON::Any.new(attachment_data)
@@ -331,50 +327,50 @@ module MCP
       if !(likes = activities.select(ActivityPub::Activity::Like)).empty?
         actors_data = likes.reverse.map do |like|
           JSON::Any.new({
-            "uri" => JSON::Any.new(mcp_actor_path(like.actor)),
-            "handle" => JSON::Any.new(like.actor.handle),
-            "liked_at" => JSON::Any.new(like.created_at.to_rfc3339)
+            "uri"      => JSON::Any.new(mcp_actor_path(like.actor)),
+            "handle"   => JSON::Any.new(like.actor.handle),
+            "liked_at" => JSON::Any.new(like.created_at.to_rfc3339),
           })
         end
         contents["likes"] = JSON::Any.new({
-          "count" => JSON::Any.new(likes.size),
-          "actors" => JSON::Any.new(actors_data)
+          "count"  => JSON::Any.new(likes.size),
+          "actors" => JSON::Any.new(actors_data),
         })
       end
 
       if !(dislikes = activities.select(ActivityPub::Activity::Dislike)).empty?
         actors_data = dislikes.reverse.map do |dislike|
           JSON::Any.new({
-            "uri" => JSON::Any.new(mcp_actor_path(dislike.actor)),
-            "handle" => JSON::Any.new(dislike.actor.handle),
-            "disliked_at" => JSON::Any.new(dislike.created_at.to_rfc3339)
+            "uri"         => JSON::Any.new(mcp_actor_path(dislike.actor)),
+            "handle"      => JSON::Any.new(dislike.actor.handle),
+            "disliked_at" => JSON::Any.new(dislike.created_at.to_rfc3339),
           })
         end
         contents["dislikes"] = JSON::Any.new({
-          "count" => JSON::Any.new(dislikes.size),
-          "actors" => JSON::Any.new(actors_data)
+          "count"  => JSON::Any.new(dislikes.size),
+          "actors" => JSON::Any.new(actors_data),
         })
       end
 
       if !(announces = activities.select(ActivityPub::Activity::Announce)).empty?
         actors_data = announces.reverse.map do |announce|
           JSON::Any.new({
-            "uri" => JSON::Any.new(mcp_actor_path(announce.actor)),
-            "handle" => JSON::Any.new(announce.actor.handle),
-            "announced_at" => JSON::Any.new(announce.created_at.to_rfc3339)
+            "uri"          => JSON::Any.new(mcp_actor_path(announce.actor)),
+            "handle"       => JSON::Any.new(announce.actor.handle),
+            "announced_at" => JSON::Any.new(announce.created_at.to_rfc3339),
           })
         end
         contents["announces"] = JSON::Any.new({
-          "count" => JSON::Any.new(announces.size),
-          "actors" => JSON::Any.new(actors_data)
+          "count"  => JSON::Any.new(announces.size),
+          "actors" => JSON::Any.new(actors_data),
         })
       end
 
       if !(replies = object.replies(for_actor: nil)).empty? # `for_actor` is a dummy parameter
         objects_data = replies.map do |reply|
           reply_data = {
-            "uri" => JSON::Any.new(mcp_object_path(reply)),
-            "author" => JSON::Any.new(mcp_actor_path(reply.attributed_to))
+            "uri"    => JSON::Any.new(mcp_object_path(reply)),
+            "author" => JSON::Any.new(mcp_actor_path(reply.attributed_to)),
           }
           if (published = reply.published)
             reply_data["published"] = JSON::Any.new(published.to_rfc3339)
@@ -391,8 +387,8 @@ module MCP
           JSON::Any.new(reply_data)
         end
         contents["replies"] = JSON::Any.new({
-          "count" => JSON::Any.new(replies.size.to_i64),
-          "objects" => JSON::Any.new(objects_data)
+          "count"   => JSON::Any.new(replies.size.to_i64),
+          "objects" => JSON::Any.new(objects_data),
         })
       end
 
@@ -401,8 +397,8 @@ module MCP
 
     private def self.attachment_to_json_any(attachment : ActivityPub::Actor::Attachment) : JSON::Any
       JSON::Any.new({
-        "name" => JSON::Any.new(attachment.name),
-        "value" => JSON::Any.new(attachment.value)
+        "name"  => JSON::Any.new(attachment.name),
+        "value" => JSON::Any.new(attachment.value),
       })
     end
   end

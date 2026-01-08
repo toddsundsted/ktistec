@@ -32,11 +32,11 @@ Spectator.describe Ktistec::Model::Deletable do
     let!(deletable) { DeletableModel.new.save }
 
     it "deletes the instance" do
-      expect{deletable.delete!}.to change{DeletableModel.count}.by(-1)
+      expect { deletable.delete! }.to change { DeletableModel.count }.by(-1)
     end
 
     it "sets deleted_at" do
-      expect{deletable.delete!}.to change{deletable.deleted_at}
+      expect { deletable.delete! }.to change { deletable.deleted_at }
     end
   end
 
@@ -110,7 +110,7 @@ Spectator.describe Ktistec::Model::Deletable do
     end
 
     it "won't be saved" do
-      expect{deletable.save}.not_to change{deletable.id}
+      expect { deletable.save }.not_to change { deletable.id }
     end
   end
 end

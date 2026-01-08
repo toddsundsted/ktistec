@@ -19,15 +19,15 @@ Spectator.describe Ktistec::JWT do
     end
 
     it "raises an error if the token is not well-formed" do
-      expect{described_class.decode("fbb", secret)}.to raise_error(Ktistec::JWT::Error)
+      expect { described_class.decode("fbb", secret) }.to raise_error(Ktistec::JWT::Error)
     end
 
     it "raises an error if the token is not encoded correctly" do
-      expect{described_class.decode("f.b.b", secret)}.to raise_error(Ktistec::JWT::Error)
+      expect { described_class.decode("f.b.b", secret) }.to raise_error(Ktistec::JWT::Error)
     end
 
     it "raise an error if the signature is not correct" do
-      expect{described_class.decode(token[0..-2], secret)}.to raise_error(Ktistec::JWT::Error)
+      expect { described_class.decode(token[0..-2], secret) }.to raise_error(Ktistec::JWT::Error)
     end
   end
 

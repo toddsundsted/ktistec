@@ -17,11 +17,11 @@ class SettingsController
     ok "settings/settings", env: env, account: account, actor: actor, settings: settings
   end
 
-  get "/settings/actor" do |env|  # ameba:disable Lint/UnusedArgument
+  get "/settings/actor" do |env| # ameba:disable Lint/UnusedArgument
     redirect settings_path
   end
 
-  get "/settings/service" do |env|  # ameba:disable Lint/UnusedArgument
+  get "/settings/service" do |env| # ameba:disable Lint/UnusedArgument
     redirect settings_path
   end
 
@@ -93,9 +93,9 @@ class SettingsController
     # `files` invocation will fail if called on anything other than
     # form data.
     files = begin
-              env.params.files.presence
-            rescue HTTP::FormData::Error
-            end
+      env.params.files.presence
+    rescue HTTP::FormData::Error
+    end
     if files
       ["image", "icon"].each do |name|
         if (upload = files[name]?) && (filename = upload.filename.presence) && upload.tempfile.size > 0
@@ -114,18 +114,18 @@ class SettingsController
     end
 
     {
-      "name" => params["name"]?.try(&.to_s),
-      "summary" => params["summary"]?.try(&.to_s),
-      "language" => params["language"]?.try(&.to_s),
-      "timezone" => params["timezone"]?.try(&.to_s.presence),
-      "password" => params["password"]?.try(&.to_s),
+      "name"                   => params["name"]?.try(&.to_s),
+      "summary"                => params["summary"]?.try(&.to_s),
+      "language"               => params["language"]?.try(&.to_s),
+      "timezone"               => params["timezone"]?.try(&.to_s.presence),
+      "password"               => params["password"]?.try(&.to_s),
       "auto_approve_followers" => params["auto_approve_followers"]?.in?("1", true) || false,
-      "auto_follow_back" => params["auto_follow_back"]?.in?("1", true) || false,
-      "default_editor" => params["default_editor"]?.try(&.to_s),
+      "auto_follow_back"       => params["auto_follow_back"]?.in?("1", true) || false,
+      "default_editor"         => params["default_editor"]?.try(&.to_s),
       # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
-      "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
-      "icon" => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
-      "attachments" => reduce_attachments(params)
+      "image"       => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
+      "icon"        => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
+      "attachments" => reduce_attachments(params),
     }.select do |k, v|
       v || k.in?("image", "icon", "auto_approve_followers", "auto_follow_back")
     end
@@ -138,9 +138,9 @@ class SettingsController
     # `files` invocation will fail if called on anything other than
     # form data.
     files = begin
-              env.params.files.presence
-            rescue HTTP::FormData::Error
-            end
+      env.params.files.presence
+    rescue HTTP::FormData::Error
+    end
     if files
       ["image"].each do |name|
         if (upload = files[name]?) && (filename = upload.filename.presence) && upload.tempfile.size > 0
@@ -162,11 +162,11 @@ class SettingsController
       # the host may not be changed via settings
       "site" => params["site"]?.try(&.to_s),
       # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
-      "image" => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
-      "description" => params["description"]?.try(&.to_s),
-      "footer" => params["footer"]?.try(&.to_s),
+      "image"              => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
+      "description"        => params["description"]?.try(&.to_s),
+      "footer"             => params["footer"]?.try(&.to_s),
       "translator_service" => params["translator_service"]?.try(&.to_s),
-      "translator_url" => params["translator_url"]?.try(&.to_s),
+      "translator_url"     => params["translator_url"]?.try(&.to_s),
     }.select do |k, v|
       v || k.in?("image")
     end
@@ -175,7 +175,7 @@ class SettingsController
   private def self.reduce_attachments(params)
     0.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1).reduce(Array(ActivityPub::Actor::Attachment).new) do |memo, i|
       if params["attachment_#{i}_name"]?.try(&.to_s.presence) &&
-          params["attachment_#{i}_value"]?.try(&.to_s.presence)
+         params["attachment_#{i}_value"]?.try(&.to_s.presence)
         memo << ActivityPub::Actor::Attachment.new(
           params["attachment_#{i}_name"].to_s,
           "PropertyValue",

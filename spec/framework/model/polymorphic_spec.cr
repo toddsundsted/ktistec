@@ -10,11 +10,11 @@ class PolymorphicModel
 
   @@table_columns = [
     "state",
-    "stamp"
+    "stamp",
   ]
 
   ALIASES = [
-    "Alias"
+    "Alias",
   ]
 end
 
@@ -165,13 +165,13 @@ Spectator.describe Ktistec::Model::Polymorphic do
     end
 
     it "raises an error" do
-      expect{Subclass1.find(subclass2.id)}.to raise_error(Ktistec::Model::NotFound)
-      expect{Subclass1.find(id: subclass2.id)}.to raise_error(Ktistec::Model::NotFound)
+      expect { Subclass1.find(subclass2.id) }.to raise_error(Ktistec::Model::NotFound)
+      expect { Subclass1.find(id: subclass2.id) }.to raise_error(Ktistec::Model::NotFound)
     end
 
     it "raises an error" do
-      expect{PolymorphicModel.find(subclass2.id, as: Subclass1)}.to raise_error(Ktistec::Model::NotFound)
-      expect{PolymorphicModel.find(id: subclass2.id, as: Subclass1)}.to raise_error(Ktistec::Model::NotFound)
+      expect { PolymorphicModel.find(subclass2.id, as: Subclass1) }.to raise_error(Ktistec::Model::NotFound)
+      expect { PolymorphicModel.find(id: subclass2.id, as: Subclass1) }.to raise_error(Ktistec::Model::NotFound)
     end
 
     context "when instantiating an abstract model" do
@@ -182,16 +182,15 @@ Spectator.describe Ktistec::Model::Polymorphic do
       end
 
       it "raises an error" do
-        expect{PolymorphicModel.find(9999_i64)}.
-          to raise_error(Ktistec::Model::TypeError, /cannot instantiate abstract model/)
+        expect { PolymorphicModel.find(9999_i64) }
+          .to raise_error(Ktistec::Model::TypeError, /cannot instantiate abstract model/)
       end
 
       it "raises an error" do
-        expect{Subclass6.find(9999_i64)}.
-          to raise_error(Ktistec::Model::TypeError, /cannot instantiate abstract model/)
+        expect { Subclass6.find(9999_i64) }
+          .to raise_error(Ktistec::Model::TypeError, /cannot instantiate abstract model/)
       end
     end
-
   end
 
   describe ".all_subtypes" do
@@ -207,8 +206,8 @@ Spectator.describe Ktistec::Model::Polymorphic do
     end
 
     it "raises an error" do
-      expect{PolymorphicModel.find(subclass2.id).as_a(Subclass1)}.to raise_error(Ktistec::Model::NotFound)
-      expect{PolymorphicModel.find(id: subclass2.id).as_a(Subclass1)}.to raise_error(Ktistec::Model::NotFound)
+      expect { PolymorphicModel.find(subclass2.id).as_a(Subclass1) }.to raise_error(Ktistec::Model::NotFound)
+      expect { PolymorphicModel.find(id: subclass2.id).as_a(Subclass1) }.to raise_error(Ktistec::Model::NotFound)
     end
   end
 

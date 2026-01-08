@@ -11,7 +11,7 @@ Spectator.describe Relationship::Content::Follow::Mention do
   let(options) do
     {
       from_iri: from.iri,
-      to_iri: "#{random_string}@remote",
+      to_iri:   "#{random_string}@remote",
     }
   end
 
@@ -38,7 +38,7 @@ Spectator.describe Relationship::Content::Follow::Mention do
     subject { described_class.new(**options) }
 
     it "sets to_iri" do
-      expect{subject.assign(name: "mention@remote")}.to change{subject.to_iri}
+      expect { subject.assign(name: "mention@remote") }.to change { subject.to_iri }
     end
   end
 

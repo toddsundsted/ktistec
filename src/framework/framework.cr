@@ -54,7 +54,7 @@ module Ktistec
       Ktistec.database.query_all("SELECT key, value FROM options WHERE key LIKE 'log_level/%'", as: {String, String})
         .reduce(Hash(String, LogLevel).new) do |log_levels, (key, value)|
           key = key.lchop("log_level/")
-          log_levels[key] =  LogLevel.new(key, Log::Severity.parse(value))
+          log_levels[key] = LogLevel.new(key, Log::Severity.parse(value))
           log_levels
         end
     end
@@ -68,13 +68,13 @@ module Ktistec
   #
   class Settings
     PROPERTIES = {
-      host: String,
-      site: String,
-      image: String,
-      description: String,
-      footer: String,
+      host:               String,
+      site:               String,
+      image:              String,
+      description:        String,
+      footer:             String,
       translator_service: String,
-      translator_url: String,
+      translator_url:     String,
     }
 
     {% for property, type in PROPERTIES %}

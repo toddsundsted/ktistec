@@ -11,8 +11,8 @@ Spectator.describe LastTime do
 
     let(options) do
       {
-        name: random_string,
-        account_id: account.id
+        name:       random_string,
+        account_id: account.id,
       }
     end
 

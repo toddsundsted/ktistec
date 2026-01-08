@@ -120,7 +120,7 @@ Spectator.describe Ktistec::CSRF do
     request = HTTP::Request.new("POST", "/",
       body: "authenticity_token=#{csrf}&hasan=lamec",
       headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded",
-                             "Cookie" => client_response.headers["Set-Cookie"]})
+                             "Cookie"       => client_response.headers["Set-Cookie"]})
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
   end
@@ -139,7 +139,7 @@ Spectator.describe Ktistec::CSRF do
     request = HTTP::Request.new("POST", "/",
       body: "hasan=lamec",
       headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded",
-                             "Cookie" => client_response.headers["Set-Cookie"],
+                             "Cookie"       => client_response.headers["Set-Cookie"],
                              "X-CSRF-Token" => csrf})
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)

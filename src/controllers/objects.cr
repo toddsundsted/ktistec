@@ -20,7 +20,7 @@ class ObjectsController
     if (object = ActivityPub::Object.find?(iri_or_id, include_deleted: true))
       if (object.visible && !object.draft?) ||
          ((account = env.account?) &&
-          (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
+         (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
         object
       end
     end
@@ -99,9 +99,7 @@ class ObjectsController
 
     redirect edit_object_path if object.draft?
 
-    replies = env.account? ?
-      object.replies(for_actor: env.account.actor) :
-      object.replies(approved_by: object.attributed_to)
+    replies = env.account? ? object.replies(for_actor: env.account.actor) : object.replies(approved_by: object.attributed_to)
 
     ok "objects/replies", env: env, object: object, replies: replies, recursive: false
   end
@@ -113,9 +111,7 @@ class ObjectsController
 
     redirect edit_object_path if object.draft?
 
-    thread = env.account? ?
-      object.thread(for_actor: env.account.actor) :
-      object.thread(approved_by: object.attributed_to)
+    thread = env.account? ? object.thread(for_actor: env.account.actor) : object.thread(approved_by: object.attributed_to)
 
     ok "objects/thread", env: env, object: object, thread: thread, follow: nil, task: nil
   end

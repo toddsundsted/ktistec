@@ -52,7 +52,7 @@ Spectator.describe Poll do
     it "stores and retrieves option data" do
       poll.options = [
         Poll::Option.new("Yes", 10),
-        Poll::Option.new("No", 5)
+        Poll::Option.new("No", 5),
       ]
       expect(poll.options.size).to eq(2)
       expect(poll.options[0].name).to eq("Yes")
@@ -85,7 +85,7 @@ Spectator.describe Poll do
       :poll,
       options: [
         Poll::Option.new("Yes", 10),
-        Poll::Option.new("No", 5)
+        Poll::Option.new("No", 5),
       ],
       voters_count: 15
     )
@@ -118,7 +118,7 @@ Spectator.describe Poll do
       vote("Yes")
 
       before_each do
-        question.assign(updated_at: vote_times.max + 1.minute)  # don't save
+        question.assign(updated_at: vote_times.max + 1.minute) # don't save
       end
 
       it "does not adjust counts" do
@@ -135,7 +135,7 @@ Spectator.describe Poll do
         vote("Yes")
 
         before_each do
-          question.assign(updated_at: vote_times.min - 1.minute)  # don't save
+          question.assign(updated_at: vote_times.min - 1.minute) # don't save
         end
 
         it "adjusts counts" do
@@ -152,7 +152,7 @@ Spectator.describe Poll do
         vote("No")
 
         before_each do
-          question.assign(updated_at: vote_times.min - 1.minute)  # don't save
+          question.assign(updated_at: vote_times.min - 1.minute) # don't save
         end
 
         it "adjusts counts" do
@@ -169,7 +169,7 @@ Spectator.describe Poll do
         vote("Yes")
 
         before_each do
-          question.assign(updated_at: vote_times.min - 1.minute)  # don't save
+          question.assign(updated_at: vote_times.min - 1.minute) # don't save
         end
 
         it "adjusts counts" do

@@ -54,7 +54,7 @@ class Task
 
     Log = ::Log.for(self)
 
-    DEFAULT_MAX_AGE_DAYS = 365
+    DEFAULT_MAX_AGE_DAYS     =  365
     DEFAULT_MAX_DELETE_COUNT = 1000
 
     class_property get_max_age_days : Int32 do
@@ -68,9 +68,9 @@ class Task
     # Performs garbage collection when scheduled.
     #
     def perform(
-         max_age_days = self.class.get_max_age_days,
-         max_delete_count = self.class.get_max_delete_count
-       )
+      max_age_days = self.class.get_max_age_days,
+      max_delete_count = self.class.get_max_delete_count,
+    )
       Log.info { "Starting garbage collection of objects older than #{max_age_days} days (maximum #{max_delete_count} objects)" }
 
       deleted_count = garbage_collect_objects(max_delete_count)
@@ -87,9 +87,9 @@ class Task
     # Performs garbage collection on-demand.
     #
     def perform_on_demand(
-         max_age_days = self.class.get_max_age_days,
-         max_delete_count = Int32::MAX
-       )
+      max_age_days = self.class.get_max_age_days,
+      max_delete_count = Int32::MAX,
+    )
       Log.info { "Starting garbage collection of objects older than #{max_age_days} days" }
 
       deleted_count = garbage_collect_objects(max_delete_count)

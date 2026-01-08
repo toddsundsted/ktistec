@@ -22,35 +22,35 @@ Spectator.describe ActivityPub::Object do
     let(source) { ActivityPub::Object::Source.new("foobar #foobar @foo@bar.com", "text/html") }
 
     it "assigns content" do
-      expect{subject.assign(source: source).save}.to change{subject.content}
+      expect { subject.assign(source: source).save }.to change { subject.content }
     end
 
     it "assigns media type" do
-      expect{subject.assign(source: source).save}.to change{subject.media_type}
+      expect { subject.assign(source: source).save }.to change { subject.media_type }
     end
 
     it "assigns attachments" do
-      expect{subject.assign(source: source).save}.to change{subject.attachments}
+      expect { subject.assign(source: source).save }.to change { subject.attachments }
     end
 
     it "assigns hashtags" do
-      expect{subject.assign(source: source).save}.to change{subject.hashtags}
+      expect { subject.assign(source: source).save }.to change { subject.hashtags }
     end
 
     it "creates hashtags" do
-      expect{subject.assign(source: source).save}.to change{Tag::Hashtag.count(subject_iri: subject.iri)}.by(1)
+      expect { subject.assign(source: source).save }.to change { Tag::Hashtag.count(subject_iri: subject.iri) }.by(1)
     end
 
     it "assigns mentions" do
-      expect{subject.assign(source: source).save}.to change{subject.mentions}
+      expect { subject.assign(source: source).save }.to change { subject.mentions }
     end
 
     it "creates mentions" do
-      expect{subject.assign(source: source).save}.to change{Tag::Mention.count(subject_iri: subject.iri)}.by(1)
+      expect { subject.assign(source: source).save }.to change { Tag::Mention.count(subject_iri: subject.iri) }.by(1)
     end
 
     it "doesn't assign if the object isn't local" do
-      expect{subject.assign(iri: "https://remote/object", source: source).save}.not_to change{subject.content}
+      expect { subject.assign(iri: "https://remote/object", source: source).save }.not_to change { subject.content }
     end
 
     context "addressing" do
@@ -130,14 +130,14 @@ Spectator.describe ActivityPub::Object do
       end
 
       it "sets subject media type to text/html" do
-        expect{subject.assign(source: markdown_source).save}.to change{subject.media_type}.to("text/html")
+        expect { subject.assign(source: markdown_source).save }.to change { subject.media_type }.to("text/html")
       end
 
       context "given a remote object" do
         before_each { subject.assign(iri: "https://remote/object").save }
 
         it "doesn't convert markdown to HTML" do
-          expect{subject.assign(source: markdown_source).save}.not_to change{subject.content}
+          expect { subject.assign(source: markdown_source).save }.not_to change { subject.content }
         end
       end
     end
@@ -1134,7 +1134,7 @@ Spectator.describe ActivityPub::Object do
     let_build(:object)
 
     it "sets thread to its iri" do
-      expect{object.save}.to change{object.thread}.to(object.iri)
+      expect { object.save }.to change { object.thread }.to(object.iri)
     end
 
     context "given a reply" do
@@ -1146,7 +1146,7 @@ Spectator.describe ActivityPub::Object do
         before_each { object.assign(thread: "https://somewhere") }
 
         it "sets thread to object's thread" do
-          expect{reply.save}.to change{reply.thread}.to("https://somewhere")
+          expect { reply.save }.to change { reply.thread }.to("https://somewhere")
         end
       end
 
@@ -1154,7 +1154,7 @@ Spectator.describe ActivityPub::Object do
         before_each { object.assign(in_reply_to_iri: "https://elsewhere") }
 
         it "sets thread to object's in_reply_to_iri" do
-          expect{reply.save}.to change{reply.thread}.to("https://elsewhere")
+          expect { reply.save }.to change { reply.thread }.to("https://elsewhere")
         end
       end
 
@@ -1162,12 +1162,12 @@ Spectator.describe ActivityPub::Object do
         before_each { reply.assign(in_reply_to_iri: "https://nowhere") }
 
         it "sets thread to its in_reply_to_iri" do
-          expect{reply.save}.to change{reply.thread}.to("https://nowhere")
+          expect { reply.save }.to change { reply.thread }.to("https://nowhere")
         end
       end
 
       it "sets thread to object's iri" do
-        expect{reply.save}.to change{reply.thread}.to(object.iri)
+        expect { reply.save }.to change { reply.thread }.to(object.iri)
       end
 
       context "when saving the root in a thread" do
@@ -1176,7 +1176,7 @@ Spectator.describe ActivityPub::Object do
         before_each { object.assign(in_reply_to_iri: "https://anywhere", thread: "https://anywhere") }
 
         it "sets reply's thread to object's thread" do
-          expect{object.save}.to change{reply.reload!.thread}.to("https://anywhere")
+          expect { object.save }.to change { reply.reload!.thread }.to("https://anywhere")
         end
       end
     end
@@ -1186,11 +1186,11 @@ Spectator.describe ActivityPub::Object do
     let_build(:object)
 
     it "updates the thread" do
-      expect{object.thread!}.to change{object.thread}.from(nil).to(object.iri)
+      expect { object.thread! }.to change { object.thread }.from(nil).to(object.iri)
     end
 
     it "saves the updated object" do
-      expect{object.thread!}.to change{ActivityPub::Object.find?(object.iri)}.from(nil).to(object)
+      expect { object.thread! }.to change { ActivityPub::Object.find?(object.iri) }.from(nil).to(object)
     end
 
     it "returns the thread" do
@@ -1641,17 +1641,12 @@ Spectator.describe ActivityPub::Object do
 
     def make_test_thread(structure : Array({time_offset: Time::Span, parent_idx: Int32?, author_idx: Int32}))
       actors = (0...6).map do |i|
-        Factory.create(:actor, iri: "https://test.test/actors/#{('a'.ord + i).chr}")  # ameba:disable Ktistec/NoImperativeFactories
+        Factory.create(:actor, iri: "https://test.test/actors/#{('a'.ord + i).chr}") # ameba:disable Ktistec/NoImperativeFactories
       end
       objects = [] of ActivityPub::Object
       structure.each do |spec|
         parent = (idx = spec[:parent_idx]) ? objects[idx] : nil
-        object = Factory.create(  # ameba:disable Ktistec/NoImperativeFactories
-          :object,
-          in_reply_to: parent,
-          attributed_to: actors[spec[:author_idx]],
-          published: base_time + spec[:time_offset]
-        )
+        object = Factory.create(:object, in_reply_to: parent, attributed_to: actors[spec[:author_idx]], published: base_time + spec[:time_offset]) # ameba:disable Ktistec/NoImperativeFactories
         objects << object
       end
       objects.first
@@ -1660,13 +1655,13 @@ Spectator.describe ActivityPub::Object do
     context "with small test thread" do
       let(root) do
         make_test_thread([
-          {time_offset: 0.minutes, parent_idx: nil, author_idx: 0},    # root by author_a
-          {time_offset: 5.minutes, parent_idx: 0, author_idx: 1},      # reply1 by author_b
-          {time_offset: 10.minutes, parent_idx: 1, author_idx: 2},     # branch_reply1 by author_c
-          {time_offset: 15.minutes, parent_idx: 1, author_idx: 3},     # branch_reply2 by author_d
-          {time_offset: 20.minutes, parent_idx: 1, author_idx: 4},     # branch_reply3 by author_e
-          {time_offset: 25.minutes, parent_idx: 1, author_idx: 5},     # branch_reply4 by author_f
-          {time_offset: 30.minutes, parent_idx: 1, author_idx: 0},     # branch_reply5 by author_a (OP)
+          {time_offset: 0.minutes, parent_idx: nil, author_idx: 0}, # root by author_a
+          {time_offset: 5.minutes, parent_idx: 0, author_idx: 1},   # reply1 by author_b
+          {time_offset: 10.minutes, parent_idx: 1, author_idx: 2},  # branch_reply1 by author_c
+          {time_offset: 15.minutes, parent_idx: 1, author_idx: 3},  # branch_reply2 by author_d
+          {time_offset: 20.minutes, parent_idx: 1, author_idx: 4},  # branch_reply3 by author_e
+          {time_offset: 25.minutes, parent_idx: 1, author_idx: 5},  # branch_reply4 by author_f
+          {time_offset: 30.minutes, parent_idx: 1, author_idx: 0},  # branch_reply5 by author_a (OP)
         ])
       end
 
@@ -1914,7 +1909,7 @@ Spectator.describe ActivityPub::Object do
       before_each { canonical.save }
 
       it "destroys the associated canonical path" do
-        expect{subject.delete!}.to change{subject.canonical_path}
+        expect { subject.delete! }.to change { subject.canonical_path }
       end
     end
 
@@ -1922,7 +1917,7 @@ Spectator.describe ActivityPub::Object do
       before_each { canonical.save }
 
       it "destroys the associated canonical path" do
-        expect{subject.destroy}.to change{subject.canonical_path}
+        expect { subject.destroy }.to change { subject.canonical_path }
       end
     end
   end
@@ -2059,7 +2054,7 @@ Spectator.describe ActivityPub::Object::ModelHelper do
       end
     end
 
-    context "given object without an id" do  # should never happen, but...
+    context "given object without an id" do # should never happen, but...
       let(json) { super.gsub(%q|"@id":"replies link",|, %q|"@id":"https://test.test/replies",|).gsub(%q|"@id":"https://test.test/object",|, "") }
 
       it "does not populate replies" do

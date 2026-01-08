@@ -24,8 +24,8 @@ Spectator.describe ObjectsController do
 
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
-  FORM_DATA = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html", "Content-Type" => "application/x-www-form-urlencoded"}
-  JSON_DATA = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
+  FORM_DATA   = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html", "Content-Type" => "application/x-www-form-urlencoded"}
+  JSON_DATA   = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
 
   let(actor) { register.actor }
 
@@ -71,7 +71,7 @@ Spectator.describe ObjectsController do
   )
 
   describe ".get_object" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     it "returns visible objects" do
       result = ObjectsController.get_object(env, visible.iri)
@@ -183,7 +183,7 @@ Spectator.describe ObjectsController do
   end
 
   describe ".get_object_editable" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     it "returns nil" do
       result = ObjectsController.get_object_editable(env, visible.iri)
@@ -224,7 +224,7 @@ Spectator.describe ObjectsController do
   end
 
   describe ".get_object_approvable" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     it "returns nil" do
       result = ObjectsController.get_object_approvable(env, reply.iri)
@@ -286,13 +286,13 @@ Spectator.describe ObjectsController do
       end
 
       it "creates an object" do
-        expect{post "/objects", FORM_DATA, "content=foo+bar"}.
-          to change{ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri)}.by(1)
+        expect { post "/objects", FORM_DATA, "content=foo+bar" }
+          .to change { ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri) }.by(1)
       end
 
       it "creates an object" do
-        expect{post "/objects", JSON_DATA, %Q|{"content":"foo bar"}|}.
-          to change{ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri)}.by(1)
+        expect { post "/objects", JSON_DATA, %Q|{"content":"foo bar"}| }
+          .to change { ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri) }.by(1)
       end
 
       it "sets the default media type" do
@@ -414,7 +414,7 @@ Spectator.describe ObjectsController do
             url: "#{Ktistec.host}/attachments/#{visible.uid}/image2.jpg",
             media_type: "image/jpeg",
             caption: "Image 2",
-          )
+          ),
         ]).save
       end
 
@@ -997,53 +997,53 @@ Spectator.describe ObjectsController do
       end
 
       it "changes the content" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "content=foo+bar"}.
-          to change{draft.reload!.content}
+        expect { post "/objects/#{draft.uid}", FORM_DATA, "content=foo+bar" }
+          .to change { draft.reload!.content }
       end
 
       it "changes the content" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar"}|}.
-          to change{draft.reload!.content}
+        expect { post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar"}| }
+          .to change { draft.reload!.content }
       end
 
       it "updates the language" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "language=fr"}.
-          to change{draft.reload!.language}.to("fr")
+        expect { post "/objects/#{draft.uid}", FORM_DATA, "language=fr" }
+          .to change { draft.reload!.language }.to("fr")
       end
 
       it "updates the language" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"language":"fr"}|}.
-          to change{draft.reload!.language}.to("fr")
+        expect { post "/objects/#{draft.uid}", JSON_DATA, %Q|{"language":"fr"}| }
+          .to change { draft.reload!.language }.to("fr")
       end
 
       it "updates the name" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "name=foo+bar"}.
-          to change{draft.reload!.name}
+        expect { post "/objects/#{draft.uid}", FORM_DATA, "name=foo+bar" }
+          .to change { draft.reload!.name }
       end
 
       it "updates the name" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"name":"foo bar"}|}.
-          to change{draft.reload!.name}
+        expect { post "/objects/#{draft.uid}", JSON_DATA, %Q|{"name":"foo bar"}| }
+          .to change { draft.reload!.name }
       end
 
       it "updates the summary" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "summary=foo+bar"}.
-          to change{draft.reload!.summary}
+        expect { post "/objects/#{draft.uid}", FORM_DATA, "summary=foo+bar" }
+          .to change { draft.reload!.summary }
       end
 
       it "updates the summary" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"summary":"foo bar"}|}.
-          to change{draft.reload!.summary}
+        expect { post "/objects/#{draft.uid}", JSON_DATA, %Q|{"summary":"foo bar"}| }
+          .to change { draft.reload!.summary }
       end
 
       it "updates the canonical path" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "canonical-path=%2Ffoo%2Fbar"}.
-          to change{draft.reload!.canonical_path}
+        expect { post "/objects/#{draft.uid}", FORM_DATA, "canonical-path=%2Ffoo%2Fbar" }
+          .to change { draft.reload!.canonical_path }
       end
 
       it "updates the canonical path" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical-path":"/foo/bar"}|}.
-          to change{draft.reload!.canonical_path}
+        expect { post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical-path":"/foo/bar"}| }
+          .to change { draft.reload!.canonical_path }
       end
 
       context "when validation fails" do
@@ -1102,13 +1102,13 @@ Spectator.describe ObjectsController do
       end
 
       it "deletes the object" do
-        expect{delete "/objects/#{draft.uid}", FORM_DATA}.
-          to change{ActivityPub::Object.count(id: draft.id)}.by(-1)
+        expect { delete "/objects/#{draft.uid}", FORM_DATA }
+          .to change { ActivityPub::Object.count(id: draft.id) }.by(-1)
       end
 
       it "deletes the object" do
-        expect{delete "/objects/#{draft.uid}", JSON_DATA}.
-          to change{ActivityPub::Object.count(id: draft.id)}.by(-1)
+        expect { delete "/objects/#{draft.uid}", JSON_DATA }
+          .to change { ActivityPub::Object.count(id: draft.id) }.by(-1)
       end
 
       it "returns 404 if not a draft" do
@@ -1546,8 +1546,8 @@ Spectator.describe ObjectsController do
       end
 
       it "approves the object" do
-        expect{post "/remote/objects/#{reply.id}/approve"}.
-          to change{reply.approved_by?(actor)}
+        expect { post "/remote/objects/#{reply.id}/approve" }
+          .to change { reply.approved_by?(actor) }
       end
 
       context "but it's already approved" do
@@ -1596,8 +1596,8 @@ Spectator.describe ObjectsController do
       end
 
       it "unapproves the object" do
-        expect{post "/remote/objects/#{reply.id}/unapprove"}.
-          to change{reply.approved_by?(actor)}
+        expect { post "/remote/objects/#{reply.id}/unapprove" }
+          .to change { reply.approved_by?(actor) }
       end
 
       context "but it's already unapproved" do
@@ -1643,8 +1643,8 @@ Spectator.describe ObjectsController do
       end
 
       it "blocks the object" do
-        expect{post "/remote/objects/#{remote.id}/block"}.
-          to change{remote.reload!.blocked?}
+        expect { post "/remote/objects/#{remote.id}/block" }
+          .to change { remote.reload!.blocked? }
       end
 
       it "returns 404 if object does not exist" do
@@ -1671,8 +1671,8 @@ Spectator.describe ObjectsController do
       end
 
       it "unblocks the object" do
-        expect{post "/remote/objects/#{remote.id}/unblock"}.
-          to change{remote.reload!.blocked?}
+        expect { post "/remote/objects/#{remote.id}/unblock" }
+          .to change { remote.reload!.blocked? }
       end
 
       it "returns 404 if object does not exist" do
@@ -1748,20 +1748,20 @@ Spectator.describe ObjectsController do
         end
 
         it "does not change the count of follow relationships" do
-          expect{post "/remote/objects/#{visible.id}/follow"}.
-            not_to change{Relationship::Content::Follow::Thread.count(thread: visible.iri)}
+          expect { post "/remote/objects/#{visible.id}/follow" }
+            .not_to change { Relationship::Content::Follow::Thread.count(thread: visible.iri) }
         end
 
         it "does not change the count of fetch tasks" do
-          expect{post "/remote/objects/#{visible.id}/follow"}.
-            not_to change{Task::Fetch::Thread.count(thread: visible.iri)}
+          expect { post "/remote/objects/#{visible.id}/follow" }
+            .not_to change { Task::Fetch::Thread.count(thread: visible.iri) }
         end
 
         context "where the fetch is complete but has failed" do
           before_each { fetch_thread_task.assign(complete: true, backtrace: ["error"]).save }
 
           it "clears the backtrace" do
-            expect{post "/remote/objects/#{visible.id}/follow"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
+            expect { post "/remote/objects/#{visible.id}/follow" }.to change { fetch_thread_task.reload!.backtrace }.to(nil)
           end
         end
       end
@@ -1890,8 +1890,8 @@ Spectator.describe ObjectsController do
         let_create!(:bookmark_relationship, actor: actor, object: visible)
 
         it "is idempotent" do
-          expect{post "/remote/objects/#{visible.id}/bookmark"}.
-            not_to change{Relationship::Content::Bookmark.count(actor: actor, object: visible)}
+          expect { post "/remote/objects/#{visible.id}/bookmark" }
+            .not_to change { Relationship::Content::Bookmark.count(actor: actor, object: visible) }
         end
       end
 
@@ -1931,8 +1931,8 @@ Spectator.describe ObjectsController do
       end
 
       it "is idempotent" do
-        expect{delete "/remote/objects/#{visible.id}/bookmark"}.
-          not_to change{Relationship::Content::Bookmark.count(actor: actor, object: visible)}
+        expect { delete "/remote/objects/#{visible.id}/bookmark" }
+          .not_to change { Relationship::Content::Bookmark.count(actor: actor, object: visible) }
       end
 
       it "returns 404 if object is draft" do
@@ -1970,8 +1970,8 @@ Spectator.describe ObjectsController do
         let_create!(:pin_relationship, actor: actor, object: reply)
 
         it "is idempotent" do
-          expect{post "/remote/objects/#{reply.id}/pin"}.
-            not_to change{Relationship::Content::Pin.count(actor: actor, object: reply)}
+          expect { post "/remote/objects/#{reply.id}/pin" }
+            .not_to change { Relationship::Content::Pin.count(actor: actor, object: reply) }
         end
       end
 
@@ -2016,8 +2016,8 @@ Spectator.describe ObjectsController do
       end
 
       it "is idempotent" do
-        expect{delete "/remote/objects/#{reply.id}/pin"}.
-          not_to change{Relationship::Content::Pin.count(actor: actor, object: reply)}
+        expect { delete "/remote/objects/#{reply.id}/pin" }
+          .not_to change { Relationship::Content::Pin.count(actor: actor, object: reply) }
       end
 
       it "returns 403 if object is not attributed to actor" do
@@ -2099,20 +2099,20 @@ Spectator.describe ObjectsController do
         end
 
         it "does not change the count of follow relationships" do
-          expect{post "/remote/objects/#{visible.id}/fetch/start"}.
-            not_to change{Relationship::Content::Follow::Thread.count(thread: visible.iri)}
+          expect { post "/remote/objects/#{visible.id}/fetch/start" }
+            .not_to change { Relationship::Content::Follow::Thread.count(thread: visible.iri) }
         end
 
         it "does not change the count of fetch tasks" do
-          expect{post "/remote/objects/#{visible.id}/fetch/start"}.
-            not_to change{Task::Fetch::Thread.count(thread: visible.iri)}
+          expect { post "/remote/objects/#{visible.id}/fetch/start" }
+            .not_to change { Task::Fetch::Thread.count(thread: visible.iri) }
         end
 
         context "where the fetch is complete but has failed" do
           before_each { fetch_thread_task.assign(complete: true, backtrace: ["error"]).save }
 
           it "clears the backtrace" do
-            expect{post "/remote/objects/#{visible.id}/fetch/start"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
+            expect { post "/remote/objects/#{visible.id}/fetch/start" }.to change { fetch_thread_task.reload!.backtrace }.to(nil)
           end
         end
       end
@@ -2237,8 +2237,8 @@ Spectator.describe ObjectsController do
       end
 
       it "does not create a translation" do
-        expect{post "/remote/objects/#{remote.id}/translation/create"}.
-          not_to change{remote.reload!.translations.size}
+        expect { post "/remote/objects/#{remote.id}/translation/create" }
+          .not_to change { remote.reload!.translations.size }
       end
 
       context "given a translator" do
@@ -2252,8 +2252,8 @@ Spectator.describe ObjectsController do
         after_each { ::Ktistec.clear_translator }
 
         it "does not create a translation" do
-          expect{post "/remote/objects/#{remote.id}/translation/create"}.
-            not_to change{remote.reload!.translations.size}
+          expect { post "/remote/objects/#{remote.id}/translation/create" }
+            .not_to change { remote.reload!.translations.size }
         end
 
         context "and an account and an object with the same primary language" do
@@ -2263,8 +2263,8 @@ Spectator.describe ObjectsController do
           end
 
           it "does not create a translation" do
-            expect{post "/remote/objects/#{remote.id}/translation/create"}.
-              not_to change{remote.reload!.translations.size}
+            expect { post "/remote/objects/#{remote.id}/translation/create" }
+              .not_to change { remote.reload!.translations.size }
           end
         end
 
@@ -2275,8 +2275,8 @@ Spectator.describe ObjectsController do
           end
 
           it "creates a translation" do
-            expect{post "/remote/objects/#{remote.id}/translation/create"}.
-              to change{remote.reload!.translations.size}.by(1)
+            expect { post "/remote/objects/#{remote.id}/translation/create" }
+              .to change { remote.reload!.translations.size }.by(1)
           end
         end
       end
@@ -2307,8 +2307,8 @@ Spectator.describe ObjectsController do
       end
 
       it "destroys the translation" do
-        expect{post "/remote/objects/#{remote.id}/translation/clear"}.
-          to change{remote.reload!.translations.size}.by(-1)
+        expect { post "/remote/objects/#{remote.id}/translation/clear" }
+          .to change { remote.reload!.translations.size }.by(-1)
       end
 
       it "returns 404 if object does not exist" do

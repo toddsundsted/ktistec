@@ -76,12 +76,12 @@ class Task
     @[Persistent]
     @[Insignificant]
     property state : State do
-        State.new.tap do |state|
-          Tag::Hashtag.where(name: name).compact_map(&.href.presence).each do |href|
-            node = State::Node.new(href)
-            state << node unless state.includes?(node)
-          end
+      State.new.tap do |state|
+        Tag::Hashtag.where(name: name).compact_map(&.href.presence).each do |href|
+          node = State::Node.new(href)
+          state << node unless state.includes?(node)
         end
+      end
     end
 
     # Identifies the actor following the hashtag.
@@ -225,7 +225,7 @@ class Task
           fetched, object = find_or_fetch_object(item)
           next if object.nil?
           if (hashtags = object.hashtags)
-            hashtags.select{ |h| h.name.downcase == name }.compact_map(&.href).each do |href|
+            hashtags.select { |h| h.name.downcase == name }.compact_map(&.href).each do |href|
               new = State::Node.new(href)
               state << new unless state.includes?(new)
             end

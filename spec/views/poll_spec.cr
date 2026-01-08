@@ -22,13 +22,13 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
     options: [
       Poll::Option.new("Red", 10),
       Poll::Option.new("Green", 20),
-      Poll::Option.new("Blue", 5)
+      Poll::Option.new("Blue", 5),
     ],
     voters_count: 35,
     multiple_choice: false,
   )
 
-  let(env) { env_factory("GET", "/") }
+  let(env) { make_env("GET", "/") }
 
   let(object_emojis) { [] of Tag::Emoji }
 
@@ -96,7 +96,7 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
     before_each do
       poll.question.assign(
         iri: "https://test.test/objects/#{Ktistec::Util.id}",
-        attributed_to: env.account.actor,  # author viewing own poll
+        attributed_to: env.account.actor, # author viewing own poll
         published: nil
       ).save
     end
@@ -120,7 +120,7 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
     before_each do
       poll.question.assign(
         iri: "https://test.test/objects/#{Ktistec::Util.id}",
-        attributed_to: env.account.actor,  # author viewing own poll
+        attributed_to: env.account.actor, # author viewing own poll
         published: Time.utc
       ).save
     end

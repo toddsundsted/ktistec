@@ -11,7 +11,7 @@ Spectator.describe Relationship::Content::Pin do
   let(options) do
     {
       from_iri: object.attributed_to.iri,
-      to_iri: object.iri
+      to_iri:   object.iri,
     }
   end
 

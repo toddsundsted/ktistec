@@ -35,7 +35,7 @@ Spectator.describe Task::Fetch::Fetcher do
       super(*args, **options)
     end
 
-    def set_next_attempt_at(*args, **options)  # ameba:disable Naming/AccessorMethodName
+    def set_next_attempt_at(*args, **options) # ameba:disable Naming/AccessorMethodName
       super(*args, **options)
     end
   end
@@ -44,11 +44,11 @@ Spectator.describe Task::Fetch::Fetcher do
     subject { TestFetcher.new(source: source, value: "").save }
 
     it "makes the task not runnable" do
-      expect{subject.complete!}.to change{subject.reload!.runnable?}.to(false)
+      expect { subject.complete! }.to change { subject.reload!.runnable? }.to(false)
     end
 
     it "makes the class interrupted" do
-      expect{subject.complete!}.to change{subject.reload!.interrupted?}.to(true)
+      expect { subject.complete! }.to change { subject.reload!.interrupted? }.to(true)
     end
   end
 
@@ -70,7 +70,7 @@ Spectator.describe Task::Fetch::Fetcher do
       end
 
       it "persists the object" do
-        expect{subject.find_or_fetch_object(object.iri)}.to change{object.class.find?(object.iri)}
+        expect { subject.find_or_fetch_object(object.iri) }.to change { object.class.find?(object.iri) }
       end
 
       it "fetches the actor" do
@@ -79,7 +79,7 @@ Spectator.describe Task::Fetch::Fetcher do
       end
 
       it "persists the actor" do
-        expect{subject.find_or_fetch_object(object.iri)}.to change{actor.class.find?(actor.iri)}
+        expect { subject.find_or_fetch_object(object.iri) }.to change { actor.class.find?(actor.iri) }
       end
 
       it "returns the object" do
@@ -101,7 +101,7 @@ Spectator.describe Task::Fetch::Fetcher do
         end
 
         it "does not persist the object" do
-          expect{subject.find_or_fetch_object(object.iri)}.not_to change{object.class.find?(object.iri)}
+          expect { subject.find_or_fetch_object(object.iri) }.not_to change { object.class.find?(object.iri) }
         end
 
         it "does not return the object" do
@@ -137,7 +137,7 @@ Spectator.describe Task::Fetch::Fetcher do
         end
 
         it "does not persist the actor" do
-          expect{subject.find_or_fetch_object(object.iri)}.not_to change{actor.class.find?(actor.iri)}
+          expect { subject.find_or_fetch_object(object.iri) }.not_to change { actor.class.find?(actor.iri) }
         end
 
         it "does not return the object" do
@@ -170,7 +170,7 @@ Spectator.describe Task::Fetch::Fetcher do
         end
 
         it "does not persist the object" do
-          expect{subject.find_or_fetch_object(object.iri)}.not_to change{object.class.find?(object.iri)}
+          expect { subject.find_or_fetch_object(object.iri) }.not_to change { object.class.find?(object.iri) }
         end
 
         it "does not fetch the actor" do
@@ -179,7 +179,7 @@ Spectator.describe Task::Fetch::Fetcher do
         end
 
         it "does not persist the actor" do
-          expect{subject.find_or_fetch_object(object.iri)}.not_to change{actor.class.find?(actor.iri)}
+          expect { subject.find_or_fetch_object(object.iri) }.not_to change { actor.class.find?(actor.iri) }
         end
 
         it "returns the object" do
@@ -195,23 +195,23 @@ Spectator.describe Task::Fetch::Fetcher do
         before_each { object.save.delete! }
 
         it "does not return the object" do
-          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).last).
-            to be_nil
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).last)
+            .to be_nil
         end
 
         it "returns false" do
-          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).first).
-            to be_false
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).first)
+            .to be_false
         end
 
         it "returns the object" do
-          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).last).
-            to eq(object.class.find(object.iri, include_deleted: true))
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).last)
+            .to eq(object.class.find(object.iri, include_deleted: true))
         end
 
         it "returns false" do
-          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).first).
-            to be_false
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).first)
+            .to be_false
         end
       end
 
@@ -219,23 +219,23 @@ Spectator.describe Task::Fetch::Fetcher do
         before_each { object.save.block! }
 
         it "does not return the object" do
-          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).last).
-            to be_nil
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).last)
+            .to be_nil
         end
 
         it "returns false" do
-          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).first).
-            to be_false
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).first)
+            .to be_false
         end
 
         it "returns the object" do
-          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).last).
-            to eq(object.class.find(object.iri, true))
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).last)
+            .to eq(object.class.find(object.iri, true))
         end
 
         it "returns false" do
-          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).first).
-            to be_false
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).first)
+            .to be_false
         end
       end
 
@@ -245,23 +245,23 @@ Spectator.describe Task::Fetch::Fetcher do
         pre_condition { expect(object.class.find?(object.iri)).to be_nil }
 
         it "does not return the object" do
-          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).last).
-            to be_nil
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).last)
+            .to be_nil
         end
 
         it "returns false" do
-          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).first).
-            to be_false
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: false).first)
+            .to be_false
         end
 
         it "returns the object" do
-          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).last).
-            to eq(object.class.find(object.iri))
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).last)
+            .to eq(object.class.find(object.iri))
         end
 
         it "returns true" do
-          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).first).
-            to be_true
+          expect(subject.find_or_fetch_object(object.iri, include_deleted: true).first)
+            .to be_true
         end
       end
 
@@ -271,23 +271,23 @@ Spectator.describe Task::Fetch::Fetcher do
         pre_condition { expect(object.class.find?(object.iri)).to be_nil }
 
         it "does not return the object" do
-          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).last).
-            to be_nil
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).last)
+            .to be_nil
         end
 
         it "returns false" do
-          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).first).
-            to be_false
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: false).first)
+            .to be_false
         end
 
         it "returns the object" do
-          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).last).
-            to eq(object.class.find(object.iri))
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).last)
+            .to eq(object.class.find(object.iri))
         end
 
         it "returns true" do
-          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).first).
-            to be_true
+          expect(subject.find_or_fetch_object(object.iri, include_blocked: true).first)
+            .to be_true
         end
       end
 
@@ -298,7 +298,7 @@ Spectator.describe Task::Fetch::Fetcher do
 
         it "raises an exception" do
           Ktistec::Server.shutdown
-          expect{ subject.find_or_fetch_object(object.iri).first }.to raise_error(TaskWorker::ServerShutdownException)
+          expect { subject.find_or_fetch_object(object.iri).first }.to raise_error(TaskWorker::ServerShutdownException)
         end
       end
     end
@@ -308,8 +308,8 @@ Spectator.describe Task::Fetch::Fetcher do
     subject { TestFetcher.new(source: source, value: "").save }
 
     EVERYTHING = {10, 10}
-    SOMETHING = {10, 6}
-    NOTHING = {10, 0}
+    SOMETHING  = {10, 6}
+    NOTHING    = {10, 0}
 
     it "sets the next attempt at in the immediate future" do
       subject.set_next_attempt_at(*EVERYTHING)
@@ -317,7 +317,7 @@ Spectator.describe Task::Fetch::Fetcher do
     end
 
     it "does not increment the failure counter" do
-      expect{subject.set_next_attempt_at(*EVERYTHING)}.not_to change{subject.failures}
+      expect { subject.set_next_attempt_at(*EVERYTHING) }.not_to change { subject.failures }
     end
 
     it "sets the next attempt at in the near future" do
@@ -326,7 +326,7 @@ Spectator.describe Task::Fetch::Fetcher do
     end
 
     it "does not increment the failure counter" do
-      expect{subject.set_next_attempt_at(*SOMETHING)}.not_to change{subject.failures}
+      expect { subject.set_next_attempt_at(*SOMETHING) }.not_to change { subject.failures }
     end
 
     it "sets the next attempt at in the far future" do
@@ -335,7 +335,7 @@ Spectator.describe Task::Fetch::Fetcher do
     end
 
     it "increments the failure counter" do
-      expect{subject.set_next_attempt_at(*NOTHING)}.to change{subject.failures}.to(1)
+      expect { subject.set_next_attempt_at(*NOTHING) }.to change { subject.failures }.to(1)
     end
 
     it "sets the next attempt at in the near future" do
@@ -344,18 +344,18 @@ Spectator.describe Task::Fetch::Fetcher do
     end
 
     it "does not increment the failure counter" do
-      expect{subject.set_next_attempt_at(*NOTHING, continuation: true)}.not_to change{subject.failures}
+      expect { subject.set_next_attempt_at(*NOTHING, continuation: true) }.not_to change { subject.failures }
     end
 
     context "given a prior failure" do
       before_each { subject.state.failures = 1 }
 
       it "resets the failure counter" do
-        expect{subject.set_next_attempt_at(*EVERYTHING)}.to change{subject.failures}.to(0)
+        expect { subject.set_next_attempt_at(*EVERYTHING) }.to change { subject.failures }.to(0)
       end
 
       it "resets the failure counter" do
-        expect{subject.set_next_attempt_at(*SOMETHING)}.to change{subject.failures}.to(0)
+        expect { subject.set_next_attempt_at(*SOMETHING) }.to change { subject.failures }.to(0)
       end
 
       it "returns a time even further in the future" do
@@ -363,7 +363,7 @@ Spectator.describe Task::Fetch::Fetcher do
       end
 
       it "increments the failure counter" do
-        expect{subject.set_next_attempt_at(*NOTHING)}.to change{subject.failures}.to(2)
+        expect { subject.set_next_attempt_at(*NOTHING) }.to change { subject.failures }.to(2)
       end
     end
 
@@ -375,7 +375,7 @@ Spectator.describe Task::Fetch::Fetcher do
       end
 
       it "increments the failure counter" do
-        expect{subject.set_next_attempt_at(*NOTHING)}.to change{subject.failures}.to(7)
+        expect { subject.set_next_attempt_at(*NOTHING) }.to change { subject.failures }.to(7)
       end
     end
 
@@ -388,11 +388,11 @@ Spectator.describe Task::Fetch::Fetcher do
       end
 
       it "does not set the next attempt at" do
-        expect{subject.set_next_attempt_at(10, 6)}.not_to change{subject.next_attempt_at}
+        expect { subject.set_next_attempt_at(10, 6) }.not_to change { subject.next_attempt_at }
       end
 
       it "does not set the next attempt at" do
-        expect{subject.set_next_attempt_at(10, 0)}.not_to change{subject.next_attempt_at}
+        expect { subject.set_next_attempt_at(10, 0) }.not_to change { subject.next_attempt_at }
       end
     end
 
@@ -400,15 +400,15 @@ Spectator.describe Task::Fetch::Fetcher do
       before_each { subject.complete! }
 
       it "does not set the next attempt at" do
-        expect{subject.set_next_attempt_at(10, 10)}.not_to change{subject.next_attempt_at}
+        expect { subject.set_next_attempt_at(10, 10) }.not_to change { subject.next_attempt_at }
       end
 
       it "does not set the next attempt at" do
-        expect{subject.set_next_attempt_at(10, 6)}.not_to change{subject.next_attempt_at}
+        expect { subject.set_next_attempt_at(10, 6) }.not_to change { subject.next_attempt_at }
       end
 
       it "does not set the next attempt at" do
-        expect{subject.set_next_attempt_at(10, 0)}.not_to change{subject.next_attempt_at}
+        expect { subject.set_next_attempt_at(10, 0) }.not_to change { subject.next_attempt_at }
       end
     end
   end

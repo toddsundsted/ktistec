@@ -11,7 +11,7 @@ Spectator.describe Relationship::Content::Notification::Follow::Mention do
   let(options) do
     {
       owner: owner,
-      name: "foo@bar",
+      name:  "foo@bar",
     }
   end
 

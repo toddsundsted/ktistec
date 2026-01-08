@@ -13,15 +13,15 @@ Spectator.describe Account do
 
   describe "#password=" do
     it "changes the encrypted_password" do
-      expect{subject.password = "foobar"}.to change{subject.encrypted_password}
+      expect { subject.password = "foobar" }.to change { subject.encrypted_password }
     end
 
     it "does not change the encrypted_password if the password is nil" do
-      expect{subject.password = nil}.not_to change{subject.encrypted_password}
+      expect { subject.password = nil }.not_to change { subject.encrypted_password }
     end
 
     it "does not change the encrypted_password if the password is an empty string" do
-      expect{subject.password = ""}.not_to change{subject.encrypted_password}
+      expect { subject.password = "" }.not_to change { subject.encrypted_password }
     end
   end
 
@@ -93,13 +93,13 @@ Spectator.describe Account do
 
     describe "#actor=" do
       it "updates the iri" do
-        expect{subject.actor = actor}.to change{subject.iri}
+        expect { subject.actor = actor }.to change { subject.iri }
       end
     end
 
     describe "#actor" do
       it "updates the actor" do
-        expect{subject.iri = actor.iri}.to change{subject.actor?}
+        expect { subject.iri = actor.iri }.to change { subject.actor? }
       end
     end
 
@@ -107,11 +107,11 @@ Spectator.describe Account do
       before_each { subject.actor = actor }
 
       it "updates the associated actor's public key" do
-        expect{subject.save}.to change{actor.pem_public_key}
+        expect { subject.save }.to change { actor.pem_public_key }
       end
 
       it "updates the associated actor's private key" do
-        expect{subject.save}.to change{actor.pem_private_key}
+        expect { subject.save }.to change { actor.pem_private_key }
       end
     end
   end

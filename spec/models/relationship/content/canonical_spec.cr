@@ -8,7 +8,7 @@ Spectator.describe Relationship::Content::Canonical do
   let(options) do
     {
       from_iri: "/canonical/iri",
-      to_iri: "/original/iri"
+      to_iri:   "/original/iri",
     }
   end
 

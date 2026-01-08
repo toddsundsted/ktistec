@@ -5,15 +5,14 @@ module Ktistec
   # Base class for translators.
   #
   abstract class Translator
-    abstract def translate(name : String?, summary : String?, content : String?, source : String, target : String) : \
-      {name: String?, summary: String?, content: String?}
+    abstract def translate(name : String?, summary : String?, content : String?, source : String, target : String) : {name: String?, summary: String?, content: String?}
 
     # Client for DeepL translation.
     #
     class DeepLTranslator < Translator
       Log = ::Log.for("translator.deep_l")
 
-      DEEPL_API = "https://api.deepl.com/v2/translate"
+      DEEPL_API      = "https://api.deepl.com/v2/translate"
       DEEPL_FREE_API = "https://api-free.deepl.com/v2/translate"
 
       @source_languages = Set(String).new
@@ -23,8 +22,8 @@ module Ktistec
 
       def initialize(@api_uri : URI, @api_key : String)
         headers = HTTP::Headers{
-          "Accept" => "application/json",
-          "Authorization" => "DeepL-Auth-Key #{@api_key}"
+          "Accept"        => "application/json",
+          "Authorization" => "DeepL-Auth-Key #{@api_key}",
         }
         response = HTTP::Client.get(@api_uri.resolve("/v2/languages?type=source"), headers: headers)
         JSON.parse(response.body).as_a.each do |language|
@@ -36,14 +35,13 @@ module Ktistec
         end
       end
 
-      def translate(name : String?, summary : String?, content : String?, source : String, target : String) : \
-         {name: String?, summary: String?, content: String?}
+      def translate(name : String?, summary : String?, content : String?, source : String, target : String) : {name: String?, summary: String?, content: String?}
         headers = HTTP::Headers{
-          "Content-Type" => "application/json",
-          "Authorization" => "DeepL-Auth-Key #{@api_key}"
+          "Content-Type"  => "application/json",
+          "Authorization" => "DeepL-Auth-Key #{@api_key}",
         }
         body = {
-          "text" => [name, summary, content].compact,
+          "text"         => [name, summary, content].compact,
           "tag_handling" => "html",
         }
         add_source(body, source)
@@ -54,7 +52,7 @@ module Ktistec
         Log.debug { body }
         texts = body["translations"].as_a.map(&.dig("text"))
         {
-          name: name ? texts.shift.as_s : nil,
+          name:    name ? texts.shift.as_s : nil,
           summary: summary ? texts.shift.as_s : nil,
           content: content ? texts.shift.as_s : nil,
         }
@@ -101,14 +99,13 @@ module Ktistec
         end
       end
 
-      def translate(name : String?, summary : String?, content : String?, source : String, target : String) : \
-         {name: String?, summary: String?, content: String?}
+      def translate(name : String?, summary : String?, content : String?, source : String, target : String) : {name: String?, summary: String?, content: String?}
         headers = HTTP::Headers{
           "Content-Type" => "application/json",
         }
         body = {
-          "q" => [name, summary, content].compact,
-          "format" => "html",
+          "q"       => [name, summary, content].compact,
+          "format"  => "html",
           "api_key" => @api_key,
         }
         add_source(body, source)
@@ -119,7 +116,7 @@ module Ktistec
         Log.debug { body }
         texts = body["translatedText"].as_a
         {
-          name: name ? texts.shift.as_s : nil,
+          name:    name ? texts.shift.as_s : nil,
           summary: summary ? texts.shift.as_s : nil,
           content: content ? texts.shift.as_s : nil,
         }

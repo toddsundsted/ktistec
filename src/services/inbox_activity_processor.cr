@@ -20,13 +20,13 @@ class InboxActivityProcessor
   # - account.actor must be the recipient
   #
   def self.process(
-       account : Account,
-       activity : ActivityPub::Activity,
-       deliver_to : Array(String)? = nil,
-       content_rules : ContentRules = ContentRules.new,
-       handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
-       receive_task_class : Task::Receive.class = Task::Receive
-     )
+    account : Account,
+    activity : ActivityPub::Activity,
+    deliver_to : Array(String)? = nil,
+    content_rules : ContentRules = ContentRules.new,
+    handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
+    receive_task_class : Task::Receive.class = Task::Receive,
+  )
     content_rules.run do
       recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq!
       recipients.each { |recipient| assert ContentRules::IsRecipient.new(recipient) }

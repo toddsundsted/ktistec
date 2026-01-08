@@ -46,24 +46,24 @@ Spectator.describe ModelChannel do
     pre_condition { expect(subject.subscriptions.size).to eq(0) }
 
     it "is invoked on timeout" do
-      expect{subject.subscribe(model, timeout: 0.seconds) { model.invocations += 1 ; model.save ; stop } }.to change{model.reload!.invocations}
+      expect { subject.subscribe(model, timeout: 0.seconds) { model.invocations += 1; model.save; stop } }.to change { model.reload!.invocations }
     end
 
     it "receives updates about the model" do
       spawn { subject.publish(model) }
-      expect{subject.subscribe(model) { model.invocations += 1 ; model.save ; stop } }.to change{model.reload!.invocations}
+      expect { subject.subscribe(model) { model.invocations += 1; model.save; stop } }.to change { model.reload!.invocations }
     end
   end
 
   describe "#publish" do
     it "publishes an update but does not invoke any subscriptions" do
-      expect{subject.publish(model)}.not_to change{model.reload!.invocations}
+      expect { subject.publish(model) }.not_to change { model.reload!.invocations }
     end
 
     context "given a subscription" do
       before_each do
         spawn do
-          subject.subscribe(model) { model.invocations += 1 ; model.save }
+          subject.subscribe(model) { model.invocations += 1; model.save }
         rescue ex
         end
         Fiber.yield
@@ -73,14 +73,14 @@ Spectator.describe ModelChannel do
 
       it "publishes an update" do
         subject.publish(model)
-        expect{Fiber.yield}.to change{model.reload!.invocations}.by(1)
+        expect { Fiber.yield }.to change { model.reload!.invocations }.by(1)
       end
     end
 
     context "given a different subscription" do
       before_each do
         spawn do
-          subject.subscribe(TestModel.new.save) { model.invocations += 1 ; model.save }
+          subject.subscribe(TestModel.new.save) { model.invocations += 1; model.save }
         rescue ex
         end
         Fiber.yield
@@ -90,7 +90,7 @@ Spectator.describe ModelChannel do
 
       it "does not publish an update" do
         subject.publish(model)
-        expect{Fiber.yield}.not_to change{model.reload!.invocations}
+        expect { Fiber.yield }.not_to change { model.reload!.invocations }
       end
     end
 
@@ -107,14 +107,14 @@ Spectator.describe ModelChannel do
 
       it "removes the subscription" do
         subject.publish(model)
-        expect{Fiber.yield}.to change{subject.subscriptions.size}.to(0)
+        expect { Fiber.yield }.to change { subject.subscriptions.size }.to(0)
       end
     end
 
     context "given multiple updates" do
       before_each do
         spawn do
-          subject.subscribe(model) { model.invocations += 1 ; model.save }
+          subject.subscribe(model) { model.invocations += 1; model.save }
         rescue ex
         end
         Fiber.yield
@@ -125,7 +125,7 @@ Spectator.describe ModelChannel do
       it "merges the updates" do
         subject.publish(model)
         subject.publish(model)
-        expect{Fiber.yield}.to change{model.reload!.invocations}.by(1)
+        expect { Fiber.yield }.to change { model.reload!.invocations }.by(1)
       end
     end
   end

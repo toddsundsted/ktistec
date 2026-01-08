@@ -11,7 +11,7 @@ Spectator.describe Relationship::Content::Notification::Follow::Hashtag do
   let(options) do
     {
       owner: owner,
-      name: "hashtag",
+      name:  "hashtag",
     }
   end
 

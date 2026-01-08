@@ -265,15 +265,15 @@ Spectator.describe ActivityPub::Object::Question do
     end
 
     it "replaces poll instance" do
-      expect{question.from_json_ld(json_string)}.to change{question.poll}.from(poll)
+      expect { question.from_json_ld(json_string) }.to change { question.poll }.from(poll)
     end
 
     it "updates voters count" do
-      expect{question.from_json_ld(json_string)}.to change{question.poll.voters_count}.to(50)
+      expect { question.from_json_ld(json_string) }.to change { question.poll.voters_count }.to(50)
     end
 
     it "updates content" do
-      expect{question.from_json_ld(json_string)}.to change{question.content}.to("Do you like polls?")
+      expect { question.from_json_ld(json_string) }.to change { question.content }.to("Do you like polls?")
     end
   end
 

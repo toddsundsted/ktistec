@@ -334,11 +334,11 @@ Spectator.describe StreamingController::ConnectionPool do
       end
 
       it "does not change the capacity of the pool" do
-        expect{subject.push(new_connection)}.not_to change{subject.capacity}
+        expect { subject.push(new_connection) }.not_to change { subject.capacity }
       end
 
       it "does not change the size of the pool" do
-        expect{subject.push(new_connection)}.not_to change{subject.size}
+        expect { subject.push(new_connection) }.not_to change { subject.size }
       end
 
       context "when a new connection is added" do
@@ -366,14 +366,14 @@ Spectator.describe ActivityPub::Object do
     let(topic) { Ktistec::Topic{object.iri, "foo/bar"} }
 
     it "updates subjects when thread changes" do
-      expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{topic.subjects}.to(["https://elsewhere", "foo/bar"])
+      expect { object.assign(in_reply_to_iri: "https://elsewhere").save }.to change { topic.subjects }.to(["https://elsewhere", "foo/bar"])
     end
 
     context "given an existing topic" do
       let!(existing) { Ktistec::Topic{"https://elsewhere"} }
 
       it "updates subjects when thread changes" do
-        expect{object.assign(in_reply_to_iri: "https://elsewhere").save}.to change{topic.subjects}.to(["https://elsewhere", "foo/bar"])
+        expect { object.assign(in_reply_to_iri: "https://elsewhere").save }.to change { topic.subjects }.to(["https://elsewhere", "foo/bar"])
       end
     end
   end

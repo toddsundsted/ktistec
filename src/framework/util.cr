@@ -41,7 +41,7 @@ module Ktistec
       "div", "figure",
       "blockquote",
       "pre",
-      "br"
+      "br",
     ]
 
     private def render_as_text(html, build)
@@ -83,46 +83,46 @@ module Ktistec
       "code", "pre",
       "img", "audio", "video", "source",
       "a",
-      "br"
+      "br",
     ]
 
     private ATTRIBUTES = {
       a: {
-        keep: ["href"],
+        keep:   ["href"],
         remote: [{"target", "_blank"}, {"rel", "external ugc"}],
-        local: [{"data-turbo-frame", "_top"}],
-        key: "href",
+        local:  [{"data-turbo-frame", "_top"}],
+        key:    "href",
       },
       img: {
-        keep: ["src", "alt", "title"],
-        all: [{"class", "ui image"}, {"loading", "lazy"}],
+        keep:  ["src", "alt", "title"],
+        all:   [{"class", "ui image"}, {"loading", "lazy"}],
         class: ["emoji"],
       },
       audio: {
         keep: ["src"],
-        all: [{"class", "ui audio"}, {"controls", nil}],
+        all:  [{"class", "ui audio"}, {"controls", nil}],
       },
       video: {
         keep: ["src"],
-        all: [{"class", "ui video"}, {"controls", nil}],
+        all:  [{"class", "ui video"}, {"controls", nil}],
       },
       source: {
         keep: ["src", "type"],
       },
       span: {
         class: ["invisible", "ellipsis"],
-      }
+      },
     }
 
     private STRIP = [
       "head",
       "script",
-      "style"
+      "style",
     ]
 
     private VOID = [
       "img",
-      "br"
+      "br",
     ]
 
     private def sanitize(html, build)

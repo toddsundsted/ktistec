@@ -94,7 +94,7 @@ Spectator.describe Ktistec::Topic do
 
   describe "#<<" do
     it "adds a subject to the topic" do
-      expect{topic << "subject"}.to change{topic.subjects}.to(["subject"])
+      expect { topic << "subject" }.to change { topic.subjects }.to(["subject"])
     end
 
     context "given a subject and a subscription" do
@@ -103,7 +103,7 @@ Spectator.describe Ktistec::Topic do
       make_subscription(topic) { stop }
 
       it "raises an error" do
-        expect{topic << "foobar"}.to raise_error(Ktistec::Topic::Error)
+        expect { topic << "foobar" }.to raise_error(Ktistec::Topic::Error)
       end
     end
 
@@ -111,7 +111,7 @@ Spectator.describe Ktistec::Topic do
       before_each { topic.notify_subscribers }
 
       it "raises an error" do
-        expect{topic << "subject"}.to raise_error(Ktistec::Topic::Error)
+        expect { topic << "subject" }.to raise_error(Ktistec::Topic::Error)
       end
     end
   end
@@ -121,7 +121,7 @@ Spectator.describe Ktistec::Topic do
 
     it "is invoked on timeout" do
       invocations = 0
-      expect{topic.subscribe(timeout: 0.seconds) { invocations += 1 ; stop } }.to change{invocations}.to(1)
+      expect { topic.subscribe(timeout: 0.seconds) { invocations += 1; stop } }.to change { invocations }.to(1)
     end
 
     context "given a subject and a pending notification" do
@@ -131,7 +131,7 @@ Spectator.describe Ktistec::Topic do
 
       it "receives updates" do
         invocations = 0
-        expect{topic.subscribe { invocations += 1 ; stop } }.to change{invocations}.to(1)
+        expect { topic.subscribe { invocations += 1; stop } }.to change { invocations }.to(1)
       end
     end
   end
@@ -154,18 +154,18 @@ Spectator.describe Ktistec::Topic do
         expect do
           topic.notify_subscribers
           Fiber.yield
-        end.to change{invocations[0]}.to(1)
+        end.to change { invocations[0] }.to(1)
       end
 
       it "notifies the subscriber" do
         expect do
           topic.notify_subscribers("foo")
           Fiber.yield
-        end.to change{invocations[0]}.to(1)
+        end.to change { invocations[0] }.to(1)
         expect do
           topic.notify_subscribers("bar")
           Fiber.yield
-        end.to change{invocations[0]}.to(2)
+        end.to change { invocations[0] }.to(2)
       end
 
       it "merges the notifications" do
@@ -173,7 +173,7 @@ Spectator.describe Ktistec::Topic do
           topic.notify_subscribers
           topic.notify_subscribers
           Fiber.yield
-        end.to change{invocations[0]}.to(1)
+        end.to change { invocations[0] }.to(1)
       end
 
       it "merges the notifications" do
@@ -181,7 +181,7 @@ Spectator.describe Ktistec::Topic do
           topic.notify_subscribers("foo")
           topic.notify_subscribers("foo")
           Fiber.yield
-        end.to change{invocations[0]}.to(1)
+        end.to change { invocations[0] }.to(1)
       end
 
       it "does not merge the notifications" do
@@ -189,7 +189,7 @@ Spectator.describe Ktistec::Topic do
           topic.notify_subscribers("foo")
           topic.notify_subscribers("bar")
           Fiber.yield
-        end.to change{invocations[0]}.to(2)
+        end.to change { invocations[0] }.to(2)
       end
     end
 
@@ -200,7 +200,7 @@ Spectator.describe Ktistec::Topic do
 
       it "does not notify the subscriber" do
         topic.notify_subscribers
-        expect{Fiber.yield}.not_to change{invocations[0]}.from(0)
+        expect { Fiber.yield }.not_to change { invocations[0] }.from(0)
       end
 
       context "that is renamed" do
@@ -213,7 +213,7 @@ Spectator.describe Ktistec::Topic do
 
         it "notifies the subscriber" do
           topic.notify_subscribers
-          expect{Fiber.yield}.to change{invocations[0]}.by(1)
+          expect { Fiber.yield }.to change { invocations[0] }.by(1)
         end
       end
     end
@@ -225,7 +225,7 @@ Spectator.describe Ktistec::Topic do
 
       it "notifies the subscriber" do
         topic.notify_subscribers
-        expect{Fiber.yield}.to change{invocations[0]}.by(1)
+        expect { Fiber.yield }.to change { invocations[0] }.by(1)
       end
     end
 
@@ -236,7 +236,7 @@ Spectator.describe Ktistec::Topic do
 
       it "removes the subscription" do
         topic.notify_subscribers
-        expect{Fiber.yield}.to change{topic.subscriptions.size}.to(0)
+        expect { Fiber.yield }.to change { topic.subscriptions.size }.to(0)
       end
     end
   end
@@ -245,11 +245,11 @@ Spectator.describe Ktistec::Topic do
     let!(topic) { Ktistec::Topic{"subject"} }
 
     it "renames the subject" do
-      expect{described_class.rename_subject("subject", "foobar")}.to change{topic.subjects}.from(["subject"]).to(["foobar"])
+      expect { described_class.rename_subject("subject", "foobar") }.to change { topic.subjects }.from(["subject"]).to(["foobar"])
     end
 
     it "renames the subject" do
-      expect{described_class.rename_subject("subject", "foobar")}.to change{described_class.subjects.to_a}.from(["subject"]).to(["foobar"])
+      expect { described_class.rename_subject("subject", "foobar") }.to change { described_class.subjects.to_a }.from(["subject"]).to(["foobar"])
     end
   end
 end
@@ -297,12 +297,12 @@ Spectator.describe Ktistec::Topic::Subjects do
     end
 
     it "unmaps values from their storage locations" do
-      expect{subject.unmap(0)}.to change{subject[0]}.from("one").to(nil)
-      expect{subject.unmap(1)}.to change{subject[1]}.from("two").to(nil)
+      expect { subject.unmap(0) }.to change { subject[0] }.from("one").to(nil)
+      expect { subject.unmap(1) }.to change { subject[1] }.from("two").to(nil)
     end
 
     it "raises an error if the storage location is not mapped" do
-      expect{subject.unmap(2)}.to raise_error
+      expect { subject.unmap(2) }.to raise_error
     end
 
     context "when mapped more than once" do
@@ -312,8 +312,8 @@ Spectator.describe Ktistec::Topic::Subjects do
       end
 
       it "does not unmap values from their storage locations" do
-        expect{subject.unmap(0)}.not_to change{subject[0]}.from("one")
-        expect{subject.unmap(1)}.not_to change{subject[1]}.from("two")
+        expect { subject.unmap(0) }.not_to change { subject[0] }.from("one")
+        expect { subject.unmap(1) }.not_to change { subject[1] }.from("two")
       end
 
       context "and unmapped once" do
@@ -323,8 +323,8 @@ Spectator.describe Ktistec::Topic::Subjects do
         end
 
         it "unmaps values from their storage locations" do
-          expect{subject.unmap(0)}.to change{subject[0]}.from("one").to(nil)
-          expect{subject.unmap(1)}.to change{subject[1]}.from("two").to(nil)
+          expect { subject.unmap(0) }.to change { subject[0] }.from("one").to(nil)
+          expect { subject.unmap(1) }.to change { subject[1] }.from("two").to(nil)
         end
       end
     end
@@ -337,12 +337,12 @@ Spectator.describe Ktistec::Topic::Subjects do
     end
 
     it "clears the storage locations" do
-      expect{subject.clear(0)}.to change{subject[0]}.from("one").to(nil)
-      expect{subject.clear(1)}.to change{subject[1]}.from("two").to(nil)
+      expect { subject.clear(0) }.to change { subject[0] }.from("one").to(nil)
+      expect { subject.clear(1) }.to change { subject[1] }.from("two").to(nil)
     end
 
     it "raises an error if the storage location is not mapped" do
-      expect{subject.clear(2)}.to raise_error
+      expect { subject.clear(2) }.to raise_error
     end
   end
 
@@ -358,7 +358,7 @@ Spectator.describe Ktistec::Topic::Subjects do
     end
 
     it "raises an error if the storage location is not mapped" do
-      expect{subject[2]}.to raise_error
+      expect { subject[2] }.to raise_error
     end
   end
 end

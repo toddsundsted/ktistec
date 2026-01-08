@@ -90,10 +90,10 @@ module ActivityPub
     property name : String? # plain text
 
     @[Persistent]
-    property summary : String?  # depends on media_type / default HTML text
+    property summary : String? # depends on media_type / default HTML text
 
     @[Persistent]
-    property content : String?  # depends on media_type / default HTML text
+    property content : String? # depends on media_type / default HTML text
 
     @[Persistent]
     property media_type : String?
@@ -158,12 +158,12 @@ module ActivityPub
       def normalized_focal_point
         return nil unless has_focal_point?
         x, y = focal_point.not_nil!
-        norm_x = x / 2 + 0.5      # normalized x = x / 2 + 0.5
-        norm_y = -y / 2 + 0.5     # normalized y = -y / 2 + 0.5 (y inverted)
+        norm_x = x / 2 + 0.5  # normalized x = x / 2 + 0.5
+        norm_y = -y / 2 + 0.5 # normalized y = -y / 2 + 0.5 (y inverted)
         # push the focal point toward the edges so that more of the focused thing is in view
         {
           exaggerate(norm_x),
-          exaggerate(norm_y)
+          exaggerate(norm_y),
         }
       end
 
@@ -674,25 +674,25 @@ module ActivityPub
     # Predefined thread query projection definitions.
     #
     PROJECTION_MINIMAL = {
-      id: Int64,
-      iri: String,
+      id:              Int64,
+      iri:             String,
       in_reply_to_iri: String?,
-      thread: String?,
-      depth: Int32,
+      thread:          String?,
+      depth:           Int32,
     }
 
     PROJECTION_METADATA = {
-      id: Int64,
-      iri: String,
+      id:                Int64,
+      iri:               String,
       attributed_to_iri: String?,
-      in_reply_to_iri: String?,
-      thread: String?,
-      published: Time?,
-      deleted: Bool,
-      blocked: Bool,
-      hashtags: String?,
-      mentions: String?,
-      depth: Int32,
+      in_reply_to_iri:   String?,
+      thread:            String?,
+      published:         Time?,
+      deleted:           Bool,
+      blocked:           Bool,
+      hashtags:          String?,
+      mentions:          String?,
+      depth:             Int32,
     }
 
     # Returns projected fields for all objects in the thread.
@@ -907,7 +907,7 @@ module ActivityPub
       if @canonical_path_changed && (canonical_path = @canonical_path)
         canonical =
           Relationship::Content::Canonical.find?(to_iri: path).try(&.assign(from_iri: canonical_path)) ||
-          Relationship::Content::Canonical.new(to_iri: path, from_iri: canonical_path)
+            Relationship::Content::Canonical.new(to_iri: path, from_iri: canonical_path)
         unless canonical.valid?
           canonical.errors.each do |key, value|
             errors["canonical_path.#{key}"] = value
@@ -1029,12 +1029,12 @@ module ActivityPub
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
         object_host = (object_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(object_iri) : nil
         {
-          "iri" => json.dig?("@id").try(&.as_s),
-          "_type" => json.dig?("@type").try(&.as_s.split("#").last),
-          "published" => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
-          "updated" => (u = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#updated")) ? Time.parse_rfc3339(u) : nil,
+          "iri"               => json.dig?("@id").try(&.as_s),
+          "_type"             => json.dig?("@type").try(&.as_s.split("#").last),
+          "published"         => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
+          "updated"           => (u = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#updated")) ? Time.parse_rfc3339(u) : nil,
           "attributed_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
-          "in_reply_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
+          "in_reply_to_iri"   => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
           # pick up the replies' id and the embedded replies if the hosts match
           "replies_iri" => if (replies = json.dig?("https://www.w3.org/ns/activitystreams#replies"))
             replies.as_s? || replies.dig?("@id").try(&.as_s?)
@@ -1048,15 +1048,15 @@ module ActivityPub
               ActivityPub::Collection.from_json_ld(replies)
             end
           end,
-          "to" => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
-          "cc" => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
-          "audience" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#audience"),
-          "name" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
-          "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-          "sensitive" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool),
-          "content" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
+          "to"         => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
+          "cc"         => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+          "audience"   => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#audience"),
+          "name"       => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
+          "summary"    => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+          "sensitive"  => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool),
+          "content"    => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
           "media_type" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
-          "hashtags" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
+          "hashtags"   => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
             next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Hashtag"
             name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
             href = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
@@ -1094,7 +1094,7 @@ module ActivityPub
           end,
           "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
           # use addressing to establish visibility
-          "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
+          "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public"),
         }.tap do |map|
           if (language = json.dig?("http://schema.org/inLanguage", "http://schema.org/identifier")) && (language = language.as_s?)
             map["language"] = language

@@ -160,28 +160,19 @@ class InboxesController
       unless object.attributed_to?(account.actor, dereference: true)
         bad_request
       end
-    # DESIGN DECISION: Actors can both Like AND Dislike the same
-    # object. This is intentional - it accurately captures federated
-    # state. Some ActivityPub implementations may allow users to both
-    # upvote and downvote the same content. Ktistec preserves this
-    # state as received.
-    when ActivityPub::Activity::Like
+    when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
+      # DESIGN DECISION: Actors can both Like AND Dislike the same
+      # object. This is intentional - it accurately captures federated
+      # state. Some ActivityPub implementations may allow users to both
+      # upvote and downvote the same content. Ktistec preserves this
+      # state as received.
       unless (object = activity.object?(account.actor, dereference: true))
         bad_request
       end
       unless object.attributed_to?(account.actor, dereference: true)
         bad_request
       end
-      # compatibility with implementations that don't address likes
-      deliver_to = [account.iri]
-    when ActivityPub::Activity::Dislike
-      unless (object = activity.object?(account.actor, dereference: true))
-        bad_request
-      end
-      unless object.attributed_to?(account.actor, dereference: true)
-        bad_request
-      end
-      # compatibility with implementations that don't address dislikes
+      # compatibility with implementations that don't address likes/dislikes
       deliver_to = [account.iri]
     when ActivityPub::Activity::Create
       unless (object = activity.object?(account.actor, dereference: true, ignore_cached: true))
@@ -325,7 +316,7 @@ class InboxesController
       "https://www.w3.org/ns/activitystreams#Dislike",
       "https://www.w3.org/ns/activitystreams#Update",
       "https://www.w3.org/ns/activitystreams#Undo",
-      "https://www.w3.org/ns/activitystreams#Delete"
+      "https://www.w3.org/ns/activitystreams#Delete",
     ]
 
     type = object.dig?("@type").try(&.as_s)

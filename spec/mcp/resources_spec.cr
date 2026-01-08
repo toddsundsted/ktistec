@@ -151,10 +151,10 @@ Spectator.describe MCP::Resources do
         image: "https://example.com/image.png",
         attachments: [
           ActivityPub::Actor::Attachment.new(
-          name: "Website",
-          type: "PropertyValue",
-          value: "https://example.com"
-        )
+            name: "Website",
+            type: "PropertyValue",
+            value: "https://example.com"
+          ),
         ],
         local: true,
       )

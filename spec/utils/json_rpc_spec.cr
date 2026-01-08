@@ -191,13 +191,13 @@ Spectator.describe JSON::RPC::Response do
       result = JSON::Any.new({"status" => JSON::Any.new("ok")})
       error = JSON::RPC::Response::Error.new(-32600, "Invalid Request")
 
-      expect { described_class.new("test-id", result, error) }.
-        to raise_error(ArgumentError, "Response cannot have both result and error")
+      expect { described_class.new("test-id", result, error) }
+        .to raise_error(ArgumentError, "Response cannot have both result and error")
     end
 
     it "raises error when neither result nor error are provided" do
-      expect { described_class.new("test-id") }.
-        to raise_error(ArgumentError, "Response must have either result or error")
+      expect { described_class.new("test-id") }
+        .to raise_error(ArgumentError, "Response must have either result or error")
     end
   end
 

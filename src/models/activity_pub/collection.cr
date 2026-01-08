@@ -124,9 +124,9 @@ module ActivityPub
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
         collection_host = (collection_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(collection_iri) : nil
         {
-          "iri" => json.dig?("@id").try(&.as_s),
+          "iri"        => json.dig?("@id").try(&.as_s),
           "items_iris" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
-          "items" => if (items = json.dig?("https://www.w3.org/ns/activitystreams#items"))
+          "items"      => if (items = json.dig?("https://www.w3.org/ns/activitystreams#items"))
             map_items(items, collection_host)
           end,
           "total_items" => json.dig?("https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i64),
@@ -194,7 +194,7 @@ module ActivityPub
             else
               ActivityPub::Collection.from_json_ld(current)
             end
-          end
+          end,
         }.compact
       end
 

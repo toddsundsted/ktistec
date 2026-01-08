@@ -148,21 +148,21 @@ Spectator.describe Task do
   describe "#schedule" do
     it "raises an error if the task is running" do
       subject.running = true
-      expect{subject.schedule}.to raise_error(Exception)
+      expect { subject.schedule }.to raise_error(Exception)
     end
 
     it "raises an error if the task has a backtrace" do
       subject.backtrace = [""]
-      expect{subject.schedule}.to raise_error(Exception)
+      expect { subject.schedule }.to raise_error(Exception)
     end
 
     it "sets the next_attempt_at if specified" do
       time = 1.day.from_now
-      expect{subject.schedule(time)}.to change{subject.next_attempt_at}
+      expect { subject.schedule(time) }.to change { subject.next_attempt_at }
     end
 
     it "saves the task" do
-      expect{subject.schedule}.to change{Task.count}
+      expect { subject.schedule }.to change { Task.count }
     end
   end
 
@@ -243,7 +243,7 @@ Spectator.describe Task do
       end
 
       it "deletes old completed tasks" do
-        expect{described_class.scheduled(now, true)}.to change{Task.count}.by(-1)
+        expect { described_class.scheduled(now, true) }.to change { Task.count }.by(-1)
         expect(Task.find?(old_completed_task.id)).to be_nil
       end
 
@@ -253,7 +253,7 @@ Spectator.describe Task do
       end
 
       it "does not delete when not reserving" do
-        expect{described_class.scheduled(now, false)}.not_to change{Task.count}
+        expect { described_class.scheduled(now, false) }.not_to change { Task.count }
       end
     end
   end
@@ -354,24 +354,24 @@ Spectator.describe Task do
     describe ".destroy_old_tasks" do
       it "destroys old complete tasks" do
         subject.assign(complete: true, created_at: now).save
-        expect{described_class.destroy_old_tasks}.to change{Task.count}.by(-1)
+        expect { described_class.destroy_old_tasks }.to change { Task.count }.by(-1)
       end
 
       it "destroys old failed tasks" do
         subject.assign(backtrace: [""], created_at: now).save
-        expect{described_class.destroy_old_tasks}.to change{Task.count}.by(-1)
+        expect { described_class.destroy_old_tasks }.to change { Task.count }.by(-1)
       end
 
       it "ignores recent tasks" do
         subject.assign(complete: true, backtrace: [""]).save
-        expect{described_class.destroy_old_tasks}.not_to change{Task.count}.from(1)
+        expect { described_class.destroy_old_tasks }.not_to change { Task.count }.from(1)
       end
     end
 
     describe ".clean_up_running_tasks" do
       it "sets running tasks to not running" do
         subject.assign(running: true).save
-        expect{described_class.clean_up_running_tasks}.to change{Task.count(running: true)}.by(-1)
+        expect { described_class.clean_up_running_tasks }.to change { Task.count(running: true) }.by(-1)
       end
     end
   end

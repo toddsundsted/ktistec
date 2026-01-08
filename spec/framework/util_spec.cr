@@ -172,7 +172,7 @@ Spectator.describe Ktistec::Util do
         {22.months, "almost 2 years"},
         {26.months, "about 2 years"},
         {30.months, "over 2 years"},
-        {34.months, "almost 3 years"}
+        {34.months, "almost 3 years"},
       ]
     end
 
@@ -211,7 +211,7 @@ Spectator.describe Ktistec::Util::PaginatedArray do
 
   describe ".more" do
     it "changes the indicator" do
-      expect{subject.more = true}.to change{subject.more?}
+      expect { subject.more = true }.to change { subject.more? }
     end
   end
 

@@ -108,12 +108,10 @@ module Ktistec
       while @index < @size
         c = @input[@index]
         case c
-        # skip whitespace
-        when .whitespace?
+        when .whitespace? # skip whitespace
           @index += 1
           next
-        # skip comments
-        when '#'
+        when '#' # skip comments
           forward_while(&.in_set?("^\r\n"))
           next
         when '"'
@@ -134,9 +132,7 @@ module Ktistec
           end
           @index += 1
           return @token =
-            (c == '"') ?
-              Token.new(Token::Type::String, builder.to_s) :
-              Token.new(Token::Type::Error, "unterminated string")
+            (c == '"') ? Token.new(Token::Type::String, builder.to_s) : Token.new(Token::Type::Error, "unterminated string")
         when '-', '+'
           if peek.try(&.in?('0'..'9'))
             number_sign = true
@@ -155,9 +151,7 @@ module Ktistec
             float = true
           end
           return @token =
-            float ?
-              Token.new(Token::Type::Float, @input[start..@index - 1].to_f64) :
-              Token.new(Token::Type::Int, @input[start..@index - 1].to_i64)
+            float ? Token.new(Token::Type::Float, @input[start..@index - 1].to_f64) : Token.new(Token::Type::Int, @input[start..@index - 1].to_i64)
         when 'A'..'Z'
           start = @index
           forward_while(&.in_set?("a-zA-Z0-9_"))

@@ -38,10 +38,10 @@ class Task
         if info.file? && info.permissions.owner_execute?
           Log.with_context(script: script) do
             env = {
-              "API_KEY" => jwt,
+              "API_KEY"      => jwt,
               "KTISTEC_HOST" => Ktistec.host,
               "KTISTEC_NAME" => Ktistec.name,
-              "USERNAME" => account.username,
+              "USERNAME"     => account.username,
             }
             Process.run(file, env: env, clear_env: true) do |process|
               output = make_channel(process.output)

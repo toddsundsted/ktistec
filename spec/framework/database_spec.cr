@@ -6,8 +6,8 @@ class TestMigraton
   extend Ktistec::Database::Migration
 
   def initialize(name)
-    up(name) {}
-    down(name) {}
+    up(name) { }
+    down(name) { }
   end
 end
 
@@ -95,11 +95,11 @@ Spectator.describe Ktistec::Database::Migration do
 
   describe ".add_column" do
     it "adds the column" do
-      expect{subject.add_column("foobars", "other", "text", index: "ASC")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ''|, %q|value integer|, %q|other text|])
+      expect { subject.add_column("foobars", "other", "text", index: "ASC") }.to change { subject.columns("foobars") }.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ''|, %q|value integer|, %q|other text|])
     end
 
     it "adds the index" do
-      expect{subject.add_column("foobars", "other", "text", index: "ASC")}.to change{subject.indexes("foobars")}.to([%q|CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)|, %q|CREATE INDEX idx_foobars_other ON foobars (other ASC)|])
+      expect { subject.add_column("foobars", "other", "text", index: "ASC") }.to change { subject.indexes("foobars") }.to([%q|CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)|, %q|CREATE INDEX idx_foobars_other ON foobars (other ASC)|])
     end
   end
 
@@ -109,15 +109,15 @@ Spectator.describe Ktistec::Database::Migration do
     end
 
     it "removes the column" do
-      expect{subject.remove_column("foobars", "other")}.to change{subject.columns("foobars")}.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ''|, %q|value integer|])
+      expect { subject.remove_column("foobars", "other") }.to change { subject.columns("foobars") }.to([%q|id integer PRIMARY KEY AUTOINCREMENT|, %q|name varchar(244) NOT NULL DEFAULT ''|, %q|value integer|])
     end
 
     it "removes the index" do
-      expect{subject.remove_column("foobars", "other")}.to change{subject.indexes("foobars")}.to([(%q|CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)|)])
+      expect { subject.remove_column("foobars", "other") }.to change { subject.indexes("foobars") }.to([(%q|CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)|)])
     end
 
     it "retains the data" do
-      expect{subject.remove_column("foobars", "other")}.not_to change{Ktistec.database.scalar("SELECT count(*) FROM foobars")}
+      expect { subject.remove_column("foobars", "other") }.not_to change { Ktistec.database.scalar("SELECT count(*) FROM foobars") }
     end
   end
 end

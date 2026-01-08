@@ -174,7 +174,7 @@ Spectator.describe Task::Deliver do
       end
 
       it "does not fail" do
-        expect{subject.perform}.not_to change{subject.failures}
+        expect { subject.perform }.not_to change { subject.failures }
       end
     end
   end

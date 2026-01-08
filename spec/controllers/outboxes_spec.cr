@@ -106,13 +106,13 @@ Spectator.describe OutboxesController do
         end
 
         it "creates an announce activity" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{ActivityPub::Activity::Announce.count(actor_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}" }
+            .to change { ActivityPub::Activity::Announce.count(actor_iri: actor.iri) }.by(1)
         end
 
         it "creates an announce activity" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|}.
-            to change{ActivityPub::Activity::Announce.count(actor_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}| }
+            .to change { ActivityPub::Activity::Announce.count(actor_iri: actor.iri) }.by(1)
         end
 
         it "does not create a visible activity if not public" do
@@ -166,13 +166,13 @@ Spectator.describe OutboxesController do
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the other's inbox" do
@@ -186,26 +186,26 @@ Spectator.describe OutboxesController do
         end
 
         it "puts the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{Timeline.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}" }
+            .to change { Timeline.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|}.
-            to change{Timeline.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}| }
+            .to change { Timeline.count(from_iri: actor.iri) }.by(1)
         end
 
         context "and the object's already in the timeline" do
           let_create!(:timeline, owner: actor, object: object)
 
           it "does not put the object in the actor's timeline" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
-              not_to change{Timeline.count(from_iri: actor.iri)}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}" }
+              .not_to change { Timeline.count(from_iri: actor.iri) }
           end
 
           it "does not put the object in the actor's timeline" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|}.
-              not_to change{Timeline.count(from_iri: actor.iri)}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}| }
+              .not_to change { Timeline.count(from_iri: actor.iri) }
           end
         end
 
@@ -217,13 +217,13 @@ Spectator.describe OutboxesController do
           end
 
           it "puts the object in the actor's timeline" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"}.
-              to change{Timeline.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}" }
+              .to change { Timeline.count(from_iri: actor.iri) }.by(1)
           end
 
           it "puts the object in the actor's timeline" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|}.
-              to change{Timeline.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}| }
+              .to change { Timeline.count(from_iri: actor.iri) }.by(1)
           end
         end
       end
@@ -275,13 +275,13 @@ Spectator.describe OutboxesController do
         end
 
         it "creates a like activity" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{ActivityPub::Activity::Like.count(actor_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}" }
+            .to change { ActivityPub::Activity::Like.count(actor_iri: actor.iri) }.by(1)
         end
 
         it "creates a like activity" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|}.
-            to change{ActivityPub::Activity::Like.count(actor_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}| }
+            .to change { ActivityPub::Activity::Like.count(actor_iri: actor.iri) }.by(1)
         end
 
         it "does not create a visible activity if not public" do
@@ -335,13 +335,13 @@ Spectator.describe OutboxesController do
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the other's inbox" do
@@ -355,13 +355,13 @@ Spectator.describe OutboxesController do
         end
 
         it "does not put the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}"}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}" }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
 
         it "does not put the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}| }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
       end
 
@@ -412,13 +412,13 @@ Spectator.describe OutboxesController do
         end
 
         it "creates a dislike activity" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{ActivityPub::Activity::Dislike.count(actor_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}" }
+            .to change { ActivityPub::Activity::Dislike.count(actor_iri: actor.iri) }.by(1)
         end
 
         it "creates a dislike activity" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|}.
-            to change{ActivityPub::Activity::Dislike.count(actor_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}| }
+            .to change { ActivityPub::Activity::Dislike.count(actor_iri: actor.iri) }.by(1)
         end
 
         it "does not create a visible activity if not public" do
@@ -472,13 +472,13 @@ Spectator.describe OutboxesController do
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the other's inbox" do
@@ -492,13 +492,13 @@ Spectator.describe OutboxesController do
         end
 
         it "does not put the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}" }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
 
         it "does not put the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}| }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
       end
 
@@ -576,23 +576,23 @@ Spectator.describe OutboxesController do
         end
 
         it "creates a create activity" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"}.
-            to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test" }
+            .to change { ActivityPub::Activity::Create.count(actor_iri: actor.iri) }.by(1)
         end
 
         it "creates a create activity" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|}.
-            to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}| }
+            .to change { ActivityPub::Activity::Create.count(actor_iri: actor.iri) }.by(1)
         end
 
         it "creates a note object" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"}.
-            to change{ActivityPub::Object::Note.count(attributed_to_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test" }
+            .to change { ActivityPub::Object::Note.count(attributed_to_iri: actor.iri) }.by(1)
         end
 
         it "creates a note object" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|}.
-            to change{ActivityPub::Object::Note.count(attributed_to_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}| }
+            .to change { ActivityPub::Object::Note.count(attributed_to_iri: actor.iri) }.by(1)
         end
 
         context "given a language" do
@@ -693,53 +693,53 @@ Spectator.describe OutboxesController do
           pre_condition { expect(object.draft?).to be_true }
 
           it "creates a create activity" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .to change { ActivityPub::Activity::Create.count(actor_iri: actor.iri) }.by(1)
           end
 
           it "creates a create activity" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              to change{ActivityPub::Activity::Create.count(actor_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .to change { ActivityPub::Activity::Create.count(actor_iri: actor.iri) }.by(1)
           end
 
           it "does not create an object" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              not_to change{ActivityPub::Object.count(attributed_to_iri: actor.iri)}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .not_to change { ActivityPub::Object.count(attributed_to_iri: actor.iri) }
           end
 
           it "does not create an object" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              not_to change{ActivityPub::Object.count(attributed_to_iri: actor.iri)}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .not_to change { ActivityPub::Object.count(attributed_to_iri: actor.iri) }
           end
 
           it "does not change the iri" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).iri}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .not_to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).iri }
           end
 
           it "does not change the iri" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).iri}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .not_to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).iri }
           end
 
           it "changes the published timestamp" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).published }
           end
 
           it "changes the published timestamp" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).published }
           end
 
           it "does not change the updated timestamp" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .not_to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).updated }
           end
 
           it "does not change the updated timestamp" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .not_to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).updated }
           end
 
           it "returns 400 if object does not exist" do
@@ -771,73 +771,73 @@ Spectator.describe OutboxesController do
           pre_condition { expect(object.draft?).to be_false }
 
           it "creates an update activity" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              to change{ActivityPub::Activity::Update.count(actor_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .to change { ActivityPub::Activity::Update.count(actor_iri: actor.iri) }.by(1)
           end
 
           it "creates an update activity" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              to change{ActivityPub::Activity::Update.count(actor_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .to change { ActivityPub::Activity::Update.count(actor_iri: actor.iri) }.by(1)
           end
 
           it "does not create an object" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              not_to change{ActivityPub::Object.count(attributed_to_iri: actor.iri)}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .not_to change { ActivityPub::Object.count(attributed_to_iri: actor.iri) }
           end
 
           it "does not create an object" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              not_to change{ActivityPub::Object.count(attributed_to_iri: actor.iri)}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .not_to change { ActivityPub::Object.count(attributed_to_iri: actor.iri) }
           end
 
           it "does not change the iri" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).iri}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .not_to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).iri }
           end
 
           it "does not change the iri" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).iri}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .not_to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).iri }
           end
 
           it "does not change the published timestamp" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .not_to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).published }
           end
 
           it "does not change the published timestamp" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              not_to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).published}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .not_to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).published }
           end
 
           it "changes the updated timestamp" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).updated }
           end
 
           it "changes the updated timestamp" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).updated}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).updated }
           end
 
           it "changes the content" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).content}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).content }
           end
 
           it "changes the content" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).content}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).content }
           end
 
           it "changes the object replied to" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}&in-reply-to=#{URI.encode_www_form(topic.iri)}"}.
-              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).in_reply_to_iri}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}&in-reply-to=#{URI.encode_www_form(topic.iri)}" }
+              .to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).in_reply_to_iri }
           end
 
           it "changes the object replied to" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}","in-reply-to":"#{topic.iri}"}|}.
-              to change{ActivityPub::Object.find(attributed_to_iri: actor.iri).in_reply_to_iri}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}","in-reply-to":"#{topic.iri}"}| }
+              .to change { ActivityPub::Object.find(attributed_to_iri: actor.iri).in_reply_to_iri }
           end
 
           it "returns 400 if object does not exist" do
@@ -1068,13 +1068,13 @@ Spectator.describe OutboxesController do
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the other's inbox" do
@@ -1088,38 +1088,38 @@ Spectator.describe OutboxesController do
         end
 
         it "puts the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"}.
-            to change{Timeline.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test" }
+            .to change { Timeline.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|}.
-            to change{Timeline.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}| }
+            .to change { Timeline.count(from_iri: actor.iri) }.by(1)
         end
 
         context "and the object's already in the timeline" do
           let_create!(:timeline, owner: actor, object: object)
 
           it "does not put the object in the actor's timeline" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}"}.
-              not_to change{Timeline.count(from_iri: actor.iri)}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }
+              .not_to change { Timeline.count(from_iri: actor.iri) }
           end
 
           it "does not put the object in the actor's timeline" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}|}.
-              not_to change{Timeline.count(from_iri: actor.iri)}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}"}| }
+              .not_to change { Timeline.count(from_iri: actor.iri) }
           end
         end
 
         context "and the object is a reply" do
           it "does not put the object in the actor's timeline" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}&in-reply-to=#{URI.encode_www_form(topic.iri)}"}.
-              not_to change{Timeline.count(from_iri: actor.iri)}
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}&in-reply-to=#{URI.encode_www_form(topic.iri)}" }
+              .not_to change { Timeline.count(from_iri: actor.iri) }
           end
 
           it "does not put the object in the actor's timeline" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}","in-reply-to":"#{topic.iri}"}|}.
-              not_to change{Timeline.count(from_iri: actor.iri)}
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"test","object":"#{object.iri}","in-reply-to":"#{topic.iri}"}| }
+              .not_to change { Timeline.count(from_iri: actor.iri) }
           end
         end
       end
@@ -1157,33 +1157,33 @@ Spectator.describe OutboxesController do
         end
 
         it "creates an unconfirmed follow relationship" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Follow&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{Relationship::Social::Follow.where(from_iri: actor.iri, to_iri: object.iri, confirmed: false).size}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Follow&object=#{URI.encode_www_form(object.iri)}" }
+            .to change { Relationship::Social::Follow.where(from_iri: actor.iri, to_iri: object.iri, confirmed: false).size }.by(1)
         end
 
         it "creates an unconfirmed follow relationship" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Follow","object":"#{object.iri}"}|}.
-            to change{Relationship::Social::Follow.where(from_iri: actor.iri, to_iri: object.iri, confirmed: false).size}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Follow","object":"#{object.iri}"}| }
+            .to change { Relationship::Social::Follow.where(from_iri: actor.iri, to_iri: object.iri, confirmed: false).size }.by(1)
         end
 
         it "creates a follow activity" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Follow&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{ActivityPub::Activity::Follow.count(actor_iri: actor.iri, object_iri: object.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Follow&object=#{URI.encode_www_form(object.iri)}" }
+            .to change { ActivityPub::Activity::Follow.count(actor_iri: actor.iri, object_iri: object.iri) }.by(1)
         end
 
         it "creates a follow activity" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Follow","object":"#{object.iri}"}|}.
-            to change{ActivityPub::Activity::Follow.count(actor_iri: actor.iri, object_iri: object.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Follow","object":"#{object.iri}"}| }
+            .to change { ActivityPub::Activity::Follow.count(actor_iri: actor.iri, object_iri: object.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Follow&object=#{URI.encode_www_form(object.iri)}"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Follow&object=#{URI.encode_www_form(object.iri)}" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Follow","object":"#{object.iri}"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Follow","object":"#{object.iri}"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the object's outbox" do
@@ -1197,13 +1197,13 @@ Spectator.describe OutboxesController do
         end
 
         it "does not put the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Follow&object=#{URI.encode_www_form(object.iri)}"}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Follow&object=#{URI.encode_www_form(object.iri)}" }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
 
         it "does not put the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Follow","object":"#{object.iri}"}|}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Follow","object":"#{object.iri}"}| }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
       end
 
@@ -1246,33 +1246,33 @@ Spectator.describe OutboxesController do
         end
 
         it "confirms the follow relationship" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Accept&object=#{URI.encode_www_form(follow.iri)}"}.
-            to change{relationship.reload!.confirmed}
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Accept&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { relationship.reload!.confirmed }
         end
 
         it "confirms the follow relationship" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Accept","object":"#{follow.iri}"}|}.
-            to change{relationship.reload!.confirmed}
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Accept","object":"#{follow.iri}"}| }
+            .to change { relationship.reload!.confirmed }
         end
 
         it "creates an accept activity" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Accept&object=#{URI.encode_www_form(follow.iri)}"}.
-            to change{ActivityPub::Activity::Accept.count(actor_iri: actor.iri, object_iri: follow.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Accept&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { ActivityPub::Activity::Accept.count(actor_iri: actor.iri, object_iri: follow.iri) }.by(1)
         end
 
         it "creates an accept activity" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Accept","object":"#{follow.iri}"}|}.
-            to change{ActivityPub::Activity::Accept.count(actor_iri: actor.iri, object_iri: follow.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Accept","object":"#{follow.iri}"}| }
+            .to change { ActivityPub::Activity::Accept.count(actor_iri: actor.iri, object_iri: follow.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Accept&object=#{URI.encode_www_form(follow.iri)}"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Accept&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Accept","object":"#{follow.iri}"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Accept","object":"#{follow.iri}"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the other's inbox" do
@@ -1325,33 +1325,33 @@ Spectator.describe OutboxesController do
         end
 
         it "confirms the follow relationship" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Reject&object=#{URI.encode_www_form(follow.iri)}"}.
-            to change{relationship.reload!.confirmed}
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Reject&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { relationship.reload!.confirmed }
         end
 
         it "confirms the follow relationship" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Reject","object":"#{follow.iri}"}|}.
-            to change{relationship.reload!.confirmed}
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Reject","object":"#{follow.iri}"}| }
+            .to change { relationship.reload!.confirmed }
         end
 
         it "creates a reject activity" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Reject&object=#{URI.encode_www_form(follow.iri)}"}.
-            to change{ActivityPub::Activity::Reject.count(actor_iri: actor.iri, object_iri: follow.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Reject&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { ActivityPub::Activity::Reject.count(actor_iri: actor.iri, object_iri: follow.iri) }.by(1)
         end
 
         it "creates a reject activity" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Reject","object":"#{follow.iri}"}|}.
-            to change{ActivityPub::Activity::Reject.count(actor_iri: actor.iri, object_iri: follow.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Reject","object":"#{follow.iri}"}| }
+            .to change { ActivityPub::Activity::Reject.count(actor_iri: actor.iri, object_iri: follow.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Reject&object=#{URI.encode_www_form(follow.iri)}"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Reject&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Reject","object":"#{follow.iri}"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Reject","object":"#{follow.iri}"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the other's inbox" do
@@ -1408,23 +1408,23 @@ Spectator.describe OutboxesController do
         end
 
         it "undoes the announce" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"}.
-            to change{ActivityPub::Activity.count(iri: announce.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(announce.iri)}" }
+            .to change { ActivityPub::Activity.count(iri: announce.iri) }.by(-1)
         end
 
         it "undoes the announce" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{announce.iri}"}|}.
-            to change{ActivityPub::Activity.count(iri: announce.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{announce.iri}"}| }
+            .to change { ActivityPub::Activity.count(iri: announce.iri) }.by(-1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(announce.iri)}" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{announce.iri}"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{announce.iri}"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the other's inbox" do
@@ -1481,23 +1481,23 @@ Spectator.describe OutboxesController do
         end
 
         it "undoes the like" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(like.iri)}"}.
-            to change{ActivityPub::Activity.count(iri: like.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(like.iri)}" }
+            .to change { ActivityPub::Activity.count(iri: like.iri) }.by(-1)
         end
 
         it "undoes the like" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{like.iri}"}|}.
-            to change{ActivityPub::Activity.count(iri: like.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{like.iri}"}| }
+            .to change { ActivityPub::Activity.count(iri: like.iri) }.by(-1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(like.iri)}"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(like.iri)}" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{like.iri}"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{like.iri}"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the other's inbox" do
@@ -1554,23 +1554,23 @@ Spectator.describe OutboxesController do
         end
 
         it "undoes the dislike" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"}.
-            to change{ActivityPub::Activity.count(iri: dislike.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}" }
+            .to change { ActivityPub::Activity.count(iri: dislike.iri) }.by(-1)
         end
 
         it "undoes the dislike" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|}.
-            to change{ActivityPub::Activity.count(iri: dislike.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}| }
+            .to change { ActivityPub::Activity.count(iri: dislike.iri) }.by(-1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the other's inbox" do
@@ -1623,33 +1623,33 @@ Spectator.describe OutboxesController do
         end
 
         it "destroys the relationship" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(follow.iri)}"}.
-            to change{Relationship::Social::Follow.count(from_iri: actor.iri, to_iri: other.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { Relationship::Social::Follow.count(from_iri: actor.iri, to_iri: other.iri) }.by(-1)
         end
 
         it "destroys the relationship" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}|}.
-            to change{Relationship::Social::Follow.count(from_iri: actor.iri, to_iri: other.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}| }
+            .to change { Relationship::Social::Follow.count(from_iri: actor.iri, to_iri: other.iri) }.by(-1)
         end
 
         it "undoes the follow" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(follow.iri)}"}.
-            to change{ActivityPub::Activity.count(iri: follow.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { ActivityPub::Activity.count(iri: follow.iri) }.by(-1)
         end
 
         it "undoes the follow" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}|}.
-            to change{ActivityPub::Activity.count(iri: follow.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}| }
+            .to change { ActivityPub::Activity.count(iri: follow.iri) }.by(-1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(follow.iri)}"}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's outbox" do
-          expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}|}.
-            to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}| }
+            .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "sends the activity to the other's inbox" do
@@ -1722,23 +1722,23 @@ Spectator.describe OutboxesController do
           end
 
           it "deletes the object" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Delete&object=#{URI.encode_www_form(object.iri)}"}.
-              to change{ActivityPub::Object.count(iri: object.iri)}.by(-1)
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Delete&object=#{URI.encode_www_form(object.iri)}" }
+              .to change { ActivityPub::Object.count(iri: object.iri) }.by(-1)
           end
 
           it "deletes the object" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Delete","object":"#{object.iri}"}|}.
-              to change{ActivityPub::Object.count(iri: object.iri)}.by(-1)
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Delete","object":"#{object.iri}"}| }
+              .to change { ActivityPub::Object.count(iri: object.iri) }.by(-1)
           end
 
           it "puts the activity in the actor's outbox" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Delete&object=#{URI.encode_www_form(object.iri)}"}.
-              to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Delete&object=#{URI.encode_www_form(object.iri)}" }
+              .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
           end
 
           it "puts the activity in the actor's outbox" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Delete","object":"#{object.iri}"}|}.
-              to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Delete","object":"#{object.iri}"}| }
+              .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
           end
 
           it "sends the activity to the other's inbox" do
@@ -1791,23 +1791,23 @@ Spectator.describe OutboxesController do
           end
 
           it "deletes the actor" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Delete&object=#{URI.encode_www_form(actor.iri)}"}.
-              to change{ActivityPub::Actor.count(iri: actor.iri)}.by(-1)
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Delete&object=#{URI.encode_www_form(actor.iri)}" }
+              .to change { ActivityPub::Actor.count(iri: actor.iri) }.by(-1)
           end
 
           it "deletes the actor" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Delete","object":"#{actor.iri}"}|}.
-              to change{ActivityPub::Actor.count(iri: actor.iri)}.by(-1)
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Delete","object":"#{actor.iri}"}| }
+              .to change { ActivityPub::Actor.count(iri: actor.iri) }.by(-1)
           end
 
           it "puts the activity in the actor's outbox" do
-            expect{post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Delete&object=#{URI.encode_www_form(actor.iri)}"}.
-              to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Delete&object=#{URI.encode_www_form(actor.iri)}" }
+              .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
           end
 
           it "puts the activity in the actor's outbox" do
-            expect{post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Delete","object":"#{actor.iri}"}|}.
-              to change{Relationship::Content::Outbox.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Delete","object":"#{actor.iri}"}| }
+              .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
           end
 
           it "sends the activity to the other's inbox" do

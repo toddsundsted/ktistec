@@ -39,11 +39,11 @@ Spectator.describe Ktistec::Model::Common do
     end
 
     it "does not change created_at" do
-      expect{common.save}.not_to change{common.created_at}
+      expect { common.save }.not_to change { common.created_at }
     end
 
     it "changes updated_at" do
-      expect{common.save}.to change{common.updated_at}
+      expect { common.save }.to change { common.updated_at }
     end
   end
 end

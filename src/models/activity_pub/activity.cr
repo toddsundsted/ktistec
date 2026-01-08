@@ -98,8 +98,8 @@ module ActivityPub
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
         activity_host = (activity_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(activity_iri) : nil
         {
-          "iri" => json.dig?("@id").try(&.as_s),
-          "_type" => json.dig?("@type").try(&.as_s.split("#").last),
+          "iri"       => json.dig?("@id").try(&.as_s),
+          "_type"     => json.dig?("@type").try(&.as_s.split("#").last),
           "published" => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
           # pick up the actor's id and the embedded actor if the hosts match
           "actor_iri" => if (actor = json.dig?("https://www.w3.org/ns/activitystreams#actor"))
@@ -128,12 +128,12 @@ module ActivityPub
               ActivityPub.from_json_ld(target, default: ActivityPub::Object)
             end
           end,
-          "to" => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
-          "cc" => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
+          "to"       => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
+          "cc"       => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
           "audience" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#audience"),
-          "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+          "summary"  => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
           # use addressing to establish visibility
-          "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public")
+          "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public"),
         }.compact
       end
 

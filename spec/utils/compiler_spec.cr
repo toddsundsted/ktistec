@@ -3,9 +3,14 @@ require "../../src/utils/compiler"
 require "../spec_helper/base"
 
 module CompilerSpec
-  class Foo < School::Fact end
-  class Bar < School::Property(String) end
-  class Baz < School::Relationship(String, String) end
+  class Foo < School::Fact
+  end
+
+  class Bar < School::Property(String)
+  end
+
+  class Baz < School::Relationship(String, String)
+  end
 
   class FooBar < School::Pattern
     getter target : School::Expression?
@@ -124,12 +129,12 @@ Spectator.describe Ktistec::Compiler do
 
               it "raises an error if receiver doesn't respond to accessor" do
                 bindings = School::Bindings{"foo" => 1234567890}
-                expect{accessor.call(bindings)}.to raise_error(Ktistec::Compiler::LinkError, /invalid accessor/)
+                expect { accessor.call(bindings) }.to raise_error(Ktistec::Compiler::LinkError, /invalid accessor/)
               end
 
               it "raises an error if receiver is unbound" do
                 bindings = School::Bindings.new
-                expect{accessor.call(bindings)}.to raise_error(Ktistec::Compiler::LinkError, /unbound receiver/)
+                expect { accessor.call(bindings) }.to raise_error(Ktistec::Compiler::LinkError, /unbound receiver/)
               end
             end
 
@@ -161,12 +166,12 @@ Spectator.describe Ktistec::Compiler do
 
               it "raises an error if receiver doesn't respond to accessor" do
                 bindings = School::Bindings{"bar" => "1234567890"}
-                expect{accessor.call(bindings)}.to raise_error(Ktistec::Compiler::LinkError, /invalid accessor/)
+                expect { accessor.call(bindings) }.to raise_error(Ktistec::Compiler::LinkError, /invalid accessor/)
               end
 
               it "raises an error if receiver is unbound" do
                 bindings = School::Bindings.new
-                expect{accessor.call(bindings)}.to raise_error(Ktistec::Compiler::LinkError, /unbound receiver/)
+                expect { accessor.call(bindings) }.to raise_error(Ktistec::Compiler::LinkError, /unbound receiver/)
               end
             end
           end
@@ -189,13 +194,13 @@ Spectator.describe Ktistec::Compiler do
             it "invokes assert method" do
               target = "foo_bar"
               options = Hash(String, School::DomainTypes).new.merge({"foo" => 12345})
-              expect{actions[0].call(rule, context)}.to change{CompilerSpec::FooBar.calls}.to([CompilerSpec::FooBar::Call.new("assert", target, options)])
+              expect { actions[0].call(rule, context) }.to change { CompilerSpec::FooBar.calls }.to([CompilerSpec::FooBar::Call.new("assert", target, options)])
             end
 
             it "invokes retract method" do
               target = "foo_bar"
               options = Hash(String, School::DomainTypes).new.merge({"foo" => "foo"})
-              expect{actions[1].call(rule, context)}.to change{CompilerSpec::FooBar.calls}.to([CompilerSpec::FooBar::Call.new("retract", target, options)])
+              expect { actions[1].call(rule, context) }.to change { CompilerSpec::FooBar.calls }.to([CompilerSpec::FooBar::Call.new("retract", target, options)])
             end
           end
         end
@@ -312,7 +317,7 @@ Spectator.describe Ktistec::Compiler do
 
         it "asserts a fact" do
           rule = domain.rules.first
-          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(Set{fact})
+          expect { rule.actions.first.call(rule, context) }.to change { domain.facts }.to(Set{fact})
         end
       end
 
@@ -327,7 +332,7 @@ Spectator.describe Ktistec::Compiler do
 
         it "retracts a fact" do
           rule = domain.rules.first
-          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(empty_set)
+          expect { rule.actions.first.call(rule, context) }.to change { domain.facts }.to(empty_set)
         end
       end
     end
@@ -362,7 +367,7 @@ Spectator.describe Ktistec::Compiler do
 
         it "asserts a fact" do
           rule = domain.rules.first
-          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(Set{fact})
+          expect { rule.actions.first.call(rule, context) }.to change { domain.facts }.to(Set{fact})
         end
       end
 
@@ -377,7 +382,7 @@ Spectator.describe Ktistec::Compiler do
 
         it "retracts a fact" do
           rule = domain.rules.first
-          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(empty_set)
+          expect { rule.actions.first.call(rule, context) }.to change { domain.facts }.to(empty_set)
         end
       end
     end
@@ -412,7 +417,7 @@ Spectator.describe Ktistec::Compiler do
 
         it "asserts a fact" do
           rule = domain.rules.first
-          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(Set{fact})
+          expect { rule.actions.first.call(rule, context) }.to change { domain.facts }.to(Set{fact})
         end
       end
 
@@ -427,24 +432,24 @@ Spectator.describe Ktistec::Compiler do
 
         it "retracts a fact" do
           rule = domain.rules.first
-          expect{rule.actions.first.call(rule, context)}.to change{domain.facts}.to(empty_set)
+          expect { rule.actions.first.call(rule, context) }.to change { domain.facts }.to(empty_set)
         end
       end
     end
 
     it "raises an error if constant is undefined" do
       input = %q|rule "name" condition UnknownClass end|
-      expect{described_class.new(input).compile}.to raise_error(Ktistec::Compiler::LinkError, /undefined constant/)
+      expect { described_class.new(input).compile }.to raise_error(Ktistec::Compiler::LinkError, /undefined constant/)
     end
 
     it "raises an error if there are too many arguments" do
       input = %q|rule "name" condition FooBar, foo, bar end|
-      expect{described_class.new(input).compile}.to raise_error(Ktistec::Compiler::LinkError, /too many arguments/)
+      expect { described_class.new(input).compile }.to raise_error(Ktistec::Compiler::LinkError, /too many arguments/)
     end
 
     it "raises an error if accessor is undefined" do
       input = %q|rule "name" condition FooBar, zip.zap end|
-      expect{described_class.new(input).compile}.to raise_error(Ktistec::Compiler::LinkError, /undefined accessor/)
+      expect { described_class.new(input).compile }.to raise_error(Ktistec::Compiler::LinkError, /undefined accessor/)
     end
   end
 end

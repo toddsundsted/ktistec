@@ -34,14 +34,14 @@ Spectator.describe Tag::Hashtag do
 
     it "strips the leading #" do
       new_tag = described_class.new(subject: object, name: "#foo")
-      expect{new_tag.save}.to change{new_tag.name}.from("#foo").to("foo")
+      expect { new_tag.save }.to change { new_tag.name }.from("#foo").to("foo")
     end
 
     pre_condition { expect(object.draft?).to be_true }
 
     it "does not change the count" do
       new_tag = described_class.new(subject: object, name: "#foo")
-      expect{new_tag.save}.not_to change{Tag.hashtag_recount_count}
+      expect { new_tag.save }.not_to change { Tag.hashtag_recount_count }
     end
   end
 
@@ -52,7 +52,7 @@ Spectator.describe Tag::Hashtag do
 
     it "does not change the count" do
       new_tag = described_class.new(subject: object, name: "#foo")
-      expect{new_tag.destroy}.not_to change{Tag.hashtag_recount_count}
+      expect { new_tag.destroy }.not_to change { Tag.hashtag_recount_count }
     end
   end
 

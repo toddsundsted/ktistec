@@ -15,7 +15,7 @@ Spectator.describe "notifications partial" do
   include Ktistec::ViewHelper::ClassMethods
 
   describe "notifications.html.slang" do
-    let(env) { env_factory("GET", "/notifications") }
+    let(env) { make_env("GET", "/notifications") }
 
     subject do
       begin
@@ -39,16 +39,16 @@ Spectator.describe "notifications partial" do
       let_create!(:notification_announce, owner: actor, activity: announce)
 
       it "renders a sharing message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-          to eq("#{announce.actor.display_name} shared your post.")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+          .to eq("#{announce.actor.display_name} shared your post.")
       end
 
       context "given another announce notification" do
         let_create!(:announce, named: another, object: announce.object)
 
         it "renders a sharing message" do
-          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-            to eq("#{announce.actor.display_name} and 1 other shared your post.")
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+            .to eq("#{announce.actor.display_name} and 1 other shared your post.")
         end
       end
     end
@@ -58,16 +58,16 @@ Spectator.describe "notifications partial" do
       let_create!(:notification_like, owner: actor, activity: like)
 
       it "renders a liking message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-          to eq("#{like.actor.display_name} liked your post.")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+          .to eq("#{like.actor.display_name} liked your post.")
       end
 
       context "given another like notification" do
         let_create!(:like, named: another, object: like.object)
 
         it "renders a liking message" do
-          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-            to eq("#{like.actor.display_name} and 1 other liked your post.")
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+            .to eq("#{like.actor.display_name} and 1 other liked your post.")
         end
       end
     end
@@ -77,16 +77,16 @@ Spectator.describe "notifications partial" do
       let_create!(:notification_dislike, owner: actor, activity: dislike)
 
       it "renders a disliking message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-          to eq("#{dislike.actor.display_name} disliked your post.")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+          .to eq("#{dislike.actor.display_name} disliked your post.")
       end
 
       context "given another dislike notification" do
         let_create!(:dislike, named: another, object: dislike.object)
 
         it "renders a disliking message" do
-          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-            to eq("#{dislike.actor.display_name} and 1 other disliked your post.")
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+            .to eq("#{dislike.actor.display_name} and 1 other disliked your post.")
         end
       end
     end
@@ -96,8 +96,8 @@ Spectator.describe "notifications partial" do
       let_create!(:notification_mention, owner: actor, object: object)
 
       it "renders a message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-          to have("#{object.attributed_to.display_name} mentioned you.")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+          .to have("#{object.attributed_to.display_name} mentioned you.")
       end
     end
 
@@ -108,21 +108,21 @@ Spectator.describe "notifications partial" do
       let_create!(:hashtag, named: nil, name: "bar", subject: object)
 
       it "renders a message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
-          to have("There are new posts tagged with ", "#foo", ".")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()"))
+          .to have("There are new posts tagged with ", "#foo", ".")
       end
 
       it "renders the content" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
-          to have("This is the content.")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()"))
+          .to have("This is the content.")
       end
 
       context "given a deleted object" do
         before_each { object.delete! }
 
         it "does not render the content" do
-          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
-            not_to have("This is the content.")
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()"))
+            .not_to have("This is the content.")
         end
       end
 
@@ -130,8 +130,8 @@ Spectator.describe "notifications partial" do
         before_each { object.block! }
 
         it "does not render the content" do
-          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
-            not_to have("This is the content.")
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()"))
+            .not_to have("This is the content.")
         end
       end
     end
@@ -144,21 +144,21 @@ Spectator.describe "notifications partial" do
       let_create!(:mention, named: nil, name: "bar@foo", subject: object)
 
       it "renders a message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
-          to have("There are new posts that mention ", "@foo@bar", ".")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()"))
+          .to have("There are new posts that mention ", "@foo@bar", ".")
       end
 
       it "renders the content" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
-          to have("This is the content.")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()"))
+          .to have("This is the content.")
       end
 
       context "given a deleted object" do
         before_each { object.delete! }
 
         it "does not render the content" do
-          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
-            not_to have("This is the content.")
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()"))
+            .not_to have("This is the content.")
         end
       end
 
@@ -166,8 +166,8 @@ Spectator.describe "notifications partial" do
         before_each { object.block! }
 
         it "does not render the content" do
-          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()")).
-            not_to have("This is the content.")
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()"))
+            .not_to have("This is the content.")
         end
       end
     end
@@ -180,8 +180,8 @@ Spectator.describe "notifications partial" do
       pre_condition { expect(reply.root?).to be_false }
 
       it "renders a replied to message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-          to eq("#{reply.attributed_to.display_name} replied to a thread you follow.")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+          .to eq("#{reply.attributed_to.display_name} replied to a thread you follow.")
       end
     end
 
@@ -192,8 +192,8 @@ Spectator.describe "notifications partial" do
       pre_condition { expect(object.root?).to be_true }
 
       it "renders a fetch the root of the thread message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-          to eq("There are replies to a thread you follow.")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+          .to eq("There are replies to a thread you follow.")
       end
     end
 
@@ -202,19 +202,19 @@ Spectator.describe "notifications partial" do
       let_create!(:notification_poll_expiry, owner: actor, question: question)
 
       it "renders poll expiry message" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join).
-          to match(/A poll you voted in has ended/)
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+          .to match(/A poll you voted in has ended/)
       end
 
       it "includes link to poll results" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//a/@href").first.text).
-          to eq("/remote/objects/#{question.id}")
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//a/@href").first.text)
+          .to eq("/remote/objects/#{question.id}")
       end
     end
   end
 
   describe "notifications.json.ecr" do
-    let(env) { env_factory("GET", "/notifications") }
+    let(env) { make_env("GET", "/notifications") }
 
     subject do
       begin

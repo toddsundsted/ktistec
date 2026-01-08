@@ -14,7 +14,7 @@ Spectator.describe Relationship do
     let(options) do
       {
         from_iri: "https://test.test/#{random_string}",
-        to_iri: "https://test.test/#{random_string}"
+        to_iri:   "https://test.test/#{random_string}",
       }
     end
 

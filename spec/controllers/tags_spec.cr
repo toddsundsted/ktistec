@@ -59,26 +59,26 @@ Spectator.describe TagsController do
 
     it "renders the collection" do
       get "/tags/bar", ACCEPT_HTML
-      expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).
-        to contain_exactly("object-#{object3.id}", "object-#{object1.id}")
+      expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id"))
+        .to contain_exactly("object-#{object3.id}", "object-#{object1.id}")
     end
 
     it "renders the collection" do
       get "/tags/bar", ACCEPT_JSON
-      expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).
-        to contain_exactly(object3.iri, object1.iri)
+      expect(JSON.parse(response.body).dig("first", "orderedItems").as_a)
+        .to contain_exactly(object3.iri, object1.iri)
     end
 
     it "renders the collection" do
       get "/tags/foo", ACCEPT_HTML
-      expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).
-        to contain_exactly("object-#{object3.id}", "object-#{object2.id}", "object-#{object1.id}")
+      expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id"))
+        .to contain_exactly("object-#{object3.id}", "object-#{object2.id}", "object-#{object1.id}")
     end
 
     it "renders the collection" do
       get "/tags/foo", ACCEPT_JSON
-      expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).
-        to contain_exactly(object3.iri, object2.iri, object1.iri)
+      expect(JSON.parse(response.body).dig("first", "orderedItems").as_a)
+        .to contain_exactly(object3.iri, object2.iri, object1.iri)
     end
 
     context "if authenticated" do
@@ -86,14 +86,14 @@ Spectator.describe TagsController do
 
       it "renders the collection" do
         get "/tags/foo", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).
-          to contain_exactly("object-#{object5.id}", "object-#{object4.id}", "object-#{object3.id}", "object-#{object2.id}", "object-#{object1.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id"))
+          .to contain_exactly("object-#{object5.id}", "object-#{object4.id}", "object-#{object3.id}", "object-#{object2.id}", "object-#{object1.id}")
       end
 
       it "renders the collection" do
         get "/tags/foo", ACCEPT_JSON
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).
-          to contain_exactly(object5.iri, object4.iri, object3.iri, object2.iri, object1.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a)
+          .to contain_exactly(object5.iri, object4.iri, object3.iri, object2.iri, object1.iri)
       end
 
       describe "turbo-stream-source pagination" do
@@ -208,20 +208,20 @@ Spectator.describe TagsController do
         end
 
         it "does not change the count of follow relationships" do
-          expect{post "/tags/foo/follow"}.
-            not_to change{Relationship::Content::Follow::Hashtag.count(name: "foo")}
+          expect { post "/tags/foo/follow" }
+            .not_to change { Relationship::Content::Follow::Hashtag.count(name: "foo") }
         end
 
         it "does not change the count of fetch tasks" do
-          expect{post "/tags/foo/follow"}.
-            not_to change{Task::Fetch::Hashtag.count(name: "foo")}
+          expect { post "/tags/foo/follow" }
+            .not_to change { Task::Fetch::Hashtag.count(name: "foo") }
         end
 
         context "where the fetch is complete but has failed" do
           before_each { fetch_hashtag_task.assign(complete: true, backtrace: ["error"]).save }
 
           it "clears the backtrace" do
-            expect{post "/tags/foo/follow"}.to change{fetch_hashtag_task.reload!.backtrace}.to(nil)
+            expect { post "/tags/foo/follow" }.to change { fetch_hashtag_task.reload!.backtrace }.to(nil)
           end
         end
       end
@@ -328,20 +328,20 @@ Spectator.describe TagsController do
         end
 
         it "does not change the count of follow relationships" do
-          expect{post "/tags/foo/fetch/start"}.
-            not_to change{Relationship::Content::Follow::Hashtag.count(name: "foo")}
+          expect { post "/tags/foo/fetch/start" }
+            .not_to change { Relationship::Content::Follow::Hashtag.count(name: "foo") }
         end
 
         it "does not change the count of fetch tasks" do
-          expect{post "/tags/foo/fetch/start"}.
-            not_to change{Task::Fetch::Hashtag.count(name: "foo")}
+          expect { post "/tags/foo/fetch/start" }
+            .not_to change { Task::Fetch::Hashtag.count(name: "foo") }
         end
 
         context "where the fetch is complete but has failed" do
           before_each { fetch_hashtag_task.assign(complete: true, backtrace: ["error"]).save }
 
           it "clears the backtrace" do
-            expect{post "/tags/foo/fetch/start"}.to change{fetch_hashtag_task.reload!.backtrace}.to(nil)
+            expect { post "/tags/foo/fetch/start" }.to change { fetch_hashtag_task.reload!.backtrace }.to(nil)
           end
         end
       end

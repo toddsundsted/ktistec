@@ -653,6 +653,16 @@ Spectator.describe "partials" do
     end
   end
 
+  def make_env(method, path, body)
+    HTTP::Server::Context.new(
+      HTTP::Request.new(method, path).tap do |request|
+        request.headers["Content-Type"] = "application/x-www-form-urlencoded"
+        request.body = body
+      end,
+      HTTP::Server::Response.new(IO::Memory.new)
+    )
+  end
+
   describe "editor.html.slang" do
     let(env) { make_env("GET", "/editor") }
 
@@ -926,6 +936,86 @@ Spectator.describe "partials" do
 
         it "renders the error class" do
           expect(subject.xpath_nodes("//form/@class").first).to match(/\berror\b/)
+        end
+      end
+
+      context "with editor=markdown" do
+        let(env) { make_env("GET", "/editor?editor=markdown") }
+
+        it "renders markdown editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).not_to be_empty
+          expect(subject.xpath_nodes("//trix-editor")).to be_empty
+        end
+
+        it "includes hidden input" do
+          expect(subject.xpath_nodes("//input[@type='hidden'][@name='editor'][@value='markdown']")).not_to be_empty
+        end
+      end
+
+      context "with editor=rich-text" do
+        let(env) { make_env("GET", "/editor?editor=rich-text") }
+
+        it "renders rich-text editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).to be_empty
+          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+        end
+
+        it "includes hidden input" do
+          expect(subject.xpath_nodes("//input[@type='hidden'][@name='editor'][@value='rich-text']")).not_to be_empty
+        end
+      end
+
+      context "with invalid editor parameter" do
+        let(env) { make_env("GET", "/editor?editor=invalid") }
+
+        it "falls back to default editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).to be_empty
+          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+        end
+      end
+
+      context "with duplicate editor parameters" do
+        let(env) { make_env("GET", "/editor?editor=markdown&editor=markdown") }
+
+        it "includes only one hidden input" do
+          expect(subject.xpath_nodes("//input[@type='hidden'][@name='editor'][@value='markdown']").size).to eq(1)
+        end
+      end
+
+      context "with unsupported editor" do
+        let_build(note, named: object, local: true)
+        let(env) { make_env("GET", "/editor?editor=poll") }
+
+        it "shows warning" do
+          expect(subject.xpath_nodes("//div[contains(@class,'warning')]//li"))
+            .to contain_exactly(/not supported.*poll/)
+        end
+      end
+
+      context "with mutually exclusive editors" do
+        let(env) { make_env("GET", "/editor?editor=markdown&editor=rich-text") }
+
+        it "shows warning" do
+          expect(subject.xpath_nodes("//div[contains(@class,'warning')]//li"))
+            .to contain_exactly(/mutually exclusive/)
+        end
+      end
+
+      context "with editor=markdown in body" do
+        let(env) { make_env("POST", "/editor", "editor=markdown") }
+
+        it "renders markdown editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).not_to be_empty
+          expect(subject.xpath_nodes("//trix-editor")).to be_empty
+        end
+      end
+
+      context "with editor=rich-text in body" do
+        let(env) { make_env("POST", "/editor", "editor=rich-text") }
+
+        it "renders rich-text editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).to be_empty
+          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
         end
       end
     end

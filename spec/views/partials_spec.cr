@@ -1018,6 +1018,100 @@ Spectator.describe "partials" do
           expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
         end
       end
+
+      context "given a new object" do
+        pre_condition { expect(object.new_record?).to be_true }
+
+        it "renders editor selector buttons" do
+          expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[contains(@class,'button')]")).not_to be_empty
+        end
+
+        it "renders rich-text and markdown buttons" do
+          button_texts = subject.xpath_nodes("//div[contains(@class,'buttons')]//a[contains(@class,'button')]/text()").map(&.to_s)
+          expect(button_texts).to contain_exactly("Rich Text", "Markdown")
+        end
+
+        it "links to query parameters" do
+          hrefs = subject.xpath_nodes("//div[contains(@class,'buttons')]//a[contains(@class,'button')]/@href").map(&.text)
+          expect(hrefs).to contain_exactly("?editor=rich-text", "?editor=markdown")
+        end
+
+        context "when default editor produces text/html" do
+          before_each { Global.account.not_nil!.assign(default_editor: "text/html; editor=trix") }
+
+          it "marks rich-text button as active" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=rich-text'][contains(@class,'active')]")).not_to be_empty
+          end
+
+          it "does not mark markdown button as active" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=markdown'][contains(@class,'active')]")).to be_empty
+          end
+        end
+
+        context "when default editor produces text/markdown" do
+          before_each { Global.account.not_nil!.assign(default_editor: "text/markdown") }
+
+          it "marks markdown button as active" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=markdown'][contains(@class,'active')]")).not_to be_empty
+          end
+
+          it "does not mark rich-text button as active" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=rich-text'][contains(@class,'active')]")).to be_empty
+          end
+        end
+
+        context "with `editor=markdown` in query" do
+          let(env) { make_env("GET", "/editor?editor=markdown") }
+
+          it "marks markdown button as active" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=markdown'][contains(@class,'active')]")).not_to be_empty
+          end
+
+          it "does not mark rich-text button as active" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=rich-text'][contains(@class,'active')]")).to be_empty
+          end
+        end
+
+        context "with `editor=rich-text` in query" do
+          let(env) { make_env("GET", "/editor?editor=rich-text") }
+
+          it "marks rich-text button as active" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=rich-text'][contains(@class,'active')]")).not_to be_empty
+          end
+
+          it "does not mark markdown button as active" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=markdown'][contains(@class,'active')]")).to be_empty
+          end
+        end
+
+        context "when object has source content" do
+          before_each do
+            object.source = ActivityPub::Object::Source.new("<p>Test</p>", "text/html; editor=trix")
+          end
+
+          it "marks rich-text button as active" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=rich-text'][contains(@class,'active')]")).not_to be_empty
+          end
+
+          it "marks markdown button as disabled" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=markdown'][contains(@class,'disabled')]")).not_to be_empty
+          end
+        end
+
+        context "when object has source content" do
+          before_each do
+            object.source = ActivityPub::Object::Source.new("# Test", "text/markdown")
+          end
+
+          it "marks markdown button as active" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=markdown'][contains(@class,'active')]")).not_to be_empty
+          end
+
+          it "marks rich-text button as disabled" do
+            expect(subject.xpath_nodes("//div[contains(@class,'buttons')]//a[@href='?editor=rich-text'][contains(@class,'disabled')]")).not_to be_empty
+          end
+        end
+      end
     end
   end
 

@@ -3,6 +3,7 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
   == render "src/views/partials/editor/_editor_hidden_fields.html.slang"
   .field data-turbo-permanent=true
     textarea.markdown-editor data-controller="editor--markdown" data-action="input->editor--markdown#input input->has-content#check input->has-content#scheduleAutosave blur->has-content#blur" data-has-content-target="input" name="content" rows=3 = content
+  == render "src/views/partials/editor/_editor_selector.html.slang"
   == render "src/views/partials/editor/_editor_language_visibility.html.slang"
   == render "src/views/partials/editor/_editor_optional_settings.html.slang"
   == render "src/views/partials/editor/_editor_buttons.html.slang"

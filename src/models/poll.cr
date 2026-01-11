@@ -39,7 +39,25 @@ class Poll
   @[Persistent]
   property multiple_choice : Bool = false
 
+  def before_save
+    # Convert relative `closed_at` to absolute time when associated
+    # question is published.
+    #
+    # Draft polls store `closed_at` as a relative duration (seconds
+    # from epoch) because users creating polls think in terms like
+    # "expires in 3 days" rather than absolute deadlines.
+    #
+    # When the question transitions from draft to published, this hook
+    # converts the relative duration to an absolute expiry time based
+    # on the current time.
+    #
+    if (question = self.question?) && question.changed?(:published) && question.published && (closed_at = self.closed_at)
+      self.closed_at = Time.utc + closed_at.to_unix.seconds
+    end
+  end
+
   def expired?
+    return false if question?.try(&.draft?)
     (closed_at = self.closed_at) ? closed_at < Time.utc : false
   end
 

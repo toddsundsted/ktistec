@@ -27,7 +27,7 @@ module ObjectBuilder
       unless question.poll? && poll_options.nil?
         validate_poll_changes(question, poll_options, poll_duration, poll_multiple_choice, result)
 
-        closed_at = poll_duration ? Time.utc + poll_duration.seconds : nil
+        closed_at = poll_duration ? Time.unix(poll_duration) : nil
         question.poll = build_poll(question, poll_options, closed_at, poll_multiple_choice)
       end
 

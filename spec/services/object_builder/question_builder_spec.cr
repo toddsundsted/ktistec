@@ -54,7 +54,7 @@ Spectator.describe ObjectBuilder::QuestionBuilder do
     it "extracts poll duration" do
       params["poll-duration"] = "3600"
       result = subject.build(params, actor)
-      expect(poll.closed_at).to be_close(Time.utc + 3600.seconds, 2.seconds)
+      expect(poll.closed_at).to eq(Time.unix(3600))
     end
 
     it "extracts poll multiple choice" do
@@ -73,7 +73,7 @@ Spectator.describe ObjectBuilder::QuestionBuilder do
         :poll,
         question: question,
         options: [Poll::Option.new("Red", 0), Poll::Option.new("Blue", 0)],
-        closed_at: 1.hour.from_now,
+        closed_at: Time.unix(3600),
       )
 
       it "allows changing poll options" do

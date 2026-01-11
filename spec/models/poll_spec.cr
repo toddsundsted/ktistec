@@ -46,6 +46,43 @@ Spectator.describe Poll do
     end
   end
 
+  describe "before_save" do
+    context "when question is draft and saved" do
+      let_build(:poll, closed_at: Time.unix(86400))
+      let_build(:question, poll: poll, local: true, published: nil)
+
+      post_condition { expect(question.draft?).to be_true }
+
+      it "does not change `closed_at`" do
+        question.save
+        expect(poll.closed_at).to eq(Time.unix(86400))
+      end
+    end
+
+    context "when question is saved and becomes published" do
+      let_build(:poll, closed_at: Time.unix(86400))
+      let_build(:question, poll: poll, local: true, published: nil)
+
+      post_condition { expect(question.draft?).to be_false }
+
+      it "changes `closed_at`" do
+        question.assign(published: Time.utc).save
+        expect(poll.closed_at).to be_close(Time.utc + 86400.seconds, 2.seconds)
+      end
+    end
+
+    context "when question is published and is saved again" do
+      let_build(:poll, closed_at: Time.unix(86400))
+      let_create!(:question, poll: poll, local: true, published: 1.day.ago)
+
+      pre_condition { expect(question.draft?).to be_false }
+
+      it "does not change `closed_at`" do
+        expect { poll.assign(voters_count: 10).save }.not_to change { poll.closed_at }
+      end
+    end
+  end
+
   describe "#options" do
     let_build(:poll)
 
@@ -77,6 +114,16 @@ Spectator.describe Poll do
 
     it "returns true when closed_at is in the past" do
       expect(past_poll.expired?).to be_true
+    end
+
+    context "when poll is a draft" do
+      let_build(:question, poll: past_poll, local: true, published: nil)
+
+      pre_condition { expect(question.draft?).to be_true }
+
+      it "returns false even though closed is in the past" do
+        expect(past_poll.expired?).to be_false
+      end
     end
   end
 

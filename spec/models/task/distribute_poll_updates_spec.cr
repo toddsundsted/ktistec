@@ -15,6 +15,7 @@ Spectator.describe Task::DistributePollUpdates do
     attributed_to: actor,
     to: ["https://www.w3.org/ns/activitystreams#Public"],
     cc: [actor.followers.not_nil!],
+    published: Time.utc,
   )
   let_create!(
     :poll,

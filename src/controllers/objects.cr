@@ -56,10 +56,7 @@ class ObjectsController
   end
 
   post "/objects" do |env|
-    params = accepts?("text/html") ? env.params.body : env.params.json
-    params_hash = params.to_h.transform_values do |value|
-      value.is_a?(Array) ? value.map(&.to_s) : value.to_s
-    end
+    params_hash = normalize_params(env.params.body.presence || env.params.json)
     result = ObjectFactory.build_from_params(params_hash, env.account.actor)
     object = result.object
 
@@ -129,10 +126,7 @@ class ObjectsController
       not_found
     end
 
-    params = accepts?("text/html") ? env.params.body : env.params.json
-    params_hash = params.to_h.transform_values do |value|
-      value.is_a?(Array) ? value.map(&.to_s) : value.to_s
-    end
+    params_hash = normalize_params(env.params.body.presence || env.params.json)
     result = ObjectFactory.build_from_params(params_hash, env.account.actor, object)
     object = result.object
 

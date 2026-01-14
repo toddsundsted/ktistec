@@ -18,9 +18,7 @@ class OutboxesController
       forbidden
     end
 
-    activity = (env.params.body.presence || env.params.json).to_h.transform_values do |value|
-      value.is_a?(Array) ? value.map(&.to_s) : value.to_s
-    end
+    activity = normalize_params(env.params.body.presence || env.params.json)
 
     if (temp_iri = activity["object"]?) && temp_iri.is_a?(String)
       object_iri = temp_iri

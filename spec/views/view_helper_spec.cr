@@ -445,6 +445,69 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".normalize_params" do
+    context "given URI::Params" do
+      it "converts single values to strings" do
+        params = URI::Params.parse("name=Alice&age=30")
+        result = self.class.normalize_params(params)
+        expect(result["name"]).to eq("Alice")
+        expect(result["age"]).to eq("30")
+      end
+
+      it "omits empty values" do
+        params = URI::Params.parse("empty=")
+        result = self.class.normalize_params(params)
+        expect(result.has_key?("empty")).to be_false
+      end
+
+      it "converts multiple values to arrays" do
+        params = URI::Params.parse("tags=ruby&tags=crystal&tags=go")
+        result = self.class.normalize_params(params)
+        expect(result["tags"]).to eq(["ruby", "crystal", "go"])
+      end
+
+      it "omits empty values from arrays" do
+        params = URI::Params.parse("tags=ruby&tags=&tags=crystal&tags=&tags=go")
+        result = self.class.normalize_params(params)
+        expect(result["tags"]).to eq(["ruby", "crystal", "go"])
+      end
+    end
+
+    context "given Hash(String, JSON::Any::Type)" do
+      it "converts primitive values to strings" do
+        params = Hash(String, JSON::Any::Type){"name" => "Alice", "age" => 30_i64, "active" => true, "score" => 95_f64}
+        result = self.class.normalize_params(params)
+        expect(result["name"]).to eq("Alice")
+        expect(result["age"]).to eq("30")
+        expect(result["active"]).to eq("true")
+        expect(result["score"]).to eq("95.0")
+      end
+
+      it "omits null values" do
+        params = Hash(String, JSON::Any::Type){"empty" => nil}
+        result = self.class.normalize_params(params)
+        expect(result.has_key?("empty")).to be_false
+      end
+
+      it "converts arrays to arrays of strings" do
+        params = Hash(String, JSON::Any::Type){"tags" => [JSON::Any.new("ruby"), JSON::Any.new("crystal"), JSON::Any.new("go")]}
+        result = self.class.normalize_params(params)
+        expect(result["tags"]).to eq(["ruby", "crystal", "go"])
+      end
+
+      it "omits null values from arrays" do
+        params = Hash(String, JSON::Any::Type){"tags" => [JSON::Any.new("ruby"), JSON::Any.new(nil), JSON::Any.new("crystal"), JSON::Any.new(nil), JSON::Any.new("go")]}
+        result = self.class.normalize_params(params)
+        expect(result["tags"]).to eq(["ruby", "crystal", "go"])
+      end
+
+      it "raises error for nested objects" do
+        params = Hash(String, JSON::Any::Type){"user" => {"name" => JSON::Any.new("Alice")}}
+        expect { self.class.normalize_params(params) }.to raise_error(Exception)
+      end
+    end
+  end
+
   describe "activity_button" do
     subject do
       XML.parse_html(activity_button("/foobar", "https://object", "Zap", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }, PARSER_OPTIONS).document

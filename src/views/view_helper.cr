@@ -349,6 +349,49 @@ module Ktistec::ViewHelper
         end
       %Q|<i class="actor-type-overlay #{icon} icon"></i>|
     end
+
+    # Normalizes `params` into a consistent hash format.
+    #
+    def normalize_params(params : URI::Params) : Hash(String, String | Array(String))
+      result = Hash(String, String | Array(String)).new
+      params.each do |key, _|
+        values = params.fetch_all(key).reject(&.empty?)
+        next if values.empty?
+        if values.size == 1
+          result[key] = values.first
+        else
+          result[key] = values
+        end
+      end
+      result
+    end
+
+    # Normalizes `params` into a consistent hash format.
+    #
+    def normalize_params(params : Hash(String, JSON::Any::Type)) : Hash(String, String | Array(String))
+      result = Hash(String, String | Array(String)).new
+      params.each do |key, value|
+        next if value.nil?
+        case value
+        when Array
+          array_values = value.compact_map do |item|
+            next if item.raw.nil?
+            case item.raw
+            when Int, Float, Bool, String
+              item.to_s
+            else
+              raise "Unsupported value"
+            end
+          end
+          result[key] = array_values unless array_values.empty?
+        when Int, Float, Bool, String
+          result[key] = value.to_s
+        else
+          raise "Unsupported value"
+        end
+      end
+      result
+    end
   end
 
   extend ClassMethods

@@ -118,6 +118,24 @@ class ObjectsController
       not_found
     end
 
+    # if no editors are specified, inspect the object and redirect
+
+    if env.params.query.fetch_all("editor").empty?
+      params = URI::Params.new
+      if (source = object.source) && source.media_type.starts_with?("text/markdown")
+        params.add("editor", "markdown")
+      else
+        params.add("editor", "rich-text")
+      end
+      _object = object
+      if _object.responds_to?(:poll?)
+        params.add("editor", "poll")
+      end
+      unless params.empty?
+        redirect "/objects/#{object.uid}/edit?#{params}"
+      end
+    end
+
     ok "objects/edit", env: env, object: object, recursive: false
   end
 

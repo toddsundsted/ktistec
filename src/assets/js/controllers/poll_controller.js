@@ -21,6 +21,8 @@ export default class extends Controller {
     const radios = form.querySelectorAll('input[type="radio"]:checked')
     const selected = checkboxes.length + radios.length
 
-    this.voteButtonTarget.disabled = (selected === 0)
+    if (this.hasVoteButtonTarget) {
+      this.voteButtonTarget.disabled = (selected === 0)
+    }
   }
 }

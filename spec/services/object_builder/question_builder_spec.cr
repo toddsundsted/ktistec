@@ -80,18 +80,21 @@ Spectator.describe ObjectBuilder::QuestionBuilder do
         params["poll-options"] = ["Yellow", "Purple", "Orange"]
         result = subject.build(params, actor, question)
         expect(result.valid?).to be_true
+        expect(poll.options.map(&.name)).to eq(["Yellow", "Purple", "Orange"])
       end
 
       it "allows changing poll duration" do
         params["poll-duration"] = "7200"
         result = subject.build(params, actor, question)
         expect(result.valid?).to be_true
+        expect(poll.closed_at).to eq(Time.unix(7200))
       end
 
       it "allows changing multiple_choice" do
         params["poll-multiple-choice"] = "true"
         result = subject.build(params, actor, question)
         expect(result.valid?).to be_true
+        expect(poll.multiple_choice).to be_true
       end
     end
 

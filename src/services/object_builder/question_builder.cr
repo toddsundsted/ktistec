@@ -60,7 +60,7 @@ module ObjectBuilder
       end
     end
 
-    # Builds `Poll` object.
+    # Builds `Poll` objects.
     #
     private def build_poll(
       question : ActivityPub::Object::Question,
@@ -68,18 +68,17 @@ module ObjectBuilder
       closed_at : Time?,
       multiple_choice : Bool,
     ) : Poll
-      options = (options || [] of String).map do |option|
-        Poll::Option.new(
-          name: option.strip,
-          votes_count: 0,
-        )
-      end
-      Poll.new(
-        question: question,
-        options: options,
+      poll = question.poll? || Poll.new(question: question)
+      poll.assign(
+        options: (options || [] of String).map do |option|
+          Poll::Option.new(
+            name: option.strip,
+            votes_count: 0,
+          )
+        end,
         multiple_choice: multiple_choice,
-        voters_count: 0,
         closed_at: closed_at,
+        voters_count: 0,
       )
     end
   end

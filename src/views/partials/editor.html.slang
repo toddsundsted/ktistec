@@ -6,7 +6,7 @@ crystal:
     editor_type_map[editor_type]
   end
   selected_editors =
-    if  env.params.body.has_key?("editor")
+    if env.params.body.has_key?("editor")
       env.params.body.fetch_all("editor")
     else
       env.params.query.fetch_all("editor")
@@ -50,6 +50,10 @@ crystal:
     else
       media_type = "text/html; editor=trix"
     end
+  end
+  _object = object
+  if _object.responds_to?(:poll?)
+    poll = _object.poll?
   end
 - if !warnings.empty?
   .ui.warning.message

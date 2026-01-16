@@ -14,20 +14,22 @@
       is_604800 = false
       poll_multiple_choice = false
     end
-  .ui.field
-    - poll_option_classes = object.errors.has_key?("poll.options") ? "error" : nil
+  - poll_option_classes = object.errors.has_key?("poll.options") ? "error" : nil
+  .ui.two.fields
     .required.field class=poll_option_classes
       label Poll Option
       input type="text" name="poll-options" value=poll_options[0]? required=true
     .required.field class=poll_option_classes
       label Poll Option
       input type="text" name="poll-options" value=poll_options[1]? required=true
+  .ui.two.fields
     .field class=poll_option_classes
       label Poll Option
       input type="text" name="poll-options" value=poll_options[2]?
     .field class=poll_option_classes
       label Poll Option
       input type="text" name="poll-options" value=poll_options[3]?
+  .ui.inline.fields
     .field
       label Poll Duration
       select.ui.dropdown name="poll-duration"

@@ -26,11 +26,13 @@ crystal:
     selected_editors = valid_editors
   end
   id = object.id || "new"
-  has_errors = !object.errors.empty?
-  canonical_path_errors = object.errors["canonical_path.from_iri"]?
-  must_be_absolute = canonical_path_errors.try(&.includes?("must be absolute"))
-  must_not_route = canonical_path_errors.try(&.includes?("must not match an existing route"))
-  must_be_unique = canonical_path_errors.try(&.includes?("must be unique"))
+  errors = object.errors
+  if (canonical_path_errors = errors["canonical_path.from_iri"]?)
+    errors["canonical_path"] = canonical_path_errors
+    errors.delete("canonical_path.from_iri")
+  end
+  errors = errors.transform_keys(&.split(/[_\.]/).map(&.capitalize).join(" "))
+  has_errors = !errors.empty?
   content = object.source.try(&.content) || object.content || nil
   actor = env.account.actor
   if (in_reply_to = object.in_reply_to?)

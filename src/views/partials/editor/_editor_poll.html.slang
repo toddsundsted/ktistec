@@ -15,16 +15,17 @@
       poll_multiple_choice = false
     end
   .ui.field
-    .required.field
+    - poll_option_classes = object.errors.has_key?("poll.options") ? "error" : nil
+    .required.field class=poll_option_classes
       label Poll Option
       input type="text" name="poll-options" value=poll_options[0]? required=true
-    .required.field
+    .required.field class=poll_option_classes
       label Poll Option
       input type="text" name="poll-options" value=poll_options[1]? required=true
-    .field
+    .field class=poll_option_classes
       label Poll Option
       input type="text" name="poll-options" value=poll_options[2]?
-    .field
+    .field class=poll_option_classes
       label Poll Option
       input type="text" name="poll-options" value=poll_options[3]?
     .field

@@ -353,6 +353,28 @@ Spectator.describe ObjectsController do
           post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical-path":"foo/bar"}|
           expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
         end
+
+        context "given an invalid language" do
+          it "returns 422 if validation fails" do
+            post "/objects", FORM_DATA, "content=foo+bar&language=invalid"
+            expect(response.status_code).to eq(422)
+          end
+
+          it "returns 422 if validation fails" do
+            post "/objects", JSON_DATA, %Q|{"content":"foo bar","language":"invalid"}|
+            expect(response.status_code).to eq(422)
+          end
+
+          it "renders an error message" do
+            post "/objects", FORM_DATA, "content=foo+bar&language=invalid"
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]")).not_to be_empty
+          end
+
+          it "renders an error message" do
+            post "/objects", JSON_DATA, %Q|{"content":"foo bar","language":"invalid"}|
+            expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
+          end
+        end
       end
     end
   end
@@ -1118,6 +1140,28 @@ Spectator.describe ObjectsController do
         it "renders an error message" do
           post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical-path":"foo/bar"}|
           expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
+        end
+
+        context "given an invalid language" do
+          it "returns 422 if validation fails" do
+            post "/objects/#{draft.uid}", FORM_DATA, "language=invalid"
+            expect(response.status_code).to eq(422)
+          end
+
+          it "returns 422 if validation fails" do
+            post "/objects/#{draft.uid}", JSON_DATA, %Q|{"language":"invalid"}|
+            expect(response.status_code).to eq(422)
+          end
+
+          it "renders an error message" do
+            post "/objects/#{draft.uid}", FORM_DATA, "language=invalid"
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]")).not_to be_empty
+          end
+
+          it "renders an error message" do
+            post "/objects/#{draft.uid}", JSON_DATA, %Q|{"language":"invalid"}|
+            expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
+          end
         end
       end
 

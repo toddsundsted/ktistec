@@ -4,7 +4,7 @@
     has_content = !object.source.try(&.media_type).nil?
     poll_active = selected_editors.includes?("poll")
     has_options = poll && !poll.options.empty?
-  .editors
+  .editors data-turbo-prefetch="false"
     - source_editors.each do |editor_name|
       crystal:
         is_active =

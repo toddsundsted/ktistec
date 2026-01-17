@@ -1,20 +1,50 @@
-- if object.new_record? || object.draft?
-  .ui.buttons
-    - if object.in_reply_to_iri
-      button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
-        | Send Reply
-    - else
-      button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
-        | Publish Post
-    - if object.new_record?
-      button.ui.button data-has-content-target="button saveDraftButton" type="submit" formaction=objects_path
-        | Create Draft
-    - else
-      button.ui.button data-has-content-target="button saveDraftButton" type="submit" formaction=object_path(object)
-        | Update Draft
-  - unless object.new_record?
-    a.ui.teal.right.floated.button href=actor_relationships_path(actor, "drafts")
-      | To Drafts
-- else
-  button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
-    | Update Post
+- if object.draft?
+  crystal:
+    source_editors = ["rich-text", "markdown"]
+    has_content = !object.source.try(&.media_type).nil?
+    poll_active = selected_editors.includes?("poll")
+    has_options = poll && !poll.options.empty?
+    optional_active = selected_editors.includes?("optional")
+    has_optional = object.name || object.summary || object.canonical_path ? true : false
+  .editors data-turbo-prefetch="false"
+    - source_editors.each do |editor_name|
+      crystal:
+        is_active =
+          if !selected_source_editors.nil? && !selected_source_editors.empty?
+            selected_source_editors.includes?(editor_name)
+          elsif editor_name == "rich-text"
+            media_type.starts_with?("text/html")
+          else
+            media_type.starts_with?("text/markdown")
+          end
+        button_classes = ["ui", "mini", "compact", "toggle", "button"]
+        button_classes << "active" if is_active
+        button_classes << "disabled" if has_content
+        editor_params = URI::Params.new
+        editor_params.add("editor", editor_name)
+        editor_params.add("editor", "poll") if poll_active
+        editor_params.add("editor", "optional") if optional_active
+        display_name = editor_name == "rich-text" ? "Rich Text" : "Markdown"
+      a class=button_classes.join(" ") href="?#{editor_params}" = display_name
+    - if supported_editors.includes?("poll")
+      crystal:
+        current_source = selected_source_editors.try(&.first?) || (media_type.starts_with?("text/markdown") ? "markdown" : "rich-text")
+        button_classes = ["ui", "mini", "compact", "toggle", "button"]
+        button_classes << "active" if poll_active
+        button_classes << "disabled" if has_options
+        editor_params = URI::Params.new
+        editor_params.add("editor", current_source)
+        editor_params.add("editor", "poll") unless poll_active
+        editor_params.add("editor", "optional") if optional_active
+      a class=button_classes.join(" ") href="?#{editor_params}" Include Poll
+    - if supported_editors.includes?("optional")
+      crystal:
+        current_source = selected_source_editors.try(&.first?) || (media_type.starts_with?("text/markdown") ? "markdown" : "rich-text")
+        button_classes = ["ui", "mini", "compact", "toggle", "button"]
+        button_classes << "active" if optional_active
+        button_classes << "disabled" if has_optional
+        editor_params = URI::Params.new
+        editor_params.add("editor", current_source)
+        editor_params.add("editor", "poll") if poll_active
+        editor_params.add("editor", "optional") unless optional_active
+      a class=button_classes.join(" ") href="?#{editor_params}" Optional

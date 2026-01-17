@@ -5,7 +5,7 @@ form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controlle
     trix-editor data-trix-target="trixEditor" data-action="trix-change->has-content#check trix-change->has-content#scheduleAutosave trix-blur->has-content#blur turbo:morph@document->has-content#check" input="editor-input"
     textarea#editor-input data-has-content-target="input" name="content" rows=3 = content
   == render "src/views/partials/editor/_editor_poll.html.slang"
-  == render "src/views/partials/editor/_editor_selector.html.slang"
+  == render "src/views/partials/editor/_editor_buttons.html.slang"
   == render "src/views/partials/editor/_editor_language_visibility.html.slang"
   == render "src/views/partials/editor/_editor_optional_settings.html.slang"
-  == render "src/views/partials/editor/_editor_buttons.html.slang"
+  == render "src/views/partials/editor/_editor_actions.html.slang"

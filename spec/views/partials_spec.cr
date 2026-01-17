@@ -1121,6 +1121,50 @@ Spectator.describe "partials" do
         end
       end
 
+      it "does not render name input" do
+        expect(subject.xpath_nodes("//form//input[@name='name']")).to be_empty
+      end
+
+      it "does not render summary input" do
+        expect(subject.xpath_nodes("//form//textarea[@name='summary']")).to be_empty
+      end
+
+      it "does not render sensitive checkbox" do
+        expect(subject.xpath_nodes("//form//input[@type='checkbox'][@name='sensitive']")).to be_empty
+      end
+
+      it "does not render canonical path input" do
+        expect(subject.xpath_nodes("//form//input[@name='canonical-path']")).to be_empty
+      end
+
+      it "renders inactive optional button" do
+        expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][not(contains(@class,'active'))][contains(text(),'Optional')]")).not_to be_empty
+      end
+
+      context "with `editor=optional` in query" do
+        let(env) { make_env("GET", "/editor?editor=optional") }
+
+        it "renders name input" do
+          expect(subject.xpath_nodes("//form//input[@name='name']").size).to eq(1)
+        end
+
+        it "renders summary input" do
+          expect(subject.xpath_nodes("//form//textarea[@name='summary']").size).to eq(1)
+        end
+
+        it "renders sensitive checkbox" do
+          expect(subject.xpath_nodes("//form//input[@type='checkbox'][@name='sensitive']").size).to eq(1)
+        end
+
+        it "renders canonical path input" do
+          expect(subject.xpath_nodes("//form//input[@name='canonical-path']").size).to eq(1)
+        end
+
+        it "renders active optional button" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][contains(@class,'active')][contains(text(),'Optional')]")).not_to be_empty
+        end
+      end
+
       context "given a question" do
         let_build(:question, named: object, local: true)
 

@@ -813,37 +813,37 @@ Spectator.describe ObjectsController do
 
       context "given a draft post" do
         it "succeeds" do
-          get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_HTML
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
           expect(response.status_code).to eq(200)
         end
 
         it "succeeds" do
-          get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_JSON
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_JSON
           expect(response.status_code).to eq(200)
         end
 
         it "renders a form with the object" do
-          get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_HTML
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-#{draft.id}")
         end
 
         it "renders a button that submits to the outbox path" do
-          get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_HTML
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//button[contains(text(),'Publish')]/@formaction").first).to eq("/actors/#{actor.username}/outbox")
         end
 
         it "renders a button that submits to the object update path" do
-          get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_HTML
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//button[contains(text(),'Update')]/@formaction").first).to eq("/objects/#{draft.uid}")
         end
 
         it "renders a textarea with the draft content" do
-          get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_HTML
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("this is a test")
         end
 
         it "renders the content" do
-          get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_JSON
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_JSON
           expect(JSON.parse(response.body)["content"]).to eq("this is a test")
         end
 
@@ -851,12 +851,12 @@ Spectator.describe ObjectsController do
           before_each { draft.assign(name: "foo bar baz").save }
 
           it "renders an input with the name" do
-            get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_HTML
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='name']/@value").first).to eq("foo bar baz")
           end
 
           it "renders the name" do
-            get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_JSON
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["name"]).to eq("foo bar baz")
           end
         end
@@ -865,12 +865,12 @@ Spectator.describe ObjectsController do
           before_each { draft.assign(summary: "foo bar baz").save }
 
           it "renders a textarea with the summary" do
-            get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_HTML
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='summary']/text()").first).to eq("foo bar baz")
           end
 
           it "renders the summary" do
-            get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_JSON
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["summary"]).to eq("foo bar baz")
           end
         end
@@ -879,12 +879,12 @@ Spectator.describe ObjectsController do
           before_each { draft.assign(canonical_path: "/foo/bar/baz").save }
 
           it "renders an input with the canonical path" do
-            get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_HTML
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical-path']/@value").first).to eq("/foo/bar/baz")
           end
 
           it "renders the canonical path" do
-            get "/objects/#{draft.uid}/edit?editor=dummy", ACCEPT_JSON
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["canonical_path"]).to eq("/foo/bar/baz")
           end
         end
@@ -899,37 +899,37 @@ Spectator.describe ObjectsController do
         end
 
         it "succeeds" do
-          get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_HTML
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
           expect(response.status_code).to eq(200)
         end
 
         it "succeeds" do
-          get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_JSON
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_JSON
           expect(response.status_code).to eq(200)
         end
 
         it "renders a form with the object" do
-          get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_HTML
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-#{visible.id}")
         end
 
         it "renders a button that submits to the outbox path" do
-          get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_HTML
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//button[contains(text(),'Update')]/@formaction").first).to eq("/actors/#{actor.username}/outbox")
         end
 
         it "does not render a button that submits to the object update path" do
-          get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_HTML
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@formaction")).to be_empty
         end
 
         it "renders a textarea with the content" do
-          get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_HTML
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("foo bar baz")
         end
 
         it "renders the content" do
-          get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_JSON
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_JSON
           expect(JSON.parse(response.body)["content"]).to eq("foo bar baz")
         end
 
@@ -937,12 +937,12 @@ Spectator.describe ObjectsController do
           before_each { visible.assign(name: "foo bar baz").save }
 
           it "renders an input with the name" do
-            get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_HTML
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='name']/@value").first).to eq("foo bar baz")
           end
 
           it "renders the name" do
-            get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_JSON
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["name"]).to eq("foo bar baz")
           end
         end
@@ -951,12 +951,12 @@ Spectator.describe ObjectsController do
           before_each { visible.assign(summary: "foo bar baz").save }
 
           it "renders a textarea with the summary" do
-            get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_HTML
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='summary']/text()").first).to eq("foo bar baz")
           end
 
           it "renders the summary" do
-            get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_JSON
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["summary"]).to eq("foo bar baz")
           end
         end
@@ -965,12 +965,12 @@ Spectator.describe ObjectsController do
           before_each { visible.assign(canonical_path: "/foo/bar/baz").save }
 
           it "renders an input with the canonical path" do
-            get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_HTML
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical-path']/@value").first).to eq("/foo/bar/baz")
           end
 
           it "renders the canonical path" do
-            get "/objects/#{visible.uid}/edit?editor=dummy", ACCEPT_JSON
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["canonical_path"]).to eq("/foo/bar/baz")
           end
         end
@@ -1008,6 +1008,46 @@ Spectator.describe ObjectsController do
         end
       end
 
+      context "given a post with no source" do
+        let_create(:object, attributed_to: actor, local: true)
+
+        it "it redirects" do
+          get "/objects/#{object.uid}/edit", ACCEPT_JSON
+          expect(response.status_code).to eq(302)
+          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text")
+        end
+      end
+
+      context "given a post with a name" do
+        let_create(:object, name: "Sample Title", attributed_to: actor, local: true)
+
+        it "it redirects" do
+          get "/objects/#{object.uid}/edit", ACCEPT_JSON
+          expect(response.status_code).to eq(302)
+          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
+        end
+      end
+
+      context "given a post with a summary" do
+        let_create(:object, summary: "Sample Summary", attributed_to: actor, local: true)
+
+        it "it redirects" do
+          get "/objects/#{object.uid}/edit", ACCEPT_JSON
+          expect(response.status_code).to eq(302)
+          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
+        end
+      end
+
+      context "given a post with a canonical path" do
+        let_create(:object, canonical_path: "/custom/path", attributed_to: actor, local: true)
+
+        it "it redirects" do
+          get "/objects/#{object.uid}/edit", ACCEPT_JSON
+          expect(response.status_code).to eq(302)
+          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
+        end
+      end
+
       context "given a question with a poll" do
         let_build(:poll, options: [Poll::Option.new("Red", 0), Poll::Option.new("Blue", 0)])
         let_create!(:question, named: object, attributed_to: actor, poll: poll, local: true)
@@ -1016,16 +1056,6 @@ Spectator.describe ObjectsController do
           get "/objects/#{object.uid}/edit", ACCEPT_JSON
           expect(response.status_code).to eq(302)
           expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=poll")
-        end
-      end
-
-      context "given a post with no source" do
-        let_create(:object, attributed_to: actor, local: true)
-
-        it "it redirects" do
-          get "/objects/#{object.uid}/edit", ACCEPT_JSON
-          expect(response.status_code).to eq(302)
-          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text")
         end
       end
 

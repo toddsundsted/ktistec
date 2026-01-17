@@ -10,35 +10,36 @@ Spectator.describe ActivityPub::Object::Question do
   describe "#supported_editors" do
     RichText = ActivityPub::Object::EditorType::RichText
     Markdown = ActivityPub::Object::EditorType::Markdown
+    Optional = ActivityPub::Object::EditorType::Optional
     Poll     = ActivityPub::Object::EditorType::Poll
 
     let_build(:question)
 
     context "with no source" do
-      it "returns RichText, Markdown, and Poll" do
-        expect(question.supported_editors).to contain_exactly(RichText, Markdown, Poll).in_any_order
+      it "returns RichText, Markdown, Optional, and Poll" do
+        expect(question.supported_editors).to contain_exactly(RichText, Markdown, Optional, Poll).in_any_order
       end
     end
 
     context "with source" do
       context "and text/html media type" do
-        it "returns RichText and Poll" do
+        it "returns RichText, Optional, and Poll" do
           question.source = ActivityPub::Object::Source.new("content", "text/html")
-          expect(question.supported_editors).to contain_exactly(RichText, Poll).in_any_order
+          expect(question.supported_editors).to contain_exactly(RichText, Optional, Poll).in_any_order
         end
       end
 
       context "and text/markdown media type" do
-        it "returns Markdown and Poll" do
+        it "returns Markdown, Optional, and Poll" do
           question.source = ActivityPub::Object::Source.new("content", "text/markdown")
-          expect(question.supported_editors).to contain_exactly(Markdown, Poll).in_any_order
+          expect(question.supported_editors).to contain_exactly(Markdown, Optional, Poll).in_any_order
         end
       end
 
       context "and unsupported media type" do
-        it "returns only Poll" do
+        it "returns Optional and Poll" do
           question.source = ActivityPub::Object::Source.new("content", "text/plain")
-          expect(question.supported_editors).to contain_exactly(Poll).in_any_order
+          expect(question.supported_editors).to contain_exactly(Optional, Poll).in_any_order
         end
       end
     end

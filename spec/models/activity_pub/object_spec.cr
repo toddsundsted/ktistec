@@ -146,61 +146,62 @@ Spectator.describe ActivityPub::Object do
   describe "#supported_editors" do
     RichText = ActivityPub::Object::EditorType::RichText
     Markdown = ActivityPub::Object::EditorType::Markdown
+    Optional = ActivityPub::Object::EditorType::Optional
     Poll     = ActivityPub::Object::EditorType::Poll
 
     let_build(:object)
 
     it "returns all editor types" do
-      expect(object.supported_editors).to contain_exactly(RichText, Markdown, Poll).in_any_order
+      expect(object.supported_editors).to contain_exactly(RichText, Markdown, Optional, Poll).in_any_order
     end
 
-    it "returns RichText and Poll" do
+    it "returns RichText, Optional, and Poll" do
       object.source = ActivityPub::Object::Source.new("content", "text/html")
-      expect(object.supported_editors).to contain_exactly(RichText, Poll).in_any_order
+      expect(object.supported_editors).to contain_exactly(RichText, Optional, Poll).in_any_order
     end
 
-    it "returns RichText and Poll" do
+    it "returns RichText, Optional, and Poll" do
       object.source = ActivityPub::Object::Source.new("content", "text/html; charset=utf-8")
-      expect(object.supported_editors).to contain_exactly(RichText, Poll).in_any_order
+      expect(object.supported_editors).to contain_exactly(RichText, Optional, Poll).in_any_order
     end
 
-    it "returns Markdown and Poll" do
+    it "returns Markdown, Optional, and Poll" do
       object.source = ActivityPub::Object::Source.new("content", "text/markdown")
-      expect(object.supported_editors).to contain_exactly(Markdown, Poll).in_any_order
+      expect(object.supported_editors).to contain_exactly(Markdown, Optional, Poll).in_any_order
     end
 
-    it "returns Markdown and Poll" do
+    it "returns Markdown, Optional, and Poll" do
       object.source = ActivityPub::Object::Source.new("content", "text/markdown; charset=utf-8")
-      expect(object.supported_editors).to contain_exactly(Markdown, Poll).in_any_order
+      expect(object.supported_editors).to contain_exactly(Markdown, Optional, Poll).in_any_order
     end
 
     context "and unsupported media type" do
-      it "returns only Poll" do
+      it "returns Optional and Poll" do
         object.source = ActivityPub::Object::Source.new("content", "text/plain")
-        expect(object.supported_editors).to contain_exactly(Poll)
+        expect(object.supported_editors).to contain_exactly(Optional, Poll).in_any_order
       end
     end
 
-    let_build(:note)
+    let_build(:note) # any subclass
 
-    it "returns RichText and Markdown" do
-      expect(note.supported_editors).to contain_exactly(RichText, Markdown).in_any_order
+    it "returns everything except Poll" do
+      expect(note.supported_editors).to contain_exactly(RichText, Markdown, Optional).in_any_order
     end
 
-    it "returns only RichText" do
+    it "returns RichText and Optional" do
       note.source = ActivityPub::Object::Source.new("content", "text/html")
-      expect(note.supported_editors).to contain_exactly(RichText)
+      expect(note.supported_editors).to contain_exactly(RichText, Optional).in_any_order
     end
 
-    it "returns only Markdown" do
+    it "returns Markdown and Optional" do
       note.source = ActivityPub::Object::Source.new("content", "text/markdown")
-      expect(note.supported_editors).to contain_exactly(Markdown)
+      expect(note.supported_editors).to contain_exactly(Markdown, Optional).in_any_order
     end
 
     context "and unsupported media type" do
-      it "returns empty array" do
+      it "returns on Optional" do
         note.source = ActivityPub::Object::Source.new("content", "text/plain")
-        expect(note.supported_editors).to be_empty
+        expect(note.supported_editors).to contain_exactly(Optional)
       end
     end
   end

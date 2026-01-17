@@ -127,6 +127,9 @@ class ObjectsController
       else
         params.add("editor", "rich-text")
       end
+      if object.name.presence || object.summary.presence || object.canonical_path
+        params.add("editor", "optional")
+      end
       _object = object
       if _object.responds_to?(:poll?)
         params.add("editor", "poll")

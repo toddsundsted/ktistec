@@ -1,6 +1,5 @@
-- unless object.in_reply_to_iri
-  details open=(object.name || object.summary || object.canonical_path ? true : false)
-    summary Optional Settings
+- if selected_editors.includes?("optional")
+  - unless object.in_reply_to_iri
     .field
       label Title
       input type="text" name="name" value=object.name

@@ -25,7 +25,7 @@
         editor_params.add("editor", "poll") if poll_active
         editor_params.add("editor", "optional") if optional_active
       a class=button_classes.join(" ") href="?#{editor_params}" = editor_name == "rich-text" ? "Rich Text" : "Markdown"
-    - if supported_editors.includes?("optional")
+    - if supported_editors.includes?("optional") && !in_reply_to
       crystal:
         button_classes = ["ui", "mini", "compact", "toggle", "button"]
         button_classes << "active" if optional_active
@@ -35,7 +35,7 @@
         editor_params.add("editor", "poll") if poll_active
         editor_params.add("editor", "optional") unless optional_active
       a class=button_classes.join(" ") href="?#{editor_params}" Optional
-    - if supported_editors.includes?("poll")
+    - if supported_editors.includes?("poll") && !in_reply_to
       crystal:
         button_classes = ["ui", "mini", "compact", "toggle", "button"]
         button_classes << "active" if poll_active

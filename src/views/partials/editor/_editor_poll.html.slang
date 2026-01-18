@@ -1,4 +1,4 @@
-- if selected_editors.includes?("poll")
+- if selected_editors.includes?("poll") && !in_reply_to
   crystal:
     if poll
       poll_options = poll.options.map(&.name)

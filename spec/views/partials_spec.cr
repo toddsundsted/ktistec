@@ -755,13 +755,26 @@ Spectator.describe "partials" do
             .to eq("@#{intermediate.attributed_to.handle} @#{original.attributed_to.handle} ")
         end
 
-        it "does not render details" do
-          expect(subject.xpath_nodes("//details")).to be_empty
-        end
-
         it "includes an input to send reply" do
           expect(subject.xpath_nodes("//button[text()='Send Reply']"))
             .not_to be_empty
+        end
+
+        context "and editor=optional&editor=poll" do
+          let(env) { make_env("GET", "/editor?editor=optional&editor=poll") }
+
+          it "does not render optional inputs for replies" do
+            expect(subject.xpath_nodes("//input[@name='name']")).to be_empty
+          end
+
+          it "does not render poll inputs for replies" do
+            expect(subject.xpath_nodes("//input[@name='poll-options']")).to be_empty
+          end
+
+          it "renders only rich-text and markdown buttons" do
+            button_texts = subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')]/text()").map(&.to_s)
+            expect(button_texts).to contain_exactly("Rich Text", "Markdown")
+          end
         end
       end
 

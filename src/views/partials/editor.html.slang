@@ -25,7 +25,6 @@ crystal:
     end
     selected_editors = valid_editors
   end
-  id = object.id || "new"
   errors = object.errors
   if (canonical_path_errors = errors["canonical_path.from_iri"]?)
     errors["canonical_path"] = canonical_path_errors
@@ -57,13 +56,26 @@ crystal:
   if _object.responds_to?(:poll?)
     poll = _object.poll?
   end
-- if !warnings.empty?
+- unless warnings.empty?
   .ui.warning.message
     .header Editor Selection
     ul.list
       - warnings.each do |warning|
         li = warning
-- if media_type.starts_with?("text/markdown")
-  == render "src/views/partials/editor/markdown.html.slang"
-- else
-  == render "src/views/partials/editor/trix.html.slang"
+crystal:
+  id = object.id || "new" # MOVE ME
+  data_controller = media_type.starts_with?("text/html") ? "editor--trix has-content" : "has-content"
+form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controller=data_controller method="POST"
+  == render "src/views/partials/editor/_editor_errors.html.slang"
+  == render "src/views/partials/editor/_editor_hidden_fields.html.slang"
+  .field data-turbo-permanent=true
+    - if media_type.starts_with?("text/html")
+      trix-editor data-trix-target="trixEditor" data-action="trix-change->has-content#check trix-change->has-content#scheduleAutosave trix-blur->has-content#blur turbo:morph@document->has-content#check" input="editor-input"
+      textarea#editor-input data-has-content-target="input" name="content" rows=3 = content
+    - else
+      textarea.markdown-editor data-controller="editor--markdown" data-action="input->editor--markdown#input input->has-content#check input->has-content#scheduleAutosave blur->has-content#blur" data-has-content-target="input" name="content" rows=3 = content
+  == render "src/views/partials/editor/_editor_poll.html.slang"
+  == render "src/views/partials/editor/_editor_buttons.html.slang"
+  == render "src/views/partials/editor/_editor_language_visibility.html.slang"
+  == render "src/views/partials/editor/_editor_optional_settings.html.slang"
+  == render "src/views/partials/editor/_editor_actions.html.slang"

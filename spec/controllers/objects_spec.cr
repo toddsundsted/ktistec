@@ -976,86 +976,85 @@ Spectator.describe ObjectsController do
         end
       end
 
-      context "given a post with rich text content" do
-        let(source) do
-          ActivityPub::Object::Source.new(
-            content: "<div>This is <strong>rich</strong> text content.</div>",
-            media_type: "text/html; editor=trix",
-          )
+      context "and with no query terms" do
+        # it always redirects
+        post_condition { expect(response.status_code).to eq(302) }
+
+        context "given a post with rich text content" do
+          let(source) do
+            ActivityPub::Object::Source.new(
+              content: "<div>This is <strong>rich</strong> text content.</div>",
+              media_type: "text/html; editor=trix",
+            )
+          end
+          let_create(:object, attributed_to: actor, source: source, local: true)
+
+          it "it redirects to the rich text editor" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text")
+          end
         end
-        let_create(:object, attributed_to: actor, source: source, local: true)
 
-        it "it redirects" do
-          get "/objects/#{object.uid}/edit", ACCEPT_JSON
-          expect(response.status_code).to eq(302)
-          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text")
+        context "given a post with markdown content" do
+          let(source) do
+            ActivityPub::Object::Source.new(
+              content: "# Heading\n\nThis is **markdown** content.",
+              media_type: "text/markdown",
+            )
+          end
+          let_create(:object, attributed_to: actor, source: source, local: true)
+
+          it "it redirects to the markdown editor" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=markdown")
+          end
         end
-      end
 
-      context "given a post with markdown content" do
-        let(source) do
-          ActivityPub::Object::Source.new(
-            content: "# Heading\n\nThis is **markdown** content.",
-            media_type: "text/markdown",
-          )
+        context "given a post with no source" do
+          let_create(:object, attributed_to: actor, local: true)
+
+          it "it redirects to the rich text editor" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text")
+          end
         end
-        let_create(:object, attributed_to: actor, source: source, local: true)
 
-        it "it redirects" do
-          get "/objects/#{object.uid}/edit", ACCEPT_JSON
-          expect(response.status_code).to eq(302)
-          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=markdown")
+        context "given a post with a name" do
+          let_create(:object, name: "Sample Title", attributed_to: actor, local: true)
+
+          it "it includes the optional settings param" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
+          end
         end
-      end
 
-      context "given a post with no source" do
-        let_create(:object, attributed_to: actor, local: true)
+        context "given a post with a summary" do
+          let_create(:object, summary: "Sample Summary", attributed_to: actor, local: true)
 
-        it "it redirects" do
-          get "/objects/#{object.uid}/edit", ACCEPT_JSON
-          expect(response.status_code).to eq(302)
-          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text")
+          it "it includes the optional settings param" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
+          end
         end
-      end
 
-      context "given a post with a name" do
-        let_create(:object, name: "Sample Title", attributed_to: actor, local: true)
+        context "given a post with a canonical path" do
+          let_create(:object, canonical_path: "/custom/path", attributed_to: actor, local: true)
 
-        it "it redirects" do
-          get "/objects/#{object.uid}/edit", ACCEPT_JSON
-          expect(response.status_code).to eq(302)
-          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
+          it "it includes the optional settings param" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
+          end
         end
-      end
 
-      context "given a post with a summary" do
-        let_create(:object, summary: "Sample Summary", attributed_to: actor, local: true)
+        context "given a question with a poll" do
+          let_build(:poll, options: [Poll::Option.new("Red", 0), Poll::Option.new("Blue", 0)])
+          let_create!(:question, named: object, attributed_to: actor, poll: poll, local: true)
 
-        it "it redirects" do
-          get "/objects/#{object.uid}/edit", ACCEPT_JSON
-          expect(response.status_code).to eq(302)
-          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
-        end
-      end
-
-      context "given a post with a canonical path" do
-        let_create(:object, canonical_path: "/custom/path", attributed_to: actor, local: true)
-
-        it "it redirects" do
-          get "/objects/#{object.uid}/edit", ACCEPT_JSON
-          expect(response.status_code).to eq(302)
-          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
-        end
-      end
-
-      context "given a question with a poll" do
-        let_build(:poll, options: [Poll::Option.new("Red", 0), Poll::Option.new("Blue", 0)])
-        let_create!(:question, named: object, attributed_to: actor, poll: poll, local: true)
-
-        it "it redirects" do
-          get "/objects/#{object.uid}/edit", ACCEPT_JSON
-          expect(response.status_code).to eq(302)
-          expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=poll")
+          it "it includes the poll editor param" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.status_code).to eq(302)
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=poll")
+          end
         end
       end
 

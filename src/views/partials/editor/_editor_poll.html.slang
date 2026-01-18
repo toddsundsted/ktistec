@@ -40,4 +40,4 @@
     .field
       .ui.checkbox
         input#p-m-c type="checkbox" name="poll-multiple-choice" value="true" checked=poll_multiple_choice
-        label for="p-m-c" Multiple choice
+        label for="p-m-c" Multiple Choice

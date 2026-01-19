@@ -81,15 +81,17 @@
  /* --bg-accent-pre ➞ --bg-input + --semantic-primary */
     --bg-label: color-mix(in srgb, var(--mix-lighter) 91%, var(--mix-darker));
  /* --bg-label-hover ➞ --bg-label */
+ /* --bg-semantic-active ➞ --semantic-affirmative */
+ /* --bg-semantic-active-hover ➞ --semantic-active */
 
     --border-color: color-mix(in srgb, var(--mix-darker) 15%, transparent);
  /* --border-color-1 ➞ --border-color */
  /* --border-color-2 ➞ --border-color */
 
     --semantic-primary: #2185d0;
+ /* --semantic-primary-hover ➞ --semantic-primary */
  /* --anchor-color ➞ --semantic-primary */
  /* --anchor-color-hover ➞ --anchor-color ➞ --semantic-primary */
- /* --semantic-primary-hover ➞ --semantic-primary */
     --semantic-affirmative: #21ba45;
     --semantic-negative: #db2828;
 
@@ -148,15 +150,17 @@
      /* --bg-accent-pre ➞ --bg-input + --semantic-primary */
         --bg-label: color-mix(in srgb, var(--mix-lighter) 72%, var(--mix-darker));
      /* --bg-label-hover ➞ --bg-label */
+     /* --bg-semantic-active ➞ --semantic-affirmative */
+     /* --bg-semantic-active-hover ➞ --semantic-active */
 
         --border-color: color-mix(in srgb, var(--mix-darker) 15%, transparent);
      /* --border-color-1 ➞ --border-color */
      /* --border-color-2 ➞ --border-color */
 
         --semantic-primary: #4dabf7;
+     /* --semantic-primary-hover ➞ --semantic-primary */
      /* --anchor-color ➞ --semantic-primary */
      /* --anchor-color-hover ➞ --anchor-color ➞ --semantic-primary */
-     /* --semantic-primary-hover ➞ --semantic-primary */
         --semantic-affirmative: #51cf66;
         --semantic-negative: #ff6b6b;
 
@@ -317,6 +321,22 @@
     }
 }
 
+/* Semantic primary background color mixins */
+
+.semantic-primary-hover() {
+    background-color: var(--semantic-primary-hover, color-mix(in srgb, var(--semantic-primary) 85%, black));
+}
+
+/* Semantic active background color mixins */
+
+.semantic-active() {
+    background-color: var(--bg-semantic-active, var(--semantic-affirmative)) !important;
+}
+
+.semantic-active-hover() {
+    background-color: var(--bg-semantic-active-hover, color-mix(in srgb, var(--bg-semantic-active, var(--semantic-affirmative)) 85%, black)) !important;
+}
+
 /* Box shadow color mixins */
 
 .shadow-info() {
@@ -376,15 +396,5 @@
 
     @media (prefers-color-scheme: dark) {
         color: var(--anchor-color-hover, color-mix(in srgb, var(--anchor-color, color-mix(in srgb, var(--semantic-primary) 95%, white)) 85%, white));
-    }
-}
-
-/* Semantic color mixins */
-
-.semantic-primary-hover() {
-    background-color: var(--semantic-primary-hover, color-mix(in srgb, var(--semantic-primary) 85%, black));
-
-    @media (prefers-color-scheme: dark) {
-        background-color: var(--semantic-primary-hover, color-mix(in srgb, var(--semantic-primary) 85%, black));
     }
 }

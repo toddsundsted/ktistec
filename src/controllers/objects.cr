@@ -121,7 +121,7 @@ class ObjectsController
     # if no editors are specified, inspect the object and redirect
 
     if env.params.query.fetch_all("editor").empty?
-      params = URI::Params.new
+      params = env.params.query.dup
       if (source = object.source) && source.media_type.starts_with?("text/markdown")
         params.add("editor", "markdown")
       else

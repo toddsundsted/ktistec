@@ -20,7 +20,8 @@
         button_classes = ["ui", "mini", "compact", "toggle", "button"]
         button_classes << "active" if is_active
         button_classes << "disabled" if has_content
-        editor_params = URI::Params.new
+        editor_params = env.params.query.dup
+        editor_params.delete_all("editor")
         editor_params.add("editor", editor_name)
         editor_params.add("editor", "poll") if poll_active
         editor_params.add("editor", "optional") if optional_active
@@ -30,7 +31,8 @@
         button_classes = ["ui", "mini", "compact", "toggle", "button"]
         button_classes << "active" if optional_active
         button_classes << "disabled" if has_optional
-        editor_params = URI::Params.new
+        editor_params = env.params.query.dup
+        editor_params.delete_all("editor")
         editor_params.add("editor", current_source)
         editor_params.add("editor", "poll") if poll_active
         editor_params.add("editor", "optional") unless optional_active
@@ -40,7 +42,8 @@
         button_classes = ["ui", "mini", "compact", "toggle", "button"]
         button_classes << "active" if poll_active
         button_classes << "disabled" if has_poll
-        editor_params = URI::Params.new
+        editor_params = env.params.query.dup
+        editor_params.delete_all("editor")
         editor_params.add("editor", current_source)
         editor_params.add("editor", "poll") unless poll_active
         editor_params.add("editor", "optional") if optional_active

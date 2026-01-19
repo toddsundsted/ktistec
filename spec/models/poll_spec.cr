@@ -17,16 +17,6 @@ Spectator.describe Poll do
       end
     end
 
-    context "when options is empty" do
-      let_build(:poll, options: [] of Poll::Option)
-
-      it "can't be empty" do
-        expect(poll.valid?).to be_false
-        expect(poll.errors.keys).to contain("options")
-        expect(poll.errors["options"]?).to contain("can't be empty")
-      end
-    end
-
     context "when options has one option" do
       let_build(:poll, options: [Poll::Option.new("yes")])
 
@@ -34,6 +24,16 @@ Spectator.describe Poll do
         expect(poll.valid?).to be_false
         expect(poll.errors.keys).to contain("options")
         expect(poll.errors["options"]?).to contain("must contain at least 2 options")
+      end
+    end
+
+    context "when options has duplicates" do
+      let_build(:poll, options: [Poll::Option.new("yes"), Poll::Option.new("yes")])
+
+      it "must have unique options" do
+        expect(poll.valid?).to be_false
+        expect(poll.errors.keys).to contain("options")
+        expect(poll.errors["options"]?).to contain("must be unique")
       end
     end
 

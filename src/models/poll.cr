@@ -26,8 +26,8 @@ class Poll
   @[Persistent]
   property options : Array(Option) { [] of Option }
   validates(options) do
-    return "can't be empty" if options.empty?
     return "must contain at least 2 options" unless options.size > 1
+    return "must be unique" unless options.map(&.name).uniq!.size == options.size
   end
 
   @[Persistent]

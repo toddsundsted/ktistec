@@ -76,7 +76,9 @@ class Poll
     # converts the relative duration to an absolute expiry time based
     # on the current time.
     #
-    if (question = self.question?) && question.changed?(:published) && question.published && (closed_at = self.closed_at)
+    # Only apply this conversion to local polls!
+    #
+    if (question = self.question?) && question.local? && question.changed?(:published) && question.published && (closed_at = self.closed_at)
       self.closed_at = Time.utc + closed_at.to_unix.seconds
     end
   end

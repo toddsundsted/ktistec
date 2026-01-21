@@ -159,6 +159,21 @@ Spectator.describe Poll do
         expect { poll.assign(voters_count: 10).save }.not_to change { poll.closed_at }
       end
     end
+
+    context "when remote question is saved" do
+      let(closed_at) { 3.days.from_now }
+      let_build(:poll, closed_at: closed_at)
+      let_build(:question, poll: poll, local: false, published: Time.utc)
+
+      pre_condition do
+        expect(question.local?).to be_false
+        expect(question.new_record?).to be_true
+      end
+
+      it "preserves the `closed_at` value" do
+        expect { question.save }.not_to change { poll.closed_at }
+      end
+    end
   end
 
   describe "#options" do

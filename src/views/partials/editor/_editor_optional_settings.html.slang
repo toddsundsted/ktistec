@@ -9,6 +9,6 @@
     .ui.checkbox
       input#content-warning type="checkbox" name="sensitive" value="true" checked=object.sensitive
       label for="content-warning" Content Warning
-  .field class=(object.errors["canonical_path"]? ? "error" : nil)
+  .field class=(errors["canonical_path"]? ? "error" : nil)
     label Canonical Path
     input type="text" name="canonical-path" value=object.canonical_path

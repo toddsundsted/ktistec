@@ -28,16 +28,41 @@ class Poll
   validates(options) do
     return "must contain at least 2 options" unless options.size > 1
     return "must be unique" unless options.map(&.name).uniq!.size == options.size
+    if !new_record? && changed?(:options)
+      if (q = question?) && q.local? && !q.draft?
+        if (s = @saved_record) && s.options.map(&.name) != options.map(&.name)
+          return "cannot be changed after publishing"
+        end
+      end
+    end
   end
 
   @[Persistent]
   property closed_at : Time?
-
-  @[Persistent]
-  property voters_count : Int32?
+  validates(closed_at) do
+    if !new_record? && changed?(:closed_at)
+      if (q = question?) && q.local? && !q.draft?
+        if (s = @saved_record) && s.closed_at != closed_at
+          return "cannot be changed after publishing"
+        end
+      end
+    end
+  end
 
   @[Persistent]
   property multiple_choice : Bool = false
+  validates(multiple_choice) do
+    if !new_record? && changed?(:multiple_choice)
+      if (q = question?) && q.local? && !q.draft?
+        if (s = @saved_record) && s.multiple_choice != multiple_choice
+          return "cannot be changed after publishing"
+        end
+      end
+    end
+  end
+
+  @[Persistent]
+  property voters_count : Int32?
 
   def before_save
     # Convert relative `closed_at` to absolute time when associated

@@ -44,6 +44,84 @@ Spectator.describe Poll do
         expect(poll.multiple_choice).to be_false
       end
     end
+
+    context "given a remote poll" do
+      let_build(:poll)
+      let_create(:question, poll: poll, local: false, published: 1.day.ago)
+
+      pre_condition { expect(question.local?).to be_false }
+
+      it "permits changing options" do
+        poll.assign(options: [Poll::Option.new("Maybe"), Poll::Option.new("Perhaps")])
+        expect(poll.valid?).to be_true
+      end
+
+      it "permits changing closed_at" do
+        poll.assign(closed_at: Time.utc + 7.days)
+        expect(poll.valid?).to be_true
+      end
+
+      it "permits changing multiple_choice" do
+        poll.assign(multiple_choice: !poll.multiple_choice)
+        expect(poll.valid?).to be_true
+      end
+    end
+
+    context "given a local draft poll" do
+      let_build(:poll)
+      let_create(:question, poll: poll, local: true, published: nil)
+
+      pre_condition { expect(question.draft?).to be_true }
+
+      it "permits changing options" do
+        poll.assign(options: [Poll::Option.new("Maybe"), Poll::Option.new("Perhaps")])
+        expect(poll.valid?).to be_true
+      end
+
+      it "permits changing closed_at" do
+        poll.assign(closed_at: Time.utc + 7.days)
+        expect(poll.valid?).to be_true
+      end
+
+      it "permits changing multiple_choice" do
+        poll.assign(multiple_choice: !poll.multiple_choice)
+        expect(poll.valid?).to be_true
+      end
+    end
+
+    context "given a local published poll" do
+      let_build(:poll)
+      let_create(:question, poll: poll, local: true, published: 1.day.ago)
+
+      pre_condition do
+        expect(question.local?).to be_true
+        expect(question.draft?).to be_false
+      end
+
+      it "permits changing options votes_count" do
+        updated_options = poll.options.map { |option| Poll::Option.new(option.name, option.votes_count + 1) }
+        poll.assign(options: updated_options)
+        expect(poll.valid?).to be_true
+      end
+
+      it "forbids changing options name" do
+        poll.assign(options: [Poll::Option.new("Maybe"), Poll::Option.new("Perhaps")])
+        expect(poll.valid?).to be_false
+        expect(poll.errors["options"]).to have(/cannot be changed/)
+      end
+
+      it "forbids changing closed_at" do
+        poll.assign(closed_at: Time.utc + 7.days)
+        expect(poll.valid?).to be_false
+        expect(poll.errors["closed_at"]).to have(/cannot be changed/)
+      end
+
+      it "forbids changing multiple_choice" do
+        poll.assign(multiple_choice: !poll.multiple_choice)
+        expect(poll.valid?).to be_false
+        expect(poll.errors["multiple_choice"]).to have(/cannot be changed/)
+      end
+    end
   end
 
   describe "before_save" do

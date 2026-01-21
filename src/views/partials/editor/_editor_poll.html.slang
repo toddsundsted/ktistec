@@ -14,7 +14,7 @@
       is_604800 = false
       poll_multiple_choice = false
     end
-  - poll_option_classes = object.errors.has_key?("poll.options") ? "error" : nil
+  - poll_option_classes = errors.has_key?("poll.options") ? "error" : nil
   .ui.two.fields
     .required.field class=poll_option_classes
       label Poll Option

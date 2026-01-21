@@ -2,7 +2,7 @@
   .inline.fields
     .ten.wide.field
       == render "src/views/partials/visibility_controls.html.slang"
-    .six.wide.field class=(object.errors["language"]? ? "error" : nil)
+    .six.wide.field class=(errors["language"]? ? "error" : nil)
       label Language
       input type="text" name="language" value=language
 - else

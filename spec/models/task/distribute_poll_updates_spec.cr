@@ -136,7 +136,7 @@ Spectator.describe Task::DistributePollUpdates do
     context "when poll has expired" do
       vote(1, voter1, "Option A")
 
-      before_each { poll.assign(closed_at: 1.minute.ago).save }
+      before_each { poll.assign(closed_at: 1.minute.ago).save(skip_validation: true) }
 
       it "creates final `Update`" do
         expect { distribute_poll_updates_task.perform }.to change { ActivityPub::Activity::Update.count }.by(1)

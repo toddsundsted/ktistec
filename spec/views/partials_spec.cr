@@ -1259,6 +1259,92 @@ Spectator.describe "partials" do
           end
         end
       end
+
+      context "given a draft question with poll" do
+        let(env) { make_env("GET", "/editor?editor=poll") }
+
+        let_build(:poll, closed_at: Time.unix(86400))
+        let_create!(:question, named: object, poll: poll, local: true, published: nil)
+
+        it "renders poll duration select" do
+          expect(subject.xpath_nodes("//form//select[@name='poll-duration']")).not_to be_empty
+        end
+
+        it "does not render hidden poll closed_at input" do
+          expect(subject.xpath_nodes("//form//input[@type='hidden'][@name='poll-duration']")).to be_empty
+        end
+
+        it "does not render disabled closed_at input" do
+          expect(subject.xpath_nodes("//form//input[@type='text'][@disabled]")).to be_empty
+        end
+
+        it "does not disable option fields" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-options']/parent::div[contains(@class,'disabled')]")).to be_empty
+        end
+
+        it "does not disable multiple choice field" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-multiple-choice']/parent::div/parent::div[contains(@class,'disabled')]")).to be_empty
+        end
+      end
+
+      context "given a published question with poll" do
+        let(env) { make_env("GET", "/editor?editor=poll") }
+
+        let(duration) { 259200 }
+        let(closed_at) { duration.seconds.from_now }
+
+        let_build(:poll, closed_at: Time.unix(duration))
+        let_create!(:question, named: object, poll: poll, local: true, published: 1.day.ago)
+
+        it "does not render poll duration select" do
+          expect(subject.xpath_nodes("//form//select[@name='poll-duration']")).to be_empty
+        end
+
+        it "renders hidden poll closed_at input" do
+          expect(subject.xpath_nodes("//form//input[@type='hidden'][@name='poll-duration']")).not_to be_empty
+          hidden_input = subject.xpath_nodes("//form//input[@type='hidden'][@name='poll-duration']/@value").first
+          expect(hidden_input.content.to_i64).to eq(closed_at.to_unix)
+        end
+
+        it "renders disabled text input with formatted date" do
+          expect(subject.xpath_nodes("//form//input[@type='text'][@disabled]")).not_to be_empty
+        end
+
+        it "disables option fields" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-options']/parent::div[contains(@class,'disabled')]").size).to eq(4)
+        end
+
+        it "disables multiple choice field" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-multiple-choice']/parent::div/parent::div[contains(@class,'disabled')]")).not_to be_empty
+        end
+      end
+
+      context "given a published question with poll without closed_at" do
+        let(env) { make_env("GET", "/editor?editor=poll") }
+
+        let_build(:poll, closed_at: nil)
+        let_create!(:question, named: object, poll: poll, local: true, published: 1.day.ago)
+
+        it "renders poll duration select" do
+          expect(subject.xpath_nodes("//form//select[@name='poll-duration']")).not_to be_empty
+        end
+
+        it "does not render hidden poll closed_at input" do
+          expect(subject.xpath_nodes("//form//input[@type='hidden'][@name='poll-duration']")).to be_empty
+        end
+
+        it "does not render disabled closed_at input" do
+          expect(subject.xpath_nodes("//form//input[@type='text'][@disabled]")).to be_empty
+        end
+
+        it "disables option fields" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-options']/parent::div[contains(@class,'disabled')]").size).to eq(4)
+        end
+
+        it "disables multiple choice field" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-multiple-choice']/parent::div/parent::div[contains(@class,'disabled')]")).not_to be_empty
+        end
+      end
     end
   end
 

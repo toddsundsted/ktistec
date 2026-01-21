@@ -43,7 +43,8 @@ class Poll
     if !new_record? && changed?(:closed_at)
       if (q = question?) && q.local? && !q.draft?
         if (s = @saved_record) && s.closed_at != closed_at
-          return "cannot be changed after publishing"
+          delta = ((d1 = s.closed_at) && (d2 = closed_at)) ? (d1 - d2).abs : nil
+          return "cannot be changed after publishing" unless delta && delta < 1.second
         end
       end
     end

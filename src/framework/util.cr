@@ -229,19 +229,19 @@ module Ktistec
       elsif distance <= 2.minutes + 29.seconds
         "2 minutes"
       elsif distance <= 44.minutes + 59.seconds
-        "#{distance.minutes} minutes"
+        "#{(distance.total_seconds / 60).round.to_i} minutes"
       elsif distance <= 1.hour + 29.minutes + 59.seconds
         "about 1 hour"
       elsif distance <= 2.hour + 29.minutes + 59.seconds
         "about 2 hours"
       elsif distance <= 24.hours - 1.second
-        "#{distance.hours} hours"
+        "#{(distance.total_minutes / 60).round.to_i} hours"
       elsif distance <= 36.hours - 1.second
         "about 1 day"
       elsif distance <= 60.hours - 1.second
         "about 2 days"
       elsif distance <= 30.days - 1.second
-        "#{distance.days} days"
+        "#{(distance.total_hours / 24).round.to_i} days"
       elsif distance <= 46.days - 1.second
         "about 1 month"
       elsif distance <= 77.days - 1.second

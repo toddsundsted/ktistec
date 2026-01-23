@@ -653,6 +653,16 @@ Spectator.describe "partials" do
     end
   end
 
+  def make_env(method, path, body)
+    HTTP::Server::Context.new(
+      HTTP::Request.new(method, path).tap do |request|
+        request.headers["Content-Type"] = "application/x-www-form-urlencoded"
+        request.body = body
+      end,
+      HTTP::Server::Response.new(IO::Memory.new)
+    )
+  end
+
   describe "editor.html.slang" do
     let(env) { make_env("GET", "/editor") }
 
@@ -745,13 +755,26 @@ Spectator.describe "partials" do
             .to eq("@#{intermediate.attributed_to.handle} @#{original.attributed_to.handle} ")
         end
 
-        it "does not render details" do
-          expect(subject.xpath_nodes("//details")).to be_empty
-        end
-
         it "includes an input to send reply" do
           expect(subject.xpath_nodes("//button[text()='Send Reply']"))
             .not_to be_empty
+        end
+
+        context "and editor=optional&editor=poll" do
+          let(env) { make_env("GET", "/editor?editor=optional&editor=poll") }
+
+          it "does not render optional inputs for replies" do
+            expect(subject.xpath_nodes("//input[@name='name']")).to be_empty
+          end
+
+          it "does not render poll inputs for replies" do
+            expect(subject.xpath_nodes("//input[@name='poll-options']")).to be_empty
+          end
+
+          it "renders only rich-text and markdown buttons" do
+            button_texts = subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')]/text()").map(&.to_s)
+            expect(button_texts).to contain_exactly("Rich Text", "Markdown")
+          end
         end
       end
 
@@ -808,6 +831,14 @@ Spectator.describe "partials" do
         it "does not include a link to return to drafts" do
           expect(subject.xpath_nodes("//a[text()='To Drafts']"))
             .to be_empty
+        end
+      end
+
+      context "given an object with errors" do
+        before_each { object.errors["object"] = ["has errors"] }
+
+        it "renders the error class" do
+          expect(subject.xpath_nodes("//form/@class").first).to match(/\berror\b/)
         end
       end
 
@@ -921,11 +952,397 @@ Spectator.describe "partials" do
         end
       end
 
-      context "an object with errors" do
-        before_each { object.errors["object"] = ["has errors"] }
+      # Source editor handling
 
-        it "renders the error class" do
-          expect(subject.xpath_nodes("//form/@class").first).to match(/\berror\b/)
+      context "with editor=markdown" do
+        let(env) { make_env("GET", "/editor?editor=markdown") }
+
+        it "renders markdown editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).not_to be_empty
+          expect(subject.xpath_nodes("//trix-editor")).to be_empty
+        end
+
+        it "includes hidden input" do
+          expect(subject.xpath_nodes("//input[@type='hidden'][@name='editor'][@value='markdown']")).not_to be_empty
+        end
+      end
+
+      context "with editor=rich-text" do
+        let(env) { make_env("GET", "/editor?editor=rich-text") }
+
+        it "renders rich-text editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).to be_empty
+          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+        end
+
+        it "includes hidden input" do
+          expect(subject.xpath_nodes("//input[@type='hidden'][@name='editor'][@value='rich-text']")).not_to be_empty
+        end
+      end
+
+      context "with invalid editor parameter" do
+        let(env) { make_env("GET", "/editor?editor=invalid") }
+
+        it "falls back to default editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).to be_empty
+          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+        end
+      end
+
+      context "with duplicate editor parameters" do
+        let(env) { make_env("GET", "/editor?editor=markdown&editor=markdown") }
+
+        it "includes only one hidden input" do
+          expect(subject.xpath_nodes("//input[@type='hidden'][@name='editor'][@value='markdown']").size).to eq(1)
+        end
+      end
+
+      context "with unsupported editor" do
+        let_build(note, named: object, local: true)
+        let(env) { make_env("GET", "/editor?editor=poll") }
+
+        it "shows warning" do
+          expect(subject.xpath_nodes("//div[contains(@class,'warning')]//li"))
+            .to contain_exactly(/not supported.*poll/)
+        end
+      end
+
+      context "with mutually exclusive editors" do
+        let(env) { make_env("GET", "/editor?editor=markdown&editor=rich-text") }
+
+        it "shows warning" do
+          expect(subject.xpath_nodes("//div[contains(@class,'warning')]//li"))
+            .to contain_exactly(/mutually exclusive/)
+        end
+      end
+
+      context "with editor=markdown in body" do
+        let(env) { make_env("POST", "/editor", "editor=markdown") }
+
+        it "renders markdown editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).not_to be_empty
+          expect(subject.xpath_nodes("//trix-editor")).to be_empty
+        end
+      end
+
+      context "with editor=rich-text in body" do
+        let(env) { make_env("POST", "/editor", "editor=rich-text") }
+
+        it "renders rich-text editor" do
+          expect(subject.xpath_nodes("//textarea[@class='markdown-editor']")).to be_empty
+          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+        end
+      end
+
+      it "renders editor selector buttons" do
+        expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')]")).not_to be_empty
+      end
+
+      it "renders rich-text and markdown buttons" do
+        button_texts = subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')]/text()").map(&.to_s)
+        expect(button_texts).to contain("Rich Text", "Markdown")
+      end
+
+      it "links to query parameters" do
+        hrefs = subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')]/@href").map(&.text)
+        expect(hrefs).to contain("?editor=rich-text", "?editor=markdown")
+      end
+
+      context "when default editor produces text/html" do
+        before_each { Global.account.not_nil!.assign(default_editor: "text/html; editor=trix") }
+
+        it "marks rich-text button as active" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=rich-text'][contains(@class,'active')]")).not_to be_empty
+        end
+
+        it "does not mark markdown button as active" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=markdown'][contains(@class,'active')]")).to be_empty
+        end
+      end
+
+      context "when default editor produces text/markdown" do
+        before_each { Global.account.not_nil!.assign(default_editor: "text/markdown") }
+
+        it "marks markdown button as active" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=markdown'][contains(@class,'active')]")).not_to be_empty
+        end
+
+        it "does not mark rich-text button as active" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=rich-text'][contains(@class,'active')]")).to be_empty
+        end
+      end
+
+      context "with `editor=markdown` in query" do
+        let(env) { make_env("GET", "/editor?editor=markdown") }
+
+        it "marks markdown button as active" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=markdown'][contains(@class,'active')]")).not_to be_empty
+        end
+
+        it "does not mark rich-text button as active" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=rich-text'][contains(@class,'active')]")).to be_empty
+        end
+      end
+
+      context "with `editor=rich-text` in query" do
+        let(env) { make_env("GET", "/editor?editor=rich-text") }
+
+        it "marks rich-text button as active" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=rich-text'][contains(@class,'active')]")).not_to be_empty
+        end
+
+        it "does not mark markdown button as active" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=markdown'][contains(@class,'active')]")).to be_empty
+        end
+      end
+
+      context "when object has rich text source content" do
+        before_each do
+          object.source = ActivityPub::Object::Source.new("<p>Test</p>", "text/html; editor=trix")
+        end
+
+        it "marks rich-text button as active" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=rich-text'][contains(@class,'active')]")).not_to be_empty
+        end
+
+        it "marks markdown button as disabled" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=markdown'][contains(@class,'disabled')]")).not_to be_empty
+        end
+      end
+
+      context "when object has markdown source content" do
+        before_each do
+          object.source = ActivityPub::Object::Source.new("# Test", "text/markdown")
+        end
+
+        it "marks markdown button as active" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=markdown'][contains(@class,'active')]")).not_to be_empty
+        end
+
+        it "marks rich-text button as disabled" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[@href='?editor=rich-text'][contains(@class,'disabled')]")).not_to be_empty
+        end
+      end
+
+      # Editor handling for optional settings
+
+      it "does not render name input" do
+        expect(subject.xpath_nodes("//form//input[@name='name']")).to be_empty
+      end
+
+      it "does not render summary input" do
+        expect(subject.xpath_nodes("//form//textarea[@name='summary']")).to be_empty
+      end
+
+      it "does not render sensitive checkbox" do
+        expect(subject.xpath_nodes("//form//input[@type='checkbox'][@name='sensitive']")).to be_empty
+      end
+
+      it "does not render canonical path input" do
+        expect(subject.xpath_nodes("//form//input[@name='canonical-path']")).to be_empty
+      end
+
+      it "renders inactive optional button" do
+        expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][not(contains(@class,'active'))][contains(text(),'Optional')]")).not_to be_empty
+      end
+
+      context "with `editor=optional` in query" do
+        let(env) { make_env("GET", "/editor?editor=optional") }
+
+        it "renders name input" do
+          expect(subject.xpath_nodes("//form//input[@name='name']").size).to eq(1)
+        end
+
+        it "renders summary input" do
+          expect(subject.xpath_nodes("//form//textarea[@name='summary']").size).to eq(1)
+        end
+
+        it "renders sensitive checkbox" do
+          expect(subject.xpath_nodes("//form//input[@type='checkbox'][@name='sensitive']").size).to eq(1)
+        end
+
+        it "renders canonical path input" do
+          expect(subject.xpath_nodes("//form//input[@name='canonical-path']").size).to eq(1)
+        end
+
+        it "renders active optional button" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][contains(@class,'active')][contains(text(),'Optional')]")).not_to be_empty
+        end
+      end
+
+      # Editor handling for special object types
+
+      context "given a note" do
+        let_build(:note, named: object, local: true)
+
+        it "does not render poll button" do
+          expect(subject.xpath_nodes("//a[contains(text(),'Include Poll')]")).to be_empty
+        end
+      end
+
+      context "given a question" do
+        let_build(:question, named: object, local: true)
+
+        it "renders poll button" do
+          expect(subject.xpath_nodes("//a[contains(text(),'Include Poll')]")).not_to be_empty
+        end
+
+        it "does not render poll inputs" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-options']")).to be_empty
+        end
+
+        context "with editor=poll in query" do
+          let(env) { make_env("GET", "/editor?editor=poll") }
+
+          it "renders poll option inputs" do
+            expect(subject.xpath_nodes("//form//input[@name='poll-options']").size).to eq(4)
+          end
+
+          it "renders poll duration select" do
+            expect(subject.xpath_nodes("//form//select[@name='poll-duration']")).not_to be_empty
+          end
+
+          it "renders multiple choice checkbox" do
+            expect(subject.xpath_nodes("//form//input[@type='checkbox'][@name='poll-multiple-choice']")).not_to be_empty
+          end
+
+          it "renders poll button" do
+            expect(subject.xpath_nodes("//a[contains(text(),'Include Poll')][contains(@class,'active')]")).not_to be_empty
+          end
+        end
+
+        context "with editor=rich-text in query" do
+          let(env) { make_env("GET", "/editor?editor=rich-text") }
+
+          it "does not render poll inputs" do
+            expect(subject.xpath_nodes("//form//input[@name='poll-options']")).to be_empty
+          end
+
+          it "renders poll button linking to editor=rich-text&editor=poll" do
+            expect(subject.xpath_nodes("//a[contains(text(),'Include Poll')]/@href").first).to eq("?editor=rich-text&editor=poll")
+          end
+        end
+
+        context "with editor=markdown in query" do
+          let(env) { make_env("GET", "/editor?editor=markdown") }
+
+          it "does not render poll inputs" do
+            expect(subject.xpath_nodes("//form//input[@name='poll-options']")).to be_empty
+          end
+
+          it "renders poll button linking to editor=markdown&editor=poll" do
+            expect(subject.xpath_nodes("//a[contains(text(),'Include Poll')]/@href").first).to eq("?editor=markdown&editor=poll")
+          end
+        end
+
+        context "with editor=rich-text&editor=poll in query" do
+          let(env) { make_env("GET", "/editor?editor=rich-text&editor=poll") }
+
+          it "renders poll inputs" do
+            expect(subject.xpath_nodes("//form//input[@name='poll-options']")).not_to be_empty
+          end
+
+          it "renders poll button linking to editor=rich-text" do
+            expect(subject.xpath_nodes("//a[contains(text(),'Include Poll')]/@href").first).to eq("?editor=rich-text")
+          end
+        end
+
+        context "with editor=markdown&editor=poll in query" do
+          let(env) { make_env("GET", "/editor?editor=markdown&editor=poll") }
+
+          it "renders poll inputs" do
+            expect(subject.xpath_nodes("//form//input[@name='poll-options']")).not_to be_empty
+          end
+
+          it "renders poll button linking to editor=markdown" do
+            expect(subject.xpath_nodes("//a[contains(text(),'Include Poll')]/@href").first).to eq("?editor=markdown")
+          end
+        end
+      end
+
+      context "given a draft question with poll" do
+        let(env) { make_env("GET", "/editor?editor=poll") }
+
+        let_build(:poll, closed_at: Time.unix(86400))
+        let_create!(:question, named: object, poll: poll, local: true, published: nil)
+
+        it "renders poll duration select" do
+          expect(subject.xpath_nodes("//form//select[@name='poll-duration']")).not_to be_empty
+        end
+
+        it "does not render hidden poll closed_at input" do
+          expect(subject.xpath_nodes("//form//input[@type='hidden'][@name='poll-duration']")).to be_empty
+        end
+
+        it "does not render disabled closed_at input" do
+          expect(subject.xpath_nodes("//form//input[@type='text'][@disabled]")).to be_empty
+        end
+
+        it "does not disable option fields" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-options']/parent::div[contains(@class,'disabled')]")).to be_empty
+        end
+
+        it "does not disable multiple choice field" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-multiple-choice']/parent::div/parent::div[contains(@class,'disabled')]")).to be_empty
+        end
+      end
+
+      context "given a published question with poll" do
+        let(env) { make_env("GET", "/editor?editor=poll") }
+
+        let(duration) { 259200 }
+        let(closed_at) { duration.seconds.from_now }
+
+        let_build(:poll, closed_at: Time.unix(duration))
+        let_create!(:question, named: object, poll: poll, local: true, published: 1.day.ago)
+
+        it "does not render poll duration select" do
+          expect(subject.xpath_nodes("//form//select[@name='poll-duration']")).to be_empty
+        end
+
+        it "renders hidden poll closed_at input" do
+          expect(subject.xpath_nodes("//form//input[@type='hidden'][@name='poll-duration']")).not_to be_empty
+          hidden_input = subject.xpath_nodes("//form//input[@type='hidden'][@name='poll-duration']/@value").first
+          expect(hidden_input.content.to_i64).to eq(closed_at.to_unix)
+        end
+
+        it "renders disabled text input with formatted date" do
+          expect(subject.xpath_nodes("//form//input[@type='text'][@disabled]")).not_to be_empty
+        end
+
+        it "disables option fields" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-options']/parent::div[contains(@class,'disabled')]").size).to eq(4)
+        end
+
+        it "disables multiple choice field" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-multiple-choice']/parent::div/parent::div[contains(@class,'disabled')]")).not_to be_empty
+        end
+      end
+
+      context "given a published question with poll without closed_at" do
+        let(env) { make_env("GET", "/editor?editor=poll") }
+
+        let_build(:poll, closed_at: nil)
+        let_create!(:question, named: object, poll: poll, local: true, published: 1.day.ago)
+
+        it "renders poll duration select" do
+          expect(subject.xpath_nodes("//form//select[@name='poll-duration']")).not_to be_empty
+        end
+
+        it "does not render hidden poll closed_at input" do
+          expect(subject.xpath_nodes("//form//input[@type='hidden'][@name='poll-duration']")).to be_empty
+        end
+
+        it "does not render disabled closed_at input" do
+          expect(subject.xpath_nodes("//form//input[@type='text'][@disabled]")).to be_empty
+        end
+
+        it "disables option fields" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-options']/parent::div[contains(@class,'disabled')]").size).to eq(4)
+        end
+
+        it "disables multiple choice field" do
+          expect(subject.xpath_nodes("//form//input[@name='poll-multiple-choice']/parent::div/parent::div[contains(@class,'disabled')]")).not_to be_empty
         end
       end
     end

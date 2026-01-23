@@ -54,7 +54,7 @@ Spectator.describe ObjectBuilder::QuestionBuilder do
     it "extracts poll duration" do
       params["poll-duration"] = "3600"
       result = subject.build(params, actor)
-      expect(poll.closed_at).to be_close(Time.utc + 3600.seconds, 2.seconds)
+      expect(poll.closed_at).to eq(Time.unix(3600))
     end
 
     it "extracts poll multiple choice" do
@@ -73,25 +73,28 @@ Spectator.describe ObjectBuilder::QuestionBuilder do
         :poll,
         question: question,
         options: [Poll::Option.new("Red", 0), Poll::Option.new("Blue", 0)],
-        closed_at: 1.hour.from_now,
+        closed_at: Time.unix(3600),
       )
 
       it "allows changing poll options" do
         params["poll-options"] = ["Yellow", "Purple", "Orange"]
         result = subject.build(params, actor, question)
         expect(result.valid?).to be_true
+        expect(poll.options.map(&.name)).to eq(["Yellow", "Purple", "Orange"])
       end
 
       it "allows changing poll duration" do
         params["poll-duration"] = "7200"
         result = subject.build(params, actor, question)
         expect(result.valid?).to be_true
+        expect(poll.closed_at).to eq(Time.unix(7200))
       end
 
       it "allows changing multiple_choice" do
         params["poll-multiple-choice"] = "true"
         result = subject.build(params, actor, question)
         expect(result.valid?).to be_true
+        expect(poll.multiple_choice).to be_true
       end
     end
 
@@ -113,21 +116,21 @@ Spectator.describe ObjectBuilder::QuestionBuilder do
         params["poll-options"] = ["Yellow", "Purple", "Orange"]
         result = subject.build(params, actor, question)
         expect(result.valid?).to be_false
-        expect(result.errors["poll_options"]).to contain("cannot be changed after publishing")
+        expect(result.errors["poll.options"]).to have(/cannot be changed/)
       end
 
       it "disallows changing poll duration" do
         params["poll-duration"] = "7200"
         result = subject.build(params, actor, question)
         expect(result.valid?).to be_false
-        expect(result.errors["poll_duration"]).to contain("cannot be changed after publishing")
+        expect(result.errors["poll.closed_at"]).to have(/cannot be changed/)
       end
 
       it "disallows changing multiple_choice" do
         params["poll-multiple-choice"] = "true"
         result = subject.build(params, actor, question)
         expect(result.valid?).to be_false
-        expect(result.errors["poll_multiple_choice"]).to contain("cannot be changed after publishing")
+        expect(result.errors["poll.multiple_choice"]).to have(/cannot be changed/)
       end
 
       it "allows editing question content" do

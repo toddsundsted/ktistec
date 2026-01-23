@@ -63,13 +63,17 @@ class ActorsController
           env.session.string("timeline_filters", filters.join(","))
         else
           env.session.delete("timeline_filters")
-          redirect "/actors/#{account.username}"
+          params = env.params.query.dup
+          params.delete_all("filters")
+          params_string = params.presence ? "?#{params}" : ""
+          redirect "/actors/#{account.username}#{params_string}"
         end
       else
         if (filters = env.session.string?("timeline_filters"))
           unless filters.empty?
-            query_string = %Q|filters=#{filters.split(",").join("&filters=")}|
-            redirect "/actors/#{account.username}?#{query_string}"
+            params = env.params.query.dup
+            filters.split(",").each { |filter| params.add("filters", filter) }
+            redirect "/actors/#{account.username}?#{params}"
           end
         end
       end

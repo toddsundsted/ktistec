@@ -25,9 +25,7 @@ module ObjectBuilder
       poll_multiple_choice = extract_boolean(params, "poll-multiple-choice")
 
       unless question.poll? && poll_options.nil?
-        validate_poll_changes(question, poll_options, poll_duration, poll_multiple_choice, result)
-
-        closed_at = poll_duration ? Time.utc + poll_duration.seconds : nil
+        closed_at = poll_duration ? Time.unix(poll_duration) : nil
         question.poll = build_poll(question, poll_options, closed_at, poll_multiple_choice)
       end
 
@@ -36,31 +34,7 @@ module ObjectBuilder
       result
     end
 
-    # Prevents editing poll settings after publishing.
-    #
-    # Published polls are immutable.
-    #
-    private def validate_poll_changes(
-      question : ActivityPub::Object::Question,
-      new_options : Array(String)?,
-      new_duration : Int32?,
-      new_multiple_choice : Bool,
-      result : BuildResult,
-    )
-      if (poll = question.poll?) && !question.draft?
-        if new_options && new_options != poll.options.map(&.name)
-          result.add_error("poll_options", "cannot be changed after publishing")
-        end
-        if new_duration
-          result.add_error("poll_duration", "cannot be changed after publishing")
-        end
-        if new_multiple_choice != poll.multiple_choice
-          result.add_error("poll_multiple_choice", "cannot be changed after publishing")
-        end
-      end
-    end
-
-    # Builds `Poll` object.
+    # Builds `Poll` objects.
     #
     private def build_poll(
       question : ActivityPub::Object::Question,
@@ -68,18 +42,17 @@ module ObjectBuilder
       closed_at : Time?,
       multiple_choice : Bool,
     ) : Poll
-      options = (options || [] of String).map do |option|
-        Poll::Option.new(
-          name: option.strip,
-          votes_count: 0,
-        )
-      end
-      Poll.new(
-        question: question,
-        options: options,
+      poll = question.poll? || Poll.new(question: question)
+      poll.assign(
+        options: (options || [] of String).map do |option|
+          Poll::Option.new(
+            name: option.strip,
+            votes_count: 0,
+          )
+        end,
         multiple_choice: multiple_choice,
-        voters_count: 0,
         closed_at: closed_at,
+        voters_count: 0,
       )
     end
   end

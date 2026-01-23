@@ -520,6 +520,17 @@ nav.ui.top.navigation.menu {
     }
 }
 
+/** editor toggle buttons **/
+.ui.form .editors .button.toggle {
+    width: 6rem;
+    &.active {
+        .semantic-active();
+        &:hover {
+            .semantic-active-hover();
+        }
+    }
+}
+
 /** markdown editor **/
 .ui.form textarea.markdown-editor {
     min-height: 4em;

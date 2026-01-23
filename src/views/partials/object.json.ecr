@@ -88,8 +88,14 @@
   "votersCount":<%= voters_count %>,
   <%- end -%>
   <%- if (closed_at = poll.closed_at) -%>
-  "endTime":<%= closed_at.to_rfc3339(fraction_digits: 3).to_json %>,
-  "closed":<%= closed_at.to_rfc3339(fraction_digits: 3).to_json %>,
+    <%- if object.draft? -%>
+      <%- absolute_closed_at = Time.utc + closed_at.to_unix.seconds -%>
+      "endTime":<%= absolute_closed_at.to_rfc3339(fraction_digits: 3).to_json %>,
+      "closed":<%= absolute_closed_at.to_rfc3339(fraction_digits: 3).to_json %>,
+    <%- else -%>
+      "endTime":<%= closed_at.to_rfc3339(fraction_digits: 3).to_json %>,
+      "closed":<%= closed_at.to_rfc3339(fraction_digits: 3).to_json %>,
+    <%- end -%>
   <%- end -%>
   <%- end -%>
   "type":<%= object.type.split("::").last.to_json %>,

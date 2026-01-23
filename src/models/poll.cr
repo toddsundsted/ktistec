@@ -26,20 +26,66 @@ class Poll
   @[Persistent]
   property options : Array(Option) { [] of Option }
   validates(options) do
-    return "can't be empty" if options.empty?
     return "must contain at least 2 options" unless options.size > 1
+    return "must be unique" unless options.map(&.name).uniq!.size == options.size
+    if !new_record? && changed?(:options)
+      if (q = question?) && q.local? && !q.draft?
+        if (s = @saved_record) && s.options.map(&.name) != options.map(&.name)
+          return "cannot be changed after publishing"
+        end
+      end
+    end
   end
 
   @[Persistent]
   property closed_at : Time?
+  validates(closed_at) do
+    if !new_record? && changed?(:closed_at)
+      if (q = question?) && q.local? && !q.draft?
+        if (s = @saved_record) && s.closed_at != closed_at
+          delta = ((d1 = s.closed_at) && (d2 = closed_at)) ? (d1 - d2).abs : nil
+          return "cannot be changed after publishing" unless delta && delta < 1.second
+        end
+      end
+    end
+  end
+
+  @[Persistent]
+  property multiple_choice : Bool = false
+  validates(multiple_choice) do
+    if !new_record? && changed?(:multiple_choice)
+      if (q = question?) && q.local? && !q.draft?
+        if (s = @saved_record) && s.multiple_choice != multiple_choice
+          return "cannot be changed after publishing"
+        end
+      end
+    end
+  end
 
   @[Persistent]
   property voters_count : Int32?
 
-  @[Persistent]
-  property multiple_choice : Bool = false
+  def before_save
+    # Convert relative `closed_at` to absolute time when associated
+    # question is published.
+    #
+    # Draft polls store `closed_at` as a relative duration (seconds
+    # from epoch) because users creating polls think in terms like
+    # "expires in 3 days" rather than absolute deadlines.
+    #
+    # When the question transitions from draft to published, this hook
+    # converts the relative duration to an absolute expiry time based
+    # on the current time.
+    #
+    # Only apply this conversion to local polls!
+    #
+    if (question = self.question?) && question.local? && question.changed?(:published) && question.published && (closed_at = self.closed_at)
+      self.closed_at = Time.utc + closed_at.to_unix.seconds
+    end
+  end
 
   def expired?
+    return false if question?.try(&.draft?)
     (closed_at = self.closed_at) ? closed_at < Time.utc : false
   end
 

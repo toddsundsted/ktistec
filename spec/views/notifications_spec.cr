@@ -198,10 +198,25 @@ Spectator.describe "notifications partial" do
     end
 
     context "given a poll expiry notification" do
+      let_create!(:question, name: "What is your favorite color?", attributed_to: actor)
+      let_create!(:notification_poll_expiry, owner: actor, question: question)
+
+      it "renders poll expiry message for author" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+          .to match(/A poll you created has ended/)
+      end
+
+      it "includes link to poll results" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//a/@href").first.text)
+          .to eq("/remote/objects/#{question.id}")
+      end
+    end
+
+    context "given a poll expiry notification" do
       let_create!(:question, name: "What is your favorite color?")
       let_create!(:notification_poll_expiry, owner: actor, question: question)
 
-      it "renders poll expiry message" do
+      it "renders poll expiry message for voter" do
         expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
           .to match(/A poll you voted in has ended/)
       end

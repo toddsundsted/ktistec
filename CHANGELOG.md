@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.2.8]
+### Added
+- Frontend support for creating polls.
+- Poll expiry notifications for poll authors.
+- Editor selection support for content type, polls, and optional metadata (name, summary).
+
+### Fixed
+- Poll `closed_at` handling for drafts and remote polls.
+
 ## [v3.2.7]
 ### Added
 - Backend support for creating polls.
@@ -616,6 +625,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.2.8]: https://github.com/toddsundsted/ktistec/compare/f00e9cc3...4e82f0da
 [v3.2.7]: https://github.com/toddsundsted/ktistec/compare/480c0c6f...c37790ba
 [v3.2.6]: https://github.com/toddsundsted/ktistec/compare/28674aa8...79e17af6
 [v3.2.5]: https://github.com/toddsundsted/ktistec/compare/2e91c174...20946f62

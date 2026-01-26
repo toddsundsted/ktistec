@@ -144,11 +144,13 @@ automatically rendered when present.
 
 ### Polls
 
-Ktistec supports creating, viewing, and voting on polls. Create polls
-when composing posts to gather feedback from your followers. When a
-post includes a poll, you can see the available options and vote
-directly from your timeline. Poll results are updated in real-time as
-votes are federated across the network.
+Ktistec supports creating, viewing, and voting on polls. When
+composing a post, you can add a poll with multiple options and set an
+expiration time. Create polls to gather feedback from your
+followers. When a post includes a poll, you can see the available
+options and vote directly from your timeline. Poll results are updated
+in real-time as votes are federated across the network.  Poll authors
+receive notifications when their polls expire.
 
 ### Control over comment visibility
 

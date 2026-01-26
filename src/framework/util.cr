@@ -41,7 +41,7 @@ module Ktistec
       "div", "figure",
       "blockquote",
       "pre",
-      "br"
+      "br",
     ]
 
     private def render_as_text(html, build)
@@ -83,46 +83,46 @@ module Ktistec
       "code", "pre",
       "img", "audio", "video", "source",
       "a",
-      "br"
+      "br",
     ]
 
     private ATTRIBUTES = {
       a: {
-        keep: ["href"],
+        keep:   ["href"],
         remote: [{"target", "_blank"}, {"rel", "external ugc"}],
-        local: [{"data-turbo-frame", "_top"}],
-        key: "href",
+        local:  [{"data-turbo-frame", "_top"}],
+        key:    "href",
       },
       img: {
-        keep: ["src", "alt", "title"],
-        all: [{"class", "ui image"}, {"loading", "lazy"}],
+        keep:  ["src", "alt", "title"],
+        all:   [{"class", "ui image"}, {"loading", "lazy"}],
         class: ["emoji"],
       },
       audio: {
         keep: ["src"],
-        all: [{"class", "ui audio"}, {"controls", nil}],
+        all:  [{"class", "ui audio"}, {"controls", nil}],
       },
       video: {
         keep: ["src"],
-        all: [{"class", "ui video"}, {"controls", nil}],
+        all:  [{"class", "ui video"}, {"controls", nil}],
       },
       source: {
         keep: ["src", "type"],
       },
       span: {
         class: ["invisible", "ellipsis"],
-      }
+      },
     }
 
     private STRIP = [
       "head",
       "script",
-      "style"
+      "style",
     ]
 
     private VOID = [
       "img",
-      "br"
+      "br",
     ]
 
     private def sanitize(html, build)
@@ -229,19 +229,19 @@ module Ktistec
       elsif distance <= 2.minutes + 29.seconds
         "2 minutes"
       elsif distance <= 44.minutes + 59.seconds
-        "#{distance.minutes} minutes"
+        "#{(distance.total_seconds / 60).round.to_i} minutes"
       elsif distance <= 1.hour + 29.minutes + 59.seconds
         "about 1 hour"
       elsif distance <= 2.hour + 29.minutes + 59.seconds
         "about 2 hours"
       elsif distance <= 24.hours - 1.second
-        "#{distance.hours} hours"
+        "#{(distance.total_minutes / 60).round.to_i} hours"
       elsif distance <= 36.hours - 1.second
         "about 1 day"
       elsif distance <= 60.hours - 1.second
         "about 2 days"
       elsif distance <= 30.days - 1.second
-        "#{distance.days} days"
+        "#{(distance.total_hours / 24).round.to_i} days"
       elsif distance <= 46.days - 1.second
         "about 1 month"
       elsif distance <= 77.days - 1.second

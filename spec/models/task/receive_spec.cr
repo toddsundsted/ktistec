@@ -314,7 +314,7 @@ Spectator.describe Task::Receive do
       let_build(:delete, named: :activity, actor_iri: receiver.iri, object_iri: "https://deleted", to: [receiver.iri])
 
       it "does not fail" do
-        expect{subject.perform}.not_to change{subject.failures}
+        expect { subject.perform }.not_to change { subject.failures }
       end
     end
   end

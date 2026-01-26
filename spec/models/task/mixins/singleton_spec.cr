@@ -7,7 +7,7 @@ class SingletonTask < Task
   include Task::Singleton
 
   def perform
-    # no-op
+    "no-op"
   ensure
     self.next_attempt_at = 1.day.from_now
   end

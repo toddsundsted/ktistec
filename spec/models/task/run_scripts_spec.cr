@@ -10,14 +10,14 @@ Spectator.describe Task::RunScripts do
 
   describe ".ensure_scheduled" do
     it "schedules a new task" do
-      expect{described_class.ensure_scheduled}.to change{described_class.count}.by(1)
+      expect { described_class.ensure_scheduled }.to change { described_class.count }.by(1)
     end
 
     context "given an existing task" do
       before_each { described_class.new.schedule }
 
       it "does not schedule a new task" do
-        expect{described_class.ensure_scheduled}.not_to change{described_class.count}
+        expect { described_class.ensure_scheduled }.not_to change { described_class.count }
       end
     end
   end
@@ -31,14 +31,14 @@ Spectator.describe Task::RunScripts do
     end
 
     it "cleans up its session" do
-      expect{subject.perform}.not_to change{account.reload!.sessions}
+      expect { subject.perform }.not_to change { account.reload!.sessions }
     end
 
     context "if there is no account yet" do
       before_each { account.destroy }
 
       it "does not raise an error" do
-        expect{subject.perform}.not_to raise_error
+        expect { subject.perform }.not_to raise_error
       end
 
       it "sets the next attempt at" do

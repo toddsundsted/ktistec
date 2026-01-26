@@ -12,7 +12,7 @@ Spectator.describe Relationship::Content::Approved do
   let(options) do
     {
       from_iri: from.iri,
-      to_iri: to.iri,
+      to_iri:   to.iri,
     }
   end
 

@@ -224,7 +224,7 @@ module Ktistec
         "statistics - subscriptions=#{subscriptions_count} slots=#{@subjects.size} free=#{@subjects.free} | #{subjects}"
       end
       Log.trace do
-         "[#{object_id}] notifying subscribers subject=#{subjects.join(" ")} value=#{value}"
+        "[#{object_id}] notifying subscribers subject=#{subjects.join(" ")} value=#{value}"
       end
       # look up the indexes that share the same name
       indexes =

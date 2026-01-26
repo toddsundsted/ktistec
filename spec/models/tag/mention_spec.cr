@@ -34,24 +34,24 @@ Spectator.describe Tag::Mention do
 
     it "strips the leading @" do
       new_tag = described_class.new(subject: object, name: "@foo@remote")
-      expect{new_tag.save}.to change{new_tag.name}.from("@foo@remote").to("foo@remote")
+      expect { new_tag.save }.to change { new_tag.name }.from("@foo@remote").to("foo@remote")
     end
 
     it "adds the host if missing" do
       new_tag = described_class.new(subject: object, href: "http://example.com/foo", name: "foo")
-      expect{new_tag.save}.to change{new_tag.name}.from("foo").to("foo@example.com")
+      expect { new_tag.save }.to change { new_tag.name }.from("foo").to("foo@example.com")
     end
 
     it "does not change the host if present" do
       new_tag = described_class.new(subject: object, href: "http://example.com/foo", name: "foo@remote")
-      expect{new_tag.save}.not_to change{new_tag.name}
+      expect { new_tag.save }.not_to change { new_tag.name }
     end
 
     pre_condition { expect(object.draft?).to be_true }
 
     it "does not change the count" do
       new_tag = described_class.new(subject: object, name: "@foo@remote")
-      expect{new_tag.save}.not_to change{Tag.mention_recount_count}
+      expect { new_tag.save }.not_to change { Tag.mention_recount_count }
     end
   end
 
@@ -62,7 +62,7 @@ Spectator.describe Tag::Mention do
 
     it "does not change the count" do
       new_tag = described_class.new(subject: object, name: "@foo@remote")
-      expect{new_tag.destroy}.not_to change{Tag.mention_recount_count}
+      expect { new_tag.destroy }.not_to change { Tag.mention_recount_count }
     end
   end
 

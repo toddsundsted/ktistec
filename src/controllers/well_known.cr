@@ -22,31 +22,31 @@ class WellKnownController
       message = {
         subject: "acct:#{username}@#{domain}",
         aliases: [
-          "#{host}/actors/#{username}"
+          "#{host}/actors/#{username}",
         ],
         links: [{
-                  rel: "self",
-                  href: "#{host}/actors/#{username}",
-                  type: Ktistec::Constants::CONTENT_TYPE_HEADER
-                }, {
-                  rel: "http://webfinger.net/rel/profile-page",
-                  href: "#{host}/@#{username}",
-                  type: "text/html"
-                }, {
-                  rel: "http://ostatus.org/schema/1.0/subscribe",
-                  template: "#{host}/authorize-interaction?uri={uri}"
-                }]
+          rel:  "self",
+          href: "#{host}/actors/#{username}",
+          type: Ktistec::Constants::CONTENT_TYPE_HEADER,
+        }, {
+          rel:  "http://webfinger.net/rel/profile-page",
+          href: "#{host}/@#{username}",
+          type: "text/html",
+        }, {
+          rel:      "http://ostatus.org/schema/1.0/subscribe",
+          template: "#{host}/authorize-interaction?uri={uri}",
+        }],
       }
     else
       message = {
         subject: domain,
         aliases: [
-          host
+          host,
         ],
         links: [{
-                  rel: "http://ostatus.org/schema/1.0/subscribe",
-                  template: "#{host}/authorize-interaction?uri={uri}"
-                }]
+          rel:      "http://ostatus.org/schema/1.0/subscribe",
+          template: "#{host}/authorize-interaction?uri={uri}",
+        }],
       }
     end
     env.response.content_type = "application/jrd+json"
@@ -59,9 +59,9 @@ class WellKnownController
   get "/.well-known/nodeinfo" do |env|
     message = {
       links: [{
-                rel: "http://nodeinfo.diaspora.software/ns/schema/2.1",
-                href: "#{host}/.well-known/nodeinfo/2.1"
-              }]
+        rel:  "http://nodeinfo.diaspora.software/ns/schema/2.1",
+        href: "#{host}/.well-known/nodeinfo/2.1",
+      }],
     }
     env.response.content_type = "application/jrd+json"
     env.response.headers.add("Access-Control-Allow-Origin", "*")
@@ -94,31 +94,31 @@ class WellKnownController
 
   get "/.well-known/nodeinfo/2.1" do |env|
     message = {
-      version: "2.1",
+      version:  "2.1",
       software: {
-        name: "ktistec",
-        version: Ktistec::VERSION,
+        name:       "ktistec",
+        version:    Ktistec::VERSION,
         repository: "https://github.com/toddsundsted/ktistec",
-        homepage: "https://ktistec.com/"
+        homepage:   "https://ktistec.com/",
       },
       protocols: [
-        "activitypub"
+        "activitypub",
       ],
       services: {
-        inbound: [] of String,
-        outbound: [] of String
+        inbound:  [] of String,
+        outbound: [] of String,
       },
       openRegistrations: false,
-      usage: {
+      usage:             {
         users: {
-          total: Account.count,
+          total:       Account.count,
           activeMonth: monthly_active_users,
         },
-        localPosts: local_posts
+        localPosts: local_posts,
       },
       metadata: {
-        siteName: Ktistec.site
-      }
+        siteName: Ktistec.site,
+      },
     }
     env.response.content_type = "application/jrd+json"
     env.response.headers.add("Access-Control-Allow-Origin", "*")
@@ -143,9 +143,9 @@ class WellKnownController
 
   get "/.well-known/oauth-protected-resource/*" do |env|
     message = {
-      resource: host,
-      authorization_servers: [host],
-      scopes_supported: ["mcp"],
+      resource:                 host,
+      authorization_servers:    [host],
+      scopes_supported:         ["mcp"],
       bearer_methods_supported: ["header"],
     }
     set_cors_headers
@@ -159,15 +159,15 @@ class WellKnownController
 
   get "/.well-known/oauth-authorization-server" do |env|
     message = {
-      issuer: host,
-      registration_endpoint: "#{host}/oauth/register",
-      authorization_endpoint: "#{host}/oauth/authorize",
-      token_endpoint: "#{host}/oauth/token",
-      scopes_supported: ["mcp"],
-      response_types_supported: ["code"],
-      grant_types_supported: ["authorization_code"],
+      issuer:                                host,
+      registration_endpoint:                 "#{host}/oauth/register",
+      authorization_endpoint:                "#{host}/oauth/authorize",
+      token_endpoint:                        "#{host}/oauth/token",
+      scopes_supported:                      ["mcp"],
+      response_types_supported:              ["code"],
+      grant_types_supported:                 ["authorization_code"],
       token_endpoint_auth_methods_supported: ["client_secret_basic"],
-      code_challenge_methods_supported: ["S256"],
+      code_challenge_methods_supported:      ["S256"],
     }
     set_cors_headers
     message.to_json

@@ -62,7 +62,7 @@ Spectator.describe Tag do
     let!(tag) { described_class.new(subject_iri: "http://remote/thing", name: "foobar") }
 
     it "increments the count" do
-      expect{tag.save}.to change{described_class.count(name: "foobar")}.by(1)
+      expect { tag.save }.to change { described_class.count(name: "foobar") }.by(1)
     end
   end
 
@@ -70,7 +70,7 @@ Spectator.describe Tag do
     let!(tag) { described_class.new(subject_iri: "http://remote/thing", name: "foobar").save }
 
     it "decrements the count" do
-      expect{tag.destroy}.to change{described_class.count(name: "foobar")}.by(-1)
+      expect { tag.destroy }.to change { described_class.count(name: "foobar") }.by(-1)
     end
   end
 

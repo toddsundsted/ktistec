@@ -103,7 +103,7 @@ class HTTP::Server::Context
   end
 end
 
-def env_factory(method, path)
+def make_env(method, path)
   HTTP::Server::Context.new(
     HTTP::Request.new(method, path),
     HTTP::Server::Response.new(IO::Memory.new)

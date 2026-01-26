@@ -11,7 +11,7 @@ Spectator.describe "actor" do
   describe "actor.html.slang" do
     let_create(:actor)
 
-    let(env) { env_factory("GET", "/actor/username") }
+    let(env) { make_env("GET", "/actor/username") }
 
     module ::Ktistec::ViewHelper
       def self.render_actor_html_slang(env, actor)
@@ -194,7 +194,7 @@ Spectator.describe "actor" do
   describe "actor.json.ecr" do
     let_create(:actor)
 
-    let(env) { env_factory("GET", "/actor/username") }
+    let(env) { make_env("GET", "/actor/username") }
 
     module ::Ktistec::ViewHelper
       def self.render_actor_json_ecr(env, actor)

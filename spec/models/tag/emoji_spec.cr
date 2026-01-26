@@ -33,17 +33,17 @@ Spectator.describe Tag::Emoji do
 
     it "strips colons" do
       new_tag = described_class.new(subject_iri: object.iri, name: ":batman:", href: "https://example.com/batman.png")
-      expect{new_tag.save}.to change{new_tag.name}.from(":batman:").to("batman")
+      expect { new_tag.save }.to change { new_tag.name }.from(":batman:").to("batman")
     end
 
     it "strips leading and trailing whitespace" do
       new_tag = described_class.new(subject_iri: object.iri, name: "  :batman:  ", href: "https://example.com/batman.png")
-      expect{new_tag.save}.to change{new_tag.name}.from("  :batman:  ").to("batman")
+      expect { new_tag.save }.to change { new_tag.name }.from("  :batman:  ").to("batman")
     end
 
     it "preserves case" do
       new_tag = described_class.new(subject_iri: object.iri, name: ":Batman:", href: "https://example.com/batman.png")
-      expect{new_tag.save}.to change{new_tag.name}.from(":Batman:").to("Batman")
+      expect { new_tag.save }.to change { new_tag.name }.from(":Batman:").to("Batman")
     end
 
     it "accepts name without colons" do

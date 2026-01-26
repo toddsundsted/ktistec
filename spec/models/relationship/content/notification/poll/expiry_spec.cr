@@ -11,8 +11,8 @@ Spectator.describe Relationship::Content::Notification::Poll::Expiry do
 
   let(options) do
     {
-      owner: owner,
-      question: question
+      owner:    owner,
+      question: question,
     }
   end
 

@@ -143,8 +143,8 @@ Spectator.describe SettingsController do
         pre_condition { expect(account.sessions.size).to eq(3) }
 
         it "invalidates existing sessions" do
-          expect { post "/settings/actor", headers, "password=foobarbaz1%21" }.
-            to change { account.reload!.sessions.size }.from(3).to(0)
+          expect { post "/settings/actor", headers, "password=foobarbaz1%21" }
+            .to change { account.reload!.sessions.size }.from(3).to(0)
         end
 
         it "redirects to the sign-in page" do
@@ -183,8 +183,8 @@ Spectator.describe SettingsController do
           before_each { actor.assign(name: "Foo Bar").save }
 
           it "updates the name if blank" do
-            expect{post "/settings/actor", headers, "name="}.
-              to change{actor.reload!.name}.from("Foo Bar").to("")
+            expect { post "/settings/actor", headers, "name=" }
+              .to change { actor.reload!.name }.from("Foo Bar").to("")
           end
         end
 
@@ -202,8 +202,8 @@ Spectator.describe SettingsController do
           before_each { account.assign(language: "en").save }
 
           it "does not update the language if blank" do
-            expect{post "/settings/actor", headers, "language="}.
-              not_to change{account.reload!.language}
+            expect { post "/settings/actor", headers, "language=" }
+              .not_to change { account.reload!.language }
           end
         end
 
@@ -216,8 +216,8 @@ Spectator.describe SettingsController do
           before_each { account.assign(timezone: "America/New_York").save }
 
           it "does not update the timezone if blank" do
-            expect{post "/settings/actor", headers, "timezone="}.
-              not_to change{account.reload!.timezone}
+            expect { post "/settings/actor", headers, "timezone=" }
+              .not_to change { account.reload!.timezone }
           end
         end
 
@@ -235,24 +235,24 @@ Spectator.describe SettingsController do
           before_each { account.assign(default_editor: "text/markdown").save }
 
           it "does not update the default_editor if not provided" do
-            expect{post "/settings/actor", headers, "name=Test"}.
-              not_to change{account.reload!.default_editor}
+            expect { post "/settings/actor", headers, "name=Test" }
+              .not_to change { account.reload!.default_editor }
           end
         end
 
         it "updates the password" do
-          expect{post "/settings/actor", headers, "password=foobarbaz1%21"}.
-            to change{account.reload!.encrypted_password}
+          expect { post "/settings/actor", headers, "password=foobarbaz1%21" }
+            .to change { account.reload!.encrypted_password }
         end
 
         it "does not update the password if blank" do
-          expect{post "/settings/actor", headers, "password="}.
-            not_to change{account.reload!.encrypted_password}
+          expect { post "/settings/actor", headers, "password=" }
+            .not_to change { account.reload!.encrypted_password }
         end
 
         it "does not update the password if empty" do
-          expect{post "/settings/actor", headers, "password=%20"}.
-            not_to change{account.reload!.encrypted_password}
+          expect { post "/settings/actor", headers, "password=%20" }
+            .not_to change { account.reload!.encrypted_password }
         end
 
         it "updates the image" do
@@ -309,11 +309,11 @@ Spectator.describe SettingsController do
         end
 
         it "updates the image" do
-          expect{post "/settings/actor", headers, form}.to change{actor.reload!.image}.from(nil)
+          expect { post "/settings/actor", headers, form }.to change { actor.reload!.image }.from(nil)
         end
 
         it "updates the icon" do
-          expect{post "/settings/actor", headers, form}.to change{actor.reload!.icon}.from(nil)
+          expect { post "/settings/actor", headers, form }.to change { actor.reload!.icon }.from(nil)
         end
 
         it "stores the image file" do
@@ -342,11 +342,11 @@ Spectator.describe SettingsController do
           end
 
           it "updates the image" do
-            expect{post "/settings/actor", headers, form}.to change{actor.reload!.image}.from("https://test.test/foo/bar.jpg")
+            expect { post "/settings/actor", headers, form }.to change { actor.reload!.image }.from("https://test.test/foo/bar.jpg")
           end
 
           it "updates the icon" do
-            expect{post "/settings/actor", headers, form}.to change{actor.reload!.icon}.from("https://test.test/foo/bar.jpg")
+            expect { post "/settings/actor", headers, form }.to change { actor.reload!.icon }.from("https://test.test/foo/bar.jpg")
           end
         end
       end
@@ -356,13 +356,13 @@ Spectator.describe SettingsController do
 
         let(json_string) {
           {
-            name: "Foo Bar",
-            summary: "Blah Blah",
+            name:     "Foo Bar",
+            summary:  "Blah Blah",
             password: "foobarbaz1!",
             language: "fr",
             timezone: "Etc/GMT",
-            image: "/foo/bar/baz",
-            icon: "/foo/bar/baz",
+            image:    "/foo/bar/baz",
+            icon:     "/foo/bar/baz",
           }.to_json
         }
 
@@ -380,8 +380,8 @@ Spectator.describe SettingsController do
           before_each { actor.assign(name: "Foo Bar").save }
 
           it "updates the name if blank" do
-            expect{post "/settings/actor", headers, %q|{"name":""}|}.
-              to change{actor.reload!.name}.from("Foo Bar").to("")
+            expect { post "/settings/actor", headers, %q|{"name":""}| }
+              .to change { actor.reload!.name }.from("Foo Bar").to("")
           end
         end
 
@@ -399,8 +399,8 @@ Spectator.describe SettingsController do
           before_each { account.assign(language: "en").save }
 
           it "does not update the language if blank" do
-            expect{post "/settings/actor", headers, %q|{"language":""}|}.
-              not_to change{account.reload!.language}
+            expect { post "/settings/actor", headers, %q|{"language":""}| }
+              .not_to change { account.reload!.language }
           end
         end
 
@@ -413,8 +413,8 @@ Spectator.describe SettingsController do
           before_each { account.assign(timezone: "America/New_York").save }
 
           it "does not update the timezone if blank" do
-            expect{post "/settings/actor", headers, %q|{"timezone":""}|}.
-              not_to change{account.reload!.timezone}
+            expect { post "/settings/actor", headers, %q|{"timezone":""}| }
+              .not_to change { account.reload!.timezone }
           end
         end
 
@@ -432,24 +432,24 @@ Spectator.describe SettingsController do
           before_each { account.assign(default_editor: "text/markdown").save }
 
           it "does not update the default_editor if not provided" do
-            expect{post "/settings/actor", headers, %q|{"name":"Test"}|}.
-              not_to change{account.reload!.default_editor}
+            expect { post "/settings/actor", headers, %q|{"name":"Test"}| }
+              .not_to change { account.reload!.default_editor }
           end
         end
 
         it "updates the password" do
-          expect{post "/settings/actor", headers, %q|{"password":"foobarbaz1!"}|}.
-            to change{account.reload!.encrypted_password}
+          expect { post "/settings/actor", headers, %q|{"password":"foobarbaz1!"}| }
+            .to change { account.reload!.encrypted_password }
         end
 
         it "does not update the password if blank" do
-          expect{post "/settings/actor", headers, %q|{"password":""}|}.
-            not_to change{account.reload!.encrypted_password}
+          expect { post "/settings/actor", headers, %q|{"password":""}| }
+            .not_to change { account.reload!.encrypted_password }
         end
 
         it "does not update the password if null" do
-          expect{post "/settings/actor", headers, %q|{"password":null}|}.
-            not_to change{account.reload!.encrypted_password}
+          expect { post "/settings/actor", headers, %q|{"password":null}| }
+            .not_to change { account.reload!.encrypted_password }
         end
 
         it "updates the image" do
@@ -511,59 +511,59 @@ Spectator.describe SettingsController do
         end
 
         it "does not change the host" do
-          expect {post "/settings/service", headers, "host=https%3A%2F%2Ffoo.bar%2F"}.
-            not_to change{Ktistec.settings.host}
+          expect { post "/settings/service", headers, "host=https%3A%2F%2Ffoo.bar%2F" }
+            .not_to change { Ktistec.settings.host }
         end
 
         it "changes the site" do
-          expect {post "/settings/service", headers, "site=Name"}.
-            to change{Ktistec.settings.site}
+          expect { post "/settings/service", headers, "site=Name" }
+            .to change { Ktistec.settings.site }
         end
 
         it "does not change the site" do
-          expect {post "/settings/service", headers, "site="}.
-            not_to change{Ktistec.settings.site}
+          expect { post "/settings/service", headers, "site=" }
+            .not_to change { Ktistec.settings.site }
         end
 
         it "changes the description" do
-          expect {post "/settings/service", headers, "description=<p>Server+description</p>"}.
-            to change{Ktistec.settings.description}
+          expect { post "/settings/service", headers, "description=<p>Server+description</p>" }
+            .to change { Ktistec.settings.description }
         end
 
         context "given a description" do
           before_each { Ktistec.settings.assign({"description" => "<p>Server description</p>"}).save }
 
           it "clears the description if blank" do
-            expect {post "/settings/service", headers, "description="}.
-              to change{Ktistec.settings.description}.from("<p>Server description</p>").to("")
+            expect { post "/settings/service", headers, "description=" }
+              .to change { Ktistec.settings.description }.from("<p>Server description</p>").to("")
           end
         end
 
         it "changes the footer" do
-          expect {post "/settings/service", headers, "footer=Copyright+Blah+Blah"}.
-            to change{Ktistec.settings.footer}
+          expect { post "/settings/service", headers, "footer=Copyright+Blah+Blah" }
+            .to change { Ktistec.settings.footer }
         end
 
         context "given a footer" do
           before_each { Ktistec.settings.assign({"footer" => "Copyright Blah Blah"}).save }
 
           it "clears the footer if blank" do
-            expect {post "/settings/service", headers, "footer="}.
-              to change{Ktistec.settings.footer}.from("Copyright Blah Blah").to("")
+            expect { post "/settings/service", headers, "footer=" }
+              .to change { Ktistec.settings.footer }.from("Copyright Blah Blah").to("")
           end
         end
 
         it "changes the image" do
-          expect {post "/settings/service", headers, "image=%2Ffoo%2Fbar%2Fbaz"}.
-            to change{Ktistec.settings.image}.from(nil).to("https://test.test/foo/bar/baz")
+          expect { post "/settings/service", headers, "image=%2Ffoo%2Fbar%2Fbaz" }
+            .to change { Ktistec.settings.image }.from(nil).to("https://test.test/foo/bar/baz")
         end
 
         context "given an image" do
           before_each { Ktistec.settings.assign({"image" => "https://test.test/foo/bar/baz"}).save }
 
           it "removes the image" do
-            expect {post "/settings/service", headers, "image="}.
-              to change{Ktistec.settings.image}.from("https://test.test/foo/bar/baz").to(nil)
+            expect { post "/settings/service", headers, "image=" }
+              .to change { Ktistec.settings.image }.from("https://test.test/foo/bar/baz").to(nil)
           end
         end
       end
@@ -587,7 +587,7 @@ Spectator.describe SettingsController do
         end
 
         it "updates the image" do
-          expect{post "/settings/service", headers, form}.to change{Ktistec.settings.image}.from(nil)
+          expect { post "/settings/service", headers, form }.to change { Ktistec.settings.image }.from(nil)
         end
 
         it "stores the image file" do
@@ -606,7 +606,7 @@ Spectator.describe SettingsController do
           end
 
           it "updates the image" do
-            expect{post "/settings/service", headers, form}.to change{Ktistec.settings.image}.from("https://test.test/foo/bar.jpg")
+            expect { post "/settings/service", headers, form }.to change { Ktistec.settings.image }.from("https://test.test/foo/bar.jpg")
           end
         end
       end
@@ -622,59 +622,59 @@ Spectator.describe SettingsController do
         end
 
         it "does not change the host" do
-           expect {post "/settings/service", headers, %q|{"host":"https://foo.bar/"}|}.
-            not_to change{Ktistec.settings.host}
+          expect { post "/settings/service", headers, %q|{"host":"https://foo.bar/"}| }
+            .not_to change { Ktistec.settings.host }
         end
 
         it "changes the site" do
-          expect {post "/settings/service", headers, %q|{"site":"Name"}|}.
-            to change{Ktistec.settings.site}
+          expect { post "/settings/service", headers, %q|{"site":"Name"}| }
+            .to change { Ktistec.settings.site }
         end
 
         it "does not change the site" do
-          expect {post "/settings/service", headers, %q|{"site":""}|}.
-            not_to change{Ktistec.settings.site}
+          expect { post "/settings/service", headers, %q|{"site":""}| }
+            .not_to change { Ktistec.settings.site }
         end
 
         it "changes the description" do
-          expect {post "/settings/service", headers, %q|{"description":"<p>Server description</p>"}|}.
-            to change{Ktistec.settings.description}
+          expect { post "/settings/service", headers, %q|{"description":"<p>Server description</p>"}| }
+            .to change { Ktistec.settings.description }
         end
 
         context "given a description" do
           before_each { Ktistec.settings.assign({"description" => "<p>Server description</p>"}).save }
 
           it "clears the description if blank" do
-            expect {post "/settings/service", headers, %q|{"description":""}|}.
-              to change{Ktistec.settings.description}.from("<p>Server description</p>").to("")
+            expect { post "/settings/service", headers, %q|{"description":""}| }
+              .to change { Ktistec.settings.description }.from("<p>Server description</p>").to("")
           end
         end
 
         it "changes the footer" do
-          expect {post "/settings/service", headers, %q|{"footer":"Copyright Blah Blah"}|}.
-            to change{Ktistec.settings.footer}
+          expect { post "/settings/service", headers, %q|{"footer":"Copyright Blah Blah"}| }
+            .to change { Ktistec.settings.footer }
         end
 
         context "given a footer" do
           before_each { Ktistec.settings.assign({"footer" => "Copyright Blah Blah"}).save }
 
           it "changes the footer if blank" do
-            expect {post "/settings/service", headers, %q|{"footer":""}|}.
-              to change{Ktistec.settings.footer}.from("Copyright Blah Blah").to("")
+            expect { post "/settings/service", headers, %q|{"footer":""}| }
+              .to change { Ktistec.settings.footer }.from("Copyright Blah Blah").to("")
           end
         end
 
         it "changes the image" do
-          expect {post "/settings/service", headers, %q|{"image":"/foo/bar/baz"}|}.
-            to change{Ktistec.settings.image}.from(nil).to("https://test.test/foo/bar/baz")
+          expect { post "/settings/service", headers, %q|{"image":"/foo/bar/baz"}| }
+            .to change { Ktistec.settings.image }.from(nil).to("https://test.test/foo/bar/baz")
         end
 
         context "given an image" do
           before_each { Ktistec.settings.assign({"image" => "https://test.test/foo/bar/baz"}).save }
 
           it "removes the image" do
-            expect {post "/settings/service", headers, %q|{"image":null}|}.
-              to change{Ktistec.settings.image}.from("https://test.test/foo/bar/baz").to(nil)
+            expect { post "/settings/service", headers, %q|{"image":null}| }
+              .to change { Ktistec.settings.image }.from("https://test.test/foo/bar/baz").to(nil)
           end
         end
       end
@@ -691,15 +691,15 @@ Spectator.describe SettingsController do
       sign_in(as: actor.username)
 
       it "schedules a terminate task" do
-        expect{post "/settings/terminate"}.to change{Task::Terminate.count(subject_iri: actor.iri, source_iri: actor.iri)}.by(1)
+        expect { post "/settings/terminate" }.to change { Task::Terminate.count(subject_iri: actor.iri, source_iri: actor.iri) }.by(1)
       end
 
       it "destroys the account" do
-        expect{post "/settings/terminate"}.to change{Account.count}.by(-1)
+        expect { post "/settings/terminate" }.to change { Account.count }.by(-1)
       end
 
       it "ends the session" do
-        expect{post "/settings/terminate"}.to change{Session.count}.by(-1)
+        expect { post "/settings/terminate" }.to change { Session.count }.by(-1)
       end
 
       it "redirects" do

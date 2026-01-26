@@ -61,7 +61,10 @@ turbo-frame.ui.segment.poll id="poll-#{question.id}" data-controller="poll" data
           span.poll-closed-time = closed_at.in(timezone).to_s("%b %d, %Y")
       - elsif (closed_at = poll.closed_at)
         span.poll-status.active
-          | Ends #{distance_of_time_in_words(closed_at - Time.utc)} from now
+          - if is_draft
+            | Ends #{distance_of_time_in_words(closed_at.to_unix.seconds)} from now
+          - else
+            | Ends #{distance_of_time_in_words(closed_at - Time.utc)} from now
       - if (voters_count = tallies[:voters_count]) && voters_count > 0
         span.poll-voters
           = pluralize(voters_count, "voter")

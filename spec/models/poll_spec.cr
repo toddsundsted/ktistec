@@ -17,16 +17,6 @@ Spectator.describe Poll do
       end
     end
 
-    context "when options is empty" do
-      let_build(:poll, options: [] of Poll::Option)
-
-      it "can't be empty" do
-        expect(poll.valid?).to be_false
-        expect(poll.errors.keys).to contain("options")
-        expect(poll.errors["options"]?).to contain("can't be empty")
-      end
-    end
-
     context "when options has one option" do
       let_build(:poll, options: [Poll::Option.new("yes")])
 
@@ -37,11 +27,151 @@ Spectator.describe Poll do
       end
     end
 
+    context "when options has duplicates" do
+      let_build(:poll, options: [Poll::Option.new("yes"), Poll::Option.new("yes")])
+
+      it "must have unique options" do
+        expect(poll.valid?).to be_false
+        expect(poll.errors.keys).to contain("options")
+        expect(poll.errors["options"]?).to contain("must be unique")
+      end
+    end
+
     context "multiple_choice is not specified" do
       let_build(:poll)
 
       it "defaults to false" do
         expect(poll.multiple_choice).to be_false
+      end
+    end
+
+    context "given a remote poll" do
+      let_build(:poll)
+      let_create(:question, poll: poll, local: false, published: 1.day.ago)
+
+      pre_condition { expect(question.local?).to be_false }
+
+      it "permits changing options" do
+        poll.assign(options: [Poll::Option.new("Maybe"), Poll::Option.new("Perhaps")])
+        expect(poll.valid?).to be_true
+      end
+
+      it "permits changing closed_at" do
+        poll.assign(closed_at: Time.utc + 7.days)
+        expect(poll.valid?).to be_true
+      end
+
+      it "permits changing multiple_choice" do
+        poll.assign(multiple_choice: !poll.multiple_choice)
+        expect(poll.valid?).to be_true
+      end
+    end
+
+    context "given a local draft poll" do
+      let_build(:poll)
+      let_create(:question, poll: poll, local: true, published: nil)
+
+      pre_condition { expect(question.draft?).to be_true }
+
+      it "permits changing options" do
+        poll.assign(options: [Poll::Option.new("Maybe"), Poll::Option.new("Perhaps")])
+        expect(poll.valid?).to be_true
+      end
+
+      it "permits changing closed_at" do
+        poll.assign(closed_at: Time.utc + 7.days)
+        expect(poll.valid?).to be_true
+      end
+
+      it "permits changing multiple_choice" do
+        poll.assign(multiple_choice: !poll.multiple_choice)
+        expect(poll.valid?).to be_true
+      end
+    end
+
+    context "given a local published poll" do
+      let_build(:poll)
+      let_create(:question, poll: poll, local: true, published: 1.day.ago)
+
+      pre_condition do
+        expect(question.local?).to be_true
+        expect(question.draft?).to be_false
+      end
+
+      it "permits changing options votes_count" do
+        updated_options = poll.options.map { |option| Poll::Option.new(option.name, option.votes_count + 1) }
+        poll.assign(options: updated_options)
+        expect(poll.valid?).to be_true
+      end
+
+      it "forbids changing options name" do
+        poll.assign(options: [Poll::Option.new("Maybe"), Poll::Option.new("Perhaps")])
+        expect(poll.valid?).to be_false
+        expect(poll.errors["options"]).to have(/cannot be changed/)
+      end
+
+      it "forbids changing closed_at" do
+        poll.assign(closed_at: Time.utc + 7.days)
+        expect(poll.valid?).to be_false
+        expect(poll.errors["closed_at"]).to have(/cannot be changed/)
+      end
+
+      it "forbids changing multiple_choice" do
+        poll.assign(multiple_choice: !poll.multiple_choice)
+        expect(poll.valid?).to be_false
+        expect(poll.errors["multiple_choice"]).to have(/cannot be changed/)
+      end
+    end
+  end
+
+  describe "before_save" do
+    context "when question is draft and saved" do
+      let_build(:poll, closed_at: Time.unix(86400))
+      let_build(:question, poll: poll, local: true, published: nil)
+
+      post_condition { expect(question.draft?).to be_true }
+
+      it "does not change `closed_at`" do
+        question.save
+        expect(poll.closed_at).to eq(Time.unix(86400))
+      end
+    end
+
+    context "when question is saved and becomes published" do
+      let_build(:poll, closed_at: Time.unix(86400))
+      let_build(:question, poll: poll, local: true, published: nil)
+
+      post_condition { expect(question.draft?).to be_false }
+
+      it "changes `closed_at`" do
+        question.assign(published: Time.utc).save
+        expect(poll.closed_at).to be_close(Time.utc + 86400.seconds, 2.seconds)
+      end
+    end
+
+    context "when question is published and is saved again" do
+      let_build(:poll, closed_at: Time.unix(86400))
+      let_create!(:question, poll: poll, local: true, published: 1.day.ago)
+
+      pre_condition { expect(question.draft?).to be_false }
+
+      it "does not change `closed_at`" do
+        expect { poll.assign(voters_count: 10).save }.not_to change { poll.closed_at }
+      end
+    end
+
+    context "when remote question is saved" do
+      let(closed_at) { 3.days.from_now }
+      let_build(:poll, closed_at: closed_at)
+      let_build(:question, poll: poll, local: false, published: Time.utc)
+
+      pre_condition do
+        expect(question.local?).to be_false
+        expect(question.new_record?).to be_true
+      end
+
+      it "preserves the `closed_at` value" do
+        expect { question.save }.not_to change { poll.closed_at }
       end
     end
   end
@@ -52,7 +182,7 @@ Spectator.describe Poll do
     it "stores and retrieves option data" do
       poll.options = [
         Poll::Option.new("Yes", 10),
-        Poll::Option.new("No", 5)
+        Poll::Option.new("No", 5),
       ]
       expect(poll.options.size).to eq(2)
       expect(poll.options[0].name).to eq("Yes")
@@ -78,6 +208,16 @@ Spectator.describe Poll do
     it "returns true when closed_at is in the past" do
       expect(past_poll.expired?).to be_true
     end
+
+    context "when poll is a draft" do
+      let_build(:question, poll: past_poll, local: true, published: nil)
+
+      pre_condition { expect(question.draft?).to be_true }
+
+      it "returns false even though closed is in the past" do
+        expect(past_poll.expired?).to be_false
+      end
+    end
   end
 
   describe "#adjust_votes" do
@@ -85,7 +225,7 @@ Spectator.describe Poll do
       :poll,
       options: [
         Poll::Option.new("Yes", 10),
-        Poll::Option.new("No", 5)
+        Poll::Option.new("No", 5),
       ],
       voters_count: 15
     )
@@ -118,7 +258,7 @@ Spectator.describe Poll do
       vote("Yes")
 
       before_each do
-        question.assign(updated_at: vote_times.max + 1.minute)  # don't save
+        question.assign(updated_at: vote_times.max + 1.minute) # don't save
       end
 
       it "does not adjust counts" do
@@ -135,7 +275,7 @@ Spectator.describe Poll do
         vote("Yes")
 
         before_each do
-          question.assign(updated_at: vote_times.min - 1.minute)  # don't save
+          question.assign(updated_at: vote_times.min - 1.minute) # don't save
         end
 
         it "adjusts counts" do
@@ -152,7 +292,7 @@ Spectator.describe Poll do
         vote("No")
 
         before_each do
-          question.assign(updated_at: vote_times.min - 1.minute)  # don't save
+          question.assign(updated_at: vote_times.min - 1.minute) # don't save
         end
 
         it "adjusts counts" do
@@ -169,7 +309,7 @@ Spectator.describe Poll do
         vote("Yes")
 
         before_each do
-          question.assign(updated_at: vote_times.min - 1.minute)  # don't save
+          question.assign(updated_at: vote_times.min - 1.minute) # don't save
         end
 
         it "adjusts counts" do

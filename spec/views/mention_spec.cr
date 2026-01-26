@@ -8,7 +8,7 @@ Spectator.describe "index.html.slang" do
 
   let(mention) { "actor@remote" }
 
-  let(env) { env_factory("GET", "/mentions/#{mention}") }
+  let(env) { make_env("GET", "/mentions/#{mention}") }
 
   before_each { env.params.url["mention"] = mention }
 

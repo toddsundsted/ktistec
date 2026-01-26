@@ -8,7 +8,7 @@ require "../spec_helper/controller"
 Spectator.describe "thread.html.slang" do
   setup_spec
 
-  let(env) { env_factory("GET", "/objects/123/thread") }
+  let(env) { make_env("GET", "/objects/123/thread") }
 
   let_create(:object)
 

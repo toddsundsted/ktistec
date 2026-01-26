@@ -188,9 +188,14 @@
             == actor_icon(attributed_to)
           .content
             .summary
-              | A poll
-              a<> href=remote_object_path(question) you voted in
-              | has ended.
+              - if actor == attributed_to
+                | A poll
+                a<> href=remote_object_path(question) you created
+                | has ended.
+              - else
+                | A poll
+                a<> href=remote_object_path(question) you voted in
+                | has ended.
             - if (content = question.preview)
               .extra.meta.truncated
                 == … content, 150

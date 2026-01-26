@@ -9,7 +9,7 @@ Spectator.describe "index.html.slang" do
 
   let(hashtag) { "hashtag" }
 
-  let(env) { env_factory("GET", "/tags/#{hashtag}") }
+  let(env) { make_env("GET", "/tags/#{hashtag}") }
 
   before_each { env.params.url["hashtag"] = hashtag }
 

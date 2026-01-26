@@ -11,7 +11,7 @@ module ObjectFactory
   def self.build_from_params(
     params : Hash(String, String | Array(String)),
     actor : ActivityPub::Actor,
-    object : ActivityPub::Object? = nil
+    object : ActivityPub::Object? = nil,
   ) : ObjectBuilder::BuildResult
     builder = detect_builder(params)
     builder.build(params, actor, object)

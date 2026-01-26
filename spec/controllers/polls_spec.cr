@@ -14,7 +14,7 @@ Spectator.describe PollsController do
     let_create!(:question)
     let_create!(:poll, question: question, options: [
       Poll::Option.new("Yes", 0),
-      Poll::Option.new("No", 0)
+      Poll::Option.new("No", 0),
     ])
 
     let(actor) { register.actor }

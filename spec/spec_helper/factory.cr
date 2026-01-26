@@ -112,13 +112,13 @@ def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **
     end
   clazz.new(
     **{
-      iri: iri,
-      inbox: "#{iri}/inbox",
-      followers: "#{iri}/followers",
-      following: "#{iri}/following",
-      featured: "#{iri}/featured",
-      pem_public_key: pem_public_key,
-      pem_private_key: pem_private_key
+      iri:             iri,
+      inbox:           "#{iri}/inbox",
+      followers:       "#{iri}/followers",
+      following:       "#{iri}/following",
+      featured:        "#{iri}/featured",
+      pem_public_key:  pem_public_key,
+      pem_private_key: pem_private_key,
     }.merge(options)
   )
 end
@@ -133,10 +133,10 @@ def object_factory(clazz = ActivityPub::Object, iri = nil, attributed_to_iri = n
   attributed_to = actor_factory(local: local) unless attributed_to_iri || attributed_to.nil? || attributed_to
   iri ||= "#{base_url(attributed_to_iri, attributed_to, local)}/objects/#{random_string}"
   clazz.new({
-    "iri" => iri,
+    "iri"               => iri,
     "attributed_to_iri" => attributed_to_iri,
-    "attributed_to" => attributed_to,
-    "visible" => visible
+    "attributed_to"     => attributed_to,
+    "visible"           => visible,
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
@@ -160,13 +160,13 @@ def activity_factory(clazz = ActivityPub::Activity, iri = nil, actor_iri = nil, 
   object_iri ||= object.iri if object.responds_to?(:iri)
   target_iri ||= target.iri if target.responds_to?(:iri)
   clazz.new({
-    "iri" => iri,
-    "actor_iri" => actor_iri,
-    "actor" => actor ? actor : nil,
+    "iri"        => iri,
+    "actor_iri"  => actor_iri,
+    "actor"      => actor ? actor : nil,
     "object_iri" => object_iri,
-    "object" => object ? object : nil,
+    "object"     => object ? object : nil,
     "target_iri" => target_iri,
-    "target" => target ? target : nil
+    "target"     => target ? target : nil,
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 

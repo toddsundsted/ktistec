@@ -107,7 +107,7 @@ class Task
             end
             Log.debug { sanitize_log_message(message) }
           end
-        rescue ex: OpenSSL::Error | IO::Error
+        rescue ex : OpenSSL::Error | IO::Error
           message = "#{ex.class}: #{ex.message}: #{inbox}"
           # track failure for recipients using this inbox
           inbox_recipients.each do |recipient|

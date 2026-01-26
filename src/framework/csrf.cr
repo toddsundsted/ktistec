@@ -30,16 +30,16 @@ module Ktistec
   #
   class CSRF < Kemal::Handler
     def initialize(
-         @header = "X-CSRF-Token",
-         @allowed_routes = [] of String,
-         @allowed_methods = %w(GET HEAD OPTIONS TRACE),
-         # these are the only content types/encodings that a browser
-         # should be able to submit cross-domain by default. see:
-         # https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests
-         @enforced_content_types = %w(application/x-www-form-urlencoded multipart/form-data text/plain),
-         @parameter_name = "authenticity_token",
-         @error : String | (HTTP::Server::Context -> String) = "Forbidden (CSRF)"
-       )
+      @header = "X-CSRF-Token",
+      @allowed_routes = [] of String,
+      @allowed_methods = %w(GET HEAD OPTIONS TRACE),
+      # these are the only content types/encodings that a browser
+      # should be able to submit cross-domain by default. see:
+      # https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests
+      @enforced_content_types = %w(application/x-www-form-urlencoded multipart/form-data text/plain),
+      @parameter_name = "authenticity_token",
+      @error : String | (HTTP::Server::Context -> String) = "Forbidden (CSRF)",
+    )
       setup
     end
 

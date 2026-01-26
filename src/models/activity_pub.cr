@@ -78,7 +78,7 @@ module ActivityPub
     end
   end
 
-  ## Helpers
+  # Helpers
 
   # Adds common filters to a query.
   #

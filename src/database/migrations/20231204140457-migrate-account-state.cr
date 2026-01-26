@@ -4,7 +4,7 @@ require "../../framework/database"
 
 extend Ktistec::Database::Migration
 
-struct Temp_20231204140457  # ameba:disable Naming/TypeNames
+struct Temp_20231204140457 # ameba:disable Naming/TypeNames
   include DB::Serializable
 
   struct State

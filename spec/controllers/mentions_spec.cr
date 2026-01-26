@@ -58,26 +58,26 @@ Spectator.describe MentionsController do
 
       it "renders the collection" do
         get "/mentions/bar%40remote", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).
-          to contain_exactly("object-#{object3.id}", "object-#{object1.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id"))
+          .to contain_exactly("object-#{object3.id}", "object-#{object1.id}")
       end
 
       it "renders the collection" do
         get "/mentions/bar%40remote", ACCEPT_JSON
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).
-          to contain_exactly(object3.iri, object1.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a)
+          .to contain_exactly(object3.iri, object1.iri)
       end
 
       it "renders the collection" do
         get "/mentions/foo%40remote", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).
-          to contain_exactly("object-#{object5.id}", "object-#{object4.id}", "object-#{object3.id}", "object-#{object2.id}", "object-#{object1.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id"))
+          .to contain_exactly("object-#{object5.id}", "object-#{object4.id}", "object-#{object3.id}", "object-#{object2.id}", "object-#{object1.id}")
       end
 
       it "renders the collection" do
         get "/mentions/foo%40remote", ACCEPT_JSON
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).
-          to contain_exactly(object5.iri, object4.iri, object3.iri, object2.iri, object1.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a)
+          .to contain_exactly(object5.iri, object4.iri, object3.iri, object2.iri, object1.iri)
       end
 
       it "returns 404 if no such mention exists" do
@@ -148,8 +148,8 @@ Spectator.describe MentionsController do
         end
 
         it "does not change the count of mention relationships" do
-          expect { post "/mentions/foo%40remote/follow" }.
-            not_to change { Relationship::Content::Follow::Mention.count(name: "foo@remote") }
+          expect { post "/mentions/foo%40remote/follow" }
+            .not_to change { Relationship::Content::Follow::Mention.count(name: "foo@remote") }
         end
 
         context "within a turbo-frame" do

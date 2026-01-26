@@ -24,8 +24,8 @@ Spectator.describe ObjectsController do
 
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html"}
   ACCEPT_JSON = HTTP::Headers{"Accept" => "application/json"}
-  FORM_DATA = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html", "Content-Type" => "application/x-www-form-urlencoded"}
-  JSON_DATA = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
+  FORM_DATA   = HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html, text/html", "Content-Type" => "application/x-www-form-urlencoded"}
+  JSON_DATA   = HTTP::Headers{"Accept" => "application/json", "Content-Type" => "application/json"}
 
   let(actor) { register.actor }
 
@@ -71,7 +71,7 @@ Spectator.describe ObjectsController do
   )
 
   describe ".get_object" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     it "returns visible objects" do
       result = ObjectsController.get_object(env, visible.iri)
@@ -183,7 +183,7 @@ Spectator.describe ObjectsController do
   end
 
   describe ".get_object_editable" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     it "returns nil" do
       result = ObjectsController.get_object_editable(env, visible.iri)
@@ -224,7 +224,7 @@ Spectator.describe ObjectsController do
   end
 
   describe ".get_object_approvable" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     it "returns nil" do
       result = ObjectsController.get_object_approvable(env, reply.iri)
@@ -286,13 +286,13 @@ Spectator.describe ObjectsController do
       end
 
       it "creates an object" do
-        expect{post "/objects", FORM_DATA, "content=foo+bar"}.
-          to change{ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri)}.by(1)
+        expect { post "/objects", FORM_DATA, "content=foo+bar" }
+          .to change { ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri) }.by(1)
       end
 
       it "creates an object" do
-        expect{post "/objects", JSON_DATA, %Q|{"content":"foo bar"}|}.
-          to change{ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri)}.by(1)
+        expect { post "/objects", JSON_DATA, %Q|{"content":"foo bar"}| }
+          .to change { ActivityPub::Object::Note.count(content: "foo bar", attributed_to_iri: actor.iri) }.by(1)
       end
 
       it "sets the default media type" do
@@ -352,6 +352,28 @@ Spectator.describe ObjectsController do
         it "renders an error message" do
           post "/objects", JSON_DATA, %Q|{"content":"foo bar","canonical-path":"foo/bar"}|
           expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
+        end
+
+        context "given an invalid language" do
+          it "returns 422 if validation fails" do
+            post "/objects", FORM_DATA, "content=foo+bar&language=invalid"
+            expect(response.status_code).to eq(422)
+          end
+
+          it "returns 422 if validation fails" do
+            post "/objects", JSON_DATA, %Q|{"content":"foo bar","language":"invalid"}|
+            expect(response.status_code).to eq(422)
+          end
+
+          it "renders an error message" do
+            post "/objects", FORM_DATA, "content=foo+bar&language=invalid"
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]")).not_to be_empty
+          end
+
+          it "renders an error message" do
+            post "/objects", JSON_DATA, %Q|{"content":"foo bar","language":"invalid"}|
+            expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
+          end
         end
       end
     end
@@ -414,7 +436,7 @@ Spectator.describe ObjectsController do
             url: "#{Ktistec.host}/attachments/#{visible.uid}/image2.jpg",
             media_type: "image/jpeg",
             caption: "Image 2",
-          )
+          ),
         ]).save
       end
 
@@ -791,37 +813,37 @@ Spectator.describe ObjectsController do
 
       context "given a draft post" do
         it "succeeds" do
-          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
           expect(response.status_code).to eq(200)
         end
 
         it "succeeds" do
-          get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_JSON
           expect(response.status_code).to eq(200)
         end
 
         it "renders a form with the object" do
-          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-#{draft.id}")
         end
 
         it "renders a button that submits to the outbox path" do
-          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//button[contains(text(),'Publish')]/@formaction").first).to eq("/actors/#{actor.username}/outbox")
         end
 
         it "renders a button that submits to the object update path" do
-          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//button[contains(text(),'Update')]/@formaction").first).to eq("/objects/#{draft.uid}")
         end
 
         it "renders a textarea with the draft content" do
-          get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("this is a test")
         end
 
         it "renders the content" do
-          get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+          get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_JSON
           expect(JSON.parse(response.body)["content"]).to eq("this is a test")
         end
 
@@ -829,12 +851,12 @@ Spectator.describe ObjectsController do
           before_each { draft.assign(name: "foo bar baz").save }
 
           it "renders an input with the name" do
-            get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='name']/@value").first).to eq("foo bar baz")
           end
 
           it "renders the name" do
-            get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["name"]).to eq("foo bar baz")
           end
         end
@@ -843,12 +865,12 @@ Spectator.describe ObjectsController do
           before_each { draft.assign(summary: "foo bar baz").save }
 
           it "renders a textarea with the summary" do
-            get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='summary']/text()").first).to eq("foo bar baz")
           end
 
           it "renders the summary" do
-            get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["summary"]).to eq("foo bar baz")
           end
         end
@@ -857,12 +879,12 @@ Spectator.describe ObjectsController do
           before_each { draft.assign(canonical_path: "/foo/bar/baz").save }
 
           it "renders an input with the canonical path" do
-            get "/objects/#{draft.uid}/edit", ACCEPT_HTML
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical-path']/@value").first).to eq("/foo/bar/baz")
           end
 
           it "renders the canonical path" do
-            get "/objects/#{draft.uid}/edit", ACCEPT_JSON
+            get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["canonical_path"]).to eq("/foo/bar/baz")
           end
         end
@@ -877,37 +899,37 @@ Spectator.describe ObjectsController do
         end
 
         it "succeeds" do
-          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
           expect(response.status_code).to eq(200)
         end
 
         it "succeeds" do
-          get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_JSON
           expect(response.status_code).to eq(200)
         end
 
         it "renders a form with the object" do
-          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-#{visible.id}")
         end
 
         it "renders a button that submits to the outbox path" do
-          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//button[contains(text(),'Update')]/@formaction").first).to eq("/actors/#{actor.username}/outbox")
         end
 
         it "does not render a button that submits to the object update path" do
-          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form[@id]//input[contains(@value,'Save')]/@formaction")).to be_empty
         end
 
         it "renders a textarea with the content" do
-          get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
           expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='content']/text()").first).to eq("foo bar baz")
         end
 
         it "renders the content" do
-          get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+          get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_JSON
           expect(JSON.parse(response.body)["content"]).to eq("foo bar baz")
         end
 
@@ -915,12 +937,12 @@ Spectator.describe ObjectsController do
           before_each { visible.assign(name: "foo bar baz").save }
 
           it "renders an input with the name" do
-            get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='name']/@value").first).to eq("foo bar baz")
           end
 
           it "renders the name" do
-            get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["name"]).to eq("foo bar baz")
           end
         end
@@ -929,12 +951,12 @@ Spectator.describe ObjectsController do
           before_each { visible.assign(summary: "foo bar baz").save }
 
           it "renders a textarea with the summary" do
-            get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='summary']/text()").first).to eq("foo bar baz")
           end
 
           it "renders the summary" do
-            get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["summary"]).to eq("foo bar baz")
           end
         end
@@ -943,13 +965,95 @@ Spectator.describe ObjectsController do
           before_each { visible.assign(canonical_path: "/foo/bar/baz").save }
 
           it "renders an input with the canonical path" do
-            get "/objects/#{visible.uid}/edit", ACCEPT_HTML
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
             expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='canonical-path']/@value").first).to eq("/foo/bar/baz")
           end
 
           it "renders the canonical path" do
-            get "/objects/#{visible.uid}/edit", ACCEPT_JSON
+            get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_JSON
             expect(JSON.parse(response.body)["canonical_path"]).to eq("/foo/bar/baz")
+          end
+        end
+      end
+
+      context "and with no query terms" do
+        # it always redirects
+        post_condition { expect(response.status_code).to eq(302) }
+
+        context "given a post with rich text content" do
+          let(source) do
+            ActivityPub::Object::Source.new(
+              content: "<div>This is <strong>rich</strong> text content.</div>",
+              media_type: "text/html; editor=trix",
+            )
+          end
+          let_create(:object, attributed_to: actor, source: source, local: true)
+
+          it "it redirects to the rich text editor" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text")
+          end
+        end
+
+        context "given a post with markdown content" do
+          let(source) do
+            ActivityPub::Object::Source.new(
+              content: "# Heading\n\nThis is **markdown** content.",
+              media_type: "text/markdown",
+            )
+          end
+          let_create(:object, attributed_to: actor, source: source, local: true)
+
+          it "it redirects to the markdown editor" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=markdown")
+          end
+        end
+
+        context "given a post with no source" do
+          let_create(:object, attributed_to: actor, local: true)
+
+          it "it redirects to the rich text editor" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text")
+          end
+        end
+
+        context "given a post with a name" do
+          let_create(:object, name: "Sample Title", attributed_to: actor, local: true)
+
+          it "it includes the optional settings param" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
+          end
+        end
+
+        context "given a post with a summary" do
+          let_create(:object, summary: "Sample Summary", attributed_to: actor, local: true)
+
+          it "it includes the optional settings param" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
+          end
+        end
+
+        context "given a post with a canonical path" do
+          let_create(:object, canonical_path: "/custom/path", attributed_to: actor, local: true)
+
+          it "it includes the optional settings param" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=optional")
+          end
+        end
+
+        context "given a question with a poll" do
+          let_build(:poll, options: [Poll::Option.new("Red", 0), Poll::Option.new("Blue", 0)])
+          let_create!(:question, named: object, attributed_to: actor, poll: poll, local: true)
+
+          it "it includes the poll editor param" do
+            get "/objects/#{object.uid}/edit", ACCEPT_JSON
+            expect(response.status_code).to eq(302)
+            expect(response.headers["Location"]).to eq("/objects/#{object.uid}/edit?editor=rich-text&editor=poll")
           end
         end
       end
@@ -997,53 +1101,53 @@ Spectator.describe ObjectsController do
       end
 
       it "changes the content" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "content=foo+bar"}.
-          to change{draft.reload!.content}
+        expect { post "/objects/#{draft.uid}", FORM_DATA, "content=foo+bar" }
+          .to change { draft.reload!.content }
       end
 
       it "changes the content" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar"}|}.
-          to change{draft.reload!.content}
+        expect { post "/objects/#{draft.uid}", JSON_DATA, %Q|{"content":"foo bar"}| }
+          .to change { draft.reload!.content }
       end
 
       it "updates the language" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "language=fr"}.
-          to change{draft.reload!.language}.to("fr")
+        expect { post "/objects/#{draft.uid}", FORM_DATA, "language=fr" }
+          .to change { draft.reload!.language }.to("fr")
       end
 
       it "updates the language" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"language":"fr"}|}.
-          to change{draft.reload!.language}.to("fr")
+        expect { post "/objects/#{draft.uid}", JSON_DATA, %Q|{"language":"fr"}| }
+          .to change { draft.reload!.language }.to("fr")
       end
 
       it "updates the name" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "name=foo+bar"}.
-          to change{draft.reload!.name}
+        expect { post "/objects/#{draft.uid}", FORM_DATA, "name=foo+bar" }
+          .to change { draft.reload!.name }
       end
 
       it "updates the name" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"name":"foo bar"}|}.
-          to change{draft.reload!.name}
+        expect { post "/objects/#{draft.uid}", JSON_DATA, %Q|{"name":"foo bar"}| }
+          .to change { draft.reload!.name }
       end
 
       it "updates the summary" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "summary=foo+bar"}.
-          to change{draft.reload!.summary}
+        expect { post "/objects/#{draft.uid}", FORM_DATA, "summary=foo+bar" }
+          .to change { draft.reload!.summary }
       end
 
       it "updates the summary" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"summary":"foo bar"}|}.
-          to change{draft.reload!.summary}
+        expect { post "/objects/#{draft.uid}", JSON_DATA, %Q|{"summary":"foo bar"}| }
+          .to change { draft.reload!.summary }
       end
 
       it "updates the canonical path" do
-        expect{post "/objects/#{draft.uid}", FORM_DATA, "canonical-path=%2Ffoo%2Fbar"}.
-          to change{draft.reload!.canonical_path}
+        expect { post "/objects/#{draft.uid}", FORM_DATA, "canonical-path=%2Ffoo%2Fbar" }
+          .to change { draft.reload!.canonical_path }
       end
 
       it "updates the canonical path" do
-        expect{post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical-path":"/foo/bar"}|}.
-          to change{draft.reload!.canonical_path}
+        expect { post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical-path":"/foo/bar"}| }
+          .to change { draft.reload!.canonical_path }
       end
 
       context "when validation fails" do
@@ -1065,6 +1169,28 @@ Spectator.describe ObjectsController do
         it "renders an error message" do
           post "/objects/#{draft.uid}", JSON_DATA, %Q|{"canonical-path":"foo/bar"}|
           expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
+        end
+
+        context "given an invalid language" do
+          it "returns 422 if validation fails" do
+            post "/objects/#{draft.uid}", FORM_DATA, "language=invalid"
+            expect(response.status_code).to eq(422)
+          end
+
+          it "returns 422 if validation fails" do
+            post "/objects/#{draft.uid}", JSON_DATA, %Q|{"language":"invalid"}|
+            expect(response.status_code).to eq(422)
+          end
+
+          it "renders an error message" do
+            post "/objects/#{draft.uid}", FORM_DATA, "language=invalid"
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]")).not_to be_empty
+          end
+
+          it "renders an error message" do
+            post "/objects/#{draft.uid}", JSON_DATA, %Q|{"language":"invalid"}|
+            expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
+          end
         end
       end
 
@@ -1102,13 +1228,13 @@ Spectator.describe ObjectsController do
       end
 
       it "deletes the object" do
-        expect{delete "/objects/#{draft.uid}", FORM_DATA}.
-          to change{ActivityPub::Object.count(id: draft.id)}.by(-1)
+        expect { delete "/objects/#{draft.uid}", FORM_DATA }
+          .to change { ActivityPub::Object.count(id: draft.id) }.by(-1)
       end
 
       it "deletes the object" do
-        expect{delete "/objects/#{draft.uid}", JSON_DATA}.
-          to change{ActivityPub::Object.count(id: draft.id)}.by(-1)
+        expect { delete "/objects/#{draft.uid}", JSON_DATA }
+          .to change { ActivityPub::Object.count(id: draft.id) }.by(-1)
       end
 
       it "returns 404 if not a draft" do
@@ -1546,8 +1672,8 @@ Spectator.describe ObjectsController do
       end
 
       it "approves the object" do
-        expect{post "/remote/objects/#{reply.id}/approve"}.
-          to change{reply.approved_by?(actor)}
+        expect { post "/remote/objects/#{reply.id}/approve" }
+          .to change { reply.approved_by?(actor) }
       end
 
       context "but it's already approved" do
@@ -1596,8 +1722,8 @@ Spectator.describe ObjectsController do
       end
 
       it "unapproves the object" do
-        expect{post "/remote/objects/#{reply.id}/unapprove"}.
-          to change{reply.approved_by?(actor)}
+        expect { post "/remote/objects/#{reply.id}/unapprove" }
+          .to change { reply.approved_by?(actor) }
       end
 
       context "but it's already unapproved" do
@@ -1643,8 +1769,8 @@ Spectator.describe ObjectsController do
       end
 
       it "blocks the object" do
-        expect{post "/remote/objects/#{remote.id}/block"}.
-          to change{remote.reload!.blocked?}
+        expect { post "/remote/objects/#{remote.id}/block" }
+          .to change { remote.reload!.blocked? }
       end
 
       it "returns 404 if object does not exist" do
@@ -1671,8 +1797,8 @@ Spectator.describe ObjectsController do
       end
 
       it "unblocks the object" do
-        expect{post "/remote/objects/#{remote.id}/unblock"}.
-          to change{remote.reload!.blocked?}
+        expect { post "/remote/objects/#{remote.id}/unblock" }
+          .to change { remote.reload!.blocked? }
       end
 
       it "returns 404 if object does not exist" do
@@ -1748,20 +1874,20 @@ Spectator.describe ObjectsController do
         end
 
         it "does not change the count of follow relationships" do
-          expect{post "/remote/objects/#{visible.id}/follow"}.
-            not_to change{Relationship::Content::Follow::Thread.count(thread: visible.iri)}
+          expect { post "/remote/objects/#{visible.id}/follow" }
+            .not_to change { Relationship::Content::Follow::Thread.count(thread: visible.iri) }
         end
 
         it "does not change the count of fetch tasks" do
-          expect{post "/remote/objects/#{visible.id}/follow"}.
-            not_to change{Task::Fetch::Thread.count(thread: visible.iri)}
+          expect { post "/remote/objects/#{visible.id}/follow" }
+            .not_to change { Task::Fetch::Thread.count(thread: visible.iri) }
         end
 
         context "where the fetch is complete but has failed" do
           before_each { fetch_thread_task.assign(complete: true, backtrace: ["error"]).save }
 
           it "clears the backtrace" do
-            expect{post "/remote/objects/#{visible.id}/follow"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
+            expect { post "/remote/objects/#{visible.id}/follow" }.to change { fetch_thread_task.reload!.backtrace }.to(nil)
           end
         end
       end
@@ -1890,8 +2016,8 @@ Spectator.describe ObjectsController do
         let_create!(:bookmark_relationship, actor: actor, object: visible)
 
         it "is idempotent" do
-          expect{post "/remote/objects/#{visible.id}/bookmark"}.
-            not_to change{Relationship::Content::Bookmark.count(actor: actor, object: visible)}
+          expect { post "/remote/objects/#{visible.id}/bookmark" }
+            .not_to change { Relationship::Content::Bookmark.count(actor: actor, object: visible) }
         end
       end
 
@@ -1931,8 +2057,8 @@ Spectator.describe ObjectsController do
       end
 
       it "is idempotent" do
-        expect{delete "/remote/objects/#{visible.id}/bookmark"}.
-          not_to change{Relationship::Content::Bookmark.count(actor: actor, object: visible)}
+        expect { delete "/remote/objects/#{visible.id}/bookmark" }
+          .not_to change { Relationship::Content::Bookmark.count(actor: actor, object: visible) }
       end
 
       it "returns 404 if object is draft" do
@@ -1970,8 +2096,8 @@ Spectator.describe ObjectsController do
         let_create!(:pin_relationship, actor: actor, object: reply)
 
         it "is idempotent" do
-          expect{post "/remote/objects/#{reply.id}/pin"}.
-            not_to change{Relationship::Content::Pin.count(actor: actor, object: reply)}
+          expect { post "/remote/objects/#{reply.id}/pin" }
+            .not_to change { Relationship::Content::Pin.count(actor: actor, object: reply) }
         end
       end
 
@@ -2016,8 +2142,8 @@ Spectator.describe ObjectsController do
       end
 
       it "is idempotent" do
-        expect{delete "/remote/objects/#{reply.id}/pin"}.
-          not_to change{Relationship::Content::Pin.count(actor: actor, object: reply)}
+        expect { delete "/remote/objects/#{reply.id}/pin" }
+          .not_to change { Relationship::Content::Pin.count(actor: actor, object: reply) }
       end
 
       it "returns 403 if object is not attributed to actor" do
@@ -2099,20 +2225,20 @@ Spectator.describe ObjectsController do
         end
 
         it "does not change the count of follow relationships" do
-          expect{post "/remote/objects/#{visible.id}/fetch/start"}.
-            not_to change{Relationship::Content::Follow::Thread.count(thread: visible.iri)}
+          expect { post "/remote/objects/#{visible.id}/fetch/start" }
+            .not_to change { Relationship::Content::Follow::Thread.count(thread: visible.iri) }
         end
 
         it "does not change the count of fetch tasks" do
-          expect{post "/remote/objects/#{visible.id}/fetch/start"}.
-            not_to change{Task::Fetch::Thread.count(thread: visible.iri)}
+          expect { post "/remote/objects/#{visible.id}/fetch/start" }
+            .not_to change { Task::Fetch::Thread.count(thread: visible.iri) }
         end
 
         context "where the fetch is complete but has failed" do
           before_each { fetch_thread_task.assign(complete: true, backtrace: ["error"]).save }
 
           it "clears the backtrace" do
-            expect{post "/remote/objects/#{visible.id}/fetch/start"}.to change{fetch_thread_task.reload!.backtrace}.to(nil)
+            expect { post "/remote/objects/#{visible.id}/fetch/start" }.to change { fetch_thread_task.reload!.backtrace }.to(nil)
           end
         end
       end
@@ -2237,8 +2363,8 @@ Spectator.describe ObjectsController do
       end
 
       it "does not create a translation" do
-        expect{post "/remote/objects/#{remote.id}/translation/create"}.
-          not_to change{remote.reload!.translations.size}
+        expect { post "/remote/objects/#{remote.id}/translation/create" }
+          .not_to change { remote.reload!.translations.size }
       end
 
       context "given a translator" do
@@ -2252,8 +2378,8 @@ Spectator.describe ObjectsController do
         after_each { ::Ktistec.clear_translator }
 
         it "does not create a translation" do
-          expect{post "/remote/objects/#{remote.id}/translation/create"}.
-            not_to change{remote.reload!.translations.size}
+          expect { post "/remote/objects/#{remote.id}/translation/create" }
+            .not_to change { remote.reload!.translations.size }
         end
 
         context "and an account and an object with the same primary language" do
@@ -2263,8 +2389,8 @@ Spectator.describe ObjectsController do
           end
 
           it "does not create a translation" do
-            expect{post "/remote/objects/#{remote.id}/translation/create"}.
-              not_to change{remote.reload!.translations.size}
+            expect { post "/remote/objects/#{remote.id}/translation/create" }
+              .not_to change { remote.reload!.translations.size }
           end
         end
 
@@ -2275,8 +2401,8 @@ Spectator.describe ObjectsController do
           end
 
           it "creates a translation" do
-            expect{post "/remote/objects/#{remote.id}/translation/create"}.
-              to change{remote.reload!.translations.size}.by(1)
+            expect { post "/remote/objects/#{remote.id}/translation/create" }
+              .to change { remote.reload!.translations.size }.by(1)
           end
         end
       end
@@ -2307,8 +2433,8 @@ Spectator.describe ObjectsController do
       end
 
       it "destroys the translation" do
-        expect{post "/remote/objects/#{remote.id}/translation/clear"}.
-          to change{remote.reload!.translations.size}.by(-1)
+        expect { post "/remote/objects/#{remote.id}/translation/clear" }
+          .to change { remote.reload!.translations.size }.by(-1)
       end
 
       it "returns 404 if object does not exist" do

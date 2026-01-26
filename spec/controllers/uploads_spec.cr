@@ -22,16 +22,16 @@ Spectator.describe UploadsController do
   let(current_actor_id) { Global.account.try(&.actor.id) }
 
   describe ".get_upload" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     let(actor1) { register.actor }
     let(actor2) { register.actor }
 
     context "with path string" do
       it "returns nil for valid path string" do
-          result = UploadsController.get_upload(env, "/uploads/abc/def/ghi/#{actor1.id}.txt")
-          expect(result).to be_nil
-        end
+        result = UploadsController.get_upload(env, "/uploads/abc/def/ghi/#{actor1.id}.txt")
+        expect(result).to be_nil
+      end
 
       context "when authenticated" do
         sign_in(as: actor1.username)

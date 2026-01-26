@@ -15,6 +15,7 @@ Spectator.describe Task::DistributePollUpdates do
     attributed_to: actor,
     to: ["https://www.w3.org/ns/activitystreams#Public"],
     cc: [actor.followers.not_nil!],
+    published: Time.utc,
   )
   let_create!(
     :poll,
@@ -41,7 +42,7 @@ Spectator.describe Task::DistributePollUpdates do
     end
 
     context "given a remote question" do
-      let_create!(:question)  # remote by default
+      let_create!(:question) # remote by default
 
       it "does not create `Update`" do
         expect { distribute_poll_updates_task.perform }.not_to change { ActivityPub::Activity::Update.count }
@@ -82,7 +83,7 @@ Spectator.describe Task::DistributePollUpdates do
         end
 
         it "updates `updated_at`" do
-          expect { sleep 0.01.seconds ; distribute_poll_updates_task.perform }.to change { question.reload!.updated_at }
+          expect { sleep 0.01.seconds; distribute_poll_updates_task.perform }.to change { question.reload!.updated_at }
         end
 
         it "creates `Update`" do
@@ -135,7 +136,7 @@ Spectator.describe Task::DistributePollUpdates do
     context "when poll has expired" do
       vote(1, voter1, "Option A")
 
-      before_each { poll.assign(closed_at: 1.minute.ago).save }
+      before_each { poll.assign(closed_at: 1.minute.ago).save(skip_validation: true) }
 
       it "creates final `Update`" do
         expect { distribute_poll_updates_task.perform }.to change { ActivityPub::Activity::Update.count }.by(1)

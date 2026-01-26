@@ -10,7 +10,7 @@ class FooBarController
 
   skip_auth [
     "/foo/bar/id_param/:id",
-    "/foo/bar/iri_param/:id"
+    "/foo/bar/iri_param/:id",
   ]
 
   get "/foo/bar/id_param/:id" do |env|
@@ -72,16 +72,16 @@ Spectator.describe "helpers" do
 
   let(collection) { Ktistec::Util::PaginatedArray(Model).new }
 
-  ## HTML helpers
+  # HTML helpers
 
   PARSER_OPTIONS =
     XML::HTMLParserOptions::NOIMPLIED |
-    XML::HTMLParserOptions::NODEFDTD
+      XML::HTMLParserOptions::NODEFDTD
 
   describe "paginate" do
     let(query) { "" }
 
-    let(env) { env_factory("GET", "/#{query}") }
+    let(env) { make_env("GET", "/#{query}") }
 
     subject do
       begin
@@ -445,6 +445,69 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".normalize_params" do
+    context "given URI::Params" do
+      it "converts single values to strings" do
+        params = URI::Params.parse("name=Alice&age=30")
+        result = self.class.normalize_params(params)
+        expect(result["name"]).to eq("Alice")
+        expect(result["age"]).to eq("30")
+      end
+
+      it "omits empty values" do
+        params = URI::Params.parse("empty=")
+        result = self.class.normalize_params(params)
+        expect(result.has_key?("empty")).to be_false
+      end
+
+      it "converts multiple values to arrays" do
+        params = URI::Params.parse("tags=ruby&tags=crystal&tags=go")
+        result = self.class.normalize_params(params)
+        expect(result["tags"]).to eq(["ruby", "crystal", "go"])
+      end
+
+      it "omits empty values from arrays" do
+        params = URI::Params.parse("tags=ruby&tags=&tags=crystal&tags=&tags=go")
+        result = self.class.normalize_params(params)
+        expect(result["tags"]).to eq(["ruby", "crystal", "go"])
+      end
+    end
+
+    context "given Hash(String, JSON::Any::Type)" do
+      it "converts primitive values to strings" do
+        params = Hash(String, JSON::Any::Type){"name" => "Alice", "age" => 30_i64, "active" => true, "score" => 95_f64}
+        result = self.class.normalize_params(params)
+        expect(result["name"]).to eq("Alice")
+        expect(result["age"]).to eq("30")
+        expect(result["active"]).to eq("true")
+        expect(result["score"]).to eq("95.0")
+      end
+
+      it "omits null values" do
+        params = Hash(String, JSON::Any::Type){"empty" => nil}
+        result = self.class.normalize_params(params)
+        expect(result.has_key?("empty")).to be_false
+      end
+
+      it "converts arrays to arrays of strings" do
+        params = Hash(String, JSON::Any::Type){"tags" => [JSON::Any.new("ruby"), JSON::Any.new("crystal"), JSON::Any.new("go")]}
+        result = self.class.normalize_params(params)
+        expect(result["tags"]).to eq(["ruby", "crystal", "go"])
+      end
+
+      it "omits null values from arrays" do
+        params = Hash(String, JSON::Any::Type){"tags" => [JSON::Any.new("ruby"), JSON::Any.new(nil), JSON::Any.new("crystal"), JSON::Any.new(nil), JSON::Any.new("go")]}
+        result = self.class.normalize_params(params)
+        expect(result["tags"]).to eq(["ruby", "crystal", "go"])
+      end
+
+      it "raises error for nested objects" do
+        params = Hash(String, JSON::Any::Type){"user" => {"name" => JSON::Any.new("Alice")}}
+        expect { self.class.normalize_params(params) }.to raise_error(Exception)
+      end
+    end
+  end
+
   describe "activity_button" do
     subject do
       XML.parse_html(activity_button("/foobar", "https://object", "Zap", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }, PARSER_OPTIONS).document
@@ -622,7 +685,7 @@ Spectator.describe "helpers" do
   end
 
   describe "authenticity_token" do
-    let(env) { env_factory("GET", "/") }
+    let(env) { make_env("GET", "/") }
 
     subject do
       XML.parse_html(authenticity_token(env), PARSER_OPTIONS).document
@@ -1094,17 +1157,17 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## JSON helpers
+  # JSON helpers
 
   describe "activity_pub_collection" do
     let(query) { "" }
 
-    let(env) { env_factory("GET", "/#{query}") }
+    let(env) { make_env("GET", "/#{query}") }
 
     let(host) { Ktistec.settings.host }
 
     subject do
-      JSON.parse(String.build { |content_io| activity_pub_collection(collection) })  # ameba:disable Lint/UnusedArgument
+      JSON.parse(String.build { |content_io| activity_pub_collection(collection) }) # ameba:disable Lint/UnusedArgument
     end
 
     it "generates a JSON-LD document" do
@@ -1192,7 +1255,7 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## Task helpers
+  # Task helpers
 
   describe "task_status_line" do
     def_double :task,
@@ -1304,7 +1367,7 @@ Spectator.describe "helpers" do
         let(collection) do
           [
             new_double(:published_object, published: 50.hours.ago),
-            new_double(:published_object, published: 70.hours.ago)
+            new_double(:published_object, published: 70.hours.ago),
           ]
         end
 
@@ -1373,7 +1436,7 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## General purpose helpers
+  # General purpose helpers
 
   describe "host" do
     it "returns the host" do
@@ -1437,45 +1500,45 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## Pagination helpers
+  # Pagination helpers
 
   describe "pagination_params" do
     it "ensures page is at least 1" do
-      env = env_factory("GET", "/?page=0")
+      env = make_env("GET", "/?page=0")
       result = self.class.pagination_params(env)
       expect(result[:page]).to eq(1)
     end
 
     it "ignores negative page numbers" do
-      env = env_factory("GET", "/?page=-5")
+      env = make_env("GET", "/?page=-5")
       result = self.class.pagination_params(env)
       expect(result[:page]).to eq(1)
     end
 
     context "when user is not authenticated" do
       it "allows size up to 20" do
-        env = env_factory("GET", "/?page=2&size=20")
+        env = make_env("GET", "/?page=2&size=20")
         result = self.class.pagination_params(env)
         expect(result[:page]).to eq(2)
         expect(result[:size]).to eq(20)
       end
 
       it "limits size to 20" do
-        env = env_factory("GET", "/?page=2&size=21")
+        env = make_env("GET", "/?page=2&size=21")
         result = self.class.pagination_params(env)
         expect(result[:page]).to eq(2)
         expect(result[:size]).to eq(20)
       end
 
       it "uses default size of 10 when no size specified" do
-        env = env_factory("GET", "/?page=1")
+        env = make_env("GET", "/?page=1")
         result = self.class.pagination_params(env)
         expect(result[:page]).to eq(1)
         expect(result[:size]).to eq(10)
       end
 
       it "uses requested size when under the limit" do
-        env = env_factory("GET", "/?size=15")
+        env = make_env("GET", "/?size=15")
         result = self.class.pagination_params(env)
         expect(result[:page]).to eq(1)
         expect(result[:size]).to eq(15)
@@ -1486,28 +1549,28 @@ Spectator.describe "helpers" do
       sign_in
 
       it "allows size up to 1000" do
-        env = env_factory("GET", "/?page=3&size=1000")
+        env = make_env("GET", "/?page=3&size=1000")
         result = self.class.pagination_params(env)
         expect(result[:page]).to eq(3)
         expect(result[:size]).to eq(1000)
       end
 
       it "limits size to 1000" do
-        env = env_factory("GET", "/?size=1001")
+        env = make_env("GET", "/?size=1001")
         result = self.class.pagination_params(env)
         expect(result[:page]).to eq(1)
         expect(result[:size]).to eq(1000)
       end
 
       it "uses default size of 10 when no size specified" do
-        env = env_factory("GET", "/?page=1")
+        env = make_env("GET", "/?page=1")
         result = self.class.pagination_params(env)
         expect(result[:page]).to eq(1)
         expect(result[:size]).to eq(10)
       end
 
       it "uses requested size when under the limit" do
-        env = env_factory("GET", "/?size=500")
+        env = make_env("GET", "/?size=500")
         result = self.class.pagination_params(env)
         expect(result[:page]).to eq(1)
         expect(result[:size]).to eq(500)
@@ -1515,7 +1578,7 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## Path helpers
+  # Path helpers
 
   double :path_double do
     stub def id
@@ -1529,7 +1592,7 @@ Spectator.describe "helpers" do
 
   describe "back_path" do
     let(env) do
-      env_factory("GET", "/filters/17").tap do |env|
+      make_env("GET", "/filters/17").tap do |env|
         env.request.headers["Referer"] = "/back"
       end
     end
@@ -1571,7 +1634,7 @@ Spectator.describe "helpers" do
 
   describe "filter_path" do
     let(env) do
-      env_factory("GET", "/filters/17").tap do |env|
+      make_env("GET", "/filters/17").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1609,7 +1672,7 @@ Spectator.describe "helpers" do
 
   describe "remote_activity_path" do
     let(env) do
-      env_factory("GET", "/remote/activities/17").tap do |env|
+      make_env("GET", "/remote/activities/17").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1629,7 +1692,7 @@ Spectator.describe "helpers" do
 
   describe "activity_path" do
     let(env) do
-      env_factory("GET", "/activities/abc").tap do |env|
+      make_env("GET", "/activities/abc").tap do |env|
         env.params.url["id"] = "abc"
       end
     end
@@ -1649,7 +1712,7 @@ Spectator.describe "helpers" do
 
   describe "anchor" do
     let(env) do
-      env_factory("GET", "/17").tap do |env|
+      make_env("GET", "/17").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1675,7 +1738,7 @@ Spectator.describe "helpers" do
 
   describe "remote_object_path" do
     let(env) do
-      env_factory("GET", "/remote/objects/17").tap do |env|
+      make_env("GET", "/remote/objects/17").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1695,7 +1758,7 @@ Spectator.describe "helpers" do
 
   describe "object_path" do
     let(env) do
-      env_factory("GET", "/objects/abc").tap do |env|
+      make_env("GET", "/objects/abc").tap do |env|
         env.params.url["id"] = "abc"
       end
     end
@@ -1715,7 +1778,7 @@ Spectator.describe "helpers" do
 
   describe "remote_thread_path" do
     let(env) do
-      env_factory("GET", "/remote/objects/17/thread").tap do |env|
+      make_env("GET", "/remote/objects/17/thread").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1735,7 +1798,7 @@ Spectator.describe "helpers" do
 
   describe "thread_path" do
     let(env) do
-      env_factory("GET", "/objects/abc/thread").tap do |env|
+      make_env("GET", "/objects/abc/thread").tap do |env|
         env.params.url["id"] = "abc"
       end
     end
@@ -1755,7 +1818,7 @@ Spectator.describe "helpers" do
 
   describe "edit_object_path" do
     let(env) do
-      env_factory("GET", "/objects/abc/edit").tap do |env|
+      make_env("GET", "/objects/abc/edit").tap do |env|
         env.params.url["id"] = "abc"
       end
     end
@@ -1775,7 +1838,7 @@ Spectator.describe "helpers" do
 
   describe "reply_path" do
     let(env) do
-      env_factory("GET", "/remote/objects/17/reply").tap do |env|
+      make_env("GET", "/remote/objects/17/reply").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1795,7 +1858,7 @@ Spectator.describe "helpers" do
 
   describe "approve_path" do
     let(env) do
-      env_factory("GET", "/remote/objects/17/approve").tap do |env|
+      make_env("GET", "/remote/objects/17/approve").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1815,7 +1878,7 @@ Spectator.describe "helpers" do
 
   describe "unapprove_path" do
     let(env) do
-      env_factory("GET", "/remote/objects/17/unapprove").tap do |env|
+      make_env("GET", "/remote/objects/17/unapprove").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1835,7 +1898,7 @@ Spectator.describe "helpers" do
 
   describe "block_object_path" do
     let(env) do
-      env_factory("GET", "/remote/objects/17/block").tap do |env|
+      make_env("GET", "/remote/objects/17/block").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1855,7 +1918,7 @@ Spectator.describe "helpers" do
 
   describe "unblock_object_path" do
     let(env) do
-      env_factory("GET", "/remote/objects/17/unblock").tap do |env|
+      make_env("GET", "/remote/objects/17/unblock").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1875,7 +1938,7 @@ Spectator.describe "helpers" do
 
   describe "object_remote_reply_path" do
     let(env) do
-      env_factory("GET", "/objects/abc/remote-reply").tap do |env|
+      make_env("GET", "/objects/abc/remote-reply").tap do |env|
         env.params.url["id"] = "abc"
       end
     end
@@ -1895,7 +1958,7 @@ Spectator.describe "helpers" do
 
   describe "object_remote_like_path" do
     let(env) do
-      env_factory("GET", "/objects/abc/remote-like").tap do |env|
+      make_env("GET", "/objects/abc/remote-like").tap do |env|
         env.params.url["id"] = "abc"
       end
     end
@@ -1915,7 +1978,7 @@ Spectator.describe "helpers" do
 
   describe "object_remote_share_path" do
     let(env) do
-      env_factory("GET", "/objects/abc/remote-share").tap do |env|
+      make_env("GET", "/objects/abc/remote-share").tap do |env|
         env.params.url["id"] = "abc"
       end
     end
@@ -1935,7 +1998,7 @@ Spectator.describe "helpers" do
 
   describe "create_translation_object_path" do
     let(env) do
-      env_factory("GET", "/remote/objects/17/translation/create").tap do |env|
+      make_env("GET", "/remote/objects/17/translation/create").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1955,7 +2018,7 @@ Spectator.describe "helpers" do
 
   describe "clear_translation_object_path" do
     let(env) do
-      env_factory("GET", "/remote/objects/17/translation/clear").tap do |env|
+      make_env("GET", "/remote/objects/17/translation/clear").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1975,7 +2038,7 @@ Spectator.describe "helpers" do
 
   describe "remote_actor_path" do
     let(env) do
-      env_factory("GET", "/remote/actors/17").tap do |env|
+      make_env("GET", "/remote/actors/17").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -1995,7 +2058,7 @@ Spectator.describe "helpers" do
 
   describe "actor_path" do
     let(env) do
-      env_factory("GET", "/actors/abc").tap do |env|
+      make_env("GET", "/actors/abc").tap do |env|
         env.params.url["username"] = "abc"
       end
     end
@@ -2015,7 +2078,7 @@ Spectator.describe "helpers" do
 
   describe "block_actor_path" do
     let(env) do
-      env_factory("GET", "/remote/actors/17/block").tap do |env|
+      make_env("GET", "/remote/actors/17/block").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -2035,7 +2098,7 @@ Spectator.describe "helpers" do
 
   describe "unblock_actor_path" do
     let(env) do
-      env_factory("GET", "/remote/actors/17/unblock").tap do |env|
+      make_env("GET", "/remote/actors/17/unblock").tap do |env|
         env.params.url["id"] = "17"
       end
     end
@@ -2055,7 +2118,7 @@ Spectator.describe "helpers" do
 
   describe "actor_relationships_path" do
     let(env) do
-      env_factory("GET", "/actors/abc/running").tap do |env|
+      make_env("GET", "/actors/abc/running").tap do |env|
         env.params.url["username"] = "abc"
         env.params.url["relationship"] = "running"
       end
@@ -2077,7 +2140,7 @@ Spectator.describe "helpers" do
 
   describe "outbox_path" do
     let(env) do
-      env_factory("GET", "/actors/abc/outbox").tap do |env|
+      make_env("GET", "/actors/abc/outbox").tap do |env|
         env.params.url["username"] = "abc"
       end
     end
@@ -2097,7 +2160,7 @@ Spectator.describe "helpers" do
 
   describe "inbox_path" do
     let(env) do
-      env_factory("GET", "/actors/abc/inbox").tap do |env|
+      make_env("GET", "/actors/abc/inbox").tap do |env|
         env.params.url["username"] = "abc"
       end
     end
@@ -2117,7 +2180,7 @@ Spectator.describe "helpers" do
 
   describe "actor_remote_follow_path" do
     let(env) do
-      env_factory("GET", "/actors/abc/remote-follow").tap do |env|
+      make_env("GET", "/actors/abc/remote-follow").tap do |env|
         env.params.url["username"] = "abc"
       end
     end
@@ -2137,7 +2200,7 @@ Spectator.describe "helpers" do
 
   describe "hashtag_path" do
     let(env) do
-      env_factory("GET", "/tags/abc").tap do |env|
+      make_env("GET", "/tags/abc").tap do |env|
         env.params.url["hashtag"] = "abc"
       end
     end
@@ -2157,7 +2220,7 @@ Spectator.describe "helpers" do
 
   describe "mention_path" do
     let(env) do
-      env_factory("GET", "/mentions/abc").tap do |env|
+      make_env("GET", "/mentions/abc").tap do |env|
         env.params.url["mention"] = "abc"
       end
     end
@@ -2181,7 +2244,7 @@ Spectator.describe "helpers" do
     end
   end
 
-  ## Theming helpers
+  # Theming helpers
 
   describe ".actor_type_class" do
     let_build(:person)

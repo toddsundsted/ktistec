@@ -15,7 +15,7 @@ Spectator.describe "object partials" do
   include Ktistec::Controller
 
   describe "label.html.slang" do
-    let(env) { env_factory("GET", "/object") }
+    let(env) { make_env("GET", "/object") }
 
     subject do
       begin
@@ -77,7 +77,7 @@ Spectator.describe "object partials" do
   end
 
   describe "content.html.slang" do
-    let(env) { env_factory("GET", "/object") }
+    let(env) { make_env("GET", "/object") }
 
     subject do
       begin
@@ -297,13 +297,13 @@ Spectator.describe "object partials" do
           before_each { object.assign(in_reply_to: original).save }
 
           it "renders a link back to the parent in thread view" do
-            expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]/@href").map(&.text)).
-              to contain_exactly("#object-#{original.id}")
+            expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]/@href").map(&.text))
+              .to contain_exactly("#object-#{original.id}")
           end
 
           it "renders a link back to the parent in thread view" do
-            expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]/@title").map(&.text)).
-              to contain_exactly("@remote")
+            expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]/@title").map(&.text))
+              .to contain_exactly("@remote")
           end
         end
 
@@ -722,7 +722,7 @@ Spectator.describe "object partials" do
   end
 
   describe "object_partial" do
-    let(env) { env_factory("GET", "/object") }
+    let(env) { make_env("GET", "/object") }
 
     subject do
       begin
@@ -781,16 +781,14 @@ Spectator.describe "object partials" do
   end
 
   describe "object.json.ecr" do
-    let(env) { env_factory("GET", "/object") }
+    let(env) { make_env("GET", "/object") }
 
     subject do
       JSON.parse(render "src/views/partials/object.json.ecr")
     end
 
     describe "Question with oneOf" do
-      let_build(
-        :actor, named: :author,
-      )
+      let_build(:actor, named: :author)
       let_build(
         :question, named: :object,
         attributed_to: author,
@@ -841,9 +839,7 @@ Spectator.describe "object partials" do
     end
 
     describe "Question with anyOf" do
-      let_build(
-        :actor, named: :author,
-      )
+      let_build(:actor, named: :author)
       let_build(
         :question, named: :object,
         attributed_to: author,
@@ -894,9 +890,7 @@ Spectator.describe "object partials" do
     end
 
     context "given a poll" do
-      let_build(
-        :actor, named: :author,
-      )
+      let_build(:actor, named: :author)
       let_build(
         :question, named: :object,
         attributed_to: author,

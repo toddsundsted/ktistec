@@ -81,8 +81,8 @@ Spectator.describe InboxesController do
     end
 
     it "does not save the activity on failure" do
-      expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld}.
-        not_to change{ActivityPub::Activity.count}
+      expect { post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld }
+        .not_to change { ActivityPub::Activity.count }
       expect(response.status_code).not_to eq(200)
     end
 
@@ -105,8 +105,8 @@ Spectator.describe InboxesController do
       end
 
       it "saves the activity" do
-        expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
-          to change{ActivityPub::Activity.count}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+          .to change { ActivityPub::Activity.count }.by(1)
       end
 
       it "is successful" do
@@ -125,8 +125,8 @@ Spectator.describe InboxesController do
         end
 
         it "saves the actor" do
-          expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
-            to change{ActivityPub::Actor.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+            .to change { ActivityPub::Actor.count }.by(1)
         end
 
         it "saves the actor's public key" do
@@ -150,8 +150,8 @@ Spectator.describe InboxesController do
           end
 
           it "saves the actor" do
-            expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
-              to change{ActivityPub::Actor.count}.by(1)
+            expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+              .to change { ActivityPub::Actor.count }.by(1)
           end
 
           it "saves the actor's public key" do
@@ -176,8 +176,8 @@ Spectator.describe InboxesController do
           end
 
           it "saves the actor" do
-            expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
-              to change{ActivityPub::Actor.count}.by(1)
+            expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+              .to change { ActivityPub::Actor.count }.by(1)
           end
 
           it "saves the actor's public key" do
@@ -214,8 +214,8 @@ Spectator.describe InboxesController do
       end
 
       it "saves the activity" do
-        expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
-          to change{ActivityPub::Activity.count}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+          .to change { ActivityPub::Activity.count }.by(1)
       end
 
       it "is successful" do
@@ -234,8 +234,8 @@ Spectator.describe InboxesController do
         end
 
         it "saves the actor" do
-          expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
-            to change{ActivityPub::Actor.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+            .to change { ActivityPub::Actor.count }.by(1)
         end
 
         it "saves the actor's public key" do
@@ -259,8 +259,8 @@ Spectator.describe InboxesController do
           end
 
           it "saves the actor" do
-            expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
-              to change{ActivityPub::Actor.count}.by(1)
+            expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+              .to change { ActivityPub::Actor.count }.by(1)
           end
 
           it "saves the actor's public key" do
@@ -285,8 +285,8 @@ Spectator.describe InboxesController do
           end
 
           it "saves the actor" do
-            expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
-              to change{ActivityPub::Actor.count}.by(1)
+            expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+              .to change { ActivityPub::Actor.count }.by(1)
           end
 
           it "saves the actor's public key" do
@@ -315,8 +315,8 @@ Spectator.describe InboxesController do
           end
 
           it "updates the actor's public key" do
-            expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
-              to change{ActivityPub::Actor.find(other.id).pem_public_key}
+            expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+              .to change { ActivityPub::Actor.find(other.id).pem_public_key }
           end
 
           it "is successful" do
@@ -360,8 +360,8 @@ Spectator.describe InboxesController do
       before_each { other.down! }
 
       it "marks the actor as up" do
-        expect{post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(true)}.
-          to change{other.reload!.up?}.to(true)
+        expect { post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(true) }
+          .to change { other.reload!.up? }.to(true)
       end
     end
 
@@ -402,26 +402,26 @@ Spectator.describe InboxesController do
 
       it "saves the object" do
         announce.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
-          to change{ActivityPub::Object.count(iri: note.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+          .to change { ActivityPub::Object.count(iri: note.iri) }.by(1)
       end
 
       it "puts the activity in the actor's inbox" do
         announce.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
-          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+          .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
       end
 
       it "puts the activity in the actor's notifications" do
         announce.object = note.assign(attributed_to: actor)
-        expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
-          to change{Notification.count(from_iri: actor.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+          .to change { Notification.count(from_iri: actor.iri) }.by(1)
       end
 
       it "puts the object in the actor's timeline" do
         announce.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
-          to change{Timeline.count(from_iri: actor.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+          .to change { Timeline.count(from_iri: actor.iri) }.by(1)
       end
 
       context "and the object's already in the timeline" do
@@ -429,8 +429,8 @@ Spectator.describe InboxesController do
 
         it "does not put the object in the actor's timeline" do
           announce.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
       end
 
@@ -443,8 +443,8 @@ Spectator.describe InboxesController do
 
         it "puts the object in the actor's timeline" do
           announce.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
-            to change{Timeline.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+            .to change { Timeline.count(from_iri: actor.iri) }.by(1)
         end
       end
 
@@ -456,8 +456,8 @@ Spectator.describe InboxesController do
 
         it "does not put the activity in the actor's inbox" do
           announce.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
-            not_to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         context "and the actor follows other" do
@@ -467,8 +467,8 @@ Spectator.describe InboxesController do
 
           it "puts the activity in the actor's inbox" do
             announce.object = note
-            expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
-              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+              .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
           end
         end
       end
@@ -480,8 +480,8 @@ Spectator.describe InboxesController do
 
         it "does not put the activity in the actor's inbox" do
           announce.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
-            not_to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         context "and the actor follows other" do
@@ -491,8 +491,8 @@ Spectator.describe InboxesController do
 
           it "puts the activity in the actor's inbox" do
             announce.object = note
-            expect{post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)}.
-              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+              .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
           end
         end
       end
@@ -538,26 +538,26 @@ Spectator.describe InboxesController do
 
       it "saves the object" do
         like.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)}.
-          to change{ActivityPub::Object.count(iri: note.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
+          .to change { ActivityPub::Object.count(iri: note.iri) }.by(1)
       end
 
       it "puts the activity in the actor's inbox" do
         like.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)}.
-          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
+          .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
       end
 
       it "puts the activity in the actor's notifications" do
         like.object = note.assign(attributed_to: actor)
-        expect{post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)}.
-          to change{Notification.count(from_iri: actor.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
+          .to change { Notification.count(from_iri: actor.iri) }.by(1)
       end
 
       it "does not put the object in the actor's timeline" do
         like.object = note.assign(attributed_to: actor)
-        expect{post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)}.
-          not_to change{Timeline.count(from_iri: actor.iri)}
+        expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
+          .not_to change { Timeline.count(from_iri: actor.iri) }
       end
     end
 
@@ -595,26 +595,26 @@ Spectator.describe InboxesController do
 
       it "saves the object" do
         dislike.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
-          to change{ActivityPub::Object.count(iri: note.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true) }
+          .to change { ActivityPub::Object.count(iri: note.iri) }.by(1)
       end
 
       it "puts the activity in the actor's inbox" do
         dislike.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
-          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true) }
+          .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
       end
 
       it "puts the activity in the actor's notifications" do
         dislike.object = note.assign(attributed_to: actor)
-        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
-          to change{Notification.count(from_iri: actor.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true) }
+          .to change { Notification.count(from_iri: actor.iri) }.by(1)
       end
 
       it "does not put the object in the actor's timeline" do
         dislike.object = note.assign(attributed_to: actor)
-        expect{post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)}.
-          not_to change{Timeline.count(from_iri: actor.iri)}
+        expect { post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true) }
+          .not_to change { Timeline.count(from_iri: actor.iri) }
       end
     end
 
@@ -654,26 +654,26 @@ Spectator.describe InboxesController do
 
       it "saves the object" do
         create.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-          to change{ActivityPub::Object.count(iri: note.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+          .to change { ActivityPub::Object.count(iri: note.iri) }.by(1)
       end
 
       it "puts the activity in the actor's inbox" do
         create.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+          .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
       end
 
       it "does not put the activity in the actor's notifications" do
         create.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-          not_to change{Notification.count(from_iri: actor.iri)}
+        expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+          .not_to change { Notification.count(from_iri: actor.iri) }
       end
 
       it "puts the object in the actor's timeline" do
         create.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-          to change{Timeline.count(from_iri: actor.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+          .to change { Timeline.count(from_iri: actor.iri) }.by(1)
       end
 
       context "and the object's already in the timeline" do
@@ -681,8 +681,8 @@ Spectator.describe InboxesController do
 
         it "does not put the object in the actor's timeline" do
           create.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
       end
 
@@ -695,8 +695,8 @@ Spectator.describe InboxesController do
 
         it "does not put the object in the actor's timeline" do
           create.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
       end
 
@@ -709,8 +709,8 @@ Spectator.describe InboxesController do
 
         it "puts the object in the actor's notifications" do
           create.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-            to change{Notification.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .to change { Notification.count(from_iri: actor.iri) }.by(1)
         end
       end
 
@@ -720,8 +720,8 @@ Spectator.describe InboxesController do
 
         it "puts the activity in the actor's notifications" do
           create.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-            to change{Notification.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .to change { Notification.count(from_iri: actor.iri) }.by(1)
         end
       end
 
@@ -733,8 +733,8 @@ Spectator.describe InboxesController do
 
         it "does not put the activity in the actor's inbox" do
           create.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-            not_to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         context "and the actor follows other" do
@@ -744,8 +744,8 @@ Spectator.describe InboxesController do
 
           it "puts the activity in the actor's inbox" do
             create.object = note
-            expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+              .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
           end
         end
       end
@@ -757,8 +757,8 @@ Spectator.describe InboxesController do
 
         it "does not put the activity in the actor's inbox" do
           create.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-            not_to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         context "and the actor follows other" do
@@ -768,8 +768,8 @@ Spectator.describe InboxesController do
 
           it "puts the activity in the actor's inbox" do
             create.object = note
-            expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+              .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
           end
         end
       end
@@ -785,8 +785,8 @@ Spectator.describe InboxesController do
         end
 
         it "saves the object" do
-          expect{post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)}.
-            to change{note.class.find?(note.iri)}.from(nil)
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .to change { note.class.find?(note.iri) }.from(nil)
         end
 
         it "succeeds" do
@@ -838,14 +838,14 @@ Spectator.describe InboxesController do
 
       it "updates the object" do
         update.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
-          to change{ActivityPub::Object.find(note.iri).content}
+        expect { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+          .to change { ActivityPub::Object.find(note.iri).content }
       end
 
       it "puts the activity in the actor's inbox" do
         update.object = note
-        expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
-          to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+        expect { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+          .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
       end
 
       it "is successful" do
@@ -865,8 +865,8 @@ Spectator.describe InboxesController do
         end
 
         it "updates the saved object" do
-          expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
-            to change{note.class.find(note.id).content}.to("content")
+          expect { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+            .to change { note.class.find(note.id).content }.to("content")
         end
 
         it "succeeds" do
@@ -884,8 +884,8 @@ Spectator.describe InboxesController do
 
         it "puts the object in the actor's notifications" do
           update.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
-            to change{Notification.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+            .to change { Notification.count(from_iri: actor.iri) }.by(1)
         end
       end
 
@@ -895,8 +895,8 @@ Spectator.describe InboxesController do
 
         it "puts the activity in the actor's notifications" do
           update.object = note
-          expect{post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)}.
-            to change{Notification.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+            .to change { Notification.count(from_iri: actor.iri) }.by(1)
         end
       end
     end
@@ -929,23 +929,23 @@ Spectator.describe InboxesController do
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", follow.to_json_ld(true), "application/json") }
 
         it "creates an unconfirmed follow relationship" do
-          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
-            to change{Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: false)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: false) }.by(1)
         end
 
         it "puts the activity in the actor's inbox" do
-          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
-            to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "puts the activity in the actor's notifications" do
-          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
-            to change{Notification.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Notification.count(from_iri: actor.iri) }.by(1)
         end
 
         it "does not put the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
 
         context "and activity isn't addressed" do
@@ -954,8 +954,8 @@ Spectator.describe InboxesController do
           end
 
           it "puts the activity in the actor's inbox" do
-            expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
-              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+              .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
           end
         end
       end
@@ -969,23 +969,23 @@ Spectator.describe InboxesController do
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", follow.to_json_ld(true), "application/json") }
 
         it "does not create a follow relationship" do
-          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
-            not_to change{Relationship::Social::Follow.count}
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .not_to change { Relationship::Social::Follow.count }
         end
 
         it "puts the activity in the actor's inbox" do
-          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
-            to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "does not put the activity in the actor's notifications" do
-          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
-            not_to change{Notification.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .not_to change { Notification.count(from_iri: actor.iri) }
         end
 
         it "does not put the object in the actor's timeline" do
-          expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
-            not_to change{Timeline.count(from_iri: actor.iri)}
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .not_to change { Timeline.count(from_iri: actor.iri) }
         end
 
         context "and activity isn't addressed" do
@@ -994,8 +994,8 @@ Spectator.describe InboxesController do
           end
 
           it "puts the activity in the actor's inbox" do
-            expect{post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)}.
-              to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+            expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+              .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
           end
         end
       end
@@ -1027,15 +1027,15 @@ Spectator.describe InboxesController do
       end
 
       it "accepts the relationship" do
-        expect{post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld}.
-          to change{relationship.reload!.confirmed}
+        expect { post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld }
+          .to change { relationship.reload!.confirmed }
         expect(response.status_code).to eq(200)
       end
 
       it "accepts the relationship even if previously received" do
         accept.save
-        expect{post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld}.
-          to change{relationship.reload!.confirmed}
+        expect { post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld }
+          .to change { relationship.reload!.confirmed }
         expect(response.status_code).to eq(200)
       end
     end
@@ -1066,15 +1066,15 @@ Spectator.describe InboxesController do
       end
 
       it "rejects the relationship" do
-        expect{post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld}.
-          to change{relationship.reload!.confirmed}
+        expect { post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld }
+          .to change { relationship.reload!.confirmed }
         expect(response.status_code).to eq(200)
       end
 
       it "rejects the relationship even if previously received" do
         reject.save
-        expect{post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld}.
-          to change{relationship.reload!.confirmed}
+        expect { post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld }
+          .to change { relationship.reload!.confirmed }
         expect(response.status_code).to eq(200)
       end
     end
@@ -1105,13 +1105,13 @@ Spectator.describe InboxesController do
         end
 
         it "puts the activity in the actor's inbox" do
-          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
-            to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "marks the announce as undone" do
-          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
-            to change{announce.reload!.undone_at}
+          expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+            .to change { announce.reload!.undone_at }
         end
 
         it "succeeds" do
@@ -1140,13 +1140,13 @@ Spectator.describe InboxesController do
         end
 
         it "puts the activity in the actor's inbox" do
-          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
-            to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "marks the like as undone" do
-          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
-            to change{like.reload!.undone_at}
+          expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+            .to change { like.reload!.undone_at }
         end
 
         it "succeeds" do
@@ -1187,18 +1187,18 @@ Spectator.describe InboxesController do
         end
 
         it "puts the activity in the actor's inbox" do
-          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
-            to change{Relationship::Content::Inbox.count(from_iri: actor.iri)}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
         end
 
         it "destroys the relationship" do
-          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
-            to change{Relationship::Social::Follow.count(from_iri: other.iri, to_iri: actor.iri)}.by(-1)
+          expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+            .to change { Relationship::Social::Follow.count(from_iri: other.iri, to_iri: actor.iri) }.by(-1)
         end
 
         it "marks the follow as undone" do
-          expect{post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld}.
-            to change{follow.reload!.undone_at}
+          expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+            .to change { follow.reload!.undone_at }
         end
 
         it "succeeds" do
@@ -1228,8 +1228,8 @@ Spectator.describe InboxesController do
         end
 
         it "marks the object as deleted" do
-          expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
-            to change{note.reload!.deleted_at}
+          expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+            .to change { note.reload!.deleted_at }
         end
 
         it "succeeds" do
@@ -1246,8 +1246,8 @@ Spectator.describe InboxesController do
           end
 
           it "removes the reply notification" do
-            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
-              to change{Notification.count(from_iri: actor.iri)}.by(-1)
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .to change { Notification.count(from_iri: actor.iri) }.by(-1)
           end
         end
 
@@ -1257,8 +1257,8 @@ Spectator.describe InboxesController do
           let_create!(:notification_mention, owner: actor, object: note)
 
           it "removes the mention notification" do
-            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
-              to change{Notification.count(from_iri: actor.iri)}.by(-1)
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .to change { Notification.count(from_iri: actor.iri) }.by(-1)
           end
         end
 
@@ -1270,8 +1270,8 @@ Spectator.describe InboxesController do
           before_each { delete.object = tombstone }
 
           it "marks the object as deleted" do
-            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)}.
-              to change{note.reload!.deleted_at}
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true) }
+              .to change { note.reload!.deleted_at }
           end
 
           it "succeeds" do
@@ -1289,8 +1289,8 @@ Spectator.describe InboxesController do
           end
 
           it "marks the object as deleted" do
-            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)}.
-              to change{note.reload!.deleted_at}
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true) }
+              .to change { note.reload!.deleted_at }
           end
 
           it "succeeds" do
@@ -1318,8 +1318,8 @@ Spectator.describe InboxesController do
         end
 
         it "marks the actor as deleted" do
-          expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
-            to change{other.reload!.deleted_at}
+          expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+            .to change { other.reload!.deleted_at }
         end
 
         it "succeeds" do
@@ -1336,8 +1336,8 @@ Spectator.describe InboxesController do
           end
 
           it "marks the actor as deleted" do
-            expect{post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld}.
-              to change{other.reload!.deleted_at}
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .to change { other.reload!.deleted_at }
           end
 
           it "succeeds" do
@@ -1363,10 +1363,10 @@ Spectator.describe InboxesController do
           # manually construct Announce{Create{Page}} like Lemmy sends
           {
             "@context" => "https://www.w3.org/ns/activitystreams",
-            "type" => "Announce",
-            "id" => announce.iri,
-            "actor" => community.iri,
-            "object" => JSON.parse(create.to_json_ld(recursive: true))
+            "type"     => "Announce",
+            "id"       => announce.iri,
+            "actor"    => community.iri,
+            "object"   => JSON.parse(create.to_json_ld(recursive: true)),
           }.to_json
         end
 
@@ -1377,18 +1377,18 @@ Spectator.describe InboxesController do
         end
 
         it "saves the inner Create activity" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            to change{ActivityPub::Activity::Create.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .to change { ActivityPub::Activity::Create.count }.by(1)
         end
 
         it "saves the Object" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            to change{ActivityPub::Object.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .to change { ActivityPub::Object.count }.by(1)
         end
 
         it "does not save the Announce wrapper" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            not_to change{ActivityPub::Activity::Announce.count}
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .not_to change { ActivityPub::Activity::Announce.count }
         end
 
         it "is successful" do
@@ -1405,10 +1405,10 @@ Spectator.describe InboxesController do
         let(wrapped_json) do
           {
             "@context" => "https://www.w3.org/ns/activitystreams",
-            "type" => "Announce",
-            "id" => announce.iri,
-            "actor" => community.iri,
-            "object" => JSON.parse(create.to_json_ld(recursive: true))
+            "type"     => "Announce",
+            "id"       => announce.iri,
+            "actor"    => community.iri,
+            "object"   => JSON.parse(create.to_json_ld(recursive: true)),
           }.to_json
         end
 
@@ -1418,13 +1418,13 @@ Spectator.describe InboxesController do
         end
 
         it "saves the inner Create activity" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            to change{ActivityPub::Activity::Create.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .to change { ActivityPub::Activity::Create.count }.by(1)
         end
 
         it "saves the Note" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            to change{ActivityPub::Object.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .to change { ActivityPub::Object.count }.by(1)
         end
 
         it "is successful" do
@@ -1441,10 +1441,10 @@ Spectator.describe InboxesController do
         let(wrapped_json) do
           {
             "@context" => "https://www.w3.org/ns/activitystreams",
-            "type" => "Announce",
-            "id" => announce.iri,
-            "actor" => community.iri,
-            "object" => JSON.parse(like.to_json_ld)
+            "type"     => "Announce",
+            "id"       => announce.iri,
+            "actor"    => community.iri,
+            "object"   => JSON.parse(like.to_json_ld),
           }.to_json
         end
 
@@ -1453,13 +1453,13 @@ Spectator.describe InboxesController do
         end
 
         it "saves the inner Like activity" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            to change{ActivityPub::Activity::Like.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .to change { ActivityPub::Activity::Like.count }.by(1)
         end
 
         it "does not save the Announce wrapper" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            not_to change{ActivityPub::Activity::Announce.count}
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .not_to change { ActivityPub::Activity::Announce.count }
         end
 
         it "is successful" do
@@ -1476,10 +1476,10 @@ Spectator.describe InboxesController do
         let(wrapped_json) do
           {
             "@context" => "https://www.w3.org/ns/activitystreams",
-            "type" => "Announce",
-            "id" => announce.iri,
-            "actor" => community.iri,
-            "object" => JSON.parse(dislike.to_json_ld)
+            "type"     => "Announce",
+            "id"       => announce.iri,
+            "actor"    => community.iri,
+            "object"   => JSON.parse(dislike.to_json_ld),
           }.to_json
         end
 
@@ -1488,13 +1488,13 @@ Spectator.describe InboxesController do
         end
 
         it "saves the inner Dislike activity" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            to change{ActivityPub::Activity::Dislike.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .to change { ActivityPub::Activity::Dislike.count }.by(1)
         end
 
         it "does not save the Announce wrapper" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            not_to change{ActivityPub::Activity::Announce.count}
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .not_to change { ActivityPub::Activity::Announce.count }
         end
 
         it "is successful" do
@@ -1511,10 +1511,10 @@ Spectator.describe InboxesController do
         let(wrapped_json) do
           {
             "@context" => "https://www.w3.org/ns/activitystreams",
-            "type" => "Announce",
-            "id" => announce.iri,
-            "actor" => community.iri,
-            "object" => JSON.parse(update.to_json_ld(recursive: true))
+            "type"     => "Announce",
+            "id"       => announce.iri,
+            "actor"    => community.iri,
+            "object"   => JSON.parse(update.to_json_ld(recursive: true)),
           }.to_json
         end
 
@@ -1524,8 +1524,8 @@ Spectator.describe InboxesController do
         end
 
         it "saves the inner Update activity" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            to change{ActivityPub::Activity::Update.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .to change { ActivityPub::Activity::Update.count }.by(1)
         end
 
         it "is successful" do
@@ -1542,10 +1542,10 @@ Spectator.describe InboxesController do
         let(wrapped_json) do
           {
             "@context" => "https://www.w3.org/ns/activitystreams",
-            "type" => "Announce",
-            "id" => announce.iri,
-            "actor" => community.iri,
-            "object" => JSON.parse(undo.to_json_ld)
+            "type"     => "Announce",
+            "id"       => announce.iri,
+            "actor"    => community.iri,
+            "object"   => JSON.parse(undo.to_json_ld),
           }.to_json
         end
 
@@ -1554,8 +1554,8 @@ Spectator.describe InboxesController do
         end
 
         it "saves the inner Undo activity" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            to change{ActivityPub::Activity::Undo.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .to change { ActivityPub::Activity::Undo.count }.by(1)
         end
 
         it "is successful" do
@@ -1565,7 +1565,7 @@ Spectator.describe InboxesController do
       end
 
       context "wrapped Delete activity" do
-        let_create(:actor, named: :lemmy_user_with_keys, iri: "https://lemmy.world/u/testuser", with_keys: true)  # WHY???????
+        let_create(:actor, named: :lemmy_user_with_keys, iri: "https://lemmy.world/u/testuser", with_keys: true)
         let_create(:object, attributed_to: lemmy_user_with_keys)
         let_build(:delete, actor: lemmy_user_with_keys, object: object)
         let_build(:announce, actor: community, object_iri: delete.iri)
@@ -1573,18 +1573,18 @@ Spectator.describe InboxesController do
         let(wrapped_json) do
           {
             "@context" => "https://www.w3.org/ns/activitystreams",
-            "type" => "Announce",
-            "id" => announce.iri,
-            "actor" => community.iri,
-            "object" => JSON.parse(delete.to_json_ld)
+            "type"     => "Announce",
+            "id"       => announce.iri,
+            "actor"    => community.iri,
+            "object"   => JSON.parse(delete.to_json_ld),
           }.to_json
         end
 
         let(headers) { Ktistec::Signature.sign(lemmy_user_with_keys, "https://test.test/actors/#{actor.username}/inbox", wrapped_json, "application/json") }
 
         it "saves the inner Delete activity" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            to change{ActivityPub::Activity::Delete.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .to change { ActivityPub::Activity::Delete.count }.by(1)
         end
 
         it "is successful" do
@@ -1600,10 +1600,10 @@ Spectator.describe InboxesController do
         let(wrapped_json) do
           {
             "@context" => "https://www.w3.org/ns/activitystreams",
-            "type" => "Announce",
-            "id" => announce.iri,
-            "actor" => community.iri,
-            "object" => JSON.parse(follow.to_json_ld)
+            "type"     => "Announce",
+            "id"       => announce.iri,
+            "actor"    => community.iri,
+            "object"   => JSON.parse(follow.to_json_ld),
           }.to_json
         end
 
@@ -1612,8 +1612,8 @@ Spectator.describe InboxesController do
         end
 
         it "does not save the inner Follow activity" do
-          expect{post "/actors/#{actor.username}/inbox", headers, wrapped_json}.
-            not_to change{ActivityPub::Activity::Follow.count}
+          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            .not_to change { ActivityPub::Activity::Follow.count }
         end
 
         it "returns 400" do
@@ -1628,13 +1628,13 @@ Spectator.describe InboxesController do
         let(wrapped_json) do
           {
             "@context" => "https://www.w3.org/ns/activitystreams",
-            "type" => "Announce",
-            "id" => announce.iri,
-            "actor" => community.iri,
-            "object" => {
+            "type"     => "Announce",
+            "id"       => announce.iri,
+            "actor"    => community.iri,
+            "object"   => {
               "type" => "Like",
               # missing required fields like id, actor, object
-            }
+            },
           }.to_json
         end
 
@@ -1660,8 +1660,8 @@ Spectator.describe InboxesController do
         let(json_ld) { announce.to_json_ld }
 
         it "saves the activity" do
-          expect{post "/actors/#{actor.username}/inbox", headers, json_ld}.
-            to change{ActivityPub::Activity::Announce.count}.by(1)
+          expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+            .to change { ActivityPub::Activity::Announce.count }.by(1)
         end
 
         it "is successful" do

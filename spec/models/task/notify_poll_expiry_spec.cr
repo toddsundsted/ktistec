@@ -19,8 +19,13 @@ Spectator.describe Task::NotifyPollExpiry do
     let_build(:notify_poll_expiry_task, question: question)
 
     context "with no voters" do
-      it "does not create any notifications" do
-        expect { notify_poll_expiry_task.perform }.not_to change { Expiry.count }
+      it "creates notification for the poll author" do
+        expect { notify_poll_expiry_task.perform }.to change { Expiry.count }.by(1)
+      end
+
+      it "creates notification for the author" do
+        notify_poll_expiry_task.perform
+        expect(Expiry.find?(owner: question.attributed_to, question: question)).not_to be_nil
       end
     end
 
@@ -39,27 +44,30 @@ Spectator.describe Task::NotifyPollExpiry do
     context "with one voter" do
       vote(1, voter1, "Option A")
 
-      it "creates one notification" do
-        expect { notify_poll_expiry_task.perform }.to change { Expiry.count }.by(1)
+      it "creates two notifications" do
+        expect { notify_poll_expiry_task.perform }.to change { Expiry.count }.by(2)
       end
 
       it "creates notification for the first voter" do
         notify_poll_expiry_task.perform
-        notification = Expiry.find(owner: voter1, question: question)
-        expect(notification.owner).to eq(voter1)
+        expect(Expiry.find?(owner: voter1, question: question)).not_to be_nil
+      end
+
+      it "creates notification for the author" do
+        notify_poll_expiry_task.perform
+        expect(Expiry.find?(owner: question.attributed_to, question: question)).not_to be_nil
       end
 
       context "and another voter" do
         vote(2, voter2, "Option B")
 
-        it "creates two notifications" do
-          expect { notify_poll_expiry_task.perform }.to change { Expiry.count }.by(2)
+        it "creates three notifications" do
+          expect { notify_poll_expiry_task.perform }.to change { Expiry.count }.by(3)
         end
 
         it "creates notification for the second voter" do
           notify_poll_expiry_task.perform
-          notification = Expiry.find(owner: voter2, question: question)
-          expect(notification.owner).to eq(voter2)
+          expect(Expiry.find?(owner: voter2, question: question)).not_to be_nil
         end
       end
     end
@@ -68,8 +76,20 @@ Spectator.describe Task::NotifyPollExpiry do
       vote(1, voter1, "Option A")
       vote(2, voter1, "Option B")
 
-      it "creates only one notification" do
-        expect { notify_poll_expiry_task.perform }.to change { Expiry.count }.by(1)
+      it "creates two notifications" do
+        expect { notify_poll_expiry_task.perform }.to change { Expiry.count }.by(2)
+      end
+
+      it "creates one notification for the voter" do
+        notify_poll_expiry_task.perform
+        notifications = Expiry.where(owner: voter1, question: question)
+        expect(notifications.size).to eq(1)
+      end
+
+      it "creates one notification for the author" do
+        notify_poll_expiry_task.perform
+        notifications = Expiry.where(owner: question.attributed_to, question: question)
+        expect(notifications.size).to eq(1)
       end
     end
 

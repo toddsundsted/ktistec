@@ -18,7 +18,7 @@ module ObjectBuilder
     abstract def build(
       params : Hash(String, String | Array(String)),
       actor : ActivityPub::Actor,
-      object : ActivityPub::Object? = nil
+      object : ActivityPub::Object? = nil,
     ) : BuildResult
 
     # Extracts a string parameter.
@@ -63,7 +63,7 @@ module ObjectBuilder
     protected def calculate_addressing(
       params : Hash(String, String | Array(String)),
       actor : ActivityPub::Actor,
-      in_reply_to : ActivityPub::Object? = nil
+      in_reply_to : ActivityPub::Object? = nil,
     ) : NamedTuple(visible: Bool, to: Set(String), cc: Set(String), audience: Array(String)?)
       visible, to, cc = Ktistec::ViewHelper.addressing(params, actor)
 
@@ -90,7 +90,7 @@ module ObjectBuilder
       addressing : NamedTuple(visible: Bool, to: Set(String), cc: Set(String), audience: Array(String)?),
       object : ActivityPub::Object,
       actor : ActivityPub::Actor,
-      in_reply_to : Object? = nil
+      in_reply_to : Object? = nil,
     )
       content = extract_string(params, "content") || ""
       media_type = extract_string(params, "media-type") || "text/html; editor=trix"
@@ -125,7 +125,7 @@ module ObjectBuilder
     #
     protected def validate_reply_to(
       in_reply_to_iri : String?,
-      result : BuildResult
+      result : BuildResult,
     ) : ActivityPub::Object?
       return nil unless in_reply_to_iri
       in_reply_to = ActivityPub::Object.find?(in_reply_to_iri)
@@ -141,7 +141,7 @@ module ObjectBuilder
     #
     protected def collect_model_errors(
       model : Ktistec::Model,
-      result : BuildResult
+      result : BuildResult,
     )
       unless model.valid?
         model.errors.each do |field, messages|

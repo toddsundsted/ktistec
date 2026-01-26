@@ -5,6 +5,7 @@ require "../models/account"
 require "../rules/content_rules"
 require "../models/task/deliver"
 require "../models/task/distribute_poll_updates"
+require "../models/task/notify_poll_expiry"
 require "../models/relationship/social/follow"
 
 class OutboxActivityProcessor
@@ -23,11 +24,11 @@ class OutboxActivityProcessor
   # - For delete: The object/actor being deleted must be local and owned by the account
   #
   def self.process(
-       account : Account,
-       activity : ActivityPub::Activity,
-       content_rules : ContentRules = ContentRules.new,
-       deliver_task_class : Task::Deliver.class = Task::Deliver
-     )
+    account : Account,
+    activity : ActivityPub::Activity,
+    content_rules : ContentRules = ContentRules.new,
+    deliver_task_class : Task::Deliver.class = Task::Deliver,
+  )
     content_rules.run do
       assert ContentRules::Outgoing.new(account.actor, activity)
     end
@@ -41,6 +42,17 @@ class OutboxActivityProcessor
             actor: activity.actor,
             question: object
           ).schedule(Task::DistributePollUpdates::CHECK_INTERVAL.from_now)
+        end
+        if object.local?
+          if (poll = object.poll?)
+            if (closed_at = poll.closed_at)
+              if closed_at > Time.utc
+                unless Task::NotifyPollExpiry.find?(question: object)
+                  Task::NotifyPollExpiry.new(source_iri: "", question: object).schedule(closed_at)
+                end
+              end
+            end
+          end
         end
       end
     when ActivityPub::Activity::Follow

@@ -216,7 +216,7 @@ Spectator.describe ActivityPub::Collection do
           ]
         }
       JSON
-      expect{described_class.from_json_ld(json)}.to raise_error(TypeCastError)
+      expect { described_class.from_json_ld(json) }.to raise_error(TypeCastError)
     end
   end
 
@@ -378,7 +378,7 @@ Spectator.describe ActivityPub::Collection do
           ]
         }
       JSON
-      expect{described_class.new.from_json_ld(json)}.to raise_error(TypeCastError)
+      expect { described_class.new.from_json_ld(json) }.to raise_error(TypeCastError)
     end
   end
 

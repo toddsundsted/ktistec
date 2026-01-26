@@ -1,8 +1,12 @@
-## Disabled
+Globs:
+  - "**/*.cr"
+  - "!lib"
 
-Lint/Formatting:
-  Description: Reports not formatted sources
-  Enabled: false
+Excluded:
+  - "src/views/**/*.slang"
+  - "src/views/**/*.ecr"
+
+## Disabled
 
 Lint/NotNil:
   Description: Identifies usage of `not_nil!` calls

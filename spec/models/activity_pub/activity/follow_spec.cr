@@ -87,13 +87,13 @@ Spectator.describe ActivityPub::Activity::Follow do
     it "validates the actor is local" do
       activity = subject.assign(actor: actor, object: object)
       expect(activity.valid_for_send?).to be_false
-      expect(activity.errors["activity"]). to contain("actor must be local")
+      expect(activity.errors["activity"]).to contain("actor must be local")
     end
 
     it "validates the object has an inbox" do
       activity = subject.assign(actor: actor, object: object)
       expect(activity.valid_for_send?).to be_false
-      expect(activity.errors["activity"]). to contain("object must have an inbox")
+      expect(activity.errors["activity"]).to contain("object must have an inbox")
     end
 
     it "passes validation" do
@@ -101,7 +101,7 @@ Spectator.describe ActivityPub::Activity::Follow do
       object.assign(iri: "https://remote/", inbox: "https://remote/inbox")
       activity = subject.assign(actor: actor, object: object)
       expect(activity.valid_for_send?).to be_true
-      expect(activity.errors["activity"]?). to be_nil
+      expect(activity.errors["activity"]?).to be_nil
     end
   end
 end

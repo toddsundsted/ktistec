@@ -156,13 +156,19 @@ Spectator.describe Ktistec::Util do
         {45.seconds, "1 minute"},
         {75.seconds, "1 minute"},
         {95.seconds, "2 minutes"},
+        {13.minutes + 25.seconds, "13 minutes"},
+        {13.minutes + 35.seconds, "14 minutes"},
         {14.minutes, "14 minutes"},
         {45.minutes, "about 1 hour"},
         {75.minutes, "about 1 hour"},
         {95.minutes, "about 2 hours"},
+        {13.hours + 25.minutes, "13 hours"},
+        {13.hours + 35.minutes, "14 hours"},
         {14.hours, "14 hours"},
         {30.hours, "about 1 day"},
         {40.hours, "about 2 days"},
+        {13.days + 11.hours, "13 days"},
+        {13.days + 13.hours, "14 days"},
         {14.days, "14 days"},
         {40.days, "about 1 month"},
         {50.days, "about 2 months"},
@@ -172,7 +178,7 @@ Spectator.describe Ktistec::Util do
         {22.months, "almost 2 years"},
         {26.months, "about 2 years"},
         {30.months, "over 2 years"},
-        {34.months, "almost 3 years"}
+        {34.months, "almost 3 years"},
       ]
     end
 
@@ -211,7 +217,7 @@ Spectator.describe Ktistec::Util::PaginatedArray do
 
   describe ".more" do
     it "changes the indicator" do
-      expect{subject.more = true}.to change{subject.more?}
+      expect { subject.more = true }.to change { subject.more? }
     end
   end
 

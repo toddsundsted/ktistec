@@ -29,8 +29,8 @@ Spectator.describe MCPController do
   def authenticated_headers
     HTTP::Headers{
       "Authorization" => "Bearer oauth_token_123",
-      "Content-Type" => "application/json",
-      "Accept" => "application/json",
+      "Content-Type"  => "application/json",
+      "Accept"        => "application/json",
     }
   end
 
@@ -48,7 +48,7 @@ Spectator.describe MCPController do
 
   describe ".authenticate_request" do
     let(env) do
-      env_factory("POST", "/mcp").tap do |env|
+      make_env("POST", "/mcp").tap do |env|
         env.request.headers["Authorization"] = "Bearer oauth_token_123"
       end
     end
@@ -59,7 +59,7 @@ Spectator.describe MCPController do
     end
 
     context "authorization header is missing" do
-      let(env) { env_factory("POST", "/mcp") }
+      let(env) { make_env("POST", "/mcp") }
 
       it "returns nil" do
         result = described_class.authenticate_request(env)

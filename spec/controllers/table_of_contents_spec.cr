@@ -71,7 +71,7 @@ Spectator.describe TableOfContentsController do
       end
 
       it "creates nested tree" do
-        tree = described_class.build_path_tree([child, parent])  # reverse order
+        tree = described_class.build_path_tree([child, parent]) # reverse order
 
         expect(tree.keys).to contain_exactly("parent")
         parent_node = tree["parent"]

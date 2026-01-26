@@ -29,13 +29,13 @@ Spectator.describe ActivityPub::Activity::Undo do
     it "validates the actor is the object's actor" do
       activity = subject.assign(actor: other, object: object)
       expect(activity.valid?).to be_false
-      expect(activity.errors["activity"]). to contain("the actor must be the object's actor")
+      expect(activity.errors["activity"]).to contain("the actor must be the object's actor")
     end
 
     it "passes validation" do
       activity = subject.assign(actor: actor, object: object)
       expect(activity.valid?).to be_true
-      expect(activity.errors["activity"]?). to be_nil
+      expect(activity.errors["activity"]?).to be_nil
     end
   end
 

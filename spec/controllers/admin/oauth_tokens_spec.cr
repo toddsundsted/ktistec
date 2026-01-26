@@ -45,7 +45,7 @@ Spectator.describe Admin::OAuthTokensController do
 
       it "deletes the OAuth token" do
         token_id = test_token.id
-        expect{delete "/admin/oauth/tokens/#{token_id}"}.to change{OAuth2::Provider::AccessToken.count}.by(-1)
+        expect { delete "/admin/oauth/tokens/#{token_id}" }.to change { OAuth2::Provider::AccessToken.count }.by(-1)
         expect(response.status_code).to eq(302)
         expect(response.headers["Location"]).to eq("/admin/oauth/tokens")
       end

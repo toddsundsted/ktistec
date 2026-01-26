@@ -11,8 +11,8 @@ Spectator.describe ObjectFactory do
   describe ".build_from_params" do
     let(params) do
       {
-        "content" => "New content",
-        "visibility" => "public"
+        "content"    => "New content",
+        "visibility" => "public",
       }
     end
 
@@ -28,8 +28,8 @@ Spectator.describe ObjectFactory do
 
       let(params) do
         {
-          "content" => "Updated content",
-          "visibility" => "public"
+          "content"    => "Updated content",
+          "visibility" => "public",
         }
       end
 
@@ -44,9 +44,9 @@ Spectator.describe ObjectFactory do
     context "when poll-options is present" do
       let(params) do
         {
-          "content" => "What is your favorite color?",
+          "content"      => "What is your favorite color?",
           "poll-options" => ["Red", "Blue", "Green"],
-          "visibility" => "public"
+          "visibility"   => "public",
         }
       end
 

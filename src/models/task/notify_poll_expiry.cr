@@ -19,6 +19,11 @@ class Task
                 next if Relationship::Content::Notification::Poll::Expiry.find?(owner: voter, question: question)
                 Relationship::Content::Notification::Poll::Expiry.new(owner: voter, question: question).save
               end
+              if (author = question.attributed_to?)
+                unless Relationship::Content::Notification::Poll::Expiry.find?(owner: author, question: question)
+                  Relationship::Content::Notification::Poll::Expiry.new(owner: author, question: question).save
+                end
+              end
             end
           end
         end

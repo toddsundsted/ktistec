@@ -17,7 +17,7 @@ Spectator.describe "timeline partial" do
   end
 
   describe "timeline.html.slang" do
-    let(env) { env_factory("GET", "/timeline") }
+    let(env) { make_env("GET", "/timeline") }
 
     subject do
       begin
@@ -41,7 +41,7 @@ Spectator.describe "timeline partial" do
     end
 
     context "given a query string" do
-      let(env) { env_factory("GET", "/timeline?foo=bar") }
+      let(env) { make_env("GET", "/timeline?foo=bar") }
 
       it "renders a stream source with the query string" do
         expect(subject.xpath_nodes("//turbo-stream-source/@src").first).to eq("/stream/actor/homepage?foo=bar")
@@ -50,7 +50,7 @@ Spectator.describe "timeline partial" do
   end
 
   describe "timeline.json.ecr" do
-    let(env) { env_factory("GET", "/timeline") }
+    let(env) { make_env("GET", "/timeline") }
 
     subject do
       begin

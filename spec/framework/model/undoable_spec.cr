@@ -32,11 +32,11 @@ Spectator.describe Ktistec::Model::Undoable do
     let!(undoable) { UndoableModel.new.save }
 
     it "undoes the instance" do
-      expect{undoable.undo!}.to change{UndoableModel.count}.by(-1)
+      expect { undoable.undo! }.to change { UndoableModel.count }.by(-1)
     end
 
     it "sets undone_at" do
-      expect{undoable.undo!}.to change{undoable.undone_at}
+      expect { undoable.undo! }.to change { undoable.undone_at }
     end
   end
 
@@ -110,7 +110,7 @@ Spectator.describe Ktistec::Model::Undoable do
     end
 
     it "won't be saved" do
-      expect{undoable.save}.not_to change{undoable.id}
+      expect { undoable.save }.not_to change { undoable.id }
     end
   end
 end

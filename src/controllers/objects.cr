@@ -20,7 +20,7 @@ class ObjectsController
     if (object = ActivityPub::Object.find?(iri_or_id, include_deleted: true))
       if (object.visible && !object.draft?) ||
          ((account = env.account?) &&
-          (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
+         (account.actor == object.attributed_to? || account.actor.in_inbox?(object)))
         object
       end
     end
@@ -56,10 +56,7 @@ class ObjectsController
   end
 
   post "/objects" do |env|
-    params = accepts?("text/html") ? env.params.body : env.params.json
-    params_hash = params.to_h.transform_values do |value|
-      value.is_a?(Array) ? value.map(&.to_s) : value.to_s
-    end
+    params_hash = normalize_params(env.params.body.presence || env.params.json)
     result = ObjectFactory.build_from_params(params_hash, env.account.actor)
     object = result.object
 
@@ -99,9 +96,7 @@ class ObjectsController
 
     redirect edit_object_path if object.draft?
 
-    replies = env.account? ?
-      object.replies(for_actor: env.account.actor) :
-      object.replies(approved_by: object.attributed_to)
+    replies = env.account? ? object.replies(for_actor: env.account.actor) : object.replies(approved_by: object.attributed_to)
 
     ok "objects/replies", env: env, object: object, replies: replies, recursive: false
   end
@@ -113,9 +108,7 @@ class ObjectsController
 
     redirect edit_object_path if object.draft?
 
-    thread = env.account? ?
-      object.thread(for_actor: env.account.actor) :
-      object.thread(approved_by: object.attributed_to)
+    thread = env.account? ? object.thread(for_actor: env.account.actor) : object.thread(approved_by: object.attributed_to)
 
     ok "objects/thread", env: env, object: object, thread: thread, follow: nil, task: nil
   end
@@ -123,6 +116,27 @@ class ObjectsController
   get "/objects/:id/edit" do |env|
     unless (object = get_object_editable(env, iri_param(env, "/objects")))
       not_found
+    end
+
+    # if no editors are specified, inspect the object and redirect
+
+    if env.params.query.fetch_all("editor").empty?
+      params = env.params.query.dup
+      if (source = object.source) && source.media_type.starts_with?("text/markdown")
+        params.add("editor", "markdown")
+      else
+        params.add("editor", "rich-text")
+      end
+      if object.name.presence || object.summary.presence || object.canonical_path
+        params.add("editor", "optional")
+      end
+      _object = object
+      if _object.responds_to?(:poll?)
+        params.add("editor", "poll")
+      end
+      unless params.empty?
+        redirect "/objects/#{object.uid}/edit?#{params}"
+      end
     end
 
     ok "objects/edit", env: env, object: object, recursive: false
@@ -133,10 +147,7 @@ class ObjectsController
       not_found
     end
 
-    params = accepts?("text/html") ? env.params.body : env.params.json
-    params_hash = params.to_h.transform_values do |value|
-      value.is_a?(Array) ? value.map(&.to_s) : value.to_s
-    end
+    params_hash = normalize_params(env.params.body.presence || env.params.json)
     result = ObjectFactory.build_from_params(params_hash, env.account.actor, object)
     object = result.object
 

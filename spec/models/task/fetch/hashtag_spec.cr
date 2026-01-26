@@ -11,8 +11,8 @@ Spectator.describe Task::Fetch::Hashtag do
 
   let(options) do
     {
-      source_iri: source.iri,
-      subject_iri: random_string
+      source_iri:  source.iri,
+      subject_iri: random_string,
     }
   end
 
@@ -113,11 +113,11 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "changes time of last attempt" do
-        expect{subject.perform}.to change{node.last_attempt_at}
+        expect { subject.perform }.to change { node.last_attempt_at }
       end
 
       it "does not change time of last success" do
-        expect{subject.perform}.not_to change{node.last_success_at}
+        expect { subject.perform }.not_to change { node.last_success_at }
       end
     end
 
@@ -143,11 +143,11 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "changes time of last attempt" do
-        expect{subject.perform}.to change{node.last_attempt_at}
+        expect { subject.perform }.to change { node.last_attempt_at }
       end
 
       it "does not change time of last success" do
-        expect{subject.perform}.not_to change{node.last_success_at}
+        expect { subject.perform }.not_to change { node.last_success_at }
       end
     end
 
@@ -192,15 +192,15 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "persists an object from the collection" do
-        expect{subject.perform(1)}.to change{find?(object2.iri)}
+        expect { subject.perform(1) }.to change { find?(object2.iri) }
       end
 
       it "changes time of last attempt" do
-        expect{subject.perform(1)}.to change{node.last_attempt_at}
+        expect { subject.perform(1) }.to change { node.last_attempt_at }
       end
 
       it "changes time of last success" do
-        expect{subject.perform(1)}.to change{node.last_success_at}
+        expect { subject.perform(1) }.to change { node.last_success_at }
       end
 
       it "sets the next attempt in the immediate future" do
@@ -210,7 +210,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
       it "fetches the hashtag collection once" do
         subject.perform
-        expect(HTTP::Client.requests.count { |request| request === "GET #{hashtag.iri}"}).to eq(1)
+        expect(HTTP::Client.requests.count { |request| request === "GET #{hashtag.iri}" }).to eq(1)
       end
 
       it "fetches all the objects from the collection" do
@@ -219,15 +219,15 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "persists all the objects from the collection" do
-        expect{subject.perform}.to change{ {find?(object2.iri), find?(object3.iri)}.any?(Nil) }.to(false)
+        expect { subject.perform }.to change { {find?(object2.iri), find?(object3.iri)}.any?(Nil) }.to(false)
       end
 
       it "changes time of last attempt" do
-        expect{subject.perform}.to change{node.last_attempt_at}
+        expect { subject.perform }.to change { node.last_attempt_at }
       end
 
       it "changes time of last success" do
-        expect{subject.perform}.to change{node.last_success_at}
+        expect { subject.perform }.to change { node.last_success_at }
       end
 
       it "sets the next attempt in the near future" do
@@ -307,7 +307,7 @@ Spectator.describe Task::Fetch::Hashtag do
           end
 
           it "adds the new collection to the horizon" do
-            expect{subject.perform}.to change{horizon(subject)}.to([other.iri, hashtag.iri])
+            expect { subject.perform }.to change { horizon(subject) }.to([other.iri, hashtag.iri])
           end
 
           it "fetches the new collection" do
@@ -321,7 +321,7 @@ Spectator.describe Task::Fetch::Hashtag do
           end
 
           it "persists the uncached object from the collection" do
-            expect{subject.perform}.to change{find?(object5.iri)}
+            expect { subject.perform }.to change { find?(object5.iri) }
           end
 
           it "sets the next attempt in the near future" do
@@ -340,7 +340,7 @@ Spectator.describe Task::Fetch::Hashtag do
         pre_condition { expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now }
 
         it "does not fetch any new objects" do
-          expect{subject.perform(1)}.not_to change{ActivityPub::Object.count}
+          expect { subject.perform(1) }.not_to change { ActivityPub::Object.count }
         end
 
         it "sets the next attempt in the near future" do
@@ -370,7 +370,7 @@ Spectator.describe Task::Fetch::Hashtag do
         end
 
         it "persists the remaining objects from the collection" do
-          expect{subject.perform(1)}.to change{find?(object3.iri)}
+          expect { subject.perform(1) }.to change { find?(object3.iri) }
         end
       end
 
@@ -384,7 +384,7 @@ Spectator.describe Task::Fetch::Hashtag do
         end
 
         it "persists all the uncached authors" do
-          expect{subject.perform}.to change{ {find?(actor2.iri), find?(actor3.iri)}.any?(Nil) }.to(false)
+          expect { subject.perform }.to change { {find?(actor2.iri), find?(actor3.iri)}.any?(Nil) }.to(false)
         end
       end
 
@@ -446,7 +446,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
       it "fetches the remaining object once" do
         subject.perform
-        expect(HTTP::Client.requests.count { |request| request === "GET #{object3.iri}"}).to eq(1)
+        expect(HTTP::Client.requests.count { |request| request === "GET #{object3.iri}" }).to eq(1)
       end
 
       context "with a blocked author" do
@@ -454,7 +454,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
         it "fetches the remaining object once" do
           subject.perform
-          expect(HTTP::Client.requests.count { |request| request === "GET #{object3.iri}"}).to eq(1)
+          expect(HTTP::Client.requests.count { |request| request === "GET #{object3.iri}" }).to eq(1)
         end
       end
     end
@@ -495,15 +495,15 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "persists an object from the API" do
-        expect{subject.perform(1)}.to change{find?(object2.iri)}
+        expect { subject.perform(1) }.to change { find?(object2.iri) }
       end
 
       it "changes time of last attempt" do
-        expect{subject.perform(1)}.to change{node.last_attempt_at}
+        expect { subject.perform(1) }.to change { node.last_attempt_at }
       end
 
       it "changes time of last success" do
-        expect{subject.perform(1)}.to change{node.last_success_at}
+        expect { subject.perform(1) }.to change { node.last_success_at }
       end
 
       it "sets the next attempt in the immediate future" do
@@ -527,15 +527,15 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "persists all the objects from the API" do
-        expect{subject.perform}.to change{ {find?(object2.iri), find?(object3.iri)}.any?(Nil) }.to(false)
+        expect { subject.perform }.to change { {find?(object2.iri), find?(object3.iri)}.any?(Nil) }.to(false)
       end
 
       it "changes time of last attempt" do
-        expect{subject.perform}.to change{node.last_attempt_at}
+        expect { subject.perform }.to change { node.last_attempt_at }
       end
 
       it "changes time of last success" do
-        expect{subject.perform}.to change{node.last_success_at}
+        expect { subject.perform }.to change { node.last_success_at }
       end
 
       it "sets the next attempt in the near future" do
@@ -545,12 +545,12 @@ Spectator.describe Task::Fetch::Hashtag do
 
       it "does not raise an error" do
         HTTP::Client.collections["#{object1.origin}/api/v1/timelines/tag/hashtag"] = %Q|[]|
-        expect{subject.perform}.not_to raise_error
+        expect { subject.perform }.not_to raise_error
       end
 
       it "does not raise an error" do
         HTTP::Client.collections["#{object1.origin}/api/v1/timelines/tag/hashtag"] = %Q|[[]]|
-        expect{subject.perform}.not_to raise_error
+        expect { subject.perform }.not_to raise_error
       end
     end
 
@@ -582,11 +582,11 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "changes time of last attempt" do
-        expect{subject.perform}.to change{node.last_attempt_at}
+        expect { subject.perform }.to change { node.last_attempt_at }
       end
 
       it "changes time of last success" do
-        expect{subject.perform}.to change{node.last_success_at}
+        expect { subject.perform }.to change { node.last_success_at }
       end
 
       context "and the second object fetched" do
@@ -621,7 +621,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
         it "only tries to fetch it once" do
           subject.perform
-          expect(HTTP::Client.requests.count{ |request| request === "GET https://missing/"}).to eq(1)
+          expect(HTTP::Client.requests.count { |request| request === "GET https://missing/" }).to eq(1)
         end
       end
     end
@@ -657,11 +657,11 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "changes time of last attempt" do
-        expect{subject.perform}.to change{node.last_attempt_at}
+        expect { subject.perform }.to change { node.last_attempt_at }
       end
 
       it "changes time of last success" do
-        expect{subject.perform}.to change{node.last_success_at}
+        expect { subject.perform }.to change { node.last_success_at }
       end
 
       context "and the second object fetched" do
@@ -696,7 +696,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
         it "only tries to fetch it once" do
           subject.perform
-          expect(HTTP::Client.requests.count{ |request| request === "GET https://missing/"}).to eq(1)
+          expect(HTTP::Client.requests.count { |request| request === "GET https://missing/" }).to eq(1)
         end
       end
     end

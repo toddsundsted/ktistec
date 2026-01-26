@@ -14,7 +14,7 @@ Spectator.describe MetricsController::Chart do
       from_hour = Time.utc(2017, 1, 1, 10, 0, 0)
       to_hour = Time.utc(2017, 1, 1, 13, 0, 0)
       expect(subject.labels(from_hour, to_hour, granularity: Granularity::Hourly)).to eq([
-        "2017-01-01 10:00", "2017-01-01 11:00", "2017-01-01 12:00", "2017-01-01 13:00"
+        "2017-01-01 10:00", "2017-01-01 11:00", "2017-01-01 12:00", "2017-01-01 13:00",
       ])
     end
 
@@ -51,11 +51,11 @@ Spectator.describe MetricsController::Chart do
       points = [
         Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 10, 30, 0), value: 5),
         Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 11, 15, 0), value: 10),
-        Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 11, 45, 0), value: 15)
+        Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 11, 45, 0), value: 15),
       ]
       hourly_chart = described_class.new("test-chart", points, Time::Location::UTC)
       expect(hourly_chart.data(from_hour, to_hour, granularity: Granularity::Hourly)).to eq({
-        "2017-01-01 10:00" => 5, "2017-01-01 11:00" => 25
+        "2017-01-01 10:00" => 5, "2017-01-01 11:00" => 25,
       })
     end
 
@@ -64,11 +64,11 @@ Spectator.describe MetricsController::Chart do
       to_hour = Time.utc(2017, 1, 1, 11, 0, 0)
       points = [
         Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 10, 15, 0), value: 10),
-        Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 10, 45, 0), value: 20)
+        Point.new(chart: "test-chart", timestamp: Time.utc(2017, 1, 1, 10, 45, 0), value: 20),
       ]
       hourly_chart = described_class.new("test-chart", points, Time::Location::UTC)
       expect(hourly_chart.data(from_hour, to_hour, granularity: Granularity::Hourly, predicate: Predicate::Average)).to eq({
-        "2017-01-01 10:00" => 15
+        "2017-01-01 10:00" => 15,
       })
     end
 

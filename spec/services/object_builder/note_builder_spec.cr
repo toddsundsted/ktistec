@@ -13,12 +13,12 @@ Spectator.describe ObjectBuilder::NoteBuilder do
   describe "#build" do
     let(params) do
       {
-        "name" => "Note title",
-        "summary" => "Content warning",
-        "content" => "Content",
+        "name"       => "Note title",
+        "summary"    => "Content warning",
+        "content"    => "Content",
         "media-type" => "text/plain",
-        "sensitive" => "true",
-        "language" => "en",
+        "sensitive"  => "true",
+        "language"   => "en",
         "visibility" => "public",
       }
     end
@@ -40,11 +40,11 @@ Spectator.describe ObjectBuilder::NoteBuilder do
       let(params) { {"content" => "Updated content"} }
 
       it "updates the draft note" do
-        expect { subject.build(params, actor, note) }.to change {note.source.try(&.content) }.to("Updated content")
+        expect { subject.build(params, actor, note) }.to change { note.source.try(&.content) }.to("Updated content")
       end
 
       it "does not change IRI" do
-        expect { subject.build(params, actor, note) }.not_to change {note.iri }
+        expect { subject.build(params, actor, note) }.not_to change { note.iri }
       end
     end
 
@@ -54,11 +54,11 @@ Spectator.describe ObjectBuilder::NoteBuilder do
       let(params) { {"content" => "Updated content"} }
 
       it "updates the published note" do
-        expect { subject.build(params, actor, note) }.to change {note.source.try(&.content) }.to("Updated content")
+        expect { subject.build(params, actor, note) }.to change { note.source.try(&.content) }.to("Updated content")
       end
 
       it "does not change IRI" do
-        expect { subject.build(params, actor, note) }.not_to change {note.iri }
+        expect { subject.build(params, actor, note) }.not_to change { note.iri }
       end
     end
   end

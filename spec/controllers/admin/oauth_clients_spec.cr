@@ -43,7 +43,7 @@ Spectator.describe Admin::OAuthClientsController do
       sign_in(as: account.username)
 
       it "creates a new OAuth client" do
-        expect{post "/admin/oauth/clients", headers, "client_name=Test+App&redirect_uris=https%3A%2F%2Fexample.com%2Fcallback"}.to change{OAuth2::Provider::Client.count}.by(1)
+        expect { post "/admin/oauth/clients", headers, "client_name=Test+App&redirect_uris=https%3A%2F%2Fexample.com%2Fcallback" }.to change { OAuth2::Provider::Client.count }.by(1)
         expect(response.status_code).to eq(302)
         client = OAuth2::Provider::Client.all.last
         expect(client.client_name).to eq("Test App")
@@ -52,19 +52,19 @@ Spectator.describe Admin::OAuthClientsController do
       end
 
       it "returns validation errors for blank client name" do
-        expect{post "/admin/oauth/clients", headers, "client_name=&redirect_uris=https%3A%2F%2Fexample.com%2Fcallback"}.not_to change{OAuth2::Provider::Client.count}
+        expect { post "/admin/oauth/clients", headers, "client_name=&redirect_uris=https%3A%2F%2Fexample.com%2Fcallback" }.not_to change { OAuth2::Provider::Client.count }
         expect(response.status_code).to eq(422)
         expect(response.body).to contain("client_name must be present")
       end
 
       it "returns validation errors for blank redirect URIs" do
-        expect{post "/admin/oauth/clients", headers, "client_name=Test+App&redirect_uris="}.not_to change{OAuth2::Provider::Client.count}
+        expect { post "/admin/oauth/clients", headers, "client_name=Test+App&redirect_uris=" }.not_to change { OAuth2::Provider::Client.count }
         expect(response.status_code).to eq(422)
         expect(response.body).to contain("redirect_uris must be present")
       end
 
       it "returns validation errors for invalid redirect URIs" do
-        expect{post "/admin/oauth/clients", headers, "client_name=Test+App&redirect_uris=invalid_uris"}.not_to change{OAuth2::Provider::Client.count}
+        expect { post "/admin/oauth/clients", headers, "client_name=Test+App&redirect_uris=invalid_uris" }.not_to change { OAuth2::Provider::Client.count }
         expect(response.status_code).to eq(422)
         expect(response.body).to contain("invalid URIs")
       end
@@ -82,7 +82,7 @@ Spectator.describe Admin::OAuthClientsController do
 
       it "deletes the OAuth client" do
         client_id = test_client.id
-        expect{delete "/admin/oauth/clients/#{client_id}"}.to change{OAuth2::Provider::Client.count}.by(-1)
+        expect { delete "/admin/oauth/clients/#{client_id}" }.to change { OAuth2::Provider::Client.count }.by(-1)
         expect(response.status_code).to eq(302)
         expect(response.headers["Location"]).to eq("/admin/oauth/clients")
       end
@@ -92,7 +92,7 @@ Spectator.describe Admin::OAuthClientsController do
 
         it "deletes associated access token" do
           token_id = oauth2_provider_access_token.id
-          expect{delete "/admin/oauth/clients/#{test_client.id}"}.to change{OAuth2::Provider::AccessToken.count}.by(-1)
+          expect { delete "/admin/oauth/clients/#{test_client.id}" }.to change { OAuth2::Provider::AccessToken.count }.by(-1)
           expect(response.status_code).to eq(302)
           expect(OAuth2::Provider::AccessToken.find?(token_id)).to be_nil
         end

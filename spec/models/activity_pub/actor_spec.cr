@@ -17,35 +17,35 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/actors/#{random_string}") }
 
     it "assigns iri" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.iri}
+      expect { subject.assign(username: "foobar").save }.to change { subject.iri }
     end
 
     it "assigns inbox" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.inbox}
+      expect { subject.assign(username: "foobar").save }.to change { subject.inbox }
     end
 
     it "assigns outbox" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.outbox}
+      expect { subject.assign(username: "foobar").save }.to change { subject.outbox }
     end
 
     it "assigns following" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.following}
+      expect { subject.assign(username: "foobar").save }.to change { subject.following }
     end
 
     it "assigns followers" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.followers}
+      expect { subject.assign(username: "foobar").save }.to change { subject.followers }
     end
 
     it "assigns featured" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.featured}
+      expect { subject.assign(username: "foobar").save }.to change { subject.featured }
     end
 
     it "assigns urls" do
-      expect{subject.assign(username: "foobar").save}.to change{subject.urls}
+      expect { subject.assign(username: "foobar").save }.to change { subject.urls }
     end
 
     it "doesn't assign if the actor isn't local" do
-      expect{subject.assign(iri: "https://remote/object", username: "foobar").save}.not_to change{subject.urls}
+      expect { subject.assign(iri: "https://remote/object", username: "foobar").save }.not_to change { subject.urls }
     end
   end
 
@@ -147,7 +147,8 @@ Spectator.describe ActivityPub::Actor do
         KNFcMekDexfrLUk8EjP0psKcm9AGVefYvfKtD2cAGhF6UTZKVUUZRmECARE=
         -----END PUBLIC KEY-----
         KEY
-      ),
+
+        ),
       pem_private_key: (<<-KEY
         -----BEGIN PRIVATE KEY-----
         MIIBUQIBADANBgkqhkiG9w0BAQEFAASCATswggE3AgEAAkEAqvX/fS/C1CjNTMoC
@@ -160,7 +161,8 @@ Spectator.describe ActivityPub::Actor do
         +4EIKbQ=
         -----END PRIVATE KEY-----
         KEY
-      )
+
+        ),
     ).save
   end
 
@@ -1780,7 +1782,7 @@ Spectator.describe ActivityPub::Actor do
 
     describe "#approve" do
       it "approves the object" do
-        expect{subject.approve(object)}.to change{object.approved_by?(subject)}
+        expect { subject.approve(object) }.to change { object.approved_by?(subject) }
       end
     end
 
@@ -1788,7 +1790,7 @@ Spectator.describe ActivityPub::Actor do
       before_each { subject.approve(object) }
 
       it "unapproves the object" do
-        expect{subject.unapprove(object)}.to change{object.approved_by?(subject)}
+        expect { subject.unapprove(object) }.to change { object.approved_by?(subject) }
       end
     end
   end

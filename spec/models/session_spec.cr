@@ -88,7 +88,7 @@ Spectator.describe Session do
 
     it "raises an exception" do
       subject.body_json = %Q|{"foo":{"value":"bar","expiry":#{Time.utc.to_unix - 60}}}|
-      expect{subject.string("foo")}.to raise_error(KeyError)
+      expect { subject.string("foo") }.to raise_error(KeyError)
     end
 
     it "returns nil" do
@@ -139,7 +139,7 @@ Spectator.describe Session do
       end
 
       it "destroys the anonymous session" do
-        expect{Session.clean_up_stale_sessions}.to change{Session.count}.by(-1)
+        expect { Session.clean_up_stale_sessions }.to change { Session.count }.by(-1)
       end
     end
 
@@ -152,7 +152,7 @@ Spectator.describe Session do
       end
 
       it "destroys the old session" do
-        expect{Session.clean_up_stale_sessions}.to change{Session.count}.by(-1)
+        expect { Session.clean_up_stale_sessions }.to change { Session.count }.by(-1)
       end
     end
   end

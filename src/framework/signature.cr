@@ -74,8 +74,8 @@ module Ktistec
       # we need to know how to process the headers (for verification,
       # the algorithm is always assumed to be rsa-sha256).
       algorithm = parameters["algorithm"]? || begin
-          "date".in?(split_headers_string) ? "rsa-sha256" : "hs2019"
-        end
+        "date".in?(split_headers_string) ? "rsa-sha256" : "hs2019"
+      end
       unless "(request-target)".in?(split_headers_string)
         raise Error.new("(request-target) header must be signed")
       end

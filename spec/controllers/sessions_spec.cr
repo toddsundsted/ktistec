@@ -121,14 +121,14 @@ Spectator.describe SessionsController do
 
     it "destroys session and redirects" do
       headers = HTTP::Headers{"Cookie" => "__Host-AuthToken=#{jwt}", "Accept" => "text/html"}
-      expect{delete "/sessions", headers}.to change{Session.count}.by(-1)
+      expect { delete "/sessions", headers }.to change { Session.count }.by(-1)
       expect(response.status_code).to eq(302)
       expect(response.headers.to_a).to have({"Location", ["/sessions"]})
     end
 
     it "destroys session and redirects" do
       headers = HTTP::Headers{"Authorization" => "Bearer #{jwt}", "Accept" => "application/json"}
-      expect{delete "/sessions", headers}.to change{Session.count}.by(-1)
+      expect { delete "/sessions", headers }.to change { Session.count }.by(-1)
       expect(response.status_code).to eq(302)
       expect(response.headers.to_a).to have({"Location", ["/sessions"]})
     end

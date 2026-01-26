@@ -224,9 +224,7 @@ module ActivityPub
     end
 
     def follows?(other : Actor, **options)
-      !other.deleted? && !other.blocked? ?
-        Relationship::Social::Follow.find?(**options.merge({actor: self, object: other})) :
-        nil
+      !other.deleted? && !other.blocked? ? Relationship::Social::Follow.find?(**options.merge({actor: self, object: other})) : nil
     end
 
     private def social_query(type, orig, dest, public = true)
@@ -807,9 +805,7 @@ module ActivityPub
     #
     def timeline(exclude_replies = false, inclusion = nil, page = 1, size = 10)
       exclude_replies =
-        exclude_replies ?
-        "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" :
-        ""
+        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
       inclusion =
         case inclusion
         when Class, String
@@ -843,9 +839,7 @@ module ActivityPub
     #
     def timeline(since : Time, exclude_replies = false, inclusion = nil)
       exclude_replies =
-        exclude_replies ?
-        "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" :
-        ""
+        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
       inclusion =
         case inclusion
         when Class, String
@@ -1021,24 +1015,24 @@ private module ActorModelHelper
   def self.from_json_ld(json : JSON::Any | String | IO, include_key)
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
     {
-      "iri" => json.dig?("@id").try(&.as_s),
-      "_type" => json.dig?("@type").try(&.as_s.split("#").last),
-      "username" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
+      "iri"            => json.dig?("@id").try(&.as_s),
+      "_type"          => json.dig?("@type").try(&.as_s.split("#").last),
+      "username"       => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
       "pem_public_key" => if include_key
         Ktistec::JSON_LD.dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
       end,
       "shared_inbox" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#endpoints", "https://www.w3.org/ns/activitystreams#sharedInbox"),
-      "inbox" => Ktistec::JSON_LD.dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
-      "outbox" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
-      "following" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
-      "followers" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
-      "featured" => Ktistec::JSON_LD.dig_id?(json, "http://joinmastodon.org/ns#featured"),
-      "name" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
-      "summary" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
-      "icon" => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
-      "image" => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
-      "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
-      "attachments" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
+      "inbox"        => Ktistec::JSON_LD.dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
+      "outbox"       => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
+      "following"    => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
+      "followers"    => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
+      "featured"     => Ktistec::JSON_LD.dig_id?(json, "http://joinmastodon.org/ns#featured"),
+      "name"         => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
+      "summary"      => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+      "icon"         => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
+      "image"        => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
+      "urls"         => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+      "attachments"  => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
         name = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
         type = Ktistec::JSON_LD.dig?(attachment, "@type").presence
         value = Ktistec::JSON_LD.dig?(attachment, "http://schema.org#value").presence
@@ -1049,7 +1043,7 @@ private module ActorModelHelper
         name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
         icon_url = tag.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
         Tag::Emoji.new(name: name, href: icon_url) if name && icon_url
-      end
+      end,
     }.compact
   end
 
@@ -1058,14 +1052,14 @@ private module ActorModelHelper
       if icons.as_a?
         icon =
           icons.as_a.map do |ico|
-          if (width = ico.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = ico.dig?("https://www.w3.org/ns/activitystreams#height"))
-            {width.as_i * height.as_i, ico}
-          else
-            {0, ico}
-          end
-        end.sort! do |(a, _), (b, _)|
-          b <=> a
-        end.first?
+            if (width = ico.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = ico.dig?("https://www.w3.org/ns/activitystreams#height"))
+              {width.as_i * height.as_i, ico}
+            else
+              {0, ico}
+            end
+          end.sort! do |(a, _), (b, _)|
+            b <=> a
+          end.first?
         if icon
           icon[1].dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
         end

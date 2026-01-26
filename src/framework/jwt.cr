@@ -21,11 +21,12 @@ module Ktistec
     #
     def self.decode(token, secret_key = Ktistec.secret_key)
       hashed_header, hashed_payload, hashed_signature = token.split(".")
-      raise Error.new unless verify(
+      verified = verify(
         Base64.decode_string(hashed_signature),
         "#{hashed_header}.#{hashed_payload}",
-        secret_key
+        secret_key,
       )
+      raise Error.new unless verified
       JSON.parse(Base64.decode_string(hashed_payload))
     rescue ex : JSON::ParseException | Base64::Error | IndexError
       raise Error.new(ex.message)

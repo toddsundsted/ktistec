@@ -13,8 +13,8 @@ module ThreadAnalysisService
   record ParticipantInfo,
     actor_iri : String,
     object_count : Int32,
-    depth_range : Tuple(Int32, Int32),   # min and max depth
-    time_range : Tuple(Time, Time),      # first and last seen
+    depth_range : Tuple(Int32, Int32), # min and max depth
+    time_range : Tuple(Time, Time),    # first and last seen
     object_ids : Array(Int64)
 
   record BranchInfo,
@@ -22,23 +22,23 @@ module ThreadAnalysisService
     score : Int32,
     object_count : Int32,
     author_count : Int32,
-    depth_range : Tuple(Int32, Int32),   # min and max depth
-    time_range : Tuple(Time?, Time?),    # first and last seen
+    depth_range : Tuple(Int32, Int32), # min and max depth
+    time_range : Tuple(Time?, Time?),  # first and last seen
     object_ids : Array(Int64)
 
   record TimelineHistogram,
-    time_range : Tuple(Time, Time),      # active range (outliers excluded)
-    total_objects : Int32,               # count of objects in active range
-    outliers_excluded : Int32,           # count of objects outside active range
-    bucket_size_minutes : Int32,         # granularity of buckets
-    buckets : Array(TimeBucket)          # non-empty buckets
+    time_range : Tuple(Time, Time), # active range (outliers excluded)
+    total_objects : Int32,          # count of objects in active range
+    outliers_excluded : Int32,      # count of objects outside active range
+    bucket_size_minutes : Int32,    # granularity of buckets
+    buckets : Array(TimeBucket)     # non-empty buckets
 
   record TimeBucket,
-    time_range : Tuple(Time, Time),      # start and end time of bucket
+    time_range : Tuple(Time, Time), # start and end time of bucket
     object_count : Int32,
     cumulative_count : Int32,
-    author_count : Int32,                # distinct authors in this bucket
-    object_ids : Array(Int64)            # objects in this bucket
+    author_count : Int32,     # distinct authors in this bucket
+    object_ids : Array(Int64) # objects in this bucket
 
   # Returns key participants in the thread based on object data.
   #
@@ -49,10 +49,10 @@ module ThreadAnalysisService
     by_author = tuples.compact_map do |t|
       if (actor_iri = t[:attributed_to_iri])
         {
-          id: t[:id],
-          iri: actor_iri,
-          depth: t[:depth],
-          published: t[:published]
+          id:        t[:id],
+          iri:       actor_iri,
+          depth:     t[:depth],
+          published: t[:published],
         }
       end
     end.group_by { |t| t[:iri] }
@@ -92,7 +92,7 @@ module ThreadAnalysisService
     tuples : Array(NamedTuple),
     threshold : Int32 = 5,
     max_depth : Int32 = 2,
-    limit : Int32 = 10
+    limit : Int32 = 10,
   ) : Array(BranchInfo)
     children_map = {} of String? => Array(typeof(tuples.first))
     children_map = tuples.reduce(children_map) do |map, t|
@@ -199,14 +199,14 @@ module ThreadAnalysisService
   # duration. Uses adaptive outlier detection to exclude stragglers.
   #
   def self.timeline_histogram(
-    tuples : Array(NamedTuple)
+    tuples : Array(NamedTuple),
   ) : TimelineHistogram?
     objects = tuples.compact_map do |t|
       if (published = t[:published])
         {
-          id: t[:id],
-          published: published,
-          attributed_to_iri: t[:attributed_to_iri]
+          id:                t[:id],
+          published:         published,
+          attributed_to_iri: t[:attributed_to_iri],
         }
       end
     end
@@ -336,14 +336,14 @@ module ThreadAnalysisService
   #
   private def self.calculate_bucket_size_for_duration(hours : Float64) : Int32
     case hours
-    when 0...1     then 5      # < 1 hour
-    when 1...3     then 15     # 1-3 hours
-    when 3...12    then 60     # 3-12 hours (1 hour)
-    when 12...24   then 180    # 12-24 hours (3 hours)
-    when 24...72   then 360    # 1-3 days (6 hours)
-    when 72...168  then 720    # 3-7 days (12 hours)
-    when 168...672 then 1440   # 1-4 weeks (daily)
-    else                10080  # > 4 weeks (weekly)
+    when 0...1     then 5     # < 1 hour
+    when 1...3     then 15    # 1-3 hours
+    when 3...12    then 60    # 3-12 hours (1 hour)
+    when 12...24   then 180   # 12-24 hours (3 hours)
+    when 24...72   then 360   # 1-3 days (6 hours)
+    when 72...168  then 720   # 3-7 days (12 hours)
+    when 168...672 then 1440  # 1-4 weeks (daily)
+    else                10080 # > 4 weeks (weekly)
     end
   end
 end

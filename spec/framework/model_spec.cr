@@ -1401,6 +1401,18 @@ Spectator.describe Ktistec::Model do
     end
   end
 
+  describe "#id!" do
+    it "returns the id" do
+      saved_model = FooBarModel.new(id: 13_i64)
+      expect(saved_model.id!).to eq(13_i64)
+    end
+
+    it "raises an error" do
+      saved_model = FooBarModel.new
+      expect { saved_model.id! }.to raise_error(NilAssertionError)
+    end
+  end
+
   context "derived properties" do
     let(derived) { DerivedModel.new(id: 13_i64, not_nil_model_id: 17_i64) }
     let(another) { AnotherModel.new(id: 17_i64, foo_bar_model_id: 13_i64, val: "Val") }

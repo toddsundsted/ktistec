@@ -3,104 +3,10 @@ require "../../src/controllers/uploads"
 require "../spec_helper/controller"
 require "../spec_helper/factory"
 
-# redefine as public for testing
-class UploadsController
-  alias TestUpload = Upload
-
-  def self.get_upload(env, path : String)
-    previous_def(env, path)
-  end
-
-  def self.get_upload(env, p1 : String, p2 : String, p3 : String, id : String)
-    previous_def(env, p1, p2, p3, id)
-  end
-end
-
 Spectator.describe UploadsController do
   setup_spec
 
   let(current_actor_id) { Global.account.try(&.actor.id) }
-
-  describe ".get_upload" do
-    let(env) { make_env("GET", "/") }
-
-    let(actor1) { register.actor }
-    let(actor2) { register.actor }
-
-    context "with path string" do
-      it "returns nil for valid path string" do
-        result = UploadsController.get_upload(env, "/uploads/abc/def/ghi/#{actor1.id}.txt")
-        expect(result).to be_nil
-      end
-
-      context "when authenticated" do
-        sign_in(as: actor1.username)
-
-        it "returns Upload instance" do
-          result = UploadsController.get_upload(env, "/uploads/abc/def/ghi/#{actor1.id}.txt")
-          expect(result).to be_a(UploadsController::TestUpload)
-          expect(result.try(&.actor_id)).to eq(actor1.id)
-        end
-
-        it "returns nil for file owned by another user" do
-          result = UploadsController.get_upload(env, "/uploads/abc/def/ghi/#{actor2.id}.txt")
-          expect(result).to be_nil
-        end
-
-        it "returns nil for invalid path string" do
-          result = UploadsController.get_upload(env, "/invalid/path/#{actor1.id}.txt")
-          expect(result).to be_nil
-        end
-
-        it "returns nil for path traversal attempt" do
-          result = UploadsController.get_upload(env, "/uploads/../../../etc/#{actor1.id}")
-          expect(result).to be_nil
-        end
-
-        it "returns nil for malformed id" do
-          result = UploadsController.get_upload(env, "/uploads/abc/def/ghi/not-a-number.txt")
-          expect(result).to be_nil
-        end
-      end
-    end
-
-    context "with path components" do
-      it "returns nil for valid path components" do
-        result = UploadsController.get_upload(env, "abc", "def", "ghi", "#{actor1.id}.txt")
-        expect(result).to be_nil
-      end
-
-      context "when authenticated" do
-        sign_in(as: actor1.username)
-
-        it "returns Upload instance" do
-          result = UploadsController.get_upload(env, "abc", "def", "ghi", "#{actor1.id}.txt")
-          expect(result).to be_a(UploadsController::TestUpload)
-          expect(result.try(&.actor_id)).to eq(actor1.id)
-        end
-
-        it "returns nil for file owned by another user" do
-          result = UploadsController.get_upload(env, "abc", "def", "ghi", "#{actor2.id}.txt")
-          expect(result).to be_nil
-        end
-
-        it "returns nil for invalid path components" do
-          result = UploadsController.get_upload(env, "abc!", "def", "ghi", "#{actor1.id}.txt")
-          expect(result).to be_nil
-        end
-
-        it "returns nil for path traversal attempt" do
-          result = UploadsController.get_upload(env, "uploads", "..", "etc", "#{actor1.id}.txt")
-          expect(result).to be_nil
-        end
-
-        it "returns nil for malformed id" do
-          result = UploadsController.get_upload(env, "abc", "def", "ghi", "not-a-number.txt")
-          expect(result).to be_nil
-        end
-      end
-    end
-  end
 
   describe "POST /uploads" do
     it "returns 401 if not authorized" do

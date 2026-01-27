@@ -1,9 +1,7 @@
-require "file_utils"
-require "uuid"
-
 require "../framework/controller"
 require "../models/task/terminate"
 require "../models/session"
+require "../services/upload_service"
 
 class SettingsController
   include Ktistec::Controller
@@ -99,15 +97,11 @@ class SettingsController
     if files
       ["image", "icon"].each do |name|
         if (upload = files[name]?) && (filename = upload.filename.presence) && upload.tempfile.size > 0
-          filename = "#{env.account.actor.id}#{File.extname(filename)}"
-          filepath = File.join("uploads", *Tuple(String, String, String).from(UUID.random.to_s.split("-")[0..2]))
-          begin
-            Dir.mkdir_p(File.join(Kemal.config.public_folder, filepath))
-            upload.tempfile.chmod(0o644) # fix permissions
-            FileUtils.mv(upload.tempfile.path, File.join(Kemal.config.public_folder, filepath, filename))
-            params[name] = "/#{filepath}/#{filename}"
-          rescue err : File::Error
-            Log.warn { err.message }
+          result = UploadService.upload(upload.tempfile, filename, env.account.actor.id!)
+          if result.valid?
+            params[name] = result.file_path.not_nil!
+          else
+            Log.warn { result.errors.values.flatten.join(", ") }
           end
         end
       end
@@ -144,15 +138,11 @@ class SettingsController
     if files
       ["image"].each do |name|
         if (upload = files[name]?) && (filename = upload.filename.presence) && upload.tempfile.size > 0
-          filename = "#{env.account.actor.id}#{File.extname(filename)}"
-          filepath = File.join("uploads", *Tuple(String, String, String).from(UUID.random.to_s.split("-")[0..2]))
-          begin
-            Dir.mkdir_p(File.join(Kemal.config.public_folder, filepath))
-            upload.tempfile.chmod(0o644) # fix permissions
-            FileUtils.mv(upload.tempfile.path, File.join(Kemal.config.public_folder, filepath, filename))
-            params[name] = "/#{filepath}/#{filename}"
-          rescue err : File::Error
-            Log.warn { err.message }
+          result = UploadService.upload(upload.tempfile, filename, env.account.actor.id!)
+          if result.valid?
+            params[name] = result.file_path.not_nil!
+          else
+            Log.warn { result.errors.values.flatten.join(", ") }
           end
         end
       end

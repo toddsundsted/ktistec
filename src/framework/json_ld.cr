@@ -39,7 +39,8 @@ module Ktistec
       result = Hash(String, JSON::Any).new
 
       body.as_h.each do |term, value|
-        if term.starts_with?("@") || ((defn = context[term]?.try(&.as_s)) && defn.starts_with?("@") && (term = defn))
+        original_term = term
+        if term.starts_with?("@") || ((defn = term_definition(term, context)) && defn.starts_with?("@") && (term = defn))
           if value.as_s?
             result[term] = expand_iri(value.as_s, context)
           else
@@ -51,12 +52,13 @@ module Ktistec
             if context[prefix]? && !suffix.starts_with?("//")
               term = "#{context[prefix]}#{suffix}"
             end
-          elsif (defn = context[term]?.try(&.as_s))
+          elsif (defn = term_definition(term, context))
             term = defn
           else
             next
           end
-          value = expand_value(term, value, context, loader)
+          id_valued = id_valued_term?(original_term, context) || id_valued_term?(term, context)
+          value = expand_value(term, value, context, loader, id_valued)
           if result[term]?.try(&.as_h?) && value.as_h?
             result[term] = wrap(result[term].as_h.merge(value.as_h))
           else
@@ -94,11 +96,47 @@ module Ktistec
           result[term] = expand_iri(iri, context)
         elsif (map = defn.as_h?)
           id = ((_id = result.key_for?("@id")) && (map[_id]?.try(&.as_s))) || (map["@id"]?.try(&.as_s))
-          result[term] = expand_iri(id, context) if id
+          type = ((_type = result.key_for?("@type")) && (map[_type]?.try(&.as_s))) || (map["@type"]?.try(&.as_s))
+          if id
+            if type
+              result[term] = wrap({
+                "@id" => expand_iri(id, context),
+                "@type" => wrap(type)
+              })
+            else
+              result[term] = expand_iri(id, context)
+            end
+          end
         end
       end
 
       wrap(result)
+    end
+
+    private def self.term_definition(term, context)
+      if (defn = context[term]?)
+        if (iri = defn.as_s?)
+          iri
+        elsif (map = defn.as_h?)
+          map["@id"]?.try(&.as_s)
+        end
+      end
+    end
+
+    private def self.id_valued_term?(term, context)
+      if (defn = context[term]?)
+        if (iri = defn.as_s?)
+          iri == "@id"
+        elsif (map = defn.as_h?)
+          map["@type"]?.try(&.as_s) == "@id"
+        end
+      else
+        if (context_map = context.as_h?)
+          if (matching_term = context_map.keys.find { |key| term_definition(key, context) == term })
+            id_valued_term?(matching_term, context)
+          end
+        end
+      end
     end
 
     private def self.expand_iri(string, context)
@@ -107,14 +145,22 @@ module Ktistec
         if context[prefix]? && !suffix.starts_with?("//")
           wrap("#{context[prefix]}#{suffix}")
         else
-          context[string]? || wrap(string)
+          if (mapped = term_definition(string, context))
+            wrap(mapped)
+          else
+            wrap(string)
+          end
         end
       else
-        context[string]? || wrap(string)
+        if (mapped = term_definition(string, context))
+          wrap(mapped)
+        else
+          wrap(string)
+        end
       end
     end
 
-    private def self.expand_value(term, value, context, loader)
+    private def self.expand_value(term, value, context, loader, id_valued = false)
       if term.in?(["https://www.w3.org/ns/activitystreams#content", "https://www.w3.org/ns/activitystreams#name", "https://www.w3.org/ns/activitystreams#summary"])
         value.as_s? ? wrap({"und" => value}) : value
       elsif value.as_a?
@@ -126,6 +172,8 @@ module Ktistec
               new_context = wrap(new_context.as_h.merge(c.as_h))
             end
             expand(v, new_context, loader)
+          elsif id_valued && v.as_s?
+            expand_iri(v.as_s, context)
           else
             v
           end
@@ -138,6 +186,8 @@ module Ktistec
           new_context = wrap(new_context.as_h.merge(c.as_h))
         end
         expand(value, new_context, loader)
+      elsif id_valued && value.as_s?
+        expand_iri(value.as_s, context)
       else
         value
       end

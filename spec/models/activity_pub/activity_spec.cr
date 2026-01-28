@@ -64,6 +64,22 @@ Spectator.describe ActivityPub::Activity do
         expect(activity.visible).to be_true
       end
     end
+
+    context "when addressed to the public collection" do
+      it "is visible when to includes as:Public" do
+        json = self.json.gsub("to link", "as:Public")
+        activity = described_class.from_json_ld(json).save
+        expect(activity.visible).to be_true
+      end
+    end
+
+    context "when addressed to the public collection" do
+      it "is visible when to includes as:Public" do
+        json = self.json.gsub("to link", "Public")
+        activity = described_class.from_json_ld(json).save
+        expect(activity.visible).to be_true
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -83,6 +99,22 @@ Spectator.describe ActivityPub::Activity do
     context "when addressed to the public collection" do
       it "is visible" do
         json = self.json.gsub("cc link", "https://www.w3.org/ns/activitystreams#Public")
+        activity = described_class.new.from_json_ld(json).save
+        expect(activity.visible).to be_true
+      end
+    end
+
+    context "when addressed to the public collection" do
+      it "is visible when cc includes as:Public" do
+        json = self.json.gsub("cc link", "as:Public")
+        activity = described_class.new.from_json_ld(json).save
+        expect(activity.visible).to be_true
+      end
+    end
+
+    context "when addressed to the public collection" do
+      it "is visible when cc includes Public" do
+        json = self.json.gsub("cc link", "Public")
         activity = described_class.new.from_json_ld(json).save
         expect(activity.visible).to be_true
       end

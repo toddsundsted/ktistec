@@ -1903,4 +1903,91 @@ Spectator.describe ActivityPub::Actor do
       end
     end
   end
+
+  describe "before_save" do
+    let(actor) { register.actor }
+
+    def upload(name)
+      tempfile = File.tempfile("image")
+      tempfile.print("image content")
+      tempfile.rewind
+      result = UploadService.upload(tempfile, name, actor.id!)
+      result.file_uri.not_nil!
+    end
+
+    def url_to_path(url)
+      File.join(Kemal.config.public_folder, URI.parse(url.not_nil!).path.not_nil!)
+    end
+
+    let(old_icon) { upload("old_icon.png") }
+    let(new_icon) { upload("new_icon.png") }
+    let(old_image) { upload("old_image.png") }
+    let(new_image) { upload("new_image.png") }
+
+    context "when icon changes" do
+      before_each { actor.assign(icon: old_icon).save }
+
+      pre_condition { expect(File.exists?(url_to_path(actor.icon))).to be_true }
+
+      it "deletes old icon file" do
+        actor.assign(icon: new_icon).save
+        expect(File.exists?(url_to_path(old_icon))).to be_false
+      end
+
+      it "deletes old icon file" do
+        actor.assign(icon: nil).save
+        expect(File.exists?(url_to_path(old_icon))).to be_false
+      end
+
+      it "does not delete when icon is unchanged" do
+        actor.assign(name: "New Name").save
+        expect(File.exists?(url_to_path(old_icon))).to be_true
+      end
+    end
+
+    context "when image changes" do
+      before_each { actor.assign(image: old_image).save }
+
+      pre_condition { expect(File.exists?(url_to_path(actor.image))).to be_true }
+
+      it "deletes old image file" do
+        actor.assign(image: new_image).save
+        expect(File.exists?(url_to_path(old_image))).to be_false
+      end
+
+      it "deletes old image when set to nil" do
+        actor.assign(image: nil).save
+        expect(File.exists?(url_to_path(old_image))).to be_false
+      end
+
+      it "does not delete when image is unchanged" do
+        actor.assign(name: "New Name").save
+        expect(File.exists?(url_to_path(old_image))).to be_true
+      end
+    end
+
+    context "with remote actor" do
+      let_create(
+        actor, named: remote_actor,
+        icon: "https://remote/avatar.jpg",
+        remote: true,
+      )
+
+      it "does not attempt to delete" do
+        expect { remote_actor.assign(icon: "https://files.mastodon.social/avatar_new.jpg").save }.not_to raise_error
+      end
+    end
+
+    context "with new actor" do
+      let_build(
+        actor, named: new_actor,
+        icon: "https://test.test/uploads/some/path.png",
+        remote: false,
+      )
+
+      it "does not attempt to delete" do
+        expect { new_actor.save }.not_to raise_error
+      end
+    end
+  end
 end

@@ -253,6 +253,49 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "before_destroy" do
+    let_create(:object, local: true)
+
+    def upload(name)
+      tempfile = File.tempfile("image")
+      tempfile.print("image content")
+      tempfile.rewind
+      result = UploadService.upload(tempfile, name, object.attributed_to.id!)
+      result.file_uri.not_nil!
+    end
+
+    def url_to_path(url)
+      File.join(Kemal.config.public_folder, URI.parse(url.not_nil!).path.not_nil!)
+    end
+
+    let(attachment) { upload("attachment.png") }
+
+    context "when object is destroyed" do
+      before_each do
+        object.assign(attachments: [ActivityPub::Object::Attachment.new(attachment, "image/png")]).save
+      end
+
+      pre_condition { expect(File.exists?(url_to_path(attachment))).to be_true }
+
+      it "deletes attachment files" do
+        object.destroy
+        expect(File.exists?(url_to_path(attachment))).to be_false
+      end
+    end
+
+    context "with remote object" do
+      let_create(
+        :object, named: remote_object,
+        attachments: [ActivityPub::Object::Attachment.new("https://remote/image.png", "image/png")],
+        remote: true,
+      )
+
+      it "does not attempt to delete" do
+        expect { remote_object.destroy }.not_to raise_error
+      end
+    end
+  end
+
   let(json) do
     <<-JSON
       {

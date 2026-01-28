@@ -148,7 +148,7 @@ module UploadService
   # Returns path components and actor ID if valid, `nil` otherwise.
   #
   private def self.parse_path_components(path : String) : NamedTuple(p1: String, p2: String, p3: String, filename: String, actor_id: Int64)?
-    if (match = path.match(/^\/uploads\/([a-z0-9-]+)\/([a-z0-9-]+)\/([a-z0-9-]+)\/(([0-9]+)(\.[^.]+)?)$/))
+    if (match = path.match(/^\/uploads\/([a-z0-9-]+)\/([a-z0-9-]+)\/([a-z0-9-]+)\/(([0-9]+)(\.[a-zA-Z0-9_-]+)?)$/))
       p1, p2, p3, filename, id_str = match[1], match[2], match[3], match[4], match[5]
       if (actor_id = id_str.to_i64?)
         {p1: p1, p2: p2, p3: p3, filename: filename, actor_id: actor_id}

@@ -100,8 +100,8 @@ module Ktistec
           if id
             if type
               result[term] = wrap({
-                "@id" => expand_iri(id, context),
-                "@type" => wrap(type)
+                "@id"   => expand_iri(id, context),
+                "@type" => wrap(type),
               })
             else
               result[term] = expand_iri(id, context)

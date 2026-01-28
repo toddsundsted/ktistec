@@ -7,6 +7,7 @@ require "../../framework/key_pair"
 require "../../framework/ext/sqlite3"
 require "../../framework/model"
 require "../../framework/model/**"
+require "../../services/upload_service"
 require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
@@ -150,6 +151,21 @@ module ActivityPub
           self.followers = "#{host}/actors/#{username}/followers"
           self.featured = "#{host}/actors/#{username}/featured"
           self.urls = ["#{host}/@#{username}"]
+        end
+      end
+    end
+
+    def before_save
+      if local? && (saved = @saved_record) && (actor_id = self.id)
+        if changed?(:icon) && (old_icon = saved.icon) && old_icon != icon
+          if (path = URI.parse(old_icon).path)
+            UploadService.delete(path, actor_id)
+          end
+        end
+        if changed?(:image) && (old_image = saved.image) && old_image != image
+          if (path = URI.parse(old_image).path)
+            UploadService.delete(path, actor_id)
+          end
         end
       end
     end

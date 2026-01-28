@@ -8,6 +8,7 @@ require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
 require "../relationship/content/canonical"
 require "../../services/thread_analysis_service"
+require "../../services/upload_service"
 require "../translation"
 require "../tag/emoji"
 require "../../framework/json_ld"
@@ -996,6 +997,20 @@ module ActivityPub
       # see the source for Relationship::Content::Follow::Thread and
       # Task::Fetch::Thread for additional after_save thread updating
       # functionality
+    end
+
+    def before_destroy
+      if local? && (attachments = self.attachments) && (actor = self.attributed_to?) && (actor_id = actor.id)
+        attachments.each do |attachment|
+          url = attachment.url
+          next unless url.presence
+          begin
+            path = URI.parse(url).path
+            UploadService.delete(path, actor_id)
+          rescue URI::Error
+          end
+        end
+      end
     end
 
     def after_delete

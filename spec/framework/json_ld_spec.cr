@@ -358,6 +358,28 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
+  context "given JSON-LD document with id-valued properties" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "to": ["as:Public", "https://www.w3.org/ns/activitystreams#Public"],
+            "cc": ["Public", "https://www.w3.org/ns/activitystreams#Public"]
+          }
+        JSON
+      ), double(loader))
+    end
+
+    describe "#[]" do
+      it "expands id-valued properties" do
+        to_values = json["https://www.w3.org/ns/activitystreams#to"].as_a.map(&.as_s)
+        cc_values = json["https://www.w3.org/ns/activitystreams#cc"].as_a.map(&.as_s)
+        expect(to_values).to eq(["https://www.w3.org/ns/activitystreams#Public", "https://www.w3.org/ns/activitystreams#Public"])
+        expect(cc_values).to eq(["https://www.w3.org/ns/activitystreams#Public", "https://www.w3.org/ns/activitystreams#Public"])
+      end
+    end
+  end
+
   context "given JSON-LD document with uncached context" do
     let(json) do
       described_class.expand(JSON.parse(<<-JSON

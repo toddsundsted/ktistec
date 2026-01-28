@@ -520,6 +520,10 @@ module Ktistec
     @[Persistent]
     property id : Int64? = nil
 
+    def id!
+      @id.not_nil!
+    end
+
     # Tracks changed model properties.
     #
     @changed : Set(Symbol)

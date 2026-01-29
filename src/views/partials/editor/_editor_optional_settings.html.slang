@@ -1,4 +1,4 @@
-- if selected_editors.includes?("optional") && !in_reply_to
+- if selected_editors.includes?("optional")
   .field
     label Title
     input type="text" name="name" value=object.name
@@ -9,6 +9,7 @@
     .ui.checkbox
       input#content-warning type="checkbox" name="sensitive" value="true" checked=object.sensitive
       label for="content-warning" Content Warning
-  .field class=(errors["canonical_path"]? ? "error" : nil)
-    label Canonical Path
-    input type="text" name="canonical-path" value=object.canonical_path
+  - unless in_reply_to
+    .field class=(errors["canonical_path"]? ? "error" : nil)
+      label Canonical Path
+      input type="text" name="canonical-path" value=object.canonical_path

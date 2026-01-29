@@ -71,6 +71,19 @@ Spectator.describe ThreadAnalysisService do
       participants = ThreadAnalysisService.key_participants(tuples)
       expect(participants.size).to eq(18)
     end
+
+    context "when a participant has only draft posts" do
+      let(tuples) do
+        [
+          {id: 1_i64, iri: "https://t/1", in_reply_to_iri: nil, attributed_to_iri: "https://t/op", published: base_time, depth: 0},
+          {id: 2_i64, iri: "https://t/2", in_reply_to_iri: "https://t/1", attributed_to_iri: "https://t/nodates", published: nil, depth: 1},
+        ]
+      end
+
+      it "excludes that participant" do
+        expect(participants.map(&.actor_iri)).to contain_exactly("https://t/op")
+      end
+    end
   end
 
   let(base_time) { Time.utc(2025, 1, 1, 10, 0) }

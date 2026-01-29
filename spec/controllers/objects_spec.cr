@@ -1490,6 +1490,16 @@ Spectator.describe ObjectsController do
         get "/remote/objects/#{remote.id}/thread/analysis"
         expect(response.status_code).to eq(404)
       end
+
+      context "when thread contains a draft" do
+        # create a draft from an author who has no other objects in the thread.
+        let_create!(:object, named: nil, in_reply_to: visible, published: nil, local: true)
+
+        it "succeeds" do
+          get "/remote/objects/#{visible.id}/thread/analysis"
+          expect(response.status_code).to eq(200)
+        end
+      end
     end
   end
 

@@ -67,7 +67,7 @@ crystal:
       - warnings.each do |warning|
         li = warning
 crystal:
-  id = object.id || "new" # MOVE ME
+  id = object.id || "new"
   data_controller = media_type.starts_with?("text/html") ? "editor--trix has-content" : "has-content"
 form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controller=data_controller method="POST"
   == render "src/views/partials/editor/_editor_errors.html.slang"

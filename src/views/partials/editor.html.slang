@@ -34,7 +34,7 @@ crystal:
     errors["canonical_path"] = canonical_path_errors
     errors.delete("canonical_path.from_iri")
   end
-  errors = errors.transform_keys(&.split(/[_\.]/).map(&.capitalize).join(" "))
+  error_messages = errors.transform_keys(&.split(/[_\.]/).map(&.capitalize).join(" "))
   has_errors = !errors.empty?
   content = object.source.try(&.content) || object.content || nil
   actor = env.account.actor

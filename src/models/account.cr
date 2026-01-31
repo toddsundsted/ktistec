@@ -3,6 +3,7 @@ require "openssl_ext"
 
 require "../framework/model"
 require "../framework/model/**"
+require "../utils/paths"
 require "./oauth2/provider/access_token"
 require "./activity_pub/actor"
 require "./last_time"
@@ -135,6 +136,33 @@ class Account
   @[Persistent]
   property default_editor : String { "text/html; editor=trix" }
   validates(default_editor) { "is not a valid editor" unless default_editor.in?("text/html; editor=trix", "text/markdown") }
+
+  @[Persistent]
+  property pinned_collections : Hash(String, String) do
+    {
+      "Bookmarks" => Utils::Paths.actor_bookmarks_path(self),
+      "Followers" => Utils::Paths.actor_followers_path(self),
+      "Following" => Utils::Paths.actor_following_path(self),
+    }
+  end
+  validates(pinned_collections) do
+    pinned_collections.each do |label, path|
+      begin
+        normalized_path = URI.parse(path).normalize.path
+        pinned_collections[label] = normalized_path
+        if normalized_path.blank?
+          return "path cannot be blank"
+        elsif !normalized_path.starts_with?("/")
+          return "path must be absolute"
+        end
+        if label.blank?
+          return "label cannot be blank"
+        end
+      rescue URI::Error
+        return "is not valid"
+      end
+    end
+  end
 
   @[Persistent]
   property iri : String { "" }

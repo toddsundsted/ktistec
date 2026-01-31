@@ -25,7 +25,7 @@ module SQLite3
   end
 end
 
-private alias Supported = JSON::Serializable | Array(JSON::Serializable) | Array(String)
+private alias Supported = JSON::Serializable | Array(JSON::Serializable) | Hash(String, String) | Array(String)
 
 class SQLite3::ResultSet
   {% for type in Supported.union_types %}

@@ -41,6 +41,30 @@ Spectator.describe Account do
     end
   end
 
+  describe "#pinned_collections" do
+    it "defaults to bookmarks, followers, and following" do
+      expect(subject.pinned_collections).to eq({
+        "Bookmarks" => "/actors/#{username}/bookmarks",
+        "Followers" => "/actors/#{username}/followers",
+        "Following" => "/actors/#{username}/following",
+      })
+    end
+  end
+
+  describe "#pinned_collections=" do
+    it "extracts the path" do
+      subject.pinned_collections = {"Thread" => "https://test.test/objects/123/thread"}
+      expect(subject.valid?).to be_true
+      expect(subject.pinned_collections["Thread"]).to eq("/objects/123/thread")
+    end
+
+    it "normalizes the path" do
+      subject.pinned_collections = {"Thread" => "/objects/123/../456/thread"}
+      expect(subject.valid?).to be_true
+      expect(subject.pinned_collections["Thread"]).to eq("/objects/456/thread")
+    end
+  end
+
   describe "#validate" do
     it "rejects the username as too short" do
       new_account = described_class.new(username: "", password: "")
@@ -85,6 +109,26 @@ Spectator.describe Account do
     it "rejects the default editor as invalid" do
       new_account = described_class.new(username: "", password: "", default_editor: "text/plain")
       expect(new_account.validate["default_editor"]).to eq(["is not a valid editor"])
+    end
+
+    it "rejects pinned_collections with blank labels" do
+      subject.pinned_collections = {"" => "/path"}
+      expect(subject.validate["pinned_collections"]).to eq(["label cannot be blank"])
+    end
+
+    it "rejects pinned_collections with blank paths" do
+      subject.pinned_collections = {"Label" => ""}
+      expect(subject.validate["pinned_collections"]).to eq(["path cannot be blank"])
+    end
+
+    it "rejects pinned_collections with paths that are not absolute" do
+      subject.pinned_collections = {"Label" => "path"}
+      expect(subject.validate["pinned_collections"]).to eq(["path must be absolute"])
+    end
+
+    it "accepts pinned_collections with valid paths" do
+      subject.pinned_collections = {"Label" => "/path"}
+      expect(subject.valid?).to be_true
     end
   end
 

@@ -20,9 +20,8 @@
           span.ui.mini.transitional.horizontal.circular.label class=color title=tooltip = count
         - else
           span.invisible.label
-      a.item href=actor_bookmarks_path(actor) Bookmarks
-      a.item href=actor_relationships_path(actor, "followers") Followers
-      a.item href=actor_relationships_path(actor, "following") Following
+      - env.account.pinned_collections.each do |label, path|
+        a.item href=path = label
       a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"
         i.horizontal.sliders.icon
         .menu

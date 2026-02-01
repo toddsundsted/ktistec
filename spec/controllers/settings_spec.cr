@@ -40,6 +40,15 @@ Spectator.describe SettingsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='default_editor'][@type='radio']")).not_to be_empty
         end
 
+        it "renders inputs for pinned_collections" do
+          get "/settings", headers
+          body = XML.parse_html(response.body)
+          0.upto(Account::PINNED_COLLECTION_LIMIT - 1) do |i|
+            expect(body.xpath_nodes("//form//input[@name='pinned_#{i}_label']")).not_to be_empty
+            expect(body.xpath_nodes("//form//input[@name='pinned_#{i}_path']")).not_to be_empty
+          end
+        end
+
         before_each do
           ENV.delete("DEEPL_API_KEY")
           ENV.delete("LIBRETRANSLATE_API_KEY")
@@ -286,6 +295,28 @@ Spectator.describe SettingsController do
           expect(attachments.first.name).to eq("Blog")
           expect(attachments.first.value).to eq("https://beowulf.example.com")
         end
+
+        it "updates the pinned_collections" do
+          post "/settings/actor", headers, "pinned_0_label=Likes&pinned_0_path=%2Factors%2F#{actor.username}%2Flikes&pinned_1_label=Crystal&pinned_1_path=%2Ftags%2Fcrystallang"
+          pinned = account.reload!.pinned_collections
+          expect(pinned.size).to eq(2)
+          expect(pinned["Likes"]).to eq("/actors/#{actor.username}/likes")
+          expect(pinned["Crystal"]).to eq("/tags/crystallang")
+        end
+
+        context "given an account with pinned collections" do
+          before_each { account.assign(pinned_collections: {"Bookmarks" => "/actors/#{actor.username}/bookmarks"}).save }
+
+          it "clears the pinned_collections" do
+            expect { post "/settings/actor", headers, "" }
+              .to change { account.reload!.pinned_collections.size }.from(1).to(0)
+          end
+        end
+
+        it "returns 422 when validation fails" do
+          post "/settings/actor", headers, "pinned_0_label=Invalid&pinned_0_path=%2Finvalid%2Fpath"
+          expect(response.status_code).to eq(422)
+        end
       end
 
       context "and posting form data" do
@@ -482,6 +513,28 @@ Spectator.describe SettingsController do
           expect(attachments.size).to eq(1)
           expect(attachments.first.name).to eq("Blog")
           expect(attachments.first.value).to eq("https://beowulf.example.com")
+        end
+
+        it "updates the pinned_collections" do
+          post "/settings/actor", headers, %Q|{"pinned_0_label":"Likes","pinned_0_path":"/actors/#{actor.username}/likes","pinned_1_label":"Crystal","pinned_1_path":"/tags/crystallang"}|
+          pinned = account.reload!.pinned_collections
+          expect(pinned.size).to eq(2)
+          expect(pinned["Likes"]).to eq("/actors/#{actor.username}/likes")
+          expect(pinned["Crystal"]).to eq("/tags/crystallang")
+        end
+
+        context "given an account with pinned collections" do
+          before_each { account.assign(pinned_collections: {"Bookmarks" => "/actors/#{actor.username}/bookmarks"}).save }
+
+          it "clears the pinned_collections" do
+            expect { post "/settings/actor", headers, %q|{}| }
+              .to change { account.reload!.pinned_collections.size }.from(1).to(0)
+          end
+        end
+
+        it "returns 422 when validation fails" do
+          post "/settings/actor", headers, %q|{"pinned_0_label":"Invalid","pinned_0_path":"/invalid/path"}|
+          expect(response.status_code).to eq(422)
         end
       end
     end

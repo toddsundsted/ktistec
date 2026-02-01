@@ -57,6 +57,36 @@ p
         input type="text" name="attachment_#{i}_value" value=attachments[i].value
   == input_tag("Background Image", actor, image, class: "filepond", type: "file")
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
+  crystal:
+    pinned_array = account.pinned_collections.to_a
+    pinned_array.size.upto(Account::PINNED_COLLECTION_LIMIT - 1) do |i|
+      pinned_array << {"", ""}
+    end
+  .field
+    label Pinned Collections
+    p
+      ' You can pin up to three collections in the secondary menu of your home page. Collections include
+      a href=actor_bookmarks_path(actor) bookmarks
+      ' ,
+      a href=actor_followers_path(actor) followers
+      ' ,
+      a href=actor_following_path(actor) following
+      ' ,
+      a href=actor_relationships_path(actor, "likes") likes
+      ' ,
+      a href=actor_relationships_path(actor, "shares") shares
+      | , as well as threads and hashtags.
+  .two.fields
+    .field
+      label Label
+    .field
+      label Path
+  - 0.upto(Account::PINNED_COLLECTION_LIMIT - 1).each do |i|
+    .two.fields
+      .field
+        input type="text" name="pinned_#{i}_label" value=pinned_array[i][0]
+      .field
+        input type="text" name="pinned_#{i}_path" value=pinned_array[i][1]
   == submit_button("Update")
 h2 Delete Account!
 p

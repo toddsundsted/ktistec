@@ -114,13 +114,16 @@ nav.ui.top.navigation.menu {
             }
             .detail {
                 a {
-                    img { cursor: pointer !important; }
+                    display: inline-block;
+                    position: relative;
+                    white-space: nowrap;
+                    img { cursor: pointer !important; display: block; }
                     img + i {
                         color: var(--semantic-primary);
-                        position: relative;
-                        left: -10px;
-                        bottom: -10px;
-                        width: 5px;
+                        position: absolute;
+                        right: -6px;
+                        bottom: -6px;
+                        line-height: 1;
                     }
                 }
             }

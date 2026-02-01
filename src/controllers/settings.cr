@@ -117,9 +117,10 @@ class SettingsController
       "auto_follow_back"       => params["auto_follow_back"]?.in?("1", true) || false,
       "default_editor"         => params["default_editor"]?.try(&.to_s),
       # FilePond passes the _path_ as a "unique file id". Ktistec requires the full URI.
-      "image"       => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
-      "icon"        => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
-      "attachments" => reduce_attachments(params),
+      "image"              => params["image"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
+      "icon"               => params["icon"]?.try(&.to_s.presence).try { |path| "#{host}#{path}" },
+      "attachments"        => reduce_attachments(params),
+      "pinned_collections" => reduce_pinned_collections(params),
     }.select do |k, v|
       v || k.in?("image", "icon", "auto_approve_followers", "auto_follow_back")
     end
@@ -171,6 +172,16 @@ class SettingsController
           "PropertyValue",
           params["attachment_#{i}_value"].to_s
         )
+      end
+      memo
+    end
+  end
+
+  private def self.reduce_pinned_collections(params)
+    0.upto(Account::PINNED_COLLECTION_LIMIT - 1).reduce(Hash(String, String).new) do |memo, i|
+      if (label = params["pinned_#{i}_label"]?.try(&.to_s.presence)) &&
+         (path = params["pinned_#{i}_path"]?.try(&.to_s.presence))
+        memo[label] = path
       end
       memo
     end

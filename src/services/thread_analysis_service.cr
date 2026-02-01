@@ -57,9 +57,10 @@ module ThreadAnalysisService
       end
     end.group_by { |t| t[:iri] }
 
-    participants = by_author.map do |actor_iri, objects|
-      depths = objects.map { |o| o[:depth] }
+    participants = by_author.compact_map do |actor_iri, objects|
+      depths = objects.compact_map { |o| o[:depth] }
       times = objects.compact_map { |o| o[:published] }
+      next if depths.empty? || times.empty?
       ParticipantInfo.new(
         actor_iri: actor_iri,
         object_count: objects.size,

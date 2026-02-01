@@ -11,6 +11,10 @@ crystal:
     else
       env.params.query.fetch_all("editor")
     end
+  # activate "optional" editor when editing object with optional fields
+  if object.name.presence || object.summary.presence || object.sensitive
+    selected_editors = selected_editors + ["optional"] unless selected_editors.includes?("optional")
+  end
   warnings = [] of String
   unless selected_editors.empty?
     unsupported_editors = selected_editors - supported_editors
@@ -30,7 +34,7 @@ crystal:
     errors["canonical_path"] = canonical_path_errors
     errors.delete("canonical_path.from_iri")
   end
-  errors = errors.transform_keys(&.split(/[_\.]/).map(&.capitalize).join(" "))
+  error_messages = errors.transform_keys(&.split(/[_\.]/).map(&.capitalize).join(" "))
   has_errors = !errors.empty?
   content = object.source.try(&.content) || object.content || nil
   actor = env.account.actor
@@ -63,7 +67,7 @@ crystal:
       - warnings.each do |warning|
         li = warning
 crystal:
-  id = object.id || "new" # MOVE ME
+  id = object.id || "new"
   data_controller = media_type.starts_with?("text/html") ? "editor--trix has-content" : "has-content"
 form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controller=data_controller method="POST"
   == render "src/views/partials/editor/_editor_errors.html.slang"

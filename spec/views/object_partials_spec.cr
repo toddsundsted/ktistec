@@ -81,7 +81,7 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, for_thread, for_actor))
+        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, in_reply, for_thread, for_actor))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -95,6 +95,7 @@ Spectator.describe "object partials" do
     let_build(:object, named: :original)
 
     let(with_detail) { false }
+    let(in_reply) { false }
     let(for_thread) { nil }
     let(for_actor) { nil }
 
@@ -248,6 +249,14 @@ Spectator.describe "object partials" do
 
       it "does not render a back link to the parent" do
         expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]")).to be_empty
+      end
+
+      context "when viewing a reply" do
+        let(in_reply) { true }
+
+        it "does not display row of iconic buttons" do
+          expect(subject.xpath_nodes("//div[contains(@class,'meta')]//*[contains(@class,'iconic')][contains(@class,'button')]")).to be_empty
+        end
       end
     end
 

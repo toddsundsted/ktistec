@@ -763,17 +763,21 @@ Spectator.describe "partials" do
         context "and editor=optional&editor=poll" do
           let(env) { make_env("GET", "/editor?editor=optional&editor=poll") }
 
-          it "does not render optional inputs for replies" do
-            expect(subject.xpath_nodes("//input[@name='name']")).to be_empty
+          it "renders optional inputs for replies" do
+            expect(subject.xpath_nodes("//input[@name='name']")).not_to be_empty
+          end
+
+          it "does not render canonical path input for replies" do
+            expect(subject.xpath_nodes("//input[@name='canonical-path']")).to be_empty
           end
 
           it "does not render poll inputs for replies" do
             expect(subject.xpath_nodes("//input[@name='poll-options']")).to be_empty
           end
 
-          it "renders only rich-text and markdown buttons" do
+          it "renders rich-text, markdown, and optional buttons" do
             button_texts = subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')]/text()").map(&.to_s)
-            expect(button_texts).to contain_exactly("Rich Text", "Markdown")
+            expect(button_texts).to contain_exactly("Rich Text", "Markdown", "Optional")
           end
         end
       end
@@ -1454,6 +1458,84 @@ Spectator.describe "partials" do
         it "renders the errors" do
           expect(subject["errors"]["object"]).to eq(["has errors"])
         end
+      end
+    end
+  end
+
+  describe "objects/reply.html.slang" do
+    let(account) { register }
+
+    sign_in(as: account.username)
+
+    let(env) { make_env("GET", "/reply") }
+
+    subject do
+      XML.parse_html(render "./src/views/objects/reply.html.slang")
+    end
+
+    let_build(:object)
+
+    it "does not inherit summary" do
+      expect(subject.xpath_nodes("//textarea[@name='summary']/text()")).to be_empty
+    end
+
+    it "does not inherit sensitive" do
+      expect(subject.xpath_nodes("//input[@name='sensitive']/@checked")).to be_empty
+    end
+
+    it "does not inherit name" do
+      expect(subject.xpath_nodes("//input[@name='name']/@value")).to be_empty
+    end
+
+    it "does not show active optional button" do
+      expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][contains(@class,'active')][contains(text(),'Optional')]")).to be_empty
+    end
+
+    context "when replying to an object with just a summary" do
+      before_each { object.assign(summary: "Summary").save }
+
+      it "does not inherit summary" do
+        expect(subject.xpath_nodes("//textarea[@name='summary']/text()")).to be_empty
+      end
+    end
+
+    context "when replying to an object marked sensitive" do
+      before_each { object.assign(sensitive: true).save }
+
+      it "does not inherit sensitive" do
+        expect(subject.xpath_nodes("//input[@name='sensitive']/@checked")).to be_empty
+      end
+    end
+
+    context "when replying to an object with a content warning" do
+      before_each { object.assign(summary: "Original warning", sensitive: true).save }
+
+      it "inherits summary" do
+        expect(subject.xpath_nodes("//textarea[@name='summary']/text()").first.content).to eq("Original warning")
+      end
+
+      it "inherits sensitive" do
+        expect(subject.xpath_nodes("//input[@name='sensitive']/@checked").first.content).to eq("checked")
+      end
+
+      it "does not inherit name" do
+        expect(subject.xpath_nodes("//input[@name='name']/@value").first.content).to eq("")
+      end
+
+      it "shows active optional button" do
+        expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][contains(@class,'active')][contains(text(),'Optional')]")).not_to be_empty
+      end
+    end
+
+    context "when manual editor=optional parameter is provided" do
+      let(env) { make_env("GET", "/reply?editor=optional") }
+
+      it "shows optional fields" do
+        expect(subject.xpath_nodes("//input[@name='name']")).not_to be_empty
+      end
+
+      it "shows active optional button" do
+        expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][contains(@class,'active')][contains(text(),'Optional')]")).not_to be_empty
       end
     end
   end

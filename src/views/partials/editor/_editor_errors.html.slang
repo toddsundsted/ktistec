@@ -1,4 +1,4 @@
 - if has_errors
   .ui.error.message
-    - messages = errors.flat_map { |k, vs| vs.map { |v| "#{k} #{v}." } }.join(" ")
+    - messages = error_messages.flat_map { |k, vs| vs.map { |v| "#{k} #{v}." } }.join(" ")
     p = messages

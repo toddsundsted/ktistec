@@ -271,7 +271,7 @@ Spectator.describe ObjectsController do
         expect(response.status_code).to eq(200)
       end
 
-      context "witihout Turbo Streams" do
+      context "without Turbo Streams" do
         let(form_data) { FORM_DATA.dup.tap { |headers| headers["Accept"] = "text/html" } }
 
         it "redirects" do
@@ -1086,7 +1086,7 @@ Spectator.describe ObjectsController do
         expect(response.status_code).to eq(200)
       end
 
-      context "witihout Turbo Streams" do
+      context "without Turbo Streams" do
         let(form_data) { FORM_DATA.dup.tap { |headers| headers["Accept"] = "text/html" } }
 
         it "redirects" do
@@ -1191,6 +1191,44 @@ Spectator.describe ObjectsController do
             post "/objects/#{draft.uid}", JSON_DATA, %Q|{"language":"invalid"}|
             expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
           end
+        end
+      end
+
+      context "given an existing private post" do
+        let(query) { "content=%3Cdiv%3E%40foo%40bar.baz%3C%2Fdiv%3E&visibility=private&media-type=text%2Fhtml%3B+editor%3Dtrix" }
+
+        before_each { post "/objects/#{draft.uid}", FORM_DATA, query }
+
+        pre_condition do
+          expect(draft.reload!.mentions.map(&.name)).to contain_exactly("foo@bar.baz")
+          expect(draft.to).to contain_exactly(actor.followers)
+          expect(draft.cc).to contain_exactly("https://bar.baz/actors/foo")
+        end
+
+        it "updates the addressing" do
+          post "/objects/#{draft.uid}", FORM_DATA, query.gsub("visibility=private", "visibility=direct")
+          expect(draft.reload!.mentions.map(&.name)).to contain_exactly("foo@bar.baz")
+          expect(draft.to).to contain_exactly("https://bar.baz/actors/foo")
+          expect(draft.cc).to be_empty
+        end
+      end
+
+      context "given an existing direct post" do
+        let(query) { "content=%3Cdiv%3E%40foo%40bar.baz%3C%2Fdiv%3E&visibility=direct&media-type=text%2Fhtml%3B+editor%3Dtrix" }
+
+        before_each { post "/objects/#{draft.uid}", FORM_DATA, query }
+
+        pre_condition do
+          expect(draft.reload!.mentions.map(&.name)).to contain_exactly("foo@bar.baz")
+          expect(draft.to).to contain_exactly("https://bar.baz/actors/foo")
+          expect(draft.cc).to be_empty
+        end
+
+        it "updates the addressing" do
+          post "/objects/#{draft.uid}", FORM_DATA, query.gsub("visibility=direct", "visibility=private")
+          expect(draft.reload!.mentions.map(&.name)).to contain_exactly("foo@bar.baz")
+          expect(draft.to).to contain_exactly(actor.followers)
+          expect(draft.cc).to contain_exactly("https://bar.baz/actors/foo")
         end
       end
 

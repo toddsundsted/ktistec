@@ -64,7 +64,18 @@ p
     end
   .field
     label Pinned Collections
-    p You can pin up to three collections in the secondary menu of your home page.
+    p
+      ' You can pin up to three collections in the secondary menu of your home page. Collections include
+      a href=actor_bookmarks_path(actor) bookmarks
+      ' ,
+      a href=actor_followers_path(actor) followers
+      ' ,
+      a href=actor_following_path(actor) following
+      ' ,
+      a href=actor_relationships_path(actor, "likes") likes
+      ' ,
+      a href=actor_relationships_path(actor, "shares") shares
+      | , as well as threads and hashtags.
   .two.fields
     .field
       label Label

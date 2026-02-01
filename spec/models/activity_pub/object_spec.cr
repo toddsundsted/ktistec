@@ -57,7 +57,7 @@ Spectator.describe ActivityPub::Object do
       let_create!(:mention, subject: subject, href: bar.iri, name: bar.username)
 
       it "replaces mentions" do
-        subject.assign(to: ["https://test.test/actor", "https://foo.com/bar"], source: source).save
+        subject.reload!.assign(to: ["https://test.test/actor", "https://foo.com/bar"], source: source).save
         expect(subject.to).to eq(["https://test.test/actor", "https://bar.com/foo"])
       end
 

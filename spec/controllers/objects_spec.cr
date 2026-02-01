@@ -1194,6 +1194,44 @@ Spectator.describe ObjectsController do
         end
       end
 
+      context "given an existing private post" do
+        let(query) { "content=%3Cdiv%3E%40foo%40bar.baz%3C%2Fdiv%3E&visibility=private&media-type=text%2Fhtml%3B+editor%3Dtrix" }
+
+        before_each { post "/objects/#{draft.uid}", FORM_DATA, query }
+
+        pre_condition do
+          expect(draft.reload!.mentions.map(&.name)).to contain_exactly("foo@bar.baz")
+          expect(draft.to).to contain_exactly(actor.followers)
+          expect(draft.cc).to contain_exactly("https://bar.baz/actors/foo")
+        end
+
+        it "updates the addressing" do
+          post "/objects/#{draft.uid}", FORM_DATA, query.gsub("visibility=private", "visibility=direct")
+          expect(draft.reload!.mentions.map(&.name)).to contain_exactly("foo@bar.baz")
+          expect(draft.to).to contain_exactly("https://bar.baz/actors/foo")
+          expect(draft.cc).to be_empty
+        end
+      end
+
+      context "given an existing direct post" do
+        let(query) { "content=%3Cdiv%3E%40foo%40bar.baz%3C%2Fdiv%3E&visibility=direct&media-type=text%2Fhtml%3B+editor%3Dtrix" }
+
+        before_each { post "/objects/#{draft.uid}", FORM_DATA, query }
+
+        pre_condition do
+          expect(draft.reload!.mentions.map(&.name)).to contain_exactly("foo@bar.baz")
+          expect(draft.to).to contain_exactly("https://bar.baz/actors/foo")
+          expect(draft.cc).to be_empty
+        end
+
+        it "updates the addressing" do
+          post "/objects/#{draft.uid}", FORM_DATA, query.gsub("visibility=direct", "visibility=private")
+          expect(draft.reload!.mentions.map(&.name)).to contain_exactly("foo@bar.baz")
+          expect(draft.to).to contain_exactly(actor.followers)
+          expect(draft.cc).to contain_exactly("https://bar.baz/actors/foo")
+        end
+      end
+
       it "returns 404 if not a draft" do
         [visible, notvisible, remote].each do |object|
           post "/objects/#{object.uid}"

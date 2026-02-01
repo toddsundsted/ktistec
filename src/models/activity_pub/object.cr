@@ -231,50 +231,53 @@ module ActivityPub
     end
 
     def before_validate
-      if changed?(:source)
-        clear_changed!(:source)
-        if (source = self.source) && local?
-          source_content = source.content
-          media_type = source.media_type.split(";").map(&.strip).first?
-          if media_type == "text/markdown"
-            source_content = Markd.to_html(source_content)
-            media_type = "text/html"
+      if local?
+        # remove old mentions from both to and cc
+        mention_hrefs = self.mentions.compact_map(&.href)
+        if !mention_hrefs.empty?
+          if (old_to = self.to)
+            self.to = old_to - mention_hrefs
           end
-          if media_type == "text/html"
-            # remove old mentions from both to and cc
-            old_mentions = self.mentions.compact_map(&.href)
-            if (old_to = self.to)
-              self.to = old_to - old_mentions
+          if (old_cc = self.cc)
+            self.cc = old_cc - mention_hrefs
+          end
+        end
+        # update from source, if changed
+        if changed?(:source)
+          clear_changed!(:source)
+          if (source = self.source)
+            source_content = source.content
+            media_type = source.media_type.split(";").map(&.strip).first?
+            if media_type == "text/markdown"
+              source_content = Markd.to_html(source_content)
+              media_type = "text/html"
             end
+            if media_type == "text/html"
+              enhancements = Ktistec::HTML.enhance(source_content)
+              self.content = enhancements.content
+              self.media_type = media_type
+              self.attachments = enhancements.attachments
+              self.hashtags = enhancements.hashtags
+              self.mentions = enhancements.mentions
+            end
+          end
+        end
+        # add new mentions based on addressing
+        mention_hrefs = self.mentions.compact_map(&.href)
+        if !mention_hrefs.empty?
+          is_public = (to = self.to) && to.includes?("https://www.w3.org/ns/activitystreams#Public")
+          is_private = to && to.includes?(attributed_to.try(&.followers))
+          if is_public || is_private
             if (old_cc = self.cc)
-              self.cc = old_cc - old_mentions
+              self.cc = old_cc | mention_hrefs
+            else
+              self.cc = mention_hrefs
             end
-
-            enhancements = Ktistec::HTML.enhance(source_content)
-            self.content = enhancements.content
-            self.media_type = media_type
-            self.attachments = enhancements.attachments
-            self.hashtags = enhancements.hashtags
-            self.mentions = enhancements.mentions
-
-            # add new mentions based on addressing
-            new_mentions = enhancements.mentions.compact_map(&.href)
-            if !new_mentions.empty?
-              is_public = (to = self.to) && to.includes?("https://www.w3.org/ns/activitystreams#Public")
-              is_private = to && to.includes?(attributed_to.try(&.followers))
-              if is_public || is_private
-                if (old_cc = self.cc)
-                  self.cc = old_cc | new_mentions
-                else
-                  self.cc = new_mentions
-                end
-              else
-                if (old_to = self.to)
-                  self.to = old_to | new_mentions
-                else
-                  self.to = new_mentions
-                end
-              end
+          else
+            if (old_to = self.to)
+              self.to = old_to | mention_hrefs
+            else
+              self.to = mention_hrefs
             end
           end
         end

@@ -271,7 +271,7 @@ Spectator.describe ObjectsController do
         expect(response.status_code).to eq(200)
       end
 
-      context "witihout Turbo Streams" do
+      context "without Turbo Streams" do
         let(form_data) { FORM_DATA.dup.tap { |headers| headers["Accept"] = "text/html" } }
 
         it "redirects" do
@@ -1086,7 +1086,7 @@ Spectator.describe ObjectsController do
         expect(response.status_code).to eq(200)
       end
 
-      context "witihout Turbo Streams" do
+      context "without Turbo Streams" do
         let(form_data) { FORM_DATA.dup.tap { |headers| headers["Accept"] = "text/html" } }
 
         it "redirects" do

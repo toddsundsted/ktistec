@@ -53,15 +53,15 @@ Spectator.describe Account do
 
   describe "#pinned_collections=" do
     it "extracts the path" do
-      subject.pinned_collections = {"Thread" => "https://test.test/objects/123/thread"}
+      subject.pinned_collections = {"Thread" => "https://test.test/remote/objects/123/thread"}
       expect(subject.valid?).to be_true
-      expect(subject.pinned_collections["Thread"]).to eq("/objects/123/thread")
+      expect(subject.pinned_collections["Thread"]).to eq("/remote/objects/123/thread")
     end
 
     it "normalizes the path" do
-      subject.pinned_collections = {"Thread" => "/objects/123/../456/thread"}
+      subject.pinned_collections = {"Thread" => "/remote/objects/123/../456/thread"}
       expect(subject.valid?).to be_true
-      expect(subject.pinned_collections["Thread"]).to eq("/objects/456/thread")
+      expect(subject.pinned_collections["Thread"]).to eq("/remote/objects/456/thread")
     end
   end
 
@@ -126,8 +126,53 @@ Spectator.describe Account do
       expect(subject.validate["pinned_collections"]).to eq(["path must be absolute"])
     end
 
-    it "accepts pinned_collections with valid paths" do
-      subject.pinned_collections = {"Label" => "/path"}
+    it "rejects pinned_collections with unsupported paths" do
+      subject.pinned_collections = {"Label" => "/unsupported/path"}
+      expect(subject.validate["pinned_collections"]).to eq(["path must be a supported collection"])
+    end
+
+    it "rejects pinned_collections with another user's paths" do
+      subject.pinned_collections = {"Label" => "/actors/otheruser/bookmarks"}
+      expect(subject.validate["pinned_collections"]).to eq(["path must be a supported collection"])
+    end
+
+    it "rejects pinned_collections with missing hashtag" do
+      subject.pinned_collections = {"Tag" => "/tags/"}
+      expect(subject.validate["pinned_collections"]).to eq(["path must be a supported collection"])
+    end
+
+    it "rejects pinned_collections with extra segment" do
+      subject.pinned_collections = {"Tag" => "/tags/ruby/extra"}
+      expect(subject.validate["pinned_collections"]).to eq(["path must be a supported collection"])
+    end
+
+    it "rejects pinned_collections with missing collection" do
+      subject.pinned_collections = {"Label" => "/actors/#{username}/"}
+      expect(subject.validate["pinned_collections"]).to eq(["path must be a supported collection"])
+    end
+
+    it "rejects pinned_collections with extra segment" do
+      subject.pinned_collections = {"Label" => "/actors/#{username}/bookmarks/extra"}
+      expect(subject.validate["pinned_collections"]).to eq(["path must be a supported collection"])
+    end
+
+    it "accepts pinned_collections with hashtag" do
+      subject.pinned_collections = {"Crystal" => "/tags/crystal"}
+      expect(subject.valid?).to be_true
+    end
+
+    it "accepts pinned_collections with thread" do
+      subject.pinned_collections = {"Thread" => "/remote/objects/123/thread"}
+      expect(subject.valid?).to be_true
+    end
+
+    it "accepts pinned_collections with collection" do
+      subject.pinned_collections = {"Likes" => "/actors/#{username}/likes"}
+      expect(subject.valid?).to be_true
+    end
+
+    it "accepts empty pinned_collections" do
+      subject.pinned_collections = {} of String => String
       expect(subject.valid?).to be_true
     end
   end

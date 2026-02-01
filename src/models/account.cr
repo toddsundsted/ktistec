@@ -26,6 +26,8 @@ class Account
   include Ktistec::Model
   include Ktistec::Model::Common
 
+  PINNED_COLLECTION_LIMIT = 3
+
   @[Persistent]
   property username : String
 
@@ -148,6 +150,9 @@ class Account
   validates(pinned_collections) do
     pinned_collections.each do |label, path|
       begin
+        if label.blank?
+          return "label cannot be blank"
+        end
         normalized_path = URI.parse(path).normalize.path
         pinned_collections[label] = normalized_path
         if normalized_path.blank?
@@ -155,8 +160,11 @@ class Account
         elsif !normalized_path.starts_with?("/")
           return "path must be absolute"
         end
-        if label.blank?
-          return "label cannot be blank"
+        is_hashtag = normalized_path.matches?(/^\/tags\/[^\/]+$/)
+        is_thread = normalized_path.matches?(/^\/remote\/objects\/[^\/]+\/thread$/)
+        is_collection = normalized_path.matches?(/^\/actors\/#{Regex.escape(username)}\/[^\/]+$/)
+        unless is_hashtag || is_thread || is_collection
+          return "path must be a supported collection"
         end
       rescue URI::Error
         return "is not valid"

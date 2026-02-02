@@ -4,6 +4,7 @@ require "../framework/jwt"
 require "../framework/model"
 require "../framework/model/**"
 require "./account"
+require "./oauth2/provider/access_token"
 
 # Client session.
 #
@@ -20,6 +21,10 @@ class Session
   @[Persistent]
   property account_id : Int64?
   belongs_to account
+
+  @[Persistent]
+  property oauth_access_token_id : Int64?
+  belongs_to oauth_access_token, class_name: OAuth2::Provider::AccessToken, inverse_of: :session
 
   # Allocates a new session for an account.
   #

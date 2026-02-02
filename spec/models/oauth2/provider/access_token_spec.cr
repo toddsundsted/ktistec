@@ -32,12 +32,12 @@ Spectator.describe OAuth2::Provider::AccessToken do
     end
   end
 
-  describe "#valid?" do
+  describe "#expired?" do
     context "when token has not expired" do
       let_build(oauth2_provider_access_token, named: valid_token, client: client, account: account, expires_at: Time.utc + 1.hour)
 
       it "returns true" do
-        expect(valid_token.valid?).to be_true
+        expect(valid_token.expired?).to be_false
       end
     end
 
@@ -45,7 +45,7 @@ Spectator.describe OAuth2::Provider::AccessToken do
       let_build(oauth2_provider_access_token, named: expired_token, client: client, account: account, expires_at: Time.utc - 1.hour)
 
       it "returns false" do
-        expect(expired_token.valid?).to be_false
+        expect(expired_token.expired?).to be_true
       end
     end
   end

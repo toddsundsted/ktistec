@@ -478,7 +478,7 @@ def oauth2_provider_client_factory(clazz = OAuth2::Provider::Client, **options)
 end
 
 def oauth2_provider_access_token_factory(clazz = OAuth2::Provider::AccessToken, *, client, account, **options)
-  clazz.new(**{token: "token", client_id: client.id, account_id: account.id, expires_at: Time.utc, scope: "read"}.merge(options))
+  clazz.new(**{token: "token", client_id: client.id, account_id: account.id, expires_at: 10.days.from_now, scope: "read"}.merge(options))
 end
 
 # Helpers methods for common operations.

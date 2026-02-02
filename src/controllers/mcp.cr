@@ -25,7 +25,7 @@ class MCPController
       if auth_header.starts_with?("Bearer ")
         if (access_token = OAuth2::Provider::AccessToken.find?(token: auth_header[7..-1]))
           if access_token.scope.split.includes?("mcp")
-            if Time.utc < access_token.expires_at
+            unless access_token.expired?
               access_token.account
             end
           end

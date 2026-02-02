@@ -49,7 +49,7 @@ class HTTP::Server::Context
   end
 
   private def find_session_from_oauth_token(token : String) : Session
-    if (access_token = OAuth2::Provider::AccessToken.find_by_token?(token)) && access_token.valid?
+    if (access_token = OAuth2::Provider::AccessToken.find_by_token?(token)) && !access_token.expired?
       access_token.session? || new_session(access_token)
     else
       new_session

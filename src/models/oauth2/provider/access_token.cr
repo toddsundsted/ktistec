@@ -68,10 +68,10 @@ module OAuth2
         find?(token: token)
       end
 
-      # Checks if the access token is valid (not expired).
+      # Checks if the access token is expired.
       #
-      def valid?
-        Time.utc < expires_at
+      def expired?
+        Time.utc > expires_at
       end
 
       # Checks if the access token has "mcp" scope.

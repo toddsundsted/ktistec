@@ -2,24 +2,29 @@ require "http/server"
 
 require "../../models/account"
 require "../../models/session"
+require "../../models/oauth2/provider/access_token"
 
 class HTTP::Server::Context
   property! session : Session
 
   delegate :account, :account?, :account=, to: session
 
-  # Returns a new, nonpersistent, unauthenticated session.
+  # Returns an existing session or creates a new session.
   #
-  # These sessions are only saved to the database when used (e.g. when
-  # a CSRF token is stored in the session).
+  # New sessions are only saved to the database when used (e.g. when a
+  # CSRF token is stored in the session).
   #
   def session
-    @session ||= (find_session || new_session)
+    @session ||= find_session
   end
 
-  private def find_session
-    if (jwt = check_authorization || check_cookie)
-      Session.find_by_jwt?(jwt)
+  private def find_session : Session
+    if (bearer_token = check_authorization)
+      find_session_from_bearer_token(bearer_token)
+    elsif (jwt = check_cookie)
+      find_session_from_jwt(jwt)
+    else
+      new_session
     end
   end
 
@@ -33,6 +38,28 @@ class HTTP::Server::Context
 
   private def check_cookie
     request.cookies["__Host-AuthToken"]?.try(&.value)
+  end
+
+  private def find_session_from_bearer_token(token : String)
+    token.count('.') == 2 ? find_session_from_jwt(token) : find_session_from_oauth_token(token)
+  end
+
+  private def find_session_from_jwt(jwt : String) : Session
+    Session.find_by_jwt?(jwt) || new_session
+  end
+
+  private def find_session_from_oauth_token(token : String) : Session
+    if (access_token = OAuth2::Provider::AccessToken.find_by_token?(token)) && access_token.valid?
+      access_token.session? || new_session(access_token)
+    else
+      new_session
+    end
+  end
+
+  # Returns a new, nonpersistent, authenticated session.
+  #
+  private def new_session(access_token : OAuth2::Provider::AccessToken)
+    Session.new(account: access_token.account, oauth_access_token: access_token)
   end
 
   # Returns a new, nonpersistent, anonymous session.

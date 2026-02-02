@@ -1,6 +1,7 @@
 require "../../../framework/model"
 require "../../../framework/model/**"
 require "../../account"
+require "../../session"
 require "./client"
 
 module OAuth2
@@ -38,6 +39,12 @@ module OAuth2
       @[Persistent]
       property account_id : Int64?
       belongs_to account
+
+      # The session.
+      #
+      # Links to the `Session` if one exists for this access token.
+      #
+      has_one :session, foreign_key: oauth_access_token_id, inverse_of: oauth_access_token
 
       # The expiration.
       #

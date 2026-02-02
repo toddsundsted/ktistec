@@ -128,6 +128,40 @@ Spectator.describe SettingsController do
         end
       end
     end
+
+    context "when authorized" do
+      let(account) { register }
+      let_create(:oauth2_provider_client, named: :client)
+      let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+      context "and accepting HTML" do
+        let(headers) { HTTP::Headers{"Authorization" => "Bearer #{access_token.token}", "Accept" => "text/html"} }
+
+        it "succeeds" do
+          get "/settings", headers
+          expect(response.status_code).to eq(200)
+        end
+
+        it "authenticates as the correct user" do
+          get "/settings", headers
+          expect(XML.parse_html(response.body).xpath_nodes("//div[@class='ui actor segments']//img[@data-actor-id='#{account.actor.id}']/@alt")).to have(account.username)
+        end
+      end
+
+      context "and accepting JSON" do
+        let(headers) { HTTP::Headers{"Authorization" => "Bearer #{access_token.token}", "Accept" => "application/json"} }
+
+        it "succeeds" do
+          get "/settings", headers
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns authenticated user's settings" do
+          get "/settings", headers
+          expect(JSON.parse(response.body).dig("actor", "username")).to eq(account.username)
+        end
+      end
+    end
   end
 
   describe "POST /settings/actor" do

@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.2.9]
+### Added
+- Support for customizing the secondary menu with pinned collections.
+
+### Fixed
+- Thread rendering no longer fails when drafts are present.
+
+### Changed
+- Content warnings are now preserved when replying to posts.
+- OAuth access tokens are now associated with sessions.
+- Attachments are deleted when draft objects are destroyed.
+- Actor icons and images are deleted when replaced or unset.
+
 ## [v3.2.8]
 ### Added
 - Frontend support for creating polls.
@@ -625,6 +638,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.2.9]: https://github.com/toddsundsted/ktistec/compare/133663fb...55f68ba3
 [v3.2.8]: https://github.com/toddsundsted/ktistec/compare/f00e9cc3...4e82f0da
 [v3.2.7]: https://github.com/toddsundsted/ktistec/compare/480c0c6f...c37790ba
 [v3.2.6]: https://github.com/toddsundsted/ktistec/compare/28674aa8...79e17af6

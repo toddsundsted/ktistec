@@ -171,6 +171,11 @@ Spectator.describe Account do
       expect(subject.valid?).to be_true
     end
 
+    it "accepts pinned_collections with actor" do
+      subject.pinned_collections = {"Actor" => "/remote/actors/2"}
+      expect(subject.valid?).to be_true
+    end
+
     it "accepts empty pinned_collections" do
       subject.pinned_collections = {} of String => String
       expect(subject.valid?).to be_true

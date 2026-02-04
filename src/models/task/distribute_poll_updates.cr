@@ -96,7 +96,9 @@ class Task
     end
 
     def path_to
-      Ktistec::ViewHelper.remote_object_path(question)
+      if (question = self.question?)
+        Ktistec::ViewHelper.remote_object_path(question)
+      end
     end
   end
 end

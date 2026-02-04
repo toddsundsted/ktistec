@@ -163,7 +163,8 @@ class Account
         is_hashtag = normalized_path.matches?(/^\/tags\/[^\/]+$/)
         is_thread = normalized_path.matches?(/^\/remote\/objects\/[^\/]+\/thread$/)
         is_collection = normalized_path.matches?(/^\/actors\/#{Regex.escape(username)}\/[^\/]+$/)
-        unless is_hashtag || is_thread || is_collection
+        is_actor = normalized_path.matches?(/^\/remote\/actors\/[^\/]+$/)
+        unless is_hashtag || is_thread || is_collection || is_actor
           return "path must be a supported collection"
         end
       rescue URI::Error

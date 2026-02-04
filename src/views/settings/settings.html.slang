@@ -81,11 +81,12 @@ p
       label Label
     .field
       label Path
+  - pinned_collections_error = account.errors["pinned_collections"]? ? "error" : nil
   - 0.upto(Account::PINNED_COLLECTION_LIMIT - 1).each do |i|
     .two.fields
-      .field
+      .field class=pinned_collections_error
         input type="text" name="pinned_#{i}_label" value=pinned_array[i][0]
-      .field
+      .field class=pinned_collections_error
         input type="text" name="pinned_#{i}_path" value=pinned_array[i][1]
   == submit_button("Update")
 h2 Delete Account!

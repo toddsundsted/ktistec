@@ -14,14 +14,17 @@ class PolymorphicModel
   ]
 
   ALIASES = [
-    "Alias",
+    "Alias1",
+    "Alias2",
   ]
 end
 
 class Subclass1 < PolymorphicModel
+  ALLOWED_TYPE_MIGRATIONS = ["Alias2"]
 end
 
 class Subclass2 < PolymorphicModel
+  ALLOWED_TYPE_MIGRATIONS = ["Subclass1"]
 end
 
 class Subclass3 < PolymorphicModel
@@ -194,8 +197,8 @@ Spectator.describe Ktistec::Model::Polymorphic do
   end
 
   describe ".all_subtypes" do
-    it "includes the alias" do
-      expect(PolymorphicModel.all_subtypes).to have("Alias")
+    it "includes the aliases" do
+      expect(PolymorphicModel.all_subtypes).to have("Alias1", "Alias2")
     end
   end
 
@@ -214,6 +217,57 @@ Spectator.describe Ktistec::Model::Polymorphic do
   describe "#valid?" do
     it "returns false if the type is invalid" do
       expect(PolymorphicModel.new(type: "SubclassXYZ").valid?).to be_false
+    end
+  end
+
+  describe "when changing type" do
+    it "allows changing from from base class to concrete subtype" do
+      instance = PolymorphicModel.new.save
+      instance.assign(type: "Subclass1")
+      expect(instance.valid?).to be_true
+      expect { instance.save }.not_to raise_error
+    end
+
+    it "allows changing from from alias to alias" do
+      instance = PolymorphicModel.new(type: "Alias1").save
+      instance.assign(type: "Alias2")
+      expect(instance.valid?).to be_true
+      expect { instance.save }.not_to raise_error
+    end
+
+    it "prohibits changing from concrete subtype to alias" do
+      instance = Subclass1.new.save
+      instance.assign(type: "Alias1")
+      expect(instance.valid?).to be_false
+      expect(instance.errors["type"]?).to eq(["is not valid"])
+    end
+
+    it "prohibits changing from concrete subtype to concrete subtype" do
+      instance = Subclass1.new.save
+      instance.assign(type: "Subclass2")
+      expect(instance.valid?).to be_false
+      expect(instance.errors["type"]?).to eq(["is not valid"])
+    end
+
+    context "when explicitly allowed" do
+      pre_condition do
+        expect(Subclass1::ALLOWED_TYPE_MIGRATIONS).to have("Alias2")
+        expect(Subclass2::ALLOWED_TYPE_MIGRATIONS).to have("Subclass1")
+      end
+
+      it "allows changing from concrete subtype to alias" do
+        instance = Subclass1.new.save
+        instance.assign(type: "Alias2")
+        expect(instance.valid?).to be_true
+        expect { instance.save }.not_to raise_error
+      end
+
+      it "allows changing from concrete subtype to concrete subtype" do
+        instance = Subclass2.new.save
+        instance.assign(type: "Subclass1")
+        expect(instance.valid?).to be_true
+        expect { instance.save }.not_to raise_error
+      end
     end
   end
 end

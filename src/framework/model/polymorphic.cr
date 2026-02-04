@@ -33,9 +33,30 @@ module Ktistec
               all_types += @type.constant(:ALIASES)
             end
           %}
-          "is not valid" unless type.in?({{all_types}})
+          unless type.in?({{all_types}})
+            {% if @type.has_constant?(:ALLOWED_TYPE_MIGRATIONS) %}
+              if type.in?({{@type.constant(:ALLOWED_TYPE_MIGRATIONS)}})
+                return
+              end
+            {% end %}
+            "is not valid"
+          end
         {% end %}
       end
+
+      # NOTE: model polymorphism and changing type
+      #
+      # Changing from a base class to a subtype (concrete or alias) is
+      # always allowed.
+      #
+      # Since aliases are just labels, changing from one alias to
+      # another is always allowed.
+      #
+      # Because concrete subtypes have distinct state (e.g. a Question
+      # has a Poll) it is generally **not possible** to change from
+      # one subtype to another (concrete or alias).
+      #
+      # `ALLOWED_TYPE_MIGRATIONS` defines the exceptions.
 
       # NOTE: a model alias is similar to a subclass, with exceptions:
       # significantly, queries executed via a subclass constrain their

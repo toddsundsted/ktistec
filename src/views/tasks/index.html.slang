@@ -36,8 +36,8 @@ h1 Tasks
       - if (subject_iri = task.subject_iri.presence)
         tr
           td rowspan=2
-            - if task.responds_to?(:path_to)
-              a href=task.path_to = task.class
+            - if task.responds_to?(:path_to) && (path_to = task.path_to)
+              a href=path_to = task.class
             - else
               = task.class
           td == wrap_link(subject_iri, include_scheme: true, length: 60, tag: :span)
@@ -49,8 +49,8 @@ h1 Tasks
       - else
         tr
           td
-            - if task.responds_to?(:path_to)
-              a href=task.path_to = task.class
+            - if task.responds_to?(:path_to) && (path_to = task.path_to)
+              a href=path_to = task.class
             - else
               = task.class
           - if task.is_a?(Task::Fetch::Fetcher)

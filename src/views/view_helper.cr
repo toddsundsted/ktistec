@@ -1037,4 +1037,8 @@ module Ktistec::ViewHelper
   def self._view_src_views_partials_object_label_html_slang(env, author, actor)
     render "src/views/partials/object/label.html.slang"
   end
+
+  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false)
+    render "src/views/partials/object/content/quote.html.slang"
+  end
 end

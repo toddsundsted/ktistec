@@ -1700,6 +1700,81 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "GET /remote/objects/:id/fetch/quote" do
+    it "returns 401" do
+      get "/remote/objects/0/fetch/quote"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      TURBO_FRAME = HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "quote-1"}
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/fetch/quote", TURBO_FRAME
+        expect(response.status_code).to eq(200)
+      end
+
+      context "when quote is not cached" do
+        let_build(:object, named: :quote)
+
+        before_each do
+          visible.assign(quote_iri: quote.iri).save
+        end
+
+        context "when fetchable" do
+          before_each do
+            HTTP::Client.objects << quote
+            HTTP::Client.actors << quote.attributed_to
+          end
+
+          it "dereferences the quoted object" do
+            expect { get "/remote/objects/#{visible.id}/fetch/quote" }.to change { ActivityPub::Object.count(iri: quote.iri) }.by(1)
+          end
+
+          it "dereferences the attributed_to actor" do
+            expect { get "/remote/objects/#{visible.id}/fetch/quote" }.to change { ActivityPub::Actor.count(iri: quote.attributed_to.iri) }.by(1)
+          end
+        end
+
+        it "succeeds even if dereference fails" do
+          get "/remote/objects/#{visible.id}/fetch/quote", TURBO_FRAME
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      it "returns 404 if object is not visible" do
+        get "/remote/objects/#{notvisible.id}/fetch/quote"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is remote" do
+        get "/remote/objects/#{remote.id}/fetch/quote"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "if remote object is visible" do
+        before_each { remote.assign(visible: true).save }
+
+        it "succeeds" do
+          get "/remote/objects/#{remote.id}"
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      it "returns 404 if object is draft" do
+        get "/remote/objects/#{draft.id}/fetch/quote"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        get "/remote/objects/0/fetch/quote"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "POST /remote/objects/:id/approve" do
     it "returns 401" do
       post "/remote/objects/0/approve"

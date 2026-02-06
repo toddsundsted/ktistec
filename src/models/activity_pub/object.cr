@@ -67,6 +67,10 @@ module ActivityPub
     property in_reply_to_iri : String?
     belongs_to in_reply_to, class_name: ActivityPub::Object, foreign_key: in_reply_to_iri, primary_key: iri
 
+    @[Persistent]
+    property quote_iri : String?
+    belongs_to quote, class_name: ActivityPub::Object, foreign_key: quote_iri, primary_key: iri
+
     # don't use an association for `replies` because it's a collection
     # and associations are automatically saved by default.
 
@@ -1080,6 +1084,10 @@ module ActivityPub
           "updated"           => (u = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#updated")) ? Time.parse_rfc3339(u) : nil,
           "attributed_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
           "in_reply_to_iri"   => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
+          "quote_iri"         => Ktistec::JSON_LD.dig_id?(json, "https://w3id.org/fep/044f#quote") ||
+            Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#quoteUrl") ||
+            Ktistec::JSON_LD.dig_id?(json, "http://fedibird.com/ns#quoteUri") ||
+            Ktistec::JSON_LD.dig_id?(json, "https://misskey-hub.net/ns#_misskey_quote"),
           # pick up the replies' id and the embedded replies if the hosts match
           "replies_iri" => if (replies = json.dig?("https://www.w3.org/ns/activitystreams#replies"))
             replies.as_s? || replies.dig?("@id").try(&.as_s?)

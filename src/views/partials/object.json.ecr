@@ -2,7 +2,8 @@
   "@context":[
     "https://www.w3.org/ns/activitystreams",
     {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"},
-    {"toot":"http://joinmastodon.org/ns#","focalPoint":"toot:focalPoint","votersCount":"toot:votersCount","closed":"toot:closed"}
+    {"toot":"http://joinmastodon.org/ns#","focalPoint":"toot:focalPoint","votersCount":"toot:votersCount","closed":"toot:closed"},
+    {"quote":"https://w3id.org/fep/044f#quote"}
   ],
   <%- if (published = object.published) -%>
   "published":<%= published.to_rfc3339(fraction_digits: 3).to_json %>,
@@ -15,6 +16,9 @@
   <%- end -%>
   <%- if (in_reply_to_iri = object.in_reply_to_iri) -%>
   "inReplyTo":<%= in_reply_to_iri.to_json %>,
+  <%- end -%>
+  <%- if (quote_iri = object.quote_iri) -%>
+  "quote":<%= quote_iri.to_json %>,
   <%- end -%>
   <%- if recursive == true && (replies = object.replies?) -%>
   "replies":<%= replies.to_json_ld %>,

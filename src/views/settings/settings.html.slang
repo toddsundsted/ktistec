@@ -38,7 +38,7 @@ p
         label for="markdown-editor" Markdown
   crystal:
     attachments = actor.attachments || [] of ActivityPub::Actor::Attachment
-    attachments.size.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1) do |i|
+    if attachments.size < ActivityPub::Actor::ATTACHMENT_LIMIT
       attachments << ActivityPub::Actor::Attachment.new("", "", "")
     end
   .field
@@ -49,17 +49,17 @@ p
       label Name
     .field
       label Value
-  - 0.upto(ActivityPub::Actor::ATTACHMENT_LIMIT - 1).each do |i|
+  - attachments.each_with_index do |attachment, i|
     .two.fields
       .field
-        input type="text" name="attachment_#{i}_name" value=attachments[i].name
+        input type="text" name="attachment_#{i}_name" value=attachment.name
       .field
-        input type="text" name="attachment_#{i}_value" value=attachments[i].value
+        input type="text" name="attachment_#{i}_value" value=attachment.value
   == input_tag("Background Image", actor, image, class: "filepond", type: "file")
   == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
   crystal:
     pinned_array = account.pinned_collections.to_a
-    pinned_array.size.upto(Account::PINNED_COLLECTION_LIMIT - 1) do |i|
+    if pinned_array.size < Account::PINNED_COLLECTION_LIMIT
       pinned_array << {"", ""}
     end
   .field
@@ -82,12 +82,12 @@ p
     .field
       label Path
   - pinned_collections_error = account.errors["pinned_collections"]? ? "error" : nil
-  - 0.upto(Account::PINNED_COLLECTION_LIMIT - 1).each do |i|
+  - pinned_array.each_with_index do |pinned_item, i|
     .two.fields
       .field class=pinned_collections_error
-        input type="text" name="pinned_#{i}_label" value=pinned_array[i][0]
+        input type="text" name="pinned_#{i}_label" value=pinned_item[0]
       .field class=pinned_collections_error
-        input type="text" name="pinned_#{i}_path" value=pinned_array[i][1]
+        input type="text" name="pinned_#{i}_path" value=pinned_item[1]
   == submit_button("Update")
 h2 Delete Account!
 p

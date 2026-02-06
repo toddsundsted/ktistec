@@ -110,7 +110,10 @@ module Ktistec
         keep: ["src", "type"],
       },
       span: {
-        class: ["invisible", "ellipsis"],
+        class: ["invisible", "ellipsis", "quote-inline"],
+      },
+      p: {
+        class: ["quote-inline"],
       },
     }
 

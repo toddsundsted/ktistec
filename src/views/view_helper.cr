@@ -66,6 +66,7 @@ module Ktistec::ViewHelper
       states << "is-deleted" if object.deleted?
       states << "is-blocked" if object.blocked?
       states << "has-replies" if object.replies_count > 0
+      states << "has-quote" if object.quote_iri
       states << "has-media" if object.attachments.try { |a| a.size > 0 }
       if (attributed_to = object.attributed_to?)
         states << "visibility-#{visibility(attributed_to, object)}"

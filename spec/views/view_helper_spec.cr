@@ -2331,6 +2331,14 @@ Spectator.describe "helpers" do
       end
     end
 
+    context "when object has a quote" do
+      before_each { note.assign(quote_iri: "https://remote/quote") }
+
+      it "includes has-quote" do
+        expect(subject).to contain("has-quote")
+      end
+    end
+
     context "when object has media attachments" do
       let(attachment) do
         ActivityPub::Object::Attachment.new(

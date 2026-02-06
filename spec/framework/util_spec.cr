@@ -107,6 +107,18 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("<span class='ellipsis'>a span</span>")
     end
 
+    # for quote posts (FEP-044f)
+    it "preserves 'quote-inline' in class attribute on span elements" do
+      content = "<span class='quote-inline foo'>RE: <a href='https://example.com/status/1'>link</a></span>"
+      expect(described_class.sanitize(content)).to eq("<span class='quote-inline'>RE: <a href='https://example.com/status/1' target='_blank' rel='external ugc'>link</a></span>")
+    end
+
+    # for quote posts (FEP-044f)
+    it "preserves 'quote-inline' in class attribute on p elements" do
+      content = "<p class='quote-inline foo'>RE: <a href='https://example.com/status/1'>link</a></p>"
+      expect(described_class.sanitize(content)).to eq("<p class='quote-inline'>RE: <a href='https://example.com/status/1' target='_blank' rel='external ugc'>link</a></p>")
+    end
+
     it "doesn't corrupt element order" do
       content = "<figure></figure><p></p>"
       expect(described_class.sanitize(content)).to eq("<figure></figure><p></p>")

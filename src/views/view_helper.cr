@@ -66,6 +66,7 @@ module Ktistec::ViewHelper
       states << "is-deleted" if object.deleted?
       states << "is-blocked" if object.blocked?
       states << "has-replies" if object.replies_count > 0
+      states << "has-quote" if object.quote_iri
       states << "has-media" if object.attachments.try { |a| a.size > 0 }
       if (attributed_to = object.attributed_to?)
         states << "visibility-#{visibility(attributed_to, object)}"
@@ -1036,5 +1037,9 @@ module Ktistec::ViewHelper
 
   def self._view_src_views_partials_object_label_html_slang(env, author, actor)
     render "src/views/partials/object/label.html.slang"
+  end
+
+  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false)
+    render "src/views/partials/object/content/quote.html.slang"
   end
 end

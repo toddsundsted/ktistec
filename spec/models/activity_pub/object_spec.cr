@@ -302,7 +302,13 @@ Spectator.describe ActivityPub::Object do
         "@context":[
           "https://www.w3.org/ns/activitystreams",
           {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"},
-          {"toot":"http://joinmastodon.org/ns#"}
+          {
+            "quote":"https://w3id.org/fep/044f#quote",
+            "quoteUrl":"https://www.w3.org/ns/activitystreams#quoteUrl",
+            "quoteUri":"http://fedibird.com/ns#quoteUri",
+            "_misskey_quote":"https://misskey-hub.net/ns#_misskey_quote",
+            "toot":"http://joinmastodon.org/ns#"
+          }
         ],
         "@id":"https://remote/foo_bar",
         "@type":"FooBarObject",
@@ -310,6 +316,7 @@ Spectator.describe ActivityPub::Object do
         "updated":"2016-02-15T11:30:45Z",
         "attributedTo":"attributed to link",
         "inReplyTo":"in reply to link",
+        "quote":"quote link",
         "replies":"replies link",
         "to":"to link",
         "cc":["cc link"],
@@ -361,6 +368,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
+      expect(object.quote_iri).to eq("quote link")
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
@@ -376,6 +384,33 @@ Spectator.describe ActivityPub::Object do
       expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
       expect(object.urls).to eq(["url link"])
+    end
+
+    context "when quoteUrl property (FEP-044f compat) is present" do
+      let(json) { super.gsub(%q|"quote":"quote link"|, %q|"quoteUrl":"quoteUrl link"|) }
+
+      it "extracts quote_iri from quoteUrl format" do
+        object = described_class.from_json_ld(json).save
+        expect(object.quote_iri).to eq("quoteUrl link")
+      end
+    end
+
+    context "when quoteUri property (Fedibird) is present" do
+      let(json) { super.gsub(%q|"quote":"quote link"|, %q|"quoteUri":"quoteUri link"|) }
+
+      it "extracts quote_iri from Fedibird format" do
+        object = described_class.from_json_ld(json).save
+        expect(object.quote_iri).to eq("quoteUri link")
+      end
+    end
+
+    context "when _misskey_quote property (Misskey) is present" do
+      let(json) { super.gsub(%q|"quote":"quote link"|, %q|"_misskey_quote":"_misskey_quote link"|) }
+
+      it "extracts quote_iri from Misskey format" do
+        object = described_class.from_json_ld(json).save
+        expect(object.quote_iri).to eq("_misskey_quote link")
+      end
     end
 
     context "when addressed to the public collection" do
@@ -575,6 +610,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
+      expect(object.quote_iri).to eq("quote link")
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
@@ -590,6 +626,33 @@ Spectator.describe ActivityPub::Object do
       expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
       expect(object.urls).to eq(["url link"])
+    end
+
+    context "when quoteUrl property (FEP-044f compat) is present" do
+      let(json) { super.gsub(%q|"quote":"quote link"|, %q|"quoteUrl":"quoteUrl link"|) }
+
+      it "extracts quote_iri from quoteUrl format" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.quote_iri).to eq("quoteUrl link")
+      end
+    end
+
+    context "when quoteUri property (Fedibird) is present" do
+      let(json) { super.gsub(%q|"quote":"quote link"|, %q|"quoteUri":"quoteUri link"|) }
+
+      it "extracts quote_iri from Fedibird format" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.quote_iri).to eq("quoteUri link")
+      end
+    end
+
+    context "when _misskey_quote property (Misskey) is present" do
+      let(json) { super.gsub(%q|"quote":"quote link"|, %q|"_misskey_quote":"_misskey_quote link"|) }
+
+      it "extracts quote_iri from Misskey format" do
+        object = described_class.new.from_json_ld(json).save
+        expect(object.quote_iri).to eq("_misskey_quote link")
+      end
     end
 
     context "when addressed to the public collection" do

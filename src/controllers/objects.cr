@@ -230,6 +230,24 @@ class ObjectsController
     ok "objects/reply", env: env, object: object
   end
 
+  get "/remote/objects/:id/fetch/quote" do |env|
+    unless (object = get_object(env, id_param(env))) && !object.draft?
+      not_found
+    end
+
+    if (quote = object.quote?(include_deleted: true) || object.quote?(env.account.actor, dereference: true))
+      attributed_to = quote.attributed_to?(include_deleted: true) || quote.attributed_to?(env.account.actor, dereference: true)
+    end
+
+    object.save
+
+    if in_turbo_frame?
+      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: !(quote && attributed_to)
+    else
+      redirect back_path
+    end
+  end
+
   post "/remote/objects/:id/approve" do |env|
     actor = env.account.actor
 

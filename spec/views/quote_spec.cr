@@ -31,11 +31,11 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
     before_each { object.assign(quote_iri: "https://remote/objects/123").save }
 
     it "renders reload button" do
-      expect(subject.xpath_nodes("//a[contains(text(),'Load quoted post')]")).not_to be_empty
+      expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).not_to be_empty
     end
 
     it "renders turbo-frame target" do
-      expect(subject.xpath_nodes("//a[@data-turbo-frame='quote-#{object.id}']")).not_to be_empty
+      expect(subject.xpath_nodes("//form[@data-turbo-frame='quote-#{object.id}']")).not_to be_empty
     end
 
     it "does not render quoted post" do
@@ -71,7 +71,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
     end
 
     it "does not render reload button" do
-      expect(subject.xpath_nodes("//a[contains(text(),'Load quoted post')]")).to be_empty
+      expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
     end
 
     context "with attachments" do
@@ -106,7 +106,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
       end
 
       it "does not render a reload button" do
-        expect(subject.xpath_nodes("//a[contains(text(),'Load quoted post')]")).to be_empty
+        expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
       end
     end
 
@@ -122,7 +122,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
       end
 
       it "does not render a reload button" do
-        expect(subject.xpath_nodes("//a[contains(text(),'Load quoted post')]")).to be_empty
+        expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
       end
     end
   end
@@ -139,7 +139,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
     end
 
     it "does not render a reload button" do
-      expect(subject.xpath_nodes("//a[contains(text(),'Load quoted post')]")).to be_empty
+      expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
     end
   end
 end

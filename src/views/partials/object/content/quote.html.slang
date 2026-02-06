@@ -14,6 +14,7 @@
         == object_partial(env, quote)
 - else
   turbo-frame.ui.segment.quoted-object id="quote-#{object.id}"
-    a.ui.tiny.button href=fetch_quote_path(object) data-turbo-frame="quote-#{object.id}" data-turbo-prefetch="false"
-      i.redo.icon
-      | Load quoted post
+    form.ui.form method="GET" action=fetch_quote_path(object) data-turbo-frame="quote-#{object.id}"
+      button.ui.tiny.button type="submit"
+        i.redo.icon
+        | Load quoted post

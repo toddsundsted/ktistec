@@ -317,5 +317,44 @@ Spectator.describe Task::Receive do
         expect { subject.perform }.not_to change { subject.failures }
       end
     end
+
+    context "when the activity object has a quote" do
+      let_build(:object, named: :quote)
+      let_build(:object, named: :post, quote_iri: quote.iri)
+      let_build(:create, named: :activity, actor_iri: receiver.iri, object_iri: post.iri, to: [receiver.iri])
+
+      before_each do
+        HTTP::Client.objects << quote
+        HTTP::Client.actors << quote.attributed_to
+        post.save
+      end
+
+      it "dereferences the quoted object" do
+        expect { subject.perform }.to change { ActivityPub::Object.find?(iri: quote.iri) }
+      end
+
+      it "dereferences the quoted object's author" do
+        expect { subject.perform }.to change { ActivityPub::Actor.find?(iri: quote.attributed_to.iri) }
+      end
+
+      context "when the quoted object cannot be fetched" do
+        before_each do
+          post.assign(quote_iri: "https://remote/objects/missing").save
+        end
+
+        it "requests the quoted object" do
+          subject.perform
+          expect(HTTP::Client.requests).to have("GET https://remote/objects/missing")
+        end
+
+        it "does not dereference the quoted object" do
+          expect { subject.perform }.not_to change { ActivityPub::Object.find?(iri: "https://remote/objects/missing") }
+        end
+
+        it "does not fail" do
+          expect { subject.perform }.not_to change { subject.failures }
+        end
+      end
+    end
   end
 end

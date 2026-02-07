@@ -226,6 +226,10 @@ def reject_factory(**options)
   activity_factory(ActivityPub::Activity::Reject, **options)
 end
 
+def quote_request_factory(**options)
+  activity_factory(ActivityPub::Activity::QuoteRequest, **options)
+end
+
 # collection factories
 
 def collection_factory(clazz = ActivityPub::Collection, **options)

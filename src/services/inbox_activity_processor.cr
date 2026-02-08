@@ -5,7 +5,10 @@ require "../models/account"
 require "../rules/content_rules"
 require "../models/task/handle_follow_request"
 require "../models/task/receive"
+require "../models/task/deliver"
 require "../models/relationship/social/follow"
+require "../models/activity_pub/object/quote_authorization"
+require "../models/quote_decision"
 
 class InboxActivityProcessor
   # Processes an inbound activity that has already been received,
@@ -26,6 +29,7 @@ class InboxActivityProcessor
     content_rules : ContentRules = ContentRules.new,
     handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
     receive_task_class : Task::Receive.class = Task::Receive,
+    deliver_task_class : Task::Deliver.class = Task::Deliver,
   )
     content_rules.run do
       recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq!
@@ -48,6 +52,8 @@ class InboxActivityProcessor
           activity: activity
         ).schedule
       end
+    when ActivityPub::Activity::QuoteRequest
+      process_quote_request(account, activity, deliver_task_class)
     when ActivityPub::Activity::Accept
       follow_activity = activity.object.as(ActivityPub::Activity::Follow)
       if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: follow_activity.object))
@@ -80,5 +86,44 @@ class InboxActivityProcessor
       activity: activity,
       deliver_to: deliver_to
     ).schedule
+  end
+
+  private def self.process_quote_request(account, quote_request, deliver_task_class)
+    quoted_post = quote_request.object
+    quoting_post_iri = quote_request.instrument_iri
+
+    now = Time.utc
+
+    existing = QuoteDecision
+      .where(interaction_target_iri: quoted_post.iri, interacting_object_iri: quoting_post_iri)
+      .first?
+
+    if existing
+      authorization = existing.quote_authorization
+    else
+      decision = QuoteDecision.new(
+        interaction_target_iri: quoted_post.iri,
+        interacting_object_iri: quoting_post_iri,
+        decision: "accept"
+      )
+      authorization = ActivityPub::Object::QuoteAuthorization.new(
+        iri: "#{Ktistec.host}/objects/#{Ktistec::Util.id}",
+        quote_decision: decision,
+        attributed_to: account.actor,
+        published: now,
+      )
+      authorization.save
+    end
+
+    accept = ActivityPub::Activity::Accept.new(
+      iri: "#{Ktistec.host}/activities/#{Ktistec::Util.id}",
+      actor: account.actor,
+      object: quote_request,
+      result: authorization,
+      to: [quote_request.actor.iri],
+      published: now,
+    ).save
+
+    OutboxActivityProcessor.process(account, accept, deliver_task_class: deliver_task_class)
   end
 end

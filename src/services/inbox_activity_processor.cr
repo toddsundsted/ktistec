@@ -49,11 +49,13 @@ class InboxActivityProcessor
         ).schedule
       end
     when ActivityPub::Activity::Accept
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
+      follow_activity = activity.object.as(ActivityPub::Activity::Follow)
+      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: follow_activity.object))
         follow.assign(confirmed: true).save
       end
     when ActivityPub::Activity::Reject
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
+      follow_activity = activity.object.as(ActivityPub::Activity::Follow)
+      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: follow_activity.object))
         follow.assign(confirmed: true).save
       end
     when ActivityPub::Activity::Undo

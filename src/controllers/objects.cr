@@ -135,7 +135,7 @@ class ObjectsController
         params.add("editor", "poll")
       end
       unless params.empty?
-        redirect "/objects/#{object.uid}/edit?#{params}"
+        redirect "/objects/#{Utils::Paths.path_id_from_iri(object.iri)}/edit?#{params}"
       end
     end
 

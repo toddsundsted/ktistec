@@ -184,12 +184,6 @@ class Account
 
   has_many last_times
 
-  # permits an account to be used in path helpers in place of
-  # an actor.
-  def uid
-    username
-  end
-
   private LAST_TIMELINE_CHECKED_AT      = "last_timeline_checked_at"
   private LAST_NOTIFICATIONS_CHECKED_AT = "last_notifications_checked_at"
 

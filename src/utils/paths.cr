@@ -8,6 +8,16 @@ module Utils::Paths
   # 2) Macro conditionals should be used to sequester code paths that
   #    require `env` from code paths that do not.
 
+  def self.path_id_from_iri(iri : String) : String
+    path = iri
+    path = path[0...-1] if path.ends_with?('/')
+    if (index = path.rindex('/'))
+      path[(index + 1)..-1]
+    else
+      path
+    end
+  end
+
   macro back_path
     env.request.headers.fetch("Referer", "/")
   end
@@ -82,7 +92,7 @@ module Utils::Paths
 
   macro activity_path(activity = nil)
     {% if activity %}
-      "/activities/#{{{activity}}.uid}"
+      "/activities/#{Utils::Paths.path_id_from_iri({{activity}}.iri)}"
     {% else %}
       "/activities/#{env.params.url["id"]}"
     {% end %}
@@ -110,7 +120,7 @@ module Utils::Paths
 
   macro object_path(object = nil)
     {% if object %}
-      "/objects/#{{{object}}.uid}"
+      "/objects/#{Utils::Paths.path_id_from_iri({{object}}.iri)}"
     {% else %}
       "/objects/#{env.params.url["id"]}"
     {% end %}
@@ -226,7 +236,7 @@ module Utils::Paths
 
   macro actor_path(actor = nil)
     {% if actor %}
-      "/actors/#{{{actor}}.uid}"
+      "/actors/#{Utils::Paths.path_id_from_iri({{actor}}.iri)}"
     {% else %}
       "/actors/#{env.params.url["username"]}"
     {% end %}

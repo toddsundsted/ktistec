@@ -3,7 +3,8 @@
     "https://www.w3.org/ns/activitystreams",
     {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"},
     {"toot":"http://joinmastodon.org/ns#","focalPoint":"toot:focalPoint","votersCount":"toot:votersCount","closed":"toot:closed"},
-    {"quote":"https://w3id.org/fep/044f#quote"}
+    {"quote":"https://w3id.org/fep/044f#quote"},
+    {"gts":"https://gotosocial.org/ns#","interactingObject":{"@id":"gts:interactingObject","@type":"@id"},"interactionTarget":{"@id":"gts:interactionTarget","@type":"@id"}}
   ],
   <%- if (published = object.published) -%>
   "published":<%= published.to_rfc3339(fraction_digits: 3).to_json %>,
@@ -100,6 +101,15 @@
       "endTime":<%= closed_at.to_rfc3339(fraction_digits: 3).to_json %>,
       "closed":<%= closed_at.to_rfc3339(fraction_digits: 3).to_json %>,
     <%- end -%>
+  <%- end -%>
+  <%- end -%>
+  <%- _object = object -%>
+  <%- if _object.is_a?(ActivityPub::Object::QuoteAuthorization) && (quote_decision = _object.quote_decision?) -%>
+  <%- if (interacting_object_iri = quote_decision.interacting_object_iri) -%>
+  "interactingObject":<%= interacting_object_iri.to_json %>,
+  <%- end -%>
+  <%- if (interaction_target_iri = quote_decision.interaction_target_iri) -%>
+  "interactionTarget":<%= interaction_target_iri.to_json %>,
   <%- end -%>
   <%- end -%>
   "type":<%= object.type.split("::").last.to_json %>,

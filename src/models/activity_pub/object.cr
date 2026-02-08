@@ -1062,8 +1062,10 @@ module ActivityPub
   end
 end
 
-# the "object.json.ecr" view template requires the `Poll` model
+# the "object.json.ecr" view template requires the
+# `Poll` and `QuoteDecision` models
 require "../poll"
+require "../quote_decision"
 
 module ActivityPub
   class Object

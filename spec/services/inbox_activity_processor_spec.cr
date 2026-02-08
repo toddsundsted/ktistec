@@ -1,5 +1,3 @@
-require "../spec_helper/base"
-require "../spec_helper/factory"
 require "../../src/services/inbox_activity_processor"
 require "../../src/models/activity_pub/activity/follow"
 require "../../src/models/activity_pub/activity/accept"
@@ -10,64 +8,16 @@ require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/create"
 require "../../src/models/relationship/social/follow"
 
+require "../spec_helper/base"
+require "../spec_helper/factory"
+require "../spec_helper/mock"
+
 Spectator.describe InboxActivityProcessor do
   setup_spec
 
   let(account) { register }
   let_create(:actor, named: :other)
   let_create(:object, attributed_to: other)
-
-  class MockHandleFollowRequestTask < Task::HandleFollowRequest
-    class_property schedule_called_count : Int32 = 0
-    class_property last_recipient : ActivityPub::Actor?
-    class_property last_activity : ActivityPub::Activity::Follow?
-
-    def self.reset!
-      self.schedule_called_count = 0
-      self.last_recipient = nil
-      self.last_activity = nil
-    end
-
-    def initialize(recipient : ActivityPub::Actor, activity : ActivityPub::Activity::Follow)
-      super(recipient: recipient, activity: activity)
-      self.class.last_recipient = recipient
-      self.class.last_activity = activity
-    end
-
-    def schedule(next_attempt_at = nil)
-      self.class.schedule_called_count += 1
-      # don't save to database
-      self
-    end
-  end
-
-  class MockReceiveTask < Task::Receive
-    class_property schedule_called_count : Int32 = 0
-    class_property last_receiver : ActivityPub::Actor?
-    class_property last_activity : ActivityPub::Activity?
-    class_property last_deliver_to : Array(String)?
-
-    def self.reset!
-      self.schedule_called_count = 0
-      self.last_receiver = nil
-      self.last_activity = nil
-      self.last_deliver_to = nil
-    end
-
-    def initialize(receiver : ActivityPub::Actor, activity : ActivityPub::Activity, deliver_to : Array(String)? = nil)
-      super(receiver: receiver, activity: activity)
-      self.deliver_to = deliver_to if deliver_to
-      self.class.last_receiver = receiver
-      self.class.last_activity = activity
-      self.class.last_deliver_to = deliver_to
-    end
-
-    def schedule(next_attempt_at = nil)
-      self.class.schedule_called_count += 1
-      # don't save to database
-      self
-    end
-  end
 
   before_each do
     MockHandleFollowRequestTask.reset!

@@ -1,5 +1,3 @@
-require "../spec_helper/base"
-require "../spec_helper/factory"
 require "../../src/services/outbox_activity_processor"
 require "../../src/models/activity_pub/activity/follow"
 require "../../src/models/activity_pub/activity/accept"
@@ -10,36 +8,16 @@ require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/create"
 require "../../src/models/relationship/social/follow"
 
+require "../spec_helper/base"
+require "../spec_helper/factory"
+require "../spec_helper/mock"
+
 Spectator.describe OutboxActivityProcessor do
   setup_spec
 
   let(account) { register }
   let_create(:actor, named: :other)
   let_create(:object, attributed_to: other)
-
-  class MockDeliverTask < Task::Deliver
-    class_property schedule_called_count : Int32 = 0
-    class_property last_sender : ActivityPub::Actor?
-    class_property last_activity : ActivityPub::Activity?
-
-    def self.reset!
-      self.schedule_called_count = 0
-      self.last_sender = nil
-      self.last_activity = nil
-    end
-
-    def initialize(sender : ActivityPub::Actor, activity : ActivityPub::Activity)
-      super(sender: sender, activity: activity)
-      self.class.last_sender = sender
-      self.class.last_activity = activity
-    end
-
-    def schedule(next_attempt_at = nil)
-      self.class.schedule_called_count += 1
-      # don't save to database
-      self
-    end
-  end
 
   before_each do
     MockDeliverTask.reset!

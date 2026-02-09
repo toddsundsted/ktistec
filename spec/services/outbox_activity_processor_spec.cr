@@ -28,18 +28,18 @@ Spectator.describe OutboxActivityProcessor do
       let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
 
       it "creates a follow relationship" do
-        expect { OutboxActivityProcessor.process(account, follow_activity, ContentRules.new, MockDeliverTask) }
+        expect { OutboxActivityProcessor.process(account, follow_activity) }
           .to change { Relationship::Social::Follow.count }.by(1)
       end
 
       it "sets the relationship as unconfirmed" do
-        OutboxActivityProcessor.process(account, follow_activity, ContentRules.new, MockDeliverTask)
+        OutboxActivityProcessor.process(account, follow_activity)
         follow = Relationship::Social::Follow.find?(actor: account.actor, object: other)
         expect(follow.try(&.confirmed)).to be_false
       end
 
       it "schedules deliver task" do
-        OutboxActivityProcessor.process(account, follow_activity, ContentRules.new, MockDeliverTask)
+        OutboxActivityProcessor.process(account, follow_activity, deliver_task_class: MockDeliverTask)
         expect(MockDeliverTask.schedule_called_count).to eq(1)
         expect(MockDeliverTask.last_sender).to eq(account.actor)
         expect(MockDeliverTask.last_activity).to eq(follow_activity)
@@ -49,7 +49,7 @@ Spectator.describe OutboxActivityProcessor do
         let_create!(:follow_relationship, actor: account.actor, object: other, visible: false)
 
         it "does not create a duplicate relationship" do
-          expect { OutboxActivityProcessor.process(account, follow_activity, ContentRules.new, MockDeliverTask) }
+          expect { OutboxActivityProcessor.process(account, follow_activity) }
             .not_to change { Relationship::Social::Follow.count }
         end
       end
@@ -61,12 +61,12 @@ Spectator.describe OutboxActivityProcessor do
       let_create(:accept, named: :accept_activity, actor: account.actor, object: follow_activity)
 
       it "confirms the follow relationship" do
-        expect { OutboxActivityProcessor.process(account, accept_activity, ContentRules.new, MockDeliverTask) }
+        expect { OutboxActivityProcessor.process(account, accept_activity) }
           .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
       end
 
       it "schedules deliver task" do
-        OutboxActivityProcessor.process(account, accept_activity, ContentRules.new, MockDeliverTask)
+        OutboxActivityProcessor.process(account, accept_activity, deliver_task_class: MockDeliverTask)
         expect(MockDeliverTask.schedule_called_count).to eq(1)
         expect(MockDeliverTask.last_sender).to eq(account.actor)
         expect(MockDeliverTask.last_activity).to eq(accept_activity)
@@ -79,12 +79,12 @@ Spectator.describe OutboxActivityProcessor do
       let_create(:reject, named: :reject_activity, actor: account.actor, object: follow_activity)
 
       it "confirms the follow relationship" do
-        expect { OutboxActivityProcessor.process(account, reject_activity, ContentRules.new, MockDeliverTask) }
+        expect { OutboxActivityProcessor.process(account, reject_activity) }
           .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
       end
 
       it "schedules deliver task" do
-        OutboxActivityProcessor.process(account, reject_activity, ContentRules.new, MockDeliverTask)
+        OutboxActivityProcessor.process(account, reject_activity, deliver_task_class: MockDeliverTask)
         expect(MockDeliverTask.schedule_called_count).to eq(1)
         expect(MockDeliverTask.last_sender).to eq(account.actor)
         expect(MockDeliverTask.last_activity).to eq(reject_activity)
@@ -100,17 +100,17 @@ Spectator.describe OutboxActivityProcessor do
         pre_condition { expect(follow_relationship).not_to be_nil }
 
         it "destroys the follow relationship" do
-          expect { OutboxActivityProcessor.process(account, undo_activity, ContentRules.new, MockDeliverTask) }
+          expect { OutboxActivityProcessor.process(account, undo_activity) }
             .to change { Relationship::Social::Follow.count }.by(-1)
         end
 
         it "marks the follow activity as undone" do
-          expect { OutboxActivityProcessor.process(account, undo_activity, ContentRules.new, MockDeliverTask) }
+          expect { OutboxActivityProcessor.process(account, undo_activity) }
             .to change { follow_activity.reload!.undone_at }.from(nil)
         end
 
         it "schedules deliver task" do
-          OutboxActivityProcessor.process(account, undo_activity, ContentRules.new, MockDeliverTask)
+          OutboxActivityProcessor.process(account, undo_activity, deliver_task_class: MockDeliverTask)
           expect(MockDeliverTask.schedule_called_count).to eq(1)
           expect(MockDeliverTask.last_sender).to eq(account.actor)
           expect(MockDeliverTask.last_activity).to eq(undo_activity)
@@ -122,12 +122,12 @@ Spectator.describe OutboxActivityProcessor do
         let_create(:undo, named: :undo_activity, actor: account.actor, object: announce_activity)
 
         it "marks the announce activity as undone" do
-          expect { OutboxActivityProcessor.process(account, undo_activity, ContentRules.new, MockDeliverTask) }
+          expect { OutboxActivityProcessor.process(account, undo_activity) }
             .to change { announce_activity.reload!.undone_at }.from(nil)
         end
 
         it "schedules deliver task" do
-          OutboxActivityProcessor.process(account, undo_activity, ContentRules.new, MockDeliverTask)
+          OutboxActivityProcessor.process(account, undo_activity, deliver_task_class: MockDeliverTask)
           expect(MockDeliverTask.schedule_called_count).to eq(1)
           expect(MockDeliverTask.last_sender).to eq(account.actor)
           expect(MockDeliverTask.last_activity).to eq(undo_activity)
@@ -141,12 +141,12 @@ Spectator.describe OutboxActivityProcessor do
         let_create(:delete, named: :delete_activity, actor: account.actor, object: object_to_delete)
 
         it "marks the object as deleted" do
-          expect { OutboxActivityProcessor.process(account, delete_activity, ContentRules.new, MockDeliverTask) }
+          expect { OutboxActivityProcessor.process(account, delete_activity) }
             .to change { object_to_delete.reload!.deleted_at }.from(nil)
         end
 
         it "schedules deliver task" do
-          OutboxActivityProcessor.process(account, delete_activity, ContentRules.new, MockDeliverTask)
+          OutboxActivityProcessor.process(account, delete_activity, deliver_task_class: MockDeliverTask)
           expect(MockDeliverTask.schedule_called_count).to eq(1)
           expect(MockDeliverTask.last_sender).to eq(account.actor)
           expect(MockDeliverTask.last_activity).to eq(delete_activity)
@@ -157,12 +157,12 @@ Spectator.describe OutboxActivityProcessor do
         let_create(:delete, named: :delete_activity, actor: account.actor, object: account.actor)
 
         it "marks the actor as deleted" do
-          expect { OutboxActivityProcessor.process(account, delete_activity, ContentRules.new, MockDeliverTask) }
+          expect { OutboxActivityProcessor.process(account, delete_activity) }
             .to change { account.actor.reload!.deleted_at }.from(nil)
         end
 
         it "schedules deliver task" do
-          OutboxActivityProcessor.process(account, delete_activity, ContentRules.new, MockDeliverTask)
+          OutboxActivityProcessor.process(account, delete_activity, deliver_task_class: MockDeliverTask)
           expect(MockDeliverTask.schedule_called_count).to eq(1)
           expect(MockDeliverTask.last_sender).to eq(account.actor)
           expect(MockDeliverTask.last_activity).to eq(delete_activity)
@@ -174,7 +174,7 @@ Spectator.describe OutboxActivityProcessor do
       let_create(:create, named: :create_activity, actor: account.actor, object: object)
 
       it "schedules deliver task" do
-        OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask)
+        OutboxActivityProcessor.process(account, create_activity, deliver_task_class: MockDeliverTask)
         expect(MockDeliverTask.schedule_called_count).to eq(1)
         expect(MockDeliverTask.last_sender).to eq(account.actor)
         expect(MockDeliverTask.last_activity).to eq(create_activity)
@@ -193,12 +193,12 @@ Spectator.describe OutboxActivityProcessor do
         )
 
         it "creates a DistributePollUpdates task" do
-          expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }
+          expect { OutboxActivityProcessor.process(account, create_activity) }
             .to change { Task::DistributePollUpdates.count }.by(1)
         end
 
         it "schedules the task for approximately 10 minutes from now" do
-          OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask)
+          OutboxActivityProcessor.process(account, create_activity)
           task = Task::DistributePollUpdates.find(question: object)
           expect(task.next_attempt_at).to be_close(10.minutes.from_now, 20.seconds)
         end
@@ -211,7 +211,7 @@ Spectator.describe OutboxActivityProcessor do
           end
 
           it "does not create a duplicate task" do
-            expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }
+            expect { OutboxActivityProcessor.process(account, create_activity) }
               .not_to change { Task::DistributePollUpdates.count }
           end
         end
@@ -220,18 +220,18 @@ Spectator.describe OutboxActivityProcessor do
           let_create(:question, named: object) # remote by default
 
           it "does not create a DistributePollUpdates task" do
-            expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }
+            expect { OutboxActivityProcessor.process(account, create_activity) }
               .not_to change { Task::DistributePollUpdates.count }
           end
         end
 
         it "creates a NotifyPollExpiry task" do
-          expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }
+          expect { OutboxActivityProcessor.process(account, create_activity) }
             .to change { Task::NotifyPollExpiry.count }.by(1)
         end
 
         it "schedules the task for poll expiry time" do
-          OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask)
+          OutboxActivityProcessor.process(account, create_activity)
           task = Task::NotifyPollExpiry.find(question: object)
           expect(task.next_attempt_at).to be_close(1.hour.from_now, 1.second)
         end
@@ -244,7 +244,7 @@ Spectator.describe OutboxActivityProcessor do
           end
 
           it "does not create a duplicate task" do
-            expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }
+            expect { OutboxActivityProcessor.process(account, create_activity) }
               .not_to change { Task::NotifyPollExpiry.count }
           end
         end
@@ -258,7 +258,7 @@ Spectator.describe OutboxActivityProcessor do
           )
 
           it "does not create a NotifyPollExpiry task" do
-            expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }
+            expect { OutboxActivityProcessor.process(account, create_activity) }
               .not_to change { Task::NotifyPollExpiry.count }
           end
         end
@@ -272,7 +272,7 @@ Spectator.describe OutboxActivityProcessor do
           )
 
           it "does not create a NotifyPollExpiry task" do
-            expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }
+            expect { OutboxActivityProcessor.process(account, create_activity) }
               .not_to change { Task::NotifyPollExpiry.count }
           end
         end
@@ -287,7 +287,7 @@ Spectator.describe OutboxActivityProcessor do
           )
 
           it "does not create a NotifyPollExpiry task" do
-            expect { OutboxActivityProcessor.process(account, create_activity, ContentRules.new, MockDeliverTask) }
+            expect { OutboxActivityProcessor.process(account, create_activity) }
               .not_to change { Task::NotifyPollExpiry.count }
           end
         end
@@ -298,7 +298,7 @@ Spectator.describe OutboxActivityProcessor do
       let_create(:announce, named: :announce_activity, actor: account.actor, object: object)
 
       it "schedules deliver task" do
-        OutboxActivityProcessor.process(account, announce_activity, ContentRules.new, MockDeliverTask)
+        OutboxActivityProcessor.process(account, announce_activity, deliver_task_class: MockDeliverTask)
         expect(MockDeliverTask.schedule_called_count).to eq(1)
         expect(MockDeliverTask.last_sender).to eq(account.actor)
         expect(MockDeliverTask.last_activity).to eq(announce_activity)

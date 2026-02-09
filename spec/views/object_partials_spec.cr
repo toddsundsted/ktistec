@@ -957,6 +957,30 @@ Spectator.describe "object partials" do
         gts_context = context.find { |c| c.as_h? && c.as_h["gts"]? == "https://gotosocial.org/ns#" }
         expect(gts_context).not_to be_nil
       end
+
+      it "does not include `interactionPolicy`" do
+        expect(subject["interactionPolicy"]?).to be_nil
+      end
+    end
+
+    describe "given a regular object" do
+      let_build(:actor, named: :author)
+      let_build(
+        :object, named: :object,
+        attributed_to: author,
+        published: Time.utc,
+      )
+      let(recursive) { false }
+
+      it "includes `@context` with interactionPolicy" do
+        context = subject["@context"].as_a
+        gts_context = context.find { |c| c.as_h? && c.as_h["interactionPolicy"]? }
+        expect(gts_context).not_to be_nil
+      end
+
+      it "includes `interactionPolicy`" do
+        expect(subject["interactionPolicy"]["canQuote"]["automaticApproval"]).to eq("https://www.w3.org/ns/activitystreams#Public")
+      end
     end
   end
 end

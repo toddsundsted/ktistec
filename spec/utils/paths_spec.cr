@@ -10,10 +10,6 @@ Spectator.describe Utils::Paths do
       expect(Utils::Paths.path_id_from_iri("https://test.test/objects/abc123")).to eq("abc123")
     end
 
-    it "strips trailing slash" do
-      expect(Utils::Paths.path_id_from_iri("https://test.test/objects/abc123/")).to eq("abc123")
-    end
-
     it "returns the input" do
       expect(Utils::Paths.path_id_from_iri("abc123")).to eq("abc123")
     end

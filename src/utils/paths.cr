@@ -9,13 +9,7 @@ module Utils::Paths
   #    require `env` from code paths that do not.
 
   def self.path_id_from_iri(iri : String) : String
-    path = iri
-    path = path[0...-1] if path.ends_with?('/')
-    if (index = path.rindex('/'))
-      path[(index + 1)..-1]
-    else
-      path
-    end
+    (index = iri.rindex('/')) ? iri[(index + 1)..-1] : iri
   end
 
   macro back_path

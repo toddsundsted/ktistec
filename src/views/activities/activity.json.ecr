@@ -18,6 +18,16 @@
   <%- elsif (target_iri = activity.target_iri) -%>
   "target":<%= target_iri.to_json %>,
   <%- end -%>
+  <%- if recursive && activity.responds_to?(:instrument) && (instrument = activity.instrument?) -%>
+  "instrument":<%= instrument.to_json_ld %>,
+  <%- elsif (instrument_iri = activity.instrument_iri) -%>
+  "instrument":<%= instrument_iri.to_json %>,
+  <%- end -%>
+  <%- if recursive && activity.responds_to?(:result) && (result = activity.result?) -%>
+  "result":<%= result.to_json_ld %>,
+  <%- elsif (result_iri = activity.result_iri) -%>
+  "result":<%= result_iri.to_json %>,
+  <%- end -%>
   <%- if (to = activity.to) -%>
   "to":<%= to.to_json %>,
   <%- end -%>

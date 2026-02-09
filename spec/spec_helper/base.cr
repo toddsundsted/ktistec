@@ -74,6 +74,10 @@ end
 
 # Redefinitions
 
+# NOTE: The `uid` methods were removed from `Account` and `Linked`
+# because the meaning of `uid` wasn't clear for remote linked models.
+# The methods were added here to avoid breaking existing tests.
+
 class Account
   private def cost
     4 # reduce the cost of computing a bcrypt hash
@@ -81,6 +85,16 @@ class Account
 
   private def size
     512 # reduce the size of the generated rsa key
+  end
+
+  def uid
+    username
+  end
+end
+
+module Ktistec::Model::Linked
+  def uid
+    URI.parse(iri).path.split("/").last
   end
 end
 

@@ -16,10 +16,6 @@ module Ktistec
         "#{uri.scheme}://#{uri.host}"
       end
 
-      def uid
-        URI.parse(iri).path.split("/").last
-      end
-
       def local?
         iri.starts_with?(Ktistec.host)
       end

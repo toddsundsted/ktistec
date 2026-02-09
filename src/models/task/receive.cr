@@ -90,6 +90,14 @@ class Task
     end
 
     def perform
+      if (activity = self.activity) && activity.is_a?(ActivityPub::Activity::ObjectActivity) && (object = activity.object?)
+        if (quote = object.quote?(include_deleted: true) || object.quote?(receiver, dereference: true))
+          if quote.attributed_to?(include_deleted: true) || quote.attributed_to?(receiver, dereference: true)
+            quote.save
+          end
+        end
+      end
+
       transfer activity, from: receiver, to: recipients
     end
   end

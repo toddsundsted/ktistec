@@ -64,12 +64,16 @@ class OutboxActivityProcessor
         ).save(skip_associated: true)
       end
     when ActivityPub::Activity::Accept
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: true).save
+      if (object = activity.object).is_a?(ActivityPub::Activity::Follow)
+        if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: object.object))
+          follow.assign(confirmed: true).save
+        end
       end
     when ActivityPub::Activity::Reject
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.object.object))
-        follow.assign(confirmed: true).save
+      if (object = activity.object).is_a?(ActivityPub::Activity::Follow)
+        if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: object.object))
+          follow.assign(confirmed: true).save
+        end
       end
     when ActivityPub::Activity::Undo
       case (object = activity.object)

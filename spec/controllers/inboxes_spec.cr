@@ -1001,6 +1001,46 @@ Spectator.describe InboxesController do
       end
     end
 
+    context "on quote request" do
+      let_create(:note, named: :quoted_post, attributed_to: actor, local: true)
+      let_build(:note, named: :quoting_post, attributed_to: other)
+      let_build(:quote_request, actor: other, object: nil, instrument: nil)
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", quote_request.to_json_ld(true), "application/json") }
+
+      it "returns 400 if no object is included" do
+        post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if object is not local" do
+        quote_request.assign(object: quoting_post) # intentionally use non-local `quoting_post`
+        post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      context "and a local object" do
+        before_each { quote_request.assign(object: quoted_post) }
+
+        it "returns 400 if object is not visible" do
+          quoted_post.assign(visible: false).save
+          post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
+          expect(response.status_code).to eq(400)
+        end
+
+        it "accepts the quote request" do
+          post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      it "accepts the quote request" do
+        quote_request.assign(object: quoted_post, instrument: quoting_post)
+        post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
+        expect(response.status_code).to eq(200)
+      end
+    end
+
     context "on accept" do
       let_create!(:follow_relationship, named: :relationship, actor: actor, object: other, confirmed: false)
       let_create(:follow, actor: actor, object: other)

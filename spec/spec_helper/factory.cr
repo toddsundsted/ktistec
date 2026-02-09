@@ -148,6 +148,10 @@ def question_factory(**options)
   object_factory(ActivityPub::Object::Question, **options)
 end
 
+def quote_authorization_factory(**options)
+  object_factory(ActivityPub::Object::QuoteAuthorization, **options)
+end
+
 def tombstone_factory(**options)
   object_factory(ActivityPub::Object::Tombstone, **options)
 end
@@ -224,6 +228,10 @@ end
 
 def reject_factory(**options)
   activity_factory(ActivityPub::Activity::Reject, **options)
+end
+
+def quote_request_factory(**options)
+  activity_factory(ActivityPub::Activity::QuoteRequest, **options)
 end
 
 # collection factories
@@ -440,6 +448,13 @@ def poll_factory(clazz = Poll, question_iri = nil, question = false, options = n
   question = question_factory unless question_iri || question.nil? || question
   options ||= [Poll::Option.new("Yes"), Poll::Option.new("No")]
   clazz.new(**{question_iri: question_iri, question: question, options: options}.merge(__options))
+end
+
+# quote decision factory
+
+def quote_decision_factory(clazz = QuoteDecision, quote_authorization_iri = nil, quote_authorization = false, **__options)
+  quote_authorization = quote_authorization_factory unless quote_authorization_iri || quote_authorization.nil? || quote_authorization
+  clazz.new(**{quote_authorization_iri: quote_authorization_iri, quote_authorization: quote_authorization}.merge(__options))
 end
 
 # filter term factory

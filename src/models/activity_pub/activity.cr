@@ -49,6 +49,12 @@ module ActivityPub
     property target_iri : String?
 
     @[Persistent]
+    property instrument_iri : String?
+
+    @[Persistent]
+    property result_iri : String?
+
+    @[Persistent]
     property to : Array(String)?
 
     @[Persistent]
@@ -126,6 +132,24 @@ module ActivityPub
           "target" => if target && target.as_h?
             if (target_iri = target.dig?("@id").try(&.as_s?)) && activity_host && parse_host(target_iri) == activity_host
               ActivityPub.from_json_ld(target, default: ActivityPub::Object)
+            end
+          end,
+          # pick up the instrument's id and the embedded instrument if the hosts match
+          "instrument_iri" => if (instrument = json.dig?("https://www.w3.org/ns/activitystreams#instrument"))
+            instrument.as_s? || instrument.dig?("@id").try(&.as_s?)
+          end,
+          "instrument" => if instrument && instrument.as_h?
+            if (instrument_iri = instrument.dig?("@id").try(&.as_s?)) && activity_host && parse_host(instrument_iri) == activity_host
+              ActivityPub.from_json_ld(instrument, default: ActivityPub::Object)
+            end
+          end,
+          # pick up the result's id and the embedded result if the hosts match
+          "result_iri" => if (result = json.dig?("https://www.w3.org/ns/activitystreams#result"))
+            result.as_s? || result.dig?("@id").try(&.as_s?)
+          end,
+          "result" => if result && result.as_h?
+            if (result_iri = result.dig?("@id").try(&.as_s?)) && activity_host && parse_host(result_iri) == activity_host
+              ActivityPub.from_json_ld(result, default: ActivityPub::Object)
             end
           end,
           "to"       => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),

@@ -199,6 +199,13 @@ class InboxesController
       end
       # compatibility with implementations that don't address follows
       deliver_to = [account.iri]
+    when ActivityPub::Activity::QuoteRequest
+      unless (object = activity.object?(account.actor, dereference: true))
+        bad_request
+      end
+      unless object.local? && object.visible
+        bad_request
+      end
     when ActivityPub::Activity::Accept
       unless activity.object?.try(&.local?)
         bad_request

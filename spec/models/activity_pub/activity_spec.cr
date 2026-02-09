@@ -7,6 +7,8 @@ require "../../spec_helper/factory"
 class FooBarActivity < ActivityPub::Activity
   belongs_to object, class_name: ActivityPub::Object, foreign_key: object_iri, primary_key: iri
   belongs_to target, class_name: ActivityPub::Activity, foreign_key: target_iri, primary_key: iri
+  belongs_to instrument, class_name: ActivityPub::Object, foreign_key: instrument_iri, primary_key: iri
+  belongs_to result, class_name: ActivityPub::Object, foreign_key: result_iri, primary_key: iri
 end
 
 Spectator.describe ActivityPub::Activity do
@@ -30,6 +32,8 @@ Spectator.describe ActivityPub::Activity do
         "actor":"actor link",
         "object":"object link",
         "target":"target link",
+        "instrument":"instrument link",
+        "result":"result link",
         "to":"to link",
         "cc":["cc link"],
         "audience":["audience link"],
@@ -51,6 +55,8 @@ Spectator.describe ActivityPub::Activity do
       expect(activity.actor_iri).to eq("actor link")
       expect(activity.object_iri).to eq("object link")
       expect(activity.target_iri).to eq("target link")
+      expect(activity.instrument_iri).to eq("instrument link")
+      expect(activity.result_iri).to eq("result link")
       expect(activity.to).to eq(["to link"])
       expect(activity.cc).to eq(["cc link"])
       expect(activity.audience).to eq(["audience link"])
@@ -90,6 +96,8 @@ Spectator.describe ActivityPub::Activity do
       expect(activity.actor_iri).to eq("actor link")
       expect(activity.object_iri).to eq("object link")
       expect(activity.target_iri).to eq("target link")
+      expect(activity.instrument_iri).to eq("instrument link")
+      expect(activity.result_iri).to eq("result link")
       expect(activity.to).to eq(["to link"])
       expect(activity.cc).to eq(["cc link"])
       expect(activity.audience).to eq(["audience link"])
@@ -130,20 +138,26 @@ Spectator.describe ActivityPub::Activity do
     let_build(:actor)
     let_build(:object)
     let_build(:activity, named: target)
+    let_build(:object, named: instrument)
+    let_build(:object, named: result)
 
     let(activity) do
       FooBarActivity.new(
         actor: actor,
         object: object,
-        target: target
+        target: target,
+        instrument: instrument,
+        result: result,
       )
     end
 
-    it "renders object and target recursively by default" do
+    it "renders object, target, instrument, and result recursively by default" do
       json = JSON.parse(activity.to_json_ld)
       expect(json["actor"].as_s?).to be_truthy
       expect(json["object"].as_h?).to be_truthy
       expect(json["target"].as_h?).to be_truthy
+      expect(json["instrument"].as_h?).to be_truthy
+      expect(json["result"].as_h?).to be_truthy
     end
 
     it "renders everything recursively if true" do
@@ -151,6 +165,8 @@ Spectator.describe ActivityPub::Activity do
       expect(json["actor"].as_h?).to be_truthy
       expect(json["object"].as_h?).to be_truthy
       expect(json["target"].as_h?).to be_truthy
+      expect(json["instrument"].as_h?).to be_truthy
+      expect(json["result"].as_h?).to be_truthy
     end
 
     it "renders nothing recursively if false" do
@@ -158,6 +174,8 @@ Spectator.describe ActivityPub::Activity do
       expect(json["actor"].as_s?).to be_truthy
       expect(json["object"].as_s?).to be_truthy
       expect(json["target"].as_s?).to be_truthy
+      expect(json["instrument"].as_s?).to be_truthy
+      expect(json["result"].as_s?).to be_truthy
     end
 
     context "when audience is multiple values" do
@@ -200,6 +218,14 @@ Spectator.describe ActivityPub::Activity::ModelHelper do
         "target":{
           "@id":"target link",
           "@type":"Activity"
+        },
+        "instrument":{
+          "@id":"instrument link",
+          "@type":"Object"
+        },
+        "result":{
+          "@id":"result link",
+          "@type":"Object"
         }
       }
     JSON
@@ -256,6 +282,40 @@ Spectator.describe ActivityPub::Activity::ModelHelper do
       it "populates target" do
         expect(activity["target"]).to be_a(ActivityPub::Activity)
         expect(activity["target"].as(ActivityPub::Activity).iri).to eq("https://test.test/target")
+      end
+    end
+
+    it "populates instrument_iri" do
+      expect(activity["instrument_iri"]).to eq("instrument link")
+    end
+
+    it "does not populate instrument" do
+      expect(activity.has_key?("instrument")).to be_false
+    end
+
+    context "given an instrument with the same host" do
+      let(json) { super.gsub(%q|"@id":"instrument link"|, %q|"@id":"https://test.test/instrument"|) }
+
+      it "populates instrument" do
+        expect(activity["instrument"]).to be_a(ActivityPub::Object)
+        expect(activity["instrument"].as(ActivityPub::Object).iri).to eq("https://test.test/instrument")
+      end
+    end
+
+    it "populates result_iri" do
+      expect(activity["result_iri"]).to eq("result link")
+    end
+
+    it "does not populate result" do
+      expect(activity.has_key?("result")).to be_false
+    end
+
+    context "given a result with the same host" do
+      let(json) { super.gsub(%q|"@id":"result link"|, %q|"@id":"https://test.test/result"|) }
+
+      it "populates result" do
+        expect(activity["result"]).to be_a(ActivityPub::Object)
+        expect(activity["result"].as(ActivityPub::Object).iri).to eq("https://test.test/result")
       end
     end
   end

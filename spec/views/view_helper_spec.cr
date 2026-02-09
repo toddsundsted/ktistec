@@ -1585,8 +1585,8 @@ Spectator.describe "helpers" do
       42
     end
 
-    stub def uid
-      "xyz"
+    stub def iri
+      "/xyz"
     end
   end
 

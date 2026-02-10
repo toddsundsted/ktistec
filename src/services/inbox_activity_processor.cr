@@ -110,6 +110,7 @@ class InboxActivityProcessor
         iri: "#{Ktistec.host}/objects/#{Ktistec::Util.id}",
         quote_decision: decision,
         attributed_to: account.actor,
+        visible: quoted_post.visible,
         published: now,
       )
       authorization.save

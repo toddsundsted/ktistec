@@ -225,6 +225,8 @@ Spectator.describe InboxActivityProcessor do
       it "creates a quote authorization" do
         expect { InboxActivityProcessor.process(account, quote_request_activity) }
           .to change { ActivityPub::Object::QuoteAuthorization.count }.by(1)
+        authorization = ActivityPub::Object::QuoteAuthorization.all.last
+        expect(authorization.visible).to be_true
       end
 
       it "creates a quote decision" do

@@ -87,3 +87,9 @@ class Task
     end
   end
 end
+
+class ActivityPub::Object
+  def delayed?
+    Task::DeliverDelayedObject.find?(object: self)
+  end
+end

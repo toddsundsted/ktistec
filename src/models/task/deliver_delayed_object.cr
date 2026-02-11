@@ -92,4 +92,9 @@ class ActivityPub::Object
   def delayed?
     Task::DeliverDelayedObject.find?(object: self)
   end
+
+  def before_destroy
+    previous_def
+    Task::DeliverDelayedObject.find?(object: self).try(&.destroy)
+  end
 end

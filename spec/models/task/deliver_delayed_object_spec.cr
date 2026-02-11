@@ -135,3 +135,30 @@ Spectator.describe Task::DeliverDelayedObject do
     end
   end
 end
+
+Spectator.describe ActivityPub::Object do
+  setup_spec
+
+  let(actor) { register.actor }
+  let_create(:object, published: nil, visible: true, local: true, attributed_to: actor)
+
+  alias State = Task::DeliverDelayedObject::State
+
+  let(state) { State.new(State::Reason::Scheduled, State::ScheduledContext.new(1.hour.from_now)) }
+
+  describe "#before_destroy" do
+    context "with an associated task" do
+      let_create!(:deliver_delayed_object_task, actor: actor, object: object, state: state)
+
+      it "destroys the associated task" do
+        expect { object.destroy }.to change { Task::DeliverDelayedObject.count }.by(-1)
+      end
+    end
+
+    context "without an associated task" do
+      it "does not raise an error" do
+        expect { object.destroy }.not_to raise_error
+      end
+    end
+  end
+end

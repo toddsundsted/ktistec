@@ -91,6 +91,7 @@ module ObjectBuilder
       object : ActivityPub::Object,
       actor : ActivityPub::Actor,
       in_reply_to : Object? = nil,
+      quote : Object? = nil,
     )
       content = extract_string(params, "content") || ""
       media_type = extract_string(params, "media-type") || "text/html; editor=trix"
@@ -105,6 +106,7 @@ module ObjectBuilder
         attributed_to_iri: actor.iri,
         attributed_to: actor,
         in_reply_to_iri: in_reply_to.try(&.iri),
+        quote_iri: quote.try(&.iri),
         replies_iri: "#{object.iri}/replies",
         language: language,
         name: name,
@@ -133,6 +135,23 @@ module ObjectBuilder
         result.add_error("in_reply_to", "object not found")
       end
       in_reply_to
+    end
+
+    # Validates that the quoted object exists.
+    #
+    # Returns the object if found, `nil` otherwise. Adds an error to
+    # the result if not found.
+    #
+    protected def validate_quote(
+      quote_iri : String?,
+      result : BuildResult,
+    ) : ActivityPub::Object?
+      return nil unless quote_iri
+      quote = ActivityPub::Object.find?(quote_iri)
+      unless quote
+        result.add_error("quote", "object not found")
+      end
+      quote
     end
 
     # Collects model validation errors.

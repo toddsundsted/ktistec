@@ -304,6 +304,7 @@ Spectator.describe ActivityPub::Object do
           {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"},
           {
             "quote":"https://w3id.org/fep/044f#quote",
+            "quoteAuthorization":{"@id":"https://w3id.org/fep/044f#quoteAuthorization","@type":"@id"},
             "quoteUrl":"https://www.w3.org/ns/activitystreams#quoteUrl",
             "quoteUri":"http://fedibird.com/ns#quoteUri",
             "_misskey_quote":"https://misskey-hub.net/ns#_misskey_quote",
@@ -317,6 +318,7 @@ Spectator.describe ActivityPub::Object do
         "attributedTo":"attributed to link",
         "inReplyTo":"in reply to link",
         "quote":"quote link",
+        "quoteAuthorization":"quote authorization link",
         "replies":"replies link",
         "to":"to link",
         "cc":["cc link"],
@@ -369,6 +371,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.quote_iri).to eq("quote link")
+      expect(object.quote_authorization_iri).to eq("quote authorization link")
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
@@ -611,6 +614,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.attributed_to_iri).to eq("attributed to link")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.quote_iri).to eq("quote link")
+      expect(object.quote_authorization_iri).to eq("quote authorization link")
       expect(object.replies_iri).to eq("replies link")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])

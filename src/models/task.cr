@@ -85,7 +85,7 @@ class Task
   end
 
   def past_due?(now = Time.utc)
-    next_attempt_at.nil? || next_attempt_at.try(&.<(now))
+    !(next_attempt_at = self.next_attempt_at).nil? && next_attempt_at < now
   end
 
   private def self.compare_times(a : Time?, b : Time?)
@@ -114,7 +114,7 @@ class Task
          UPDATE tasks
             SET running = 1
           WHERE running = 0 AND complete = 0 AND backtrace IS NULL
-            AND (next_attempt_at IS NULL OR next_attempt_at < ?)
+            AND next_attempt_at <= ?
       RETURNING #{columns}
       SQL
       query_all(query, now).sort do |a, b|
@@ -130,7 +130,7 @@ class Task
           SELECT #{columns}
           FROM tasks
          WHERE running = 0 AND complete = 0 AND backtrace IS NULL
-           AND (next_attempt_at IS NULL OR next_attempt_at < ?)
+           AND next_attempt_at <= ?
       ORDER BY next_attempt_at, id
       SQL
       query_all(query, now)
@@ -140,7 +140,7 @@ class Task
   # NOTE: This method is redefined when running tests. Invoking
   # `schedule` immediately invokes `perform`.
 
-  def schedule(next_attempt_at = nil)
+  def schedule(next_attempt_at = Time.utc)
     raise "Not runnable" unless runnable? || complete
     self.next_attempt_at = next_attempt_at if next_attempt_at
     self.complete = false

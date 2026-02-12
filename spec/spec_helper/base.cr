@@ -123,7 +123,7 @@ end
 class Task
   class_property schedule_but_dont_perform : Bool = false
 
-  def schedule(next_attempt_at = nil)
+  def schedule(next_attempt_at = Time.utc)
     previous_def(next_attempt_at).tap do |task|
       TaskWorker.instance.perform(task) unless task.class.schedule_but_dont_perform
     end

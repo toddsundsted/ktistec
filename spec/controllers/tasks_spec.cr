@@ -60,12 +60,12 @@ Spectator.describe TasksController do
 
         it "renders the task status" do
           get "/tasks", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//table/tr/td")).to have("The next run is imminent.")
+          expect(XML.parse_html(response.body).xpath_nodes("//table/tr/td")).to have("The task isn't scheduled.")
         end
 
         it "renders the task status" do
           get "/tasks", ACCEPT_JSON
-          expect(JSON.parse(response.body).dig("tasks", 0, "status")).to eq("The next run is imminent.")
+          expect(JSON.parse(response.body).dig("tasks", 0, "status")).to eq("The task isn't scheduled.")
         end
 
         context "given a task that fetches content" do
@@ -103,12 +103,12 @@ Spectator.describe TasksController do
 
           it "renders the task status" do
             get "/tasks", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//table/tr/td")).to have("The next check for new posts is imminent.")
+            expect(XML.parse_html(response.body).xpath_nodes("//table/tr/td")).to have("The next check for new posts isn't scheduled.")
           end
 
           it "renders the task status" do
             get "/tasks", ACCEPT_JSON
-            expect(JSON.parse(response.body).dig("tasks", 0, "status")).to eq("The next check for new posts is imminent.")
+            expect(JSON.parse(response.body).dig("tasks", 0, "status")).to eq("The next check for new posts isn't scheduled.")
           end
 
           it "renders the subject" do

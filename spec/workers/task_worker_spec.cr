@@ -5,8 +5,10 @@ require "../../src/workers/task_worker"
 require "../spec_helper/base"
 
 class TaskWorker
+  NOW = Time.utc(2016, 2, 15, 10, 20, 7)
+
   # expose method for testing
-  def work(now = Time.utc)
+  def work(now = NOW)
     previous_def(now)
   end
 end
@@ -14,8 +16,9 @@ end
 class BaseTask < Task
   def initialize(options = Hash(String, String).new)
     options = {
-      "source_iri"  => "https://test.test/#{random_string}",
-      "subject_iri" => "https://test.test/#{random_string}",
+      "source_iri"      => "https://test.test/#{random_string}",
+      "subject_iri"     => "https://test.test/#{random_string}",
+      "next_attempt_at" => TaskWorker::NOW - 1.second,
     }.merge(options)
     super(options)
   end
@@ -105,7 +108,7 @@ Spectator.describe TaskWorker do
   describe "#work" do
     before_each { FooBarTask.performed.clear }
 
-    macro create_task!(index, next_attempt_at = nil)
+    macro create_task!(index, next_attempt_at)
       let!(task{{index}}) do
         FooBarTask.new(
           source_iri: "https://test.test/source",
@@ -115,17 +118,17 @@ Spectator.describe TaskWorker do
       end
     end
 
-    let(now) { Time.utc(2016, 2, 15, 10, 20, 7) }
+    let(now) { TaskWorker::NOW }
 
     create_task!(1, now + 1.second)
     create_task!(2, now - 3.seconds)
     create_task!(3, now - 1.second)
     create_task!(4, now - 5.seconds)
-    create_task!(5)
+    create_task!(5, now)
 
     it "calls perform on all scheduled tasks" do
       described_class.new.work(now)
-      expect(FooBarTask.performed).to eq([task5.id, task4.id, task2.id, task3.id])
+      expect(FooBarTask.performed).to eq([task4.id, task2.id, task3.id, task5.id])
     end
 
     it "ensures task is not left running" do

@@ -5,7 +5,7 @@ class ActivityPub::Activity
   class QuoteRequest < ActivityPub::Activity
     # see: Activity.recursive
     def self.recursive
-      false
+      true
     end
 
     # NOTE: per FEP-044F, "The `QuoteRequest` activity uses the

@@ -265,7 +265,7 @@ class ObjectsController
     object = result.object
 
     if draft
-      if !draft.draft? || ActivityPub::Activity::QuoteRequest.where(instrument: draft).any?
+      if !draft.draft? || !ActivityPub::Activity::QuoteRequest.where(instrument: draft).empty?
         unprocessable_entity "objects/quote", env: env, object: object, quoted: quoted
       end
     end

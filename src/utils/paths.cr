@@ -156,6 +156,10 @@ module Utils::Paths
     "#{Utils::Paths.remote_object_path({{object}})}/reply"
   end
 
+  macro quote_path(object = nil)
+    "#{Utils::Paths.remote_object_path({{object}})}/quote"
+  end
+
   macro fetch_quote_path(object = nil)
     "#{Utils::Paths.remote_object_path({{object}})}/fetch/quote"
   end

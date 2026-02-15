@@ -213,7 +213,14 @@ class InboxesController
       unless activity.object.actor == account.actor
         bad_request
       end
-      unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
+      case activity.object
+      when ActivityPub::Activity::Follow
+        unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
+          bad_request
+        end
+      when ActivityPub::Activity::QuoteRequest
+        # no additional check needed
+      else
         bad_request
       end
       # compatibility with implementations that don't address accepts
@@ -225,7 +232,14 @@ class InboxesController
       unless activity.object.actor == account.actor
         bad_request
       end
-      unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
+      case activity.object
+      when ActivityPub::Activity::Follow
+        unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
+          bad_request
+        end
+      when ActivityPub::Activity::QuoteRequest
+        # no additional check needed
+      else
         bad_request
       end
       # compatibility with implementations that don't address rejects

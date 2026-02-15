@@ -1041,7 +1041,7 @@ Spectator.describe InboxesController do
       end
     end
 
-    context "on accept" do
+    context "on accept (follow)" do
       let_create!(:follow_relationship, named: :relationship, actor: actor, object: other, confirmed: false)
       let_create(:follow, actor: actor, object: other)
       let_build(:accept, actor: other, object: follow)
@@ -1080,7 +1080,37 @@ Spectator.describe InboxesController do
       end
     end
 
-    context "on reject" do
+    context "on accept (quote request)" do
+      let_create(:quote_request, actor: actor, object: nil)
+      let_build(:accept, actor: other, object: quote_request)
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", accept.to_json_ld, "application/json") }
+
+      it "returns 400 if related activity does not exist" do
+        quote_request.destroy
+        post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld(recursive: false)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if it's not accepting the actor's quote request" do
+        quote_request.assign(actor: other).save
+        post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
+      it "accepts the quote request" do
+        post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
+        expect(response.status_code).to eq(200)
+      end
+
+      it "accepts the quote request even if previously received" do
+        accept.save
+        post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
+        expect(response.status_code).to eq(200)
+      end
+    end
+
+    context "on reject (follow)" do
       let_create!(:follow_relationship, named: :relationship, actor: actor, object: other, confirmed: false)
       let_create(:follow, actor: actor, object: other)
       let_build(:reject, actor: other, object: follow)
@@ -1115,6 +1145,36 @@ Spectator.describe InboxesController do
         reject.save
         expect { post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld }
           .to change { relationship.reload!.confirmed }
+        expect(response.status_code).to eq(200)
+      end
+    end
+
+    context "on reject (quote request)" do
+      let_create(:quote_request, actor: actor, object: nil)
+      let_build(:reject, actor: other, object: quote_request)
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", reject.to_json_ld, "application/json") }
+
+      it "returns 400 if related activity does not exist" do
+        quote_request.destroy
+        post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld(recursive: false)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if it's not rejecting the actor's quote request" do
+        quote_request.assign(actor: other).save
+        post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
+      it "rejects the quote request" do
+        post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
+        expect(response.status_code).to eq(200)
+      end
+
+      it "rejects the quote request even if previously received" do
+        reject.save
+        post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
         expect(response.status_code).to eq(200)
       end
     end

@@ -118,6 +118,25 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "with quote" do
+      let(quote_iri) { "https://remote/quoted-post" }
+
+      it "prepends textual fallback to content" do
+        subject.assign(quote_iri: quote_iri, source: source).save
+        expect(subject.content).to match(/\A<p class="quote-inline">RE: .*<\/p>/)
+      end
+
+      it "does not prepend multiple textual fallbacks to content" do
+        subject.assign(quote_iri: quote_iri, source: source).save.save.save
+        expect(subject.content.not_nil!.scan(/<p class="quote-inline">/).size).to eq(1)
+      end
+
+      it "does not prepend textual fallback to content" do
+        subject.assign(source: source).save
+        expect(subject.content).not_to match(/<p class="quote-inline">/)
+      end
+    end
+
     context "with markdown" do
       let(markdown_source) { ActivityPub::Object::Source.new("# Heading\n\nThis is **bold** and this is *italic*.", "text/markdown") }
 

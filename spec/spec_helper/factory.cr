@@ -387,6 +387,15 @@ def handle_follow_request_task_factory(source_iri = nil, recipient = false, subj
   )
 end
 
+def deliver_delayed_object_task_factory(source_iri = nil, actor = false, subject_iri = nil, object = false, **options)
+  actor = actor_factory(local: true) unless source_iri || actor.nil? || actor
+  object = object_factory(published: nil, local: true) unless subject_iri || object.nil? || object
+  task_factory(
+    Task::DeliverDelayedObject,
+    **{actor: actor || nil, source_iri: source_iri, object: object || nil, subject_iri: subject_iri}.merge(options)
+  )
+end
+
 def notify_poll_expiry_task_factory(subject_iri = nil, question = false, **options)
   question = question_factory unless subject_iri || question.nil? || question
   task_factory(

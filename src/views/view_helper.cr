@@ -865,12 +865,16 @@ module Ktistec::ViewHelper
           if {{task}}.running
             %io << "Running."
           else
-            if (%next_attempt_at = {{task}}.next_attempt_at) && %next_attempt_at > %now
-              %io << "The next run is in "
-              %io << distance_of_time_in_words(%next_attempt_at, %now)
-              %io << "."
+            if (%next_attempt_at = {{task}}.next_attempt_at)
+              if %next_attempt_at > %now
+                %io << "The next run is in "
+                %io << distance_of_time_in_words(%next_attempt_at, %now)
+                %io << "."
+              else
+                %io << "The next run is imminent."
+              end
             else
-              %io << "The next run is imminent."
+              %io << "The task isn't scheduled."
             end
             if {{detail}}
               if (%last_attempt_at = {{task}}.last_attempt_at) && %last_attempt_at < %now
@@ -900,12 +904,16 @@ module Ktistec::ViewHelper
           if {{task}}.running
             %io << "Checking for new posts."
           else
-            if (%next_attempt_at = {{task}}.next_attempt_at) && %next_attempt_at > %now
-              %io << "The next check for new posts is in "
-              %io << distance_of_time_in_words(%next_attempt_at, %now)
-              %io << "."
+            if (%next_attempt_at = {{task}}.next_attempt_at)
+              if %next_attempt_at > %now
+                %io << "The next check for new posts is in "
+                %io << distance_of_time_in_words(%next_attempt_at, %now)
+                %io << "."
+              else
+                %io << "The next check for new posts is imminent."
+              end
             else
-              %io << "The next check for new posts is imminent."
+              %io << "The next check for new posts isn't scheduled."
             end
             if {{detail}}
               if (%last_attempt_at = {{task}}.last_attempt_at) && %last_attempt_at < %now

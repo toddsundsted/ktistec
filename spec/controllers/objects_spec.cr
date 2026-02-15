@@ -1700,6 +1700,248 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "GET /remote/objects/:id/quote" do
+    it "returns 401" do
+      get "/remote/objects/0/quote"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/quote"
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the object" do
+        get "/remote/objects/#{visible.id}/quote", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id").first).to eq("object-#{visible.id}")
+      end
+
+      it "renders the form" do
+        get "/remote/objects/#{visible.id}/quote", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//trix-editor")).not_to be_empty
+      end
+
+      it "returns 404 if object is not visible" do
+        get "/remote/objects/#{notvisible.id}/quote"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is remote" do
+        get "/remote/objects/#{remote.id}/quote"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "if remote object is visible" do
+        before_each { remote.assign(visible: true).save }
+
+        it "succeeds" do
+          get "/remote/objects/#{remote.id}/quote"
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      it "returns 404 if object is a draft" do
+        get "/remote/objects/#{draft.id}/quote"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        get "/remote/objects/0/quote"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/:id/quote" do
+    it "returns 401" do
+      post "/remote/objects/0/quote"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      def quote_post_path_for(quoted)
+        Ktistec::ViewHelper.object_path(ActivityPub::Object.find(quote: quoted))
+      end
+
+      it "succeeds" do
+        post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}"
+        expect(response.status_code).to eq(302)
+      end
+
+      it "redirects" do
+        post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}"
+        expect(response.headers["Location"]).to eq(quote_post_path_for(visible))
+      end
+
+      it "succeeds" do
+        post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}"}|
+        expect(response.status_code).to eq(201)
+      end
+
+      it "returns the path" do
+        post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}"}|
+        expect(response.headers["Location"]).to eq(quote_post_path_for(visible))
+      end
+
+      it "creates a draft object" do
+        expect { post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}" }.to change { actor.drafts.size }.by(1)
+      end
+
+      it "creates a draft object" do
+        expect { post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}"}| }.to change { actor.drafts.size }.by(1)
+      end
+
+      it "creates a quote request" do
+        expect { post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}" }.to change { ActivityPub::Activity::QuoteRequest.count }.by(1)
+      end
+
+      it "creates a quote request" do
+        expect { post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}"}| }.to change { ActivityPub::Activity::QuoteRequest.count }.by(1)
+      end
+
+      it "sets the quoted object" do
+        post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}"
+        expect(ActivityPub::Activity::QuoteRequest.find?(object: visible)).to be_truthy
+      end
+
+      it "sets the quoted object" do
+        post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}"}|
+        expect(ActivityPub::Activity::QuoteRequest.find?(object: visible)).to be_truthy
+      end
+
+      def quote_request_for(quoted)
+        ActivityPub::Activity::QuoteRequest.find(object: quoted)
+      end
+
+      it "addresses the quote request" do
+        post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}"
+        expect(quote_request_for(visible).to).to contain_exactly(visible.attributed_to.iri)
+      end
+
+      it "addresses the quote request" do
+        post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}"}|
+        expect(quote_request_for(visible).to).to contain_exactly(visible.attributed_to.iri)
+      end
+
+      it "creates a task" do
+        post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}"
+        expect(Task::DeliverDelayedObject.all.last.object.quote).to eq(visible)
+      end
+
+      it "creates a task" do
+        post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}"}|
+        expect(Task::DeliverDelayedObject.all.last.object.quote).to eq(visible)
+      end
+
+      context "given a self-quote" do
+        let_create(:object, named: :post, attributed_to: actor, published: published, visible: true, local: true)
+
+        it "does not create a quote request" do
+          expect { post "/remote/objects/#{post.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(post.iri)}" }.not_to change { ActivityPub::Activity::QuoteRequest.count }
+        end
+
+        it "does not create a quote request" do
+          expect { post "/remote/objects/#{post.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{post.iri}"}| }.not_to change { ActivityPub::Activity::QuoteRequest.count }
+        end
+      end
+
+      context "given an existing draft quote post" do
+        let_create!(:object, named: :post, attributed_to: actor, quote_iri: visible.iri, published: nil, local: true)
+
+        it "does not create a new draft object" do
+          expect { post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}&object=#{URI.encode_www_form(post.iri)}" }.not_to change { actor.drafts.size }
+        end
+
+        it "does not create a new draft object" do
+          expect { post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}","object":"#{post.iri}"}| }.not_to change { actor.drafts.size }
+        end
+
+        it "updates the existing draft" do
+          post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=updated&quote=#{URI.encode_www_form(visible.iri)}&object=#{URI.encode_www_form(post.iri)}"
+          expect(ActivityPub::Object.find(post.id).source.try(&.content)).to eq("updated")
+        end
+
+        it "updates the existing draft" do
+          post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"updated","quote":"#{visible.iri}","object":"#{post.iri}"}|
+          expect(ActivityPub::Object.find(post.id).source.try(&.content)).to eq("updated")
+        end
+
+        context "with an existing quote request" do
+          let_create!(:quote_request, actor: actor, object: visible, instrument_iri: post.iri)
+
+          it "returns 422" do
+            post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}&object=#{URI.encode_www_form(post.iri)}"
+            expect(response.status_code).to eq(422)
+          end
+
+          it "returns 422" do
+            post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}","object":"#{post.iri}"}|
+            expect(response.status_code).to eq(422)
+          end
+        end
+      end
+
+      context "given a published quote post" do
+        let_create!(:object, named: :post, attributed_to: actor, quote_iri: visible.iri, published: published, visible: true, local: true)
+
+        it "returns 422" do
+          post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}&object=#{URI.encode_www_form(post.iri)}"
+          expect(response.status_code).to eq(422)
+        end
+
+        it "returns 422" do
+          post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}","object":"#{post.iri}"}|
+          expect(response.status_code).to eq(422)
+        end
+      end
+
+      it "returns 422 if validation fails" do
+        post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}&canonical-path=foo%2Fbar"
+        expect(response.status_code).to eq(422)
+      end
+
+      it "returns 422 if validation fails" do
+        post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}","canonical-path":"foo/bar"}|
+        expect(response.status_code).to eq(422)
+      end
+
+      it "renders an error message" do
+        post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}&canonical-path=foo%2Fbar"
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error')]")).not_to be_empty
+      end
+
+      it "renders an error message" do
+        post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}","canonical-path":"foo/bar"}|
+        expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
+      end
+
+      it "returns 404 if object is a draft" do
+        post "/remote/objects/#{draft.id}/quote", FORM_DATA, "content="
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is a draft" do
+        post "/remote/objects/#{draft.id}/quote", JSON_DATA, %Q|{"content":""}|
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/0/quote", FORM_DATA, "content="
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/0/quote", JSON_DATA, %Q|{"content":""}|
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "GET /remote/objects/:id/fetch/quote" do
     it "returns 401" do
       get "/remote/objects/0/fetch/quote"

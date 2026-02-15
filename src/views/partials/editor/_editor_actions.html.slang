@@ -3,6 +3,9 @@
     - if object.in_reply_to_iri
       button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
         | Send Reply
+    - elsif object.quote_iri
+      button.ui.primary.button data-has-content-target="button" type="submit" formaction=quote_path(object.quote)
+        | Publish Quote
     - else
       button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
         | Publish Post

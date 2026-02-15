@@ -81,9 +81,9 @@ Spectator.describe Task do
   end
 
   describe "#past_due?" do
-    it "is true if next_attempt_at is nil" do
+    it "is false if next_attempt_at is nil" do
       subject.next_attempt_at = nil
-      expect(subject.past_due?).to be_true
+      expect(subject.past_due?).to be_false
     end
 
     it "is true if next_attempt_at is in the past" do
@@ -181,9 +181,10 @@ Spectator.describe Task do
     create_task!(2, Time.utc(2016, 2, 15, 10, 20, 4))
     create_task!(3, Time.utc(2016, 2, 15, 10, 20, 6))
     create_task!(4, Time.utc(2016, 2, 15, 10, 20, 2))
-    create_task!(5) # perform immediately
-    create_task!(6)
-    create_task!(7)
+    # perform now
+    create_task!(5, Time.utc(2016, 2, 15, 10, 20, 7))
+    create_task!(6, Time.utc(2016, 2, 15, 10, 20, 7))
+    create_task!(7, Time.utc(2016, 2, 15, 10, 20, 7))
 
     before_each do
       task6.assign(running: true).save
@@ -193,7 +194,7 @@ Spectator.describe Task do
     let(now) { Time.utc(2016, 2, 15, 10, 20, 7) }
 
     it "returns the scheduled tasks in priority order" do
-      expect(described_class.scheduled(now, false)).to eq([task5, task4, task2, task3])
+      expect(described_class.scheduled(now, false)).to eq([task4, task2, task3, task5])
     end
 
     it "does not reserve the scheduled tasks" do
@@ -201,7 +202,7 @@ Spectator.describe Task do
     end
 
     it "returns the scheduled tasks in priority order" do
-      expect(described_class.scheduled(now, true)).to eq([task5, task4, task2, task3])
+      expect(described_class.scheduled(now, true)).to eq([task4, task2, task3, task5])
     end
 
     it "reserves the scheduled tasks" do

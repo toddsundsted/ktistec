@@ -1539,4 +1539,31 @@ Spectator.describe "partials" do
       end
     end
   end
+
+  describe "objects/quote.html.slang" do
+    let(account) { register }
+
+    sign_in(as: account.username)
+
+    let(env) { make_env("GET", "/quote") }
+
+    subject do
+      XML.parse_html(render "./src/views/objects/quote.html.slang")
+    end
+
+    let_build(:object, named: :quoted)
+    let_build(:object, quote: quoted)
+
+    it "renders heading" do
+      expect(subject.xpath_nodes("//h1")).to have("Quote")
+    end
+
+    it "includes hidden quote field" do
+      expect(subject.xpath_nodes("//input[@name='quote']/@value")).to have(quoted.iri)
+    end
+
+    it "renders the quoted object" do
+      expect(subject.xpath_nodes("//*[contains(@class,'event')]/@id")).to have("object-#{quoted.id}")
+    end
+  end
 end

@@ -44,7 +44,7 @@ class Task
       #
       def self.ensure_scheduled
         instance = current_instance
-        instance.schedule if instance.runnable?
+        instance.schedule if instance.runnable? && instance.next_attempt_at.nil?
         instance
       end
     end

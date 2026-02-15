@@ -1,10 +1,13 @@
 require "../framework/controller"
+require "../models/activity_pub/activity/quote_request"
 require "../models/relationship/content/bookmark"
 require "../models/relationship/content/pin"
 require "../models/relationship/content/follow/thread"
+require "../models/task/deliver_delayed_object"
 require "../models/task/fetch/thread"
 require "../models/translation"
 require "../services/object_factory"
+require "../services/outbox_activity_processor"
 
 class ObjectsController
   include Ktistec::Controller
@@ -228,6 +231,73 @@ class ObjectsController
     end
 
     ok "objects/reply", env: env, object: object
+  end
+
+  get "/remote/objects/:id/quote" do |env|
+    unless (quoted = get_object(env, id_param(env))) && !quoted.draft?
+      not_found
+    end
+
+    object = ActivityPub::Object.new(
+      iri: "#{host}/objects/quote",
+      attributed_to: env.account.actor,
+      quote: quoted,
+    )
+
+    ok "objects/quote", env: env, object: object, quoted: quoted
+  end
+
+  alias State = Task::DeliverDelayedObject::State
+
+  post "/remote/objects/:id/quote" do |env|
+    unless (quoted = get_object(env, id_param(env))) && !quoted.draft?
+      not_found
+    end
+
+    actor = env.account.actor
+
+    params_hash = normalize_params(env.params.body.presence || env.params.json)
+    draft =
+      if (draft_iri = params_hash["object"]?.try(&.as?(String)))
+        get_object_editable(env, draft_iri)
+      end
+    result = ObjectFactory.build_from_params(params_hash, actor, draft)
+    object = result.object
+
+    if draft
+      if !draft.draft? || !ActivityPub::Activity::QuoteRequest.where(instrument: draft).empty?
+        unprocessable_entity "objects/quote", env: env, object: object, quoted: quoted
+      end
+    end
+
+    unless result.valid?
+      if accepts_turbo_stream?
+        unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "object-#{object.id}"
+      else
+        unprocessable_entity "objects/quote", env: env, object: object, quoted: quoted
+      end
+    end
+
+    object.save
+
+    if quoted.attributed_to == object.attributed_to # self-quote
+      now = Time.utc
+      state = State.new(State::Reason::Scheduled, State::ScheduledContext.new(now))
+      Task::DeliverDelayedObject.new(actor: actor, object: object, state: state).schedule(now)
+    else
+      iri = "#{host}/activities/#{Ktistec::Util.id}"
+      quote_request = ActivityPub::Activity::QuoteRequest.new(iri: iri, actor: actor, object: quoted, instrument: object, to: [quoted.attributed_to_iri].compact).save
+      OutboxActivityProcessor.process(env.account, quote_request)
+
+      state = State.new(State::Reason::PendingQuoteAuthorization, State::PendingQuoteAuthorizationContext.new(quote_request.iri))
+      Task::DeliverDelayedObject.new(actor: actor, object: object, state: state).save
+    end
+
+    if accepts?("application/ld+json", "application/activity+json", "application/json")
+      created object_path(object), "objects/object", env: env, object: object, recursive: false
+    else
+      redirect object_path(object)
+    end
   end
 
   get "/remote/objects/:id/fetch/quote" do |env|

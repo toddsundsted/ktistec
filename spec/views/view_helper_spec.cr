@@ -1285,11 +1285,11 @@ Spectator.describe "helpers" do
       end
     end
 
-    context "given a task that hasn't run" do
+    context "given a task that isn't scheduled" do
       let(task) { new_double(:task) }
 
       it "returns the status" do
-        expect(subject).to match(/The next run is imminent./)
+        expect(subject).to match(/The task isn't scheduled./)
       end
     end
 
@@ -1381,11 +1381,11 @@ Spectator.describe "helpers" do
       end
     end
 
-    context "given a task that hasn't run" do
+    context "given a task that isn't scheduled" do
       let(task) { new_double(:fetch_task) }
 
       it "returns the status" do
-        expect(subject).to match(/The next check for new posts is imminent./)
+        expect(subject).to match(/The next check for new posts isn't scheduled./)
       end
     end
 

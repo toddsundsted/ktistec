@@ -3,6 +3,7 @@ require "../../src/models/activity_pub/object/question"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
 require "../../src/models/translation"
+require "../../src/models/task/deliver_delayed_object"
 require "../../src/framework/controller"
 require "../../src/utils/translator"
 
@@ -465,6 +466,30 @@ Spectator.describe "object partials" do
 
         it "renders a button to edit" do
           expect(subject.xpath_nodes("//button/text()")).to have("Edit")
+        end
+
+        alias State = Task::DeliverDelayedObject::State
+
+        it "does not render a delayed reason" do
+          expect(subject.xpath_nodes("//span[contains(@class,'label')]")).to be_empty
+        end
+
+        context "with a pending quote authorization task" do
+          let(state) { State.new(State::Reason::PendingQuoteAuthorization, State::PendingQuoteAuthorizationContext.new("https://example.com/activities/abc")) }
+          let_create!(:deliver_delayed_object_task, actor: actor, object: object, state: state)
+
+          it "renders a delayed reason" do
+            expect(subject.xpath_nodes("//span[contains(@class,'label')]").map(&.text)).to contain_exactly("pending quote authorization")
+          end
+        end
+
+        context "with a scheduled task" do
+          let(state) { State.new(State::Reason::Scheduled, State::ScheduledContext.new(1.hour.from_now)) }
+          let_create!(:deliver_delayed_object_task, actor: actor, object: object, state: state)
+
+          it "renders a delayed reason" do
+            expect(subject.xpath_nodes("//span[contains(@class,'label')]").map(&.text)).to contain_exactly("scheduled")
+          end
         end
       end
     end
@@ -960,6 +985,27 @@ Spectator.describe "object partials" do
 
       it "does not include `interactionPolicy`" do
         expect(subject["interactionPolicy"]?).to be_nil
+      end
+    end
+
+    describe "given a quote authorization" do
+      let_build(:actor, named: :author)
+      let_build(
+        :object,
+        attributed_to: author,
+        published: Time.utc,
+        quote_authorization_iri: "https://remote/authorizations/abc",
+      )
+      let(recursive) { false }
+
+      it "includes `quoteAuthorization`" do
+        expect(subject["quoteAuthorization"]).to eq("https://remote/authorizations/abc")
+      end
+
+      it "includes `@context` with namespace" do
+        context = subject["@context"].as_a
+        fep_context = context.find { |c| c.as_h? && c.as_h["quoteAuthorization"]? }
+        expect(fep_context).not_to be_nil
       end
     end
 

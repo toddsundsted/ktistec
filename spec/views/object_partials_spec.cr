@@ -988,6 +988,27 @@ Spectator.describe "object partials" do
       end
     end
 
+    describe "given a quote authorization" do
+      let_build(:actor, named: :author)
+      let_build(
+        :object,
+        attributed_to: author,
+        published: Time.utc,
+        quote_authorization_iri: "https://remote/authorizations/abc",
+      )
+      let(recursive) { false }
+
+      it "includes `quoteAuthorization`" do
+        expect(subject["quoteAuthorization"]).to eq("https://remote/authorizations/abc")
+      end
+
+      it "includes `@context` with namespace" do
+        context = subject["@context"].as_a
+        fep_context = context.find { |c| c.as_h? && c.as_h["quoteAuthorization"]? }
+        expect(fep_context).not_to be_nil
+      end
+    end
+
     describe "given a regular object" do
       let_build(:actor, named: :author)
       let_build(

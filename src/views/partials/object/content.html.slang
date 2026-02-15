@@ -152,6 +152,10 @@ crystal:
           == activity_button(outbox_path(account), object.iri, "Announce", button_class: "ui button mini iconic") do
             i.share.icon
             = pluralize(c, "Share")
+        a data-turbo-frame="_top" href=quote_path(object)
+          button.ui.mini.iconic.button
+            i.retweet.icon
+            | Quote
         - if (bookmark = Relationship::Content::Bookmark.find?(actor: account.actor, object: object))
           == form_button bookmark_path(object), method: "DELETE", button_class: "ui button mini blue iconic" do
             i.bookmark.icon

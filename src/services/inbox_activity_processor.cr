@@ -6,6 +6,7 @@ require "../rules/content_rules"
 require "../models/task/handle_follow_request"
 require "../models/task/receive"
 require "../models/task/deliver"
+require "../models/task/deliver_delayed_object"
 require "../models/relationship/social/follow"
 require "../models/activity_pub/object/quote_authorization"
 require "../models/quote_decision"
@@ -55,14 +56,22 @@ class InboxActivityProcessor
     when ActivityPub::Activity::QuoteRequest
       process_quote_request(account, activity, deliver_task_class)
     when ActivityPub::Activity::Accept
-      follow_activity = activity.object.as(ActivityPub::Activity::Follow)
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: follow_activity.object))
-        follow.assign(confirmed: true).save
+      case (object = activity.object)
+      when ActivityPub::Activity::Follow
+        if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: object.object))
+          follow.assign(confirmed: true).save
+        end
+      when ActivityPub::Activity::QuoteRequest
+        process_accept_quote_request(object, activity)
       end
     when ActivityPub::Activity::Reject
-      follow_activity = activity.object.as(ActivityPub::Activity::Follow)
-      if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: follow_activity.object))
-        follow.assign(confirmed: true).save
+      case (object = activity.object)
+      when ActivityPub::Activity::Follow
+        if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: object.object))
+          follow.assign(confirmed: true).save
+        end
+      when ActivityPub::Activity::QuoteRequest
+        # no action needed
       end
     when ActivityPub::Activity::Undo
       case (object = activity.object)
@@ -86,6 +95,13 @@ class InboxActivityProcessor
       activity: activity,
       deliver_to: deliver_to
     ).schedule
+  end
+
+  private def self.process_accept_quote_request(quote_request, accept)
+    if (quote_post = quote_request.instrument?)
+      quote_post.assign(quote_authorization_iri: accept.result_iri).save
+      Task::DeliverDelayedObject.find?(object: quote_post).try(&.schedule)
+    end
   end
 
   private def self.process_quote_request(account, quote_request, deliver_task_class)

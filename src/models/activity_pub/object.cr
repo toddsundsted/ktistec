@@ -71,6 +71,9 @@ module ActivityPub
     property quote_iri : String?
     belongs_to quote, class_name: ActivityPub::Object, foreign_key: quote_iri, primary_key: iri
 
+    @[Persistent]
+    property quote_authorization_iri : String?
+
     # don't use an association for `replies` because it's a collection
     # and associations are automatically saved by default.
 
@@ -1090,6 +1093,7 @@ module ActivityPub
             Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#quoteUrl") ||
             Ktistec::JSON_LD.dig_id?(json, "http://fedibird.com/ns#quoteUri") ||
             Ktistec::JSON_LD.dig_id?(json, "https://misskey-hub.net/ns#_misskey_quote"),
+          "quote_authorization_iri" => Ktistec::JSON_LD.dig_id?(json, "https://w3id.org/fep/044f#quoteAuthorization"),
           # pick up the replies' id and the embedded replies if the hosts match
           "replies_iri" => if (replies = json.dig?("https://www.w3.org/ns/activitystreams#replies"))
             replies.as_s? || replies.dig?("@id").try(&.as_s?)

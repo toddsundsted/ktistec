@@ -61,5 +61,51 @@ Spectator.describe ObjectBuilder::NoteBuilder do
         expect { subject.build(params, actor, note) }.not_to change { note.iri }
       end
     end
+
+    context "given a quote parameter" do
+      let_create(:object)
+
+      context "when the quoted object exists" do
+        let(params) { {"content" => "Quoting this", "quote" => object.iri} }
+
+        it "sets quote_iri on the note" do
+          result = subject.build(params, actor)
+          expect(result.object.quote_iri).to eq(object.iri)
+        end
+
+        it "is valid" do
+          result = subject.build(params, actor)
+          expect(result.valid?).to be_true
+        end
+      end
+
+      context "when the quoted object does not exist" do
+        let(params) { {"content" => "Quoting this", "quote" => "https://remote/objects/missing"} }
+
+        it "adds an error for quote" do
+          result = subject.build(params, actor)
+          expect(result.errors["quote"]).to contain("object not found")
+        end
+
+        it "is not valid" do
+          result = subject.build(params, actor)
+          expect(result.valid?).to be_false
+        end
+      end
+
+      context "when the quote parameter is absent" do
+        let(params) { {"content" => "No quote"} }
+
+        it "does not set quote_iri" do
+          result = subject.build(params, actor)
+          expect(result.object.quote_iri).to be_nil
+        end
+
+        it "is valid" do
+          result = subject.build(params, actor)
+          expect(result.valid?).to be_true
+        end
+      end
+    end
   end
 end

@@ -6,7 +6,9 @@ require "../../src/models/activity_pub/activity/undo"
 require "../../src/models/activity_pub/activity/delete"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/create"
+require "../../src/models/activity_pub/activity/quote_request"
 require "../../src/models/relationship/social/follow"
+require "../../src/models/task/deliver_delayed_object"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
@@ -81,39 +83,110 @@ Spectator.describe InboxActivityProcessor do
       end
     end
 
-    context "with an Accept activity" do
-      let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
-      let_create(:follow_relationship, actor: account.actor, object: other, confirmed: false)
-      let_create(:accept, named: :accept_activity, actor: other, object: follow_activity)
+    let(state) do
+      Task::DeliverDelayedObject::State.new(
+        Task::DeliverDelayedObject::State::Reason::PendingQuoteAuthorization,
+        Task::DeliverDelayedObject::State::PendingQuoteAuthorizationContext.new("https://remote/activities/qr1")
+      )
+    end
 
-      it "confirms the follow relationship" do
-        expect { InboxActivityProcessor.process(account, accept_activity) }
-          .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
+    context "with an Accept activity" do
+      context "given a Follow" do
+        let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
+        let_create(:follow_relationship, actor: account.actor, object: other, confirmed: false)
+        let_create(:accept, named: :accept_activity, actor: other, object: follow_activity)
+
+        it "confirms the follow relationship" do
+          expect { InboxActivityProcessor.process(account, accept_activity) }
+            .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
+        end
+
+        it "schedules receive task" do
+          InboxActivityProcessor.process(account, accept_activity, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.schedule_called_count).to eq(1)
+          expect(MockReceiveTask.last_receiver).to eq(account.actor)
+          expect(MockReceiveTask.last_activity).to eq(accept_activity)
+        end
       end
 
-      it "schedules receive task" do
-        InboxActivityProcessor.process(account, accept_activity, receive_task_class: MockReceiveTask)
-        expect(MockReceiveTask.schedule_called_count).to eq(1)
-        expect(MockReceiveTask.last_receiver).to eq(account.actor)
-        expect(MockReceiveTask.last_activity).to eq(accept_activity)
+      context "given a QuoteRequest" do
+        let(authorization_iri) { "https://remote/authorizations/#{random_string}" }
+
+        let_create(:note, named: :quoted_post, attributed_to: other)
+        let_create(:note, named: :quote_post, published: nil, attributed_to: account.actor, local: true)
+        let_create(:quote_request, named: :quote_request_activity, actor: account.actor, object: quoted_post, instrument: quote_post)
+        let_create(:accept, named: :accept_activity, actor: other, object: quote_request_activity, result_iri: authorization_iri)
+        let_create!(:deliver_delayed_object_task, actor: account.actor, object: quote_post, state: state)
+
+        it "sets quote_authorization_iri" do
+          InboxActivityProcessor.process(account, accept_activity)
+          expect(quote_post.reload!.quote_authorization_iri).to eq(authorization_iri)
+        end
+
+        it "publishes the quote post" do
+          expect { InboxActivityProcessor.process(account, accept_activity) }
+            .to change { quote_post.reload!.published }.from(nil)
+        end
+
+        it "schedules receive task" do
+          InboxActivityProcessor.process(account, accept_activity, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.schedule_called_count).to eq(1)
+          expect(MockReceiveTask.last_receiver).to eq(account.actor)
+          expect(MockReceiveTask.last_activity).to eq(accept_activity)
+        end
+
+        context "when the quote post cannot be found" do
+          before_each { quote_post.destroy }
+
+          it "does not raise an error" do
+            expect { InboxActivityProcessor.process(account, accept_activity) }.not_to raise_error
+          end
+        end
       end
     end
 
     context "with a Reject activity" do
-      let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
-      let_create(:follow_relationship, actor: account.actor, object: other, confirmed: false)
-      let_create(:reject, named: :reject_activity, actor: other, object: follow_activity)
+      context "given a Follow" do
+        let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
+        let_create(:follow_relationship, actor: account.actor, object: other, confirmed: false)
+        let_create(:reject, named: :reject_activity, actor: other, object: follow_activity)
 
-      it "confirms the follow relationship" do
-        expect { InboxActivityProcessor.process(account, reject_activity) }
-          .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
+        it "confirms the follow relationship" do
+          expect { InboxActivityProcessor.process(account, reject_activity) }
+            .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
+        end
+
+        it "schedules receive task" do
+          InboxActivityProcessor.process(account, reject_activity, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.schedule_called_count).to eq(1)
+          expect(MockReceiveTask.last_receiver).to eq(account.actor)
+          expect(MockReceiveTask.last_activity).to eq(reject_activity)
+        end
       end
 
-      it "schedules receive task" do
-        InboxActivityProcessor.process(account, reject_activity, receive_task_class: MockReceiveTask)
-        expect(MockReceiveTask.schedule_called_count).to eq(1)
-        expect(MockReceiveTask.last_receiver).to eq(account.actor)
-        expect(MockReceiveTask.last_activity).to eq(reject_activity)
+      context "given a QuoteRequest" do
+        let_create(:note, named: :quoted_post, attributed_to: other)
+        let_create(:note, named: :quote_post, published: nil, attributed_to: account.actor, local: true)
+        let_create(:quote_request, named: :quote_request_activity, actor: account.actor, object: quoted_post, instrument: quote_post)
+        let_create(:reject, named: :reject_activity, actor: other, object: quote_request_activity)
+        let_create!(:deliver_delayed_object_task, actor: account.actor, object: quote_post, state: state)
+
+        it "does not set quote_authorization_iri" do
+          InboxActivityProcessor.process(account, reject_activity)
+          expect(quote_post.reload!.quote_authorization_iri).to be_nil
+        end
+
+        it "does not publish the quote post" do
+          expect { InboxActivityProcessor.process(account, reject_activity) }
+            .not_to change { quote_post.reload!.published }
+        end
+
+        it "schedules receive task" do
+          InboxActivityProcessor.process(account, reject_activity, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.schedule_called_count).to eq(1)
+          expect(MockReceiveTask.last_receiver).to eq(account.actor)
+          expect(MockReceiveTask.last_activity).to eq(reject_activity)
+        end
       end
     end
 

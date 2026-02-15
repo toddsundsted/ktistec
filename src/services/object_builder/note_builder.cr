@@ -16,8 +16,10 @@ module ObjectBuilder
 
       in_reply_to_iri = extract_string(params, "in-reply-to")
       in_reply_to = validate_reply_to(in_reply_to_iri, result)
+      quote_iri = extract_string(params, "quote")
+      quote = validate_quote(quote_iri, result)
       addressing = calculate_addressing(params, actor, in_reply_to)
-      apply_common_attributes(params, addressing, note, actor, in_reply_to)
+      apply_common_attributes(params, addressing, note, actor, in_reply_to, quote)
 
       collect_model_errors(note, result)
 

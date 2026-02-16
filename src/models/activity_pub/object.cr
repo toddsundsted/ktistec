@@ -73,6 +73,7 @@ module ActivityPub
 
     @[Persistent]
     property quote_authorization_iri : String?
+    belongs_to quote_authorization, foreign_key: quote_authorization_iri, primary_key: iri
 
     # don't use an association for `replies` because it's a collection
     # and associations are automatically saved by default.
@@ -262,6 +263,9 @@ module ActivityPub
             if media_type == "text/html"
               enhancements = Ktistec::HTML.enhance(source_content)
               self.content = enhancements.content
+              if (quote_iri = self.quote_iri)
+                self.content = "<p class=\"quote-inline\">RE: #{Ktistec::Util.wrap_link(quote_iri)}</p>#{self.content}"
+              end
               self.media_type = media_type
               self.attachments = enhancements.attachments
               self.hashtags = enhancements.hashtags

@@ -198,6 +198,41 @@ module Ktistec
       text.size > length ? text[0, length - ellipsis.size] + ellipsis : text
     end
 
+    # Wraps a string in a link if it is a URL.
+    #
+    # By default, matches the weird format used by Mastodon:
+    # https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb
+    #
+    def wrap_link(str, include_scheme = false, length = 30, tag = :a)
+      uri = URI.parse(str)
+      if (scheme = uri.scheme) && (host = uri.host) && (path = uri.path)
+        first = include_scheme ? "#{scheme}://#{host}#{path}" : "#{host}#{path}"
+        rest = ""
+        if first.size > length
+          first, rest = first[0...length], first[length..-1]
+        end
+        String.build do |io|
+          if tag == :a
+            io << %Q|<a href="#{str}" target="_blank" rel="ugc">|
+          else
+            io << %Q|<#{tag}>|
+          end
+          unless include_scheme
+            io << %Q|<span class="invisible">#{scheme}://</span>|
+          end
+          if rest.presence
+            io << %Q|<span class="ellipsis">#{first}</span>|
+            io << %Q|<span class="invisible">#{rest}</span>|
+          else
+            io << %Q|<span>#{first}</span>|
+          end
+          io << %Q|</#{tag}>|
+        end
+      else
+        str
+      end
+    end
+
     # Converts the array of words to comma-separated sentence form
     # where the last word is joined by a connector word (by default
     # "and").

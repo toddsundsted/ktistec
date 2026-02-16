@@ -6,6 +6,7 @@ require "../activity_pub/activity"
 require "../activity_pub/actor"
 require "../activity_pub/collection"
 require "../activity_pub/object"
+require "../activity_pub/object/quote_authorization"
 require "../relationship/social/follow"
 
 class Task
@@ -94,6 +95,16 @@ class Task
         if (quote = object.quote?(include_deleted: true) || object.quote?(receiver, dereference: true))
           if quote.attributed_to?(include_deleted: true) || quote.attributed_to?(receiver, dereference: true)
             quote.save
+          end
+          if !object.local? && object.attributed_to != quote.attributed_to
+            if (quote_authorization = object.quote_authorization?(receiver, dereference: true))
+              if (quote_decision = quote_authorization.quote_decision?) &&
+                 quote_decision.interacting_object? == object &&
+                 quote_decision.interaction_target? == quote &&
+                 quote_authorization.attributed_to? == quote.attributed_to
+                quote_authorization.save
+              end
+            end
           end
         end
       end

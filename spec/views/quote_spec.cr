@@ -125,12 +125,48 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
         expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
       end
     end
+
+    context "when the quote is not a self-quote" do
+      let_create(:actor, named: :other)
+
+      before_each { quote.assign(attributed_to: other).save }
+
+      it "renders 'This quote has not been verified.' message" do
+        expect(subject.xpath_nodes("//em[text()='This quote has not been verified.']")).not_to be_empty
+      end
+
+      it "does not render the quoted content" do
+        expect(subject.xpath_nodes("//section[@class='ui feed']//div[@class='content']")).to be_empty
+      end
+
+      it "does not render a reload button" do
+        expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
+      end
+
+      context "and the quote authorization is cached" do
+        let_create(:quote_authorization, attributed_to: other)
+
+        before_each { object.assign(quote_authorization_iri: quote_authorization.iri).save }
+
+        it "renders quoted post" do
+          expect(subject.xpath_nodes("//section[@class='ui feed']//div[@class='content']")).not_to be_empty
+        end
+
+        it "does not render 'This quote has not been verified.' message" do
+          expect(subject.xpath_nodes("//em[text()='This quote has not been verified.']")).to be_empty
+        end
+
+        it "does not render a reload button" do
+          expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
+        end
+      end
+    end
   end
 
   context "dereference failed" do
     let(failed) { true }
 
-    it "renders 'Failed' message" do
+    it "renders 'Failed to load!' message" do
       expect(subject.xpath_nodes("//em[text()='Failed to load!']")).not_to be_empty
     end
 

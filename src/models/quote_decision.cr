@@ -16,9 +16,11 @@ class QuoteDecision
 
   @[Persistent]
   property interacting_object_iri : String?
+  belongs_to interacting_object, class_name: ActivityPub::Object, foreign_key: interacting_object_iri, primary_key: iri
 
   @[Persistent]
   property interaction_target_iri : String?
+  belongs_to interaction_target, class_name: ActivityPub::Object, foreign_key: interaction_target_iri, primary_key: iri
 
   @[Persistent]
   property decision : String { "accept" }

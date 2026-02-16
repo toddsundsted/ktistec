@@ -73,6 +73,7 @@ module ActivityPub
 
     @[Persistent]
     property quote_authorization_iri : String?
+    belongs_to quote_authorization, foreign_key: quote_authorization_iri, primary_key: iri
 
     # don't use an association for `replies` because it's a collection
     # and associations are automatically saved by default.

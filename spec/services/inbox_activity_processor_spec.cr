@@ -13,6 +13,7 @@ require "../../src/models/task/deliver_delayed_object"
 require "../spec_helper/base"
 require "../spec_helper/factory"
 require "../spec_helper/mock"
+require "../spec_helper/network"
 
 Spectator.describe InboxActivityProcessor do
   setup_spec
@@ -91,7 +92,7 @@ Spectator.describe InboxActivityProcessor do
     end
 
     context "with an Accept activity" do
-      context "given a Follow" do
+      context "for a Follow" do
         let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
         let_create(:follow_relationship, actor: account.actor, object: other, confirmed: false)
         let_create(:accept, named: :accept_activity, actor: other, object: follow_activity)
@@ -109,7 +110,7 @@ Spectator.describe InboxActivityProcessor do
         end
       end
 
-      context "given a QuoteRequest" do
+      context "for a QuoteRequest" do
         let(authorization_iri) { "https://remote/authorizations/#{random_string}" }
 
         let_create(:note, named: :quoted_post, attributed_to: other)
@@ -142,11 +143,79 @@ Spectator.describe InboxActivityProcessor do
             expect { InboxActivityProcessor.process(account, accept_activity) }.not_to raise_error
           end
         end
+
+        context "with a QuoteAuthorization" do
+          before_each { quote_post.assign(quote_iri: quoted_post.iri).save }
+
+          let_build(:quote_decision, interacting_object: quote_post, interaction_target: quoted_post)
+          let_build(:quote_authorization, quote_decision: quote_decision, attributed_to: other, iri: authorization_iri)
+
+          before_each { HTTP::Client.objects << quote_authorization }
+
+          it "dereferences the quote authorization" do
+            InboxActivityProcessor.process(account, accept_activity)
+            expect(HTTP::Client.requests).to have("GET #{authorization_iri}")
+          end
+
+          it "saves the quote authorization" do
+            expect { InboxActivityProcessor.process(account, accept_activity) }
+              .to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
+          end
+
+          context "and quote authorization has wrong interacting_object_iri" do
+            before_each do
+              quote_decision.interacting_object_iri = "https://remote/objects/wrong"
+              HTTP::Client.objects << quote_authorization
+            end
+
+            it "does not save the quote authorization" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
+            end
+          end
+
+          context "and quote authorization has wrong interaction_target_iri" do
+            before_each do
+              quote_decision.interaction_target_iri = "https://remote/objects/wrong"
+              HTTP::Client.objects << quote_authorization
+            end
+
+            it "does not save the quote authorization" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
+            end
+          end
+
+          context "and quote authorization has wrong attributed_to_iri" do
+            before_each do
+              quote_authorization.attributed_to_iri = "https://remote/wrong"
+              HTTP::Client.objects << quote_authorization
+            end
+
+            it "does not save the quote authorization" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
+            end
+          end
+
+          context "when QuoteAuthorization cannot be dereferenced" do
+            before_each { HTTP::Client.cache.delete(authorization_iri) }
+
+            it "does not save the quote authorization" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
+            end
+
+            it "does not raise an error" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }.not_to raise_error
+            end
+          end
+        end
       end
     end
 
     context "with a Reject activity" do
-      context "given a Follow" do
+      context "for a Follow" do
         let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
         let_create(:follow_relationship, actor: account.actor, object: other, confirmed: false)
         let_create(:reject, named: :reject_activity, actor: other, object: follow_activity)
@@ -164,7 +233,7 @@ Spectator.describe InboxActivityProcessor do
         end
       end
 
-      context "given a QuoteRequest" do
+      context "for a QuoteRequest" do
         let_create(:note, named: :quoted_post, attributed_to: other)
         let_create(:note, named: :quote_post, published: nil, attributed_to: account.actor, local: true)
         let_create(:quote_request, named: :quote_request_activity, actor: account.actor, object: quoted_post, instrument: quote_post)

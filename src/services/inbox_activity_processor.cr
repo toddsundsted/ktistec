@@ -62,7 +62,7 @@ class InboxActivityProcessor
           follow.assign(confirmed: true).save
         end
       when ActivityPub::Activity::QuoteRequest
-        process_accept_quote_request(object, activity)
+        process_accept_quote_request(account, object, activity)
       end
     when ActivityPub::Activity::Reject
       case (object = activity.object)
@@ -97,9 +97,19 @@ class InboxActivityProcessor
     ).schedule
   end
 
-  private def self.process_accept_quote_request(quote_request, accept)
+  private def self.process_accept_quote_request(account, quote_request, accept)
     if (quote_post = quote_request.instrument?)
       quote_post.assign(quote_authorization_iri: accept.result_iri).save
+      if (quote_authorization_iri = accept.result_iri)
+        if (quote_authorization = ActivityPub::Object::QuoteAuthorization.dereference?(account.actor, quote_authorization_iri))
+          if (quote_decision = quote_authorization.quote_decision?) &&
+             quote_decision.interacting_object? == quote_post &&
+             quote_decision.interaction_target? == quote_post.quote &&
+             quote_authorization.attributed_to? == accept.actor
+            quote_authorization.save
+          end
+        end
+      end
       Task::DeliverDelayedObject.find?(object: quote_post).try(&.schedule)
     end
   end

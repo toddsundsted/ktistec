@@ -216,41 +216,6 @@ module Ktistec::ViewHelper
       end
     end
 
-    # Wraps a string in a link if it is a URL.
-    #
-    # By default, matches the weird format used by Mastodon:
-    # https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb
-    #
-    def wrap_link(str, include_scheme = false, length = 30, tag = :a)
-      uri = URI.parse(str)
-      if (scheme = uri.scheme) && (host = uri.host) && (path = uri.path)
-        first = include_scheme ? "#{scheme}://#{host}#{path}" : "#{host}#{path}"
-        rest = ""
-        if first.size > length
-          first, rest = first[0...length], first[length..-1]
-        end
-        String.build do |io|
-          if tag == :a
-            io << %Q|<a href="#{str}" target="_blank" rel="ugc">|
-          else
-            io << %Q|<#{tag}>|
-          end
-          unless include_scheme
-            io << %Q|<span class="invisible">#{scheme}://</span>|
-          end
-          if rest.presence
-            io << %Q|<span class="ellipsis">#{first}</span>|
-            io << %Q|<span class="invisible">#{rest}</span>|
-          else
-            io << %Q|<span>#{first}</span>|
-          end
-          io << %Q|</#{tag}>|
-        end
-      else
-        str
-      end
-    end
-
     def wrap_filter_term(str)
       str = str.gsub(/\\?[%_]/) { %Q|<span class="wildcard">#{$0}</span>| }
       %Q|<span class="ui filter term">#{str}</span>|
@@ -981,6 +946,15 @@ module Ktistec::ViewHelper
   #
   macro distance_of_time_in_words(*args)
     Ktistec::Util.distance_of_time_in_words({{args.splat}})
+  end
+
+  # Wraps a string in a link if it is a URL.
+  #
+  # By default, matches the weird format used by Mastodon:
+  # https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb
+  #
+  macro wrap_link(*args, **opts)
+    Ktistec::Util.wrap_link({{args.splat}}, {{opts.double_splat}})
   end
 
   # Pluralizes the noun.

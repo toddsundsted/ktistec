@@ -9,9 +9,13 @@
     .ui.segment.quoted-object
       em This post is blocked!
   - else
-    turbo-frame.ui.segment.quoted-object id="quote-#{object.id}"
-      section.ui.feed data-controller="icon-load-error"
-        == object_partial(env, quote)
+    - if object.attributed_to == quote.attributed_to || object.quote_authorization?
+      turbo-frame.ui.segment.quoted-object id="quote-#{object.id}"
+        section.ui.feed data-controller="icon-load-error"
+          == object_partial(env, quote)
+    - else
+      .ui.segment.quoted-object
+        em This quote has not been verified.
 - else
   turbo-frame.ui.segment.quoted-object id="quote-#{object.id}"
     form.ui.form method="GET" action=fetch_quote_path(object) data-turbo-frame="quote-#{object.id}"

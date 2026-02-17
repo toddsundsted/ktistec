@@ -322,6 +322,18 @@ Spectator.describe SettingsController do
           end
         end
 
+        it "updates manually_approve_quotes to false when unchecked" do
+          account.assign(manually_approve_quotes: true).save
+          expect { post "/settings/actor", headers, "" }
+            .to change { account.reload!.manually_approve_quotes }.from(true).to(false)
+        end
+
+        it "updates manually_approve_quotes to true when checked" do
+          account.assign(manually_approve_quotes: false).save
+          expect { post "/settings/actor", headers, "manually_approve_quotes=1" }
+            .to change { account.reload!.manually_approve_quotes }.from(false).to(true)
+        end
+
         it "updates the attachments" do
           post "/settings/actor", headers, "attachment_0_name=Blog&attachment_0_value=https://beowulf.example.com"
           attachments = actor.reload!.attachments.not_nil!
@@ -539,6 +551,18 @@ Spectator.describe SettingsController do
             post "/settings/actor", headers, %q|{"icon":null}|
             expect(actor.reload!.icon).to be_nil
           end
+        end
+
+        it "updates manually_approve_quotes to false" do
+          account.assign(manually_approve_quotes: true).save
+          expect { post "/settings/actor", headers, %q|{"manually_approve_quotes":false}| }
+            .to change { account.reload!.manually_approve_quotes }.from(true).to(false)
+        end
+
+        it "updates manually_approve_quotes to true" do
+          account.assign(manually_approve_quotes: false).save
+          expect { post "/settings/actor", headers, %q|{"manually_approve_quotes":true}| }
+            .to change { account.reload!.manually_approve_quotes }.from(false).to(true)
         end
 
         it "updates the attachments" do

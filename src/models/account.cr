@@ -136,6 +136,9 @@ class Account
   property auto_follow_back : Bool { false }
 
   @[Persistent]
+  property manually_approve_quotes : Bool { true }
+
+  @[Persistent]
   property default_editor : String { "text/html; editor=trix" }
   validates(default_editor) { "is not a valid editor" unless default_editor.in?("text/html; editor=trix", "text/markdown") }
 

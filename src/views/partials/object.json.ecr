@@ -4,7 +4,7 @@
     {"Hashtag":"as:Hashtag","sensitive":"as:sensitive"},
     {"toot":"http://joinmastodon.org/ns#","focalPoint":"toot:focalPoint","votersCount":"toot:votersCount","closed":"toot:closed"},
     {"gts":"https://gotosocial.org/ns#","interactingObject":{"@id":"gts:interactingObject","@type":"@id"},"interactionTarget":{"@id":"gts:interactionTarget","@type":"@id"},"interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"}},
-    {"quote":"https://w3id.org/fep/044f#quote","quoteAuthorization":{"@id":"https://w3id.org/fep/044f#quoteAuthorization","@type":"@id"}}
+    {"quote":{"@id":"https://w3id.org/fep/044f#quote","@type":"@id"},"quoteAuthorization":{"@id":"https://w3id.org/fep/044f#quoteAuthorization","@type":"@id"}}
   ],
   <%- if (published = object.published) -%>
   "published":<%= published.to_rfc3339(fraction_digits: 3).to_json %>,
@@ -25,11 +25,15 @@
   "quoteAuthorization":<%= quote_authorization_iri.to_json %>,
   <%- end -%>
   <%- unless object.is_a?(ActivityPub::Object::QuoteAuthorization) -%>
+  <%- if (account = Account.find?(iri: object.attributed_to_iri)) -%>
   "interactionPolicy":{
     "canQuote":{
-      "automaticApproval":<%= Ktistec::Constants::PUBLIC.to_json %>
+      "automaticApproval":[
+        <%= account.manually_approve_quotes ? object.attributed_to_iri.to_json : Ktistec::Constants::PUBLIC.to_json %>
+      ]
     }
   },
+  <%- end -%>
   <%- end -%>
   <%- if recursive == true && (replies = object.replies?) -%>
   "replies":<%= replies.to_json_ld %>,

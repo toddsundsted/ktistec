@@ -4,6 +4,8 @@ require "../../src/models/relationship/content/notification/follow/hashtag"
 require "../../src/models/relationship/content/notification/follow/mention"
 require "../../src/models/relationship/content/notification/follow/thread"
 require "../../src/models/relationship/content/notification/poll/expiry"
+require "../../src/models/relationship/content/notification/quote"
+require "../../src/models/activity_pub/activity/quote_request"
 
 require "../spec_helper/factory"
 require "../spec_helper/controller"
@@ -224,6 +226,37 @@ Spectator.describe "notifications partial" do
       it "includes link to poll results" do
         expect(subject.xpath_nodes("//article[contains(@class,'event')]//a/@href").first.text)
           .to eq("/remote/objects/#{question.id}")
+      end
+    end
+
+    context "given a quote notification" do
+      let_build(:object, named: quoted_post, attributed_to: actor)
+      let_build(:actor, named: quoting_actor)
+      let_build(:quote_request, actor: quoting_actor, object: quoted_post)
+      let_create!(:notification_quote, owner: actor, activity: quote_request)
+
+      it "renders a quoting message" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()").join)
+          .to eq("#{quoting_actor.display_name} quoted your post.")
+      end
+
+      it "displays the actor who quoted" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//a/@href").first.text)
+          .to eq("/remote/actors/#{quoting_actor.id}")
+      end
+
+      it "links to the quoted post" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//a/@href").map(&.text))
+          .to have("/remote/objects/#{quoted_post.id}")
+      end
+
+      context "with content preview" do
+        before_each { quoted_post.assign(content: "This is the quoted content.").save }
+
+        it "shows a preview of the quoted content" do
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()"))
+            .to have("This is the quoted content.")
+        end
       end
     end
   end

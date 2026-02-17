@@ -953,6 +953,27 @@ Spectator.describe "object partials" do
       end
     end
 
+    describe "given a quote" do
+      let_build(:actor, named: :author)
+      let_build(
+        :object,
+        attributed_to: author,
+        published: Time.utc,
+        quote_iri: "https://remote/posts/quoted",
+      )
+      let(recursive) { false }
+
+      it "includes `quote`" do
+        expect(subject["quote"]).to eq("https://remote/posts/quoted")
+      end
+
+      it "includes `@context` with quote defined as IRI type" do
+        context = subject["@context"].as_a
+        fep_context = context.find { |c| c.as_h? && c.dig?("quote", "@id") == "https://w3id.org/fep/044f#quote" }
+        expect(fep_context).not_to be_nil
+      end
+    end
+
     describe "given a quote decision" do
       let_build(:actor, named: :author)
       let_build(

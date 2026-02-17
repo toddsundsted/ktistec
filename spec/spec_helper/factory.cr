@@ -298,6 +298,10 @@ def notification_mention_factory(object_iri = nil, object = false, **options)
   notification_factory(Relationship::Content::Notification::Mention, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
 end
 
+def notification_quote_factory(**options)
+  notification_factory(Relationship::Content::Notification::Quote, ActivityPub::Activity::QuoteRequest, **options)
+end
+
 def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   object = object_factory(attributed_to_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, attributed_to: owner) unless object_iri || object.nil? || object

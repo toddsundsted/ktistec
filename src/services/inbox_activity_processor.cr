@@ -8,6 +8,7 @@ require "../models/task/receive"
 require "../models/task/deliver"
 require "../models/task/deliver_delayed_object"
 require "../models/relationship/social/follow"
+require "../models/relationship/content/notification/quote"
 require "../models/activity_pub/object/quote_authorization"
 require "../models/quote_decision"
 
@@ -115,42 +116,59 @@ class InboxActivityProcessor
   end
 
   private def self.process_quote_request(account, quote_request, deliver_task_class)
-    quoted_post = quote_request.object
-    quoting_post_iri = quote_request.instrument_iri
-
     now = Time.utc
 
-    existing = QuoteDecision
-      .where(interaction_target_iri: quoted_post.iri, interacting_object_iri: quoting_post_iri)
-      .first?
-
-    if existing
-      authorization = existing.quote_authorization
-    else
-      decision = QuoteDecision.new(
-        interaction_target_iri: quoted_post.iri,
-        interacting_object_iri: quoting_post_iri,
-        decision: "accept"
-      )
-      authorization = ActivityPub::Object::QuoteAuthorization.new(
-        iri: "#{Ktistec.host}/objects/#{Ktistec::Util.id}",
-        quote_decision: decision,
-        attributed_to: account.actor,
-        visible: quoted_post.visible,
+    if account.manually_approve_quotes
+      reject = ActivityPub::Activity::Reject.new(
+        iri: "#{Ktistec.host}/activities/#{Ktistec::Util.id}",
+        actor: account.actor,
+        object: quote_request,
+        to: [quote_request.actor.iri],
         published: now,
-      )
-      authorization.save
+      ).save
+
+      OutboxActivityProcessor.process(account, reject, deliver_task_class: deliver_task_class)
+    else
+      quoted_post = quote_request.object
+      quoting_post_iri = quote_request.instrument_iri
+
+      existing = QuoteDecision
+        .where(interaction_target_iri: quoted_post.iri, interacting_object_iri: quoting_post_iri)
+        .first?
+
+      if existing
+        authorization = existing.quote_authorization
+      else
+        decision = QuoteDecision.new(
+          interaction_target_iri: quoted_post.iri,
+          interacting_object_iri: quoting_post_iri,
+          decision: "accept"
+        )
+        authorization = ActivityPub::Object::QuoteAuthorization.new(
+          iri: "#{Ktistec.host}/objects/#{Ktistec::Util.id}",
+          quote_decision: decision,
+          attributed_to: account.actor,
+          visible: quoted_post.visible,
+          published: now,
+        )
+        authorization.save
+      end
+
+      accept = ActivityPub::Activity::Accept.new(
+        iri: "#{Ktistec.host}/activities/#{Ktistec::Util.id}",
+        actor: account.actor,
+        object: quote_request,
+        result: authorization,
+        to: [quote_request.actor.iri],
+        published: now,
+      ).save
+
+      OutboxActivityProcessor.process(account, accept, deliver_task_class: deliver_task_class)
+
+      Relationship::Content::Notification::Quote.new(
+        owner: account.actor,
+        activity: quote_request,
+      ).save
     end
-
-    accept = ActivityPub::Activity::Accept.new(
-      iri: "#{Ktistec.host}/activities/#{Ktistec::Util.id}",
-      actor: account.actor,
-      object: quote_request,
-      result: authorization,
-      to: [quote_request.actor.iri],
-      published: now,
-    ).save
-
-    OutboxActivityProcessor.process(account, accept, deliver_task_class: deliver_task_class)
   end
 end

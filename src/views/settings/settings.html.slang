@@ -23,6 +23,10 @@ p
       .ui.checkbox
         input type="checkbox" name="auto_follow_back" value="1" checked=account.auto_follow_back
         label Automatically follow back when followed
+    .field
+      .ui.checkbox
+        input type="checkbox" name="manually_approve_quotes" value="1" checked=account.manually_approve_quotes
+        label Manually approve quote posts
   crystal:
     is_rich_text = account.default_editor == "text/html; editor=trix"
     is_markdown = account.default_editor == "text/markdown"

@@ -364,57 +364,108 @@ Spectator.describe InboxActivityProcessor do
       let_create(:note, attributed_to: account.actor)
       let_create(:quote_request, named: :quote_request_activity, actor: other, object: note, instrument_iri: "https://remote/objects/123")
 
-      it "creates a quote authorization" do
-        expect { InboxActivityProcessor.process(account, quote_request_activity) }
-          .to change { ActivityPub::Object::QuoteAuthorization.count }.by(1)
-        authorization = ActivityPub::Object::QuoteAuthorization.all.last
-        expect(authorization.visible).to be_true
-      end
+      context "when manually_approve_quotes is true" do
+        pre_condition { expect(account.manually_approve_quotes).to be_true }
 
-      it "creates a quote decision" do
-        expect { InboxActivityProcessor.process(account, quote_request_activity) }
-          .to change { QuoteDecision.count }.by(1)
-        decision = QuoteDecision.where(interaction_target_iri: note.iri, interacting_object_iri: "https://remote/objects/123").first
-        expect(decision.decision).to eq("accept")
-      end
-
-      it "creates an accept activity with a quote authorization" do
-        expect { InboxActivityProcessor.process(account, quote_request_activity) }
-          .to change { ActivityPub::Activity::Accept.count }.by(1)
-        accept = ActivityPub::Activity::Accept.all.last
-        expect(accept.actor).to eq(account.actor)
-        expect(accept.object).to eq(quote_request_activity)
-        expect(accept.result).to be_a(ActivityPub::Object::QuoteAuthorization)
-      end
-
-      it "schedules receive task" do
-        InboxActivityProcessor.process(account, quote_request_activity, receive_task_class: MockReceiveTask)
-        expect(MockReceiveTask.schedule_called_count).to eq(1)
-        expect(MockReceiveTask.last_receiver).to eq(account.actor)
-        expect(MockReceiveTask.last_activity).to eq(quote_request_activity)
-      end
-
-      it "schedules deliver task" do
-        InboxActivityProcessor.process(account, quote_request_activity, deliver_task_class: MockDeliverTask)
-        expect(MockDeliverTask.schedule_called_count).to eq(1)
-        expect(MockDeliverTask.last_sender).to eq(account.actor)
-        expect(MockDeliverTask.last_activity).to be_a(ActivityPub::Activity::Accept)
-      end
-
-      context "given an existing quote decision" do
-        let_create!(:quote_authorization, attributed_to: account.actor)
-        let_create!(:quote_decision, quote_authorization: quote_authorization, interaction_target_iri: note.iri, interacting_object_iri: "https://remote/objects/123", decision: "accept")
-
-        it "reuses the existing quote authorization" do
+        it "does not create a quote authorization" do
           expect { InboxActivityProcessor.process(account, quote_request_activity) }
             .not_to change { ActivityPub::Object::QuoteAuthorization.count }
         end
 
-        it "creates a new accept activity" do
+        it "does not create a quote decision" do
+          expect { InboxActivityProcessor.process(account, quote_request_activity) }
+            .not_to change { QuoteDecision.count }
+        end
+
+        it "creates a Reject activity" do
+          expect { InboxActivityProcessor.process(account, quote_request_activity) }
+            .to change { ActivityPub::Activity::Reject.count }.by(1)
+          reject = ActivityPub::Activity::Reject.all.last
+          expect(reject.actor).to eq(account.actor)
+          expect(reject.object?).to eq(quote_request_activity)
+          expect(reject.result?).to be_nil
+        end
+
+        it "schedules deliver task" do
+          InboxActivityProcessor.process(account, quote_request_activity, deliver_task_class: MockDeliverTask)
+          expect(MockDeliverTask.schedule_called_count).to eq(1)
+          expect(MockDeliverTask.last_sender).to eq(account.actor)
+          expect(MockDeliverTask.last_activity).to be_a(ActivityPub::Activity::Reject)
+        end
+      end
+
+      context "when manually_approve_quotes is false" do
+        before_each { account.assign(manually_approve_quotes: false).save }
+
+        it "creates a quote authorization" do
+          expect { InboxActivityProcessor.process(account, quote_request_activity) }
+            .to change { ActivityPub::Object::QuoteAuthorization.count }.by(1)
+          authorization = ActivityPub::Object::QuoteAuthorization.all.last
+          expect(authorization.visible).to be_true
+        end
+
+        it "creates a quote decision" do
+          expect { InboxActivityProcessor.process(account, quote_request_activity) }
+            .to change { QuoteDecision.count }.by(1)
+          decision = QuoteDecision.where(interaction_target_iri: note.iri, interacting_object_iri: "https://remote/objects/123").first
+          expect(decision.decision).to eq("accept")
+        end
+
+        it "creates an Accept activity with a QuoteAuthorization" do
           expect { InboxActivityProcessor.process(account, quote_request_activity) }
             .to change { ActivityPub::Activity::Accept.count }.by(1)
           accept = ActivityPub::Activity::Accept.all.last
-          expect(accept.result).to eq(quote_authorization)
+          expect(accept.actor).to eq(account.actor)
+          expect(accept.object?).to eq(quote_request_activity)
+          expect(accept.result?).to be_a(ActivityPub::Object::QuoteAuthorization)
+        end
+
+        it "schedules receive task" do
+          InboxActivityProcessor.process(account, quote_request_activity, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.schedule_called_count).to eq(1)
+          expect(MockReceiveTask.last_receiver).to eq(account.actor)
+          expect(MockReceiveTask.last_activity).to eq(quote_request_activity)
+        end
+
+        it "schedules deliver task" do
+          InboxActivityProcessor.process(account, quote_request_activity, deliver_task_class: MockDeliverTask)
+          expect(MockDeliverTask.schedule_called_count).to eq(1)
+          expect(MockDeliverTask.last_sender).to eq(account.actor)
+          expect(MockDeliverTask.last_activity).to be_a(ActivityPub::Activity::Accept)
+        end
+
+        it "creates a quote notification" do
+          expect { InboxActivityProcessor.process(account, quote_request_activity) }
+            .to change { Relationship::Content::Notification::Quote.count }.by(1)
+        end
+
+        it "sets the notification owner to the account actor" do
+          InboxActivityProcessor.process(account, quote_request_activity)
+          notification = Relationship::Content::Notification::Quote.all.last
+          expect(notification.owner).to eq(account.actor)
+        end
+
+        it "sets the notification activity to the quote request" do
+          InboxActivityProcessor.process(account, quote_request_activity)
+          notification = Relationship::Content::Notification::Quote.all.last
+          expect(notification.activity).to eq(quote_request_activity)
+        end
+
+        context "given an existing quote authorization" do
+          let_create!(:quote_authorization, attributed_to: account.actor)
+          let_create!(:quote_decision, quote_authorization: quote_authorization, interaction_target_iri: note.iri, interacting_object_iri: "https://remote/objects/123", decision: "accept")
+
+          it "reuses the existing quote authorization" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { ActivityPub::Object::QuoteAuthorization.count }
+          end
+
+          it "creates a new accept activity" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .to change { ActivityPub::Activity::Accept.count }.by(1)
+            accept = ActivityPub::Activity::Accept.all.last
+            expect(accept.result).to eq(quote_authorization)
+          end
         end
       end
     end

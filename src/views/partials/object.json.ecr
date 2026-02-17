@@ -25,11 +25,15 @@
   "quoteAuthorization":<%= quote_authorization_iri.to_json %>,
   <%- end -%>
   <%- unless object.is_a?(ActivityPub::Object::QuoteAuthorization) -%>
+  <%- if (account = Account.find?(iri: object.attributed_to_iri)) -%>
   "interactionPolicy":{
     "canQuote":{
-      "automaticApproval":<%= Ktistec::Constants::PUBLIC.to_json %>
+      "automaticApproval":[
+        <%= account.manually_approve_quotes ? object.attributed_to_iri.to_json : Ktistec::Constants::PUBLIC.to_json %>
+      ]
     }
   },
+  <%- end -%>
   <%- end -%>
   <%- if recursive == true && (replies = object.replies?) -%>
   "replies":<%= replies.to_json_ld %>,

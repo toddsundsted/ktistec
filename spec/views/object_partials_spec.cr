@@ -1009,8 +1009,9 @@ Spectator.describe "object partials" do
       end
     end
 
-    describe "given a regular object" do
-      let_build(:actor, named: :author)
+    describe "given a local object" do
+      let(account) { register }
+      let(author) { account.actor }
       let_build(
         :object, named: :object,
         attributed_to: author,
@@ -1024,8 +1025,36 @@ Spectator.describe "object partials" do
         expect(gts_context).not_to be_nil
       end
 
-      it "includes `interactionPolicy`" do
-        expect(subject["interactionPolicy"]["canQuote"]["automaticApproval"]).to eq("https://www.w3.org/ns/activitystreams#Public")
+      context "when manually_approve_quotes is true" do
+        pre_condition { expect(account.manually_approve_quotes).to be_true }
+
+        it "emits automaticApproval with author" do
+          automatic_approval = subject["interactionPolicy"]["canQuote"]["automaticApproval"]
+          expect(automatic_approval).to eq([author.iri])
+        end
+      end
+
+      context "when manually_approve_quotes is false" do
+        before_each { account.assign(manually_approve_quotes: false).save }
+
+        it "emits automaticApproval with 'as:Public'" do
+          automatic_approval = subject["interactionPolicy"]["canQuote"]["automaticApproval"]
+          expect(automatic_approval).to eq(["https://www.w3.org/ns/activitystreams#Public"])
+        end
+      end
+    end
+
+    describe "given a remote object" do
+      let_build(:actor, named: :author)
+      let_build(
+        :object, named: :object,
+        attributed_to: author,
+        published: Time.utc,
+      )
+      let(recursive) { false }
+
+      it "does not include interactionPolicy" do
+        expect(subject["interactionPolicy"]?).to be_nil
       end
     end
   end

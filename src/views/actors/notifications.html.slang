@@ -199,6 +199,21 @@
             - if (content = question.preview)
               .extra.meta.truncated
                 == … content, 150
+        - in Relationship::Content::Notification::Quote
+          crystal:
+            activity = notification.activity
+            emojis = Tag::Emoji.where(subject: activity.actor)
+          .label
+            == actor_icon(activity.actor)
+          .content
+            .summary
+              a> href=remote_actor_path(activity.actor) == s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
+              | quoted
+              a< href=remote_object_path(activity.object) your post
+              | .
+            - if (content = activity.object.preview)
+              .extra.meta.truncated
+                == … content, 150
         - in Relationship::Content::Notification
           / This can't happen!
   == paginate(env, notifications)

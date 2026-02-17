@@ -434,7 +434,24 @@ Spectator.describe InboxActivityProcessor do
           expect(MockDeliverTask.last_activity).to be_a(ActivityPub::Activity::Accept)
         end
 
-        context "given an existing quote decision" do
+        it "creates a quote notification" do
+          expect { InboxActivityProcessor.process(account, quote_request_activity) }
+            .to change { Relationship::Content::Notification::Quote.count }.by(1)
+        end
+
+        it "sets the notification owner to the account actor" do
+          InboxActivityProcessor.process(account, quote_request_activity)
+          notification = Relationship::Content::Notification::Quote.all.last
+          expect(notification.owner).to eq(account.actor)
+        end
+
+        it "sets the notification activity to the quote request" do
+          InboxActivityProcessor.process(account, quote_request_activity)
+          notification = Relationship::Content::Notification::Quote.all.last
+          expect(notification.activity).to eq(quote_request_activity)
+        end
+
+        context "given an existing quote authorization" do
           let_create!(:quote_authorization, attributed_to: account.actor)
           let_create!(:quote_decision, quote_authorization: quote_authorization, interaction_target_iri: note.iri, interacting_object_iri: "https://remote/objects/123", decision: "accept")
 

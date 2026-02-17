@@ -8,6 +8,7 @@ require "../models/task/receive"
 require "../models/task/deliver"
 require "../models/task/deliver_delayed_object"
 require "../models/relationship/social/follow"
+require "../models/relationship/content/notification/quote"
 require "../models/activity_pub/object/quote_authorization"
 require "../models/quote_decision"
 
@@ -163,6 +164,11 @@ class InboxActivityProcessor
       ).save
 
       OutboxActivityProcessor.process(account, accept, deliver_task_class: deliver_task_class)
+
+      Relationship::Content::Notification::Quote.new(
+        owner: account.actor,
+        activity: quote_request,
+      ).save
     end
   end
 end

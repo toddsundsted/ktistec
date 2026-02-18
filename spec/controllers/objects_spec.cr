@@ -2017,6 +2017,134 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "GET /remote/objects/:id/fetch/quote-authorization" do
+    it "returns 401" do
+      get "/remote/objects/0/fetch/quote-authorization"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      TURBO_FRAME = HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "quote-1"}
+
+      let_create(:actor, named: :quoted_author)
+      let_create(:object, named: :quoted_object, attributed_to: quoted_author, published: Time.utc)
+      let_create(:object, named: :quoting_object, attributed_to: author, quote: quoted_object, visible: true, published: Time.utc, local: true)
+
+      before_each do
+        visible.assign(quote: quoted_object).save
+      end
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/fetch/quote-authorization", TURBO_FRAME
+        expect(response.status_code).to eq(200)
+      end
+
+      context "given a quote authorization" do
+        let(authorization_iri) { "https://remote/authorizations/#{random_string}" }
+
+        before_each do
+          quoting_object.assign(quote_authorization_iri: authorization_iri).save
+        end
+
+        it "returns error message" do
+          get "/remote/objects/#{quoting_object.id}/fetch/quote-authorization", TURBO_FRAME
+          expect(response.status_code).to eq(200)
+          expect(response.body).to contain("Failed to fetch authorization.")
+        end
+
+        context "with invalid interacting object" do
+          let_build(:quote_decision, interacting_object_iri: "https://wrong/object", interaction_target: quoted_object, decision: "accept")
+          let_build(:quote_authorization, quote_decision: quote_decision, iri: authorization_iri, attributed_to: quoted_author)
+
+          before_each do
+            HTTP::Client.objects << quote_authorization
+          end
+
+          it "returns error message" do
+            get "/remote/objects/#{quoting_object.id}/fetch/quote-authorization", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+            expect(response.body).to contain("Quote authorization does not match.")
+          end
+
+          it "does not save the authorization" do
+            expect { get "/remote/objects/#{quoting_object.id}/fetch/quote-authorization", TURBO_FRAME }
+              .not_to change { ActivityPub::Object::QuoteAuthorization.count(iri: authorization_iri) }
+          end
+        end
+
+        context "with invalid interaction target" do
+          let_build(:quote_decision, interacting_object: quoting_object, interaction_target_iri: "https://wrong/object", decision: "accept")
+          let_build(:quote_authorization, quote_decision: quote_decision, iri: authorization_iri, attributed_to: quoted_author)
+
+          before_each do
+            HTTP::Client.objects << quote_authorization
+          end
+
+          it "returns error message" do
+            get "/remote/objects/#{quoting_object.id}/fetch/quote-authorization", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+            expect(response.body).to contain("Quote authorization does not match.")
+          end
+
+          it "does not save the authorization" do
+            expect { get "/remote/objects/#{quoting_object.id}/fetch/quote-authorization", TURBO_FRAME }
+              .not_to change { ActivityPub::Object::QuoteAuthorization.count(iri: authorization_iri) }
+          end
+        end
+
+        context "that is valid" do
+          let_build(:quote_decision, interacting_object: quoting_object, interaction_target: quoted_object, decision: "accept")
+          let_build(:quote_authorization, quote_decision: quote_decision, iri: authorization_iri, attributed_to: quoted_author)
+
+          before_each do
+            HTTP::Client.objects << quote_authorization
+          end
+
+          it "fetches and saves the quote authorization" do
+            expect { get "/remote/objects/#{quoting_object.id}/fetch/quote-authorization", TURBO_FRAME }
+              .to change { ActivityPub::Object::QuoteAuthorization.count(iri: authorization_iri) }.by(1)
+          end
+
+          it "fetches and saves the quote decision" do
+            expect { get "/remote/objects/#{quoting_object.id}/fetch/quote-authorization", TURBO_FRAME }
+              .to change { QuoteDecision.count(quote_authorization_iri: authorization_iri) }.by(1)
+          end
+        end
+      end
+
+      it "returns 404 if object is not visible" do
+        get "/remote/objects/#{notvisible.id}/fetch/quote-authorization"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is remote" do
+        get "/remote/objects/#{remote.id}/fetch/quote-authorization"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "if remote object is visible" do
+        before_each { remote.assign(visible: true).save }
+
+        it "succeeds" do
+          get "/remote/objects/#{remote.id}/fetch/quote-authorization", TURBO_FRAME
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      it "returns 404 if object is a draft" do
+        get "/remote/objects/#{draft.id}/fetch/quote-authorization"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        get "/remote/objects/0/fetch/quote-authorization"
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "POST /remote/objects/:id/approve" do
     it "returns 401" do
       post "/remote/objects/0/approve"

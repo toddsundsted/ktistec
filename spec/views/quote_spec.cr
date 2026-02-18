@@ -11,7 +11,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
   subject do
     begin
-      XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed))
+      XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed, error_message))
     rescue XML::Error
       XML.parse_html("<div/>").document
     end
@@ -24,6 +24,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
   let(quote) { nil }
   let(failed) { false }
+  let(error_message) { nil }
 
   let(env) { make_env("GET", "/objects") }
 
@@ -131,8 +132,8 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
       before_each { quote.assign(attributed_to: other).save }
 
-      it "renders 'This quote has not been verified.' message" do
-        expect(subject.xpath_nodes("//em[text()='This quote has not been verified.']")).not_to be_empty
+      it "renders 'This quote cannot be verified.' message" do
+        expect(subject.xpath_nodes("//em[text()='This quote cannot be verified.']")).not_to be_empty
       end
 
       it "does not render the quoted content" do
@@ -141,6 +142,30 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
       it "does not render a reload button" do
         expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
+      end
+
+      it "does not render a verify button" do
+        expect(subject.xpath_nodes("//button[contains(text(),'Verify quote')]")).to be_empty
+      end
+
+      context "and quote_authorization_iri exists but authorization not cached" do
+        before_each { object.assign(quote_authorization_iri: "https://remote/authorizations/123").save }
+
+        it "renders 'This quote has not been verified.' message" do
+          expect(subject.xpath_nodes("//em[text()='This quote has not been verified.']")).not_to be_empty
+        end
+
+        it "does not render the quoted content" do
+          expect(subject.xpath_nodes("//section[@class='ui feed']//div[@class='content']")).to be_empty
+        end
+
+        it "does not render a reload button" do
+          expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
+        end
+
+        it "renders a verify button" do
+          expect(subject.xpath_nodes("//button[contains(text(),'Verify quote')]")).not_to be_empty
+        end
       end
 
       context "and the quote authorization is cached" do
@@ -152,12 +177,32 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
           expect(subject.xpath_nodes("//section[@class='ui feed']//div[@class='content']")).not_to be_empty
         end
 
-        it "does not render 'This quote has not been verified.' message" do
-          expect(subject.xpath_nodes("//em[text()='This quote has not been verified.']")).to be_empty
+        it "does not render a reload button" do
+          expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
+        end
+
+        it "does not render a verify button" do
+          expect(subject.xpath_nodes("//button[contains(text(),'Verify quote')]")).to be_empty
+        end
+      end
+
+      context "and error_message is set" do
+        let(error_message) { "Authorization does not match this quote." }
+
+        it "renders the error message" do
+          expect(subject.xpath_nodes("//em[text()='Authorization does not match this quote.']")).not_to be_empty
+        end
+
+        it "does not render the quoted content" do
+          expect(subject.xpath_nodes("//section[@class='ui feed']//div[@class='content']")).to be_empty
         end
 
         it "does not render a reload button" do
           expect(subject.xpath_nodes("//button[contains(text(),'Load quoted post')]")).to be_empty
+        end
+
+        it "does not render a verify button" do
+          expect(subject.xpath_nodes("//button[contains(text(),'Verify quote')]")).to be_empty
         end
       end
     end

@@ -236,6 +236,8 @@ module Ktistec::ViewHelper
               "follow"
             in Relationship::Content::Notification::Reply
               "reply"
+            in Relationship::Content::Notification::Quote
+              "quote"
             in Relationship::Content::Notification::Mention
               "mention"
             in Relationship::Content::Notification::Announce, Relationship::Content::Notification::Like, Relationship::Content::Notification::Dislike
@@ -246,7 +248,7 @@ module Ktistec::ViewHelper
               "other"
             end
           end
-        if groups.has_key?("follow") || groups.has_key?("reply") || groups.has_key?("mention")
+        if groups.has_key?("follow") || groups.has_key?("reply") || groups.has_key?("quote") || groups.has_key?("mention")
           label_color = "red"
         elsif groups.has_key?("social")
           label_color = "orange"

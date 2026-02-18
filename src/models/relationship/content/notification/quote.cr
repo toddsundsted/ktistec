@@ -1,4 +1,5 @@
 require "../../../relationship"
+require "../../../activity_pub/activity/quote_request"
 require "../notification"
 
 class Relationship

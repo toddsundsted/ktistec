@@ -157,6 +157,53 @@ Spectator.describe ActivityPub::Object::QuoteAuthorization do
     end
   end
 
+  describe "#valid_for?" do
+    let_create(:actor, named: :quoted_author)
+    let_create(:actor, named: :quoting_author)
+    let_create(:object, named: :quoted_object, attributed_to: quoted_author)
+    let_create(:object, named: :quoting_object, attributed_to: quoting_author)
+
+    let_build(:quote_decision, interacting_object_iri: quoting_object.iri, interaction_target_iri: quoted_object.iri, decision: "accept")
+    let_build(:quote_authorization, quote_decision: quote_decision, attributed_to: quoted_author)
+
+    it "returns true" do
+      expect(quote_authorization.valid_for?(quoting_object, quoted_object)).to be_true
+    end
+
+    context "when quote_decision is nil" do
+      let(quote_decision) { nil }
+
+      it "returns false" do
+        expect(quote_authorization.valid_for?(quoting_object, quoted_object)).to be_false
+      end
+    end
+
+    context "when interacting_object does not match" do
+      let_create(:object, named: :other_object)
+
+      it "returns false" do
+        expect(quote_authorization.valid_for?(other_object, quoted_object)).to be_false
+      end
+    end
+
+    context "when interaction_target does not match" do
+      let_create(:object, named: :other_target)
+
+      it "returns false" do
+        expect(quote_authorization.valid_for?(quoting_object, other_target)).to be_false
+      end
+    end
+
+    context "when attributed_to does not match" do
+      let_create(:actor, named: :other_author)
+
+      it "returns false" do
+        quote_authorization.attributed_to = other_author
+        expect(quote_authorization.valid_for?(quoting_object, quoted_object)).to be_false
+      end
+    end
+  end
+
   describe "#save" do
     let_create(:quote_authorization)
 

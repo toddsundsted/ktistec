@@ -164,6 +164,10 @@ module Utils::Paths
     "#{Utils::Paths.remote_object_path({{object}})}/fetch/quote"
   end
 
+  macro fetch_quote_authorization_path(object = nil)
+    "#{Utils::Paths.remote_object_path({{object}})}/fetch/quote-authorization"
+  end
+
   macro bookmark_path(object = nil)
     "#{Utils::Paths.remote_object_path({{object}})}/bookmark"
   end

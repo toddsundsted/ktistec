@@ -236,6 +236,8 @@ module Ktistec::ViewHelper
               "follow"
             in Relationship::Content::Notification::Reply
               "reply"
+            in Relationship::Content::Notification::Quote
+              "quote"
             in Relationship::Content::Notification::Mention
               "mention"
             in Relationship::Content::Notification::Announce, Relationship::Content::Notification::Like, Relationship::Content::Notification::Dislike
@@ -246,7 +248,7 @@ module Ktistec::ViewHelper
               "other"
             end
           end
-        if groups.has_key?("follow") || groups.has_key?("reply") || groups.has_key?("mention")
+        if groups.has_key?("follow") || groups.has_key?("reply") || groups.has_key?("quote") || groups.has_key?("mention")
           label_color = "red"
         elsif groups.has_key?("social")
           label_color = "orange"
@@ -1021,7 +1023,7 @@ module Ktistec::ViewHelper
     render "src/views/partials/object/label.html.slang"
   end
 
-  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false)
+  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false, error_message = nil)
     render "src/views/partials/object/content/quote.html.slang"
   end
 

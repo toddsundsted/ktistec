@@ -312,7 +312,33 @@ class ObjectsController
     object.save
 
     if in_turbo_frame?
-      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: !(quote && attributed_to)
+      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: !(quote && attributed_to), error_message: nil
+    else
+      redirect back_path
+    end
+  end
+
+  get "/remote/objects/:id/fetch/quote-authorization" do |env|
+    unless (object = get_object(env, id_param(env))) && !object.draft?
+      not_found
+    end
+
+    error_message = nil
+
+    if (quote = object.quote?) && object.attributed_to != quote.attributed_to && object.quote_authorization_iri
+      if (quote_authorization = object.quote_authorization?(env.account.actor, dereference: true))
+        if quote_authorization.valid_for?(object, quote)
+          quote_authorization.save
+        else
+          error_message = "Quote authorization does not match."
+        end
+      else
+        error_message = "Failed to fetch authorization."
+      end
+    end
+
+    if in_turbo_frame?
+      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: false, error_message: error_message
     else
       redirect back_path
     end

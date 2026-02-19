@@ -103,10 +103,7 @@ class InboxActivityProcessor
       quote_post.assign(quote_authorization_iri: accept.result_iri).save
       if (quote_authorization_iri = accept.result_iri)
         if (quote_authorization = ActivityPub::Object::QuoteAuthorization.dereference?(account.actor, quote_authorization_iri))
-          if (quote_decision = quote_authorization.quote_decision?) &&
-             quote_decision.interacting_object? == quote_post &&
-             quote_decision.interaction_target? == quote_post.quote &&
-             quote_authorization.attributed_to? == accept.actor
+          if (quote = quote_post.quote?) && quote_authorization.valid_for?(quote_post, quote)
             quote_authorization.save
           end
         end

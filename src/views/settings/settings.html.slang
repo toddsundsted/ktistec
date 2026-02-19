@@ -26,7 +26,7 @@ p
     .field
       .ui.checkbox
         input type="checkbox" name="manually_approve_quotes" value="1" checked=account.manually_approve_quotes
-        label Manually approve quote posts
+        label Manually approve quote requests
   crystal:
     is_rich_text = account.default_editor == "text/html; editor=trix"
     is_markdown = account.default_editor == "text/markdown"

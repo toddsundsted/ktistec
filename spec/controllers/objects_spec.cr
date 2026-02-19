@@ -1953,18 +1953,18 @@ Spectator.describe ObjectsController do
 
       TURBO_FRAME = HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "quote-1"}
 
+      let_build(:object, named: :quote)
+
+      before_each do
+        visible.assign(quote_iri: quote.iri).save
+      end
+
       it "succeeds" do
         get "/remote/objects/#{visible.id}/fetch/quote", TURBO_FRAME
         expect(response.status_code).to eq(200)
       end
 
       context "when quote is not cached" do
-        let_build(:object, named: :quote)
-
-        before_each do
-          visible.assign(quote_iri: quote.iri).save
-        end
-
         context "when fetchable" do
           before_each do
             HTTP::Client.objects << quote
@@ -2000,7 +2000,7 @@ Spectator.describe ObjectsController do
         before_each { remote.assign(visible: true).save }
 
         it "succeeds" do
-          get "/remote/objects/#{remote.id}"
+          get "/remote/objects/#{remote.id}/fetch/quote", TURBO_FRAME
           expect(response.status_code).to eq(200)
         end
       end

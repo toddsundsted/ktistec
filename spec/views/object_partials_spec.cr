@@ -82,7 +82,7 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, in_reply, for_thread, for_actor))
+        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, in_reply, show_quote, for_thread, for_actor))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -97,6 +97,7 @@ Spectator.describe "object partials" do
 
     let(with_detail) { false }
     let(in_reply) { false }
+    let(show_quote) { true }
     let(for_thread) { nil }
     let(for_actor) { nil }
 
@@ -751,6 +752,37 @@ Spectator.describe "object partials" do
 
       it "renders name of the object" do
         expect(subject.xpath_nodes("//strong/text()")).to have("Foo Bar Baz")
+      end
+    end
+
+    # quotes
+
+    context "given a quote" do
+      let(with_detail) { true }
+
+      let_create(:object, named: :quote, attributed_to: actor, published: Time.utc)
+      let_create(:object, named: :other, attributed_to: actor, published: Time.utc)
+
+      before_each { object.assign(quote: quote).save }
+
+      it "renders a quote section" do
+        expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(1)
+      end
+
+      context "and an object that quotes the object" do
+        before_each { other.assign(quote: object).save }
+
+        it "renders a quote section" do
+          expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(1)
+        end
+      end
+
+      context "and an object that is quoted by the quote" do
+        before_each { quote.assign(quote: other).save }
+
+        it "renders a quote section" do
+          expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(1)
+        end
       end
     end
   end

@@ -12,7 +12,7 @@
     - if !error_message && (object.attributed_to == quote.attributed_to || object.quote_authorization?)
       turbo-frame.ui.segment.quoted-object id="quote-#{object.id}"
         section.ui.feed data-controller="icon-load-error"
-          == object_partial(env, quote)
+          == object_partial(env, quote, show_quote: false)
     - else
       turbo-frame.ui.segment.quoted-object id="quote-#{object.id}"
         - if error_message

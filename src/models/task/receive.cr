@@ -98,10 +98,7 @@ class Task
           end
           if !object.local? && object.attributed_to != quote.attributed_to
             if (quote_authorization = object.quote_authorization?(receiver, dereference: true))
-              if (quote_decision = quote_authorization.quote_decision?) &&
-                 quote_decision.interacting_object? == object &&
-                 quote_decision.interaction_target? == quote &&
-                 quote_authorization.attributed_to? == quote.attributed_to
+              if quote_authorization.valid_for?(object, quote)
                 quote_authorization.save
               end
             end

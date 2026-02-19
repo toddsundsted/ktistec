@@ -17,6 +17,7 @@
     - [Blocking](#blocking)
     - [Bookmarks](#bookmarks)
     - [Pinned posts](#pinned-posts)
+    - [Quote posts](#quote-posts)
     - [RSS feeds](#rss-feeds)
     - [X-Ray Mode](#x-ray-mode)
     - [Metrics](#metrics)
@@ -237,6 +238,13 @@ Pin important posts to the top of your profile. Pinned posts appear
 prominently at the top of your profile page and are also exposed via
 the Mastodon "featured posts" collection for compatibility with
 Mastodon and other Fediverse servers.
+
+### Quote posts
+
+Ktistec supports consent-respecting quote posts (FEP-044f), allowing
+you to quote another user's post in your own post. You can also
+configure whether to automatically approve requests to quote your
+posts or to require manual approval.
 
 ### RSS feeds
 
@@ -1096,6 +1104,7 @@ configure your settings.
 - **Password**: When supplied, updates your account password
 - **Auto-approve Followers**: When enabled, follow requests are automatically approved without requiring manual review
 - **Auto-follow Back**: When enabled, automatically follows back actors that follow you
+- **Manually Approve Quote Requests**: When enabled, quote requests require your approval before approval to quote to granted
 - **Default Editor**: Choose between the rich text editor or Markdown editor for composing posts
 - **Background Image**: Your profile banner/background image
 - **Profile Image**: Your profile avatar icon
@@ -1180,7 +1189,7 @@ TL;DR It's a big Fediverse so translation won't always work.
 ## Copyright and License
 
 Ktistec ActivityPub Server
-Copyright (C) 2021, 2022, 2023, 2024, 2025 Todd Sundsted
+Copyright (C) 2021, 2022, 2023, 2024, 2025, 2026 Todd Sundsted
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as

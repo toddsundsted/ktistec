@@ -129,6 +129,21 @@ module Ktistec::ViewHelper
       attrs
     end
 
+    # Renders an ActivityPub object.
+    #
+    # Parameters:
+    # - `env`: HTTP request environment.
+    # - `object`: The ActivityPub object to render.
+    # - `actor`: The actor who performed the activity (defaults to object's `attributed_to`). May differ from author.
+    # - `author`: The original author of the object (defaults to `actor`).
+    # - `activity`: Optional activity containing this object (e.g., Like, Announce).
+    # - `with_detail`: Renders expanded view with additional metadata.
+    # - `as_context`: Indicates this object is being shown to provide context for (or is part of) the main content, not as the primary interactive element.
+    # - `show_quote`: Whether or not to render quoted content (defaults to true).
+    # - `for_thread`: Collection of objects in thread; enables thread view rendering.
+    # - `for_actor`: Actor for whom view is being rendered.
+    # - `highlight`: Whether or not to highlight this object in the feed.
+    #
     def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, as_context = false, show_quote = true, for_thread = nil, for_actor = nil, highlight = false)
       if for_thread
         render "src/views/partials/thread.html.slang"

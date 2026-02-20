@@ -322,7 +322,7 @@ class ObjectsController
     object.save
 
     if in_turbo_frame?
-      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: !(quote && attributed_to), error_message: nil
+      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: !(quote && attributed_to), error_message: nil, show_quote: true
     else
       redirect back_path
     end
@@ -348,7 +348,7 @@ class ObjectsController
     end
 
     if in_turbo_frame?
-      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: false, error_message: error_message
+      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: false, error_message: error_message, show_quote: true
     else
       redirect back_path
     end

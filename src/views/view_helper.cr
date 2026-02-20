@@ -1071,7 +1071,7 @@ module Ktistec::ViewHelper
     render "src/views/partials/object/label.html.slang"
   end
 
-  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false, error_message = nil)
+  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false, error_message = nil, show_quote = true)
     render "src/views/partials/object/content/quote.html.slang"
   end
 

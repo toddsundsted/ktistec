@@ -1,4 +1,10 @@
-- if failed
+- if !show_quote
+  .ui.segment.quoted-object
+    - if quote
+      em Quoted a post by @#{quote.attributed_to.handle}
+    - else
+      em Quoted a post
+- elsif failed
   .ui.segment.quoted-object
     em Failed to load!
 - elsif quote

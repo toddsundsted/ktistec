@@ -897,6 +897,42 @@ module ActivityPub
       Object.query_all(query, iri, additional_columns: {depth: Int32})
     end
 
+    # Returns self-replies in threaded order.
+    #
+    # Self-replies are replies to this object or its descendants that
+    # share the same author as this object. They are returned in
+    # thread ordered (parent before children).
+    #
+    # The `position` string encodes the path through the reply tree,
+    # ensuring correct ordering even when posts are fetched out of
+    # order. The `id` distinguishes siblings when an author
+    # self-replies multiple times to the same parent.
+    #
+    def self_replies
+      query = <<-QUERY
+      WITH RECURSIVE
+       self_replies_to(iri, position) AS (
+          VALUES(?, '')
+           UNION
+          SELECT o.iri, printf('%s.%020d', r.position, o.id)
+            FROM objects AS o, self_replies_to AS r
+            JOIN actors AS a
+              ON a.iri = o.attributed_to_iri
+           WHERE o.in_reply_to_iri = r.iri
+             AND o.attributed_to_iri = ?
+             #{common_filters(objects: "o", actors: "a")}
+      )
+      SELECT #{Object.columns(prefix: "o")}
+        FROM objects AS o, self_replies_to AS r
+        JOIN actors AS a
+          ON a.iri = o.attributed_to_iri
+       WHERE o.iri IN (r.iri)
+         #{common_filters(objects: "o", actors: "a")}
+       ORDER BY r.position ASC
+      QUERY
+      Object.query_all(query, iri, attributed_to_iri)
+    end
+
     def activities(inclusion = nil, exclusion = nil)
       inclusion =
         case inclusion

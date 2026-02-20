@@ -344,6 +344,14 @@ Spectator.describe "object partials" do
         it "renders a button to the threaded conversation" do
           expect(subject.xpath_nodes("//button/text()")).to have("Thread")
         end
+
+        context "but viewing content only" do
+          let(in_reply) { true }
+
+          it "does not render a button to the threaded conversation" do
+            expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
+          end
+        end
       end
 
       context "given hashtags with the same name" do
@@ -362,6 +370,14 @@ Spectator.describe "object partials" do
           expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
             .to contain_exactly("#bar")
         end
+
+        context "when viewing content only" do
+          let(in_reply) { true }
+
+          it "does not render any hashtags" do
+            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]")).to be_empty
+          end
+        end
       end
 
       context "given mentions with the same name" do
@@ -379,6 +395,14 @@ Spectator.describe "object partials" do
         it "renders one mention" do
           expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
             .to contain_exactly("@bar")
+        end
+
+        context "when viewing content only" do
+          let(in_reply) { true }
+
+          it "does not render any mentions" do
+            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]")).to be_empty
+          end
         end
       end
 

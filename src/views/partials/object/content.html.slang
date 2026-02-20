@@ -71,7 +71,7 @@ crystal:
         == render "src/views/partials/object/content/body.html.slang"
     - else
       == render "src/views/partials/object/content/body.html.slang"
-    - if with_detail && account
+    - if with_detail && !in_reply && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq
         mentions = object.mentions.map(&.name.downcase).uniq
@@ -231,7 +231,7 @@ crystal:
           button.ui.mini.iconic.button
             i.share.icon
             = pluralize(object.announces_count, "Share")
-  - if account && with_detail && !is_blocked
+  - if account && with_detail && !in_reply && !is_blocked
     - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
       .extra.detail
         - activities.each do |activity|

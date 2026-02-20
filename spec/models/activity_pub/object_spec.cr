@@ -1825,6 +1825,39 @@ Spectator.describe ActivityPub::Object do
         expect(object1.descendants.map(&.depth)).to eq([0, 1, 2])
       end
     end
+
+    describe "#self_replies" do
+      let_create!(:object, named: :reply1, attributed_to: actor, in_reply_to: subject, visible: true)
+      let_create!(:object, named: :reply2, attributed_to: actor, in_reply_to: reply1, visible: true)
+
+      it "returns the object and its self-replies" do
+        expect(subject.self_replies).to eq([subject, reply1, reply2])
+      end
+
+      it "excludes replies from other authors" do
+        expect(subject.self_replies).not_to contain(object1)
+      end
+
+      it "omits deleted self-replies" do
+        reply1.delete!
+        expect(subject.self_replies).not_to contain(reply1)
+      end
+
+      it "omits blocked self-replies" do
+        reply1.block!
+        expect(subject.self_replies).not_to contain(reply1)
+      end
+
+      it "omits self-replies with deleted attributed_to actors" do
+        actor.delete!
+        expect(subject.self_replies).to be_empty
+      end
+
+      it "omits self-replies with blocked attributed_to actors" do
+        actor.block!
+        expect(subject.self_replies).to be_empty
+      end
+    end
   end
 
   describe "#analyze_thread" do

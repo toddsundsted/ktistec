@@ -47,7 +47,7 @@ p
     end
   .field
     label Metadata
-    p You can have up to four items displayed on your profile.
+    p You can have up to #{number_to_word(ActivityPub::Actor::ATTACHMENT_LIMIT)} items displayed on your profile.
   .two.fields
     .field
       label Name
@@ -69,7 +69,7 @@ p
   .field
     label Pinned Collections
     p
-      ' You can pin up to three collections in the secondary menu of your home page. Collections include
+      ' You can pin up to #{number_to_word(Account::PINNED_COLLECTION_LIMIT)} collections in the secondary menu of your home page. Collections include
       a href=actor_bookmarks_path(actor) bookmarks
       ' ,
       a href=actor_followers_path(actor) followers

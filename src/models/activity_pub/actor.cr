@@ -44,7 +44,7 @@ module ActivityPub
     include Ktistec::KeyPair
     include ActivityPub
 
-    ATTACHMENT_LIMIT = 4
+    ATTACHMENT_LIMIT = 6
 
     @@table_name = "actors"
 

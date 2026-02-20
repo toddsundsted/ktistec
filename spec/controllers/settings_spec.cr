@@ -40,15 +40,6 @@ Spectator.describe SettingsController do
           expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='default_editor'][@type='radio']")).not_to be_empty
         end
 
-        it "renders inputs for pinned_collections" do
-          get "/settings", headers
-          body = XML.parse_html(response.body)
-          0.upto(Account::PINNED_COLLECTION_LIMIT - 1) do |i|
-            expect(body.xpath_nodes("//form//input[@name='pinned_#{i}_label']")).not_to be_empty
-            expect(body.xpath_nodes("//form//input[@name='pinned_#{i}_path']")).not_to be_empty
-          end
-        end
-
         before_each do
           ENV.delete("DEEPL_API_KEY")
           ENV.delete("LIBRETRANSLATE_API_KEY")

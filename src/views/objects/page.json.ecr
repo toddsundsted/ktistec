@@ -1,0 +1,10 @@
+{
+  "@context":"https://www.w3.org/ns/activitystreams",
+  "type":"Collection",
+  "id":<%= "#{object.iri}/page".to_json %>,
+  "items":[
+    <%- objects.each_with_index do |obj, i| -%>
+    <%= obj.to_json_ld %><%= comma(objects, i) %>
+    <%- end -%>
+  ]
+}

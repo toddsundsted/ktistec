@@ -1637,6 +1637,95 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "GET /remote/objects/:id/page" do
+    it "returns 401" do
+      get "/remote/objects/0/page"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/page", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/page", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the collection" do
+        get "/remote/objects/#{visible.id}/page", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}")
+      end
+
+      it "renders the collection" do
+        get "/remote/objects/#{visible.id}/page", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri)
+      end
+
+      it "returns 404 if object is not visible" do
+        get "/remote/objects/#{notvisible.id}/page"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is remote" do
+        get "/remote/objects/#{remote.id}/page"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "if remote object is visible" do
+        before_each { remote.assign(visible: true).save }
+
+        it "succeeds" do
+          get "/remote/objects/#{remote.id}/page"
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      it "returns 404 if object is draft" do
+        get "/remote/objects/#{draft.id}/page"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        get "/remote/objects/0/page"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "with self-replies" do
+        let_create!(:object, named: :reply1, in_reply_to: visible, attributed_to: author, published: published + 2.minutes, visible: true)
+        let_create!(:object, named: :reply2, in_reply_to: reply1, attributed_to: author, published: published + 3.minutes, visible: true)
+
+        it "renders self-replies in order" do
+          get "/remote/objects/#{visible.id}/page", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id").map(&.text)).to eq(["object-#{visible.id}", "object-#{reply1.id}", "object-#{reply2.id}"])
+        end
+
+        it "renders self-replies in order" do
+          get "/remote/objects/#{visible.id}/page", ACCEPT_JSON
+          expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to eq([visible.iri, reply1.iri, reply2.iri])
+        end
+      end
+
+      context "with replies from other authors" do
+        let_create!(:object, named: :other_reply, in_reply_to: visible, attributed_to: actor, published: published + 1.minute, visible: true)
+
+        it "excludes replies from other authors" do
+          get "/remote/objects/#{visible.id}/page", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{visible.id}")
+        end
+
+        it "excludes replies from other authors" do
+          get "/remote/objects/#{visible.id}/page", ACCEPT_JSON
+          expect(JSON.parse(response.body).dig("items").as_a.map(&.dig("id"))).to contain_exactly(visible.iri)
+        end
+      end
+    end
+  end
+
   describe "GET /remote/objects/:id/reply" do
     it "returns 401" do
       get "/remote/objects/0/reply"

@@ -63,7 +63,7 @@ crystal:
         - else
           strong = name
     - if (summary = translation.try(&.summary).presence || object.summary.presence)
-      details open=(with_detail || in_reply)
+      details open=(with_detail || as_context)
         summary
           - if object.sensitive
             i.red.eye.slash.icon
@@ -71,7 +71,7 @@ crystal:
         == render "src/views/partials/object/content/body.html.slang"
     - else
       == render "src/views/partials/object/content/body.html.slang"
-    - if with_detail && !in_reply && account
+    - if with_detail && !as_context && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq
         mentions = object.mentions.map(&.name.downcase).uniq
@@ -96,7 +96,7 @@ crystal:
   - elsif object.blocked?
     .extra.text
       em This content is blocked!
-  - unless in_reply
+  - unless as_context
     .meta
       - if account && object.deleted?
         - if object.cached?
@@ -231,7 +231,7 @@ crystal:
           button.ui.mini.iconic.button
             i.share.icon
             = pluralize(object.announces_count, "Share")
-  - if account && with_detail && !in_reply && !is_blocked
+  - if account && with_detail && !as_context && !is_blocked
     - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
       .extra.detail
         - activities.each do |activity|

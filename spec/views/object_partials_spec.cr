@@ -82,7 +82,7 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, in_reply, show_quote, for_thread, for_actor))
+        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -96,7 +96,7 @@ Spectator.describe "object partials" do
     let_build(:object, named: :original)
 
     let(with_detail) { false }
-    let(in_reply) { false }
+    let(as_context) { false }
     let(show_quote) { true }
     let(for_thread) { nil }
     let(for_actor) { nil }
@@ -253,8 +253,8 @@ Spectator.describe "object partials" do
         expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]")).to be_empty
       end
 
-      context "when viewing a reply" do
-        let(in_reply) { true }
+      context "when rendered as context" do
+        let(as_context) { true }
 
         it "does not display row of iconic buttons" do
           expect(subject.xpath_nodes("//div[contains(@class,'meta')]//*[contains(@class,'iconic')][contains(@class,'button')]")).to be_empty
@@ -345,8 +345,8 @@ Spectator.describe "object partials" do
           expect(subject.xpath_nodes("//button/text()")).to have("Thread")
         end
 
-        context "but viewing content only" do
-          let(in_reply) { true }
+        context "but rendered as context" do
+          let(as_context) { true }
 
           it "does not render a button to the threaded conversation" do
             expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
@@ -371,8 +371,8 @@ Spectator.describe "object partials" do
             .to contain_exactly("#bar")
         end
 
-        context "when viewing content only" do
-          let(in_reply) { true }
+        context "when rendered as context" do
+          let(as_context) { true }
 
           it "does not render any hashtags" do
             expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]")).to be_empty
@@ -397,8 +397,8 @@ Spectator.describe "object partials" do
             .to contain_exactly("@bar")
         end
 
-        context "when viewing content only" do
-          let(in_reply) { true }
+        context "when rendered as context" do
+          let(as_context) { true }
 
           it "does not render any mentions" do
             expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]")).to be_empty

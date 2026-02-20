@@ -375,6 +375,39 @@ module Ktistec::ViewHelper
       end
       result
     end
+
+    NUMBERS_TO_WORDS = {
+       0 => "zero",
+       1 => "one",
+       2 => "two",
+       3 => "three",
+       4 => "four",
+       5 => "five",
+       6 => "six",
+       7 => "seven",
+       8 => "eight",
+       9 => "nine",
+      10 => "ten",
+      11 => "eleven",
+      12 => "twelve",
+      13 => "thirteen",
+      14 => "fourteen",
+      15 => "fifteen",
+      16 => "sixteen",
+      17 => "seventeen",
+      18 => "eighteen",
+      19 => "nineteen",
+      20 => "twenty",
+    }
+
+    # Converts an integer to its word representation.
+    #
+    # Returns the word for numbers 0-20 and the number itself as a
+    # string for numbers outside that range.
+    #
+    def number_to_word(n : Int) : String
+      NUMBERS_TO_WORDS[n]? || n.to_s
+    end
   end
 
   extend ClassMethods

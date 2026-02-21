@@ -82,7 +82,7 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, in_reply, show_quote, for_thread, for_actor))
+        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -96,7 +96,7 @@ Spectator.describe "object partials" do
     let_build(:object, named: :original)
 
     let(with_detail) { false }
-    let(in_reply) { false }
+    let(as_context) { false }
     let(show_quote) { true }
     let(for_thread) { nil }
     let(for_actor) { nil }
@@ -253,8 +253,8 @@ Spectator.describe "object partials" do
         expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]")).to be_empty
       end
 
-      context "when viewing a reply" do
-        let(in_reply) { true }
+      context "when rendered as context" do
+        let(as_context) { true }
 
         it "does not display row of iconic buttons" do
           expect(subject.xpath_nodes("//div[contains(@class,'meta')]//*[contains(@class,'iconic')][contains(@class,'button')]")).to be_empty
@@ -344,6 +344,14 @@ Spectator.describe "object partials" do
         it "renders a button to the threaded conversation" do
           expect(subject.xpath_nodes("//button/text()")).to have("Thread")
         end
+
+        context "but rendered as context" do
+          let(as_context) { true }
+
+          it "does not render a button to the threaded conversation" do
+            expect(subject.xpath_nodes("//button/text()")).not_to have("Thread")
+          end
+        end
       end
 
       context "given hashtags with the same name" do
@@ -362,6 +370,14 @@ Spectator.describe "object partials" do
           expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
             .to contain_exactly("#bar")
         end
+
+        context "when rendered as context" do
+          let(as_context) { true }
+
+          it "does not render any hashtags" do
+            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]")).to be_empty
+          end
+        end
       end
 
       context "given mentions with the same name" do
@@ -379,6 +395,14 @@ Spectator.describe "object partials" do
         it "renders one mention" do
           expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
             .to contain_exactly("@bar")
+        end
+
+        context "when rendered as context" do
+          let(as_context) { true }
+
+          it "does not render any mentions" do
+            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]")).to be_empty
+          end
         end
       end
 
@@ -780,8 +804,18 @@ Spectator.describe "object partials" do
       context "and an object that is quoted by the quote" do
         before_each { quote.assign(quote: other).save }
 
-        it "renders a quote section" do
-          expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(1)
+        it "renders two quote sections" do
+          expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(2)
+        end
+
+        context "and an object that is quoted by the quote's quote" do
+          let_create(:object, named: :fourth, attributed_to: actor, published: Time.utc)
+
+          before_each { other.assign(quote: fourth).save }
+
+          it "renders two quote sections" do
+            expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(2)
+          end
         end
       end
     end

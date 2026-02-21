@@ -5,6 +5,11 @@ class ActivityPub::Object
   class QuoteAuthorization < ActivityPub::Object
     has_one quote_decision, foreign_key: quote_authorization_iri, primary_key: iri, inverse_of: quote_authorization
 
+    def before_save
+      super
+      self.special ||= "quote_authorization"
+    end
+
     # Validates this quote authorization.
     #
     # Returns `true` if this quote authorization correctly authorizes

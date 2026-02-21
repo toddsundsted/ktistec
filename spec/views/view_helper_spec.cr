@@ -438,6 +438,28 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".number_to_word" do
+    it "returns 'one'" do
+      expect(self.class.number_to_word(1)).to eq("one")
+    end
+
+    it "returns 'ten'" do
+      expect(self.class.number_to_word(10)).to eq("ten")
+    end
+
+    it "returns 'twenty'" do
+      expect(self.class.number_to_word(20)).to eq("twenty")
+    end
+
+    it "returns the number as a string for values over 20" do
+      expect(self.class.number_to_word(21)).to eq("21")
+    end
+
+    it "returns the number as a string for negative values" do
+      expect(self.class.number_to_word(-5)).to eq("-5")
+    end
+  end
+
   describe "activity_button" do
     subject do
       XML.parse_html(activity_button("/foobar", "https://object", "Zap", method: "PUT", form_class: "blarg", button_class: "honk", csrf: "CSRF") { "<div/>" }, PARSER_OPTIONS).document
@@ -2389,6 +2411,37 @@ Spectator.describe "helpers" do
 
       it "includes mentions-only-me" do
         expect(subject).to contain("mentions-only-me")
+      end
+    end
+  end
+
+  describe ".quote_states" do
+    let_build(:note)
+    let_build(:actor)
+
+    subject { self.class.quote_states(note, actor) }
+
+    it "returns empty array" do
+      expect(subject).to be_empty
+    end
+
+    context "when object quotes actor's post" do
+      let_create(:note, named: :quote, attributed_to: actor)
+
+      before_each { note.assign(quote: quote) }
+
+      it "contains quotes-me" do
+        expect(subject).to contain("quotes-me")
+      end
+    end
+
+    context "when object quotes another actor's post" do
+      let_create(:note, named: :quote)
+
+      before_each { note.assign(quote: quote) }
+
+      it "does not contain quotes-me" do
+        expect(subject).not_to contain("quotes-me")
       end
     end
   end

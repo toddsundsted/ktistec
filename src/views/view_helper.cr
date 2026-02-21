@@ -93,6 +93,14 @@ module Ktistec::ViewHelper
       states
     end
 
+    def quote_states(object, actor)
+      states = [] of String
+      if object.quote?.try(&.attributed_to?) == actor
+        states << "quotes-me"
+      end
+      states
+    end
+
     def object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
       attrs = {} of String => String
       if (id = object.id)
@@ -129,7 +137,22 @@ module Ktistec::ViewHelper
       attrs
     end
 
-    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, in_reply = false, show_quote = true, for_thread = nil, for_actor = nil, highlight = false)
+    # Renders an ActivityPub object.
+    #
+    # Parameters:
+    # - `env`: HTTP request environment.
+    # - `object`: The ActivityPub object to render.
+    # - `actor`: The actor who performed the activity (defaults to object's `attributed_to`). May differ from author.
+    # - `author`: The original author of the object (defaults to `actor`).
+    # - `activity`: Optional activity containing this object (e.g., Like, Announce).
+    # - `with_detail`: Renders expanded view with additional metadata.
+    # - `as_context`: Indicates this object is being shown to provide context for (or is part of) the main content, not as the primary interactive element.
+    # - `show_quote`: Whether or not to render quoted content (defaults to true).
+    # - `for_thread`: Collection of objects in thread; enables thread view rendering.
+    # - `for_actor`: Actor for whom view is being rendered.
+    # - `highlight`: Whether or not to highlight this object in the feed.
+    #
+    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, as_context = false, show_quote = true, for_thread = nil, for_actor = nil, highlight = false)
       if for_thread
         render "src/views/partials/thread.html.slang"
       elsif with_detail
@@ -359,6 +382,39 @@ module Ktistec::ViewHelper
         end
       end
       result
+    end
+
+    NUMBERS_TO_WORDS = {
+       0 => "zero",
+       1 => "one",
+       2 => "two",
+       3 => "three",
+       4 => "four",
+       5 => "five",
+       6 => "six",
+       7 => "seven",
+       8 => "eight",
+       9 => "nine",
+      10 => "ten",
+      11 => "eleven",
+      12 => "twelve",
+      13 => "thirteen",
+      14 => "fourteen",
+      15 => "fifteen",
+      16 => "sixteen",
+      17 => "seventeen",
+      18 => "eighteen",
+      19 => "nineteen",
+      20 => "twenty",
+    }
+
+    # Converts an integer to its word representation.
+    #
+    # Returns the word for numbers 0-20 and the number itself as a
+    # string for numbers outside that range.
+    #
+    def number_to_word(n : Int) : String
+      NUMBERS_TO_WORDS[n]? || n.to_s
     end
   end
 
@@ -1015,7 +1071,7 @@ module Ktistec::ViewHelper
     render "src/views/partials/collection.json.ecr"
   end
 
-  def self._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, in_reply, show_quote, for_thread, for_actor)
+  def self._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor)
     render "src/views/partials/object/content.html.slang"
   end
 
@@ -1023,7 +1079,7 @@ module Ktistec::ViewHelper
     render "src/views/partials/object/label.html.slang"
   end
 
-  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false, error_message = nil)
+  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false, error_message = nil, show_quote = true)
     render "src/views/partials/object/content/quote.html.slang"
   end
 

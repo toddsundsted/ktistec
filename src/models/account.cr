@@ -26,7 +26,7 @@ class Account
   include Ktistec::Model
   include Ktistec::Model::Common
 
-  PINNED_COLLECTION_LIMIT = 3
+  PINNED_COLLECTION_LIMIT = 8
 
   @[Persistent]
   property username : String

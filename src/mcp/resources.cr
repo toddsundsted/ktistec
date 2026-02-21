@@ -304,6 +304,18 @@ module MCP
       if (in_reply_to = object.in_reply_to?)
         contents["in_reply_to"] = JSON::Any.new(mcp_object_path(in_reply_to))
       end
+      if (quote = object.quote?)
+        contents["quote"] = JSON::Any.new(mcp_object_path(quote))
+        contents["quote_status"] = JSON::Any.new(
+          if object.attributed_to_iri == quote.attributed_to_iri
+            "self_quote"
+          elsif object.quote_authorization?
+            "verified"
+          else
+            "unverified"
+          end
+        )
+      end
       contents["type"] = JSON::Any.new(object.class.to_s.split("::").last)
 
       if filtered_attachments && !filtered_attachments.empty?

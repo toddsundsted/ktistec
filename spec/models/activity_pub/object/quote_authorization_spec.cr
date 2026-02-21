@@ -157,6 +157,24 @@ Spectator.describe ActivityPub::Object::QuoteAuthorization do
     end
   end
 
+  describe "#before_save" do
+    context "when special is not set" do
+      let_build(:quote_authorization)
+
+      it "changes special" do
+        expect { quote_authorization.save }.to change { quote_authorization.special }.from(nil).to("quote_authorization")
+      end
+    end
+
+    context "when special is set" do
+      let_build(:quote_authorization, special: "other")
+
+      it "does not change special" do
+        expect { quote_authorization.save }.not_to change { quote_authorization.special }
+      end
+    end
+  end
+
   describe "#valid_for?" do
     let_create(:actor, named: :quoted_author)
     let_create(:actor, named: :quoting_author)

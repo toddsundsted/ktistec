@@ -9,6 +9,7 @@ crystal:
     actor_type_class(actor),
     object_type_class(object),
     viewing_actor ? mention_states(object, viewing_actor) : nil,
+    viewing_actor ? quote_states(object, viewing_actor) : nil,
     object_states(object),
     actor_states(object, author, actor, followed_actors),
   ].compact.flatten.join(" ")

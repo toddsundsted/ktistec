@@ -93,6 +93,14 @@ module Ktistec::ViewHelper
       states
     end
 
+    def quote_states(object, actor)
+      states = [] of String
+      if object.quote?.try(&.attributed_to?) == actor
+        states << "quotes-me"
+      end
+      states
+    end
+
     def object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
       attrs = {} of String => String
       if (id = object.id)

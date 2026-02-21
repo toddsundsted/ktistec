@@ -1027,12 +1027,11 @@ Spectator.describe ActivityPub::Object do
       expect(described_class.federated_posts(2, 2).more?).not_to be_true
     end
 
-    context "with a draft post" do
+    context "with an unpublished post" do
       let_create!(
         :object, named: :draft_post,
         published: nil,
         visible: true,
-        local: true,
       )
 
       it "filters out draft posts" do
@@ -1086,12 +1085,11 @@ Spectator.describe ActivityPub::Object do
       expect(described_class.federated_posts_count).to eq(3)
     end
 
-    context "with a draft post" do
+    context "with an unpublished post" do
       let_create!(
         :object, named: :draft_post,
         published: nil,
         visible: true,
-        local: true
       )
 
       it "filters out draft posts" do

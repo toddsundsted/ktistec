@@ -374,7 +374,7 @@ module ActivityPub
               ON t.iri = o.attributed_to_iri
            WHERE o.visible = 1
              #{common_filters(objects: "o", actors: "t")}
-             AND NOT (o.iri LIKE '#{Ktistec.host}%' AND o.published IS NULL)
+             AND o.published IS NOT NULL
         ORDER BY o.id DESC
            LIMIT ? OFFSET ?
       QUERY
@@ -394,7 +394,7 @@ module ActivityPub
               ON t.iri = o.attributed_to_iri
            WHERE o.visible = 1
              #{common_filters(objects: "o", actors: "t")}
-             AND NOT (o.iri LIKE '#{Ktistec.host}%' AND o.published IS NULL)
+             AND o.published IS NOT NULL
       QUERY
       Object.scalar(query).as(Int64)
     end

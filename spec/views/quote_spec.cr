@@ -198,6 +198,26 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
         end
       end
     end
+
+    context "when the quoting object is a draft" do
+      let_create(:actor, named: :other)
+      let_create(:object, attributed_to: actor, published: nil)
+      let_create(:object, named: :quote, attributed_to: other, published: Time.utc)
+
+      before_each { object.assign(quote: quote).save }
+
+      it "renders quoted post" do
+        expect(subject.xpath_nodes(CONTENT_XPATH)).not_to be_empty
+      end
+
+      it "does not render verify/load buttons" do
+        expect(subject.xpath_nodes(BUTTON_TEXT_XPATH)).to be_empty
+      end
+
+      it "does not render error/info messages" do
+        expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to be_empty
+      end
+    end
   end
 
   context "dereference failed" do

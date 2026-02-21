@@ -93,6 +93,14 @@ module Ktistec::ViewHelper
       states
     end
 
+    def quote_states(object, actor)
+      states = [] of String
+      if object.quote?.try(&.attributed_to?) == actor
+        states << "quotes-me"
+      end
+      states
+    end
+
     def object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
       attrs = {} of String => String
       if (id = object.id)
@@ -1071,7 +1079,7 @@ module Ktistec::ViewHelper
     render "src/views/partials/object/label.html.slang"
   end
 
-  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false, error_message = nil)
+  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false, error_message = nil, show_quote = true)
     render "src/views/partials/object/content/quote.html.slang"
   end
 

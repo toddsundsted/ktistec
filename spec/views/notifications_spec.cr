@@ -246,8 +246,23 @@ Spectator.describe "notifications partial" do
       end
 
       it "links to the quoted post" do
-        expect(subject.xpath_nodes("//article[contains(@class,'event')]//a/@href").map(&.text))
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//a[contains(text(),'your post')]/@href").map(&.text))
           .to have("/remote/objects/#{quoted_post.id}")
+      end
+
+      it "does not link to the quoting post" do
+        expect(subject.xpath_nodes("//article[contains(@class,'event')]//a[contains(text(),'quoted')]/@href").map(&.text))
+          .to be_empty
+      end
+
+      context "when the quoting post is cached" do
+        let_build(:object, named: quoting_post, attributed_to: quoting_actor)
+        before_each { quote_request.assign(instrument: quoting_post).save }
+
+        it "links to the quoting post" do
+          expect(subject.xpath_nodes("//article[contains(@class,'event')]//a[contains(text(),'quoted')]/@href").map(&.text))
+            .to have("/remote/objects/#{quoting_post.id}")
+        end
       end
 
       context "with content preview" do

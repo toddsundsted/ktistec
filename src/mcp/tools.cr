@@ -7,6 +7,7 @@ require "../models/relationship/content/notification/follow/hashtag"
 require "../models/relationship/content/notification/follow/mention"
 require "../models/relationship/content/notification/follow/thread"
 require "../models/relationship/content/notification/poll/expiry"
+require "../models/relationship/content/notification/quote"
 require "../models/tag/hashtag"
 require "../models/tag/mention"
 require "./tools/results_pager"
@@ -991,6 +992,21 @@ module MCP
           "action_url" => JSON::Any.new("#{Ktistec.host}#{remote_object_path(notification.question)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         })
+      in Relationship::Content::Notification::Quote
+        quote_request = notification.activity
+        quoted_object = quote_request.object
+        JSON::Any.new({
+          "type"             => JSON::Any.new("quote"),
+          "requester_id"     => JSON::Any.new(quote_request.actor.id),
+          "quoted_object_id" => JSON::Any.new(quoted_object.id),
+          "instrument_iri"   => JSON::Any.new(quote_request.instrument_iri),
+          "action_url"       => JSON::Any.new("#{Ktistec.host}#{remote_object_path(quoted_object)}"),
+          "created_at"       => JSON::Any.new(notification.created_at.to_rfc3339),
+        }).tap do |json|
+          if (instrument = quote_request.instrument?)
+            json.as_h["instrument_id"] = JSON::Any.new(instrument.id)
+          end
+        end
       in Relationship::Content::Notification
         nil
       end

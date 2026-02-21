@@ -208,7 +208,10 @@
           .content
             .summary
               a> href=remote_actor_path(activity.actor) == s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
-              | quoted
+              - if (instrument = activity.instrument?)
+                a href=remote_object_path(instrument) quoted
+              - else
+                | quoted
               a< href=remote_object_path(activity.object) your post
               | .
             - if (content = activity.object.preview)

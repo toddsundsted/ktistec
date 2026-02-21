@@ -2415,6 +2415,37 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".quote_states" do
+    let_build(:note)
+    let_build(:actor)
+
+    subject { self.class.quote_states(note, actor) }
+
+    it "returns empty array" do
+      expect(subject).to be_empty
+    end
+
+    context "when object quotes actor's post" do
+      let_create(:note, named: :quote, attributed_to: actor)
+
+      before_each { note.assign(quote: quote) }
+
+      it "contains quotes-me" do
+        expect(subject).to contain("quotes-me")
+      end
+    end
+
+    context "when object quotes another actor's post" do
+      let_create(:note, named: :quote)
+
+      before_each { note.assign(quote: quote) }
+
+      it "does not contain quotes-me" do
+        expect(subject).not_to contain("quotes-me")
+      end
+    end
+  end
+
   describe ".object_data_attributes" do
     let_create(:note)
     let_build(:actor, named: :author, username: "alice")

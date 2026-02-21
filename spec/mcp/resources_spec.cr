@@ -516,6 +516,72 @@ Spectator.describe MCP::Resources do
         end
       end
 
+      context "with a self-quote" do
+        let_create!(:object,
+          named: quoted,
+          attributed_to: object.attributed_to,
+          content: "The quoted content",
+        )
+
+        before_each { object.assign(quote: quoted).save }
+
+        it "includes quote field with self_quote status" do
+          response = described_class.handle_resources_read(request, account)
+
+          text = response["contents"].as_a.first["text"].as_s
+          json = JSON.parse(text)
+
+          expect(json["quote"]).to eq("ktistec://objects/#{quoted.id}")
+          expect(json["quote_status"]).to eq("self_quote")
+        end
+      end
+
+      context "with a verified quote" do
+        let_create(:actor, named: other)
+        let_create!(:object,
+          named: quoted,
+          attributed_to: other,
+          content: "The quoted content",
+        )
+        let_create!(:quote_authorization,
+          named: auth,
+          attributed_to: other,
+        )
+
+        before_each { object.assign(quote: quoted, quote_authorization: auth).save }
+
+        it "includes quote field with verified status" do
+          response = described_class.handle_resources_read(request, account)
+
+          text = response["contents"].as_a.first["text"].as_s
+          json = JSON.parse(text)
+
+          expect(json["quote"]).to eq("ktistec://objects/#{quoted.id}")
+          expect(json["quote_status"]).to eq("verified")
+        end
+      end
+
+      context "with an unverified quote" do
+        let_create(:actor, named: other)
+        let_create!(:object,
+          named: quoted,
+          attributed_to: other,
+          content: "The quoted content",
+        )
+
+        before_each { object.assign(quote: quoted).save }
+
+        it "includes quote field with unverified status" do
+          response = described_class.handle_resources_read(request, account)
+
+          text = response["contents"].as_a.first["text"].as_s
+          json = JSON.parse(text)
+
+          expect(json["quote"]).to eq("ktistec://objects/#{quoted.id}")
+          expect(json["quote_status"]).to eq("unverified")
+        end
+      end
+
       it "returns error for invalid object URI" do
         request = JSON::RPC::Request.from_json(%Q|{"jsonrpc": "2.0", "id": "read-obj-2", "method": "resources/read", "params": {"uri": "ktistec://objects/999999"}}|)
         expect { described_class.handle_resources_read(request, account) }.to raise_error(MCPError, "Object not found")

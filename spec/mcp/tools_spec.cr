@@ -821,6 +821,45 @@ Spectator.describe MCP::Tools do
         end
       end
 
+      context "with a quote notification" do
+        let_create(:actor)
+        let_create(:object, attributed_to: account.actor)
+        let_create(:quote_request, actor: actor, object: object)
+
+        before_each do
+          put_in_notifications(account.actor, quote_request)
+        end
+
+        it "returns quote notification for valid request" do
+          request = paginate_notifications_request("paginate-notifications-12")
+
+          notifications = expect_paginated_response(request, 1, false)
+
+          quote_notification = notifications.first
+          expect(quote_notification["type"]).to eq("quote")
+          expect(quote_notification["requester_id"].as_i64).to eq(actor.id)
+          expect(quote_notification["quoted_object_id"].as_i64).to eq(object.id)
+          expect(quote_notification["instrument_iri"]).to eq(quote_request.instrument_iri)
+          expect(quote_notification["action_url"]).to eq("#{Ktistec.host}/remote/objects/#{object.id}")
+          expect(quote_notification["created_at"]).not_to be_nil
+        end
+
+        context "when instrument is dereferenced" do
+          let_create!(:object, named: instrument, attributed_to: actor)
+
+          before_each { quote_request.assign(instrument: instrument).save }
+
+          it "includes instrument_id" do
+            request = paginate_notifications_request("paginate-notifications-14")
+
+            notifications = expect_paginated_response(request, 1, false)
+
+            quote_notification = notifications.first
+            expect(quote_notification["instrument_id"].as_i64).to eq(instrument.id)
+          end
+        end
+      end
+
       context "with an object in the timeline" do
         let_create!(:object, attributed_to: account.actor, published: now)
 

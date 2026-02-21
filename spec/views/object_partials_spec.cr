@@ -804,8 +804,18 @@ Spectator.describe "object partials" do
       context "and an object that is quoted by the quote" do
         before_each { quote.assign(quote: other).save }
 
-        it "renders a quote section" do
-          expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(1)
+        it "renders two quote sections" do
+          expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(2)
+        end
+
+        context "and an object that is quoted by the quote's quote" do
+          let_create(:object, named: :fourth, attributed_to: actor, published: Time.utc)
+
+          before_each { other.assign(quote: fourth).save }
+
+          it "renders two quote sections" do
+            expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(2)
+          end
         end
       end
     end

@@ -45,6 +45,11 @@ crystal:
           a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) == s Ktistec::Emoji.emojify(author.display_name, author_emojis)
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
+        - case visibility(author, object)
+        - when "private"
+          i.envelope.icon<
+        - when "direct"
+          i.at.icon<
       - else
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link == s Ktistec::Emoji.emojify(actor.display_name, actor_emojis)

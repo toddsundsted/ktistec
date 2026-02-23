@@ -819,6 +819,56 @@ Spectator.describe "object partials" do
         end
       end
     end
+
+    # visibility
+
+    context "when visibility is public" do
+      before_each { object.assign(to: ["https://www.w3.org/ns/activitystreams#Public"]).save }
+
+      context "when authenticated" do
+        sign_in(as: account.username)
+
+        it "does not display envelope icon" do
+          expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'envelope')]")).to be_empty
+        end
+
+        it "does not display at icon" do
+          expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'at')]")).to be_empty
+        end
+      end
+    end
+
+    context "when visibility is private" do
+      before_each { object.assign(to: [author.followers].compact).save }
+
+      it "does not display envelope icon" do
+        expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'envelope')]")).to be_empty
+      end
+
+      context "when authenticated" do
+        sign_in(as: account.username)
+
+        it "displays envelope icon" do
+          expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'envelope')]")).not_to be_empty
+        end
+      end
+    end
+
+    context "when visibility is direct" do
+      before_each { object.assign(to: [author.iri]).save }
+
+      it "does not display at icon" do
+        expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'at')]")).to be_empty
+      end
+
+      context "when authenticated" do
+        sign_in(as: account.username)
+
+        it "displays at icon" do
+          expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'at')]")).not_to be_empty
+        end
+      end
+    end
   end
 
   describe "object_partial" do

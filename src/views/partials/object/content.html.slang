@@ -237,7 +237,7 @@ crystal:
             i.share.icon
             = pluralize(object.announces_count, "Share")
   - if account && with_detail && !as_context && !is_blocked
-    - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
+    - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike])).empty?
       .extra.detail
         - activities.each do |activity|
           - if activity.actor?
@@ -248,3 +248,5 @@ crystal:
                 i.share.icon
               - when ActivityPub::Activity::Like
                 i.thumbs.up.icon
+              - when ActivityPub::Activity::Dislike
+                i.thumbs.down.icon

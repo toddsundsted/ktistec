@@ -67,6 +67,10 @@ nav.ui.top.navigation.menu {
 }
 
 /** timeline **/
+// .ui.feed:first-child sets margin-top: 0
+// ensure margin is the same when feed is preceded by a Turbo Stream source
+turbo-stream-source + .ui.feed { margin-top: 0; }
+
 .ui.feed {
     .event {
         &.highlighted {

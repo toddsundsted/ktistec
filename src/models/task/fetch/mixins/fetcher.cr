@@ -78,7 +78,7 @@ class Task
                 offset = base // 4
                 min = base - offset
                 max = base + offset
-                Random::DEFAULT.rand(min..max).hours.from_now
+                RANDOM.rand(min..max).hours.from_now
               end
           end
         elsif count < maximum
@@ -86,18 +86,20 @@ class Task
             self.next_attempt_at =
               begin
                 state.failures = 0
-                Random::DEFAULT.rand(90..150).minutes.from_now
+                RANDOM.rand(90..150).minutes.from_now
               end
           end
         else
           self.next_attempt_at =
             begin
               state.failures = 0
-              Random::DEFAULT.rand(6..10).seconds.from_now
+              RANDOM.rand(6..10).seconds.from_now
             end
         end
       end
     end
+
+    private RANDOM = Random.new
 
     # Sets the task to complete.
     #

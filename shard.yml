@@ -45,7 +45,7 @@ development_dependencies:
     github: crystal-ameba/ameba
     version: ~> 1.6.0
 
-crystal: "< 1.17.0"
+crystal: 1.19.1
 
 libraries:
   libsqlite3: ">= 3.11.0"

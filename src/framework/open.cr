@@ -18,7 +18,7 @@ module Ktistec
       was = url
       message = "Failed"
       attempts.times do
-        start = Time.monotonic
+        start = Time.instant
         begin
           uri = URI.parse(url)
           client = HTTP::Client.new(uri)
@@ -64,7 +64,7 @@ module Ktistec
           message = "Secure connection failure"
           break
         rescue IO::TimeoutError # subclass of IO::Error
-          message = "Timeout [#{(Time.monotonic - start).to_i}s]"
+          message = "Timeout [#{(Time.instant - start).to_i}s]"
           break
         rescue IO::Error
           message = "I/O error"

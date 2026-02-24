@@ -178,7 +178,7 @@ class Task
           false
         end
       count = 0
-      start = Time.monotonic
+      start = Time.instant
       shutting_down = false
       begin
         maximum.times do
@@ -209,7 +209,7 @@ class Task
         shutting_down = true
         raise ex
       ensure
-        duration = (Time.monotonic - start).total_seconds
+        duration = (Time.instant - start).total_seconds
         duration = sprintf("%.3f", duration)
         if interrupted
           Log.debug { "perform [#{id}] - interrupted! - #{duration} seconds, #{count} fetched" }

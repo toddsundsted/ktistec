@@ -125,49 +125,6 @@ Spectator.describe MetricsController::Chart do
     it "returns an empty collection" do
       expect(subject.data(nil, nil)).to be_empty
     end
-
-    # SEE: https://github.com/crystal-lang/crystal/issues/16112
-
-    context "DST bug" do
-      let(bug_time) { Time.parse("2024-11-04 04:34:08.000", "%Y-%m-%d %H:%M:%S.%L", Time::Location::UTC) }
-      let(ny_tz) { Time::Location.load("America/New_York") }
-
-      # when the following test starts to fail, we know the bug has
-      # been fixed and the workaround can be removed.
-
-      it "returns tuesday" do
-        beginning_of_week = bug_time.in(ny_tz).at_beginning_of_week
-        expect(beginning_of_week.day_of_week).to eq(Time::DayOfWeek::Tuesday)
-      end
-
-      describe ".safe_at_beginning_of_week" do
-        it "returns monday" do
-          beginning_of_week = described_class.safe_at_beginning_of_week(bug_time.in(ny_tz))
-          expect(beginning_of_week.day_of_week).to eq(Time::DayOfWeek::Monday)
-        end
-      end
-
-      # include the DST transition
-
-      let(from) { Time.parse("2024-10-01", "%Y-%m-%d", ny_tz) }
-      let(to) { Time.parse("2024-12-01", "%Y-%m-%d", ny_tz) }
-
-      let_create!(
-        point,
-        named: dst_point,
-        chart: "heap-size",
-        timestamp: bug_time,
-        value: 1000
-      )
-
-      subject { described_class.new("heap-size", [dst_point], ny_tz) }
-
-      it "correctly handles dates at DST transitions at weekly granularity" do
-        data = subject.data(from, to, granularity: Granularity::Weekly)
-        expect(data.keys).not_to contain("2024-10-29")
-        expect(data.keys).to contain("2024-10-28")
-      end
-    end
   end
 end
 

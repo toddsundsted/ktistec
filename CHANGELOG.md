@@ -1,6 +1,23 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.3.1]
+### Added
+- Federation documentation (FEDERATION.md).
+- Visibility (private or direct) icon in object summary.
+- Object social activity details include dislikes.
+- "quotes-me" theming class for objects.
+- Notification for quote posts.
+- MCP integration for quote posts.
+
+### Changed
+- Renamed NodeInfo `siteName` to more standard `nodeName`.
+- Increased hard-coded limits for actor attachments and pinned collections.
+
+### Fixed
+- Displaying quoted posts in draft view.
+- Visual indication of nested quotes in object view.
+
 ## [v3.3.0]
 ### Added
 - Support for consent-respecting quote posts (FEP-044f).
@@ -646,6 +663,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.3.1]: https://github.com/toddsundsted/ktistec/compare/18542942...b4ede065
 [v3.3.0]: https://github.com/toddsundsted/ktistec/compare/d3336807...9c9ee343
 [v3.2.9]: https://github.com/toddsundsted/ktistec/compare/133663fb...55f68ba3
 [v3.2.8]: https://github.com/toddsundsted/ktistec/compare/f00e9cc3...4e82f0da

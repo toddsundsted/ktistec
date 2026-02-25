@@ -45,6 +45,11 @@ crystal:
           a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) == s Ktistec::Emoji.emojify(author.display_name, author_emojis)
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
+        - case visibility(author, object)
+        - when "private"
+          i.envelope.icon<
+        - when "direct"
+          i.at.icon<
       - else
         - if author != actor
           a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link == s Ktistec::Emoji.emojify(actor.display_name, actor_emojis)
@@ -232,7 +237,7 @@ crystal:
             i.share.icon
             = pluralize(object.announces_count, "Share")
   - if account && with_detail && !as_context && !is_blocked
-    - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like])).empty?
+    - unless (activities = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike])).empty?
       .extra.detail
         - activities.each do |activity|
           - if activity.actor?
@@ -243,3 +248,5 @@ crystal:
                 i.share.icon
               - when ActivityPub::Activity::Like
                 i.thumbs.up.icon
+              - when ActivityPub::Activity::Dislike
+                i.thumbs.down.icon

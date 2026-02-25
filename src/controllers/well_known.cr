@@ -117,7 +117,7 @@ class WellKnownController
         localPosts: local_posts,
       },
       metadata: {
-        siteName: Ktistec.site,
+        nodeName: Ktistec.site,
       },
     }
     env.response.content_type = "application/jrd+json"

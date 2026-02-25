@@ -2,6 +2,7 @@ require "../../src/models/activity_pub/object/note"
 require "../../src/models/activity_pub/object/question"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/like"
+require "../../src/models/activity_pub/activity/dislike"
 require "../../src/models/translation"
 require "../../src/models/task/deliver_delayed_object"
 require "../../src/framework/controller"
@@ -815,6 +816,118 @@ Spectator.describe "object partials" do
 
           it "renders two quote sections" do
             expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(2)
+          end
+        end
+      end
+    end
+
+    # visibility
+
+    context "when visibility is public" do
+      before_each { object.assign(to: ["https://www.w3.org/ns/activitystreams#Public"]).save }
+
+      context "when authenticated" do
+        sign_in(as: account.username)
+
+        it "does not display envelope icon" do
+          expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'envelope')]")).to be_empty
+        end
+
+        it "does not display at icon" do
+          expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'at')]")).to be_empty
+        end
+      end
+    end
+
+    context "when visibility is private" do
+      before_each { object.assign(to: [author.followers].compact).save }
+
+      it "does not display envelope icon" do
+        expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'envelope')]")).to be_empty
+      end
+
+      context "when authenticated" do
+        sign_in(as: account.username)
+
+        it "displays envelope icon" do
+          expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'envelope')]")).not_to be_empty
+        end
+      end
+    end
+
+    context "when visibility is direct" do
+      before_each { object.assign(to: [author.iri]).save }
+
+      it "does not display at icon" do
+        expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'at')]")).to be_empty
+      end
+
+      context "when authenticated" do
+        sign_in(as: account.username)
+
+        it "displays at icon" do
+          expect(subject.xpath_nodes("//div[@class='summary']//i[contains(@class,'at')]")).not_to be_empty
+        end
+      end
+    end
+
+    # social signals
+
+    context "when viewing with detail" do
+      let(with_detail) { true }
+
+      context "when authenticated" do
+        sign_in(as: account.username)
+
+        SHARE_ICON_XPATH       = "//div[contains(@class,'extra detail')]//i[contains(@class,'share')]"
+        THUMBS_UP_ICON_XPATH   = "//div[contains(@class,'extra detail')]//i[contains(@class,'thumbs up')]"
+        THUMBS_DOWN_ICON_XPATH = "//div[contains(@class,'extra detail')]//i[contains(@class,'thumbs down')]"
+
+        context "given an announce activity" do
+          let_create!(:announce, object: object)
+
+          it "displays the share icon" do
+            expect(subject.xpath_nodes(SHARE_ICON_XPATH)).not_to be_empty
+          end
+
+          it "does not display the thumbs up icon" do
+            expect(subject.xpath_nodes(THUMBS_UP_ICON_XPATH)).to be_empty
+          end
+
+          it "does not display the thumbs down icon" do
+            expect(subject.xpath_nodes(THUMBS_DOWN_ICON_XPATH)).to be_empty
+          end
+        end
+
+        context "given a like activity" do
+          let_create!(:like, object: object)
+
+          it "does not display the share icon" do
+            expect(subject.xpath_nodes(SHARE_ICON_XPATH)).to be_empty
+          end
+
+          it "displays the thumbs up icon" do
+            expect(subject.xpath_nodes(THUMBS_UP_ICON_XPATH)).not_to be_empty
+          end
+
+          it "does not display the thumbs down icon" do
+            expect(subject.xpath_nodes(THUMBS_DOWN_ICON_XPATH)).to be_empty
+          end
+        end
+
+        context "given a dislike activity" do
+          let_create!(:dislike, object: object)
+
+          it "does not display the share icon" do
+            expect(subject.xpath_nodes(SHARE_ICON_XPATH)).to be_empty
+          end
+
+          it "does not display the thumbs up icon" do
+            expect(subject.xpath_nodes(THUMBS_UP_ICON_XPATH)).to be_empty
+          end
+
+          it "displays the thumbs down icon" do
+            expect(subject.xpath_nodes(THUMBS_DOWN_ICON_XPATH)).not_to be_empty
           end
         end
       end

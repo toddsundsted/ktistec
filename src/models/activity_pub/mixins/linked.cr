@@ -80,6 +80,10 @@ module Ktistec
               headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
               Ktistec::Open.open?(key_pair, iri, headers) do |response|
                 instance = self.from_json_ld(response.body, **options)
+                if instance && instance.iri != iri
+                  Log.warn { "#{self}.dereference? - #{iri} - IRI mismatch: requested #{iri}, got #{instance.iri}" }
+                  instance = nil
+                end
               rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
                 Log.info { "#{self}.dereference? - #{iri} - #{ex.message}" }
               end
@@ -112,7 +116,13 @@ module Ktistec
                           else
                             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
                             Ktistec::Open.open?(key_pair, {{foreign_key}}, headers) do |response|
-                              self.{{name}} = {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
+                              {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
+                              if {{name}}_ && {{name}}_.iri != {{foreign_key}}
+                                Log.warn { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} - IRI mismatch: requested #{{{foreign_key}}}, got #{{{name}}_.iri}" }
+                                {{name}}_ = nil
+                              else
+                                self.{{name}} = {{name}}_
+                              end
                             rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
                               Log.info { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} -- #{ex.message}" }
                             end

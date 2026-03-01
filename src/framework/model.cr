@@ -12,11 +12,11 @@ module Ktistec
       # 50ms. Slow queries include the query plan.
       #
       def self.log_query(query, args = nil, &)
-        start = Time.monotonic
+        start = Time.instant
         begin
           yield
         ensure
-          finish = Time.monotonic
+          finish = Time.instant
           delta = (finish - start).total_milliseconds
           if delta > 50
             Log.notice { |log| log_query_message(log, "Slow query", delta, query, args) }

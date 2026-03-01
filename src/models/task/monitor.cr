@@ -31,8 +31,10 @@ class Task
       Session.clean_up_stale_sessions
     ensure
       # run on a random schedule
-      delay = Random::DEFAULT.rand(15..300)
+      delay = RANDOM.rand(15..300)
       self.next_attempt_at = delay.seconds.from_now
     end
+
+    private RANDOM = Random.new
   end
 end

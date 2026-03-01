@@ -240,8 +240,8 @@ module Ktistec::ViewHelper
     end
 
     def wrap_filter_term(str)
-      str = str.gsub(/\\?[%_]/) { %Q|<span class="wildcard">#{$0}</span>| }
-      %Q|<span class="ui filter term">#{str}</span>|
+      str = str.gsub(/\\?[%_]/) { %Q(<span class="wildcard">#{$0}</span>) }
+      %Q(<span class="ui filter term">#{str}</span>)
     end
 
     # Returns a tuple of {count, color, tooltip} for actor notifications.
@@ -310,12 +310,12 @@ module Ktistec::ViewHelper
         alt = "User"
       end
       attrs = [
-        %Q|src="#{src}"|,
-        %Q|alt="#{::HTML.escape(alt)}"|,
+        %Q(src="#{src}"),
+        %Q(alt="#{::HTML.escape(alt)}"),
       ]
-      attrs.push %Q|data-actor-id="#{actor.id}"| if actor && actor.id
-      attrs.unshift %Q|class="#{classes}"| if classes
-      %Q|<img #{attrs.join(" ")}>|
+      attrs.push %Q(data-actor-id="#{actor.id}") if actor && actor.id
+      attrs.unshift %Q(class="#{classes}") if classes
+      %Q(<img #{attrs.join(" ")}>)
     end
 
     def actor_type(actor)
@@ -338,7 +338,7 @@ module Ktistec::ViewHelper
         else
           "user"
         end
-      %Q|<i class="actor-type-overlay #{icon} icon"></i>|
+      %Q(<i class="actor-type-overlay #{icon} icon"></i>)
     end
 
     # Normalizes `params` into a consistent hash format.
@@ -474,30 +474,30 @@ module Ktistec::ViewHelper
     {% end %}
     {% if method == "DELETE" %}
       {% method = "POST" %}
-      %input = %q|<input type="hidden" name="_method" value="delete">|
+      %input = %q(<input type="hidden" name="_method" value="delete">)
     {% else %}
       %input = ""
     {% end %}
     {% if csrf && method != "GET" %}
-     %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
+     %csrf = %Q(<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">)
     {% else %}
       %csrf = ""
     {% end %}
     %form_attrs = [
-      %Q|class="#{{{form_class}}}"|,
-      %Q|action="#{{{action}}}"|,
-      %Q|method="#{{{method}}}"|,
+      %Q(class="#{{{form_class}}}"),
+      %Q(action="#{{{action}}}"),
+      %Q(method="#{{{method}}}"),
       {% if form_data %}
         {% for key, value in form_data %}
-          %Q|data-{{key.id}}="#{{{value}}}"|,
+          %Q(data-{{key.id}}="#{{{value}}}"),
         {% end %}
       {% end %}
     ]
     %button_attrs = [
-      %Q|class="#{{{button_class}}}"|,
+      %Q(class="#{{{button_class}}}"),
       {% if button_data %}
         {% for key, value in button_data %}
-          %Q|data-{{key.id}}="#{{{value}}}"|,
+          %Q(data-{{key.id}}="#{{{value}}}"),
         {% end %}
       {% end %}
     ]
@@ -529,36 +529,36 @@ module Ktistec::ViewHelper
     {% end %}
     {% if method == "DELETE" %}
       {% method = "POST" %}
-      %input = %q|<input type="hidden" name="_method" value="delete">|
+      %input = %q(<input type="hidden" name="_method" value="delete">)
     {% else %}
       %input = ""
     {% end %}
     {% if csrf && method != "GET" %}
-     %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
+     %csrf = %Q(<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">)
     {% else %}
       %csrf = ""
     {% end %}
     %form_attrs = [
       {% if form_id %}
-        %Q|id="#{{{form_id}}}"|,
+        %Q(id="#{{{form_id}}}"),
       {% end %}
-      %Q|class="#{{{form_class}}}"|,
-      %Q|action="#{{{action}}}"|,
-      %Q|method="#{{{method}}}"|,
+      %Q(class="#{{{form_class}}}"),
+      %Q(action="#{{{action}}}"),
+      %Q(method="#{{{method}}}"),
       {% if form_data %}
         {% for key, value in form_data %}
-          %Q|data-{{key.id}}="#{{{value}}}"|,
+          %Q(data-{{key.id}}="#{{{value}}}"),
         {% end %}
       {% end %}
     ]
     %button_attrs = [
       {% if button_id %}
-        %Q|id="#{{{button_id}}}"|,
+        %Q(id="#{{{button_id}}}"),
       {% end %}
-      %Q|class="#{{{button_class}}}"|,
+      %Q(class="#{{{button_class}}}"),
       {% if button_data %}
         {% for key, value in button_data %}
-          %Q|data-{{key.id}}="#{{{value}}}"|,
+          %Q(data-{{key.id}}="#{{{value}}}"),
         {% end %}
       {% end %}
     ]
@@ -574,7 +574,7 @@ module Ktistec::ViewHelper
   end
 
   macro authenticity_token(env)
-    %Q|<input type="hidden" name="authenticity_token" value="#{{{env}}.session.string?("csrf")}">|
+    %Q(<input type="hidden" name="authenticity_token" value="#{{{env}}.session.string?("csrf")}">)
   end
 
   macro error_messages(model)
@@ -582,7 +582,7 @@ module Ktistec::ViewHelper
       %messages = %errors.transform_keys(&.split(".").last).flat_map do |k, vs|
         vs.map { |v| "#{k} #{v}" }
       end.join(", ")
-      %Q|<div class="ui error message"><div class="header">#{%messages}</div></div>|
+      %Q(<div class="ui error message"><div class="header">#{%messages}</div></div>)
     else
       ""
     end
@@ -599,12 +599,12 @@ module Ktistec::ViewHelper
     {% end %}
     {% if method == "DELETE" %}
       {% method = "POST" %}
-      %input = %q|<input type="hidden" name="_method" value="delete">|
+      %input = %q(<input type="hidden" name="_method" value="delete">)
     {% else %}
       %input = ""
     {% end %}
     {% if csrf && method != "GET" %}
-     %csrf = %Q|<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">|
+     %csrf = %Q(<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">)
     {% else %}
       %csrf = ""
     {% end %}
@@ -613,14 +613,14 @@ module Ktistec::ViewHelper
         {{block.body}}
       end
     %attributes = [
-      %Q|class="#{%classes}"|,
-      %Q|action="#{{{action}}}"|,
-      %Q|method="#{{{method}}}"|,
+      %Q(class="#{%classes}"),
+      %Q(action="#{{{action}}}"),
+      %Q(method="#{{{method}}}"),
       {% if method == "POST" && form %}
         {% if form == "data" %}
-          %Q|enctype="multipart/form-data"|
+          %Q(enctype="multipart/form-data")
         {% elsif form == "urlencoded" %}
-          %Q|enctype="application/x-www-form-urlencoded"|
+          %Q(enctype="application/x-www-form-urlencoded")
         {% else %}
           {% raise "invalid form encoding: #{form}" %}
         {% end %}
@@ -629,7 +629,7 @@ module Ktistec::ViewHelper
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q|data-{{key.id}}="#{{{value}}}"|,
+          %Q(data-{{key.id}}="#{{{value}}}"),
         {% end %}
       {% end %}
     ]
@@ -656,22 +656,22 @@ module Ktistec::ViewHelper
       %value = nil
     {% end %}
     %attributes = [
-      %Q|class="#{{{_class}}}"|,
-      %Q|type="#{{{type}}}"|,
-      %Q|name="#{%name}"|,
-      %Q|value="#{%value}"|,
+      %Q(class="#{{{_class}}}"),
+      %Q(type="#{{{type}}}"),
+      %Q(name="#{%name}"),
+      %Q(value="#{%value}"),
       {% if id %}
-        %Q|id="#{{{id}}}"|,
+        %Q(id="#{{{id}}}"),
       {% end %}
       {% if placeholder %}
-        %Q|placeholder="#{{{placeholder}}}"|,
+        %Q(placeholder="#{{{placeholder}}}"),
       {% end %}
       {% if autofocus %}
-        %Q|autofocus|,
+        %Q(autofocus),
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q|data-{{key.id}}="#{{{value}}}"|,
+          %Q(data-{{key.id}}="#{{{value}}}"),
         {% end %}
       {% end %}
     ]
@@ -697,21 +697,21 @@ module Ktistec::ViewHelper
       %value = nil
     {% end %}
     %attributes = [
-      %Q|class="#{{{_class}}}"|,
-      %Q|name="#{%name}"|,
-      %Q|rows="#{{{rows}}}"|,
+      %Q(class="#{{{_class}}}"),
+      %Q(name="#{%name}"),
+      %Q(rows="#{{{rows}}}"),
       {% if id %}
-        %Q|id="#{{{id}}}"|,
+        %Q(id="#{{{id}}}"),
       {% end %}
       {% if placeholder %}
-        %Q|placeholder="#{{{placeholder}}}"|,
+        %Q(placeholder="#{{{placeholder}}}"),
       {% end %}
       {% if autofocus %}
-        %Q|autofocus|,
+        %Q(autofocus),
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q|data-{{key.id}}="#{{{value}}}"|,
+          %Q(data-{{key.id}}="#{{{value}}}"),
         {% end %}
       {% end %}
     ]
@@ -737,22 +737,22 @@ module Ktistec::ViewHelper
       %selected = {{selected}}
     {% end %}
     %attributes = [
-      %Q|class="#{{{_class}}}"|,
-      %Q|name="#{%name}"|,
+      %Q(class="#{{{_class}}}"),
+      %Q(name="#{%name}"),
       {% if id %}
-        %Q|id="#{{{id}}}"|,
+        %Q(id="#{{{id}}}"),
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q|data-{{key.id}}="#{{{value}}}"|,
+          %Q(data-{{key.id}}="#{{{value}}}"),
         {% end %}
       {% end %}
     ]
     %options = {{options}}.map do |key, value|
       if %selected && %selected.to_s == key.to_s
-        %Q|<option value="#{key}" selected>#{value}</option>|
+        %Q(<option value="#{key}" selected>#{value}</option>)
       else
-        %Q|<option value="#{key}">#{value}</option>|
+        %Q(<option value="#{key}">#{value}</option>)
       end
     end
     <<-HTML
@@ -778,16 +778,16 @@ module Ktistec::ViewHelper
     {% end %}
     %id = {{id}} || "#{%name}-#{Time.utc.to_unix_ms}"
     %trix_editor_attributes = [
-      %Q|data-controller="editor--trix"|,
-      %Q|input="#{%id}"|,
+      %Q(data-controller="editor--trix"),
+      %Q(input="#{%id}"),
       {% if _class %}
-        %Q|class="#{{{_class}}}"|,
+        %Q(class="#{{{_class}}}"),
       {% end %}
     ]
     %textarea_attributes = [
-      %Q|id="#{%id}"|,
-      %Q|name="#{%name}"|,
-      %Q|rows="4"|,
+      %Q(id="#{%id}"),
+      %Q(name="#{%name}"),
+      %Q(rows="4"),
     ]
     <<-HTML
     <div class="#{%classes}" data-turbo-permanent>\
@@ -799,7 +799,7 @@ module Ktistec::ViewHelper
   end
 
   macro submit_button(value = "Submit", class _class = "ui primary button")
-    %Q|<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">|
+    %Q(<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">)
   end
 
   macro params_to_inputs(params, exclude exclude_ = nil, include include_ = nil)
@@ -810,7 +810,7 @@ module Ktistec::ViewHelper
       if (%include = {{include_}})
         next unless %include.includes?(%name)
       end
-      %Q|<input type="hidden" name="#{%name}" value="#{%value}">|
+      %Q(<input type="hidden" name="#{%name}" value="#{%value}">)
     end.join
   end
 
@@ -824,45 +824,45 @@ module Ktistec::ViewHelper
     %unpaged = !%query["page"]?
     %page = %query["page"]?.try(&.to_i) || 1
     %page = %page > 0 ? %page : 1
-    content_io << %Q|{|
-    content_io << %Q|"@context":"https://www.w3.org/ns/activitystreams",|
+    content_io << %Q({)
+    content_io << %Q("@context":"https://www.w3.org/ns/activitystreams",)
     if %unpaged
-      content_io << %Q|"type":"OrderedCollection",|
-      content_io << %Q|"id":"#{host}#{%path}",|
-      content_io << %Q|"first":{|
-      content_io << %Q|"type":"OrderedCollectionPage",|
+      content_io << %Q("type":"OrderedCollection",)
+      content_io << %Q("id":"#{host}#{%path}",)
+      content_io << %Q("first":{)
+      content_io << %Q("type":"OrderedCollectionPage",)
       %query["page"] = "1"
-      content_io << %Q|"id":"#{host}#{%path}?#{%query}",|
+      content_io << %Q("id":"#{host}#{%path}?#{%query}",)
     else
-      content_io << %Q|"type":"OrderedCollectionPage",|
-      content_io << %Q|"id":"#{host}#{%path}?#{%query}",|
+      content_io << %Q("type":"OrderedCollectionPage",)
+      content_io << %Q("id":"#{host}#{%path}?#{%query}",)
       if %page > 1
         %query["page"] = (%page - 1).to_s
-        content_io << %Q|"prev":"#{host}#{%path}?#{%query}",|
+        content_io << %Q("prev":"#{host}#{%path}?#{%query}",)
       end
     end
     if {{collection}}.more?
       %query["page"] = (%page + 1).to_s
-      content_io << %Q|"next":"#{host}#{%path}?#{%query}",|
+      content_io << %Q("next":"#{host}#{%path}?#{%query}",)
     end
-    content_io << %Q|"orderedItems":[|
+    content_io << %Q("orderedItems":[)
     {% if block %}
       {{collection}}.each_with_index do |{{block.args.join(",").id}}|
         {{block.body}}
       end
     {% end %}
-    content_io << %Q|]|
+    content_io << %Q(])
     if %unpaged
-      content_io << %Q|}|
+      content_io << %Q(})
     end
-    content_io << %Q|}|
+    content_io << %Q(})
   end
 
   macro error_block(model, comma = true)
     if (%errors = {{model}}.errors.presence)
       %comma = {{comma}} ? "," : ""
       %errors = %errors.transform_keys(&.split(".").last).to_json
-      %Q|"errors":#{%errors}#{%comma}|
+      %Q("errors":#{%errors}#{%comma})
     else
       ""
     end
@@ -871,7 +871,7 @@ module Ktistec::ViewHelper
   macro field_pair(model, field, comma = true)
     %comma = {{comma}} ? "," : ""
     %value = {{model}}.{{field.id}}.try(&.inspect) || "null"
-    %Q|"{{field.id}}":#{%value}#{%comma}|
+    %Q("{{field.id}}":#{%value}#{%comma})
   end
 
   # Task helpers

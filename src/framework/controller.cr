@@ -69,7 +69,7 @@ module Ktistec
     # Send Turbo Stream refresh.
     #
     macro turbo_stream_refresh
-      %q|<turbo-stream action="refresh"><template></template></turbo-stream>|
+      %q(<turbo-stream action="refresh"><template></template></turbo-stream>)
     end
 
     VIEWS = {} of String => { String, String, String? }
@@ -110,9 +110,9 @@ module Ktistec
                 register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
                 %body = ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
                 \{% if _method %}
-                  %body = %Q|<turbo-stream action="#{\{{_operation}}}" method="#{\{{_method}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>|
+                  %body = %Q(<turbo-stream action="#{\{{_operation}}}" method="#{\{{_method}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>)
                 \{% else %}
-                  %body = %Q|<turbo-stream action="#{\{{_operation}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>|
+                  %body = %Q(<turbo-stream action="#{\{{_operation}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>)
                 \{% end %}
                 halt env, status_code: \{{_status_code}}, response: %body
               end
@@ -164,9 +164,9 @@ module Ktistec
               register_view(\{{key}}, "src/views/pages/generic.html.slang", env: env, message: \{{_message}})
               %body = ::Ktistec::ViewHelper.\{{key.id}}(env: env, message: \{{_message}})
               \{% if _method %}
-                %body = %Q|<turbo-stream action="#{\{{_operation}}}" method="#{\{{_method}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>|
+                %body = %Q(<turbo-stream action="#{\{{_operation}}}" method="#{\{{_method}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>)
               \{% else %}
-                %body = %Q|<turbo-stream action="#{\{{_operation}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>|
+                %body = %Q(<turbo-stream action="#{\{{_operation}}}" target="#{\{{_target}}}"><template>#{%body}</template></turbo-stream>)
               \{% end %}
               halt env, status_code: \{{_status_code}}, response: %body
             end

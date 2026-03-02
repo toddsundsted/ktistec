@@ -26,7 +26,7 @@ shards:
 
   libxml_ext:
     git: https://github.com/toddsundsted/libxml_ext.git
-    version: 0.1.2
+    version: 0.2.0
 
   markd:
     git: https://github.com/icyleaf/markd.git

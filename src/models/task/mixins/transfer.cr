@@ -86,11 +86,15 @@ class Task
         end
       end
 
-      # deliver once per unique inbox
-      inbox_to_recipients.each do |inbox, inbox_recipients|
+      # deliver once per unique inbox, with fallback from shared to personal inboxes
+      work_queue = inbox_to_recipients.to_a
+      while (entry = work_queue.shift?)
+        inbox, inbox_recipients = entry
         body = activity.to_json_ld
         headers = Ktistec::Signature.sign(transferer, inbox, body, Ktistec::Constants::CONTENT_TYPE_HEADER)
         headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
+        success = false
+        message = ""
         begin
           uri = URI.parse(inbox)
           client = HTTP::Client.new(uri)
@@ -99,23 +103,32 @@ class Task
           client.write_timeout = 10.seconds
           client.read_timeout = 10.seconds
           response = client.post(uri.request_target, headers, body)
-          unless response.success?
+          if response.success?
+            success = true
+          else
             message = "failed to deliver to #{inbox}: [#{response.status_code}] #{response.body}"
-            # track failure for recipients using this inbox
-            inbox_recipients.each do |recipient|
-              failures << Failure.new(recipient, message)
-            end
             Log.debug { sanitize_log_message(message) }
           end
         rescue ex : OpenSSL::Error | IO::Error
           message = "#{ex.class}: #{ex.message}: #{inbox}"
-          # track failure for recipients using this inbox
-          inbox_recipients.each do |recipient|
-            failures << Failure.new(recipient, message)
-          end
           Log.debug { message }
         ensure
           client.try(&.close)
+        end
+        # fall back to personal inboxes
+        unless success
+          fallback_inboxes = {} of String => Array(String)
+          inbox_recipients.each do |recipient|
+            if (actor = recipient_to_actor[recipient]?) && (actor_inbox = actor.inbox) && actor_inbox != inbox
+              fallback_inboxes[actor_inbox] ||= [] of String
+              fallback_inboxes[actor_inbox] << recipient
+            else
+              failures << Failure.new(recipient, message)
+            end
+          end
+          fallback_inboxes.each do |actor_inbox, recipients_for_inbox|
+            work_queue << {actor_inbox, recipients_for_inbox}
+          end
         end
       end
 

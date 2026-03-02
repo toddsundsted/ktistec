@@ -228,14 +228,37 @@ Spectator.describe Task do
           created_at: now - 3.hours,
         ).save
       end
-      let!(old_failed_task) do
+      let!(old_task_with_backtrace) do
         described_class.new(
           source_iri: "https://test.test/source",
-          subject_iri: "https://test.test/old-failed",
+          subject_iri: "https://test.test/old-with-backtrace",
           complete: true,
           backtrace: ["error"],
           created_at: now - 3.hours,
         ).save
+      end
+      # NOTE: "[{}]" is used to represent a non-empty failures array
+      let!(old_task_with_failures) do
+        described_class.new(
+          source_iri: "https://test.test/source",
+          subject_iri: "https://test.test/old-with-failures",
+          complete: true,
+          backtrace: nil,
+          created_at: now - 3.hours,
+        ).save.tap do |task|
+          Ktistec.database.exec("UPDATE tasks SET failures = ? WHERE id = ?", "[{}]", task.id)
+        end
+      end
+      let!(very_old_task_with_failures) do
+        described_class.new(
+          source_iri: "https://test.test/source",
+          subject_iri: "https://test.test/very-old-with-failures",
+          complete: true,
+          backtrace: nil,
+          created_at: now - 5.days,
+        ).save.tap do |task|
+          Ktistec.database.exec("UPDATE tasks SET failures = ? WHERE id = ?", "[{}]", task.id)
+        end
       end
 
       it "preserves recent completed tasks" do
@@ -244,13 +267,23 @@ Spectator.describe Task do
       end
 
       it "deletes old completed tasks" do
-        expect { described_class.scheduled(now, true) }.to change { Task.count }.by(-1)
+        expect { described_class.scheduled(now, true) }.to change { Task.count }.by(-2)
         expect(Task.find?(old_completed_task.id)).to be_nil
       end
 
       it "preserves old completed tasks with backtraces" do
         described_class.scheduled(now, true)
-        expect(Task.find?(old_failed_task.id)).not_to be_nil
+        expect(Task.find?(old_task_with_backtrace.id)).not_to be_nil
+      end
+
+      it "preserves old completed tasks with failures" do
+        described_class.scheduled(now, true)
+        expect(Task.find?(old_task_with_failures.id)).not_to be_nil
+      end
+
+      it "deletes very old completed tasks with failures" do
+        described_class.scheduled(now, true)
+        expect(Task.find?(very_old_task_with_failures.id)).to be_nil
       end
 
       it "does not delete when not reserving" do

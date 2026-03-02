@@ -230,6 +230,25 @@ Spectator.describe Ktistec::Model::Linked do
       end
     end
 
+    context "when linked object IRI does not match requested IRI" do
+      let(requested_iri) { "https://remote/objects/requested" }
+
+      before_each do
+        HTTP::Client.objects[requested_iri] = object.to_json_ld
+        subject.linked_model_iri = requested_iri
+      end
+
+      it "fetches the object" do
+        subject.linked_model?(key_pair, dereference: true)
+        expect(HTTP::Client.last?).to match("GET #{requested_iri}")
+      end
+
+      it "does not return the object" do
+        result = subject.linked_model?(key_pair, dereference: true)
+        expect(result).to be_nil
+      end
+    end
+
     context "when linked IRI contains a fragment" do
       let(iri) { "https://remote/objects/object#activity/like/12345" }
 
@@ -399,6 +418,24 @@ Spectator.describe Ktistec::Model::Linked do
             expect(HTTP::Client.last?).to be_nil
           end
         end
+      end
+    end
+
+    context "when linked object IRI does not match requested IRI" do
+      let(requested_iri) { "https://remote/objects/requested" }
+
+      before_each do
+        HTTP::Client.objects[requested_iri] = object.to_json_ld
+      end
+
+      it "fetches the object" do
+        subject.dereference?(key_pair, requested_iri)
+        expect(HTTP::Client.last?).to match("GET #{requested_iri}")
+      end
+
+      it "does not return the object" do
+        result = subject.dereference?(key_pair, requested_iri)
+        expect(result).to be_nil
       end
     end
 

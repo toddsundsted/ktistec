@@ -237,9 +237,11 @@ class Task
     else
       percentage = randomization_percentage || (delta < ADAPTIVE_RANDOMIZATION_THRESHOLD ? ADAPTIVE_RANDOMIZATION_PERCENTAGE_SHORT : ADAPTIVE_RANDOMIZATION_PERCENTAGE_LONG)
       half_range = delta.total_seconds * percentage / 2.0
-      random_variation = Random::DEFAULT.rand(-half_range..half_range)
+      random_variation = RANDOM.rand(-half_range..half_range)
       adjusted_delta = delta + random_variation.seconds
       adjusted_delta.from_now
     end
   end
+
+  private RANDOM = Random.new
 end

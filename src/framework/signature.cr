@@ -18,7 +18,7 @@ module Ktistec
       date = Time::Format::HTTP_DATE.format(time)
       headers_string = "(request-target)"
       signature_string = "(request-target): #{method} #{url.path}"
-      signature_params = %Q<keyId="#{key_pair.iri}">
+      signature_params = %Q<keyId="#{key_pair.iri}#main-key">
       case algorithm
       when "hs2019"
         headers_string += " (created) (expires) host"

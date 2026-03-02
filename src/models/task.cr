@@ -41,6 +41,51 @@ class Task
 
   @@table_columns = ["failures", "state"]
 
+  # Retention period for completed tasks without failures.
+  #
+  SUCCESSFUL_TASK_RETENTION = 2.hours
+
+  # Retention period for completed tasks with failures. This must
+  # exceed DOWN_DETECTION_SPAN to ensure failure data is available
+  # for down detection.
+  #
+  FAILED_TASK_RETENTION = 96.hours
+
+  # Minimum time span that failures must cover to mark a recipient
+  # as down. FAILED_TASK_RETENTION must exceed this value.
+  #
+  DOWN_DETECTION_SPAN = 80.hours
+
+  # Minimum time delta threshold for applying randomization.
+  #
+  # Task scheduling deltas below this threshold will not be randomized
+  # to maintain precision for short-interval tasks.
+  #
+  MIN_RANDOMIZATION_THRESHOLD = 5.minutes
+
+  # Threshold for adaptive randomization calculation .
+  #
+  # Intervals shorter than this use `ADAPTIVE_RANDOMIZATION_PERCENTAGE_SHORT`.
+  # Intervals longer than or equal to this use `ADAPTIVE_RANDOMIZATION_PERCENTAGE_LONG`.
+  #
+  ADAPTIVE_RANDOMIZATION_THRESHOLD = 6.hours
+
+  # Adaptive randomization percentage for short intervals.
+  #
+  # This percentage represents the total randomization range (e.g., 0.05 = 5%
+  # total range, meaning ±2.5%). Used when adaptive randomization is enabled
+  # and the interval is shorter than `ADAPTIVE_RANDOMIZATION_THRESHOLD`.
+  #
+  ADAPTIVE_RANDOMIZATION_PERCENTAGE_SHORT = 0.05
+
+  # Adaptive randomization percentage for long intervals.
+  #
+  # This percentage represents the total randomization range (e.g., 0.025 = 2.5%
+  # total range, meaning ±1.25%). Used when adaptive randomization is enabled
+  # and the interval is greater than or equal to `ADAPTIVE_RANDOMIZATION_THRESHOLD`.
+  #
+  ADAPTIVE_RANDOMIZATION_PERCENTAGE_LONG = 0.025
+
   # Priority sets the order in which tasks are spawned by the task
   # worker.  See `TaskWorker#work`.
 
@@ -107,9 +152,13 @@ class Task
           WHERE running = 0
             AND complete = 1
             AND backtrace IS NULL
-            AND created_at < ?
+            AND (
+              ((failures IS NULL OR failures = '[]') AND created_at < ?)
+              OR
+              ((failures IS NOT NULL AND failures != '[]') AND created_at < ?)
+            )
       SQL
-      exec(cleanup, now - 2.hours)
+      exec(cleanup, now - SUCCESSFUL_TASK_RETENTION, now - FAILED_TASK_RETENTION)
       query = <<-SQL
          UPDATE tasks
             SET running = 1
@@ -180,36 +229,6 @@ class Task
     SQL
     scalar(query, now, threshold).as(Int64)
   end
-
-  # Minimum time delta threshold for applying randomization.
-  #
-  # Task scheduling deltas below this threshold will not be randomized
-  # to maintain precision for short-interval tasks.
-  #
-  MIN_RANDOMIZATION_THRESHOLD = 5.minutes
-
-  # Threshold for adaptive randomization calculation .
-  #
-  # Intervals shorter than this use `ADAPTIVE_RANDOMIZATION_PERCENTAGE_SHORT`.
-  # Intervals longer than or equal to this use `ADAPTIVE_RANDOMIZATION_PERCENTAGE_LONG`.
-  #
-  ADAPTIVE_RANDOMIZATION_THRESHOLD = 6.hours
-
-  # Adaptive randomization percentage for short intervals.
-  #
-  # This percentage represents the total randomization range (e.g., 0.05 = 5%
-  # total range, meaning ±2.5%). Used when adaptive randomization is enabled
-  # and the interval is shorter than `ADAPTIVE_RANDOMIZATION_THRESHOLD`.
-  #
-  ADAPTIVE_RANDOMIZATION_PERCENTAGE_SHORT = 0.05
-
-  # Adaptive randomization percentage for long intervals.
-  #
-  # This percentage represents the total randomization range (e.g., 0.025 = 2.5%
-  # total range, meaning ±1.25%). Used when adaptive randomization is enabled
-  # and the interval is greater than or equal to `ADAPTIVE_RANDOMIZATION_THRESHOLD`.
-  #
-  ADAPTIVE_RANDOMIZATION_PERCENTAGE_LONG = 0.025
 
   # Returns a randomized next attempt time based on the given delta.
   #

@@ -191,12 +191,12 @@ Spectator.describe Task::Transfer do
 
     context "when recipient has a shared inbox" do
       before_each do
-        remote_recipient.assign(shared_inbox: "https://remote/shared-inbox").save
+        remote_recipient.assign(shared_inbox: "https://remote/shared/inbox").save
       end
 
       it "sends the activity to the shared inbox" do
         subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
-        expect(HTTP::Client.requests).to have("POST https://remote/shared-inbox")
+        expect(HTTP::Client.requests).to have("POST https://remote/shared/inbox")
         expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.inbox}")
       end
     end
@@ -206,22 +206,34 @@ Spectator.describe Task::Transfer do
 
       context "when multiple recipients share the same shared inbox" do
         before_each do
-          remote_recipient.assign(shared_inbox: "https://remote/shared-inbox").save
-          another_recipient.assign(shared_inbox: "https://remote/shared-inbox").save
+          remote_recipient.assign(shared_inbox: "https://remote/shared/inbox").save
+          another_recipient.assign(shared_inbox: "https://remote/shared/inbox").save
         end
 
         it "delivers once to the shared inbox" do
           subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
-          expect(HTTP::Client.requests).to have("POST https://remote/shared-inbox")
+          expect(HTTP::Client.requests).to have("POST https://remote/shared/inbox")
           expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.inbox}")
           expect(HTTP::Client.requests).not_to have("POST #{another_recipient.inbox}")
         end
       end
 
-      context "when delivery to the shared inbox fails" do
+      context "when delivery to both shared and personal inboxes fail" do
         before_each do
-          remote_recipient.assign(shared_inbox: "https://remote/openssl-error").save
-          another_recipient.assign(shared_inbox: "https://remote/openssl-error").save
+          remote_recipient.assign(inbox: "https://remote/io-error", shared_inbox: "https://remote/openssl-error").save
+          another_recipient.assign(inbox: "https://remote/io-error", shared_inbox: "https://remote/openssl-error").save
+        end
+
+        it "tracks failures for each recipient" do
+          subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
+          expect(subject.failures.map(&.recipient)).to contain_exactly(remote_recipient.iri, another_recipient.iri)
+        end
+      end
+
+      context "when there are no shared inboxes and delivery to personal inboxes fail" do
+        before_each do
+          remote_recipient.assign(inbox: "https://remote/openssl-error", shared_inbox: nil).save
+          another_recipient.assign(inbox: "https://remote/openssl-error", shared_inbox: nil).save
         end
 
         it "tracks failures for each recipient" do
@@ -232,14 +244,80 @@ Spectator.describe Task::Transfer do
 
       context "when mixing recipients with and without a shared inbox" do
         before_each do
-          remote_recipient.assign(shared_inbox: "https://remote/shared-inbox").save
+          remote_recipient.assign(shared_inbox: "https://remote/shared/inbox").save
         end
 
         it "delivers to shared and individual inboxes appropriately" do
           subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
-          expect(HTTP::Client.requests).to have("POST https://remote/shared-inbox")
+          expect(HTTP::Client.requests).to have("POST https://remote/shared/inbox")
           expect(HTTP::Client.requests).to have("POST #{another_recipient.inbox}")
           expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.inbox}")
+        end
+      end
+
+      context "when shared inbox delivery fails" do
+        before_each do
+          remote_recipient.assign(shared_inbox: "https://remote/openssl-error").save
+          another_recipient.assign(shared_inbox: "https://remote/openssl-error").save
+        end
+
+        it "attempts delivery to the shared inbox" do
+          subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
+          expect(HTTP::Client.requests).to have("POST https://remote/openssl-error")
+        end
+
+        it "falls back to personal inboxes" do
+          subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
+          expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
+          expect(HTTP::Client.requests).to have("POST #{another_recipient.inbox}")
+        end
+
+        it "does not record failures" do
+          subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
+          expect(subject.failures).to be_empty
+        end
+
+        context "and the personal inbox is the shared inbox" do
+          before_each do
+            remote_recipient.assign(inbox: "https://remote/openssl-error", shared_inbox: "https://remote/openssl-error").save
+          end
+
+          it "attempts delivery the inbox" do
+            subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+            expect(HTTP::Client.requests).to have("POST https://remote/openssl-error")
+          end
+
+          it "does not attempt delivery twice" do
+            subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+            posts = HTTP::Client.requests.select { |r| r.method == "POST" }
+            expect(posts.size).to eq(1)
+          end
+
+          it "records failure" do
+            subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+            expect(subject.failures.map(&.recipient)).to contain_exactly(remote_recipient.iri)
+          end
+        end
+
+        context "and personal inbox also fails" do
+          before_each do
+            remote_recipient.assign(inbox: "https://remote/io-error", shared_inbox: "https://remote/openssl-error").save
+          end
+
+          it "attempts delivery to shared inbox" do
+            subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+            expect(HTTP::Client.requests).to have("POST https://remote/openssl-error")
+          end
+
+          it "attempts delivery to personal inbox" do
+            subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+            expect(HTTP::Client.requests).to have("POST https://remote/io-error")
+          end
+
+          it "records failure" do
+            subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+            expect(subject.failures.map(&.recipient)).to contain_exactly(remote_recipient.iri)
+          end
         end
       end
     end

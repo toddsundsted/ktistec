@@ -162,6 +162,10 @@ module Ktistec::ViewHelper
       end
     end
 
+    def body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
+      render "src/views/partials/object/content/body.html.slang"
+    end
+
     def mention_page_mention_banner(env, mention, follow, count)
       render "src/views/partials/mention_page_mention_banner.html.slang"
     end

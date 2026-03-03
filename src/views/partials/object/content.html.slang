@@ -1,21 +1,9 @@
 crystal:
   account = env.account?
   timezone = account.try { |account| Time::Location.load(account.timezone) }
-  href = !object.draft? ? account ? remote_object_path(object) : object.display_link : nil
   type = object.type.split("::").last.downcase
-  translation = object.translations.first?
-  if (content = translation.try(&.content).presence || object.content.presence)
-    html = (object.media_type == "text/markdown") ? markdown_to_html(content) : content
-  end
-  object_emojis = Tag::Emoji.where(subject: object)
   actor_emojis = Tag::Emoji.where(subject: actor)
   author_emojis = (author.iri != actor.iri) ? Tag::Emoji.where(subject: author) : actor_emojis
-  if (attachments = object.attachments.dup)  # don't modify the object
-    if html
-      urls = XML.parse_html(html).xpath_nodes("//img/@src").map(&.text)
-      attachments.reject! { |a| a.url.in?(urls) }
-    end
-  end
   is_blocked = object.blocked? || author.blocked? || actor.blocked?
   is_deleted = object.deleted? || author.deleted? || actor.deleted?
 .content data-controller="image-viewer" data-action="click->image-viewer#handleClick"
@@ -60,22 +48,22 @@ crystal:
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
   - unless is_blocked
-    - if (name = translation.try(&.name).presence || object.name.presence)
+    - if (name = object.translations.first?.try(&.name).presence || object.name.presence)
       .extra.text
         - if object.external?
           a href=object.display_link target="_blank"
             strong = name
         - else
           strong = name
-    - if (summary = translation.try(&.summary).presence || object.summary.presence)
+    - if (summary = object.translations.first?.try(&.summary).presence || object.summary.presence)
       details open=(with_detail || as_context)
         summary
           - if object.sensitive
             i.red.eye.slash.icon
           == t summary
-        == render "src/views/partials/object/content/body.html.slang"
+        == body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
     - else
-      == render "src/views/partials/object/content/body.html.slang"
+      == body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
     - if with_detail && !as_context && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq
@@ -178,7 +166,7 @@ crystal:
             == form_button pin_path(object), button_class: "ui button mini iconic" do
               i.pin.icon
               | Pin
-        - if translation
+        - if object.translations.first?
           == form_button clear_translation_object_path(object), button_class: "ui button mini purple iconic" do
             i.paper.plane.icon
             | Clear

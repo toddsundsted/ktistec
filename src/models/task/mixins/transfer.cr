@@ -41,8 +41,9 @@ class Task
     # recent delivery history.
     #
     # A recipient is considered "down" if there are 3+ delivery
-    # failures spanning at least 80 hours, with no successful
-    # deliveries to that recipient since the earliest failure.
+    # failures spanning at least DOWN_DETECTION_SPAN, with no
+    # successful deliveries to that recipient since the earliest
+    # failure.
     #
     # A delivery is deemed successful when the recipient is not in the
     # failures list.
@@ -53,7 +54,7 @@ class Task
 
       earliest = failures.min_by(&.timestamp).timestamp
       latest = failures.max_by(&.timestamp).timestamp
-      return false if latest - earliest < 80.hours
+      return false if latest - earliest < Task::DOWN_DETECTION_SPAN
 
       !tasks.any? do |task|
         next false if task.created_at <= earliest

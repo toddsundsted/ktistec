@@ -101,6 +101,18 @@ module ActivityPub
       end
     end
 
+    # Allows same-origin matching for collections.
+    #
+    def iri_matches?(requested_iri : String) : Bool
+      self_uri = URI.parse(self.iri).normalize!
+      requested_uri = URI.parse(requested_iri).normalize!
+      self_uri.scheme == requested_uri.scheme &&
+        self_uri.host == requested_uri.host &&
+        self_uri.port == requested_uri.port
+    rescue URI::Error
+      false
+    end
+
     def to_json_ld(recursive = true)
       ModelHelper.to_json_ld(self, recursive)
     end

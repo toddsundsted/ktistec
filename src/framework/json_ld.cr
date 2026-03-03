@@ -75,6 +75,9 @@ module Ktistec
         context = loader.load(url)
       elsif (url = context.as_s?)
         context = loader.load(url)
+        if context.as_h?.try(&.empty?)
+          context = loader.load("https://www.w3.org/ns/activitystreams")
+        end
       end
       if (contexts = context.as_a?)
         context = contexts.reduce(empty) do |a, c|
@@ -82,6 +85,9 @@ module Ktistec
             c = self.context(c, loader)
           end
           wrap(a.as_h.merge(c.as_h))
+        end
+        if contexts.all?(&.as_s?) && context.as_h?.try(&.empty?)
+          context = loader.load("https://www.w3.org/ns/activitystreams")
         end
       end
 

@@ -495,6 +495,48 @@ Spectator.describe ActivityPub::Collection do
       end
     end
   end
+
+  describe "#iri_matches?" do
+    it "returns true when same origin" do
+      collection = described_class.new(iri: "https://example.com/?term_id=123")
+      expect(collection.iri_matches?("https://example.com/tag/foo/")).to be_true
+    end
+
+    it "returns true when scheme differs in case" do
+      collection = described_class.new(iri: "HTTPS://example.com/foo")
+      expect(collection.iri_matches?("https://example.com/bar")).to be_true
+    end
+
+    it "returns true when host differs in case" do
+      collection = described_class.new(iri: "https://EXAMPLE.COM/foo")
+      expect(collection.iri_matches?("https://example.com/bar")).to be_true
+    end
+
+    it "returns true when http port 80 is explicit vs implicit" do
+      collection = described_class.new(iri: "http://example.com:80/foo")
+      expect(collection.iri_matches?("http://example.com/bar")).to be_true
+    end
+
+    it "returns true when https port 443 is explicit vs implicit" do
+      collection = described_class.new(iri: "https://example.com:443/foo")
+      expect(collection.iri_matches?("https://example.com/bar")).to be_true
+    end
+
+    it "returns false when schemes differ" do
+      collection = described_class.new(iri: "http://example.com/foo")
+      expect(collection.iri_matches?("https://example.com/foo")).to be_false
+    end
+
+    it "returns false when hosts differ" do
+      collection = described_class.new(iri: "https://other.com/foo")
+      expect(collection.iri_matches?("https://example.com/foo")).to be_false
+    end
+
+    it "returns false when ports differ" do
+      collection = described_class.new(iri: "https://example.com/foo")
+      expect(collection.iri_matches?("https://example.com:8443/foo")).to be_false
+    end
+  end
 end
 
 Spectator.describe ActivityPub::Collection::ModelHelper do

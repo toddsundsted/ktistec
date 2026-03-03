@@ -510,6 +510,20 @@ Spectator.describe Ktistec::Model::Linked do
     end
   end
 
+  describe "#iri_matches?" do
+    it "returns true when IRIs match exactly" do
+      expect(LinkedModel.new(iri: "https://test.test/foo_bar").iri_matches?("https://test.test/foo_bar")).to be_true
+    end
+
+    it "returns true when IRIs match with different case" do
+      expect(LinkedModel.new(iri: "https://test.test/tags/FooBar").iri_matches?("https://test.test/tags/foobar")).to be_true
+    end
+
+    it "returns false when IRIs differ" do
+      expect(LinkedModel.new(iri: "https://test.test/foo_bar").iri_matches?("https://test.test/bar_baz")).to be_false
+    end
+  end
+
   describe "#origin" do
     it "returns the origin" do
       expect(LinkedModel.new(iri: "https://test.test/foo_bar").origin).to eq("https://test.test")

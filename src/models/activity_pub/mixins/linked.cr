@@ -32,6 +32,14 @@ module Ktistec
         io << ">"
       end
 
+      # Returns `true` if this instance's IRI matches the requested IRI.
+      #
+      # Override in subclasses to implement custom matching heuristics.
+      #
+      def iri_matches?(requested_iri : String) : Bool
+        iri.compare(requested_iri, case_insensitive: true) == 0
+      end
+
       macro included
         # permits models to have a missing/blank IRI. this is useful
         # for ActivityPub objects that are, for example, sometimes
@@ -80,7 +88,7 @@ module Ktistec
               headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
               Ktistec::Open.open?(key_pair, iri, headers) do |response|
                 instance = self.from_json_ld(response.body, **options)
-                if instance && instance.iri != iri
+                if instance && !instance.iri_matches?(iri)
                   Log.warn { "#{self}.dereference? - #{iri} - IRI mismatch: requested #{iri}, got #{instance.iri}" }
                   instance = nil
                 end
@@ -117,7 +125,7 @@ module Ktistec
                             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
                             Ktistec::Open.open?(key_pair, {{foreign_key}}, headers) do |response|
                               {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
-                              if {{name}}_ && {{name}}_.iri != {{foreign_key}}
+                              if {{name}}_ && !{{name}}_.iri_matches?({{foreign_key}})
                                 Log.warn { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} - IRI mismatch: requested #{{{foreign_key}}}, got #{{{name}}_.iri}" }
                                 {{name}}_ = nil
                               else

@@ -386,16 +386,53 @@ Spectator.describe Ktistec::JSON_LD do
           {
             "@context": "https://uncached",
             "@type": "Lock",
-            "name": "Foo Bar Baz",
-            "page": "https://test/"
+            "name": "Foo Bar Baz"
           }
         JSON
       ), double(loader))
     end
 
     describe "#[]" do
-      it "gently ignores the context" do
-        expect(json.as_h.keys).to match_array(["@context", "@type"]).in_any_order
+      it "falls back to activitystreams context" do
+        expect(json.as_h.keys).to match_array(["@context", "@type", "https://www.w3.org/ns/activitystreams#name"]).in_any_order
+      end
+    end
+  end
+
+  context "given JSON-LD document with array of uncached context" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": ["https://uncached"],
+            "@type": "Lock",
+            "name": "Foo Bar Baz"
+          }
+        JSON
+      ), double(loader))
+    end
+
+    describe "#[]" do
+      it "falls back to activitystreams context" do
+        expect(json.as_h.keys).to match_array(["@context", "@type", "https://www.w3.org/ns/activitystreams#name"]).in_any_order
+      end
+    end
+  end
+
+  context "given JSON-LD document with empty context array" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": [],
+            "@type": "Lock",
+            "name": "Foo Bar Baz"
+          }
+        JSON
+      ), double(loader))
+    end
+
+    describe "#[]" do
+      it "falls back to activitystreams context" do
+        expect(json.as_h.keys).to match_array(["@context", "@type", "https://www.w3.org/ns/activitystreams#name"]).in_any_order
       end
     end
   end

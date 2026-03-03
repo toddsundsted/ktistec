@@ -66,6 +66,15 @@ INSERT INTO migrations VALUES(20251031205133,'add-auto-follow-back-to-accounts')
 INSERT INTO migrations VALUES(20251118203714,'add-featured-to-actors');
 INSERT INTO migrations VALUES(20251208090435,'add-polls-table');
 INSERT INTO migrations VALUES(20251215082458,'add-special-to-objects');
+INSERT INTO migrations VALUES(20251217132359,'add-default-editor-to-accounts');
+INSERT INTO migrations VALUES(20260130143000,'add-pinned-collections-to-accounts');
+INSERT INTO migrations VALUES(20260202124808,'add-oauth-token-to-sessions');
+INSERT INTO migrations VALUES(20260204205318,'add-quote-iri-to-objects');
+INSERT INTO migrations VALUES(20260207071514,'add-instrument-iri-and-result-iri-to-activities');
+INSERT INTO migrations VALUES(20260207071600,'create-quote-decisions');
+INSERT INTO migrations VALUES(20260211113333,'add-quote-authorization-iri-to-objects');
+INSERT INTO migrations VALUES(20260217071152,'add-index-on-instrument-iri-to-activities');
+INSERT INTO migrations VALUES(20260217085347,'add-manually-approve-quotes-to-accounts');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -77,7 +86,10 @@ CREATE TABLE accounts (
     state text,
     language varchar(244) COLLATE NOCASE,
     auto_approve_followers BOOLEAN NOT NULL DEFAULT 0,
-    auto_follow_back BOOLEAN NOT NULL DEFAULT 0
+    auto_follow_back BOOLEAN NOT NULL DEFAULT 0,
+    manually_approve_quotes BOOLEAN NOT NULL DEFAULT 1,
+    default_editor TEXT,
+    pinned_collections TEXT
   );
 CREATE TABLE sessions (
     id integer PRIMARY KEY AUTOINCREMENT,
@@ -85,7 +97,8 @@ CREATE TABLE sessions (
     updated_at datetime NOT NULL,
     body_json text NOT NULL,
     session_key varchar(22) NOT NULL,
-    account_id integer
+    account_id integer,
+    oauth_access_token_id integer
   );
 CREATE TABLE actors (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -139,7 +152,9 @@ CREATE TABLE objects (
     "sensitive" boolean DEFAULT 0,
     "updated" datetime,
     "audience" text,
-    "special" text
+    "special" text,
+    "quote_iri" text COLLATE NOCASE,
+    "quote_authorization_iri" text COLLATE NOCASE
   );
 CREATE TABLE activities (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -156,7 +171,9 @@ CREATE TABLE activities (
     "cc" text,
     "summary" text,
     "undone_at" datetime,
-    "audience" text
+    "audience" text,
+    "instrument_iri" text COLLATE NOCASE,
+    "result_iri" text COLLATE NOCASE
   );
 CREATE TABLE collections (
     id integer PRIMARY KEY AUTOINCREMENT,
@@ -273,10 +290,21 @@ CREATE TABLE polls (
     "created_at" datetime NOT NULL,
     "updated_at" datetime NOT NULL
   );
+CREATE TABLE quote_decisions (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "quote_authorization_iri" text COLLATE NOCASE NOT NULL,
+    "interacting_object_iri" text COLLATE NOCASE,
+    "interaction_target_iri" text COLLATE NOCASE,
+    "decision" text NOT NULL DEFAULT 'accept',
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL
+  );
 CREATE UNIQUE INDEX idx_accounts_username
     ON accounts (username ASC);
 CREATE INDEX idx_accounts_iri
     ON accounts (iri ASC);
+CREATE INDEX idx_sessions_oauth_access_token_id
+    ON sessions (oauth_access_token_id ASC);
 CREATE UNIQUE INDEX idx_sessions_session_key
     ON sessions (session_key ASC);
 CREATE UNIQUE INDEX idx_actors_iri
@@ -291,6 +319,8 @@ CREATE INDEX idx_objects_attributed_to_iri
     ON objects (attributed_to_iri ASC);
 CREATE INDEX idx_objects_thread
     ON objects (thread ASC);
+CREATE INDEX idx_objects_quote_iri
+    ON objects (quote_iri ASC);
 CREATE UNIQUE INDEX idx_activities_iri
     ON activities (iri ASC);
 CREATE INDEX idx_activities_actor_iri
@@ -299,6 +329,8 @@ CREATE INDEX idx_activities_object_iri
     ON activities (object_iri ASC);
 CREATE INDEX idx_activities_target_iri
     ON activities (target_iri ASC);
+CREATE INDEX idx_activities_instrument_iri
+    ON activities (instrument_iri ASC);
 CREATE UNIQUE INDEX idx_collections_iri
     ON collections (iri ASC);
 CREATE INDEX idx_relationships_to_iri
@@ -335,4 +367,10 @@ CREATE INDEX idx_oauth_access_tokens_account_id
     ON oauth_access_tokens (account_id ASC);
 CREATE UNIQUE INDEX idx_polls_question_iri
     ON polls (question_iri);
+CREATE UNIQUE INDEX idx_quote_decisions_quote_authorization_iri
+    ON quote_decisions (quote_authorization_iri);
+CREATE INDEX idx_quote_decisions_interaction_target_iri_interacting_object_iri
+    ON quote_decisions (interaction_target_iri, interacting_object_iri);
+CREATE INDEX idx_quote_decisions_interacting_object_iri
+    ON quote_decisions (interacting_object_iri);
 COMMIT;

@@ -24,7 +24,7 @@ FilePond.setOptions({
     },
     revert: {
       url: "/uploads",
-      headers: {"X-CSRF-Token": Ktistec.csrf}
+      headers: {"Content-Type": "application/json"}
     },
     restore: {
       url: ""

@@ -46,8 +46,8 @@ Spectator.describe Ktistec::CSRF do
     handler.next = ->(_context : HTTP::Server::Context) { }
     request = HTTP::Request.new("GET", "/",
       headers: HTTP::Headers{"Accept" => %q|text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8|})
-    _, client_response = process_request_and_return_response(handler, request)
-    expect(client_response.cookies["__Secure-authenticity_token"]?.try(&.value)).not_to be_nil
+    context, _ = process_request_and_return_response(handler, request)
+    expect(context.session.string?("csrf")).not_to be_nil
   end
 
   it "does not generate an authenticity token on non-HTML requests" do
@@ -55,8 +55,8 @@ Spectator.describe Ktistec::CSRF do
     handler.next = ->(_context : HTTP::Server::Context) { }
     request = HTTP::Request.new("GET", "/",
       headers: HTTP::Headers{"Accept" => %q|application/json|})
-    _, client_response = process_request_and_return_response(handler, request)
-    expect(client_response.cookies["__Secure-authenticity_token"]?.try(&.value)).to be_nil
+    context, _ = process_request_and_return_response(handler, request)
+    expect(context.session.string?("csrf")).to be_nil
   end
 
   it "allows POSTs with safe content types" do

@@ -59,14 +59,6 @@ module Ktistec
         unless context.session.string?("csrf")
           csrf_token = Random::Secure.hex(16)
           context.session.string("csrf", csrf_token)
-          context.response.cookies << HTTP::Cookie.new(
-            name: "__Secure-#{@parameter_name}",
-            value: csrf_token,
-            path: "/",
-            expires: Time.local.to_utc + 1.hour,
-            http_only: false,
-            secure: true,
-          )
         end
       end
 

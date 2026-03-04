@@ -465,7 +465,7 @@ module Ktistec::ViewHelper
 
   # Posts an activity to an outbox.
   #
-  macro activity_button(arg1, arg2, arg3, type = nil, method = "POST", public = true, form_class = "ui inline form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
+  macro activity_button(arg1, arg2, arg3, type = nil, method = "POST", public = true, form_class = "ui inline form", button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.csrf_token, &block)
     {% if block %}
       {% action = arg1; object = arg2; type = arg3 %}
       %block =
@@ -521,7 +521,7 @@ module Ktistec::ViewHelper
 
   # General purpose form-powered button.
   #
-  macro form_button(arg1, action = nil, method = "POST", form_id = nil, form_class = "ui inline form", button_id = nil, button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.string?("csrf"), &block)
+  macro form_button(arg1, action = nil, method = "POST", form_id = nil, form_class = "ui inline form", button_id = nil, button_class = "ui button", form_data = nil, button_data = nil, csrf = env.session.csrf_token, &block)
     {% if block %}
       {% action = arg1 %}
       %block =
@@ -578,7 +578,7 @@ module Ktistec::ViewHelper
   end
 
   macro authenticity_token(env)
-    %Q(<input type="hidden" name="authenticity_token" value="#{{{env}}.session.string?("csrf")}">)
+    %Q(<input type="hidden" name="authenticity_token" value="#{{{env}}.session.csrf_token}">)
   end
 
   macro error_messages(model)
@@ -592,7 +592,7 @@ module Ktistec::ViewHelper
     end
   end
 
-  macro form_tag(model, action, *, method = "POST", form = nil, class _class = "ui form", data = nil, csrf = env.session.string?("csrf"), &block)
+  macro form_tag(model, action, *, method = "POST", form = nil, class _class = "ui form", data = nil, csrf = env.session.csrf_token, &block)
     {% if model %}
       %classes =
         {{model}}.errors.presence ?

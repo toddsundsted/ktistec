@@ -55,13 +55,6 @@ module Ktistec
     def call(context)
       return call_next(context) if exclude_match?(context)
 
-      if context.accepts?("text/html")
-        unless context.session.string?("csrf")
-          csrf_token = Random::Secure.hex(16)
-          context.session.string("csrf", csrf_token)
-        end
-      end
-
       content_type = context.request.headers["Content-Type"]?.try(&.split(";").first.strip.presence)
       return call_next(context) unless content_type.nil? || @enforced_content_types.includes?(content_type)
       return call_next(context) if @allowed_methods.includes?(context.request.method)

@@ -179,13 +179,13 @@ crystal:
         - if object.in_reply_to? && for_thread.try(&.first.attributed_to?) == account.actor
           - if object.approved_by?(account.actor)
             form.ui.form method="POST" action=unapprove_path(object) data-controller="checkbox-submit"
-              input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+              input type="hidden" name="authenticity_token" value=env.session.csrf_token
               .ui.mini.toggle.checkbox.checked
                 input id="object-#{object.id}-public" type="checkbox" name="public" checked="checked" data-action="change->checkbox-submit#change"
                 label for="object-#{object.id}-public" Public
           - else
             form.ui.form method="POST" action=approve_path(object) data-controller="checkbox-submit"
-              input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+              input type="hidden" name="authenticity_token" value=env.session.csrf_token
               .ui.mini.toggle.checkbox
                 input id="object-#{object.id}-public" type="checkbox" name="public" data-action="change->checkbox-submit#change"
                 label for="object-#{object.id}-public" Public

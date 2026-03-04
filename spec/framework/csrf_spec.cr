@@ -41,20 +41,11 @@ Spectator.describe Ktistec::CSRF do
     expect(client_response.status_code).to eq(404)
   end
 
-  it "generates an authenticity token on HTML requests" do
+  it "does not generate an authenticity token" do
     handler = described_class.new
     handler.next = ->(_context : HTTP::Server::Context) { }
     request = HTTP::Request.new("GET", "/",
       headers: HTTP::Headers{"Accept" => %q|text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8|})
-    context, _ = process_request_and_return_response(handler, request)
-    expect(context.session.string?("csrf")).not_to be_nil
-  end
-
-  it "does not generate an authenticity token on non-HTML requests" do
-    handler = described_class.new
-    handler.next = ->(_context : HTTP::Server::Context) { }
-    request = HTTP::Request.new("GET", "/",
-      headers: HTTP::Headers{"Accept" => %q|application/json|})
     context, _ = process_request_and_return_response(handler, request)
     expect(context.session.string?("csrf")).to be_nil
   end
@@ -114,7 +105,7 @@ Spectator.describe Ktistec::CSRF do
     context, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
 
-    csrf = context.session.string("csrf")
+    csrf = context.session.csrf_token
 
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
@@ -133,7 +124,7 @@ Spectator.describe Ktistec::CSRF do
     context, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
 
-    csrf = context.session.string("csrf")
+    csrf = context.session.csrf_token
 
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",

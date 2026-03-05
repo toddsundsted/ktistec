@@ -72,7 +72,7 @@ crystal:
 form.ui.form id="object-#{id}" class=(has_errors ? "error" : nil) data-controller=data_controller method="POST"
   == render "src/views/partials/editor/_editor_errors.html.slang"
   == render "src/views/partials/editor/_editor_hidden_fields.html.slang"
-  .field data-turbo-permanent=true
+  .field#editor-field data-turbo-permanent=true
     - if media_type.starts_with?("text/html")
       trix-editor data-trix-target="trixEditor" data-action="trix-change->has-content#check trix-change->has-content#scheduleAutosave trix-blur->has-content#blur turbo:morph@document->has-content#check" input="editor-input"
       textarea#editor-input data-has-content-target="input" name="content" rows=3 = content

@@ -1,5 +1,5 @@
 require "../framework/controller"
-require "../framework/constants"
+require "../ktistec/constants"
 
 class WellKnownController
   include Ktistec::Controller

@@ -1,7 +1,7 @@
 require "../task"
 require "../task/mixins/transfer"
 
-require "../../framework/constants"
+require "../../ktistec/constants"
 require "../activity_pub/activity"
 require "../activity_pub/actor"
 require "../activity_pub/collection"

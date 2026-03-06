@@ -1,6 +1,6 @@
 require "../framework/controller"
-require "../framework/constants"
 require "../framework/open"
+require "../ktistec/constants"
 
 class ProxyController
   include Ktistec::Controller

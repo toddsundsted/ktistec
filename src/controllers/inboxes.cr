@@ -1,7 +1,7 @@
-require "../framework/constants"
 require "../framework/controller"
 require "../framework/open"
 require "../framework/signature"
+require "../ktistec/constants"
 require "../models/activity_pub/activity/**"
 require "../services/inbox_activity_processor"
 

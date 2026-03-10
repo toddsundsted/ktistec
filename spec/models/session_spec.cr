@@ -57,6 +57,23 @@ Spectator.describe Session do
     end
   end
 
+  describe "#csrf_token" do
+    it "generates a token" do
+      token = subject.csrf_token
+      expect(token).to match(/^[a-f0-9]{32}$/)
+    end
+
+    it "returns the existing token" do
+      subject.string("csrf", "existing-token")
+      expect(subject.csrf_token).to eq("existing-token")
+    end
+
+    it "persists the token in the session" do
+      token = subject.csrf_token
+      expect(subject.string?("csrf")).to eq(token)
+    end
+  end
+
   context "with an expiry in the future" do
     it "stores the expiration date" do
       subject.string("foo", "bar", expires_in: 5.seconds)

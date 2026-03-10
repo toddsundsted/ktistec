@@ -1,4 +1,4 @@
-input type="hidden" name="authenticity_token" value=env.session.string?("csrf")
+input type="hidden" name="authenticity_token" value=env.session.csrf_token
 input type="hidden" name="media-type" value=media_type
 input type="hidden" name="type" value="Publish"
 - unless object.new_record?

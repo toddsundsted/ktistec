@@ -13,7 +13,15 @@ module Ktistec
       # only apply on browser navigation
       if env.request.method == "GET" && env.accepts?("text/html")
         # include both the path and the query in the redirect path
-        env.session.string("redirect_after_auth_path", env.request.resource, expires_in: 5.minutes)
+        env.response.cookies["__Host-RedirectPath"] = HTTP::Cookie.new(
+          name: "__Host-RedirectPath",
+          value: URI.encode_path(env.request.resource),
+          http_only: true,
+          secure: true,
+          samesite: HTTP::Cookie::SameSite::Lax,
+          max_age: 5.minutes,
+          path: "/",
+        )
       end
 
       message = "Unauthorized"

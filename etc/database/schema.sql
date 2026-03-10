@@ -75,6 +75,7 @@ INSERT INTO migrations VALUES(20260207071600,'create-quote-decisions');
 INSERT INTO migrations VALUES(20260211113333,'add-quote-authorization-iri-to-objects');
 INSERT INTO migrations VALUES(20260217071152,'add-index-on-instrument-iri-to-activities');
 INSERT INTO migrations VALUES(20260217085347,'add-manually-approve-quotes-to-accounts');
+INSERT INTO migrations VALUES(20260310155831,'make-oauth-access-token-account-id-nullable');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -276,7 +277,7 @@ CREATE TABLE oauth_access_tokens (
     "updated_at" datetime NOT NULL,
     "token" varchar(255) NOT NULL,
     "client_id" integer NOT NULL,
-    "account_id" integer NOT NULL,
+    "account_id" integer,
     "expires_at" datetime NOT NULL,
     "scope" varchar(255) NOT NULL
   );

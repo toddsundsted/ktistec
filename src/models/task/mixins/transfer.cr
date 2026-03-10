@@ -1,5 +1,5 @@
-require "../../../framework/constants"
 require "../../../framework/signature"
+require "../../../ktistec/constants"
 
 class Task
   module Transfer

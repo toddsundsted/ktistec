@@ -58,8 +58,16 @@ class HTTP::Server::Context
 
   # Returns a new, nonpersistent, authenticated session.
   #
+  # If the access token has an account, creates an authenticated
+  # session. If the access token has no account (app-level access
+  # token), creates an anonymous session linked to the token.
+  #
   private def new_session(access_token : OAuth2::Provider::AccessToken)
-    Session.new(account: access_token.account, oauth_access_token: access_token)
+    if (account = access_token.account?)
+      Session.new(account: account, oauth_access_token: access_token)
+    else
+      Session.new(oauth_access_token: access_token)
+    end
   end
 
   # Returns a new, nonpersistent, anonymous session.

@@ -78,6 +78,16 @@ class Session
     # ignore
   end
 
+  # Returns the CSRF token for this session.
+  #
+  def csrf_token
+    string?("csrf") || begin
+      token = Random::Secure.hex(16)
+      string("csrf", token)
+      token
+    end
+  end
+
   def delete(key)
     body = self.body.as_h
     if (value = body.delete(key))

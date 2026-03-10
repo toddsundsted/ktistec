@@ -55,21 +55,6 @@ module Ktistec
     def call(context)
       return call_next(context) if exclude_match?(context)
 
-      if context.accepts?("text/html")
-        unless context.session.string?("csrf")
-          csrf_token = Random::Secure.hex(16)
-          context.session.string("csrf", csrf_token)
-          context.response.cookies << HTTP::Cookie.new(
-            name: "__Secure-#{@parameter_name}",
-            value: csrf_token,
-            path: "/",
-            expires: Time.local.to_utc + 1.hour,
-            http_only: false,
-            secure: true,
-          )
-        end
-      end
-
       content_type = context.request.headers["Content-Type"]?.try(&.split(";").first.strip.presence)
       return call_next(context) unless content_type.nil? || @enforced_content_types.includes?(content_type)
       return call_next(context) if @allowed_methods.includes?(context.request.method)
@@ -96,7 +81,13 @@ module Ktistec
     end
   end
 
+  {% if flag?(:with_mastodon_api) %}
+    CSRF_ALLOWED_ROUTES = ["/actors/:username/inbox", "/oauth/token", "/api/v1/apps"]
+  {% else %}
+    CSRF_ALLOWED_ROUTES = ["/actors/:username/inbox", "/oauth/token"]
+  {% end %}
+
   add_handler CSRF.new(
-    allowed_routes: ["/actors/:username/inbox", "/oauth/token"]
+    allowed_routes: CSRF_ALLOWED_ROUTES
   )
 end

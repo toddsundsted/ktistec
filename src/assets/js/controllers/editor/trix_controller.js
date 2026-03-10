@@ -185,7 +185,7 @@ export default class extends Controller {
     if (attachment.previewURL) {
       let xhr = new XMLHttpRequest()
       xhr.open("DELETE", attachment.previewURL)
-      xhr.setRequestHeader("X-CSRF-Token", Ktistec.csrf)
+      xhr.setRequestHeader("Content-type", "application/json")
       xhr.send()
     }
   }

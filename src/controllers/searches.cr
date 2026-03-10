@@ -1,6 +1,6 @@
 require "../framework/controller"
 require "../framework/open"
-require "../framework/constants"
+require "../ktistec/constants"
 require "../utils/network"
 
 class SearchesController

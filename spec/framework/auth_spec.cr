@@ -44,19 +44,26 @@ Spectator.describe Ktistec::Auth do
         expect(JSON.parse(response.body)["msg"]).to eq("Unauthorized")
       end
 
-      it "stores the path in the session" do
+      it "sets redirect cookie" do
         get "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html", "Cookie" => "__Host-AuthToken=#{jwt}"}
-        expect(session.reload!.string?("redirect_after_auth_path")).to eq("/foo/bar/auth")
+        cookie = response.cookies["__Host-RedirectPath"]?
+        expect(cookie).not_to be_nil
+        expect(cookie.not_nil!.value).to eq("/foo/bar/auth")
+        expect(cookie.not_nil!.http_only).to be_true
+        expect(cookie.not_nil!.secure).to be_true
+        expect(cookie.not_nil!.samesite).to eq(HTTP::Cookie::SameSite::Lax)
+        expect(cookie.not_nil!.max_age).to eq(5.minutes)
+        expect(cookie.not_nil!.path).to eq("/")
       end
 
-      it "doesn't store the path in the session" do
+      it "doesn't set a redirect cookie" do
         post "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html", "Cookie" => "__Host-AuthToken=#{jwt}"}
-        expect(session.reload!.string?("redirect_after_auth_path")).to be_nil
+        expect(response.cookies["__Host-RedirectPath"]?).to be_nil
       end
 
-      it "doesn't store the path in the session" do
+      it "doesn't set a redirect cookie" do
         get "/foo/bar/auth", HTTP::Headers{"Cookie" => "__Host-AuthToken=#{jwt}"}
-        expect(session.reload!.string?("redirect_after_auth_path")).to be_nil
+        expect(response.cookies["__Host-RedirectPath"]?).to be_nil
       end
     end
 
@@ -78,9 +85,9 @@ Spectator.describe Ktistec::Auth do
         expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
       end
 
-      it "doesn't store the path in the session" do
-        get "/foo/bar/auth", HTTP::Headers{"Cookie" => "__Host-AuthToken=#{jwt}"}
-        expect(session.reload!.string?("redirect_after_auth_path")).to be_nil
+      it "doesn't set a redirect cookie" do
+        get "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html", "Cookie" => "__Host-AuthToken=#{jwt}"}
+        expect(response.cookies["__Host-RedirectPath"]?).to be_nil
       end
     end
   end
@@ -106,9 +113,9 @@ Spectator.describe Ktistec::Auth do
         expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
       end
 
-      it "doesn't store the path in the session" do
-        get "/foo/bar/skip", HTTP::Headers{"Cookie" => "__Host-AuthToken=#{jwt}"}
-        expect(session.reload!.string?("redirect_after_auth_path")).to be_nil
+      it "doesn't set a redirect cookie" do
+        get "/foo/bar/skip", HTTP::Headers{"Accept" => "text/html", "Cookie" => "__Host-AuthToken=#{jwt}"}
+        expect(response.cookies["__Host-RedirectPath"]?).to be_nil
       end
     end
 
@@ -130,9 +137,9 @@ Spectator.describe Ktistec::Auth do
         expect(JSON.parse(response.body).dig("session", "session_key")).to eq(session.session_key)
       end
 
-      it "doesn't store the path in the session" do
-        get "/foo/bar/skip", HTTP::Headers{"Cookie" => "__Host-AuthToken=#{jwt}"}
-        expect(session.reload!.string?("redirect_after_auth_path")).to be_nil
+      it "doesn't set a redirect cookie" do
+        get "/foo/bar/skip", HTTP::Headers{"Accept" => "text/html", "Cookie" => "__Host-AuthToken=#{jwt}"}
+        expect(response.cookies["__Host-RedirectPath"]?).to be_nil
       end
     end
   end

@@ -2,7 +2,7 @@ require "uri"
 
 require "../../../framework/model"
 require "../../../framework/open"
-require "../../../framework/constants"
+require "../../../ktistec/constants"
 require "../../activity_pub"
 
 module Ktistec

@@ -13,8 +13,18 @@ class SessionsController
     username, password = params(env)
 
     if (account = account?(username, password))
-      # get the `redirect_after_auth_path` from the old session.
-      redirect_path = env.session.string?("redirect_after_auth_path") || actor_path(account)
+      # get the redirect path from the cookie
+      redirect_path = redirect_path_from_cookie(env) || actor_path(account)
+
+      # clear the redirect cookie
+      env.response.cookies["__Host-RedirectPath"] = HTTP::Cookie.new(
+        name: "__Host-RedirectPath",
+        value: "",
+        path: "/",
+        max_age: Time::Span.zero,
+        http_only: true,
+        secure: true,
+      )
 
       session = env.new_session(account)
       jwt = session.generate_jwt
@@ -47,6 +57,19 @@ class SessionsController
   private def self.account?(username, password)
     if (account = Account.find?(username: username)) && account.check_password(password)
       account
+    end
+  end
+
+  # Reads and validates the redirect path in the cookie.
+  #
+  private def self.redirect_path_from_cookie(env) : String?
+    value = env.request.cookies["__Host-RedirectPath"]?.try(&.value)
+    unless value.nil? || value.empty?
+      path = URI.decode(value)
+      uri = URI.parse(path).normalize
+      if uri.scheme.nil? && uri.host.nil?
+        path
+      end
     end
   end
 end

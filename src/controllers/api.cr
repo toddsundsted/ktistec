@@ -12,24 +12,21 @@
 
     Log = ::Log.for("api")
 
-    skip_auth ["/api/v1/apps"], OPTIONS, POST
+    skip_auth ["/api/*"], OPTIONS
+    skip_auth ["/api/v1/apps"], POST
     skip_auth ["/api/v1/instance", "/api/v2/instance", "/api/v1/instance/translation_languages"], GET
 
-    private macro set_headers
+    options "/api/*" do |env|
       env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+      env.response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
       env.response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
-      env.response.content_type = "application/json"
-    end
-
-    options "/api/v1/apps" do |env|
-      set_headers
 
       no_content
     end
 
     post "/api/v1/apps" do |env|
-      set_headers
+      env.response.headers.add("Access-Control-Allow-Origin", "*")
+      env.response.content_type = "application/json"
 
       client_name : String
       redirect_uris : Array(String)

@@ -18,9 +18,14 @@
     let(account) { register }
     let_create(:oauth2_provider_client, named: :client)
 
-    describe "OPTIONS /api/v1/apps" do
+    describe "OPTIONS /api/*" do
       it "returns 204" do
-        options "/api/v1/apps"
+        options "/api/v1/instance"
+        expect(response.status_code).to eq(204)
+      end
+
+      it "returns 204" do
+        options "/api/v2/instance"
         expect(response.status_code).to eq(204)
       end
 
@@ -31,7 +36,12 @@
 
       it "includes Access-Control-Allow-Methods header" do
         options "/api/v1/apps"
-        expect(response.headers["Access-Control-Allow-Methods"]?).to eq("POST, OPTIONS")
+        expect(response.headers["Access-Control-Allow-Methods"]?).to eq("GET, POST, PUT, PATCH, DELETE, OPTIONS")
+      end
+
+      it "includes Access-Control-Allow-Headers header" do
+        options "/api/v1/apps"
+        expect(response.headers["Access-Control-Allow-Headers"]?).to eq("Authorization, Content-Type")
       end
     end
 

@@ -1,6 +1,17 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.3.3]
+Adds an incomplete implementation of a Mastodon-compatible API, gated
+by a compiler flag (`-Dwith_mastodon_api`).
+
+### Fixed
+- Editor focus now stays in the editor after the first draft is saved. (fixes [#139](https://github.com/toddsundsted/ktistec/issues/139))
+- Filter settings instructions. (fixes [#135](https://github.com/toddsundsted/ktistec/issues/135))
+
+### Changed
+- Make coloring of mini buttons more uniform.
+
 ## [v3.3.2]
 Requires Crystal >= 1.19.1.
 
@@ -675,6 +686,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.3.3]: https://github.com/toddsundsted/ktistec/compare/39a167b9...c95cd6f3
 [v3.3.2]: https://github.com/toddsundsted/ktistec/compare/6ab42fb5...cc77366a
 [v3.3.1]: https://github.com/toddsundsted/ktistec/compare/18542942...b4ede065
 [v3.3.0]: https://github.com/toddsundsted/ktistec/compare/d3336807...9c9ee343

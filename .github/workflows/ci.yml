@@ -27,6 +27,13 @@ jobs:
                sudo apt update && sudo apt install -y lld
           fi
         shell: bash
+      - name: Cache shards
+        uses: actions/cache@v4
+        with:
+          path: lib
+          key: shards-${{ runner.os }}-${{ hashFiles('shard.lock') }}
+          restore-keys: |
+            shards-${{ runner.os }}-
       - name: Install shards
         run: shards install
       - name: Run tests
@@ -41,3 +48,20 @@ jobs:
           LOG_LEVEL: NONE
       - name: Build
         run: shards build
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-${{ runner.os }}-
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Audit npm dependencies
+        run: npm audit
+      - name: Run npm tests
+        run: npm run test

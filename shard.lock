@@ -59,4 +59,3 @@ shards:
   web_finger:
     git: https://github.com/toddsundsted/web_finger.git
     version: 0.2.6
-

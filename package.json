@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "css-loader": "^5.1.2",
-    "css-minimizer-webpack-plugin": "^7.0.0",
+    "css-minimizer-webpack-plugin": "^8.0.0",
     "jsdom": "^27.2.0",
     "less": "^4.1.1",
     "less-loader": "^8.0.0",

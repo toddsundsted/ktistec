@@ -132,7 +132,11 @@ export default class extends Controller {
   }
 
   blur(event) {
-    this.performAutosave()
+    const next = event.relatedTarget || document.activeElement || null
+    const shouldSkip = next && next.closest && next.closest('[data-has-content-skip-blur-autosave="true"]')
+    if (!shouldSkip) {
+      this.performAutosave()
+    }
   }
 
   _editorIn(container) {

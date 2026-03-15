@@ -119,14 +119,12 @@ Trix.config.textAttributes.sup = { tagName: "sup", inheritable: true }
       checkConnectivity(function (isOnline) {
         if (isOnline) {
           document.body.classList.remove('offline');
-          console.debug("counter", counter, "closed", closed, "|", "refreshing", window.location.href)
           session.refresh(window.location.href)
           counter = 0
           closed = false
           checking = false
         } else {
           document.body.classList.add('offline');
-          console.debug("counter", counter, "closed", closed, "|", "server unreachable, waiting to refresh", window.location.href)
           checking = false
         }
       })

@@ -9,7 +9,7 @@ RUN crystal build src/ktistec/server.cr --static --no-debug --release
 FROM node:latest AS nodebuilder
 WORKDIR /build
 COPY --from=builder /build /build
-RUN npm install --save-dev webpack
+RUN npm ci
 RUN npm run build
 
 FROM alpine:latest AS server

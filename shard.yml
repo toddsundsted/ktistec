@@ -1,6 +1,9 @@
 name: ktistec
 version: 3.3.3
 
+description: |
+  Ktistec is an ActivityPub server for individual users and small groups.
+
 authors:
   - Todd Sundsted <todd@sundsted.com>
 
@@ -50,4 +53,4 @@ crystal: 1.19.1
 libraries:
   libsqlite3: ">= 3.11.0"
 
-license: AGPL-3.0
+license: AGPL-3.0-only

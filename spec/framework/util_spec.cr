@@ -305,6 +305,28 @@ Spectator.describe Ktistec::Util::PaginatedArray do
     end
   end
 
+  describe ".cursor_start" do
+    it "is nil" do
+      expect(subject.cursor_start).to be_nil
+    end
+
+    it "can be set" do
+      subject.cursor_start = 100_i64
+      expect(subject.cursor_start).to eq(100_i64)
+    end
+  end
+
+  describe ".cursor_end" do
+    it "is nil" do
+      expect(subject.cursor_end).to be_nil
+    end
+
+    it "can be set" do
+      subject.cursor_end = 50_i64
+      expect(subject.cursor_end).to eq(50_i64)
+    end
+  end
+
   describe "#map" do
     it "returns a paginated array" do
       expect(subject.map(&.-)).to be_a(Ktistec::Util::PaginatedArray(Int32))
@@ -316,6 +338,16 @@ Spectator.describe Ktistec::Util::PaginatedArray do
 
     it "returns an indication of whether there are more results" do
       expect(subject.map(&.-).more?).to eq(false)
+    end
+
+    it "preserves cursor_start through map" do
+      subject.cursor_start = 100_i64
+      expect(subject.map(&.-).cursor_start).to eq(100_i64)
+    end
+
+    it "preserves cursor_end through map" do
+      subject.cursor_end = 50_i64
+      expect(subject.map(&.-).cursor_end).to eq(50_i64)
     end
   end
 end

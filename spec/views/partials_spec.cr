@@ -681,7 +681,7 @@ Spectator.describe "partials" do
         pre_condition { expect(object.new_record?).to be_true }
 
         it "renders an id" do
-          expect(subject.xpath_nodes("//form/@id").first).to eq("object-new")
+          expect(subject.xpath_nodes("//form/@id").first).to eq("editor")
         end
 
         it "does not render an input with the object iri" do
@@ -726,7 +726,7 @@ Spectator.describe "partials" do
         pre_condition { expect(object.new_record?).to be_false }
 
         it "renders an id" do
-          expect(subject.xpath_nodes("//form/@id").first).to eq("object-#{object.id}")
+          expect(subject.xpath_nodes("//form/@id").first).to eq("editor")
         end
 
         it "renders an input with the object iri" do

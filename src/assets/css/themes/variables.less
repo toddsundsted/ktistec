@@ -398,3 +398,81 @@
         color: var(--anchor-color-hover, color-mix(in srgb, var(--anchor-color, color-mix(in srgb, var(--semantic-primary) 95%, white)) 85%, white));
     }
 }
+
+/* X-ray modal color mixins */
+
+.xray-bg() {
+    background-color: var(--xray-bg, color-mix(in srgb, var(--color-black) 90%, var(--color-white)));
+}
+
+.xray-border-color() {
+    border-color: var(--xray-border, color-mix(in srgb, var(--color-black) 80%, var(--color-white)));
+}
+
+.xray-text-color() {
+    color: var(--xray-text, color-mix(in srgb, var(--color-white) 88%, var(--color-black)));
+}
+
+.xray-scrollbar-track-bg() {
+    background: var(--xray-scrollbar-track, color-mix(in srgb, var(--color-black) 82%, var(--color-white)));
+}
+
+.xray-scrollbar-thumb-bg() {
+    background: var(--xray-scrollbar-thumb, color-mix(in srgb, var(--color-black) 67%, var(--color-white)));
+}
+
+.xray-scrollbar-thumb-hover-bg() {
+    background: var(--xray-scrollbar-thumb-hover, color-mix(in srgb, var(--color-black) 53%, var(--color-white)));
+}
+
+.xray-key-color() {
+    color: var(--xray-key, color-mix(in srgb, var(--semantic-primary) 80%, var(--color-white)));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--xray-key, var(--semantic-primary));
+    }
+}
+
+.xray-string-color() {
+    color: var(--xray-string, color-mix(in srgb, var(--semantic-affirmative) 85%, var(--color-black)));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--xray-string, color-mix(in srgb, var(--semantic-affirmative) 75%, var(--color-black)));
+    }
+}
+
+.xray-number-color() {
+    color: var(--xray-number, color-mix(in srgb, var(--semantic-primary) 85%, var(--color-black)));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--xray-number, color-mix(in srgb, var(--semantic-primary) 70%, var(--color-black)));
+    }
+}
+
+.xray-boolean-color() {
+    color: var(--xray-boolean, color-mix(in srgb, var(--color-purple) 90%, var(--color-black)));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--xray-boolean, var(--color-purple));
+    }
+}
+
+.xray-clickable-color() {
+    color: var(--xray-clickable, color-mix(in srgb, var(--color-blue) 75%, var(--color-white)));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--xray-clickable, var(--color-blue));
+    }
+}
+
+.xray-clickable-hover-color() {
+    color: var(--xray-clickable-hover, var(--color-blue));
+
+    @media (prefers-color-scheme: dark) {
+        color: var(--xray-clickable-hover, color-mix(in srgb, var(--color-blue) 85%, var(--color-black)));
+    }
+}
+
+.xray-clickable-bg-hover() {
+    background-color: var(--xray-clickable-bg-hover, color-mix(in srgb, var(--color-blue) 10%, transparent));
+}

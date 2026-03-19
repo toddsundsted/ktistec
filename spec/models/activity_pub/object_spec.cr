@@ -1040,6 +1040,74 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe ".federated_posts" do
+    macro post(index)
+      let_build(:actor, named: actor{{index}})
+      let_create!(
+        :object, named: post{{index}},
+        attributed_to: actor{{index}},
+        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+        visible: {{index}}.odd?
+      )
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(described_class.federated_posts(limit: 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "filters out deleted posts" do
+      post5.delete!
+      expect(described_class.federated_posts(limit: 2)).to eq([post3, post1])
+    end
+
+    it "filters out blocked posts" do
+      post5.block!
+      expect(described_class.federated_posts(limit: 2)).to eq([post3, post1])
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete!
+      expect(described_class.federated_posts(limit: 2)).to eq([post3, post1])
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block!
+      expect(described_class.federated_posts(limit: 2)).to eq([post3, post1])
+    end
+
+    it "filters out non-public posts" do
+      expect(described_class.federated_posts(limit: 2)).to eq([post5, post3])
+    end
+
+    it "paginates the results" do
+      expect(described_class.federated_posts(max_id: post3.id, limit: 2)).to eq([post1])
+      expect(described_class.federated_posts(max_id: post3.id, limit: 2).more?).not_to be_true
+    end
+
+    it "paginates the results" do
+      expect(described_class.federated_posts(min_id: post2.id, limit: 1)).to eq([post3])
+      expect(described_class.federated_posts(min_id: post2.id, limit: 1).more?).to be_true
+    end
+
+    context "with an unpublished post" do
+      let_create!(
+        :object, named: :draft_post,
+        published: nil,
+        visible: true,
+      )
+
+      it "filters out draft posts" do
+        expect(described_class.federated_posts(limit: 10)).not_to contain(draft_post)
+      end
+    end
+  end
+
   describe ".federated_posts_count" do
     macro post(index)
       let_build(:actor, named: actor{{index}})

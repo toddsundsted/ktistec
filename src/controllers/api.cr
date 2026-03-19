@@ -1,7 +1,10 @@
 {% if flag?(:with_mastodon_api) %}
   require "../framework/controller"
   require "../models/activity_pub/object"
+  require "../models/activity_pub/activity/create"
   require "../services/oauth2/client_registration"
+  require "../services/object_factory"
+  require "../services/outbox_activity_processor"
   require "../api/serializers/application"
   require "../api/serializers/instance"
   require "../api/serializers/account"
@@ -16,8 +19,12 @@
     skip_auth ["/api/v1/apps"], POST
     skip_auth ["/api/v1/instance", "/api/v2/instance", "/api/v1/instance/translation_languages"], GET
 
-    options "/api/*" do |env|
+    before_all "/api/*" do |env|
       env.response.headers.add("Access-Control-Allow-Origin", "*")
+      env.response.content_type = "application/json"
+    end
+
+    options "/api/*" do |env|
       env.response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
       env.response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
 
@@ -25,9 +32,6 @@
     end
 
     post "/api/v1/apps" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       client_name : String
       redirect_uris : Array(String)
       scopes : String
@@ -99,23 +103,14 @@
     end
 
     get "/api/v1/instance" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       API::V1::Serializers::Instance.current.to_json
     end
 
     get "/api/v2/instance" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       API::V2::Serializers::Instance.current.to_json
     end
 
     get "/api/v1/accounts/verify_credentials" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       unless (account = env.account?)
         unauthorized "api/error", error: "The access token is invalid"
       end
@@ -124,28 +119,46 @@
     end
 
     get "/api/v1/timelines/home" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       unless (account = env.account?)
         unauthorized "api/error", error: "The access token is invalid"
       end
 
-      actor = account.actor
-      limit = (env.params.query["limit"]?.try(&.to_i?) || 20).clamp(1, 100)
+      params = cursor_pagination_params(env)
+      params = params.merge(limit: params[:limit].clamp(1, 40))
 
-      timeline = actor.timeline(page: 1, size: limit)
+      timeline = account.actor.timeline(**params)
       statuses = timeline.map do |entry|
         API::V1::Serializers::Status.from_object(entry.object)
+      end
+
+      if (link = link_header("/api/v1/timelines/home", statuses, params[:limit]))
+        env.response.headers["Link"] = link
+      end
+
+      statuses.to_a.to_json
+    end
+
+    get "/api/v1/timelines/public" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+
+      params = cursor_pagination_params(env)
+      params = params.merge(limit: params[:limit].clamp(1, 40))
+
+      posts = ActivityPub::Object.federated_posts(**params)
+      statuses = posts.map do |object|
+        API::V1::Serializers::Status.from_object(object)
+      end
+
+      if (link = link_header("/api/v1/timelines/public", statuses, params[:limit]))
+        env.response.headers["Link"] = link
       end
 
       statuses.to_a.to_json
     end
 
     get "/api/v1/statuses/:id" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       unless env.account?
         unauthorized "api/error", error: "The access token is invalid"
       end
@@ -160,9 +173,6 @@
     end
 
     get "/api/v1/statuses/:id/context" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       unless env.account?
         unauthorized "api/error", error: "The access token is invalid"
       end
@@ -184,19 +194,92 @@
       {ancestors: ancestors, descendants: descendants}.to_json
     end
 
+    post "/api/v1/statuses" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+
+      params = normalize_params(env.params.body.presence || env.params.json)
+
+      unless (status_text = params["status"]?.try(&.as(String)).presence)
+        unprocessable_entity "api/error", error: "Status can't be blank"
+      end
+
+      if (in_reply_to_id = params["in_reply_to_id"]?.try(&.as(String)).presence)
+        unless (in_reply_to = ActivityPub::Object.find?(in_reply_to_id.to_i64))
+          unprocessable_entity "api/error", error: "Reply not found"
+        end
+        in_reply_to_iri = in_reply_to.iri
+      end
+
+      # map mastodon visibility to ktistec visibility
+      visibility =
+        case params["visibility"]?.try(&.as(String))
+        when "public", "unlisted"
+          "public"
+        when "private"
+          "private"
+        when "direct"
+          "direct"
+        else
+          "public"
+        end
+
+      build_params = {} of String => String
+      build_params["content"] = status_text
+      build_params["media-type"] = "text/markdown"
+      build_params["visibility"] = visibility
+      build_params["sensitive"] = params["sensitive"]?.try(&.as(String)) || "false"
+      if (spoiler_text = params["spoiler_text"]?.try(&.as(String)))
+        build_params["summary"] = spoiler_text
+      end
+      if (language = params["language"]?.try(&.as(String)))
+        build_params["language"] = language
+      end
+      if in_reply_to_iri
+        build_params["in-reply-to"] = in_reply_to_iri
+      end
+
+      result = ObjectFactory.build_from_params(build_params, account.actor)
+      object = result.object
+
+      unless result.valid?
+        errors = result.errors.map { |field, messages| "#{field}: #{messages.join(", ")}" }.join("; ")
+        unprocessable_entity "api/error", error: errors
+      end
+
+      activity = ActivityPub::Activity::Create.new(
+        iri: "#{host}/activities/#{id}",
+        actor: account.actor,
+        object: object,
+        visible: object.visible,
+        to: object.to,
+        cc: object.cc,
+        audience: object.audience,
+      )
+
+      unless activity.valid_for_send?
+        unprocessable_entity "api/error", error: "Activity is not valid"
+      end
+
+      now = Time.utc
+      object.assign(published: now)
+      activity.assign(published: now)
+
+      activity.save
+
+      OutboxActivityProcessor.process(account, activity)
+
+      API::V1::Serializers::Status.from_object(object).to_json
+    end
+
     # stub endpoints to prevent 404 errors during client initialization
 
     get "/api/v1/instance/translation_languages" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       "{}"
     end
 
     get "/api/v1/filters" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       unless env.account?
         unauthorized "api/error", error: "The access token is invalid"
       end
@@ -205,9 +288,6 @@
     end
 
     get "/api/v2/filters" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       unless env.account?
         unauthorized "api/error", error: "The access token is invalid"
       end
@@ -216,9 +296,6 @@
     end
 
     get "/api/v1/markers" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       unless env.account?
         unauthorized "api/error", error: "The access token is invalid"
       end
@@ -227,9 +304,6 @@
     end
 
     get "/api/v2/notifications/policy" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       unless env.account?
         unauthorized "api/error", error: "The access token is invalid"
       end
@@ -248,9 +322,6 @@
     end
 
     get "/api/v1/notifications" do |env|
-      env.response.headers.add("Access-Control-Allow-Origin", "*")
-      env.response.content_type = "application/json"
-
       unless env.account?
         unauthorized "api/error", error: "The access token is invalid"
       end

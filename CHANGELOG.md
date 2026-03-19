@@ -1,6 +1,24 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.3.4]
+Continues the Mastodon-compatible API work.
+
+### Added
+- Cursor-based pagination on actor timeline and everything pages.
+- Mastodon-compatible API: `/api/v1/statuses` endpoint for status posting.
+- Mastodon-compatible API: `/api/v1/timelines/public` endpoint.
+
+### Fixed
+- Autosave focus handling. Fixes problems introduced in v3.3.3.
+- Prevent blur from creating a draft post when publishing a post.
+
+### Changed
+- Integrate X-Ray Mode colors into the theming system.
+- Improve CI: add `npm` audit, test, and caching.
+- Use `npm ci` in Dockerfile for reproducible builds.
+- Remove very old compiler bug work-around.
+
 ## [v3.3.3]
 Adds an incomplete implementation of a Mastodon-compatible API, gated
 by a compiler flag (`-Dwith_mastodon_api`).
@@ -686,6 +704,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.3.4]: https://github.com/toddsundsted/ktistec/compare/f64f24d1...df77bdab
 [v3.3.3]: https://github.com/toddsundsted/ktistec/compare/39a167b9...c95cd6f3
 [v3.3.2]: https://github.com/toddsundsted/ktistec/compare/6ab42fb5...cc77366a
 [v3.3.1]: https://github.com/toddsundsted/ktistec/compare/18542942...b4ede065

@@ -824,7 +824,7 @@ Spectator.describe ObjectsController do
 
         it "renders a form with the object" do
           get "/objects/#{draft.uid}/edit?editor=optional", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-#{draft.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("editor")
         end
 
         it "renders a button that submits to the outbox path" do
@@ -910,7 +910,7 @@ Spectator.describe ObjectsController do
 
         it "renders a form with the object" do
           get "/objects/#{visible.uid}/edit?editor=optional", ACCEPT_HTML
-          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("object-#{visible.id}")
+          expect(XML.parse_html(response.body).xpath_nodes("//form/@id").first).to eq("editor")
         end
 
         it "renders a button that submits to the outbox path" do

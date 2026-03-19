@@ -300,6 +300,18 @@ module Ktistec
         {% end %}
       end
 
+      # Executes an offset-based paginated query.
+      #
+      # The query must include `LIMIT ? OFFSET ?` placeholders as the
+      # last two bind parameters.
+      #
+      # Parameters:
+      # - `query`: SQL query
+      # - `*args`: Bind parameters for the query
+      # - `page`: Page number (default 1, 1-indexed)
+      # - `size`: Number of items per page (default 10)
+      # - `additional_columns`: Extra columns to read from the result set
+      #
       protected def query_and_paginate(query, *args, additional_columns = NamedTuple.new, page = 1, size = 10)
         Internal.log_query(query, {*args, size.to_i + 1, ((page - 1) * size).to_i}) do
           Ktistec::Util::PaginatedArray(self).new.tap do |array|
@@ -316,44 +328,84 @@ module Ktistec
         end
       end
 
-      # specialize the following to avoid a compile bug?
-      # see: https://github.com/crystal-lang/crystal/issues/7164
+      # Executes a cursor-based paginated query.
+      #
+      # The query must include a placeholder `%{cursor_condition}`
+      # where cursor filtering conditions will be inserted, and must
+      # not include `ORDER BY` or `LIMIT` clauses (which are added
+      # automatically).
+      #
+      # Parameters:
+      # - `query`: SQL query
+      # - `*args`: Bind parameters for the query
+      # - `cursor_column`: The column to use for cursor filtering and ordering
+      # - `max_id`: Return items older than this
+      # - `min_id`: Return items newer than this
+      # - `limit`: Maximum number of items to return (default 10)
+      # - `additional_columns`: Extra columns to read from the result set
+      #
+      # Results are always returned in descending order (newest first).
+      #
+      protected def query_with_cursor(
+        query : String,
+        *args,
+        cursor_column : String,
+        max_id : Int64? = nil,
+        min_id : Int64? = nil,
+        limit : Int32 = 10,
+        additional_columns = NamedTuple.new,
+      )
+        cursor_args = [] of Int64
+        cursor_condition = [] of String
+        if max_id
+          cursor_args << max_id
+          cursor_condition << "#{cursor_column} < ?"
+        end
+        if min_id
+          cursor_args << min_id
+          cursor_condition << "#{cursor_column} > ?"
+        end
+        direction = min_id && !max_id ? "ASC" : "DESC"
+        cursor_condition = cursor_condition.empty? ? "1" : cursor_condition.join(" AND ")
+        query = query % {cursor_condition: cursor_condition}
+        query += " ORDER BY #{cursor_column} #{direction} LIMIT ?"
+        all_args = args.to_a + cursor_args + [limit + 1]
+        Internal.log_query(query, all_args) do
+          result = Ktistec::Util::PaginatedArray(self).new
+          Ktistec.database.query(query, args: all_args) do |rs|
+            rs.each { result << compose(rs, **additional_columns) }
+          end
+          more = false
+          if result.size > limit
+            more = true
+            result.pop
+          end
+          items = result.to_a
+          if min_id && !max_id
+            items = items.reverse
+          end
+          Ktistec::Util::PaginatedArray(self).new(items.size).tap do |array|
+            items.each { |item| array << item }
+            array.more = more
+            if array.size > 0
+              array.cursor_start = array.first.id
+              array.cursor_end = items.last.id
+            end
+          end
+        end
+      end
 
-      protected def query_all(query, *args_, additional_columns = NamedTuple.new)
-        Internal.log_query(query, args_) do
-          Ktistec.database.query_all(
-            query, *args_
-          ) do |rs|
+      protected def query_all(query, *args_, args : Enumerable? = nil, additional_columns = NamedTuple.new)
+        Internal.log_query(query, args || args_) do
+          Ktistec.database.query_all(query, *args_, args: args) do |rs|
             compose(rs, **additional_columns)
           end
         end
       end
 
-      protected def query_all(query, args : Array? = nil, additional_columns = NamedTuple.new)
-        Internal.log_query(query, args) do
-          Ktistec.database.query_all(
-            query, args: args
-          ) do |rs|
-            compose(rs, **additional_columns)
-          end
-        end
-      end
-
-      protected def query_one(query, *args_, additional_columns = NamedTuple.new)
-        Internal.log_query(query, args_) do
-          Ktistec.database.query_one(
-            query, *args_
-          ) do |rs|
-            compose(rs, **additional_columns)
-          end
-        end
-      end
-
-      protected def query_one(query, args : Array? = nil, additional_columns = NamedTuple.new)
-        Internal.log_query(query, args) do
-          Ktistec.database.query_one(
-            query, args: args
-          ) do |rs|
+      protected def query_one(query, *args_, args : Enumerable? = nil, additional_columns = NamedTuple.new)
+        Internal.log_query(query, args || args_) do
+          Ktistec.database.query_one(query, *args_, args: args) do |rs|
             compose(rs, **additional_columns)
           end
         end
@@ -466,19 +518,9 @@ module Ktistec
       #
       # Returns the result.
       #
-      def scalar(query : String, *args_)
-        Internal.log_query(query, args_) do
-          Ktistec.database.scalar(query, *args_)
-        end
-      end
-
-      # Runs the query.
-      #
-      # Returns the result.
-      #
-      def scalar(query : String, args : Array? = nil)
-        Internal.log_query(query, args) do
-          Ktistec.database.scalar(query, args: args)
+      def scalar(query : String, *args_, args : Enumerable? = nil)
+        Internal.log_query(query, args || args_) do
+          Ktistec.database.scalar(query, *args_, args: args)
         end
       end
 
@@ -486,19 +528,9 @@ module Ktistec
       #
       # Returns the number of rows affected.
       #
-      def exec(query : String, *args_)
-        Internal.log_query(query, args_) do
-          Ktistec.database.exec(query, *args_).rows_affected
-        end
-      end
-
-      # Runs the query.
-      #
-      # Returns the number of rows affected.
-      #
-      def exec(query : String, args : Array? = nil)
-        Internal.log_query(query, args) do
-          Ktistec.database.exec(query, args: args).rows_affected
+      def exec(query : String, *args_, args : Enumerable? = nil)
+        Internal.log_query(query, args || args_) do
+          Ktistec.database.exec(query, *args_, args: args).rows_affected
         end
       end
 
@@ -506,8 +538,8 @@ module Ktistec
       #
       # Returns saved instances.
       #
-      def sql(query : String, *arguments)
-        query_all(query, *arguments)
+      def sql(query : String, *arguments, args : Enumerable? = nil)
+        query_all(query, *arguments, args: args)
       end
     end
 

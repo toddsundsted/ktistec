@@ -326,10 +326,14 @@ module Ktistec
         PaginatedArray(U).new(size).tap do |array|
           each { |t| array << yield t }
           array.more = more?
+          array.cursor_start = cursor_start
+          array.cursor_end = cursor_end
         end
       end
 
       property? more : Bool = false
+      property cursor_start : Int64? = nil
+      property cursor_end : Int64? = nil
     end
   end
 end

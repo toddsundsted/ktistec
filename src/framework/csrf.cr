@@ -82,7 +82,7 @@ module Ktistec
   end
 
   {% if flag?(:with_mastodon_api) %}
-    CSRF_ALLOWED_ROUTES = ["/actors/:username/inbox", "/oauth/token", "/api/v1/apps"]
+    CSRF_ALLOWED_ROUTES = ["/actors/:username/inbox", "/oauth/token", "/api/v1/apps", "/api/v1/statuses"]
   {% else %}
     CSRF_ALLOWED_ROUTES = ["/actors/:username/inbox", "/oauth/token"]
   {% end %}

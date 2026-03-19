@@ -65,7 +65,7 @@ class ObjectsController
 
     unless result.valid?
       if accepts_turbo_stream?
-        unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "object-new"
+        unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "editor"
       else
         unprocessable_entity "objects/new", env: env, object: object, recursive: false
       end
@@ -76,7 +76,7 @@ class ObjectsController
     if accepts?("application/ld+json", "application/activity+json", "application/json")
       created object_path(object), "objects/object", env: env, object: object, recursive: false
     elsif accepts_turbo_stream?
-      ok "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "object-new"
+      ok "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "editor"
     else
       redirect edit_object_path(object)
     end
@@ -156,7 +156,7 @@ class ObjectsController
 
     unless result.valid?
       if accepts_turbo_stream?
-        unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "object-#{object.id}"
+        unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "editor"
       else
         unprocessable_entity "objects/edit", env: env, object: object, recursive: false
       end
@@ -167,7 +167,7 @@ class ObjectsController
     if accepts?("application/ld+json", "application/activity+json", "application/json")
       ok "objects/object", env: env, object: object, recursive: false
     elsif accepts_turbo_stream?
-      ok "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "object-#{object.id}"
+      ok "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "editor"
     else
       redirect edit_object_path(object)
     end
@@ -282,7 +282,7 @@ class ObjectsController
 
     unless result.valid?
       if accepts_turbo_stream?
-        unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "object-#{object.id}"
+        unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "editor"
       else
         unprocessable_entity "objects/quote", env: env, object: object, quoted: quoted
       end

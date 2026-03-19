@@ -381,6 +381,25 @@ module ActivityPub
       Object.query_and_paginate(query, page: page, size: size)
     end
 
+    # Returns federated posts with cursor-based pagination.
+    #
+    # Includes local posts. Does not include private (not visible)
+    # posts.
+    #
+    def self.federated_posts(*, max_id = nil, min_id = nil, limit = 10)
+      query = <<-QUERY
+          SELECT #{Object.columns(prefix: "o")}
+            FROM objects AS o
+            JOIN actors AS t
+              ON t.iri = o.attributed_to_iri
+           WHERE o.visible = 1
+             #{common_filters(objects: "o", actors: "t")}
+             AND o.published IS NOT NULL
+             AND %{cursor_condition}
+      QUERY
+      Object.query_with_cursor(query, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of federated posts.
     #
     # Includes local posts. Does not include private (not visible)

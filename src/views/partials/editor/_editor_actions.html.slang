@@ -1,13 +1,13 @@
 - if object.new_record? || object.draft?
   .ui.buttons
     - if object.in_reply_to_iri
-      button.ui.primary.button data-has-content-target="button" data-has-content-skip-blur-autosave="true" type="submit" formaction=outbox_path(actor)
+      button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
         | Send Reply
     - elsif object.quote_iri
-      button.ui.primary.button data-has-content-target="button" data-has-content-skip-blur-autosave="true" type="submit" formaction=quote_path(object.quote)
+      button.ui.primary.button data-has-content-target="button" type="submit" formaction=quote_path(object.quote)
         | Publish Quote
     - else
-      button.ui.primary.button data-has-content-target="button" data-has-content-skip-blur-autosave="true" type="submit" formaction=outbox_path(actor)
+      button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
         | Publish Post
     - if object.new_record?
       button.ui.button data-has-content-target="button saveDraftButton" type="submit" formaction=objects_path

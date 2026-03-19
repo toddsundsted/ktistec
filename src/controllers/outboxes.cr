@@ -109,7 +109,7 @@ class OutboxesController
       # validate ensures properties are populated from source
       unless result.valid?
         if accepts_turbo_stream?
-          unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _target: %Q<object-#{object.id || "new"}>
+          unprocessable_entity "partials/editor", env: env, object: object, _operation: "replace", _target: "editor"
         elsif object.new_record?
           unprocessable_entity "objects/new", env: env, object: object, recursive: false
         else

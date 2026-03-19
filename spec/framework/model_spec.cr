@@ -94,6 +94,10 @@ class QueryModel
     super(*args, **opts)
   end
 
+  def self.query_with_cursor(*args, **opts)
+    super(*args, **opts)
+  end
+
   def self.query_all(*args, **opts)
     super(*args, **opts)
   end
@@ -193,6 +197,61 @@ Spectator.describe Ktistec::Model do
     it "includes the additional columns" do
       query = %Q|SELECT 0, 'foo', 'bar', ?, ?|
       expect(QueryModel.query_and_paginate(query, additional_columns: {foo: String, bar: String})).to eq([QueryModel.new(id: 0_i64, foo: "foo", bar: "bar")])
+    end
+  end
+
+  describe ".query_with_cursor" do
+    before_each do
+      Ktistec.database.exec <<-SQL
+        CREATE TABLE IF NOT EXISTS query_models (
+          id integer PRIMARY KEY AUTOINCREMENT,
+          foo text,
+          bar text
+        )
+      SQL
+      5.times do |i|
+        Ktistec.database.exec %Q|INSERT INTO query_models (id) VALUES (?)|, i + 1
+      end
+    end
+    after_each do
+      Ktistec.database.exec "DROP TABLE IF EXISTS query_models"
+    end
+
+    let(base_query) { "SELECT id FROM query_models WHERE %{cursor_condition}" }
+
+    it "returns all items" do
+      result = QueryModel.query_with_cursor(base_query, cursor_column: "id")
+      expect(result.map(&.id)).to eq([5, 4, 3, 2, 1])
+    end
+
+    it "respects the limit" do
+      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
+      expect(result.map(&.id)).to eq([5, 4])
+    end
+
+    it "sets `more?`" do
+      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
+      expect(result.more?).to be_true
+    end
+
+    it "sets `cursor_start`" do
+      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
+      expect(result.cursor_start).to eq(5)
+    end
+
+    it "sets `cursor_end`" do
+      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
+      expect(result.cursor_end).to eq(4)
+    end
+
+    it "returns items less than `max_id`" do
+      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", max_id: 4_i64)
+      expect(result.map(&.id)).to eq([3, 2, 1])
+    end
+
+    it "returns items greater than `min_id`" do
+      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", min_id: 2_i64)
+      expect(result.map(&.id)).to eq([5, 4, 3])
     end
   end
 
@@ -667,7 +726,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "returns the count of saved instances" do
-      expect(NotNilModel.scalar("SELECT count(*) FROM #{NotNilModel.table_name} WHERE val = ?", ["Val"])).to eq(1)
+      expect(NotNilModel.scalar("SELECT count(*) FROM #{NotNilModel.table_name} WHERE val = ?", args: ["Val"])).to eq(1)
     end
   end
 
@@ -679,7 +738,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "deletes the saved instances" do
-      expect { NotNilModel.exec("DELETE FROM #{NotNilModel.table_name} WHERE val = ?", ["Val"]) }.to change { NotNilModel.count }.by(-1)
+      expect { NotNilModel.exec("DELETE FROM #{NotNilModel.table_name} WHERE val = ?", args: ["Val"]) }.to change { NotNilModel.count }.by(-1)
     end
 
     it "returns the count of rows affected" do
@@ -687,7 +746,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "returns the count of rows affected" do
-      expect(NotNilModel.exec("DELETE FROM #{NotNilModel.table_name} WHERE val = ?", ["Val"])).to eq(1)
+      expect(NotNilModel.exec("DELETE FROM #{NotNilModel.table_name} WHERE val = ?", args: ["Val"])).to eq(1)
     end
   end
 
@@ -700,7 +759,7 @@ Spectator.describe Ktistec::Model do
       end
 
       it "returns the saved instances" do
-        expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", ["Val"])).to eq([saved_model])
+        expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", args: ["Val"])).to eq([saved_model])
       end
     end
 
@@ -709,7 +768,7 @@ Spectator.describe Ktistec::Model do
     end
 
     it "returns an empty collection" do
-      expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", ["Val"])).to be_empty
+      expect(NotNilModel.sql("SELECT #{NotNilModel.columns} FROM #{NotNilModel.table_name} WHERE val = ?", args: ["Val"])).to be_empty
     end
   end
 

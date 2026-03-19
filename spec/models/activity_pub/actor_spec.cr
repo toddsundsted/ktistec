@@ -1707,6 +1707,139 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#timeline" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro post(index)
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
+      let_create!(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
+      let_create!(:inbox_relationship, named: nil, owner: subject, activity: activity{{index}})
+      let_create!(:timeline_announce, named: timeline{{index}}, owner: subject, object: object{{index}})
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.timeline(page: 1, size: 2).first).to be_a(Relationship::Content::Timeline)
+    end
+
+    it "returns the count" do
+      expect(subject.timeline(since: since)).to eq(5)
+      expect(subject.timeline(since: timeline1.created_at)).to eq(4)
+    end
+
+    it "filters out deleted posts" do
+      object5.delete!
+      expect(subject.timeline(limit: 2)).to eq([timeline4, timeline3])
+      expect(subject.timeline(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      object5.block!
+      expect(subject.timeline(limit: 2)).to eq([timeline4, timeline3])
+      expect(subject.timeline(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete!
+      expect(subject.timeline(limit: 2)).to eq([timeline4, timeline3])
+      expect(subject.timeline(since: since)).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block!
+      expect(subject.timeline(limit: 2)).to eq([timeline4, timeline3])
+      expect(subject.timeline(since: since)).to eq(4)
+    end
+
+    it "filters out posts not associated with included activities" do
+      expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Announce], limit: 2)).to eq([timeline5, timeline4])
+      expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Announce])).to eq(5)
+    end
+
+    it "filters out posts not associated with included activities" do
+      expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Create], limit: 2)).to be_empty
+      expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create])).to eq(0)
+    end
+
+    context "given a prior create not in timeline" do
+      let_create!(:create, actor: actor5, object: object5)
+
+      it "includes announces by default" do
+        expect(subject.timeline(limit: 2)).to eq([timeline5, timeline4])
+        expect(subject.timeline(since: since)).to eq(5)
+      end
+
+      it "includes announces" do
+        expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Announce], limit: 2)).to eq([timeline5, timeline4])
+        expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Announce])).to eq(5)
+      end
+
+      it "filters out announces" do
+        expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Create], limit: 2)).to be_empty
+        expect(subject.timeline(since: since, inclusion: [Relationship::Content::Timeline::Create])).to eq(0)
+      end
+    end
+
+    context "given a reply" do
+      before_each { object4.assign(in_reply_to: object5).save }
+
+      it "includes replies by default" do
+        expect(subject.timeline(limit: 2)).to eq([timeline5, timeline4])
+        expect(subject.timeline(since: since)).to eq(5)
+      end
+
+      it "includes replies" do
+        expect(subject.timeline(exclude_replies: false, limit: 2)).to eq([timeline5, timeline4])
+        expect(subject.timeline(since: since, exclude_replies: false)).to eq(5)
+      end
+
+      it "filters out replies" do
+        expect(subject.timeline(exclude_replies: true, limit: 2)).to eq([timeline5, timeline3])
+        expect(subject.timeline(since: since, exclude_replies: true)).to eq(4)
+      end
+    end
+
+    context "given a local post" do
+      let_build(:object, attributed_to: subject)
+      let_create!(:create, actor: subject, object: object)
+      let_create!(:outbox_relationship, owner: subject, activity: create)
+      let_create!(:timeline, owner: subject, object: object)
+
+      it "includes the post" do
+        expect(subject.timeline(limit: 2)).to eq([timeline, timeline5])
+        expect(subject.timeline(since: since)).to eq(6)
+      end
+    end
+
+    context "given a post without an associated activity" do
+      let_build(:object, attributed_to: subject)
+      let_create!(:timeline, owner: subject, object: object)
+
+      it "includes the post" do
+        expect(subject.timeline(limit: 2)).to eq([timeline, timeline5])
+        expect(subject.timeline(since: since)).to eq(6)
+      end
+    end
+
+    it "paginates the results" do
+      expect(subject.timeline(max_id: timeline3.id, limit: 2)).to eq([timeline2, timeline1])
+      expect(subject.timeline(max_id: timeline3.id, limit: 2).more?).not_to be_true
+    end
+
+    it "paginates the results" do
+      expect(subject.timeline(min_id: timeline2.id, limit: 2)).to eq([timeline4, timeline3])
+      expect(subject.timeline(min_id: timeline2.id, limit: 2).more?).to be_true
+    end
+  end
+
   describe "#notifications" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 

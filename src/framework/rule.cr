@@ -353,7 +353,7 @@ module Ktistec
 
           trace.condition(self) if trace
 
-          {{clazz.id}}.sql(query, args).map do |model|
+          {{clazz.id}}.sql(query, args: args).map do |model|
             bindings.dup.tap do |temporary|
               if (target = @target) && (name = target.name?) && !temporary.has_key?(name)
                 temporary[name] = model

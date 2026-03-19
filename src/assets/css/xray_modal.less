@@ -85,14 +85,15 @@
     }
 
     &__content {
-        background: #1a1a1a;
+        .xray-bg();
         border-radius: 8px;
         width: @xray-viewport-width;
         height: @xray-viewport-height;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        border: 1px solid #333;
+        border: 1px solid;
+        .xray-border-color();
     }
 
     &__json {
@@ -101,7 +102,7 @@
         padding: 1rem;
         background: transparent;
         border: none;
-        color: #e1e4e8;
+        .xray-text-color();
         font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
         font-size: 13px;
         line-height: 1.5;
@@ -117,35 +118,35 @@
         }
 
         &::-webkit-scrollbar-track {
-            background: #2d2d2d;
+            .xray-scrollbar-track-bg();
         }
 
         &::-webkit-scrollbar-thumb {
-            background: #555;
+            .xray-scrollbar-thumb-bg();
             border-radius: 4px;
         }
 
         &::-webkit-scrollbar-thumb:hover {
-            background: #777;
+            .xray-scrollbar-thumb-hover-bg();
         }
     }
 
     // JSON syntax highlighting
     &__json {
         .xray-json-key {
-            color: #0084ff; // Blue for keys
+            .xray-key-color();
         }
 
         .xray-json-string {
-            color: #22863a; // Green for string values
+            .xray-string-color();
         }
 
         .xray-json-number {
-            color: #005cc5; // Light blue for numbers
+            .xray-number-color();
         }
 
         .xray-json-literal {
-            color: #a626a4; // Purple for booleans/null
+            .xray-boolean-color();
         }
     }
 
@@ -214,13 +215,13 @@ body.xray-modal-open {
 }
 
 .xray-json-clickable {
-    color: #4a9eff !important;
+    .xray-clickable-color() !important;
     cursor: pointer !important;
     text-decoration: underline;
 
     &:hover {
-        color: #2085ff !important;
-        background-color: rgba(74, 158, 255, 0.1);
+        .xray-clickable-hover-color() !important;
+        .xray-clickable-bg-hover();
     }
 }
 

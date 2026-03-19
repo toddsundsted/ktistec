@@ -848,6 +848,47 @@ module ActivityPub
       Timeline.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
+    # Returns entries in the actor's timeline.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    # Includes private (not visible) posts and replies.
+    #
+    # May be filtered to exclude replies (via `exclude_replies`).
+    #
+    # May be filtered to include only objects with associated
+    # relationships of the specified type (via `inclusion`).
+    #
+    # The cursor values correspond to timeline relationship id.
+    #
+    def timeline(*, exclude_replies = false, inclusion = nil, max_id = nil, min_id = nil, limit = 10)
+      exclude_replies =
+        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
+      inclusion =
+        case inclusion
+        when Class, String
+          %Q|AND +t.type = '#{inclusion}'|
+        when Array
+          %Q|AND +t.type IN ('#{inclusion.map(&.to_s).join("','")}')|
+        else
+          %Q|AND +t.type IN ('#{Timeline.all_subtypes.map(&.to_s).join("','")}')|
+        end
+      query = <<-QUERY
+          SELECT #{Timeline.columns(prefix: "t")}
+            FROM relationships AS t
+            JOIN objects AS o
+              ON o.iri = t.to_iri
+            JOIN actors AS c
+              ON c.iri = o.attributed_to_iri
+           WHERE +t.from_iri = ?
+             #{inclusion}
+             #{exclude_replies}
+             #{common_filters(objects: "o", actors: "c")}
+             AND %{cursor_condition}
+      QUERY
+      Timeline.query_with_cursor(query, self.iri, cursor_column: "t.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of entries in the actor's timeline since the
     # given date.
     #

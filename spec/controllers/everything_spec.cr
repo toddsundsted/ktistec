@@ -50,12 +50,12 @@ Spectator.describe EverythingController do
       end
 
       it "renders the collection" do
-        get "/everything?size=2", ACCEPT_HTML
+        get "/everything?limit=2", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{post5.id}", "object-#{post4.id}")
       end
 
       it "renders the collection" do
-        get "/everything?size=2", ACCEPT_JSON
+        get "/everything?limit=2", ACCEPT_JSON
         expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(post5.iri, post4.iri)
       end
 
@@ -67,7 +67,7 @@ Spectator.describe EverythingController do
         end
 
         it "excludes turbo-stream-source on subsequent pages" do
-          get "/everything?page=2", ACCEPT_HTML
+          get "/everything?max_id=#{post5.id}", ACCEPT_HTML
           expect(response.status_code).to eq(200)
           expect(response.body).to_not contain("turbo-stream-source")
         end

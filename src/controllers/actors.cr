@@ -160,7 +160,7 @@ class ActorsController
 
     actor = account.actor
 
-    timeline = actor.timeline(**pagination_params(env))
+    timeline = actor.timeline(**cursor_pagination_params(env))
 
     account.update_last_timeline_checked_at
 

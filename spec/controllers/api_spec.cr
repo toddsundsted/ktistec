@@ -758,6 +758,421 @@
       end
     end
 
+    describe "POST /api/v1/statuses/:id/favourite" do
+      let_create(:object, attributed_to: account.actor, published: Time.utc, visible: true)
+
+      it "returns 401" do
+        post "/api/v1/statuses/#{object.id}/favourite"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "succeeds" do
+          post "/api/v1/statuses/#{object.id}/favourite", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns favourited as true" do
+          post "/api/v1/statuses/#{object.id}/favourite", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json["favourited"]).to eq(true)
+        end
+
+        it "returns 404" do
+          post "/api/v1/statuses/999999/favourite", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+      end
+    end
+
+    describe "POST /api/v1/statuses/:id/unfavourite" do
+      let_create(:object, attributed_to: account.actor, published: Time.utc, visible: true)
+
+      it "returns 401" do
+        post "/api/v1/statuses/#{object.id}/unfavourite"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        context "when liked" do
+          let_create!(:like, actor: account.actor, object: object)
+
+          it "succeeds" do
+            post "/api/v1/statuses/#{object.id}/unfavourite", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "returns favourited as false" do
+            post "/api/v1/statuses/#{object.id}/unfavourite", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["favourited"]).to eq(false)
+          end
+
+          it "returns 404" do
+            post "/api/v1/statuses/999999/unfavourite", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(404)
+          end
+        end
+      end
+    end
+
+    describe "POST /api/v1/statuses/:id/reblog" do
+      let_create(:object, attributed_to: account.actor, published: Time.utc, visible: true)
+
+      it "returns 401" do
+        post "/api/v1/statuses/#{object.id}/reblog"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "succeeds" do
+          post "/api/v1/statuses/#{object.id}/reblog", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns reblogged as true" do
+          post "/api/v1/statuses/#{object.id}/reblog", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json["reblogged"]).to eq(true)
+        end
+
+        it "returns 404" do
+          post "/api/v1/statuses/999999/reblog", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+      end
+    end
+
+    describe "POST /api/v1/statuses/:id/unreblog" do
+      let_create(:object, attributed_to: account.actor, published: Time.utc, visible: true)
+
+      it "returns 401" do
+        post "/api/v1/statuses/#{object.id}/unreblog"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        context "when announced" do
+          let_create!(:announce, actor: account.actor, object: object)
+
+          it "succeeds" do
+            post "/api/v1/statuses/#{object.id}/unreblog", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "returns reblogged as false" do
+            post "/api/v1/statuses/#{object.id}/unreblog", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["reblogged"]).to eq(false)
+          end
+
+          it "returns 404" do
+            post "/api/v1/statuses/999999/unreblog", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(404)
+          end
+        end
+      end
+    end
+
+    describe "POST /api/v1/statuses/:id/bookmark" do
+      let_create(:object, attributed_to: account.actor, published: Time.utc, visible: true)
+
+      it "returns 401" do
+        post "/api/v1/statuses/#{object.id}/bookmark"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "succeeds" do
+          post "/api/v1/statuses/#{object.id}/bookmark", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns bookmarked as true" do
+          post "/api/v1/statuses/#{object.id}/bookmark", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json["bookmarked"]).to eq(true)
+        end
+
+        it "returns 404" do
+          post "/api/v1/statuses/999999/bookmark", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+      end
+    end
+
+    describe "POST /api/v1/statuses/:id/unbookmark" do
+      let_create(:object, attributed_to: account.actor, published: Time.utc, visible: true)
+
+      it "returns 401" do
+        post "/api/v1/statuses/#{object.id}/unbookmark"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        context "when bookmarked" do
+          let_create!(:bookmark_relationship, actor: account.actor, object: object)
+
+          it "succeeds" do
+            post "/api/v1/statuses/#{object.id}/unbookmark", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "returns bookmarked as false" do
+            post "/api/v1/statuses/#{object.id}/unbookmark", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["bookmarked"]).to eq(false)
+          end
+
+          it "returns 404" do
+            post "/api/v1/statuses/999999/unbookmark", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(404)
+          end
+        end
+      end
+    end
+
+    describe "GET /api/v1/preferences" do
+      it "returns 401" do
+        get "/api/v1/preferences"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "succeeds" do
+          get "/api/v1/preferences", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns posting:default:visibility" do
+          get "/api/v1/preferences", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json["posting:default:visibility"]).to eq("public")
+        end
+
+        it "returns posting:default:sensitive" do
+          get "/api/v1/preferences", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json["posting:default:sensitive"]).to eq(false)
+        end
+
+        it "returns posting:default:language from account" do
+          get "/api/v1/preferences", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json["posting:default:language"]).to eq("en")
+        end
+      end
+    end
+
+    describe "GET /api/v1/accounts/relationships" do
+      it "returns 401" do
+        get "/api/v1/accounts/relationships"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+        let_create(:actor, named: :other1, local: true)
+        let_create(:actor, named: :other2, local: true)
+
+        it "succeeds" do
+          get "/api/v1/accounts/relationships?id%5B%5D=#{other1.id}", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "handles multiple ids" do
+          get "/api/v1/accounts/relationships?id%5B%5D=#{other1.id}&id%5B%5D=#{other2.id}", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.size).to eq(2)
+        end
+
+        it "returns the ids" do
+          get "/api/v1/accounts/relationships?id%5B%5D=#{other1.id}&id%5B%5D=#{other2.id}", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.map(&.dig?("id"))).to eq([other1.id.to_s, other2.id.to_s])
+        end
+
+        it "returns empty array" do
+          get "/api/v1/accounts/relationships?id%5B%5D=999999", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a).to be_empty
+        end
+      end
+    end
+
+    describe "POST /api/v1/polls/:id/votes" do
+      let_create!(:question, published: Time.utc)
+      let_create!(:poll, question: question, options: [
+        Poll::Option.new("Yes", 0),
+        Poll::Option.new("No", 0),
+      ])
+
+      it "returns 401" do
+        post "/api/v1/polls/#{poll.id}/votes"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "succeeds" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns a poll" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+          json = JSON.parse(response.body)
+          expect(json["id"]).to eq(poll.id.to_s)
+        end
+
+        it "returns voted" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+          json = JSON.parse(response.body)
+          expect(json["voted"]).to eq(true)
+        end
+
+        it "returns own_votes" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+          json = JSON.parse(response.body)
+          expect(json["own_votes"]).to eq([0])
+        end
+
+        it "assigns published" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+          expect(question.votes_by(account.actor).all?(&.published.is_a?(Time))).to be_true
+        end
+
+        it "assigns special" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+          expect(question.votes_by(account.actor).all?(&.special.==("vote"))).to be_true
+        end
+
+        it "assigns to" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+          expect(question.votes_by(account.actor).flat_map(&.to)).to contain_exactly(question.attributed_to.iri)
+        end
+
+        it "does not assign cc" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+          expect(question.votes_by(account.actor).flat_map(&.cc)).to be_empty
+        end
+
+        it "schedules deliveries" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+          question.votes_by(account.actor).each do |vote|
+            create_activity = ActivityPub::Activity::Create.find(actor: account.actor, object: vote)
+            expect(Task::Deliver.find?(sender: account.actor, activity: create_activity)).not_to be_nil
+          end
+        end
+
+        context "when poll has future closed_at" do
+          before_each { poll.assign(closed_at: 1.day.from_now).save }
+
+          it "creates notification task" do
+            expect { post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json }.to change { Task::NotifyPollExpiry.count }.by(1)
+          end
+
+          it "schedules task for poll closed_at time" do
+            post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+            task = Task::NotifyPollExpiry.find(question: question)
+            expect(task.next_attempt_at).to be_close(poll.closed_at.not_nil!, 1.second)
+          end
+        end
+
+        context "when notification task already exists" do
+          before_each { poll.assign(closed_at: 1.day.from_now).save }
+
+          let_create!(:notify_poll_expiry_task, question: question)
+
+          it "does not create another task" do
+            expect { post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json }.not_to change { Task::NotifyPollExpiry.count }
+          end
+        end
+
+        context "when poll has no closed_at" do
+          before_each { poll.assign(closed_at: nil).save }
+
+          it "does not create task" do
+            expect { post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json }.not_to change { Task::NotifyPollExpiry.count }
+          end
+        end
+
+        context "when poll has closed_at in the past" do
+          before_each { poll.assign(closed_at: 1.day.ago).save }
+
+          it "does not create task" do
+            expect { post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json }.not_to change { Task::NotifyPollExpiry.count }
+          end
+        end
+
+        it "returns 404" do
+          post "/api/v1/polls/999999/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+          expect(response.status_code).to eq(404)
+        end
+
+        context "given an expired poll" do
+          before_each { poll.assign(closed_at: 1.day.ago).save }
+
+          it "returns 422" do
+            post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+            expect(response.status_code).to eq(422)
+          end
+        end
+
+        context "given an existing vote" do
+          let_create!(:note, attributed_to: account.actor, in_reply_to: question, name: "Yes", special: "vote")
+
+          it "returns 422" do
+            post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+            expect(response.status_code).to eq(422)
+          end
+        end
+
+        context "given the author's own poll" do
+          before_each { question.assign(attributed_to: account.actor).save }
+
+          it "returns 422" do
+            post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
+            expect(response.status_code).to eq(422)
+          end
+        end
+
+        context "given a multiple-choice poll" do
+          before_each { poll.assign(multiple_choice: true).save }
+
+          it "succeeds with multiple choices on multiple-choice poll" do
+            post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0, 1]}.to_json
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        it "returns 422" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0, 1]}.to_json
+          expect(response.status_code).to eq(422)
+        end
+
+        it "returns 422" do
+          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [99]}.to_json
+          expect(response.status_code).to eq(422)
+        end
+      end
+    end
+
     describe "GET /api/v1/instance/translation_languages" do
       it "succeeds" do
         get "/api/v1/instance/translation_languages"
@@ -884,6 +1299,48 @@
 
         it "returns empty array" do
           get "/api/v1/notifications", headers: json_bearer_headers(access_token.token)
+          expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
+        end
+      end
+    end
+
+    describe "GET /api/v1/lists" do
+      it "returns 401" do
+        get "/api/v1/lists"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "succeeds" do
+          get "/api/v1/lists", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns empty array" do
+          get "/api/v1/lists", headers: json_bearer_headers(access_token.token)
+          expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
+        end
+      end
+    end
+
+    describe "GET /api/v1/followed_tags" do
+      it "returns 401" do
+        get "/api/v1/followed_tags"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "succeeds" do
+          get "/api/v1/followed_tags", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns empty array" do
+          get "/api/v1/followed_tags", headers: json_bearer_headers(access_token.token)
           expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
         end
       end

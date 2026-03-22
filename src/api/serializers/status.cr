@@ -7,6 +7,7 @@
   require "../../models/activity_pub/actor"
   require "../../models/poll"
   require "../../models/quote_decision"
+  require "../../models/relationship/content/bookmark"
   require "../../views/view_helper"
   require "./account"
 
@@ -269,17 +270,27 @@
         #
         # Set `include_quote` to false to prevent recursive quote serialization.
         #
-        def self.from_object(object : ActivityPub::Object, include_quote : Bool = true) : Status
+        def self.from_object(object : ActivityPub::Object, actor : ActivityPub::Actor? = nil, include_quote : Bool = true) : Status
           account = Account.from_actor(object.attributed_to)
 
           visibility = Ktistec::ViewHelper.visibility(object.attributed_to, object)
           media_attachments = build_media_attachments(object)
-          poll = object.is_a?(ActivityPub::Object::Question) ? build_poll(object) : nil
-          quote = include_quote ? build_quote(object) : nil
+          poll = object.is_a?(ActivityPub::Object::Question) ? build_poll(object, actor) : nil
+          quote = include_quote ? build_quote(object, actor) : nil
 
           if (in_reply_to = object.in_reply_to?)
             in_reply_to_id = in_reply_to.id.to_s
             in_reply_to_account_id = in_reply_to.attributed_to.id.to_s
+          end
+
+          if actor
+            favourited = !!actor.find_like_for(object)
+            reblogged = !!actor.find_announce_for(object)
+            bookmarked = !!::Relationship::Content::Bookmark.find?(actor: actor, object: object)
+          else
+            favourited = false
+            reblogged = false
+            bookmarked = false
           end
 
           Status.new(
@@ -314,10 +325,10 @@
               manual: [] of String,
               current_user: "unknown",
             ),
-            favourited: false,
-            reblogged: false,
+            favourited: favourited,
+            reblogged: reblogged,
             muted: false,
-            bookmarked: false,
+            bookmarked: bookmarked,
             pinned: false,
             filtered: [] of FilterResult,
           )
@@ -352,7 +363,7 @@
           end
         end
 
-        private def self.build_poll(question : ActivityPub::Object::Question) : Poll?
+        def self.build_poll(question : ActivityPub::Object::Question, actor : ActivityPub::Actor? = nil) : Poll?
           if (poll = question.poll?)
             options = poll.options.map do |option|
               Poll::PollOption.new(
@@ -361,6 +372,15 @@
               )
             end
             votes_count = poll.options.sum(&.votes_count)
+            if actor
+              voted = question.voted_by?(actor)
+              own_votes = question.options_by(actor).compact_map do |name|
+                poll.options.index { |o| o.name == name }
+              end
+            else
+              voted = false
+              own_votes = [] of Int32
+            end
             Poll.new(
               id: poll.id.to_s,
               expires_at: poll.closed_at.try(&.to_rfc3339),
@@ -370,22 +390,22 @@
               voters_count: poll.multiple_choice ? poll.voters_count : nil,
               options: options,
               emojis: [] of CustomEmoji,
-              voted: false,
-              own_votes: [] of Int32,
+              voted: voted,
+              own_votes: own_votes,
             )
           end
         end
 
-        private def self.build_quote(object : ActivityPub::Object) : Quote?
+        private def self.build_quote(object : ActivityPub::Object, actor : ActivityPub::Actor? = nil) : Quote?
           if (quoted_object = object.quote?)
             if object.attributed_to == quoted_object.attributed_to
-              quoted_status = from_object(quoted_object, include_quote: false)
+              quoted_status = from_object(quoted_object, actor: actor, include_quote: false)
               Quote.new(state: "accepted", quoted_status: quoted_status)
             else
               if (authorization = object.quote_authorization?) && (decision = authorization.quote_decision?)
                 case decision.decision
                 when "accept"
-                  quoted_status = from_object(quoted_object, include_quote: false)
+                  quoted_status = from_object(quoted_object, actor: actor, include_quote: false)
                   Quote.new(state: "accepted", quoted_status: quoted_status)
                 when "reject"
                   Quote.new(state: "rejected", quoted_status: nil)

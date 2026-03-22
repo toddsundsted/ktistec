@@ -128,7 +128,7 @@
                 privacy: "public",
                 sensitive: false,
                 language: account.language || "",
-                follow_requests_count: Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: false),
+                follow_requests_count: ::Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: false),
                 indexable: false,
                 quote_policy: account.manually_approve_quotes ? "approval" : "public",
               )
@@ -159,8 +159,8 @@
             created_at: actor.created_at.not_nil!.to_rfc3339,
             last_status_at: last_status_at(actor),
             statuses_count: actor.all_posts(Time.unix(0)),
-            followers_count: Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: true),
-            following_count: Relationship::Social::Follow.count(from_iri: actor.iri, confirmed: true),
+            followers_count: ::Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: true),
+            following_count: ::Relationship::Social::Follow.count(from_iri: actor.iri, confirmed: true),
             source: source,
           )
         end
@@ -197,8 +197,8 @@
             created_at: actor.created_at.not_nil!.to_rfc3339,
             last_status_at: last_status_at(actor),
             statuses_count: actor.all_posts(Time.unix(0)),
-            followers_count: Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: true),
-            following_count: Relationship::Social::Follow.count(from_iri: actor.iri, confirmed: true),
+            followers_count: ::Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: true),
+            following_count: ::Relationship::Social::Follow.count(from_iri: actor.iri, confirmed: true),
             source: nil,
           )
         end

@@ -1,7 +1,9 @@
 {% if flag?(:with_mastodon_api) %}
   require "../framework/controller"
   require "../models/activity_pub/object"
+  require "../models/activity_pub/object/question"
   require "../models/activity_pub/activity/create"
+  require "../models/poll"
   require "../services/oauth2/client_registration"
   require "../services/object_factory"
   require "../services/outbox_activity_processor"
@@ -9,6 +11,7 @@
   require "../api/serializers/instance"
   require "../api/serializers/account"
   require "../api/serializers/status"
+  require "../api/serializers/relationship"
 
   class APIController
     include Ktistec::Controller
@@ -123,12 +126,13 @@
         unauthorized "api/error", error: "The access token is invalid"
       end
 
+      actor = account.actor
       params = cursor_pagination_params(env)
       params = params.merge(limit: params[:limit].clamp(1, 40))
 
-      timeline = account.actor.timeline(**params)
+      timeline = actor.timeline(**params)
       statuses = timeline.map do |entry|
-        API::V1::Serializers::Status.from_object(entry.object)
+        API::V1::Serializers::Status.from_object(entry.object, actor: actor)
       end
 
       if (link = link_header("/api/v1/timelines/home", statuses, params[:limit]))
@@ -143,12 +147,13 @@
         unauthorized "api/error", error: "The access token is invalid"
       end
 
+      actor = account.actor
       params = cursor_pagination_params(env)
       params = params.merge(limit: params[:limit].clamp(1, 40))
 
       posts = ActivityPub::Object.federated_posts(**params)
       statuses = posts.map do |object|
-        API::V1::Serializers::Status.from_object(object)
+        API::V1::Serializers::Status.from_object(object, actor: actor)
       end
 
       if (link = link_header("/api/v1/timelines/public", statuses, params[:limit]))
@@ -159,7 +164,7 @@
     end
 
     get "/api/v1/statuses/:id" do |env|
-      unless env.account?
+      unless (account = env.account?)
         unauthorized "api/error", error: "The access token is invalid"
       end
 
@@ -169,14 +174,15 @@
         not_found "api/error", error: "Record not found"
       end
 
-      API::V1::Serializers::Status.from_object(object).to_json
+      API::V1::Serializers::Status.from_object(object, actor: account.actor).to_json
     end
 
     get "/api/v1/statuses/:id/context" do |env|
-      unless env.account?
+      unless (account = env.account?)
         unauthorized "api/error", error: "The access token is invalid"
       end
 
+      actor = account.actor
       id = env.params.url["id"].to_i64
 
       unless (object = ActivityPub::Object.find?(id))
@@ -184,11 +190,11 @@
       end
 
       ancestors = object.ancestors.reject(&.id.== object.id).map do |ancestor|
-        API::V1::Serializers::Status.from_object(ancestor)
+        API::V1::Serializers::Status.from_object(ancestor, actor: actor)
       end
 
       descendants = object.descendants.reject(&.id.== object.id).map do |descendant|
-        API::V1::Serializers::Status.from_object(descendant)
+        API::V1::Serializers::Status.from_object(descendant, actor: actor)
       end
 
       {ancestors: ancestors, descendants: descendants}.to_json
@@ -270,7 +276,268 @@
 
       OutboxActivityProcessor.process(account, activity)
 
-      API::V1::Serializers::Status.from_object(object).to_json
+      API::V1::Serializers::Status.from_object(object, actor: account.actor).to_json
+    end
+
+    post "/api/v1/statuses/:id/favourite" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+      unless (object = ActivityPub::Object.find?(id_param(env)))
+        not_found "api/error", error: "Object not found"
+      end
+
+      actor = account.actor
+
+      unless actor.find_like_for(object)
+        to = [object.attributed_to.iri]
+        cc = [actor.followers].compact
+
+        activity = ActivityPub::Activity::Like.new(
+          iri: "#{host}/activities/#{id}",
+          actor: actor,
+          object: object,
+          published: Time.utc,
+          to: to,
+          cc: cc,
+        )
+
+        activity.save
+        OutboxActivityProcessor.process(account, activity)
+      end
+
+      API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    end
+
+    post "/api/v1/statuses/:id/unfavourite" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+      unless (object = ActivityPub::Object.find?(id_param(env)))
+        not_found "api/error", error: "Object not found"
+      end
+
+      actor = account.actor
+
+      if (like = actor.find_like_for(object))
+        to = [object.attributed_to.iri]
+        cc = [actor.followers].compact
+
+        undo = ActivityPub::Activity::Undo.new(
+          iri: "#{host}/activities/#{id}",
+          actor: actor,
+          object: like,
+          to: to,
+          cc: cc,
+        )
+
+        undo.save
+        OutboxActivityProcessor.process(account, undo)
+      end
+
+      API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    end
+
+    post "/api/v1/statuses/:id/reblog" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+      unless (object = ActivityPub::Object.find?(id_param(env)))
+        not_found "api/error", error: "Object not found"
+      end
+
+      actor = account.actor
+
+      unless actor.find_announce_for(object)
+        to = [Ktistec::Constants::PUBLIC]
+        cc = [object.attributed_to.iri, actor.followers].compact
+
+        activity = ActivityPub::Activity::Announce.new(
+          iri: "#{host}/activities/#{id}",
+          actor: actor,
+          object: object,
+          published: Time.utc,
+          visible: true,
+          to: to,
+          cc: cc,
+        )
+
+        activity.save
+        OutboxActivityProcessor.process(account, activity)
+      end
+
+      API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    end
+
+    post "/api/v1/statuses/:id/unreblog" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+      unless (object = ActivityPub::Object.find?(id_param(env)))
+        not_found "api/error", error: "Object not found"
+      end
+
+      actor = account.actor
+
+      if (announce = actor.find_announce_for(object))
+        to = [object.attributed_to.iri]
+        cc = [actor.followers].compact
+
+        undo = ActivityPub::Activity::Undo.new(
+          iri: "#{host}/activities/#{id}",
+          actor: actor,
+          object: announce,
+          to: to,
+          cc: cc,
+        )
+
+        undo.save
+        OutboxActivityProcessor.process(account, undo)
+      end
+
+      API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    end
+
+    post "/api/v1/statuses/:id/bookmark" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+      unless (object = ActivityPub::Object.find?(id_param(env)))
+        not_found "api/error", error: "Object not found"
+      end
+
+      actor = account.actor
+
+      bookmark = Relationship::Content::Bookmark.find_or_new(actor: actor, object: object)
+      bookmark.save if bookmark.new_record?
+
+      API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    end
+
+    post "/api/v1/statuses/:id/unbookmark" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+      unless (object = ActivityPub::Object.find?(id_param(env)))
+        not_found "api/error", error: "Object not found"
+      end
+
+      actor = account.actor
+
+      bookmark = Relationship::Content::Bookmark.find?(actor: actor, object: object)
+      bookmark.destroy if bookmark
+
+      API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    end
+
+    get "/api/v1/preferences" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+
+      {
+        "posting:default:visibility" => "public",
+        "posting:default:sensitive"  => false,
+        "posting:default:language"   => account.language,
+        "reading:expand:media"       => "default",
+        "reading:expand:spoilers"    => false,
+      }.to_json
+    end
+
+    get "/api/v1/accounts/relationships" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+
+      actor = account.actor
+      ids = env.params.query.fetch_all("id[]")
+
+      relationships = ids.compact_map do |id|
+        if (other = ActivityPub::Actor.find?(id.to_i64))
+          API::V1::Serializers::Relationship.from_actors(actor, other)
+        end
+      rescue ArgumentError
+      end
+
+      relationships.to_json
+    end
+
+    post "/api/v1/polls/:id/votes" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+      unless (poll = Poll.find?(id_param(env)))
+        not_found "api/error", error: "Poll not found"
+      end
+
+      question = poll.question
+      actor = account.actor
+
+      if poll.expired?
+        unprocessable_entity "api/error", error: "The poll has already ended"
+      end
+      if question.attributed_to == actor
+        unprocessable_entity "api/error", error: "You cannot vote on your own poll"
+      end
+      if question.voted_by?(actor)
+        unprocessable_entity "api/error", error: "You have already voted on this poll"
+      end
+
+      choices = env.params.json["choices"]?
+      indices = choices.is_a?(Array) ? choices.map(&.as_i) : [] of Int32
+
+      if indices.empty?
+        unprocessable_entity "api/error", error: "No choices provided"
+      end
+      unless poll.multiple_choice
+        if indices.size > 1
+          unprocessable_entity "api/error", error: "Poll only allows one choice"
+        end
+      end
+
+      selected = indices.compact_map do |index|
+        poll.options[index]?.try(&.name)
+      end
+
+      if selected.size != indices.size
+        unprocessable_entity "api/error", error: "Invalid choice index"
+      end
+
+      now = Time.utc
+
+      selected.each do |name|
+        vote = ActivityPub::Object::Note.new(
+          iri: "#{host}/objects/#{id}",
+          attributed_to: actor,
+          in_reply_to: question,
+          name: name,
+          content: nil,
+          published: now,
+          special: "vote",
+          to: [question.attributed_to.iri],
+          cc: [] of String,
+        )
+        activity = ActivityPub::Activity::Create.new(
+          iri: "#{host}/activities/#{id}",
+          actor: actor,
+          object: vote,
+          published: vote.published,
+          to: vote.to,
+          cc: vote.cc,
+        ).save
+
+        if (closed_at = poll.closed_at)
+          if closed_at > now
+            unless Task::NotifyPollExpiry.find?(question: question)
+              Task::NotifyPollExpiry.new(source_iri: "", question: question).schedule(closed_at)
+            end
+          end
+        end
+
+        OutboxActivityProcessor.process(account, activity)
+      end
+
+      API::V1::Serializers::Status.build_poll(question, actor).not_nil!.to_json
     end
 
     # stub endpoints to prevent 404 errors during client initialization
@@ -322,6 +589,22 @@
     end
 
     get "/api/v1/notifications" do |env|
+      unless env.account?
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+
+      "[]"
+    end
+
+    get "/api/v1/lists" do |env|
+      unless env.account?
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+
+      "[]"
+    end
+
+    get "/api/v1/followed_tags" do |env|
       unless env.account?
         unauthorized "api/error", error: "The access token is invalid"
       end

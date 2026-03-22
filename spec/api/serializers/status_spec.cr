@@ -154,6 +154,36 @@
         expect(subject.filtered).to be_empty
       end
 
+      context "with actor" do
+        let_create(:actor, named: :viewer, local: true, with_keys: true)
+
+        subject { described_class.from_object(object, actor: viewer) }
+
+        context "when liked" do
+          let_create!(:like, actor: viewer, object: object)
+
+          it "returns favourited" do
+            expect(subject.favourited).to be_true
+          end
+        end
+
+        context "when announced" do
+          let_create!(:announce, actor: viewer, object: object)
+
+          it "returns reblogged" do
+            expect(subject.reblogged).to be_true
+          end
+        end
+
+        context "when bookmarked" do
+          let_create!(:bookmark_relationship, actor: viewer, object: object)
+
+          it "returns bookmarked" do
+            expect(subject.bookmarked).to be_true
+          end
+        end
+      end
+
       context "with content" do
         before_each { object.assign(content: "<p>Hello world</p>").save }
 
@@ -367,6 +397,21 @@
 
           it "returns expired" do
             expect(api_poll.expired).to be_false
+          end
+        end
+
+        context "when actor has voted" do
+          let_create(:actor, named: :voter, local: true)
+          let_create!(:note, attributed_to: voter, in_reply_to_iri: question.iri, name: "Yes", special: "vote")
+
+          subject { described_class.from_object(question, actor: voter) }
+
+          it "returns voted" do
+            expect(api_poll.voted).to be_true
+          end
+
+          it "returns own_votes" do
+            expect(api_poll.own_votes).to eq([0])
           end
         end
       end

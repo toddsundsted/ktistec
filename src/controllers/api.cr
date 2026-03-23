@@ -483,8 +483,17 @@
         unprocessable_entity "api/error", error: "You have already voted on this poll"
       end
 
-      choices = env.params.json["choices"]?
-      indices = choices.is_a?(Array) ? choices.map(&.as_i) : [] of Int32
+      params = normalize_params(env.params.body.presence || env.params.json)
+      choices = params["choices[]"]? || params["choices"]?
+      indices =
+        case choices
+        when Array
+          choices.map(&.to_i)
+        when String
+          [choices.to_i]
+        else
+          [] of Int32
+        end
 
       if indices.empty?
         unprocessable_entity "api/error", error: "No choices provided"
@@ -538,6 +547,76 @@
       end
 
       API::V1::Serializers::Status.build_poll(question, actor).not_nil!.to_json
+    end
+
+    get "/api/v1/accounts/:id/following" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+      unless (actor = ActivityPub::Actor.find?(id_param(env)))
+        not_found "api/error", error: "Actor not found"
+      end
+
+      params = cursor_pagination_params(env)
+      params = params.merge(limit: params[:limit].clamp(1, 80))
+
+      public = (account.actor != actor)
+      following = actor.all_following(**params, public: public)
+      accounts = following.map do |actor|
+        API::V1::Serializers::Account.from_actor(actor)
+      end
+
+      if (link = link_header("/api/v1/accounts/#{actor.id}/following", accounts, params[:limit]))
+        env.response.headers["Link"] = link
+      end
+
+      accounts.to_a.to_json
+    end
+
+    get "/api/v1/accounts/:id/followers" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+      unless (actor = ActivityPub::Actor.find?(id_param(env)))
+        not_found "api/error", error: "Actor not found"
+      end
+
+      params = cursor_pagination_params(env)
+      params = params.merge(limit: params[:limit].clamp(1, 80))
+
+      public = (account.actor != actor)
+      followers = actor.all_followers(**params, public: public)
+      accounts = followers.map do |actor|
+        API::V1::Serializers::Account.from_actor(actor)
+      end
+
+      if (link = link_header("/api/v1/accounts/#{actor.id}/followers", accounts, params[:limit]))
+        env.response.headers["Link"] = link
+      end
+
+      accounts.to_a.to_json
+    end
+
+    get "/api/v1/follow_requests" do |env|
+      unless (account = env.account?)
+        unauthorized "api/error", error: "The access token is invalid"
+      end
+
+      actor = account.actor
+
+      params = cursor_pagination_params(env)
+      params = params.merge(limit: params[:limit].clamp(1, 80))
+
+      requests = actor.all_follow_requests(**params)
+      accounts = requests.map do |actor|
+        API::V1::Serializers::Account.from_actor(actor)
+      end
+
+      if (link = link_header("/api/v1/follow_requests", accounts, params[:limit]))
+        env.response.headers["Link"] = link
+      end
+
+      accounts.to_a.to_json
     end
 
     # stub endpoints to prevent 404 errors during client initialization

@@ -93,6 +93,7 @@ module Ktistec
       "/api/v1/statuses/:id/unreblog",
       "/api/v1/statuses/:id/bookmark",
       "/api/v1/statuses/:id/unbookmark",
+      "/api/v1/polls/:id/votes",
     ]
   {% else %}
     CSRF_ALLOWED_ROUTES = [

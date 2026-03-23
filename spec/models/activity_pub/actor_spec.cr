@@ -648,6 +648,161 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#all_following" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_following(index, confirmed = true, visible = true)
+      let(following{{index}}) { described_class.new(iri: "https://test.test/#{random_string}").save }
+      let!(follow{{index}}) { subject.follow(following{{index}}, confirmed: {{confirmed}}, visible: {{visible}}).save }
+    end
+
+    create_following(1)
+    create_following(2)
+    create_following(3)
+
+    it "returns following actors" do
+      expect(subject.all_following(public: true, limit: 10)).to contain_exactly(following1, following2, following3).in_any_order
+    end
+
+    it "paginates with max_id" do
+      expect(subject.all_following(max_id: follow3.id, limit: 2, public: true)).to eq([following2, following1])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.all_following(min_id: follow1.id, limit: 2, public: true)).to eq([following3, following2])
+    end
+
+    it "reports more results" do
+      expect(subject.all_following(min_id: follow1.id, limit: 1, public: true).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.all_following(min_id: follow1.id, limit: 2, public: true).more?).not_to be_true
+    end
+
+    create_following(4, confirmed: true, visible: false)
+
+    it "excludes non-public relationships" do
+      expect(subject.all_following(public: true, limit: 10)).not_to contain(following4)
+    end
+
+    it "includes non-public relationships" do
+      expect(subject.all_following(public: false, limit: 10)).to contain(following4)
+    end
+
+    it "excludes deleted actors" do
+      following1.delete!
+      expect(subject.all_following(public: true, limit: 10)).not_to contain(following1)
+    end
+
+    it "excludes blocked actors" do
+      following1.block!
+      expect(subject.all_following(public: true, limit: 10)).not_to contain(following1)
+    end
+  end
+
+  describe "#all_followers" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_follower(index, confirmed = true, visible = true)
+      let(follower{{index}}) { described_class.new(iri: "https://test.test/#{random_string}").save }
+      let!(follow{{index}}) { follower{{index}}.follow(subject, confirmed: {{confirmed}}, visible: {{visible}}).save }
+    end
+
+    create_follower(1)
+    create_follower(2)
+    create_follower(3)
+
+    it "returns follower actors" do
+      expect(subject.all_followers(public: true, limit: 10)).to contain_exactly(follower1, follower2, follower3).in_any_order
+    end
+
+    it "paginates with max_id" do
+      expect(subject.all_followers(max_id: follow3.id, limit: 2, public: true)).to eq([follower2, follower1])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.all_followers(min_id: follow1.id, limit: 2, public: true)).to eq([follower3, follower2])
+    end
+
+    it "reports more results" do
+      expect(subject.all_followers(min_id: follow1.id, limit: 1, public: true).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.all_followers(min_id: follow1.id, limit: 2, public: true).more?).not_to be_true
+    end
+
+    create_follower(4, confirmed: true, visible: false)
+
+    it "excludes non-public relationships when public is true" do
+      expect(subject.all_followers(public: true, limit: 10)).not_to contain(follower4)
+    end
+
+    it "includes non-public relationships when public is false" do
+      expect(subject.all_followers(public: false, limit: 10)).to contain(follower4)
+    end
+
+    it "excludes deleted actors" do
+      follower1.delete!
+      expect(subject.all_followers(public: true, limit: 10)).not_to contain(follower1)
+    end
+
+    it "excludes blocked actors" do
+      follower1.block!
+      expect(subject.all_followers(public: true, limit: 10)).not_to contain(follower1)
+    end
+  end
+
+  describe "#all_follow_requests" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_requester(index, confirmed = false)
+      let(requester{{index}}) { described_class.new(iri: "https://test.test/#{random_string}").save }
+      let!(request{{index}}) { requester{{index}}.follow(subject, confirmed: {{confirmed}}, visible: false).save }
+    end
+
+    create_requester(1)
+    create_requester(2)
+    create_requester(3)
+
+    it "returns pending follow requests" do
+      expect(subject.all_follow_requests(limit: 10)).to contain_exactly(requester1, requester2, requester3).in_any_order
+    end
+
+    it "paginates with max_id" do
+      expect(subject.all_follow_requests(max_id: request3.id, limit: 2)).to eq([requester2, requester1])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.all_follow_requests(min_id: request1.id, limit: 2)).to eq([requester3, requester2])
+    end
+
+    it "reports more results" do
+      expect(subject.all_follow_requests(min_id: request1.id, limit: 1).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.all_follow_requests(min_id: request1.id, limit: 2).more?).not_to be_true
+    end
+
+    create_requester(4, confirmed: true)
+
+    it "excludes confirmed follows" do
+      expect(subject.all_follow_requests(limit: 10)).not_to contain(requester4)
+    end
+
+    it "excludes deleted actors" do
+      requester1.delete!
+      expect(subject.all_follow_requests(limit: 10)).not_to contain(requester1)
+    end
+
+    it "excludes blocked actors" do
+      requester1.block!
+      expect(subject.all_follow_requests(limit: 10)).not_to contain(requester1)
+    end
+  end
+
   describe "#likes" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 

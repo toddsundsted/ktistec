@@ -53,12 +53,12 @@
         expect(subject.note).to eq("")
       end
 
-      it "returns avatar" do
-        expect(subject.avatar).to eq("")
+      it "returns fallback avatar" do
+        expect(subject.avatar).to match(/\/images\/avatars\/color-\d+\.png/)
       end
 
-      it "returns avatar_static" do
-        expect(subject.avatar_static).to eq("")
+      it "returns fallback avatar_static" do
+        expect(subject.avatar_static).to match(/\/images\/avatars\/color-\d+\.png/)
       end
 
       it "returns header" do
@@ -372,12 +372,12 @@
         expect(subject.note).to eq("")
       end
 
-      it "returns avatar" do
-        expect(subject.avatar).to eq("")
+      it "returns fallback avatar" do
+        expect(subject.avatar).to match(/\/images\/avatars\/color-\d+\.png/)
       end
 
-      it "returns avatar_static" do
-        expect(subject.avatar_static).to eq("")
+      it "returns fallback avatar_static" do
+        expect(subject.avatar_static).to match(/\/images\/avatars\/color-\d+\.png/)
       end
 
       it "returns header" do
@@ -580,8 +580,8 @@
         expect(json["uri"]).to eq(actor.iri)
         expect(json["display_name"]).to eq("")
         expect(json["note"]).to eq("")
-        expect(json["avatar"]).to eq("")
-        expect(json["avatar_static"]).to eq("")
+        expect(json["avatar"].as_s).to match(/\/images\/avatars\/color-\d+\.png/)
+        expect(json["avatar_static"].as_s).to match(/\/images\/avatars\/color-\d+\.png/)
         expect(json["header"]).to eq("")
         expect(json["header_static"]).to eq("")
         expect(json["locked"]).to eq(!account.auto_approve_followers)

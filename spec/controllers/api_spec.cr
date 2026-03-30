@@ -379,6 +379,262 @@
       end
     end
 
+    describe "GET /api/v1/accounts" do
+      it "returns 401" do
+        get "/api/v1/accounts"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "when authorized" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+        let_create(:actor, named: :local, local: true)
+        let_create(:actor, named: :remote)
+
+        it "succeeds" do
+          get "/api/v1/accounts", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns empty array" do
+          get "/api/v1/accounts", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a).to be_empty
+        end
+
+        it "returns multiple accounts" do
+          get "/api/v1/accounts?id%5B%5D=#{local.id}&id%5B%5D=#{remote.id}", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.size).to eq(2)
+        end
+
+        it "returns the actors's ids" do
+          get "/api/v1/accounts?id%5B%5D=#{local.id}&id%5B%5D=#{remote.id}", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.map(&.dig?("id"))).to eq([local.id.to_s, remote.id.to_s])
+        end
+
+        it "skips unknown ids" do
+          get "/api/v1/accounts?id%5B%5D=#{local.id}&id%5B%5D=999999", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.size).to eq(1)
+        end
+
+        it "skips bad ids" do
+          get "/api/v1/accounts?id%5B%5D=#{local.id}&id%5B%5D=abc", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.size).to eq(1)
+        end
+      end
+    end
+
+    describe "GET /api/v1/accounts/lookup" do
+      it "returns 401" do
+        get "/api/v1/accounts/lookup?acct=nobody@nowhere"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "when authorized" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "returns 404" do
+          get "/api/v1/accounts/lookup", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+
+        it "returns 404" do
+          get "/api/v1/accounts/lookup?acct=nobody@nowhere", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+
+        it "returns 404" do
+          get "/api/v1/accounts/lookup?acct=user@host@host", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+
+        context "given an existing actor" do
+          let_create!(:actor, username: "foobar")
+
+          it "succeeds" do
+            get "/api/v1/accounts/lookup?acct=foobar@remote", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "returns the actor's id" do
+            get "/api/v1/accounts/lookup?acct=foobar@remote", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["id"]).to eq(actor.id.to_s)
+          end
+        end
+      end
+    end
+
+    describe "GET /api/v1/accounts/:id" do
+      let_create(:actor)
+
+      it "returns 401" do
+        get "/api/v1/accounts/#{actor.id}"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "when authorized" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "returns 404" do
+          get "/api/v1/accounts/999999", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+
+        context "with a local actor" do
+          let(local_actor) { register.actor }
+
+          it "succeeds" do
+            get "/api/v1/accounts/#{local_actor.id}", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "returns the actor's id" do
+            get "/api/v1/accounts/#{local_actor.id}", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["id"]).to eq(local_actor.id.to_s)
+          end
+
+          it "returns locked" do
+            get "/api/v1/accounts/#{local_actor.id}", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["locked"]).to eq(true)
+          end
+        end
+
+        context "with a remote actor" do
+          before_each { actor.assign(username: "remote").save }
+
+          it "succeeds" do
+            get "/api/v1/accounts/#{actor.id}", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "returns the actor's id" do
+            get "/api/v1/accounts/#{actor.id}", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["id"]).to eq(actor.id.to_s)
+          end
+
+          it "returns locked" do
+            get "/api/v1/accounts/#{actor.id}", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["locked"]).to eq(false)
+          end
+        end
+      end
+    end
+
+    describe "GET /api/v1/accounts/:id/statuses" do
+      macro published_post(index, actor, visible = true)
+        let_create(:object, named: post\{{index}}, attributed_to: \{{actor}}, visible: \{{visible}}, local: true, published: Time.utc)
+        let_create(:create, named: create\{{index}}, actor: \{{actor}}, object: post\{{index}}, local: true)
+      end
+
+      it "returns 401" do
+        get "/api/v1/accounts/0/statuses"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let(actor) { account.actor }
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "succeeds" do
+          get "/api/v1/accounts/#{actor.id}/statuses", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns JSON" do
+          get "/api/v1/accounts/#{actor.id}/statuses", headers: json_bearer_headers(access_token.token)
+          expect(response.headers["Content-Type"]?).to eq("application/json")
+        end
+
+        it "returns empty array" do
+          get "/api/v1/accounts/#{actor.id}/statuses", headers: json_bearer_headers(access_token.token)
+          expect(JSON.parse(response.body).as_a).to be_empty
+        end
+
+        it "returns 404" do
+          get "/api/v1/accounts/999999/statuses", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+
+        context "with your posts" do
+          published_post(1, actor)
+          published_post(2, actor)
+          published_post(3, actor, visible: false)
+
+          before_each do
+            put_in_outbox(actor, create1)
+            put_in_outbox(actor, create2)
+            put_in_outbox(actor, create3)
+          end
+
+          it "returns all statuses" do
+            get "/api/v1/accounts/#{actor.id}/statuses", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json.as_a.size).to eq(3)
+          end
+
+          it "returns status ids" do
+            get "/api/v1/accounts/#{actor.id}/statuses", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json.as_a.map(&.dig("id").as_s)).to contain_exactly(post1.id.to_s, post2.id.to_s, post3.id.to_s).in_any_order
+          end
+
+          it "includes link header" do
+            get "/api/v1/accounts/#{actor.id}/statuses?limit=1", headers: json_bearer_headers(access_token.token)
+            expect(response.headers["Link"]?).to contain(%Q(rel="next"))
+          end
+        end
+
+        context "viewing a local actor's posts" do
+          let_create(:actor, named: :local_actor, local: true)
+          published_post(4, local_actor)
+          published_post(5, local_actor, visible: false)
+
+          before_each do
+            put_in_outbox(local_actor, create4)
+            put_in_outbox(local_actor, create5)
+          end
+
+          it "returns public statuses" do
+            get "/api/v1/accounts/#{local_actor.id}/statuses", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json.as_a.map(&.dig("id").as_s)).to contain(post4.id.to_s)
+          end
+
+          it "excludes private statuses" do
+            get "/api/v1/accounts/#{local_actor.id}/statuses", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json.as_a.map(&.dig("id").as_s)).not_to contain(post5.id.to_s)
+          end
+        end
+
+        context "viewing a remote actor's posts" do
+          let_create(:actor, named: :remote_actor, local: false)
+          let_create!(:object, named: :post6, attributed_to: remote_actor, visible: true, published: Time.utc)
+          let_create!(:object, named: :post7, attributed_to: remote_actor, visible: false, published: Time.utc)
+
+          it "returns public statuses" do
+            get "/api/v1/accounts/#{remote_actor.id}/statuses", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json.as_a.map(&.dig("id").as_s)).to contain(post6.id.to_s)
+          end
+
+          it "excludes private statuses" do
+            get "/api/v1/accounts/#{remote_actor.id}/statuses", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json.as_a.map(&.dig("id").as_s)).not_to contain(post7.id.to_s)
+          end
+        end
+      end
+    end
+
     describe "GET /api/v1/timelines/home" do
       let(actor) { account.actor }
 
@@ -1364,6 +1620,189 @@
       end
     end
 
+    describe "POST /api/v1/accounts/:id/follow" do
+      it "returns 401" do
+        post "/api/v1/accounts/0/follow"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+        let_create(:actor, named: :other)
+        let(actor) { account.actor }
+
+        it "returns 404" do
+          post "/api/v1/accounts/999999/follow", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+
+        it "succeeds" do
+          post "/api/v1/accounts/#{other.id}/follow", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns a relationship" do
+          post "/api/v1/accounts/#{other.id}/follow", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json["id"]).to eq(other.id.to_s)
+        end
+
+        it "sets requested to true" do
+          post "/api/v1/accounts/#{other.id}/follow", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json["requested"]).to eq(true)
+        end
+
+        it "creates a follow relationship" do
+          expect { post "/api/v1/accounts/#{other.id}/follow", headers: json_bearer_headers(access_token.token) }
+            .to change { Relationship::Social::Follow.count(actor: actor, object: other) }.by(1)
+        end
+
+        context "when already following" do
+          before_each do
+            actor.follow(other, confirmed: true, visible: true).save
+          end
+
+          it "does not create a duplicate" do
+            expect { post "/api/v1/accounts/#{other.id}/follow", headers: json_bearer_headers(access_token.token) }
+              .not_to change { Relationship::Social::Follow.count(actor: actor) }
+          end
+        end
+      end
+    end
+
+    describe "POST /api/v1/accounts/:id/unfollow" do
+      it "returns 401" do
+        post "/api/v1/accounts/0/unfollow"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+        let_create(:actor, named: :other)
+        let(actor) { account.actor }
+
+        it "returns 404" do
+          post "/api/v1/accounts/999999/unfollow", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+
+        it "succeeds" do
+          post "/api/v1/accounts/#{other.id}/unfollow", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns a relationship" do
+          post "/api/v1/accounts/#{other.id}/unfollow", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json["id"]).to eq(other.id.to_s)
+        end
+
+        context "when following" do
+          let_create!(:follow, named: nil, actor: actor, object: other)
+
+          before_each do
+            actor.follow(other, confirmed: true, visible: false).save
+          end
+
+          it "sets following to false" do
+            post "/api/v1/accounts/#{other.id}/unfollow", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["following"]).to eq(false)
+          end
+
+          it "destroys the follow relationship" do
+            expect { post "/api/v1/accounts/#{other.id}/unfollow", headers: json_bearer_headers(access_token.token) }
+              .to change { Relationship::Social::Follow.count(actor: actor, object: other) }.by(-1)
+          end
+        end
+      end
+    end
+
+    describe "POST /api/v1/follow_requests/:id/authorize" do
+      it "returns 401" do
+        post "/api/v1/follow_requests/0/authorize"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+        let_create(:actor, named: :requester)
+        let(actor) { account.actor }
+
+        it "returns 404" do
+          post "/api/v1/follow_requests/999999/authorize", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+
+        it "succeeds" do
+          post "/api/v1/follow_requests/#{requester.id}/authorize", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        context "with a pending follow request" do
+          let_create!(:follow, named: nil, actor: requester, object: actor)
+
+          before_each do
+            requester.follow(actor, confirmed: false, visible: false).save
+          end
+
+          it "sets followed_by to true" do
+            post "/api/v1/follow_requests/#{requester.id}/authorize", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["followed_by"]).to eq(true)
+          end
+
+          it "confirms the follow relationship" do
+            expect { post "/api/v1/follow_requests/#{requester.id}/authorize", headers: json_bearer_headers(access_token.token) }
+              .to change { Relationship::Social::Follow.find(actor: requester, object: actor).confirmed }.from(false).to(true)
+          end
+        end
+      end
+    end
+
+    describe "POST /api/v1/follow_requests/:id/reject" do
+      it "returns 401" do
+        post "/api/v1/follow_requests/0/reject"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "with valid user access token" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+        let_create(:actor, named: :requester)
+        let(actor) { account.actor }
+
+        it "returns 404" do
+          post "/api/v1/follow_requests/999999/reject", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
+        end
+
+        it "succeeds" do
+          post "/api/v1/follow_requests/#{requester.id}/reject", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        context "with a pending follow request" do
+          let_create!(:follow, named: nil, actor: requester, object: actor)
+
+          before_each do
+            requester.follow(actor, confirmed: false, visible: false).save
+          end
+
+          it "sets followed_by to false" do
+            post "/api/v1/follow_requests/#{requester.id}/reject", headers: json_bearer_headers(access_token.token)
+            json = JSON.parse(response.body)
+            expect(json["followed_by"]).to eq(false)
+          end
+
+          it "confirms the follow relationship" do
+            expect { post "/api/v1/follow_requests/#{requester.id}/reject", headers: json_bearer_headers(access_token.token) }
+              .to change { Relationship::Social::Follow.find(actor: requester, object: actor).confirmed }.from(false).to(true)
+          end
+        end
+      end
+    end
+
     describe "GET /api/v1/instance/translation_languages" do
       it "succeeds" do
         get "/api/v1/instance/translation_languages"
@@ -1533,6 +1972,46 @@
         it "returns empty array" do
           get "/api/v1/followed_tags", headers: json_bearer_headers(access_token.token)
           expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
+        end
+      end
+    end
+
+    describe "GET /api/v1/custom_emojis" do
+      it "succeeds" do
+        get "/api/v1/custom_emojis"
+        expect(response.status_code).to eq(200)
+      end
+
+      it "returns empty array" do
+        get "/api/v1/custom_emojis"
+        expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
+      end
+    end
+
+    describe "GET /api/v1/accounts/:id/featured_tags" do
+      let_create(:actor)
+
+      it "returns 401" do
+        get "/api/v1/accounts/#{actor.id}/featured_tags"
+        expect(response.status_code).to eq(401)
+      end
+
+      context "when authorized" do
+        let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+        it "succeeds" do
+          get "/api/v1/accounts/#{actor.id}/featured_tags", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "returns empty array" do
+          get "/api/v1/accounts/#{actor.id}/featured_tags", headers: json_bearer_headers(access_token.token)
+          expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
+        end
+
+        it "returns 404" do
+          get "/api/v1/accounts/999999/featured_tags", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(404)
         end
       end
     end

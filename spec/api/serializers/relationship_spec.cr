@@ -70,7 +70,9 @@
       end
 
       context "when following other" do
-        before_each { do_follow(actor, other) }
+        let_create!(:follow_relationship, actor: actor, object: other, confirmed: true)
+        let_create!(:follow, named: :follow_activity, actor: actor, object: other)
+        let_create!(:accept, named: nil, actor: other, object: follow_activity)
 
         it "returns following" do
           expect(subject.following).to be_true
@@ -78,7 +80,9 @@
       end
 
       context "when followed by other" do
-        before_each { do_follow(other, actor) }
+        let_create!(:follow_relationship, actor: other, object: actor, confirmed: true)
+        let_create!(:follow, named: :follow_activity, actor: other, object: actor)
+        let_create!(:accept, named: nil, actor: actor, object: follow_activity)
 
         it "returns followed_by" do
           expect(subject.followed_by).to be_true

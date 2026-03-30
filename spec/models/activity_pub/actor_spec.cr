@@ -1497,6 +1497,64 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#known_posts" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro post(index)
+      let_create!(
+        :object, named: post{{index}},
+        attributed_to: subject,
+        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+        visible: {{index}}.odd?
+      )
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.known_posts(limit: 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "filters out non-public posts" do
+      expect(subject.known_posts(limit: 2)).to eq([post5, post3])
+    end
+
+    it "filters out deleted posts" do
+      post5.delete!
+      expect(subject.known_posts(limit: 3)).to eq([post3, post1])
+    end
+
+    it "filters out blocked posts" do
+      post5.block!
+      expect(subject.known_posts(limit: 3)).to eq([post3, post1])
+    end
+
+    it "filters out draft posts" do
+      post5.assign(published: nil).save
+      expect(subject.known_posts(limit: 3)).to eq([post3, post1])
+    end
+
+    it "paginates with max_id" do
+      expect(subject.known_posts(max_id: post5.id, limit: 2)).to eq([post3, post1])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.known_posts(min_id: post1.id, limit: 2)).to eq([post5, post3])
+    end
+
+    it "reports more results" do
+      expect(subject.known_posts(min_id: post1.id, limit: 1).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.known_posts(limit: 5).more?).not_to be_true
+    end
+  end
+
   describe "#public_posts_with_pins" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
@@ -1647,6 +1705,84 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#public_posts" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro post(index)
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
+      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
+      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "instantiates the correct subclass" do
+      expect(subject.public_posts(limit: 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "filters out deleted posts" do
+      object5.delete!
+      expect(subject.public_posts(limit: 2)).to eq([object4, object3])
+    end
+
+    it "filters out blocked posts" do
+      object5.block!
+      expect(subject.public_posts(limit: 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete!
+      expect(subject.public_posts(limit: 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block!
+      expect(subject.public_posts(limit: 2)).to eq([object4, object3])
+    end
+
+    it "filters out non-public posts" do
+      object5.assign(visible: false).save
+      expect(subject.public_posts(limit: 2)).to eq([object4, object3])
+    end
+
+    it "filters out replies" do
+      object5.assign(in_reply_to: object3).save
+      expect(subject.public_posts(limit: 2)).to eq([object4, object3])
+    end
+
+    it "filters out posts belonging to undone activities" do
+      activity5.undo!
+      expect(subject.public_posts(limit: 2)).to eq([object4, object3])
+    end
+
+    # only local (not cached) actors have an outbox
+    it "filters out posts that are not in an outbox" do
+      outbox5.destroy
+      expect(subject.public_posts(limit: 2)).to eq([object4, object3])
+    end
+
+    it "paginates with max_id" do
+      expect(subject.public_posts(max_id: outbox5.id, limit: 2)).to eq([object4, object3])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.public_posts(min_id: outbox1.id, limit: 2)).to eq([object3, object2])
+    end
+
+    it "reports more results" do
+      expect(subject.public_posts(min_id: outbox1.id, limit: 1).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.public_posts(limit: 5).more?).not_to be_true
+    end
+  end
+
   describe "#all_posts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
@@ -1730,6 +1866,99 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
       expect(subject.all_posts(3, 2)).to eq([object1])
       expect(subject.all_posts(3, 2).more?).not_to be_true
+    end
+  end
+
+  describe "#all_posts" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro post(index)
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
+      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
+      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.all_posts(limit: 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "returns the count" do
+      expect(subject.all_posts(since: since)).to eq(5)
+      expect(subject.all_posts(since: object1.created_at)).to eq(4)
+    end
+
+    it "filters out deleted posts" do
+      object5.delete!
+      expect(subject.all_posts(limit: 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      object5.block!
+      expect(subject.all_posts(limit: 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete!
+      expect(subject.all_posts(limit: 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block!
+      expect(subject.all_posts(limit: 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
+    end
+
+    it "includes non-public posts" do
+      object5.assign(visible: false).save
+      expect(subject.all_posts(limit: 2)).to eq([object5, object4])
+      expect(subject.all_posts(since: since)).to eq(5)
+    end
+
+    it "includes replies" do
+      object5.assign(in_reply_to: object3).save
+      expect(subject.all_posts(limit: 2)).to eq([object5, object4])
+      expect(subject.all_posts(since: since)).to eq(5)
+    end
+
+    it "filters out posts belonging to undone activities" do
+      activity5.undo!
+      expect(subject.all_posts(limit: 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
+    end
+
+    # only local (not cached) actors have an outbox
+    it "filters out posts that are not in an outbox" do
+      outbox5.destroy
+      expect(subject.all_posts(limit: 2)).to eq([object4, object3])
+      expect(subject.all_posts(since: since)).to eq(4)
+    end
+
+    it "paginates with max_id" do
+      expect(subject.all_posts(max_id: outbox5.id, limit: 2)).to eq([object4, object3])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.all_posts(min_id: outbox1.id, limit: 2)).to eq([object3, object2])
+    end
+
+    it "reports more results" do
+      expect(subject.all_posts(min_id: outbox1.id, limit: 1).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.all_posts(limit: 5).more?).not_to be_true
     end
   end
 

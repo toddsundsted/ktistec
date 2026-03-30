@@ -4,6 +4,7 @@
   require "../../models/account"
   require "../../models/activity_pub/actor"
   require "../../models/relationship/social/follow"
+  require "../../utils/avatar"
 
   module API
     module V1::Serializers
@@ -134,7 +135,7 @@
               )
             end
 
-          avatar = actor.icon || ""
+          avatar = Utils::Avatar.url_for(actor)
           header = actor.image || ""
 
           Account.new(
@@ -172,7 +173,7 @@
         def self.from_actor(actor : ActivityPub::Actor) : Account
           fields = build_fields(actor)
 
-          avatar = actor.icon || ""
+          avatar = Utils::Avatar.url_for(actor)
           header = actor.image || ""
 
           Account.new(

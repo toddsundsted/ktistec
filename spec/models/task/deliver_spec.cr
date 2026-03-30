@@ -36,8 +36,8 @@ Spectator.describe Task::Deliver do
     end
   end
 
-  let_build(:actor, named: :local_recipient, iri: "https://test.test/actors/local")
-  let_build(:actor, named: :remote_recipient, iri: "https://remote/actors/remote")
+  let_build(:actor, named: :local_recipient, username: "local", local: true)
+  let_build(:actor, named: :remote_recipient, username: "remote")
 
   let_build(:collection, named: :local_collection, iri: "https://test.test/collections/local")
   let_build(:collection, named: :remote_collection, iri: "https://remote/collections/remote")

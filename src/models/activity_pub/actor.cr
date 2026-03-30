@@ -716,6 +716,29 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
     end
 
+    # Returns the actor's known posts.
+    #
+    # Meant to be called on both local and cached actors.
+    #
+    # Does not include private (not visible) posts.
+    #
+    # Note: The offset-based overload prioritizes pinned posts; this
+    # cursor-based overload does not. A pin-aware cursor variant will
+    # be needed when offset-based pagination is retired.
+    #
+    def known_posts(*, max_id = nil, min_id = nil, limit = 10)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+          WHERE o.attributed_to_iri = ?
+            #{common_filters(objects: "o")}
+            AND o.published IS NOT NULL
+            AND o.visible = 1
+            AND %{cursor_condition}
+      QUERY
+      Object.query_with_cursor(query, self.iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the actor's public posts and shares.
     #
     # Meant to be called on local (not cached) actors.
@@ -742,6 +765,33 @@ module ActivityPub
           LIMIT ? OFFSET ?
       QUERY
       Object.query_and_paginate(query, self.iri, page: page, size: size)
+    end
+
+    # Returns the actor's public posts and shares.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    # Does not include private (not visible) posts and replies.
+    #
+    def public_posts(*, max_id = nil, min_id = nil, limit = 10)
+      query = <<-QUERY
+         SELECT DISTINCT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+            AND r.type = '#{Relationship::Content::Outbox}'
+          WHERE r.from_iri = ?
+            #{common_filters(objects: "o", actors: "t", activities: "a")}
+            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
+            AND o.visible = 1
+            AND %{cursor_condition}
+      QUERY
+      Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the actor's public posts and shares.
@@ -825,6 +875,31 @@ module ActivityPub
           LIMIT ? OFFSET ?
       QUERY
       Object.query_and_paginate(query, self.iri, page: page, size: size)
+    end
+
+    # Returns the actor's posts and shares.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    # Includes private posts and replies!
+    #
+    def all_posts(*, max_id = nil, min_id = nil, limit = 10)
+      query = <<-QUERY
+         SELECT DISTINCT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS t
+             ON t.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+            AND r.type = '#{Relationship::Content::Outbox}'
+          WHERE r.from_iri = ?
+            #{common_filters(objects: "o", actors: "t", activities: "a")}
+            AND %{cursor_condition}
+      QUERY
+      Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the count of the actor's posts since the given date.

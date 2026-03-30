@@ -85,15 +85,7 @@ module Ktistec
     CSRF_ALLOWED_ROUTES = [
       "/actors/:username/inbox",
       "/oauth/token",
-      "/api/v1/apps",
-      "/api/v1/statuses",
-      "/api/v1/statuses/:id/favourite",
-      "/api/v1/statuses/:id/unfavourite",
-      "/api/v1/statuses/:id/reblog",
-      "/api/v1/statuses/:id/unreblog",
-      "/api/v1/statuses/:id/bookmark",
-      "/api/v1/statuses/:id/unbookmark",
-      "/api/v1/polls/:id/votes",
+      "/api/*",
     ]
   {% else %}
     CSRF_ALLOWED_ROUTES = [

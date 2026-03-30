@@ -38,7 +38,7 @@ class RelationshipsController
       not_found
     end
 
-    related = account.actor.all_following(**pagination_params(env), public: env.account? != account)
+    related = account.actor.all_following(**cursor_pagination_params(env), public: env.account? != account)
     ok "relationships/actors", env: env, related: related, title: "Following"
   end
 
@@ -47,7 +47,7 @@ class RelationshipsController
       not_found
     end
 
-    related = account.actor.all_followers(**pagination_params(env), public: env.account? != account)
+    related = account.actor.all_followers(**cursor_pagination_params(env), public: env.account? != account)
     ok "relationships/actors", env: env, related: related, title: "Followers"
   end
 

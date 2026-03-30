@@ -47,9 +47,9 @@
 
         def self.from_actors(actor : ActivityPub::Actor, other : ActivityPub::Actor) : Relationship
           follow = actor.follows?(other)
-          following = follow ? follow.confirmed : false
+          following = follow ? !!follow.accepted? : false
           follow_by = other.follows?(actor)
-          followed_by = follow_by ? follow_by.confirmed : false
+          followed_by = follow_by ? !!follow_by.accepted? : false
           requested = follow ? follow.pending? : false
           blocking = other.blocked?
 

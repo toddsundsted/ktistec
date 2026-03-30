@@ -315,7 +315,7 @@ Spectator.describe "object partials" do
 
           it "renders a link back to the parent in thread view" do
             expect(subject.xpath_nodes("//a[contains(@class,'in-reply-to')]/@title").map(&.text))
-              .to contain_exactly("@remote")
+              .to contain_exactly(original.attributed_to.handle)
           end
         end
 

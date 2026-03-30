@@ -101,7 +101,7 @@ end
 # actor factories
 
 def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **options)
-  username = random_string
+  username = options.fetch(:username, random_string)
   iri = local ? "https://test.test/actors/#{username}" : "https://remote/actors/#{username}"
   pem_public_key, pem_private_key =
     if with_keys
@@ -113,6 +113,7 @@ def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **
   clazz.new(
     **{
       iri:             iri,
+      username:        username,
       inbox:           "#{iri}/inbox",
       followers:       "#{iri}/followers",
       following:       "#{iri}/following",

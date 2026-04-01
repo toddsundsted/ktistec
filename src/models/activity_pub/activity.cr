@@ -5,8 +5,6 @@ require "../../framework/model"
 require "../../framework/model/**"
 require "../activity_pub"
 
-require "../../views/view_helper"
-
 module ActivityPub
   class Activity
     include Ktistec::Model
@@ -92,7 +90,13 @@ module ActivityPub
     def self.map(json, **options)
       ModelHelper.from_json_ld(json)
     end
+  end
+end
 
+require "../../views/view_helper"
+
+module ActivityPub
+  class Activity
     module ModelHelper
       include Ktistec::ViewHelper
 

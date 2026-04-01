@@ -1,6 +1,30 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.3.5]
+Continues the Mastodon-compatible API work. The API is now always
+enabled (the `with_mastodon_api` compiler flag has been removed).
+
+### Added
+- Mastodon-compatible API:
+  - `/api/v1/accounts`
+  - `/api/v1/accounts/lookup`
+  - `/api/v1/accounts/:id`
+  - `/api/v1/accounts/:id/statuses`
+  - `/api/v1/accounts/:id/following`
+  - `/api/v1/accounts/:id/followers`
+  - `/api/v1/accounts/relationships`
+  - `/api/v1/follow_requests`
+  - `/api/v1/polls/:id/votes`
+  - `/api/v1/preferences`
+
+### Fixed
+- Correctly resolve `keyId` from `Signature` header for inbox verification.
+
+### Changed
+- Support both offset and cursor-based pagination in JSON collections.
+- Switch following/followers pages to cursor-based pagination.
+
 ## [v3.3.4]
 Continues the Mastodon-compatible API work.
 
@@ -704,6 +728,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.3.5]: https://github.com/toddsundsted/ktistec/compare/5e87aae6...6f54cac5
 [v3.3.4]: https://github.com/toddsundsted/ktistec/compare/f64f24d1...df77bdab
 [v3.3.3]: https://github.com/toddsundsted/ktistec/compare/39a167b9...c95cd6f3
 [v3.3.2]: https://github.com/toddsundsted/ktistec/compare/6ab42fb5...cc77366a

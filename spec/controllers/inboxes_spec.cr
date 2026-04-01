@@ -350,6 +350,262 @@ Spectator.describe InboxesController do
           end
         end
       end
+
+      context "and the actor is impersonated" do
+        let_create(:actor, named: :impersonator, with_keys: true)
+
+        let(headers) { Ktistec::Signature.sign(impersonator, actor.inbox.not_nil!, json_ld, "application/json") }
+
+        before_each { HTTP::Client.activities << activity }
+
+        it "retrieves the activity from the origin" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "and the signature header is malformed" do
+        before_each { HTTP::Client.activities << activity }
+
+        let(headers) do
+          HTTP::Headers{
+            "Content-Type" => "application/json",
+            "Signature"    => "bogus",
+          }
+        end
+
+        it "retrieves the activity from the origin" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(response.status_code).to eq(200)
+        end
+      end
+
+      context "given a GoToSocial-style path keyId" do
+        let(key_id) { "#{other.iri}/main-key" }
+
+        # GoToSocial returns an actor stub with nested `publicKey`
+        # see: https://docs.gotosocial.org/en/v0.21.2/federation/http_signatures/#quirks
+        let(key_document) do
+          {
+            "@context" => [
+              "https://w3id.org/security/v1",
+              "https://www.w3.org/ns/activitystreams",
+            ],
+            "id"        => other.iri,
+            "type"      => "Person",
+            "publicKey" => {
+              "id"           => key_id,
+              "owner"        => other.iri,
+              "publicKeyPem" => other.pem_public_key,
+            },
+          }.to_json
+        end
+
+        let(headers) do
+          Ktistec::Signature.sign(other, actor.inbox.not_nil!, json_ld, "application/json").tap do |hdrs|
+            hdrs["Signature"] = hdrs["Signature"].gsub(/keyId="[^"]*"/, %Q<keyId="#{key_id}">)
+          end
+        end
+
+        before_each do
+          HTTP::Client.cache[key_id] = key_document
+          HTTP::Client.activities << activity
+        end
+
+        it "retrieves the key document" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(HTTP::Client.requests).to have("GET #{key_id}")
+        end
+
+        it "does not retrieve the activity from the origin" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(response.status_code).to eq(200)
+        end
+
+        context "and the actor is impersonated" do
+          let_create(:actor, named: :impersonated, with_keys: true)
+
+          let(key_document) do
+            {
+              "@context"  => ["https://w3id.org/security/v1", "https://www.w3.org/ns/activitystreams"],
+              "id"        => impersonated.iri,
+              "type"      => "Person",
+              "publicKey" => {
+                "id"           => key_id,
+                "owner"        => impersonated.iri,
+                "publicKeyPem" => impersonated.pem_public_key,
+              },
+            }.to_json
+          end
+
+          it "retrieves the activity from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the resolved key id does not match the keyId" do
+          let(key_document) do
+            {
+              "@context"  => ["https://w3id.org/security/v1", "https://www.w3.org/ns/activitystreams"],
+              "id"        => other.iri,
+              "type"      => "Person",
+              "publicKey" => {
+                "id"           => "#{other.iri}/wrong-key",
+                "owner"        => other.iri,
+                "publicKeyPem" => other.pem_public_key,
+              },
+            }.to_json
+          end
+
+          it "retrieves the activity from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the publicKey is missing" do
+          let(key_document) do
+            {
+              "@context" => ["https://w3id.org/security/v1", "https://www.w3.org/ns/activitystreams"],
+              "id"       => other.iri,
+              "type"     => "Person",
+            }.to_json
+          end
+
+          it "retrieves the activity from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and fetching the key document fails" do
+          let(key_id) { "https://remote/returns-500/main-key" }
+
+          it "retrieves the activity from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
+        end
+      end
+
+      context "given a path keyId" do
+        let(key_id) { "#{other.iri}/main-key" }
+
+        let(key_document) do
+          {
+            "@context"     => "https://w3id.org/security/v1",
+            "id"           => key_id,
+            "owner"        => other.iri,
+            "publicKeyPem" => other.pem_public_key,
+          }.to_json
+        end
+
+        let(headers) do
+          Ktistec::Signature.sign(other, actor.inbox.not_nil!, json_ld, "application/json").tap do |hdrs|
+            hdrs["Signature"] = hdrs["Signature"].gsub(/keyId="[^"]*"/, %Q<keyId="#{key_id}">)
+          end
+        end
+
+        before_each do
+          HTTP::Client.cache[key_id] = key_document
+          HTTP::Client.activities << activity
+        end
+
+        it "retrieves the key document" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(HTTP::Client.requests).to have("GET #{key_id}")
+        end
+
+        it "does not retrieve the activity from the origin" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(response.status_code).to eq(200)
+        end
+
+        context "and the actor is impersonated" do
+          let_create(:actor, named: :impersonated, with_keys: true)
+
+          let(key_document) do
+            {
+              "@context"     => "https://w3id.org/security/v1",
+              "id"           => key_id,
+              "owner"        => impersonated.iri,
+              "publicKeyPem" => impersonated.pem_public_key,
+            }.to_json
+          end
+
+          it "retrieves the activity from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the resolved key id does not match the keyId" do
+          let(key_document) do
+            {
+              "@context"     => "https://w3id.org/security/v1",
+              "id"           => "#{other.iri}/wrong-key",
+              "owner"        => other.iri,
+              "publicKeyPem" => other.pem_public_key,
+            }.to_json
+          end
+
+          it "retrieves the activity from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
+        end
+      end
     end
 
     context "when the other actor is down" do

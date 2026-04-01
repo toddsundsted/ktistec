@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../framework/json_ld"
 require "../framework/open"
 require "../framework/signature"
 require "../ktistec/constants"
@@ -11,6 +12,100 @@ class InboxesController
   Log = ::Log.for("inbox")
 
   skip_auth ["/actors/:username/inbox"], POST
+
+  # Lightweight `KeyPair` for path-based `keyId` resolution.
+  #
+  private struct ResolvedKey
+    include Ktistec::KeyPair
+
+    getter iri : String
+
+    def initialize(@iri : String, @pem_public_key : String)
+    end
+
+    def public_key
+      OpenSSL::RSA.new(@pem_public_key, nil, false)
+    end
+
+    def private_key
+      nil
+    end
+  end
+
+  # Parses the `keyId` parameter from the `Signature` header.
+  #
+  # Returns `nil` if the header is missing or malformed.
+  #
+  private def self.parse_key_id(headers : HTTP::Headers) : String?
+    if (signature = headers["Signature"]?)
+      signature.split(",", remove_empty: true).each do |part|
+        parts = part.split("=", 2)
+        next unless parts.size == 2
+        if parts[0].strip == "keyId"
+          return parts[1].strip.delete('"')
+        end
+      end
+    end
+  end
+
+  # Resolves a `keyId` to a `KeyPair` for signature verification.
+  #
+  # Handles three cases:
+  #
+  # 1. Fragment URI (e.g. "actor_iri#main-key") — the common case
+  #    used by Mastodon, Pleroma, Ktistec, etc. Strips the fragment,
+  #    checks that the base URL matches the activity's actor, and
+  #    uses the already-fetched actor as the `KeyPair`.
+  #
+  # 2. Path URI returning an actor stub with nested `publicKey`
+  #    (GoToSocial). Fetches the document, extracts key fields from
+  #    the nested `publicKey` object.
+  #
+  # 3. Path URI returning a bare key document with top-level
+  #    `publicKeyPem` and `owner` (the correct form per the spec).
+  #
+  # For cases 2 and 3, verifies that the resolved key's id matches
+  # the `keyId` from the `Signature` header and that the owner
+  # matches the activity's actor. Returns a `ResolvedKey`.
+  #
+  # Returns `nil` on any failure or cross-check mismatch, allowing
+  # the caller to fall through to origin-fetch verification.
+  #
+  private def self.resolve_key_id(account, key_id : String, actor, request_id) : Ktistec::KeyPair?
+    if key_id.includes?("#")
+      # case 1: fragment URI
+      base_url = key_id.split("#", 2).first
+      if base_url == actor.iri
+        actor
+      end
+    else
+      # cases 2 & 3: path URI
+      accept = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
+      response = Ktistec::Open.open?(account.actor, key_id, accept)
+      unless response
+        Log.warn { "[#{request_id}] failed to fetch key for #{key_id}" }
+        return
+      end
+      json_ld = Ktistec::JSON_LD.expand(JSON.parse(response.body))
+      # actor stub with nested publicKey (GoToSocial)
+      pem = Ktistec::JSON_LD.dig?(json_ld, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
+      owner = Ktistec::JSON_LD.dig_id?(json_ld, "https://w3id.org/security#publicKey", "https://w3id.org/security#owner")
+      resolved_key_id = Ktistec::JSON_LD.dig_id?(json_ld, "https://w3id.org/security#publicKey")
+      # bare key document
+      unless pem && owner && resolved_key_id
+        pem = Ktistec::JSON_LD.dig?(json_ld, "https://w3id.org/security#publicKeyPem")
+        owner = Ktistec::JSON_LD.dig_id?(json_ld, "https://w3id.org/security#owner")
+        resolved_key_id = json_ld.dig?("@id").try(&.as_s)
+      end
+      if pem && owner && resolved_key_id
+        if owner == actor.iri && resolved_key_id == key_id
+          ResolvedKey.new(resolved_key_id, pem)
+        end
+      end
+    end
+  rescue ex
+    Log.trace { "[#{request_id}] keyId resolution failed with exception: #{ex.message}" }
+  end
 
   private def self.get_account(env)
     Account.find?(username: env.params.url["username"]?)
@@ -54,13 +149,12 @@ class InboxesController
       ok
     end
 
-    # if the activity is signed but we don't have the actor's public
-    # key, 1) fetch the actor, including their public key. 2) verify
-    # the activity against the actor's public key (this will fail for
-    # relays). if the activity is not signed or verification fails,
-    # 3) verify the activity by retrieving it from the origin.
-    # finally, 4) ensure the verified activity is associated with the
-    # fetched actor.
+    # if the activity is signed, 1) fetch the actor. 2) resolve the
+    # keyId from the signature header to determine the correct key for
+    # verification. 3) verify the signature using the resolved key. if
+    # the activity is not signed or verification fails, 4) verify the
+    # activity by retrieving it from the origin. finally, 5) ensure
+    # the verified activity is associated with the fetched actor.
 
     # 1
 
@@ -84,17 +178,21 @@ class InboxesController
 
     verified = false
 
-    # 2
+    # 2 & 3
 
     if signature
-      if Ktistec::Signature.verify?(actor, "#{host}#{env.request.path}", env.request.headers, body)
+      key_pair =
+        if (key_id = parse_key_id(env.request.headers))
+          resolve_key_id(account, key_id, actor, request_id)
+        end
+      if key_pair && Ktistec::Signature.verify?(key_pair, "#{host}#{env.request.path}", env.request.headers, body)
         verified = true
       else
         Log.trace { "[#{request_id}] signature verification failed" }
       end
     end
 
-    # 3
+    # 4
 
     unless verified
       if activity.iri.presence && (temporary = ActivityPub::Activity.dereference?(account.actor, activity.iri))
@@ -144,7 +242,7 @@ class InboxesController
       bad_request("Can't Be Verified")
     end
 
-    # 4
+    # 5
 
     actor.up!
 

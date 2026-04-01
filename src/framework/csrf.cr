@@ -81,18 +81,11 @@ module Ktistec
     end
   end
 
-  {% if flag?(:with_mastodon_api) %}
-    CSRF_ALLOWED_ROUTES = [
-      "/actors/:username/inbox",
-      "/oauth/token",
-      "/api/*",
-    ]
-  {% else %}
-    CSRF_ALLOWED_ROUTES = [
-      "/actors/:username/inbox",
-      "/oauth/token",
-    ]
-  {% end %}
+  CSRF_ALLOWED_ROUTES = [
+    "/actors/:username/inbox",
+    "/oauth/token",
+    "/api/*",
+  ]
 
   add_handler CSRF.new(
     allowed_routes: CSRF_ALLOWED_ROUTES

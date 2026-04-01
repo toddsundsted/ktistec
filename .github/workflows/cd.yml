@@ -2,9 +2,7 @@
 on:
   push:
     tags:
-      - "v*.*.*"
-  # Temporary, for demonstration purposes
-  pull_request:
+      - "v*.*.*":
 
 # deploy to github's image registry
 env:

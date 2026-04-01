@@ -1,6 +1,8 @@
 require "spectator"
 require "http/request"
 
+require "./base"
+
 # Networking mock.
 #
 # Cache an actor for later retrieval from the mock:
@@ -187,11 +189,9 @@ class HTTP::Client
   end
 end
 
-{% if @top_level.has_constant?("BEFORE_PROCS") %}
-  BEFORE_PROCS << -> do
-    HTTP::Client.reset
-  end
-{% end %}
+BEFORE_PROCS << -> do
+  HTTP::Client.reset
+end
 
 # WebFinger mock.
 #

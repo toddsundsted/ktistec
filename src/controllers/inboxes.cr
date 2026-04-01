@@ -142,6 +142,11 @@ class InboxesController
 
     Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
+    # DIAG checkpoints
+    if activity.is_a?(ActivityPub::Activity::ObjectActivity)
+      puts "DIAG[1] after from_json_ld: object=#{activity.object?.try(&.iri) || "nil"} class=#{activity.class}"
+    end
+
     # this is, strictly speaking, not required because this method
     # should be idempotent, but it avoids a lot of unnecessary work
 
@@ -244,14 +249,24 @@ class InboxesController
 
     # 5
 
+    if activity.is_a?(ActivityPub::Activity::ObjectActivity)
+      puts "DIAG[2] after verification: object=#{activity.object?.try(&.iri) || "nil"} verified=#{verified}"
+    end
+
     actor.up!
 
     activity.actor = actor
+
+    if activity.is_a?(ActivityPub::Activity::ObjectActivity)
+      puts "DIAG[3] after actor=: object=#{activity.object?.try(&.iri) || "nil"}"
+    end
 
     Log.trace { "[#{request_id}] processing type=#{activity.class}" }
 
     case activity
     when ActivityPub::Activity::Announce
+      puts "DIAG[4] in case Announce: object_iri=#{activity.object_iri}"
+      puts "DIAG[5] inner object?=#{activity.object?.try(&.iri) || "nil"}"
       unless (object = activity.object?(account.actor, dereference: true))
         bad_request
       end

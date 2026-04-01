@@ -125,9 +125,19 @@ module ActivityPub
             object.as_s? || object.dig?("@id").try(&.as_s?)
           end,
           "object" => if object && object.as_h?
-            if (object_iri = object.dig?("@id").try(&.as_s?)) && activity_host && parse_host(object_iri) == activity_host
-              ActivityPub.from_json_ld(object, default: ActivityPub::Object)
+            _obj_iri = object.dig?("@id").try(&.as_s?)
+            _hosts_match = _obj_iri && activity_host && parse_host(_obj_iri) == activity_host
+            if _hosts_match
+              _result = ActivityPub.from_json_ld(object, default: ActivityPub::Object)
+              puts "DIAG[map] object from_json_ld result: #{_result.class} iri=#{_result.try(&.iri)}"
+              _result
+            else
+              puts "DIAG[map] host check failed: object_iri=#{_obj_iri} activity_host=#{activity_host} parse_host=#{_obj_iri.try { |u| parse_host(u) }}"
+              nil
             end
+          else
+            puts "DIAG[map] object not a hash: object=#{object.try(&.class)} as_h?=#{object.try(&.as_h?) != nil}"
+            nil
           end,
           # pick up the target's id and the embedded target if the hosts match
           "target_iri" => if (target = json.dig?("https://www.w3.org/ns/activitystreams#target"))

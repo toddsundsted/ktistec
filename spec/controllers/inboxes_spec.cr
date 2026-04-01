@@ -649,6 +649,24 @@ Spectator.describe InboxesController do
         expect(HTTP::Client.last?).to be_nil
       end
 
+      # diagnostic: check JSON-LD round-trip preserves embedded object
+      it "preserves embedded object through JSON-LD deserialization" do
+        announce.object = note
+        json_ld_body = announce.to_json_ld(true)
+        expanded = Ktistec::JSON_LD.expand(JSON.parse(json_ld_body))
+        mapped = ActivityPub::Activity::ModelHelper.from_json_ld(expanded)
+        puts "DIAG mapped keys: #{mapped.keys}"
+        puts "DIAG mapped[object]: #{mapped["object"]?.try(&.class)}"
+        puts "DIAG mapped[object_iri]: #{mapped["object_iri"]?}"
+        deserialized = ActivityPub::Activity.from_json_ld(expanded)
+        puts "DIAG deserialized class: #{deserialized.class}"
+        puts "DIAG deserialized object_iri: #{deserialized.object_iri}"
+        puts "DIAG deserialized @object nil?: #{deserialized.as(ActivityPub::Activity::ObjectActivity).object?.nil?}"
+        expect(deserialized.object_iri).to eq(note.iri)
+        embedded = deserialized.as(ActivityPub::Activity::ObjectActivity).object?
+        expect(embedded).not_to be_nil
+      end
+
       it "fetches the attributed to actor" do
         announce.object = note
         note.attributed_to_iri = "https://remote/actors/123"

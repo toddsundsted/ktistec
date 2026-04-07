@@ -120,7 +120,7 @@ def actor_factory(clazz = ActivityPub::Actor, with_keys = false, local = nil, **
       featured:        "#{iri}/featured",
       pem_public_key:  pem_public_key,
       pem_private_key: pem_private_key,
-    }.merge(options)
+    }.merge(options),
   )
 end
 
@@ -239,7 +239,7 @@ end
 
 def collection_factory(clazz = ActivityPub::Collection, **options)
   clazz.new(
-    **{iri: "https://remote/collections/#{random_string}"}.merge(options)
+    **{iri: "https://remote/collections/#{random_string}"}.merge(options),
   )
 end
 
@@ -388,7 +388,7 @@ def handle_follow_request_task_factory(source_iri = nil, recipient = false, subj
   activity = follow_factory unless subject_iri || activity.nil? || activity
   task_factory(
     Task::HandleFollowRequest,
-    **{recipient: recipient || nil, source_iri: source_iri, activity: activity || nil, subject_iri: subject_iri}.merge(options)
+    **{recipient: recipient || nil, source_iri: source_iri, activity: activity || nil, subject_iri: subject_iri}.merge(options),
   )
 end
 
@@ -397,7 +397,7 @@ def deliver_delayed_object_task_factory(source_iri = nil, actor = false, subject
   object = object_factory(published: nil, local: true) unless subject_iri || object.nil? || object
   task_factory(
     Task::DeliverDelayedObject,
-    **{actor: actor || nil, source_iri: source_iri, object: object || nil, subject_iri: subject_iri}.merge(options)
+    **{actor: actor || nil, source_iri: source_iri, object: object || nil, subject_iri: subject_iri}.merge(options),
   )
 end
 
@@ -405,7 +405,7 @@ def notify_poll_expiry_task_factory(subject_iri = nil, question = false, **optio
   question = question_factory unless subject_iri || question.nil? || question
   task_factory(
     Task::NotifyPollExpiry,
-    **{question: question || nil, subject_iri: subject_iri}.merge(options)
+    **{question: question || nil, subject_iri: subject_iri}.merge(options),
   )
 end
 
@@ -413,7 +413,7 @@ def distribute_poll_updates_task_factory(subject_iri = nil, question = false, **
   question = question_factory unless subject_iri || question.nil? || question
   task_factory(
     Task::DistributePollUpdates,
-    **{question: question || nil, subject_iri: subject_iri}.merge(options)
+    **{question: question || nil, subject_iri: subject_iri}.merge(options),
   )
 end
 
@@ -564,8 +564,12 @@ def put_in_notifications(owner : ActivityPub::Actor, activity : ActivityPub::Act
   Factory.create(:notification_quote, owner: owner, activity: activity)
 end
 
-def put_in_timeline(owner : ActivityPub::Actor, object : ActivityPub::Object)
-  Factory.create(:timeline, owner: owner, object: object)
+def put_in_timeline_create(owner : ActivityPub::Actor, object : ActivityPub::Object)
+  Factory.create(:timeline_create, owner: owner, object: object)
+end
+
+def put_in_timeline_announce(owner : ActivityPub::Actor, object : ActivityPub::Object)
+  Factory.create(:timeline_announce, owner: owner, object: object)
 end
 
 def do_follow(actor : ActivityPub::Actor, object : ActivityPub::Actor)

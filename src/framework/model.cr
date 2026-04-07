@@ -49,7 +49,7 @@ module Ktistec
             {order, detail}
           end
         log.emit(
-          results.inspect
+          results.inspect,
         )
       end
 
@@ -209,9 +209,7 @@ module Ktistec
         query = "SELECT COUNT(id) FROM #{table} WHERE #{conditions(**options, include_deleted: include_deleted, include_undone: include_undone)}"
         args = values(**options)
         Internal.log_query(query, args) do
-          Ktistec.database.scalar(
-            query, args: args
-          ).as(Int)
+          Ktistec.database.scalar(query, args: args).as(Int)
         end
       end
 
@@ -221,9 +219,7 @@ module Ktistec
         query = "SELECT COUNT(id) FROM #{table} WHERE #{conditions(options: options, include_deleted: include_deleted, include_undone: include_undone)}"
         args = values(options: options)
         Internal.log_query(query, args) do
-          Ktistec.database.scalar(
-            query, args: args
-          ).as(Int)
+          Ktistec.database.scalar(query, args: args).as(Int)
         end
       end
 
@@ -316,7 +312,7 @@ module Ktistec
         Internal.log_query(query, {*args, size.to_i + 1, ((page - 1) * size).to_i}) do
           Ktistec::Util::PaginatedArray(self).new.tap do |array|
             Ktistec.database.query(
-              query, *args, size.to_i + 1, ((page - 1) * size).to_i
+              query, *args, size.to_i + 1, ((page - 1) * size).to_i,
             ) do |rs|
               rs.each { array << compose(rs, **additional_columns) }
             end
@@ -947,7 +943,7 @@ module Ktistec
       Node,
       model : Model,
       association : String?,
-      index : Int32?
+      index : Int32?,
     )
 
     def serialize_graph(skip_associated = false)

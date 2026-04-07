@@ -321,7 +321,7 @@ Spectator.describe ActivityPub::Object::Question do
     it "deletes old poll when saving new poll" do
       old_poll = Poll.new(
         question: question,
-        options: [Poll::Option.new("Old 1"), Poll::Option.new("Old 2")]
+        options: [Poll::Option.new("Old 1"), Poll::Option.new("Old 2")],
       ).save
       expect(old_poll.id).not_to be_nil
 
@@ -329,7 +329,7 @@ Spectator.describe ActivityPub::Object::Question do
 
       new_poll = Poll.new(
         question: question,
-        options: [Poll::Option.new("New 1"), Poll::Option.new("New 2")]
+        options: [Poll::Option.new("New 1"), Poll::Option.new("New 2")],
       ).save
       expect(new_poll.id).not_to be_nil
 

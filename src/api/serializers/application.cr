@@ -72,7 +72,7 @@ module API
             client_id: client.client_id,
             client_secret: client.client_secret,
             client_secret_expires_at: 0,
-            vapid_key: ""
+            vapid_key: "",
           )
         else
           Application.new(
@@ -85,7 +85,7 @@ module API
             client_id: client.client_id,
             client_secret: nil,
             client_secret_expires_at: nil,
-            vapid_key: nil
+            vapid_key: nil,
           )
         end
       end

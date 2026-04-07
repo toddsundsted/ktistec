@@ -123,7 +123,7 @@ Spectator.describe "helpers" do
       let(attachment) do
         ActivityPub::Object::Attachment.new(
           url: "https://example.com/image.jpg",
-          media_type: "image/jpeg"
+          media_type: "image/jpeg",
         )
       end
 

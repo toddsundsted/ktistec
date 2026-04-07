@@ -218,7 +218,7 @@ module API
           stats: Stats.new(
             user_count: ::Account.count,
             status_count: WellKnownController.local_posts,
-            domain_count: 0
+            domain_count: 0,
           ),
           email: "",
           registrations: false,
@@ -227,16 +227,16 @@ module API
           contact_account: nil,
           rules: [] of Rule,
           urls: Urls.new(
-            streaming_api: ""
+            streaming_api: "",
           ),
           configuration: Configuration.new(
             accounts: Configuration::Accounts.new(
-              max_featured_tags: 0
+              max_featured_tags: 0,
             ),
             statuses: Configuration::Statuses.new(
               max_characters: Ktistec::Constants::MAX_POST_CHARACTERS,
               max_media_attachments: Ktistec::Constants::MAX_MEDIA_ATTACHMENTS,
-              characters_reserved_per_url: 0
+              characters_reserved_per_url: 0,
             ),
             media_attachments: Configuration::MediaAttachments.new(
               supported_mime_types: SUPPORTED_MEDIA_TYPES,
@@ -244,15 +244,15 @@ module API
               image_matrix_limit: 0,
               video_size_limit: 0,
               video_frame_rate_limit: 0,
-              video_matrix_limit: 0
+              video_matrix_limit: 0,
             ),
             polls: Configuration::Polls.new(
               max_options: Ktistec::Constants::MAX_POLL_OPTIONS,
               max_characters_per_option: Ktistec::Constants::MAX_POLL_OPTION_CHARACTERS,
               min_expiration: Ktistec::Constants::MIN_POLL_EXPIRATION,
-              max_expiration: Ktistec::Constants::MAX_POLL_EXPIRATION
-            )
-          )
+              max_expiration: Ktistec::Constants::MAX_POLL_EXPIRATION,
+            ),
+          ),
         )
       end
     end
@@ -539,29 +539,29 @@ module API
           description: Ktistec.settings.description || "",
           usage: Usage.new(
             users: Usage::Users.new(
-              active_month: WellKnownController.monthly_active_users
-            )
+              active_month: WellKnownController.monthly_active_users,
+            ),
           ),
           thumbnail: Thumbnail.new(
-            url: Ktistec.settings.image || ""
+            url: Ktistec.settings.image || "",
           ),
           icon: [] of Icon,
           languages: ::Account.all.compact_map(&.language),
           configuration: Configuration.new(
             urls: Configuration::Urls.new(
-              streaming: ""
+              streaming: "",
             ),
             vapid: Configuration::Vapid.new(
-              public_key: ""
+              public_key: "",
             ),
             accounts: Configuration::Accounts.new(
               max_featured_tags: 0,
-              max_pinned_statuses: Ktistec::Constants::MAX_PINNED_POSTS
+              max_pinned_statuses: Ktistec::Constants::MAX_PINNED_POSTS,
             ),
             statuses: Configuration::Statuses.new(
               max_characters: Ktistec::Constants::MAX_POST_CHARACTERS,
               max_media_attachments: Ktistec::Constants::MAX_MEDIA_ATTACHMENTS,
-              characters_reserved_per_url: 0
+              characters_reserved_per_url: 0,
             ),
             media_attachments: Configuration::MediaAttachments.new(
               supported_mime_types: SUPPORTED_MEDIA_TYPES,
@@ -570,29 +570,29 @@ module API
               image_matrix_limit: 0,
               video_size_limit: 0,
               video_frame_rate_limit: 0,
-              video_matrix_limit: 0
+              video_matrix_limit: 0,
             ),
             polls: Configuration::Polls.new(
               max_options: Ktistec::Constants::MAX_POLL_OPTIONS,
               max_characters_per_option: Ktistec::Constants::MAX_POLL_OPTION_CHARACTERS,
               min_expiration: Ktistec::Constants::MIN_POLL_EXPIRATION,
-              max_expiration: Ktistec::Constants::MAX_POLL_EXPIRATION
+              max_expiration: Ktistec::Constants::MAX_POLL_EXPIRATION,
             ),
             translation: Configuration::Translation.new(
-              enabled: !Ktistec.translator.nil?
-            )
+              enabled: !Ktistec.translator.nil?,
+            ),
           ),
           registrations: Registrations.new(
             enabled: false,
-            approval_required: false
+            approval_required: false,
           ),
           api_versions: ApiVersions.new(
-            mastodon: 0
+            mastodon: 0,
           ),
           contact: Contact.new(
-            email: ""
+            email: "",
           ),
-          rules: [] of Rule
+          rules: [] of Rule,
         )
       end
     end

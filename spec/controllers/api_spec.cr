@@ -500,7 +500,7 @@ Spectator.describe APIController do
         it "returns locked" do
           get "/api/v1/accounts/#{local_actor.id}", headers: json_bearer_headers(access_token.token)
           json = JSON.parse(response.body)
-          expect(json["locked"]).to eq(true)
+          expect(json["locked"]).to be_true
         end
       end
 
@@ -521,7 +521,7 @@ Spectator.describe APIController do
         it "returns locked" do
           get "/api/v1/accounts/#{actor.id}", headers: json_bearer_headers(access_token.token)
           json = JSON.parse(response.body)
-          expect(json["locked"]).to eq(false)
+          expect(json["locked"]).to be_false
         end
       end
     end
@@ -671,8 +671,8 @@ Spectator.describe APIController do
         let_create(:object, named: :post2, attributed_to: other, published: Time.utc, visible: true)
 
         before_each do
-          put_in_timeline(actor, post1)
-          put_in_timeline(actor, post2)
+          put_in_timeline_create(actor, post1)
+          put_in_timeline_create(actor, post2)
         end
 
         it "returns statuses" do
@@ -701,6 +701,35 @@ Spectator.describe APIController do
         it "includes next" do
           get "/api/v1/timelines/home?limit=1", headers: json_bearer_headers(access_token.token)
           expect(response.headers["Link"]?).to contain(%Q(rel="next"))
+        end
+      end
+
+      context "with timeline items" do
+        let_create(:actor, named: :other)
+        let_create(:object, named: :post, attributed_to: other, published: Time.utc, visible: true)
+        let_create(:announce, object: post, published: Time.utc)
+
+        before_each do
+          put_in_inbox(actor, announce)
+          put_in_timeline_announce(actor, post)
+        end
+
+        it "wraps the announce in reblog" do
+          get "/api/v1/timelines/home", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.first.dig?("reblog", "id")).to eq(post.id.to_s)
+        end
+
+        it "sets reblog account.id to the author" do
+          get "/api/v1/timelines/home", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.first.dig?("reblog", "account", "id")).to eq(other.id.to_s)
+        end
+
+        it "includes account.id" do
+          get "/api/v1/timelines/home", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.first.dig?("account", "id")).to eq(announce.actor.id.to_s)
         end
       end
     end
@@ -1032,7 +1061,7 @@ Spectator.describe APIController do
       it "returns favourited as true" do
         post "/api/v1/statuses/#{object.id}/favourite", headers: json_bearer_headers(access_token.token)
         json = JSON.parse(response.body)
-        expect(json["favourited"]).to eq(true)
+        expect(json["favourited"]).to be_true
       end
 
       it "returns 404" do
@@ -1064,7 +1093,7 @@ Spectator.describe APIController do
         it "returns favourited as false" do
           post "/api/v1/statuses/#{object.id}/unfavourite", headers: json_bearer_headers(access_token.token)
           json = JSON.parse(response.body)
-          expect(json["favourited"]).to eq(false)
+          expect(json["favourited"]).to be_false
         end
 
         it "returns 404" do
@@ -1094,7 +1123,7 @@ Spectator.describe APIController do
       it "returns reblogged as true" do
         post "/api/v1/statuses/#{object.id}/reblog", headers: json_bearer_headers(access_token.token)
         json = JSON.parse(response.body)
-        expect(json["reblogged"]).to eq(true)
+        expect(json["reblogged"]).to be_true
       end
 
       it "returns 404" do
@@ -1126,7 +1155,7 @@ Spectator.describe APIController do
         it "returns reblogged as false" do
           post "/api/v1/statuses/#{object.id}/unreblog", headers: json_bearer_headers(access_token.token)
           json = JSON.parse(response.body)
-          expect(json["reblogged"]).to eq(false)
+          expect(json["reblogged"]).to be_false
         end
 
         it "returns 404" do
@@ -1156,7 +1185,7 @@ Spectator.describe APIController do
       it "returns bookmarked as true" do
         post "/api/v1/statuses/#{object.id}/bookmark", headers: json_bearer_headers(access_token.token)
         json = JSON.parse(response.body)
-        expect(json["bookmarked"]).to eq(true)
+        expect(json["bookmarked"]).to be_true
       end
 
       it "returns 404" do
@@ -1188,7 +1217,7 @@ Spectator.describe APIController do
         it "returns bookmarked as false" do
           post "/api/v1/statuses/#{object.id}/unbookmark", headers: json_bearer_headers(access_token.token)
           json = JSON.parse(response.body)
-          expect(json["bookmarked"]).to eq(false)
+          expect(json["bookmarked"]).to be_false
         end
 
         it "returns 404" do
@@ -1222,7 +1251,7 @@ Spectator.describe APIController do
       it "returns posting:default:sensitive" do
         get "/api/v1/preferences", headers: json_bearer_headers(access_token.token)
         json = JSON.parse(response.body)
-        expect(json["posting:default:sensitive"]).to eq(false)
+        expect(json["posting:default:sensitive"]).to be_false
       end
 
       it "returns posting:default:language from account" do
@@ -1298,7 +1327,7 @@ Spectator.describe APIController do
       it "returns voted" do
         post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
         json = JSON.parse(response.body)
-        expect(json["voted"]).to eq(true)
+        expect(json["voted"]).to be_true
       end
 
       it "returns own_votes" do
@@ -1332,46 +1361,6 @@ Spectator.describe APIController do
         question.votes_by(account.actor).each do |vote|
           create_activity = ActivityPub::Activity::Create.find(actor: account.actor, object: vote)
           expect(Task::Deliver.find?(sender: account.actor, activity: create_activity)).not_to be_nil
-        end
-      end
-
-      context "when poll has future closed_at" do
-        before_each { poll.assign(closed_at: 1.day.from_now).save }
-
-        it "creates notification task" do
-          expect { post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json }.to change { Task::NotifyPollExpiry.count }.by(1)
-        end
-
-        it "schedules task for poll closed_at time" do
-          post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json
-          task = Task::NotifyPollExpiry.find(question: question)
-          expect(task.next_attempt_at).to be_close(poll.closed_at.not_nil!, 1.second)
-        end
-      end
-
-      context "when notification task already exists" do
-        before_each { poll.assign(closed_at: 1.day.from_now).save }
-
-        let_create!(:notify_poll_expiry_task, question: question)
-
-        it "does not create another task" do
-          expect { post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json }.not_to change { Task::NotifyPollExpiry.count }
-        end
-      end
-
-      context "when poll has no closed_at" do
-        before_each { poll.assign(closed_at: nil).save }
-
-        it "does not create task" do
-          expect { post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json }.not_to change { Task::NotifyPollExpiry.count }
-        end
-      end
-
-      context "when poll has closed_at in the past" do
-        before_each { poll.assign(closed_at: 1.day.ago).save }
-
-        it "does not create task" do
-          expect { post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [0]}.to_json }.not_to change { Task::NotifyPollExpiry.count }
         end
       end
 
@@ -1649,7 +1638,7 @@ Spectator.describe APIController do
       it "sets requested to true" do
         post "/api/v1/accounts/#{other.id}/follow", headers: json_bearer_headers(access_token.token)
         json = JSON.parse(response.body)
-        expect(json["requested"]).to eq(true)
+        expect(json["requested"]).to be_true
       end
 
       it "creates a follow relationship" do
@@ -1707,7 +1696,7 @@ Spectator.describe APIController do
         it "sets following to false" do
           post "/api/v1/accounts/#{other.id}/unfollow", headers: json_bearer_headers(access_token.token)
           json = JSON.parse(response.body)
-          expect(json["following"]).to eq(false)
+          expect(json["following"]).to be_false
         end
 
         it "destroys the follow relationship" do
@@ -1749,7 +1738,7 @@ Spectator.describe APIController do
         it "sets followed_by to true" do
           post "/api/v1/follow_requests/#{requester.id}/authorize", headers: json_bearer_headers(access_token.token)
           json = JSON.parse(response.body)
-          expect(json["followed_by"]).to eq(true)
+          expect(json["followed_by"]).to be_true
         end
 
         it "confirms the follow relationship" do
@@ -1791,7 +1780,7 @@ Spectator.describe APIController do
         it "sets followed_by to false" do
           post "/api/v1/follow_requests/#{requester.id}/reject", headers: json_bearer_headers(access_token.token)
           json = JSON.parse(response.body)
-          expect(json["followed_by"]).to eq(false)
+          expect(json["followed_by"]).to be_false
         end
 
         it "confirms the follow relationship" do

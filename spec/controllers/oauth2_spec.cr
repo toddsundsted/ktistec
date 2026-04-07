@@ -135,7 +135,7 @@ Spectator.describe OAuth2Controller do
             client_secret: Random::Secure.urlsafe_base64,
             redirect_uris: "https://example.com/callback",
             client_name: "Provisional Client",
-            scope: "mcp"
+            scope: "mcp",
           )
         end
 
@@ -229,7 +229,7 @@ Spectator.describe OAuth2Controller do
             client_secret: Random::Secure.urlsafe_base64,
             redirect_uris: "https://example.com/callback",
             client_name: "Provisional Client",
-            scope: "mcp"
+            scope: "mcp",
           )
         end
 

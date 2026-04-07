@@ -93,17 +93,17 @@ Spectator.describe RelationshipsController do
         actor: actor,
         object: other1,
         confirmed: true,
-        visible: true
+        visible: true,
       )
       let_create!(
         :follow_relationship, named: :relationship2,
         actor: actor,
-        object: other2
+        object: other2,
       )
       let_create!(
         :follow_relationship, named: :relationship3,
         actor: other1,
-        object: other2
+        object: other2,
       )
 
       context "when unauthorized" do
@@ -157,17 +157,17 @@ Spectator.describe RelationshipsController do
         actor: other1,
         object: actor,
         confirmed: true,
-        visible: true
+        visible: true,
       )
       let_create!(
         :follow_relationship, named: :relationship2,
         actor: other2,
-        object: actor
+        object: actor,
       )
       let_create!(
         :follow_relationship, named: :relationship3,
         actor: other1,
-        object: other2
+        object: other2,
       )
 
       context "when unauthorized" do

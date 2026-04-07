@@ -2,15 +2,52 @@
 on:
   push:
     tags:
-      - "v*.*.*":
+      - "v*.*.*"
 
 # deploy to github's image registry
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
-# run build-and-push job on an ubuntu host
+# run build-and-push job and deploy-docs jobs on an ubuntu host
 jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Crystal
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: latest
+      - name: Install libraries
+        run: sudo apt update && sudo apt install -y lld
+      - name: Cache shards
+        uses: actions/cache@v4
+        with:
+          path: lib
+          key: shards-${{ runner.os }}-${{ hashFiles('shard.lock') }}
+          restore-keys: |
+            shards-${{ runner.os }}-
+      - name: Install shards
+        run: shards install
+      - name: Generate docs
+        run: crystal docs
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
   build-and-push-image:
     runs-on: ubuntu-latest
     permissions:

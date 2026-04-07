@@ -165,7 +165,7 @@ Spectator.describe API::V1::Serializers::Account do
         actor.assign(
           attachments: [
             ActivityPub::Actor::Attachment.new(name: "Website", type: "PropertyValue", value: "https://example.com"),
-          ]
+          ],
         ).save
       end
 
@@ -444,7 +444,7 @@ Spectator.describe API::V1::Serializers::Account do
         actor.assign(
           attachments: [
             ActivityPub::Actor::Attachment.new(name: "Website", type: "PropertyValue", value: "https://example.com"),
-          ]
+          ],
         ).save
       end
 

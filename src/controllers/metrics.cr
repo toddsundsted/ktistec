@@ -116,7 +116,7 @@ class MetricsController
       Chart.new(
         name: chart,
         points: Point.chart(chart, *range),
-        timezone: timezone(env)
+        timezone: timezone(env),
       )
     end.reject(&.points.empty?)
 

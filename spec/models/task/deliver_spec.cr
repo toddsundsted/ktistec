@@ -46,7 +46,7 @@ Spectator.describe Task::Deliver do
     subject do
       described_class.new(
         sender: sender,
-        activity: activity
+        activity: activity,
       )
     end
 
@@ -161,7 +161,7 @@ Spectator.describe Task::Deliver do
     subject do
       described_class.new(
         sender: sender,
-        activity: activity
+        activity: activity,
       )
     end
 

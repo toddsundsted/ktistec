@@ -57,7 +57,7 @@ module MCP
       end
 
       def page(page_num : Int32) : Array(T)?
-        return nil if page_num < 1 || page_num > total_pages
+        return if page_num < 1 || page_num > total_pages
         start_idx = (page_num - 1) * page_size
         end_idx = Math.min(start_idx + page_size, results.size)
         results[start_idx...end_idx]

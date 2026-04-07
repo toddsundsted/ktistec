@@ -150,7 +150,7 @@ class OutboxesController
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
-        to: [object.iri]
+        to: [object.iri],
       )
       unless activity.valid_for_send?
         bad_request
@@ -169,7 +169,7 @@ class OutboxesController
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
-        to: [object.actor.iri]
+        to: [object.actor.iri],
       )
     when "Reject"
       unless object_iri && (object = ActivityPub::Activity::Follow.find?(object_iri))
@@ -185,7 +185,7 @@ class OutboxesController
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
-        to: [object.actor.iri]
+        to: [object.actor.iri],
       )
     when "Undo"
       unless object_iri && (object = ActivityPub::Activity.find?(object_iri))
@@ -217,7 +217,7 @@ class OutboxesController
         actor: account.actor,
         object: object,
         to: to,
-        cc: cc
+        cc: cc,
       )
     when "Delete"
       if (iri = object_iri)

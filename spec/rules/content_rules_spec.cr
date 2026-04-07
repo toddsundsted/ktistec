@@ -1130,12 +1130,13 @@ Spectator.describe ContentRules do
     end
 
     context "given a timeline with an object already added" do
-      before_each { put_in_timeline(owner, object) }
-
       pre_condition { expect(owner.timeline.map(&.object)).to eq([object]) }
 
       context "and an associated create" do
-        before_each { put_in_inbox(owner, create) }
+        before_each do
+          put_in_timeline_create(owner, object)
+          put_in_inbox(owner, create)
+        end
 
         it "does not add the object to the timeline" do
           run(owner, create)
@@ -1167,7 +1168,10 @@ Spectator.describe ContentRules do
       end
 
       context "and an associated announce" do
-        before_each { put_in_inbox(owner, announce) }
+        before_each do
+          put_in_timeline_announce(owner, object)
+          put_in_inbox(owner, announce)
+        end
 
         it "does not add the object to the timeline" do
           run(owner, announce)
@@ -1185,6 +1189,15 @@ Spectator.describe ContentRules do
           it "removes the object from the timeline" do
             run(owner, undo)
             expect(Timeline.where(from_iri: owner.iri)).to be_empty
+          end
+
+          context "with a create in the database but not in a mailbox" do
+            before_each { create.save }
+
+            it "removes the object from the timeline" do
+              run(owner, undo)
+              expect(Timeline.where(from_iri: owner.iri)).to be_empty
+            end
           end
 
           context "and another announce" do
@@ -1214,7 +1227,7 @@ Spectator.describe ContentRules do
 
       before_each do
         put_in_inbox(owner, create)
-        put_in_timeline(owner, another)
+        put_in_timeline_create(owner, another)
       end
 
       pre_condition { expect(owner.timeline.map(&.object)).to eq([another]) }
@@ -1235,7 +1248,7 @@ Spectator.describe ContentRules do
 
     context "given a timeline with an object that has been deleted" do
       before_each do
-        put_in_timeline(owner, object)
+        put_in_timeline_create(owner, object)
         object.delete!
       end
 

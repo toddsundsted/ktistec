@@ -60,7 +60,7 @@ class OAuth2Controller
     result = OAuth2::ClientRegistration.register(
       client_name: client_name,
       redirect_uris: redirect_uris,
-      scopes: "mcp"
+      scopes: "mcp",
     )
 
     case result

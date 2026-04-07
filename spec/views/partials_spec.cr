@@ -659,7 +659,7 @@ Spectator.describe "partials" do
         request.headers["Content-Type"] = "application/x-www-form-urlencoded"
         request.body = body
       end,
-      HTTP::Server::Response.new(IO::Memory.new)
+      HTTP::Server::Response.new(IO::Memory.new),
     )
   end
 

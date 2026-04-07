@@ -69,7 +69,7 @@ class Task
                 if ancestors.all? { |ancestor| [ancestor.to, ancestor.cc].compact.flatten.includes?(recipient) }
                   Relationship::Social::Follow.where(
                     object: receiver,
-                    confirmed: true
+                    confirmed: true,
                   ).select(&.actor?).map(&.actor.iri)
                 end
               end

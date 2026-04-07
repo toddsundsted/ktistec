@@ -275,29 +275,25 @@ module ActivityPub
     def all_following(page = 1, size = 10, public = true)
       Actor.query_and_paginate(
         social_query(Relationship::Social::Follow, :to_iri, :from_iri, public),
-        self.iri, page: page, size: size
-      )
+        self.iri, page: page, size: size)
     end
 
     def all_following(*, max_id = nil, min_id = nil, limit = 10, public = true)
       Actor.query_with_cursor(
         social_cursor_query(Relationship::Social::Follow, :to_iri, :from_iri, public),
-        self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit
-      )
+        self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     def all_followers(page = 1, size = 10, public = false)
       Actor.query_and_paginate(
         social_query(Relationship::Social::Follow, :from_iri, :to_iri, public),
-        self.iri, page: page, size: size
-      )
+        self.iri, page: page, size: size)
     end
 
     def all_followers(*, max_id = nil, min_id = nil, limit = 10, public = false)
       Actor.query_with_cursor(
         social_cursor_query(Relationship::Social::Follow, :from_iri, :to_iri, public),
-        self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit
-      )
+        self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     def all_follow_requests(*, max_id = nil, min_id = nil, limit = 10)
@@ -312,8 +308,7 @@ module ActivityPub
            AND %{cursor_condition}
       QUERY
       Actor.query_with_cursor(
-        query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit
-      )
+        query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     private def activity_query(type)
@@ -357,8 +352,7 @@ module ActivityPub
     def likes(page = 1, size = 10)
       Object.query_and_paginate(
         activity_query(ActivityPub::Activity::Like),
-        self.iri, page: page, size: size
-      )
+        self.iri, page: page, size: size)
     end
 
     # Returns the count of objects that this actor has liked since the
@@ -369,7 +363,7 @@ module ActivityPub
     def likes(since : Time)
       Object.scalar(
         activity_count_query(ActivityPub::Activity::Like),
-        iri, since
+        iri, since,
       ).as(Int64)
     end
 
@@ -383,8 +377,7 @@ module ActivityPub
     def dislikes(page = 1, size = 10)
       Object.query_and_paginate(
         activity_query(ActivityPub::Activity::Dislike),
-        self.iri, page: page, size: size
-      )
+        self.iri, page: page, size: size)
     end
 
     # Returns the count of objects that this actor has disliked since the
@@ -395,7 +388,7 @@ module ActivityPub
     def dislikes(since : Time)
       Object.scalar(
         activity_count_query(ActivityPub::Activity::Dislike),
-        iri, since
+        iri, since,
       ).as(Int64)
     end
 
@@ -409,8 +402,7 @@ module ActivityPub
     def announces(page = 1, size = 10)
       Object.query_and_paginate(
         activity_query(ActivityPub::Activity::Announce),
-        self.iri, page: page, size: size
-      )
+        self.iri, page: page, size: size)
     end
 
     # Returns the count of objects that this actor has announced
@@ -421,7 +413,7 @@ module ActivityPub
     def announces(since : Time)
       Object.scalar(
         activity_count_query(ActivityPub::Activity::Announce),
-        iri, since
+        iri, since,
       ).as(Int64)
     end
 
@@ -1163,7 +1155,7 @@ module ActivityPub
         actor: self,
         object: self,
         to: ["https://www.w3.org/ns/activitystreams#Public"],
-        cc: [followers, following].compact
+        cc: [followers, following].compact,
       )
     end
 

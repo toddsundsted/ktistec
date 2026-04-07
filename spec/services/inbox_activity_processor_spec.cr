@@ -87,7 +87,7 @@ Spectator.describe InboxActivityProcessor do
     let(state) do
       Task::DeliverDelayedObject::State.new(
         Task::DeliverDelayedObject::State::Reason::PendingQuoteAuthorization,
-        Task::DeliverDelayedObject::State::PendingQuoteAuthorizationContext.new("https://remote/activities/qr1")
+        Task::DeliverDelayedObject::State::PendingQuoteAuthorizationContext.new("https://remote/activities/qr1"),
       )
     end
 

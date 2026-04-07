@@ -180,6 +180,79 @@ Spectator.describe OutboxActivityProcessor do
         expect(MockDeliverTask.last_activity).to eq(create_activity)
       end
 
+      context "given vote Note object" do
+        let_create(
+          :question,
+          attributed_to: other,
+        )
+        let_create!(
+          :poll,
+          question: question,
+          options: [Poll::Option.new("Option A", 0), Poll::Option.new("Option B", 0)],
+          closed_at: 1.hour.from_now,
+        )
+        let_create(
+          :note, named: object,
+          attributed_to: account.actor,
+          in_reply_to: question,
+          name: "Option A",
+          content: nil,
+          special: "vote",
+        )
+
+        it "creates a NotifyPollExpiry task" do
+          expect { OutboxActivityProcessor.process(account, create_activity) }
+            .to change { Task::NotifyPollExpiry.count }.by(1)
+        end
+
+        it "schedules the task for poll expiry time" do
+          OutboxActivityProcessor.process(account, create_activity)
+          task = Task::NotifyPollExpiry.find(question: question)
+          expect(task.next_attempt_at).to be_close(1.hour.from_now, 1.second)
+        end
+
+        context "when task already exists" do
+          let_build(:notify_poll_expiry_task, question: question)
+
+          before_each do
+            notify_poll_expiry_task.schedule(1.hour.from_now)
+          end
+
+          it "does not create a duplicate task" do
+            expect { OutboxActivityProcessor.process(account, create_activity) }
+              .not_to change { Task::NotifyPollExpiry.count }
+          end
+        end
+
+        context "when poll closed_at is in the past" do
+          let_create!(
+            :poll,
+            question: question,
+            options: [Poll::Option.new("Option A", 0), Poll::Option.new("Option B", 0)],
+            closed_at: 1.hour.ago,
+          )
+
+          it "does not create a NotifyPollExpiry task" do
+            expect { OutboxActivityProcessor.process(account, create_activity) }
+              .not_to change { Task::NotifyPollExpiry.count }
+          end
+        end
+
+        context "when poll has no closed_at" do
+          let_create!(
+            :poll,
+            question: question,
+            options: [Poll::Option.new("Option A", 0), Poll::Option.new("Option B", 0)],
+            closed_at: nil,
+          )
+
+          it "does not create a NotifyPollExpiry task" do
+            expect { OutboxActivityProcessor.process(account, create_activity) }
+              .not_to change { Task::NotifyPollExpiry.count }
+          end
+        end
+      end
+
       context "given Question object" do
         let_create(
           :question, named: object,

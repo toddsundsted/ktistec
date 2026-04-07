@@ -192,7 +192,7 @@ module ActivityPub
       end
 
       def normalized_focal_point
-        return nil unless has_focal_point?
+        return unless has_focal_point?
         x, y = focal_point.not_nil!
         norm_x = x / 2 + 0.5  # normalized x = x / 2 + 0.5
         norm_y = -y / 2 + 0.5 # normalized y = -y / 2 + 0.5 (y inverted)
@@ -853,7 +853,7 @@ module ActivityPub
         timeline_histogram: histogram,
         key_participants: participants.not_nil!,
         notable_branches: branches.not_nil!,
-        duration_ms: duration.total_milliseconds
+        duration_ms: duration.total_milliseconds,
       )
     end
 
@@ -1106,7 +1106,7 @@ module ActivityPub
         actor: attributed_to,
         object: self,
         to: to,
-        cc: cc
+        cc: cc,
       )
     end
 

@@ -37,7 +37,7 @@ module Ktistec
     def save
       Ktistec.database.exec(
         "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)",
-        "log_level/#{@source}", @severity.to_s
+        "log_level/#{@source}", @severity.to_s,
       )
       self
     end
@@ -45,7 +45,7 @@ module Ktistec
     def destroy
       Ktistec.database.exec(
         "DELETE FROM options WHERE key = ?",
-        "log_level/#{@source}"
+        "log_level/#{@source}",
       )
       self
     end

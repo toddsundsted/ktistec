@@ -28,7 +28,7 @@ module Ktistec::RSS
               XML::HTMLParserOptions::NOIMPLIED |
               XML::HTMLParserOptions::NOERROR |
               XML::HTMLParserOptions::NOWARNING |
-              XML::HTMLParserOptions::NONET
+              XML::HTMLParserOptions::NONET,
             ).xpath_string("string()")
             stripped.size > 50 ? "#{stripped[0...50]}…" : stripped
           else

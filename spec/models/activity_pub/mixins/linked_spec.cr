@@ -102,12 +102,12 @@ Spectator.describe Ktistec::Model::Linked do
     let(subject) do
       LinkedModel.new(
         iri: "https://test.test/objects/subject",
-        linked_model_iri: "https://remote/objects/object"
+        linked_model_iri: "https://remote/objects/object",
       )
     end
     let(object) do
       LinkedModel.new(
-        iri: "https://remote/objects/object"
+        iri: "https://remote/objects/object",
       )
     end
     let(key_pair) do
@@ -334,7 +334,7 @@ Spectator.describe Ktistec::Model::Linked do
     end
     let(object) do
       LinkedModel.new(
-        iri: "https://remote/objects/object"
+        iri: "https://remote/objects/object",
       )
     end
     let(key_pair) do

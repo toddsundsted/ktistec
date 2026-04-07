@@ -46,12 +46,12 @@ class InboxActivityProcessor
           Relationship::Social::Follow.new(
             actor: activity.actor,
             object: activity.object,
-            visible: false
+            visible: false,
           ).save(skip_associated: true)
         end
         handle_follow_request_task_class.new(
           recipient: account.actor,
-          activity: activity
+          activity: activity,
         ).schedule
       end
     when ActivityPub::Activity::QuoteRequest
@@ -94,7 +94,7 @@ class InboxActivityProcessor
     receive_task_class.new(
       receiver: account.actor,
       activity: activity,
-      deliver_to: deliver_to
+      deliver_to: deliver_to,
     ).schedule
   end
 
@@ -139,7 +139,7 @@ class InboxActivityProcessor
         decision = QuoteDecision.new(
           interaction_target_iri: quoted_post.iri,
           interacting_object_iri: quoting_post_iri,
-          decision: "accept"
+          decision: "accept",
         )
         authorization = ActivityPub::Object::QuoteAuthorization.new(
           iri: "#{Ktistec.host}/objects/#{Ktistec::Util.id}",

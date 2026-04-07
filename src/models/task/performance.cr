@@ -14,23 +14,23 @@ class Task
       Point.new(
         chart: "heap-size",
         timestamp: now,
-        value: (stats.heap_size / 1000).to_i32
+        value: (stats.heap_size / 1000).to_i32,
       ).save
       Point.new(
         chart: "free-kilobytes",
         timestamp: now,
-        value: (stats.free_bytes / 1000).to_i32
+        value: (stats.free_bytes / 1000).to_i32,
       ).save
       Point.new(
         chart: "total-kilobytes",
         timestamp: now,
-        value: (stats.total_bytes / 1000).to_i32
+        value: (stats.total_bytes / 1000).to_i32,
       ).save
       memory_used = LibSQLite3.memory_used
       Point.new(
         chart: "sqlite-kilobytes",
         timestamp: now,
-        value: (memory_used / 1000).to_i32
+        value: (memory_used / 1000).to_i32,
       ).save
     ensure
       self.next_attempt_at = randomized_next_attempt_at(1.hour)

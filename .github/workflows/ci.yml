@@ -42,7 +42,7 @@ jobs:
                PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/opt/libxml2/lib/pkgconfig" crystal spec
           elif [ "$RUNNER_OS" == "Linux" ]; then
                # Run in batches of 25 to avoid some build memory/time limit that causes the suite set to be canceled.
-               find spec -name "*_spec.cr" | xargs -n 25 crystal spec --link-flags="-fuse-ld=lld"
+               find spec -name "*_spec.cr" -print0 | xargs -0 -n 25 crystal spec --link-flags="-fuse-ld=lld"
           fi
         env:
           LOG_LEVEL: NONE

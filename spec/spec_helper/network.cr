@@ -96,31 +96,31 @@ class HTTP::Client
         HTTP::Client::Response.new(
           200,
           headers: HTTP::Headers.new,
-          body: "bad json"
+          body: "bad json",
         )
       when /specified-page/
         HTTP::Client::Response.new(
           200,
           headers: HTTP::Headers.new,
-          body: "content"
+          body: "content",
         )
       when /redirected-page-absolute/
         HTTP::Client::Response.new(
           301,
           headers: HTTP::Headers{"Location" => "https://#{url.host}/specified-page"},
-          body: ""
+          body: "",
         )
       when /redirected-page-relative/
         HTTP::Client::Response.new(
           301,
           headers: HTTP::Headers{"Location" => "/specified-page"},
-          body: ""
+          body: "",
         )
       when /redirected-no-location/
         HTTP::Client::Response.new(
           301,
           headers: HTTP::Headers.new,
-          body: ""
+          body: "",
         )
       when /socket-addrinfo-error/
         raise Socket::Addrinfo::Error.from_os_error(nil, nil)
@@ -134,14 +134,14 @@ class HTTP::Client
         HTTP::Client::Response.new(
           $1.to_i,
           headers: HTTP::Headers.new,
-          body: $1
+          body: $1,
         )
       else
         if (json = @@cache[url.to_s]?)
           HTTP::Client::Response.new(
             200,
             headers: HTTP::Headers.new,
-            body: json
+            body: json,
           )
         else
           HTTP::Client::Response.new(404)
@@ -170,14 +170,14 @@ class HTTP::Client
         HTTP::Client::Response.new(
           200,
           headers: HTTP::Headers.new,
-          body: ""
+          body: "",
         )
       else
         if (json = @@cache[url.to_s]?)
           HTTP::Client::Response.new(
             200,
             headers: HTTP::Headers.new,
-            body: json
+            body: json,
           )
         else
           HTTP::Client::Response.new(404)

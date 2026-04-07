@@ -75,7 +75,7 @@ class Task
               visible: object.visible,
               to: object.to,
               cc: object.cc,
-              audience: object.audience
+              audience: object.audience,
             )
             object.assign(published: time)
             activity.assign(published: time)

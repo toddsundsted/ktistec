@@ -58,7 +58,7 @@ class Task
           account, timezone = account_timezone
           key = Key.new(
             "#{relationship.type.split("::").last.downcase}-#{account.username}",
-            relationship.created_at.in(timezone).at_beginning_of_hour
+            relationship.created_at.in(timezone).at_beginning_of_hour,
           )
           acc[key] += 1
         end

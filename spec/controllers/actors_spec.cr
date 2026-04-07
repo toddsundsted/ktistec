@@ -674,7 +674,7 @@ Spectator.describe ActorsController do
         context "given a create" do
           before_each do
             put_in_outbox(owner: actor, activity: create)
-            put_in_timeline(owner: actor, object: object)
+            put_in_timeline_create(owner: actor, object: object)
           end
 
           it "renders the object's create aspect" do
@@ -686,7 +686,7 @@ Spectator.describe ActorsController do
         context "given an announce" do
           before_each do
             put_in_outbox(owner: actor, activity: announce)
-            put_in_timeline(owner: actor, object: object)
+            put_in_timeline_announce(owner: actor, object: object)
           end
 
           it "renders the object's announce aspect" do
@@ -702,7 +702,7 @@ Spectator.describe ActorsController do
         context "given a create" do
           before_each do
             put_in_inbox(owner: actor, activity: create)
-            put_in_timeline(owner: actor, object: object)
+            put_in_timeline_create(owner: actor, object: object)
           end
 
           it "renders the object's create aspect" do
@@ -714,7 +714,7 @@ Spectator.describe ActorsController do
         context "given an announce" do
           before_each do
             put_in_inbox(owner: actor, activity: announce)
-            put_in_timeline(owner: actor, object: object)
+            put_in_timeline_announce(owner: actor, object: object)
           end
 
           it "renders the object's announce aspect" do
@@ -727,7 +727,7 @@ Spectator.describe ActorsController do
           before_each do
             create.save
             announce.save
-            put_in_timeline(owner: actor, object: object)
+            put_in_timeline_create(owner: actor, object: object)
           end
 
           it "renders the object without aspect" do
@@ -740,7 +740,7 @@ Spectator.describe ActorsController do
           before_each do
             announce.save
             put_in_inbox(owner: actor, activity: create)
-            put_in_timeline(owner: actor, object: object)
+            put_in_timeline_create(owner: actor, object: object)
           end
 
           it "renders the object's create aspect" do
@@ -753,7 +753,7 @@ Spectator.describe ActorsController do
           before_each do
             create.save
             put_in_inbox(owner: actor, activity: announce)
-            put_in_timeline(owner: actor, object: object)
+            put_in_timeline_announce(owner: actor, object: object)
           end
 
           it "renders the object's announce aspect" do
@@ -767,7 +767,7 @@ Spectator.describe ActorsController do
         context "given a like" do
           before_each do
             put_in_inbox(owner: actor, activity: like)
-            put_in_timeline(owner: actor, object: object)
+            put_in_timeline_create(owner: actor, object: object)
           end
 
           it "renders the object without aspect" do
@@ -938,7 +938,7 @@ Spectator.describe ActorsController do
       let_create!(
         :object, named: :draft,
         attributed_to: actor,
-        local: true
+        local: true,
       )
 
       it "renders the collection" do

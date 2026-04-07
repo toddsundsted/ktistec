@@ -21,7 +21,7 @@ Spectator.describe Task do
   subject do
     Task.new(
       source_iri: "https://test.test/source",
-      subject_iri: "https://test.test/subject"
+      subject_iri: "https://test.test/subject",
     )
   end
 

@@ -54,7 +54,7 @@ module OAuth2
         client_secret: Random::Secure.urlsafe_base64,
         client_name: client_name,
         redirect_uris: redirect_uris.join(" "),
-        scope: scopes
+        scope: scopes,
       )
 
       @@provisional_clients.push(client)

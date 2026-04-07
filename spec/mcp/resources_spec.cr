@@ -58,7 +58,7 @@ Spectator.describe MCP::Resources do
       expect(actor_template["mimeType"]).to eq("application/json")
       expect(actor_template["description"]).to eq(
         "Retrieve ActivityPub actor profiles including name, summary, icon, attachments, and URLs. Supports single ID " \
-        "(ktistec://actors/123) or comma-separated IDs for batch retrieval (ktistec://actors/123,456,789)."
+        "(ktistec://actors/123) or comma-separated IDs for batch retrieval (ktistec://actors/123,456,789).",
       )
       expect(actor_template["title"]).to eq("ActivityPub Actor")
       expect(actor_template["name"]).to eq("Actor")
@@ -68,7 +68,7 @@ Spectator.describe MCP::Resources do
       expect(object_template["mimeType"]).to eq("application/json")
       expect(object_template["description"]).to eq(
         "Access ActivityPub posts/objects with name, summary, content, metadata, and relationships. Supports single ID " \
-        "(ktistec://objects/123) or comma-separated IDs for batch retrieval (ktistec://objects/123,456,789)."
+        "(ktistec://objects/123) or comma-separated IDs for batch retrieval (ktistec://objects/123,456,789).",
       )
       expect(object_template["title"]).to eq("ActivityPub Object")
       expect(object_template["name"]).to eq("Object")
@@ -153,7 +153,7 @@ Spectator.describe MCP::Resources do
           ActivityPub::Actor::Attachment.new(
             name: "Website",
             type: "PropertyValue",
-            value: "https://example.com"
+            value: "https://example.com",
           ),
         ],
         local: true,
@@ -219,7 +219,7 @@ Spectator.describe MCP::Resources do
         name: "Test Actor",
         summary: "This is a summary",
         icon: "https://example.com/icon.png",
-        image: "https://example.com/image.png"
+        image: "https://example.com/image.png",
       )
       let(uri) { "ktistec://actors/#{actor.id}" }
       let(request) do
@@ -398,7 +398,7 @@ Spectator.describe MCP::Resources do
           expect(json["summary"]).to eq("This is a translated summary")
           expect(json["content"]).to eq("This is translated content")
           expect(json["original_language"]).to eq("en")
-          expect(json["is_translated"]).to eq(true)
+          expect(json["is_translated"]).to be_true
         end
       end
 

@@ -203,7 +203,7 @@ Spectator.describe MetricsController do
           :point, named: point_empty_chart,
           chart: "inbox-older-chart",
           timestamp: Time.utc(2010, 1, 1, 0, 0, 0),
-          value: 0
+          value: 0,
         )
 
         it "ignores charts with no points in the date range" do

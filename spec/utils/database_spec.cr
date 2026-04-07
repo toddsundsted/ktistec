@@ -72,8 +72,8 @@ Spectator.describe Ktistec::Database do
 
       before_each do
         put_in_inbox(owner, create1)
-        put_in_timeline(owner, object1)
-        put_in_timeline(owner, object2)
+        put_in_timeline_create(owner, object1)
+        put_in_timeline_create(owner, object2)
         put_in_inbox(owner, create3)
       end
 

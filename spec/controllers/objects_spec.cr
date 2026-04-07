@@ -34,40 +34,40 @@ Spectator.describe ObjectsController do
   let_create(
     :actor, named: :author,
     iri: "https://nowhere/actor/#{random_string}",
-    username: "author"
+    username: "author",
   )
   let_create(
     :object, named: :visible,
     attributed_to: author,
     published: published,
     visible: true,
-    local: true
+    local: true,
   )
   let_create(
     :object, named: :notvisible,
     attributed_to: author,
     published: published,
     visible: false,
-    local: true
+    local: true,
   )
   let_create(
     :object, named: :remote,
     attributed_to: author,
     published: published,
-    visible: false
+    visible: false,
   )
   let_create(
     :object, named: :draft,
     content: "this is a test",
     attributed_to: actor,
-    local: true
+    local: true,
   )
   let_create(
     :object, named: :reply,
     in_reply_to: visible,
     attributed_to: actor,
     published: published,
-    local: true
+    local: true,
   )
 
   describe ".get_object" do
@@ -894,7 +894,7 @@ Spectator.describe ObjectsController do
         before_each do
           visible.assign(
             attributed_to: actor,
-            content: "foo bar baz"
+            content: "foo bar baz",
           ).save
         end
 

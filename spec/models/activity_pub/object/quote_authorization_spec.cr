@@ -229,7 +229,7 @@ Spectator.describe ActivityPub::Object::QuoteAuthorization do
       old_decision = QuoteDecision.new(
         quote_authorization: quote_authorization,
         interacting_object_iri: "https://remote/posts/old",
-        interaction_target_iri: "https://test.test/objects/old"
+        interaction_target_iri: "https://test.test/objects/old",
       ).save
       expect(old_decision.id).not_to be_nil
 
@@ -238,7 +238,7 @@ Spectator.describe ActivityPub::Object::QuoteAuthorization do
       new_decision = QuoteDecision.new(
         quote_authorization: quote_authorization,
         interacting_object_iri: "https://remote/posts/new",
-        interaction_target_iri: "https://test.test/objects/new"
+        interaction_target_iri: "https://test.test/objects/new",
       ).save
       expect(new_decision.id).not_to be_nil
 

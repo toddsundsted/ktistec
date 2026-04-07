@@ -333,6 +333,55 @@ module API
         )
       end
 
+      # Builds a Status representing an announced (boosted) object.
+      #
+      def self.from_announce(announce : ActivityPub::Activity::Announce, actor : ActivityPub::Actor? = nil) : Status
+        account = Account.from_actor(announce.actor)
+
+        visibility = Ktistec::ViewHelper.visibility(announce.actor, announce)
+        reblog = from_object(announce.object, actor: actor)
+
+        Status.new(
+          id: announce.id.to_s,
+          uri: announce.iri,
+          created_at: (announce.published || announce.object.published).not_nil!.to_rfc3339,
+          account: account,
+          content: "",
+          visibility: visibility,
+          sensitive: false,
+          spoiler_text: "",
+          media_attachments: [] of MediaAttachment,
+          mentions: [] of Mention,
+          tags: [] of Tag,
+          emojis: [] of CustomEmoji,
+          reblogs_count: 0_i64,
+          favourites_count: 0_i64,
+          quotes_count: 0_i64,
+          replies_count: 0_i64,
+          url: nil,
+          in_reply_to_id: nil,
+          in_reply_to_account_id: nil,
+          reblog: reblog,
+          poll: nil,
+          card: nil,
+          language: nil,
+          text: nil,
+          edited_at: nil,
+          quote: nil,
+          quote_approval: QuoteApproval.new(
+            automatic: ["public"],
+            manual: [] of String,
+            current_user: "unknown",
+          ),
+          favourited: false,
+          reblogged: true,
+          muted: false,
+          bookmarked: false,
+          pinned: false,
+          filtered: [] of FilterResult,
+        )
+      end
+
       private def self.build_media_attachments(object : ActivityPub::Object) : Array(MediaAttachment)
         attachments = object.attachments || [] of ActivityPub::Object::Attachment
         attachments.map_with_index do |attachment, index|

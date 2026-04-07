@@ -76,7 +76,7 @@ module Ktistec
           XML::HTMLParserOptions::NOIMPLIED |
           XML::HTMLParserOptions::NOERROR |
           XML::HTMLParserOptions::NOWARNING |
-          XML::HTMLParserOptions::NONET
+          XML::HTMLParserOptions::NONET,
         ).xpath_string("string()")
       end
       LibSQLite3.result_text(context, str, str.bytesize, TRANSIENT)

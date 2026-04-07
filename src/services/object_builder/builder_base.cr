@@ -129,7 +129,7 @@ module ObjectBuilder
       in_reply_to_iri : String?,
       result : BuildResult,
     ) : ActivityPub::Object?
-      return nil unless in_reply_to_iri
+      return unless in_reply_to_iri
       in_reply_to = ActivityPub::Object.find?(in_reply_to_iri)
       unless in_reply_to
         result.add_error("in_reply_to", "object not found")
@@ -146,7 +146,7 @@ module ObjectBuilder
       quote_iri : String?,
       result : BuildResult,
     ) : ActivityPub::Object?
-      return nil unless quote_iri
+      return unless quote_iri
       quote = ActivityPub::Object.find?(quote_iri)
       unless quote
         result.add_error("quote", "object not found")

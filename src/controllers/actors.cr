@@ -110,7 +110,7 @@ class ActorsController
 
     Ktistec::RSS.generate_rss_feed(
       objects, actor_name, actor_url,
-      "#{actor_name}: RSS Feed"
+      "#{actor_name}: RSS Feed",
     )
   end
 

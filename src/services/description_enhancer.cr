@@ -12,7 +12,7 @@ module Ktistec
       nonce = Settings.nonce
       description = Ktistec.settings.description.presence
 
-      return nil unless description
+      return unless description
 
       if @@nonce != nonce
         enhancements = Ktistec::HTML.enhance(description)

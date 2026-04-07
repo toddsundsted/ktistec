@@ -31,7 +31,7 @@ class Task
         elsif recipient && recipient =~ /^#{sender.iri}\/followers$/
           Relationship::Social::Follow.where(
             object: sender,
-            confirmed: true
+            confirmed: true,
           ).select(&.actor?).map(&.actor.iri)
         end
       end.compact.sort!.uniq!

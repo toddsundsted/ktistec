@@ -88,6 +88,6 @@ module Ktistec
   ]
 
   add_handler CSRF.new(
-    allowed_routes: CSRF_ALLOWED_ROUTES
+    allowed_routes: CSRF_ALLOWED_ROUTES,
   )
 end

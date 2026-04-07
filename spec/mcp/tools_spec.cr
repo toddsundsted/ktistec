@@ -394,7 +394,7 @@ Spectator.describe MCP::Tools do
         expect(tags_schema["items"]["type"]).to eq("string")
         expect(tags_schema["minItems"]).to eq(1)
         expect(tags_schema["maxItems"]).to eq(8)
-        expect(tags_schema["uniqueItems"]).to eq(true)
+        expect(tags_schema["uniqueItems"]).to be_true
 
         scores_schema = properties["scores"]
         expect(scores_schema["type"]).to eq("array")
@@ -864,7 +864,7 @@ Spectator.describe MCP::Tools do
         let_create!(:object, attributed_to: account.actor, published: now)
 
         before_each do
-          put_in_timeline(account.actor, object)
+          put_in_timeline_create(account.actor, object)
         end
 
         it "returns timeline objects for valid request" do
@@ -930,7 +930,7 @@ Spectator.describe MCP::Tools do
         before_each do
           25.times do
             object = Factory.create(:object) # ameba:disable Ktistec/NoImperativeFactories
-            put_in_timeline(account.actor, object)
+            put_in_timeline_create(account.actor, object)
           end
         end
 
@@ -1346,7 +1346,7 @@ Spectator.describe MCP::Tools do
             relationship = objects.first.as_h
             expect(relationship["actor_id"].as_i64).to eq(follower.id)
             expect(relationship["actor_handle"].as_s).to eq(follower.handle)
-            expect(relationship["confirmed"]).to eq(true)
+            expect(relationship["confirmed"]).to be_true
           end
 
           context "and an unconfirmed follower" do
@@ -1360,11 +1360,11 @@ Spectator.describe MCP::Tools do
 
               unconfirmed_relationship = objects[0].as_h
               expect(unconfirmed_relationship["actor_id"].as_i64).to eq(unconfirmed_follower.id)
-              expect(unconfirmed_relationship["confirmed"]).to eq(false)
+              expect(unconfirmed_relationship["confirmed"]).to be_false
 
               confirmed_relationship = objects[1].as_h
               expect(confirmed_relationship["actor_id"].as_i64).to eq(follower.id)
-              expect(confirmed_relationship["confirmed"]).to eq(true)
+              expect(confirmed_relationship["confirmed"]).to be_true
             end
 
             it "supports pagination for followers collection" do
@@ -1401,7 +1401,7 @@ Spectator.describe MCP::Tools do
             relationship = objects.first.as_h
             expect(relationship["actor_id"].as_i64).to eq(followed_actor.id)
             expect(relationship["actor_handle"].as_s).to eq(followed_actor.handle)
-            expect(relationship["confirmed"]).to eq(true)
+            expect(relationship["confirmed"]).to be_true
           end
 
           context "and an unconfirmed following" do
@@ -1415,11 +1415,11 @@ Spectator.describe MCP::Tools do
 
               unconfirmed_relationship = objects[0].as_h
               expect(unconfirmed_relationship["actor_id"].as_i64).to eq(unconfirmed_followed.id)
-              expect(unconfirmed_relationship["confirmed"]).to eq(false)
+              expect(unconfirmed_relationship["confirmed"]).to be_false
 
               confirmed_relationship = objects[1].as_h
               expect(confirmed_relationship["actor_id"].as_i64).to eq(followed_actor.id)
-              expect(confirmed_relationship["confirmed"]).to eq(true)
+              expect(confirmed_relationship["confirmed"]).to be_true
             end
 
             it "supports pagination for following collection" do
@@ -1561,9 +1561,9 @@ Spectator.describe MCP::Tools do
         let_create(:object, named: object3, attributed_to: account.actor)
 
         before_each do
-          put_in_timeline(account.actor, object1)
-          put_in_timeline(account.actor, object2)
-          put_in_timeline(account.actor, object3)
+          put_in_timeline_create(account.actor, object1)
+          put_in_timeline_create(account.actor, object2)
+          put_in_timeline_create(account.actor, object3)
         end
 
         # the `since` cutoff is decided based on the `created_at`
@@ -1667,13 +1667,13 @@ Spectator.describe MCP::Tools do
           named: tagged_post,
           attributed_to: account.actor,
           content: "Post with #testhashtag",
-          published: Time.utc(2024, 1, 1, 10, 0, 0)
+          published: Time.utc(2024, 1, 1, 10, 0, 0),
         )
         let_create!(
           :hashtag,
           name: "testhashtag",
           subject: tagged_post,
-          created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 10, 0, 0),
         )
 
         it "returns count for valid hashtag" do
@@ -1695,13 +1695,13 @@ Spectator.describe MCP::Tools do
           named: mentioned_post,
           attributed_to: account.actor,
           content: "Post mentioning @testuser@example.com",
-          published: Time.utc(2024, 1, 1, 10, 0, 0)
+          published: Time.utc(2024, 1, 1, 10, 0, 0),
         )
         let_create!(
           :mention,
           name: "testuser@example.com",
           subject: mentioned_post,
-          created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 10, 0, 0),
         )
 
         it "returns count for valid mention" do
@@ -1722,13 +1722,13 @@ Spectator.describe MCP::Tools do
           :like,
           named: nil,
           actor: account.actor,
-          created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 10, 0, 0),
         )
         let_create!(
           :like,
           named: nil,
           actor: account.actor,
-          created_at: Time.utc(2024, 1, 1, 12, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 12, 0, 0),
         )
 
         it "returns count for likes collection" do
@@ -1749,13 +1749,13 @@ Spectator.describe MCP::Tools do
           :dislike,
           named: nil,
           actor: account.actor,
-          created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 10, 0, 0),
         )
         let_create!(
           :dislike,
           named: nil,
           actor: account.actor,
-          created_at: Time.utc(2024, 1, 1, 12, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 12, 0, 0),
         )
 
         it "returns count for dislikes collection" do
@@ -1776,13 +1776,13 @@ Spectator.describe MCP::Tools do
           :announce,
           named: nil,
           actor: account.actor,
-          created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 10, 0, 0),
         )
         let_create!(
           :announce,
           named: nil,
           actor: account.actor,
-          created_at: Time.utc(2024, 1, 1, 12, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 12, 0, 0),
         )
 
         it "returns count for announces collection" do
@@ -1803,13 +1803,13 @@ Spectator.describe MCP::Tools do
           :bookmark_relationship,
           named: nil,
           actor: account.actor,
-          created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 10, 0, 0),
         )
         let_create!(
           :bookmark_relationship,
           named: nil,
           actor: account.actor,
-          created_at: Time.utc(2024, 1, 1, 12, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 12, 0, 0),
         )
 
         it "returns count for bookmarks collection" do
@@ -1830,13 +1830,13 @@ Spectator.describe MCP::Tools do
           :pin_relationship,
           named: nil,
           actor: account.actor,
-          created_at: Time.utc(2024, 1, 1, 10, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 10, 0, 0),
         )
         let_create!(
           :pin_relationship,
           named: nil,
           actor: account.actor,
-          created_at: Time.utc(2024, 1, 1, 12, 0, 0)
+          created_at: Time.utc(2024, 1, 1, 12, 0, 0),
         )
 
         it "returns count for pins collection" do
@@ -2104,7 +2104,7 @@ Spectator.describe MCP::Tools do
 
         expect(data["objects"].as_a.size).to eq(1)
         expect(data["cursor"].as_s).not_to be_nil
-        expect(data["has_more"]).to eq(true)
+        expect(data["has_more"]).to be_true
       end
 
       it "fetches subsequent pages using cursor" do
@@ -2116,7 +2116,7 @@ Spectator.describe MCP::Tools do
 
         expect(data["objects"].as_a.size).to eq(1)
         expect(data["cursor"].as_s).not_to be_nil
-        expect(data["has_more"]).to eq(true)
+        expect(data["has_more"]).to be_true
 
         cursor = data["cursor"].as_s
 
@@ -2128,7 +2128,7 @@ Spectator.describe MCP::Tools do
 
         expect(data["objects"].as_a.size).to eq(1)
         expect(data["cursor"].as_s).not_to be_nil
-        expect(data["has_more"]).to eq(true)
+        expect(data["has_more"]).to be_true
       end
 
       it "returns nil cursor on last page" do
@@ -2140,7 +2140,7 @@ Spectator.describe MCP::Tools do
 
         expect(data["objects"].as_a.size).to eq(3)
         expect(data["cursor"].as_s).not_to be_nil
-        expect(data["has_more"]).to eq(true)
+        expect(data["has_more"]).to be_true
 
         cursor = data["cursor"].as_s
 
@@ -2152,7 +2152,7 @@ Spectator.describe MCP::Tools do
 
         expect(data["objects"].as_a.size).to eq(1)
         expect(data["cursor"].as_nil).to be_nil
-        expect(data["has_more"]).to eq(false)
+        expect(data["has_more"]).to be_false
       end
 
       it "raises error for invalid cursor" do
@@ -2191,7 +2191,7 @@ Spectator.describe MCP::Tools do
 
       private def analyze_thread_request(id, object_id)
         JSON::RPC::Request.from_json(
-          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "analyze_thread", "arguments": {"object_id": #{object_id}}}}|
+          %Q|{"jsonrpc": "2.0", "id": "#{id}", "method": "tools/call", "params": {"name": "analyze_thread", "arguments": {"object_id": #{object_id}}}}|,
         )
       end
 

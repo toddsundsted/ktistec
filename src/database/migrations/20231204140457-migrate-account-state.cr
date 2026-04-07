@@ -30,13 +30,13 @@ up do |db|
     if (last_timeline_checked_at = result.state.last_timeline_checked_at)
       db.exec(
         %q|INSERT INTO "last_times" ("created_at", "updated_at", "account_id", "name", "timestamp") VALUES (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?, ?)|,
-        result.id, "last_timeline_checked_at", last_timeline_checked_at
+        result.id, "last_timeline_checked_at", last_timeline_checked_at,
       )
     end
     if (last_notifications_checked_at = result.state.last_notifications_checked_at)
       db.exec(
         %q|INSERT INTO "last_times" ("created_at", "updated_at", "account_id", "name", "timestamp") VALUES (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?, ?)|,
-        result.id, "last_notifications_checked_at", last_notifications_checked_at
+        result.id, "last_notifications_checked_at", last_notifications_checked_at,
       )
     end
   end

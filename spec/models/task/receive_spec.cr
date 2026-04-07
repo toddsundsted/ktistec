@@ -40,7 +40,7 @@ Spectator.describe Task::Receive do
     subject do
       described_class.new(
         receiver: receiver,
-        activity: activity
+        activity: activity,
       )
     end
 
@@ -59,7 +59,7 @@ Spectator.describe Task::Receive do
     subject do
       described_class.new(
         receiver: receiver,
-        activity: activity
+        activity: activity,
       )
     end
 
@@ -79,7 +79,7 @@ Spectator.describe Task::Receive do
     subject do
       described_class.new(
         receiver: receiver,
-        activity: activity
+        activity: activity,
       )
     end
 
@@ -306,7 +306,7 @@ Spectator.describe Task::Receive do
     subject do
       described_class.new(
         receiver: receiver,
-        activity: activity
+        activity: activity,
       )
     end
 

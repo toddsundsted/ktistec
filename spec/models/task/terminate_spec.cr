@@ -45,7 +45,7 @@ Spectator.describe Task::Terminate do
     subject do
       described_class.new(
         source: actor,
-        subject: actor
+        subject: actor,
       )
     end
 

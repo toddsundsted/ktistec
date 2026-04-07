@@ -370,7 +370,7 @@ rule "undo"
   condition undo, InMailboxOf, actor
   condition UndoActivity, undo, object: activity
   condition AnnounceActivity, activity, object: object
-  none CreateActivity, object: object
+  none TimelineCreate, owner: actor, object: object
   none AnnounceActivity, not activity, object: object
   any Timeline, owner: actor, object: object
   retract Timeline, owner: actor, object: object

@@ -187,7 +187,7 @@ Spectator.describe TableOfContentsController do
         result = described_class.render_toc_html(tree, "/test-html-3")
 
         expect(result).to eq(
-          %Q|<div class="item"><a href="/test-html-3/bar">bar</a><div class="list"><div class="item"><a href="/test-html-3/bar/baz">baz</a></div></div></div>|
+          %Q|<div class="item"><a href="/test-html-3/bar">bar</a><div class="list"><div class="item"><a href="/test-html-3/bar/baz">baz</a></div></div></div>|,
         )
       end
     end

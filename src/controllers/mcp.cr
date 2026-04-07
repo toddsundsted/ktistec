@@ -128,7 +128,7 @@ class MCPController
         "federated ActivityPub content, with language translation support, and rich media attachment " \
         "handling. After reading this, the first steps you should take are: 1) list the resources and " \
         "tools this server supports and 2) read the information resource (#{mcp_information_path}) for " \
-        "more detail about this server, including collections supported and their naming conventions."
+        "more detail about this server, including collections supported and their naming conventions.",
       ),
       "capabilities" => JSON::Any.new({
         "resources"         => JSON::Any.new({} of String => JSON::Any),

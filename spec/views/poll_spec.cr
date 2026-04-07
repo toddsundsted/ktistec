@@ -97,7 +97,7 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
       poll.question.assign(
         iri: "https://test.test/objects/#{Ktistec::Util.id}",
         attributed_to: env.account.actor, # author viewing own poll
-        published: nil
+        published: nil,
       ).save
     end
 
@@ -121,7 +121,7 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
       poll.question.assign(
         iri: "https://test.test/objects/#{Ktistec::Util.id}",
         attributed_to: env.account.actor, # author viewing own poll
-        published: Time.utc
+        published: Time.utc,
       ).save
     end
 

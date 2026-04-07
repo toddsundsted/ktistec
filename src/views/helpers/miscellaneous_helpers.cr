@@ -41,7 +41,8 @@ module Ktistec::ViewHelper
         else
           "direct"
         end
-      elsif (in_reply_to = object.in_reply_to?) && (addresses = [in_reply_to.to, in_reply_to.cc].compact).presence
+      elsif object.responds_to?(:in_reply_to?) && (in_reply_to = object.in_reply_to?) &&
+            (addresses = [in_reply_to.to, in_reply_to.cc].compact).presence
         addresses.flatten.includes?(PUBLIC) ? "public" : "direct"
       else
         "public"

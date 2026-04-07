@@ -15,7 +15,7 @@ module Admin
         client_secret: "",
         redirect_uris: "",
         scope: "mcp",
-        manual: true
+        manual: true,
       )
       ok "admin/oauth/clients/index", env: env, clients: clients, new_client: new_client
     end
@@ -28,7 +28,7 @@ module Admin
         client_name: env.params.body["client_name"]? || "",
         redirect_uris: env.params.body["redirect_uris"]? || "",
         scope: "mcp",
-        manual: true
+        manual: true,
       )
       if new_client.valid?
         new_client.save

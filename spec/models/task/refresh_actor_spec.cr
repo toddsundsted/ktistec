@@ -113,7 +113,7 @@ Spectator.describe Task::RefreshActor do
     subject do
       described_class.new(
         source: source,
-        actor: actor
+        actor: actor,
       )
     end
 
@@ -327,7 +327,7 @@ Spectator.describe Task::RefreshActor do
         let(collection) do
           ActivityPub::Collection.new(
             iri: featured_iri,
-            items_iris: [other_object.iri]
+            items_iris: [other_object.iri],
           )
         end
 

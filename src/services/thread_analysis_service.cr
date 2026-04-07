@@ -66,7 +66,7 @@ module ThreadAnalysisService
         object_count: objects.size,
         depth_range: {depths.min, depths.max},
         time_range: {times.min, times.max},
-        object_ids: objects.map { |o| o[:id] }
+        object_ids: objects.map { |o| o[:id] },
       )
     end
 
@@ -162,7 +162,7 @@ module ThreadAnalysisService
         author_count: authors.size,
         depth_range: {depths.min, depths.max},
         time_range: times.size > 1 ? {times.first, times.last} : {times.first?, times.first?},
-        object_ids: descendant_ids
+        object_ids: descendant_ids,
       )
     end
 
@@ -212,7 +212,7 @@ module ThreadAnalysisService
       end
     end
 
-    return nil if objects.size < 2
+    return if objects.size < 2
 
     objects.sort_by! { |o| o[:published] }
 
@@ -319,7 +319,7 @@ module ThreadAnalysisService
         object_count: bucket_objects.size,
         cumulative_count: cumulative,
         author_count: author_count,
-        object_ids: bucket_objects.map { |o| o[:id] }
+        object_ids: bucket_objects.map { |o| o[:id] },
       )
     end
 
@@ -328,7 +328,7 @@ module ThreadAnalysisService
       total_objects: active_objects.size,
       outliers_excluded: outlier_count,
       bucket_size_minutes: bucket_size_minutes,
-      buckets: buckets
+      buckets: buckets,
     )
   end
 

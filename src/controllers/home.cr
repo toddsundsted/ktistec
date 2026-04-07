@@ -46,7 +46,7 @@ class HomeController
 
     Ktistec::RSS.generate_rss_feed(
       objects, site_name, site_host,
-      "#{site_name}: RSS Feed"
+      "#{site_name}: RSS Feed",
     )
   end
 

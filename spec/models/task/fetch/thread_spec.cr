@@ -905,7 +905,7 @@ Spectator.describe Task::Fetch::Thread do
     subject do
       described_class.new(
         source: source,
-        thread: object.thread
+        thread: object.thread,
       ).save
     end
 
@@ -928,7 +928,7 @@ Spectator.describe Task::Fetch::Thread do
     subject do
       described_class.new(
         source: source,
-        thread: object.thread
+        thread: object.thread,
       ).save
     end
 

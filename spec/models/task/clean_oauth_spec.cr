@@ -28,7 +28,7 @@ Spectator.describe Task::CleanOauth do
         client: client,
         account: account,
         token: "expired_token",
-        expires_at: 1.day.ago
+        expires_at: 1.day.ago,
       )
       let_create!(
         oauth2_provider_access_token,
@@ -36,7 +36,7 @@ Spectator.describe Task::CleanOauth do
         client: client,
         account: account,
         token: "valid_token",
-        expires_at: 1.day.from_now
+        expires_at: 1.day.from_now,
       )
 
       it "deletes expired access tokens" do

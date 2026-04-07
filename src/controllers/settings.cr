@@ -171,7 +171,7 @@ class SettingsController
         memo << ActivityPub::Actor::Attachment.new(
           params["attachment_#{i}_name"].to_s,
           "PropertyValue",
-          params["attachment_#{i}_value"].to_s
+          params["attachment_#{i}_value"].to_s,
         )
       end
       memo

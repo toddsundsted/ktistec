@@ -40,7 +40,7 @@ module MCP
           "mimeType"    => JSON::Any.new("application/json"),
           "description" => JSON::Any.new(
             "Retrieve ActivityPub actor profiles including name, summary, icon, attachments, and URLs. Supports single ID " \
-            "(ktistec://actors/123) or comma-separated IDs for batch retrieval (ktistec://actors/123,456,789)."
+            "(ktistec://actors/123) or comma-separated IDs for batch retrieval (ktistec://actors/123,456,789).",
           ),
           "title" => JSON::Any.new("ActivityPub Actor"),
           "name"  => JSON::Any.new("Actor"),
@@ -50,7 +50,7 @@ module MCP
           "mimeType"    => JSON::Any.new("application/json"),
           "description" => JSON::Any.new(
             "Access ActivityPub posts/objects with name, summary, content, metadata, and relationships. Supports single ID " \
-            "(ktistec://objects/123) or comma-separated IDs for batch retrieval (ktistec://objects/123,456,789)."
+            "(ktistec://objects/123) or comma-separated IDs for batch retrieval (ktistec://objects/123,456,789).",
           ),
           "title" => JSON::Any.new("ActivityPub Object"),
           "name"  => JSON::Any.new("Object"),
@@ -313,7 +313,7 @@ module MCP
             "verified"
           else
             "unverified"
-          end
+          end,
         )
       end
       contents["type"] = JSON::Any.new(object.class.to_s.split("::").last)

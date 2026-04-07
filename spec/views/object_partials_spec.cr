@@ -363,7 +363,7 @@ Spectator.describe "object partials" do
 
         before_each do
           object.assign(
-            hashtags: [one, two]
+            hashtags: [one, two],
           )
         end
 
@@ -389,7 +389,7 @@ Spectator.describe "object partials" do
 
         before_each do
           object.assign(
-            mentions: [one, two]
+            mentions: [one, two],
           )
         end
 
@@ -415,7 +415,7 @@ Spectator.describe "object partials" do
 
         before_each do
           object.assign(
-            mentions: [one, two]
+            mentions: [one, two],
           )
         end
 
@@ -433,7 +433,7 @@ Spectator.describe "object partials" do
 
         before_each do
           object.assign(
-            mentions: [one, two]
+            mentions: [one, two],
           )
         end
 
@@ -1165,7 +1165,7 @@ Spectator.describe "object partials" do
         quote_authorization: object,
         interacting_object_iri: "https://remote/posts/456",
         interaction_target_iri: "https://test.test/objects/789",
-        decision: "accept"
+        decision: "accept",
       )
       let(recursive) { false }
 

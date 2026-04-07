@@ -68,7 +68,7 @@ Spectator.describe ActivityPub::Object do
           subject.assign(
             to: ["https://www.w3.org/ns/activitystreams#Public"],
             cc: [followers],
-            source: source
+            source: source,
           ).save
         end
 
@@ -86,7 +86,7 @@ Spectator.describe ActivityPub::Object do
           subject.assign(
             to: [followers],
             cc: [] of String,
-            source: source
+            source: source,
           ).save
         end
 
@@ -104,7 +104,7 @@ Spectator.describe ActivityPub::Object do
           subject.assign(
             to: [] of String,
             cc: [] of String,
-            source: source
+            source: source,
           ).save
         end
 
@@ -877,7 +877,7 @@ Spectator.describe ActivityPub::Object do
       let(:object) do
         described_class.new(
           iri: "https://test.test/objects/#{random_string}",
-          attachments: [ActivityPub::Object::Attachment.new("https://example.com/image.jpg", "image/jpeg", "Test image", {0.5, -0.25})]
+          attachments: [ActivityPub::Object::Attachment.new("https://example.com/image.jpg", "image/jpeg", "Test image", {0.5, -0.25})],
         ).save
       end
 
@@ -903,7 +903,7 @@ Spectator.describe ActivityPub::Object do
     it "does not render a content map" do
       object = described_class.new(
         iri: "https://test.test/object",
-        content: "abc"
+        content: "abc",
       ).save
       expect(JSON.parse(object.to_json_ld).as_h).not_to have_key("contentMap")
     end
@@ -929,15 +929,15 @@ Spectator.describe ActivityPub::Object do
     it "renders sensitive property when true" do
       object = described_class.new(
         iri: "https://test.test/object",
-        sensitive: true
+        sensitive: true,
       ).save
-      expect(JSON.parse(object.to_json_ld).as_h["sensitive"]).to eq(true)
+      expect(JSON.parse(object.to_json_ld).as_h["sensitive"]).to be_true
     end
 
     it "does not render sensitive property when false" do
       object = described_class.new(
         iri: "https://test.test/object",
-        sensitive: false
+        sensitive: false,
       ).save
       expect(JSON.parse(object.to_json_ld).as_h.has_key?("sensitive")).to be_false
     end
@@ -951,7 +951,7 @@ Spectator.describe ActivityPub::Object do
         iri: "https://test.test/objects/object",
         attributed_to: attributed_to,
         to: ["to_iri"],
-        cc: ["cc_iri"]
+        cc: ["cc_iri"],
       )
     end
 
@@ -1337,7 +1337,7 @@ Spectator.describe ActivityPub::Object do
   describe "#with_statistics!" do
     let(object) do
       described_class.new(
-        iri: "https://test.test/objects/#{random_string}"
+        iri: "https://test.test/objects/#{random_string}",
       )
     end
 
@@ -1989,7 +1989,7 @@ Spectator.describe ActivityPub::Object do
   describe "#activities" do
     subject do
       described_class.new(
-        iri: "https://test.test/objects/#{random_string}"
+        iri: "https://test.test/objects/#{random_string}",
       )
     end
 
@@ -2043,7 +2043,7 @@ Spectator.describe ActivityPub::Object do
   describe "#approved_by?" do
     subject do
       described_class.new(
-        iri: "https://test.test/objects/#{random_string}"
+        iri: "https://test.test/objects/#{random_string}",
       )
     end
 
@@ -2062,7 +2062,7 @@ Spectator.describe ActivityPub::Object do
   describe "#external?" do
     subject do
       described_class.new(
-        iri: "https://test.test/objects/#{random_string}"
+        iri: "https://test.test/objects/#{random_string}",
       ).save
     end
 
@@ -2074,7 +2074,7 @@ Spectator.describe ActivityPub::Object do
   describe "#root?" do
     subject do
       described_class.new(
-        iri: "https://test.test/objects/#{random_string}"
+        iri: "https://test.test/objects/#{random_string}",
       ).save
     end
 
@@ -2094,7 +2094,7 @@ Spectator.describe ActivityPub::Object do
   describe "#draft?" do
     subject do
       described_class.new(
-        iri: "https://test.test/objects/#{random_string}"
+        iri: "https://test.test/objects/#{random_string}",
       ).save
     end
 
@@ -2116,7 +2116,7 @@ Spectator.describe ActivityPub::Object do
 
     subject do
       described_class.new(
-        iri: "https://test.test#{PATH}"
+        iri: "https://test.test#{PATH}",
       )
     end
 
@@ -2221,7 +2221,7 @@ Spectator.describe ActivityPub::Object do
       described_class.new(
         iri: "https://test.test/object",
         hashtags: [hashtag],
-        mentions: [mention]
+        mentions: [mention],
       )
     end
 
@@ -2377,7 +2377,7 @@ Spectator.describe ActivityPub::Object::Attachment do
       "https://example.com/image.jpg",
       "image/jpeg",
       nil,
-      focal_point
+      focal_point,
     )
   end
 

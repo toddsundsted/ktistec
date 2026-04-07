@@ -45,7 +45,8 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new
     handler.next = ->(_context : HTTP::Server::Context) { }
     request = HTTP::Request.new("GET", "/",
-      headers: HTTP::Headers{"Accept" => %q|text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8|})
+      headers: HTTP::Headers{"Accept" => %q|text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8|},
+    )
     context, _ = process_request_and_return_response(handler, request)
     expect(context.session.string?("csrf")).to be_nil
   end
@@ -53,19 +54,22 @@ Spectator.describe Ktistec::CSRF do
   it "allows POSTs with safe content types" do
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
-      headers: HTTP::Headers{"Content-Type" => %q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|})
+      headers: HTTP::Headers{"Content-Type" => %q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|},
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
 
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
-      headers: HTTP::Headers{"Content-Type" => "application/activity+json"})
+      headers: HTTP::Headers{"Content-Type" => "application/activity+json"},
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
 
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
-      headers: HTTP::Headers{"Content-Type" => "application/json"})
+      headers: HTTP::Headers{"Content-Type" => "application/json"},
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
   end
@@ -79,20 +83,23 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "foo=bar",
-      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"})
+      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"},
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
 
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: %Q|--1Aa\r\nContent-Disposition: form-data; name="foo"\r\n\r\nbar\r\n--1Aa--"|,
-      headers: HTTP::Headers{"Content-Type" => "multipart/form-data; boundary=1Aa"})
+      headers: HTTP::Headers{"Content-Type" => "multipart/form-data; boundary=1Aa"},
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
 
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
-      headers: HTTP::Headers{"Content-Type" => "text/plain"})
+      headers: HTTP::Headers{"Content-Type" => "text/plain"},
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
   end
@@ -101,7 +108,8 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "authenticity_token=cemal&hasan=lamec",
-      headers: HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"})
+      headers: HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"},
+    )
     context, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
 
@@ -110,8 +118,11 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "authenticity_token=#{csrf}&hasan=lamec",
-      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded",
-                             "Cookie"       => client_response.headers["Set-Cookie"]})
+      headers: HTTP::Headers{
+        "Content-Type" => "application/x-www-form-urlencoded",
+        "Cookie"       => client_response.headers["Set-Cookie"],
+      },
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
   end
@@ -120,7 +131,8 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "hasan=lamec",
-      headers: HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"})
+      headers: HTTP::Headers{"Accept" => "text/html", "Content-Type" => "application/x-www-form-urlencoded"},
+    )
     context, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
 
@@ -129,9 +141,12 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       body: "hasan=lamec",
-      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded",
-                             "Cookie"       => client_response.headers["Set-Cookie"],
-                             "X-CSRF-Token" => csrf})
+      headers: HTTP::Headers{
+        "Content-Type" => "application/x-www-form-urlencoded",
+        "Cookie"       => client_response.headers["Set-Cookie"],
+        "X-CSRF-Token" => csrf,
+      },
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
   end
@@ -140,7 +155,8 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new(allowed_routes: ["/allowed"])
     request = HTTP::Request.new("POST", "/allowed/",
       body: "authenticity_token=cemal&hasan=lamec",
-      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"})
+      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"},
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
   end
@@ -149,7 +165,8 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new(allowed_routes: ["/everything/*"])
     request = HTTP::Request.new("POST", "/everything/here/and",
       body: "authenticity_token=cemal&hasan=lamec",
-      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"})
+      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"},
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(404)
   end
@@ -158,7 +175,8 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new(allowed_routes: ["/nothing/*"])
     request = HTTP::Request.new("POST", "/something/",
       body: "authenticity_token=cemal&hasan=lamec",
-      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"})
+      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"},
+    )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
   end

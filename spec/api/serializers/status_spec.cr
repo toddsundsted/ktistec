@@ -245,7 +245,7 @@ Spectator.describe API::V1::Serializers::Status do
               caption: "An image",
               focal_point: {0.5, -0.25},
             ),
-          ]
+          ],
         ).save
       end
 
@@ -438,7 +438,7 @@ Spectator.describe API::V1::Serializers::Status do
           quote_authorization: quote_authorization,
           interacting_object: quoting,
           interaction_target: quoted,
-          decision: "accept"
+          decision: "accept",
         )
 
         before_each { quoting.assign(quote_authorization: quote_authorization).save }
@@ -468,7 +468,7 @@ Spectator.describe API::V1::Serializers::Status do
           quote_authorization: quote_authorization,
           interacting_object: quoting,
           interaction_target: quoted,
-          decision: "reject"
+          decision: "reject",
         )
 
         before_each { quoting.assign(quote_authorization: quote_authorization).save }
@@ -534,6 +534,160 @@ Spectator.describe API::V1::Serializers::Status do
       it "returns edited_at" do
         expect(subject.edited_at).to eq(updated.to_rfc3339)
       end
+    end
+  end
+
+  describe ".from_announce" do
+    let(published) { Time.utc(2024, 6, 15, 12, 0, 0) }
+    let_create(:object, published: published, visible: true)
+    let_create(:announce, object: object, published: published)
+
+    subject { described_class.from_announce(announce) }
+
+    it "returns id" do
+      expect(subject.id).to eq(announce.id.to_s)
+    end
+
+    it "returns uri" do
+      expect(subject.uri).to eq(announce.iri)
+    end
+
+    it "returns created_at" do
+      expect(subject.created_at).to eq(published.to_rfc3339)
+    end
+
+    it "returns account" do
+      expect(subject.account.id).to eq(announce.actor.id.to_s)
+    end
+
+    it "returns content" do
+      expect(subject.content).to eq("")
+    end
+
+    it "returns visibility" do
+      expect(subject.visibility).to eq("public")
+    end
+
+    it "returns sensitive" do
+      expect(subject.sensitive).to be_false
+    end
+
+    it "returns spoiler_text" do
+      expect(subject.spoiler_text).to eq("")
+    end
+
+    it "returns media_attachments" do
+      expect(subject.media_attachments).to be_empty
+    end
+
+    it "returns mentions" do
+      expect(subject.mentions).to be_empty
+    end
+
+    it "returns tags" do
+      expect(subject.tags).to be_empty
+    end
+
+    it "returns emojis" do
+      expect(subject.emojis).to be_empty
+    end
+
+    it "returns reblogs_count" do
+      expect(subject.reblogs_count).to eq(0)
+    end
+
+    it "returns favourites_count" do
+      expect(subject.favourites_count).to eq(0)
+    end
+
+    it "returns quotes_count" do
+      expect(subject.quotes_count).to eq(0)
+    end
+
+    it "returns replies_count" do
+      expect(subject.replies_count).to eq(0)
+    end
+
+    it "returns url" do
+      expect(subject.url).to be_nil
+    end
+
+    it "returns in_reply_to_id" do
+      expect(subject.in_reply_to_id).to be_nil
+    end
+
+    it "returns in_reply_to_account_id" do
+      expect(subject.in_reply_to_account_id).to be_nil
+    end
+
+    let(reblog) { subject.reblog.not_nil! }
+
+    it "returns reblog id" do
+      expect(reblog.id).to eq(object.id.to_s)
+    end
+
+    it "returns reblog account id" do
+      expect(reblog.account.id).to eq(object.attributed_to.id.to_s)
+    end
+
+    it "returns poll" do
+      expect(subject.poll).to be_nil
+    end
+
+    it "returns card" do
+      expect(subject.card).to be_nil
+    end
+
+    it "returns language" do
+      expect(subject.language).to be_nil
+    end
+
+    it "returns text" do
+      expect(subject.text).to be_nil
+    end
+
+    it "returns edited_at" do
+      expect(subject.edited_at).to be_nil
+    end
+
+    it "returns quote" do
+      expect(subject.quote).to be_nil
+    end
+
+    it "returns quote_approval.automatic" do
+      expect(subject.quote_approval.automatic).to eq(["public"])
+    end
+
+    it "returns quote_approval.manual" do
+      expect(subject.quote_approval.manual).to be_empty
+    end
+
+    it "returns quote_approval.current_user" do
+      expect(subject.quote_approval.current_user).to eq("unknown")
+    end
+
+    it "returns favourited" do
+      expect(subject.favourited).to be_false
+    end
+
+    it "returns reblogged" do
+      expect(subject.reblogged).to be_true
+    end
+
+    it "returns muted" do
+      expect(subject.muted).to be_false
+    end
+
+    it "returns bookmarked" do
+      expect(subject.bookmarked).to be_false
+    end
+
+    it "returns pinned" do
+      expect(subject.pinned).to be_false
+    end
+
+    it "returns filtered" do
+      expect(subject.filtered).to be_empty
     end
   end
 

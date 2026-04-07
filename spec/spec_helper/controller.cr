@@ -106,7 +106,7 @@ end
 def make_env(method, path)
   HTTP::Server::Context.new(
     HTTP::Request.new(method, path),
-    HTTP::Server::Response.new(IO::Memory.new)
+    HTTP::Server::Response.new(IO::Memory.new),
   )
 end
 

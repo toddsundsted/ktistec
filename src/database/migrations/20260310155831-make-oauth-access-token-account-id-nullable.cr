@@ -11,7 +11,7 @@ up do |db|
 
   table_sql = db.scalar(
     "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
-    table_name
+    table_name,
   ).as(String)
 
   unless table_sql =~ ACCOUNT_ID_NOT_NULL
@@ -25,7 +25,7 @@ up do |db|
   indexes = [] of String
   db.query(
     "SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name=? AND sql IS NOT NULL",
-    table_name
+    table_name,
   ) do |rs|
     rs.each do
       indexes << rs.read(String)
@@ -46,7 +46,7 @@ up do |db|
 
   final_sql = db.scalar(
     "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
-    table_name
+    table_name,
   ).as(String)
   unless final_sql =~ ACCOUNT_ID_NULLABLE
     raise "Migration failed: account_id should be nullable"
@@ -61,7 +61,7 @@ down do |db|
 
   table_sql = db.scalar(
     "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
-    table_name
+    table_name,
   ).as(String)
 
   unless table_sql =~ ACCOUNT_ID_NULLABLE
@@ -75,7 +75,7 @@ down do |db|
   indexes = [] of String
   db.query(
     "SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name=? AND sql IS NOT NULL",
-    table_name
+    table_name,
   ) do |rs|
     rs.each do
       indexes << rs.read(String)
@@ -96,7 +96,7 @@ down do |db|
 
   final_sql = db.scalar(
     "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
-    table_name
+    table_name,
   ).as(String)
   unless final_sql =~ ACCOUNT_ID_NOT_NULL
     raise "Migration failed: account_id should be NOT NULL"

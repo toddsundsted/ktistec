@@ -706,7 +706,7 @@ Spectator.describe Task::Fetch::Hashtag do
     subject do
       described_class.new(
         source: source,
-        name: "hashtag"
+        name: "hashtag",
       ).save
     end
 

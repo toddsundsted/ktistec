@@ -25,7 +25,7 @@ class Task
           iri: "#{Ktistec.host}/activities/#{Ktistec::Util.id}",
           actor: account.actor,
           object: activity,
-          to: [activity.actor.iri]
+          to: [activity.actor.iri],
         ).save
 
         OutboxActivityProcessor.process(account, accept_activity)
@@ -39,7 +39,7 @@ class Task
           iri: "#{Ktistec.host}/activities/#{Ktistec::Util.id}",
           actor: account.actor,
           object: activity.actor,
-          to: [activity.actor.iri]
+          to: [activity.actor.iri],
         ).save
 
         OutboxActivityProcessor.process(account, follow_activity)

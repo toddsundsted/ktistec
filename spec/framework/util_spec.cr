@@ -337,7 +337,7 @@ Spectator.describe Ktistec::Util::PaginatedArray do
     end
 
     it "returns an indication of whether there are more results" do
-      expect(subject.map(&.-).more?).to eq(false)
+      expect(subject.map(&.-).more?).to be_false
     end
 
     it "preserves cursor_start through map" do

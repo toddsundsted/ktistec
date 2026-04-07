@@ -25,7 +25,7 @@ module Ktistec
           XML::HTMLParserOptions::NOIMPLIED |
           XML::HTMLParserOptions::NOERROR |
           XML::HTMLParserOptions::NOWARNING |
-          XML::HTMLParserOptions::NONET
+          XML::HTMLParserOptions::NONET,
         ), build)
       end.chomp
     end
@@ -67,7 +67,7 @@ module Ktistec
           XML::HTMLParserOptions::NOIMPLIED |
           XML::HTMLParserOptions::NOERROR |
           XML::HTMLParserOptions::NOWARNING |
-          XML::HTMLParserOptions::NONET
+          XML::HTMLParserOptions::NONET,
         ), build)
       end.gsub(/^<div>|<\/div>$/, "")
     end

@@ -33,7 +33,7 @@ module Ktistec
         XML::HTMLParserOptions::NOIMPLIED |
         XML::HTMLParserOptions::NOERROR |
         XML::HTMLParserOptions::NOWARNING |
-        XML::HTMLParserOptions::NONET
+        XML::HTMLParserOptions::NONET,
       )
       Enhancements.new.tap do |enhancements|
         xml.xpath_nodes("//figure").each do |figure|

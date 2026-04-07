@@ -28,7 +28,7 @@ Spectator.describe Ktistec::Rule do
   describe ".make_pattern" do
     Ktistec::Rule.make_pattern(
       RulePattern,
-      RuleModel
+      RuleModel,
     )
 
     it "inherits from School::Pattern" do
@@ -41,13 +41,13 @@ Spectator.describe Ktistec::Rule do
       RulePattern,
       RuleModel,
       associations: [child_of],
-      properties: [id, name, quux]
+      properties: [id, name, quux],
     )
     Ktistec::Rule.make_pattern(
       RuleSubclassPattern,
       RuleSubclassModel,
       associations: [child_of],
-      properties: [id, name, quux]
+      properties: [id, name, quux],
     )
 
     describe "#vars" do

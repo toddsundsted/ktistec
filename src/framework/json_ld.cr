@@ -25,7 +25,7 @@ module Ktistec
       expand(
         body,
         context(body["@context"]?, loader),
-        loader
+        loader,
       )
     rescue ex
       # methods on JSON::Any raise the base class `Exception` which

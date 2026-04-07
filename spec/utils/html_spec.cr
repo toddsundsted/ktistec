@@ -240,7 +240,7 @@ Spectator.describe Ktistec::HTML do
         :actor,
         iri: "https://bar.com/actors/foo",
         username: "foo",
-        urls: ["https://bar.com/@foo"]
+        urls: ["https://bar.com/@foo"],
       )
 
       it "replaces mentions with links" do

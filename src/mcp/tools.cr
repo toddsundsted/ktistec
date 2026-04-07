@@ -240,7 +240,8 @@ module MCP
       {name: "name", type: "string", description: "Name of the collection to paginate", required: true, matches: NAME_REGEX},
       {name: "page", type: "integer", description: "Page number (optional, defaults to 1)", minimum: 1, default: 1},
       {name: "size", type: "integer", description: "Number of items per page (optional, defaults to 10, maximum 1000)", minimum: 1, maximum: 20, default: 10},
-    ]) do
+    ],
+    ) do
       unless account.reload!
         raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
@@ -365,7 +366,8 @@ module MCP
       "Count items in ActivityPub collections since a given time. Use this tool when you want to know if new items have been added in the last day/week/month.", [
       {name: "name", type: "string", description: "Name of the collection to count", required: true, matches: NAME_REGEX},
       {name: "since", type: "time", description: "Time (RFC3339) to count from", required: true},
-    ]) do
+    ],
+    ) do
       unless account.reload!
         raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
@@ -452,7 +454,7 @@ module MCP
         {name: "projection", type: "string", description: "Data fields to include: 'minimal' (IDs and structure only) or 'metadata' (adds authors, timestamps). Only used with object_id.", required: false, enum: ["minimal", "metadata"], default: "metadata"},
         {name: "page_size", type: "integer", description: "Number of objects per page. Only used with object_id.", required: false, minimum: 1, maximum: 100, default: 25},
         {name: "cursor", type: "string", description: "Opaque pagination cursor from previous get_thread response. Use ONLY this parameter to fetch next page.", required: false},
-      ]
+      ],
     ) do
       unless account.reload!
         raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -517,7 +519,7 @@ module MCP
               objects_count: objects.size,
               authors_count: nil,
               root_object_id: results.find { |t| t[:in_reply_to_iri].nil? }.try(&.[:id]),
-              max_depth: results.max_of? { |t| t[:depth] } || 0
+              max_depth: results.max_of? { |t| t[:depth] } || 0,
             )
           when "metadata"
             results = object.thread_query(projection: ActivityPub::Object::PROJECTION_METADATA)
@@ -549,7 +551,7 @@ module MCP
               objects_count: objects.size,
               authors_count: results.compact_map { |t| t[:attributed_to_iri] }.uniq!.size,
               root_object_id: results.find { |t| t[:in_reply_to_iri].nil? }.try(&.[:id]),
-              max_depth: results.max_of? { |t| t[:depth] } || 0
+              max_depth: results.max_of? { |t| t[:depth] } || 0,
             )
           else
             raise "should never happen"
@@ -603,7 +605,7 @@ module MCP
       "- Timeline histogram (temporal distribution of posts)",
       [
         {name: "object_id", type: "integer", description: "Database ID of any object in the thread", required: true, minimum: 1},
-      ]
+      ],
     ) do
       unless account.reload!
         raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
@@ -685,7 +687,8 @@ module MCP
       "IDs of resources of the same type). Use this tool as a universal fallback when resources are not supported by an MCP " \
       "client.", [
       {name: "uris", type: "array", description: "Resource URIs to read (e.g., ['ktistec://actors/123,456', 'ktistec://objects/456,789'])", required: true, items: "string"},
-    ]) do
+    ],
+    ) do
       Log.debug { "read_resources: user=#{mcp_user_path(account)} uris=#{uris}" }
 
       resources_data = uris.flat_map do |uri|
@@ -696,7 +699,7 @@ module MCP
         fake_request = JSON::RPC::Request.new(
           "resources/read",
           "fake-id",
-          fake_params
+          fake_params,
         )
 
         # reuse existing handle_resources_read logic

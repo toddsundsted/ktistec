@@ -40,7 +40,7 @@ class OutboxActivityProcessor
         if object.local? && !Task::DistributePollUpdates.find?(question: object)
           Task::DistributePollUpdates.new(
             actor: activity.actor,
-            question: object
+            question: object,
           ).schedule(Task::DistributePollUpdates::CHECK_INTERVAL.from_now)
         end
         if object.local?
@@ -54,13 +54,27 @@ class OutboxActivityProcessor
             end
           end
         end
+      when ActivityPub::Object::Note
+        if object.special == "vote"
+          if (question = object.in_reply_to?).is_a?(ActivityPub::Object::Question)
+            if (poll = question.poll?)
+              if (closed_at = poll.closed_at)
+                if closed_at > Time.utc
+                  unless Task::NotifyPollExpiry.find?(question: question)
+                    Task::NotifyPollExpiry.new(source_iri: "", question: question).schedule(closed_at)
+                  end
+                end
+              end
+            end
+          end
+        end
       end
     when ActivityPub::Activity::Follow
       unless Relationship::Social::Follow.find?(actor: activity.actor, object: activity.object, visible: false)
         Relationship::Social::Follow.new(
           actor: activity.actor,
           object: activity.object,
-          visible: false
+          visible: false,
         ).save(skip_associated: true)
       end
     when ActivityPub::Activity::Accept
@@ -94,7 +108,7 @@ class OutboxActivityProcessor
 
     deliver_task_class.new(
       sender: account.actor,
-      activity: activity
+      activity: activity,
     ).schedule
   end
 end

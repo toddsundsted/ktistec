@@ -227,7 +227,7 @@ Spectator.describe Poll do
         Poll::Option.new("Yes", 10),
         Poll::Option.new("No", 5),
       ],
-      voters_count: 15
+      voters_count: 15,
     )
 
     let(question) { poll.question }

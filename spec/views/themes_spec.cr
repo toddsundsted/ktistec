@@ -45,11 +45,11 @@ Spectator.describe "Themes Integration" do
 
     expect(html).to contain(%(<link rel="stylesheet" href="/themes/01-base.css"/>))
     expect(html).to contain(%(<link rel="stylesheet" href="/themes/02-theme.css"/>))
-    expect(html).to contain(%(<script src="/themes/theme.js"></script>))
+    expect(html).to contain(%(<script defer src="/themes/theme.js"></script>))
     expect(html).not_to contain("ignored.txt")
 
     site_css_pos = html.index!(%(<link rel="stylesheet" href="/dist/site.css"/>))
-    site_js_pos = html.index!(%(<script src="/dist/site.bundle.js"></script>))
+    site_js_pos = html.index!(%(<script defer src="/dist/site.bundle.js"></script>))
 
     css1_pos = html.index!("01-base.css")
     css2_pos = html.index!("02-theme.css")

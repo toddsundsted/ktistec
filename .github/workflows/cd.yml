@@ -26,7 +26,7 @@ jobs:
       - name: Install Crystal
         uses: crystal-lang/install-crystal@v1
         with:
-          crystal: latest
+          crystal: 1.19.1
       - name: Install libraries
         run: sudo apt update && sudo apt install -y lld
       - name: Cache shards

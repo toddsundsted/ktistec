@@ -114,6 +114,7 @@ module Ktistec::ViewHelper
       attrs = [
         %Q(src="#{src}"),
         %Q(alt="#{::HTML.escape(alt)}"),
+        %Q(loading="lazy"),
       ]
       attrs.push %Q(data-actor-id="#{actor.id}") if actor && actor.id
       attrs.unshift %Q(class="#{classes}") if classes

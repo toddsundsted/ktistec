@@ -53,9 +53,9 @@ Spectator.describe Ktistec::Themes do
       before_each { described_class.js_files = ["02-theme.js", "01-base.js", "03-custom.js"] }
 
       it "generates script tags in sorted order" do
-        expected = %(<script src="/themes/01-base.js"></script>
-<script src="/themes/02-theme.js"></script>
-<script src="/themes/03-custom.js"></script>)
+        expected = %(<script defer src="/themes/01-base.js"></script>
+<script defer src="/themes/02-theme.js"></script>
+<script defer src="/themes/03-custom.js"></script>)
         expect(subject).to eq(expected)
       end
     end
@@ -64,9 +64,9 @@ Spectator.describe Ktistec::Themes do
       before_each { described_class.js_files = ["<script>alert('xss')</script>.js", "file&name.js", %("quoted".js)] }
 
       it "properly escapes file names" do
-        expected = %(<script src="/themes/&quot;quoted&quot;.js"></script>
-<script src="/themes/&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;.js"></script>
-<script src="/themes/file&amp;name.js"></script>)
+        expected = %(<script defer src="/themes/&quot;quoted&quot;.js"></script>
+<script defer src="/themes/&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;.js"></script>
+<script defer src="/themes/file&amp;name.js"></script>)
         expect(subject).to eq(expected)
       end
     end

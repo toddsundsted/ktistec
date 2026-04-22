@@ -12,7 +12,7 @@ module Ktistec::Themes
 
   def self.js_tags
     js_files.sort.map do |file|
-      %(<script src="/themes/#{::HTML.escape(file)}"></script>)
+      %(<script defer src="/themes/#{::HTML.escape(file)}"></script>)
     end.join("\n")
   end
 

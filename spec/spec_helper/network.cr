@@ -1,7 +1,40 @@
 require "spectator"
 require "http/request"
+require "socket"
 
 require "./base"
+
+# DNS resolution mock.
+#
+# Returns a public IP for most test hostnames. Hostnames matching the
+# following patterns resolve to addresses in reserved ranges:
+#
+#   "loopback"    -> 127.0.0.1   (loopback)
+#   "private-ip"  -> 10.0.0.1    (RFC 1918 private)
+#   "link-local"  -> 169.254.0.1 (link-local)
+#   "unspecified" -> 0.0.0.0     (unspecified)
+#
+# Hostnames matching "socket-addrinfo-error" raise the error directly.
+#
+struct Socket::Addrinfo
+  def self.resolve(domain : String, service, family : Family? = nil, type : Type = nil, protocol : Protocol = Protocol::IP, timeout = nil) : Array(Addrinfo)
+    ip = case domain
+         when /socket-addrinfo-error/
+           raise Socket::Addrinfo::Error.from_os_error(nil, nil)
+         when /loopback/
+           "127.0.0.1"
+         when /private-ip/
+           "10.0.0.1"
+         when /link-local/
+           "169.254.0.1"
+         when /unspecified/
+           "0.0.0.0"
+         else
+           "93.184.216.34"
+         end
+    previous_def(ip, service, family, type, protocol, timeout)
+  end
+end
 
 # Networking mock.
 #

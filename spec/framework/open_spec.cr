@@ -68,6 +68,26 @@ Spectator.describe Ktistec::Open do
       expect { described_class.open(key_pair, "https://external/io-error") }.to raise_error(Ktistec::Open::Error, /I\/O error/)
     end
 
+    it "fails on errors" do
+      expect { described_class.open(key_pair, "https://loopback.example/path") }.to raise_error(Ktistec::Open::Error, /Request to private address denied/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.open(key_pair, "https://private-ip.example/path") }.to raise_error(Ktistec::Open::Error, /Request to private address denied/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.open(key_pair, "https://link-local.example/path") }.to raise_error(Ktistec::Open::Error, /Request to private address denied/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.open(key_pair, "https://unspecified.example/path") }.to raise_error(Ktistec::Open::Error, /Request to private address denied/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.open(key_pair, "urn:isbn:12345") }.to raise_error(Ktistec::Open::Error, /URL has no host/)
+    end
+
     context "given a remote object" do
       class MockObject
         property iri : String

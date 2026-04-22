@@ -174,6 +174,30 @@ Spectator.describe "object partials" do
       it "renders the attachment" do
         expect(subject.xpath_nodes("//img/@src")).to have("http://remote/foo.jpg")
       end
+
+      it "renders the image with loading attribute" do
+        expect(subject.xpath_nodes("//img/@loading")).to have("lazy")
+      end
+    end
+
+    context "given a video attachment" do
+      let(attachment) { ActivityPub::Object::Attachment.new(url: "http://remote/foo.mp4", media_type: "video/mp4") }
+
+      before_each { object.assign(attachments: [attachment]) }
+
+      it "renders the video with preload attribute" do
+        expect(subject.xpath_nodes("//video/@preload")).to have("none")
+      end
+    end
+
+    context "given an audio attachment" do
+      let(attachment) { ActivityPub::Object::Attachment.new(url: "http://remote/foo.mp3", media_type: "audio/mpeg") }
+
+      before_each { object.assign(attachments: [attachment]) }
+
+      it "renders the audio with preload attribute" do
+        expect(subject.xpath_nodes("//audio/@preload")).to have("none")
+      end
     end
 
     # translation

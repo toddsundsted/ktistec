@@ -325,6 +325,10 @@ Spectator.describe "helpers" do
         expect(subject.xpath_nodes("//img/@data-actor-id").map(&.text)).to contain_exactly(actor.id.to_s)
       end
 
+      it "renders an img tag with loading attribute" do
+        expect(subject.xpath_nodes("//img/@loading").map(&.text)).to contain_exactly("lazy")
+      end
+
       context "and classes" do
         let(classes) { "ui avatar image" }
 

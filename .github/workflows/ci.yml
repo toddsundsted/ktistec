@@ -9,7 +9,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        crystal: [latest]
+        crystal: [1.19.1]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Download source

@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.3.6]
+Pins Crystal version to 1.19.1. 1.20.0 introduces breaking changes.
+
+### Fixed
+- Prevent SSRF when dereferencing externally supplied IRIs.
+- Timeline entry no longer becomes stale when an announce is undone.
+- Correctly represent boosted posts on the home timeline in API clients.
+
+### Changed
+- Defer downloading of script files.
+- Defer loading of image, video, and audio attachments.
+- Move poll vote notification for voters into the outbox processor.
+
 ## [v3.3.5]
 Continues the Mastodon-compatible API work. The API is now always
 enabled (the `with_mastodon_api` compiler flag has been removed).
@@ -728,6 +741,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.3.6]: https://github.com/toddsundsted/ktistec/compare/99046b6d...3b5cf8dc
 [v3.3.5]: https://github.com/toddsundsted/ktistec/compare/5e87aae6...6f54cac5
 [v3.3.4]: https://github.com/toddsundsted/ktistec/compare/f64f24d1...df77bdab
 [v3.3.3]: https://github.com/toddsundsted/ktistec/compare/39a167b9...c95cd6f3

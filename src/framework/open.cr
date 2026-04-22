@@ -1,4 +1,5 @@
 require "http"
+require "socket"
 require "uri"
 
 require "./signature"
@@ -8,6 +9,18 @@ module Ktistec
     extend self
 
     Log = ::Log.for(self)
+
+    # Resolves the hostname and checks the resulting IP address
+    # against private and reserved ranges.
+    #
+    private def validate_host(host : String)
+      addrinfos = Socket::Addrinfo.resolve(host, 443, type: Socket::Type::STREAM)
+      raise Error.new("No addresses found: #{host}") if addrinfos.empty?
+      addr = addrinfos.first.ip_address
+      if addr.loopback? || addr.private? || addr.link_local? || addr.unspecified?
+        raise Error.new("Request to private address denied: #{host}")
+      end
+    end
 
     # Opens and reads from the specified URL.
     #
@@ -21,6 +34,9 @@ module Ktistec
         start = Time.instant
         begin
           uri = URI.parse(url)
+          host = uri.host.presence
+          raise Error.new("URL has no host: #{url}") unless host
+          validate_host(host)
           client = HTTP::Client.new(uri)
           client.dns_timeout = 5.seconds
           client.connect_timeout = 5.seconds
